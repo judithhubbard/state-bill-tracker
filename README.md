@@ -1,0 +1,72 @@
+# Albany Bill Tracker
+
+Every New York Senate and Assembly bill, paired across the two houses, with filters by
+stage, topic, law amended, committee, and history in earlier and later sessions.
+Published at https://albanybilltracker.org/ and rebuilt every morning.
+
+Data: New York State Senate [Open Legislation API](https://legislation.nysenate.gov/).
+
+## How it works
+
+- `fetch_bills.py SESSION` downloads every bill in a session (about 4 minutes) to `data/bills_SESSION.json`.
+- `build_data.py --github _site` builds one page per session with the data embedded:
+  `index.html` for the current session and `YEAR.html` for past ones.
+- `fetch_contacts.py SESSION` collects email, district phone and page for every legislator (Open States), committee chairs, members and meeting times (Senate from the API,
+  Assembly from nyassembly.gov) and legislators' page links into `data/contacts_SESSION.json`, used for
+  the "What's next and who to contact" box under each bill.
+- `fetch_party_history.py` (run by hand; rarely changes) records the party of every current and
+  former legislator by seat, from the Open States people archive, into `data/seat_parties.json`,
+  so party comparisons cover past sessions too.
+- `fetch_places.py` downloads New York place names and their counties from the U.S. Geological Survey
+  (towns, cities, villages and hamlets) into `data/ny_places.json`, which is kept in the repository. The
+  build uses it to tell which county a bill about a named place is about, for the "Places" filter.
+  It also writes `data/district_counties.json` (which Senate and Assembly districts cover each county,
+  from the Census Bureau), so choosing a county suggests that county's legislators.
+- `fetch_agendas.py SESSION` downloads committee agendas (which bills each committee takes
+  up, and when) into `data/agendas_SESSION.json`, so bills show an upcoming committee meeting.
+  Senate agendas come from the API; Assembly agendas from the agenda pages on nyassembly.gov,
+  which list upcoming meetings only.
+- `fetch_old_outcomes.py` (run once) saves how far each 2009–2015 bill got into
+  `data/old_outcomes.json.gz`, so bill histories show outcomes before the full downloads begin.
+- On GitHub Pages each current legislator also has a page filtered to their bills, at
+  `/<last name>/` (or `/<first>-<last>/` when a last name is shared, with `/<last name>/` then
+  offering a choice). The list comes from the nightly contacts refresh, so it follows elections.
+- The Watchlist tab (also `/watchlist/`) shows the visitor's starred bills, each marked Support or
+  Oppose, with a "What to do" list grouped by person and email drafts. Watchlists are kept in each
+  browser (localStorage); the share link (`/watchlist/#w=2025.S1234.-A5678`, "-" = oppose) carries a copy.
+- Floor leaders (Senate Majority Leader, Assembly Speaker) are set in `LEADERS` in
+  `build_data.py`; check them after leadership votes each January of odd years.
+- Votes: Senate floor and committee votes come from the API; Assembly floor votes from
+  nyassembly.gov via `fetch_assembly_votes.py`, cached in `data/assembly_votes_SESSION.json`.
+- A bill's own link is the page address plus `#S1234` (or `#A1234`).
+- `tracker.html` is the page template; topic rules and the sponsor checkboxes are at the top of `build_data.py`.
+- `.github/workflows/update.yml` runs both every day and deploys to GitHub Pages. The note at
+  the top of the page (end of votes, governor's remaining bills, session over) is worked out
+  in the browser from the data and the date, so it changes on its own.
+  The API key is the repository secret `NYSENATE_API_KEY`.
+
+Past sessions don't change, so they're stored compressed in `data/` and not re-downloaded.
+
+## When a new session starts (January of odd years)
+
+Nothing has to be done by hand. The workflow works out the session from the date. The first
+time it runs in a new session, it downloads the session that just ended one last time and
+commits it as `data/bills_YEAR.json.gz`. Until the new session has bills, the old one stays
+the current page. The Webb and Kelles checkboxes carry forward for Senate District 52 and
+Assembly District 125, and drop out on their own if someone else holds either seat
+(`DELEGATION` in `build_data.py`).
+
+## Published watchlists
+
+Groups with an invite code can publish a watchlist with its own link (`/watchlist/#list=<name>`). It updates
+for everyone when they click "Update the published list". The lists live in a small Cloudflare Worker
+(`lists_worker/`, deployed with `npx wrangler deploy` from that folder) that stores them in Workers KV. The site
+itself stays on GitHub Pages.
+
+- Anyone can read a published list. Creating one needs an invite code; there is one code per group.
+- Whoever creates a list gets a private edit key, kept in their browser. They can copy it to use on another computer.
+- Revoking a group's code hides all of that group's lists.
+
+`lists_admin.py` manages codes and lists (`code-new "Group name"`, `codes`, `code-revoke CODE`, `lists`,
+`list-delete NAME`). It reads the admin token from `~/.albany_lists_admin`, which is also stored as the Worker
+secret `ADMIN_TOKEN`; neither goes in the repository.

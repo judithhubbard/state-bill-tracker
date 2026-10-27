@@ -1,0 +1,12 @@
+# Copied from ny-bill-tracker. Renamed and unbound so a deploy from here can't touch the live
+# NY Worker or its lists. Create a new KV namespace before deploying (npx wrangler kv namespace create LISTS).
+name = "state-lists"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# Published watchlists and the invite codes that may create them.
+[[kv_namespaces]]
+binding = "LISTS"
+id = "REPLACE_WITH_NEW_KV_NAMESPACE_ID"
+
+# ADMIN_TOKEN is a secret (wrangler secret put ADMIN_TOKEN); it is never stored here.

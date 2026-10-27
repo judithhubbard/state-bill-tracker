@@ -1,0 +1,16 @@
+# Fresh downloads are rebuilt every run; only past sessions are kept, gzipped.
+data/*.json
+data/*.tmp
+site/
+_site/
+__pycache__/
+.DS_Store
+!data/contacts_*.json
+!data/assembly_votes_*.json
+!data/seat_parties.json
+!data/ny_places.json
+!data/district_counties.json
+!data/session_calendar.json
+lists_worker/.wrangler/
+cron_worker/.wrangler/
+lists_worker/node_modules/
