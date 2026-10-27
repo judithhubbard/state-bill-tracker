@@ -17,6 +17,7 @@ Usage: python3 build_data.py            builds every session found in data/
 import base64, glob, gzip, json, os, re, sys
 from fetch_contacts import committee_key, name_key, senate_url
 from collections import Counter, defaultdict
+from states.ny import profile as P
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATE = os.path.join(HERE, "tracker.html")
@@ -25,14 +26,13 @@ SITE = os.path.join(HERE, "site")
 URLS_FILE = os.path.join(HERE, "artifact_urls.json")
 # Session data may be plain JSON (fresh downloads) or gzipped (past sessions kept in git).
 SESSIONS = sorted({int(re.search(r"bills_(\d{4})", f).group(1)) for f in glob.glob(os.path.join(HERE, "data", "bills_*.json*"))})
-# The current session by the calendar (sessions start in odd years), as the workflow works it out,
+# The current session by the calendar (P.session_of), as the workflow works it out,
 # or the newest one downloaded if that hasn't started yet. A later session in data/ is upcoming:
 # its prefiled bills get their own page before it opens.
 def _current():
     from datetime import datetime
     from zoneinfo import ZoneInfo
-    y = datetime.now(ZoneInfo("America/New_York")).year
-    by_date = y if y % 2 else y - 1
+    by_date = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
     return max([s for s in SESSIONS if s <= by_date] or SESSIONS)
 CURRENT = _current() if SESSIONS else None
 ARGS = sys.argv[1:]
@@ -42,12 +42,7 @@ if "--github" in ARGS:
     GITHUB = os.path.abspath(ARGS[i + 1])
     del ARGS[i:i + 2]
 ONLY = [int(a) for a in ARGS] or SESSIONS
-# The GitHub Pages address, used for share links and links to single bills.
-SITE_URL = os.environ.get("SITE_URL", "https://albanybilltracker.org/")
-# Visitor counts on the public site only (both are public values that appear in the page source).
-# Cloudflare Web Analytics: the token from its JS snippet. GoatCounter: the site code, as in <code>.goatcounter.com.
-CF_ANALYTICS_TOKEN = "4124cfe282c84c29990753f76caa2319"
-GOATCOUNTER_CODE = "albanybilltracker"
+
 
 
 def read_session(session):
@@ -57,197 +52,8 @@ def read_session(session):
     with gzip.open(path + ".gz", "rt") as f:
         return json.load(f)
 
-# Sponsor checkboxes: only Sen. Webb (SD 52, from 2023) and Asm. Kelles (AD 125, from 2021).
-# Later sessions use the same districts, but a checkbox appears only while Webb or Kelles
-# holds the seat. Sessions with neither get no checkboxes.
-DELEGATION = {
-    2021: {"ASSEMBLY": {125}},
-}
-DEFAULT_DELEGATION = {"SENATE": {52}, "ASSEMBLY": {125}}  # 2023 onward
-DELEGATION_NAMES = {"Webb", "Kelles"}
-
-# Who decides which bills reach each house's floor. Check after leadership votes in January
-# of odd years; a leader is shown only while the named person still holds a seat.
-LEADERS = {"S": ("Andrea Stewart-Cousins", "Senate Majority Leader"),
-           "A": ("Carl Heastie", "Assembly Speaker")}
-
-
-def delegation(session):
-    return DELEGATION.get(session, DEFAULT_DELEGATION if session >= 2023 else {})
-
-# Topic: (label, committees, laws amended, title/summary words).
-# Committee and law names are matched exactly as the API spells them.
-TOPICS = {
-    "env": ("Environment & energy",
-            {"Environmental Conservation", "Energy", "Energy And Telecommunications"},
-            {"Environmental Conservation Law", "Environmental Conservation", "Navigation Law",
-             "Energy Law", "Energy"},
-            r"\b(climate|greenhouse|emission|renewable|solar|wind energy|pollut\w*|wetland|watershed|"
-            r"drinking water|pesticide|plastic|recycl\w*|pfas|stormwater|wastewater|invasive species|"
-            r"conservation easement|forest|wildlife|clean water|clean air|composting|landfill)\b"),
-    "local": ("Local government",
-              {"Local Government", "Local Governments", "Cities", "Cities 1", "Cities 2"},
-              {"County Law", "Town Law", "Village Law", "General Municipal Law", "Municipal Home Rule Law",
-               "Local Finance Law", "General City Law"},
-              None),
-    "tax": ("Taxes & assessment",
-            {"Budget And Revenue", "Real Property Taxation"},
-            {"Tax Law", "Real Property Tax Law", "Real Property Taxation", "Taxation"},
-            None),
-    "safety": ("Public safety & courts",
-               {"Codes", "Correction", "Crime Victims, Crime And Correction", "Judiciary"},
-               {"Penal Law", "Criminal Procedure Law", "Correction Law", "Family Court Act", "Judiciary Law",
-                "Civil Practice Law and Rules", "Court of Claims Act"},
-               None),
-    "human": ("Human services",
-              {"Social Services", "Children And Families", "Aging", "Disabilities", "People With Disabilities",
-               "Women's Issues", "Veterans, Homeland Security And Military Affairs", "Veterans' Affairs"},
-              {"Social Services Law", "Social Services", "Elder Law", "Veterans' Service Law"},
-              None),
-    "health": ("Health & mental health",
-               {"Health", "Mental Health", "Mental Health And Developmental Disabilities", "Alcoholism And Drug Abuse",
-                "Alcoholism And Substance Use Disorders", "Alcoholism And Substance Abuse"},
-               {"Public Health Law", "Public Health", "Mental Hygiene Law", "Mental Hygiene"},
-               None),
-    "edu": ("Education",
-            {"Education", "Higher Education", "Libraries", "Libraries And Education Technology",
-             "New York City Education"},
-            {"Education Law", "Education"},
-            None),
-    "transp": ("Transportation & highways",
-               {"Transportation", "Infrastructure And Capital Investment"},
-               {"Vehicle and Traffic Law", "Highway Law", "Transportation Law", "Transportation"},
-               None),
-    "labor": ("Labor & public employees",
-              {"Labor", "Governmental Employees", "Civil Service And Pensions"},
-              {"Labor Law", "Civil Service Law", "Civil Service", "Retirement and Social Security Law",
-               "Retirement", "Workers' Compensation Law"},
-              None),
-    "housing": ("Housing",
-                {"Housing", "Housing, Construction And Community Development"},
-                {"Real Property Law", "Private Housing Finance Law", "Public Housing Law", "Multiple Dwelling Law",
-                 "Real Property Actions and Proceedings Law", "Emergency Tenant Protection Act of 1974"},
-                None),
-    "ag": ("Agriculture",
-           {"Agriculture", "Domestic Animal Welfare"},
-           {"Agriculture and Markets Law"},
-           None),
-    "gov": ("Elections & state government",
-            {"Election Law", "Elections", "Governmental Operations", "Investigations And Government Operations",
-             "Ethics And Internal Governance", "Procurement And Contracts"},
-            {"Election Law", "Public Officers Law", "Legislative Law", "State Finance Law"},
-            None),
-    "biz": ("Business & consumers",
-            {"Consumer Affairs And Protection", "Consumer Protection", "Banks", "Insurance", "Economic Development",
-             "Commerce, Economic Development And Small Business", "Small Business",
-             "Corporations, Authorities And Commissions", "Racing And Wagering", "Racing, Gaming And Wagering",
-             "Internet And Technology", "Science And Technology"},
-            {"General Business Law", "Insurance Law", "Banking Law", "Financial Services Law",
-             "Alcoholic Beverage Control Law", "Cannabis Law"},
-            None),
-    "const": ("Constitutional amendments", set(), {"Constitution, Concurrent Resolutions to Amend"}, None),
-}
-TOPIC_WORDS = {k: re.compile(v[3], re.I) for k, v in TOPICS.items() if v[3]}
-
-# Laws that touch county and municipal operations, for the "local government impact" filter.
-LOCAL_LAWS = TOPICS["local"][2] | {"Real Property Tax Law", "Real Property Taxation", "Social Services Law"}
-LOCAL_WORDS = re.compile(r"\b(count(y|ies)|municipal\w*|local governments?|unfunded mandate)\b", re.I)
-
-# Which counties a bill is only about, when it names specific places: a town, city, village, county,
-# district or New York City body. Bills worded to reach beyond those places count as statewide.
-COUNTIES = [c.replace("_", " ") for c in ("Albany Allegany Bronx Broome Cattaraugus Cayuga Chautauqua Chemung Chenango Clinton "
-            "Columbia Cortland Delaware Dutchess Erie Essex Franklin Fulton Genesee Greene Hamilton Herkimer Jefferson Kings "
-            "Lewis Livingston Madison Monroe Montgomery Nassau New_York Niagara Oneida Onondaga Ontario Orange Orleans Oswego "
-            "Otsego Putnam Queens Rensselaer Richmond Rockland St._Lawrence Saratoga Schenectady Schoharie Schuyler Seneca "
-            "Steuben Suffolk Sullivan Tioga Tompkins Ulster Warren Washington Wayne Westchester Wyoming Yates").split()]
-NYC = ["New York", "Kings", "Queens", "Bronx", "Richmond"]
-# Regions and bodies named without a town or county.
-REGIONS = {
-    "New York city": NYC, "New York City": NYC, "city of New York": NYC, "NYC": NYC, "N.Y. city": NYC, "population of one million or more": NYC,
-    "Brooklyn": ["Kings"], "Manhattan": ["New York"], "Harlem": ["New York"], "Staten Island": ["Richmond"],
-    "the Bronx": ["Bronx"], "Rockaway": ["Queens"], "Coney Island": ["Kings"], "NYCHA": NYC, "Port Authority": NYC,
-    "metropolitan transportation authority": NYC + ["Nassau", "Suffolk", "Westchester", "Putnam", "Dutchess", "Orange", "Rockland"],
-    "MTA": NYC + ["Nassau", "Suffolk", "Westchester", "Putnam", "Dutchess", "Orange", "Rockland"],
-    "Long Island Rail Road": ["Kings", "Queens", "Nassau", "Suffolk"], "Long Island Power Authority": ["Nassau", "Suffolk"],
-    "Long Island": ["Nassau", "Suffolk"], "Westchester": ["Westchester"],
-    "Adirondack": ["Clinton", "Essex", "Franklin", "Fulton", "Hamilton", "Herkimer", "Lewis", "Oneida", "St. Lawrence", "Saratoga", "Warren", "Washington"],
-    "Catskill": ["Delaware", "Greene", "Sullivan", "Ulster"],
-    "Hudson Valley": ["Columbia", "Dutchess", "Greene", "Orange", "Putnam", "Rockland", "Sullivan", "Ulster", "Westchester"],
-    "Mid-Hudson": ["Columbia", "Dutchess", "Greene", "Orange", "Putnam", "Sullivan", "Ulster"],
-    "Hudson River": ["Albany", "Columbia", "Dutchess", "Greene", "Orange", "Putnam", "Rensselaer", "Rockland", "Saratoga", "Ulster", "Warren", "Washington", "Westchester", "New York", "Bronx"],
-    "Lake George": ["Warren", "Washington", "Essex"], "Lake Champlain": ["Clinton", "Essex", "Washington"],
-    "Capital District": ["Albany", "Rensselaer", "Saratoga", "Schenectady"], "Capital Region": ["Albany", "Rensselaer", "Saratoga", "Schenectady"],
-    "Western New York": ["Allegany", "Cattaraugus", "Chautauqua", "Erie", "Genesee", "Niagara", "Orleans", "Wyoming"],
-    "North Country": ["Clinton", "Essex", "Franklin", "Hamilton", "Jefferson", "Lewis", "St. Lawrence"],
-    "Finger Lakes": ["Cayuga", "Livingston", "Monroe", "Ontario", "Schuyler", "Seneca", "Steuben", "Tompkins", "Wayne", "Yates"],
-    "Cayuga Lake": ["Cayuga", "Seneca", "Tompkins"],
-    "Southern Tier": ["Allegany", "Broome", "Cattaraugus", "Chautauqua", "Chemung", "Chenango", "Delaware", "Schuyler", "Steuben", "Tioga", "Tompkins"],
-    "Central New York": ["Cayuga", "Cortland", "Madison", "Onondaga", "Oswego", "Tompkins"],
-}
-# Cities named on their own. Names that are also common words or other things (Hudson, Rome, Geneva) are left out.
-CITY_NAMES = ["Buffalo", "Rochester", "Syracuse", "Yonkers", "Schenectady", "Binghamton", "Utica", "Niagara Falls", "Poughkeepsie",
-              "Newburgh", "New Rochelle", "Mount Vernon", "White Plains", "Long Beach", "Glen Cove", "Saratoga Springs", "Plattsburgh",
-              "Watertown", "Jamestown", "Elmira", "Kingston", "Lackawanna", "Lockport", "Olean", "Peekskill", "Glens Falls",
-              "Gloversville", "Cohoes", "Watervliet", "Ogdensburg", "Oneonta", "Hornell", "Corning", "Dunkirk", "Batavia",
-              "Canandaigua", "Port Jervis", "Salamanca", "North Tonawanda", "Ithaca", "Cortland", "Trumansburg", "Cayuga Heights"]
-PLACES_PATH = os.path.join(HERE, "data", "ny_places.json")
-DISTRICTS_PATH = os.path.join(HERE, "data", "district_counties.json")
-PLACE_COUNTIES = json.load(open(PLACES_PATH)) if os.path.exists(PLACES_PATH) else {}
-_NAME = r"(?:St\. )?[A-Z][A-Za-z'’.-]+(?:[ -](?:on[ -]the[ -])?[A-Z][A-Za-z'’.-]+)*"
-_CTY = "|".join(re.escape(c) for c in COUNTIES)
-_MUNI = re.compile(r"\b(?:[Cc]ity|[Tt]own|[Vv]illage|[Hh]amlet|[Bb]orough)s? of (?!New York State\b)(" + _NAME + ")")
-_COUNTY = re.compile(r"\b(" + _CTY + r")[ -][Cc]ount(?:y|ies)\b|\b[Cc]ount(?:y|ies) of (" + _CTY + r")\b")
-_ENTITY = re.compile(r"\b(" + _NAME + r") (?:[Vv]olunteer )?(?:[Ff]ire (?:[Dd]epartment|[Cc]ompany|[Dd]istrict)|[Aa]mbulance"
-                     r"|(?:[Pp]ublic |[Ff]ree )?[Ll]ibrary(?: [Dd]istrict)?|(?:[Cc]entral |[Uu]nion [Ff]ree |[Cc]ity )?[Ss]chool [Dd]istrict"
-                     r"|[Ww]ater [Dd]istrict|[Ss]ewer [Dd]istrict|[Hh]ousing [Aa]uthority|[Ii]ndustrial [Dd]evelopment [Aa]gency"
-                     r"|[Pp]arking [Aa]uthority|Cemetery|Hospital|Rescue Squad|Community College"
-                     r"|(?:(?:[Vv]olunteer|Exempt) )*(?:Fire(?:fighter|men)(?:'s|s'|’s|s)? )?Benevolent Association"
-                     r"|(?:First |United |Reformed |Evangelical |Lutheran |Baptist |Methodist |Presbyterian |Episcopal |Catholic )*Church)\b")
-_NAMED = re.compile(r"\b(" + "|".join(re.escape(k) for k in sorted(list(REGIONS) + CITY_NAMES, key=len, reverse=True)) + r")\b")
-# Wording that makes a bill reach beyond the places it names, e.g. "counties outside the city of New York".
-REACHES_BEYOND = re.compile(r"\b(statewide|each county|every county|all counties|any county|state of New York|outside|except|"
-                            r"other than|excluding|limits the application|the counties and|counties and the city)\b", re.I)
-
-
-# Bills for one named person or organization, and namings of roads and bridges: stock formats such as
-# "Grants retroactive tier IV membership ... to Katie Adamek", "Authorizes the Congregation Atzei Chaim to
-# receive retroactive real property tax exempt status", "Dedicates a portion of the state highway system to ...".
-_NOT_NAME = set("""New York State County City Town Village Police Department Fire Retirement System Tier Local Employees Authority
-Sheriff Correction Correctional Office Commissioner University College Court Supreme Family Civil Service Teachers Transit Metropolitan
-Island Long Nassau Suffolk Westchester Erie Monroe Department's Board District School Union Free Central Volunteer Benevolent
-Association Inc Corporation Church Congregation Temple Foundation Society Hospital Center Highway Bridge Memorial Route Parkway
-Expressway Thruway Lake River Park Medicaid SUNY CUNY MTA Act Law Program Fund Trust Agency Development Housing Water Sewer Library
-Cemetery Lodge Post Club Academy Museum Health Council Senate Assembly Governor Comptroller Attorney General Division Bureau Unit
-Office's Troopers Trooper Parks Disease Syndrome Cancer Nation Indian Brook Creek United States America World Trade War Veterans
-Native American NY NYS Status""".split())
-_PERSON = re.compile(r"\b((?:[A-Z][a-z'’]+|[A-Z]\.)(?: (?:[A-Z]\.|[A-Z][a-z'’-]+|Mc[A-Z][a-z]+|O'[A-Z][a-z]+)){1,3})")
-_BENEFIT = re.compile(r"service credit|retirement|disability|death benefit|\btier\b|pension|civil service (?:examination|exam|list)|eligib|"
-                      r"sick leave|reinstat|deemed|appointed|accidental|vested|membership|annuity|survivor|widow|spouse|wife of|husband of|"
-                      r"salary|back pay|seniority|probationary|age requirement|maximum age|competitive", re.I)
-_ORG_TAX = re.compile(r"real property tax(?:es)? exempt|exempt(?:ion)? from (?:real property|school) tax|tax exempt status|"
-                      r"application for (?:an )?exemption|retroactive real property tax|from real property taxation", re.I)
-_NAMING = re.compile(r"^(?:Dedicates|Designates|Names|Renames|Redesignates)\b.*\b(?:portion|bridge|segment|section|route|interchange|"
-                     r"highway|overpass|memorial|building|facility|courthouse|post office|park|trail|exit)\b|\bMemorial (?:Highway|Bridge|Way|Parkway)\b", re.I)
-NARROW_KINDS = ["", "person", "org", "naming"]
-# When the current governor took office. Patterns in how bills are requested start here; change it
-# if a new governor takes office.
-GOV_SINCE = "2021-08-24"
 # Scheduled last day of each year's session (calendar year -> date), entered each January.
 SESSION_END = json.load(open(os.path.join(HERE, "data", "session_calendar.json")))["end"]
-
-
-def narrow_kind(title):
-    """"person", "org" or "naming" for the stock narrow formats; "" otherwise."""
-    if _NAMING.search(title):
-        return "naming"
-    t = title[:1].lower() + title[1:]
-    if _ORG_TAX.search(title) and any(w not in ("New", "York", "State", "NY", "NYS") for w in re.findall(r"\b[A-Z][A-Za-z'’.-]+", t)):
-        return "org"
-    if _BENEFIT.search(title):
-        for m in _PERSON.finditer(t):
-            if not any(w in _NOT_NAME for w in m.group(1).replace(".", "").split()):
-                return "person"
-    return ""
 
 
 def committee_fate(live):
@@ -273,7 +79,7 @@ def main_topic(live, topics):
     topics come from the laws it amends and can be incidental. Falls back to its first topic."""
     for _h, name, _left in first_committees(live):
         for t in topics:
-            if name in TOPICS[t][1]:
+            if name in P.TOPICS[t][1]:
                 return t
     return topics[0] if topics else ""
 
@@ -287,14 +93,14 @@ def counties_of_name(name):
     """Counties for a place name, trying shorter versions ("Johnson City Central" -> "Johnson City")."""
     name = re.sub(r"'s$", "", name.replace("’", "'").rstrip(".,")).replace("Mt. ", "Mount ")
     if name in ("New York", "NY", "N.Y."):
-        return NYC
+        return P.NYC
     words = name.split()
     # Longest leading run first ("Johnson City Central" -> "Johnson City"), then without a leading
     # direction ("East Ramapo" -> "Ramapo").
     for cand in [words[:k] for k in range(len(words), 0, -1)] + [words[1:]] * (len(words) > 1):
-        if " ".join(cand) in COUNTIES and " ".join(cand) != "New York":
+        if " ".join(cand) in P.COUNTIES and " ".join(cand) != "New York":
             return [" ".join(cand)]
-        hit = PLACE_COUNTIES.get(" ".join(cand).lower())
+        hit = P.PLACE_COUNTIES.get(" ".join(cand).lower())
         if hit:
             return hit
     return []
@@ -303,43 +109,43 @@ def counties_of_name(name):
 def place_counties(title, summary, law_code):
     """The counties a bill is only about, or [] if it isn't about specific places. "?" marks a named place
     whose county isn't known."""
-    if REACHES_BEYOND.search(title):
+    if P.REACHES_BEYOND.search(title):
         return []
     t = title[:1].lower() + title[1:]  # the opening verb isn't a place name
     found, unknown = set(), False
-    for m in _MUNI.finditer(t):
+    for m in P._MUNI.finditer(t):
         hit = counties_of_name(m.group(1))
         found.update(hit); unknown |= not hit
-    for m in _ENTITY.finditer(t):
+    for m in P._ENTITY.finditer(t):
         hit = counties_of_name(m.group(1))
         found.update(hit); unknown |= not hit
-    for m in _COUNTY.finditer(t):
+    for m in P._COUNTY.finditer(t):
         found.add(m.group(1) or m.group(2))
     if re.search(r"\bcounties\b", t):  # "the counties of Dutchess, Orange and Putnam"
-        found.update(c for c in COUNTIES if c != "New York" and re.search(r"\b" + re.escape(c) + r"\b", t))
-    for m in _NAMED.finditer(t):
-        found.update(REGIONS.get(m.group(1)) or PLACE_COUNTIES.get(m.group(1).lower(), []))
+        found.update(c for c in P.COUNTIES if c != "New York" and re.search(r"\b" + re.escape(c) + r"\b", t))
+    for m in P._NAMED.finditer(t):
+        found.update(P.REGIONS.get(m.group(1)) or P.PLACE_COUNTIES.get(m.group(1).lower(), []))
     if found:
         # The summary often names the county ("town of Brookhaven, county of Suffolk").
-        for m in _COUNTY.finditer(summary):
+        for m in P._COUNTY.finditer(summary):
             found.add(m.group(1) or m.group(2))
     elif unknown:
         # A place the list doesn't have; the summary may say where it is.
-        for m in _MUNI.finditer(summary):
+        for m in P._MUNI.finditer(summary):
             found.update(counties_of_name(m.group(1)))
-        for m in _COUNTY.finditer(summary):
+        for m in P._COUNTY.finditer(summary):
             found.add(m.group(1) or m.group(2))
     else:
         # Summaries mention New York City in passing, so only named towns and counties count there.
-        for m in _MUNI.finditer(summary):
+        for m in P._MUNI.finditer(summary):
             if not m.group(1).rstrip(".").endswith(("New York", "NY")):
                 hit = counties_of_name(m.group(1))
                 found.update(hit); unknown |= not hit
-        for m in _COUNTY.finditer(summary):
+        for m in P._COUNTY.finditer(summary):
             found.add(m.group(1) or m.group(2))
         if not (found or unknown) and law_code and all("NYC" in p for p in law_code.split(";") if p.strip()):
-            found.update(NYC)
-    out = sorted(c for c in found if c in COUNTIES)
+            found.update(P.NYC)
+    out = sorted(c for c in found if c in P.COUNTIES)
     return out or (["?"] if unknown else [])
 
 
@@ -460,7 +266,7 @@ def load_session(session):
     """Read one session's bills and return (records, printNo -> record index, fetched time)."""
     raw = read_session(session)
     bills = {b["printNo"]: b for b in raw["bills"] if not b["resolution"]}
-    deleg = delegation(session)
+    deleg = P.delegation(session)
 
     # The API names some laws two ways ("Cannabis" and "Cannabis Law"); use the full name.
     law_names = {b["lawSection"] for b in bills.values() if b["lawSection"]}
@@ -534,8 +340,8 @@ def load_session(session):
         text = " ".join(filter(None, [lead["title"], lead["summary"]]))
 
         topics = []
-        for k, (label, cset, lset, _) in TOPICS.items():
-            if comm_names & cset or set(laws) & lset or (k in TOPIC_WORDS and TOPIC_WORDS[k].search(lead["title"] or "")):
+        for k, (label, cset, lset, _) in P.TOPICS.items():
+            if comm_names & cset or set(laws) & lset or (k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(lead["title"] or "")):
                 topics.append(k)
         if any((b["programInfo"] or {}).get("name") in ("Department of Environmental Conservation",
                                                        "Environmental Facilities Corporation") for b in live):
@@ -578,10 +384,10 @@ def load_session(session):
             "comms": comms,
             "topics": topics,
             "places": place_counties(lead["title"] or "", lead["summary"] or "", lead["lawCode"] or ""),
-            "narrow": narrow_kind(lead["title"] or ""),
+            "narrow": P.narrow_kind(lead["title"] or ""),
             "commFate": committee_fate(live),
             "mainTopic": main_topic(live, topics),
-            "local": "local" in topics or bool(set(laws) & LOCAL_LAWS) or bool(LOCAL_WORDS.search(text)),
+            "local": "local" in topics or bool(set(laws) & P.LOCAL_LAWS) or bool(P.LOCAL_WORDS.search(text)),
             "senDeleg": any(b["chamber"] == "SENATE" and b["district"] in deleg.get("SENATE", ()) for b in live),
             "asmDeleg": any(b["chamber"] == "ASSEMBLY" and b["district"] in deleg.get("ASSEMBLY", ()) for b in live),
             "budget": any(b["budget"] for b in live),
@@ -622,7 +428,7 @@ def load_session(session):
         if b["district"] in deleg.get(b["chamber"], ()) and b["sponsorShort"]:
             names[b["chamber"]].add(b["sponsor"].split()[-1] if not b["sponsor"].split()[-1].rstrip(".").isupper()
                                     else b["sponsor"].split()[-2])
-    names = {k: sorted(v & DELEGATION_NAMES) for k, v in names.items()}
+    names = {k: sorted(v & P.DELEGATION_NAMES) for k, v in names.items()}
     # If someone else holds the seat, drop that checkbox's matches as well.
     for r in recs:
         if not names["SENATE"]:
@@ -634,14 +440,14 @@ def load_session(session):
 
 def analytics_tags():
     """Visit counters for the public site; none for local test builds."""
-    if not SITE_URL.startswith("https://albanybilltracker.org"):
+    if not P.SITE_URL.startswith(P.PUBLIC_URL.rstrip("/")):
         return ""
     tags = ""
-    if CF_ANALYTICS_TOKEN:
+    if P.CF_ANALYTICS_TOKEN:
         tags += ('<script defer src="https://static.cloudflareinsights.com/beacon.min.js" '
-                 f'data-cf-beacon=\'{{"token": "{CF_ANALYTICS_TOKEN}"}}\'></script>\n')
-    if GOATCOUNTER_CODE:
-        tags += (f'<script data-goatcounter="https://{GOATCOUNTER_CODE}.goatcounter.com/count" '
+                 f'data-cf-beacon=\'{{"token": "{P.CF_ANALYTICS_TOKEN}"}}\'></script>\n')
+    if P.GOATCOUNTER_CODE:
+        tags += (f'<script data-goatcounter="https://{P.GOATCOUNTER_CODE}.goatcounter.com/count" '
                  'async src="https://gc.zgo.at/count.js"></script>\n')
     return tags
 
@@ -682,8 +488,8 @@ def assembly_resolver(session):
             cands = [c for last, cs in by_last.items() if len(stem) >= 5 and last.startswith(stem) for c in cs]
         if len(cands) > 1 and initials:
             cands = [c for c in cands if c[0][0].upper() in initials] or cands
-        if short.strip().lower() in ("mr. speaker", "mr speaker", "madam speaker") and "A" in LEADERS:
-            speaker = name_key(LEADERS["A"][0]).split()
+        if short.strip().lower() in ("mr. speaker", "mr speaker", "madam speaker") and "A" in P.LEADERS:
+            speaker = name_key(P.LEADERS["A"][0]).split()
             cands = [c for c in by_last.get(speaker[-1], []) if c[0] == speaker[0]]
         cache[short] = cands[0][1] if len(cands) == 1 else None
         return cache[short]
@@ -833,14 +639,14 @@ def contacts_for(session, recs, delegation_names):
             person(v["sponsor"], v["p"][0], v.get("district"))
     reps = []
     for house, title in (("S", "Sen."), ("A", "Asm.")):
-        for district in sorted(delegation(session).get("SENATE" if house == "S" else "ASSEMBLY", ())):
+        for district in sorted(P.delegation(session).get("SENATE" if house == "S" else "ASSEMBLY", ())):
             seat = seats.get(f"{house}:{district}")
             if seat and seat["key"].split()[-1] in {n.lower() for n in ours[house]}:
                 name = next((n for n in people if name_key(n) == seat["key"]), seat["name"])
                 people.setdefault(name, lookup(name, house, district))
                 reps.append({"title": title, "name": name, "house": house, "last": seat["key"].split()[-1]})
     leaders = {}
-    for house, (name, role) in LEADERS.items():
+    for house, (name, role) in P.LEADERS.items():
         if any(k[0] == house and v["key"] == name_key(name) for k, v in seats.items()):
             person(name, house)
             leaders[house] = {"name": name, "role": role}
@@ -855,7 +661,7 @@ def choose_page(legs):
         f'<span>{"Senate" if l["house"] == "S" else "Assembly"} District {l["district"]}</span></li>' for l in legs)
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231d3b78'/><path d='M32 10 52 23H12z' fill='%23fff'/><rect x='14' y='25' width='36' height='4' fill='%23fff'/><rect x='17' y='31' width='6' height='16' fill='%23fff'/><rect x='29' y='31' width='6' height='16' fill='%23fff'/><rect x='41' y='31' width='6' height='16' fill='%23fff'/><rect x='11' y='49' width='42' height='5' fill='%23e3b04b'/></svg>"><title>Which {html_escape(last)}? · Albany Bill Tracker</title>
+<meta name="robots" content="noindex, nofollow"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231d3b78'/><path d='M32 10 52 23H12z' fill='%23fff'/><rect x='14' y='25' width='36' height='4' fill='%23fff'/><rect x='17' y='31' width='6' height='16' fill='%23fff'/><rect x='29' y='31' width='6' height='16' fill='%23fff'/><rect x='41' y='31' width='6' height='16' fill='%23fff'/><rect x='11' y='49' width='42' height='5' fill='%23e3b04b'/></svg>"><title>Which {html_escape(last)}? · {P.SITE_NAME}</title>
 <style>
 :root {{ --bg: #f6f8fb; --fg: #14213d; --muted: #4a5878; --link: #1d3b78; color-scheme: light; }}
 @media (prefers-color-scheme: dark) {{ :root {{ --bg: #0f1626; --fg: #e6ebf5; --muted: #a3b0c9; --link: #8fb0f0; color-scheme: dark; }} }}
@@ -904,7 +710,7 @@ def insights(loaded, hist, current):
     past = [s for s in sorted(loaded) if s != current]
     # Each topic also comes as "t|g" (general bills only: not about one place, person or group, nor a
     # naming), and "all|n" covers the narrow ones, for the Statistics switch and each bill's odds line.
-    base = ["all"] + list(TOPICS)
+    base = ["all"] + list(P.TOPICS)
     topics = base + [t + "|g" for t in base] + ["all|n"]
 
     def has(r, t):
@@ -976,7 +782,7 @@ def insights(loaded, hist, current):
                 d = r["keyDates"][i]
                 if not d:
                     continue
-                who = "Cuomo" if d < "2021-08-24" else "Hochul"
+                who = P.governor_on(d)
                 if s != current:
                     gov_months[f"{who}|{d[5:7]}"][kind] += 1
                 gov_years[f"{d[:4]}|{who}"][kind] += 1
@@ -1123,7 +929,7 @@ def insights(loaded, hist, current):
     # late in the year are more often vetoed than bills overall.
     from datetime import date, datetime
     from zoneinfo import ZoneInfo
-    today = datetime.now(ZoneInfo("America/New_York")).date()
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).date()
     year = today.year - current
     waiting = None
     if year in (0, 1):
@@ -1159,7 +965,7 @@ def insights(loaded, hist, current):
         for r in loaded[s][0]:
             k = r["keyDates"]
             d = k[4].split(";")[-1]
-            if not d or d < GOV_SINCE:
+            if not d or d < P.GOV_SINCE:
                 continue
             decided = min(filter(None, [k[5], k[6]]), default="")
             # Earlier requests this year count toward the time to a decision; the rest uses whole years.
@@ -1171,8 +977,8 @@ def insights(loaded, hist, current):
             ps, pa = k[1].split(";")[0], k[2].split(";")[0]
             if ps and pa and max(ps, pa) <= f"{d[:4]}-{today:%m-%d}" < d:
                 later[d[5:7]] += 1
-    years = sorted({d[:4] for d in asked if d[:7] >= GOV_SINCE[:7] and d[5:7] == mm} |
-                   {str(y) for y in range(int(GOV_SINCE[:4]) + (GOV_SINCE[5:7] > mm), today.year)})
+    years = sorted({d[:4] for d in asked if d[:7] >= P.GOV_SINCE[:7] and d[5:7] == mm} |
+                   {str(y) for y in range(int(P.GOV_SINCE[:4]) + (P.GOV_SINCE[5:7] > mm), today.year)})
     if len(years) >= 3 and len(lags) >= 30:
         batches = sorted(sum(1 for d, n in asked.items() if d[:7] == f"{y}-{mm}" and n >= 10) for y in years)
         total = sum(later.values())
@@ -1523,36 +1329,11 @@ def similar_bills(recs, k=8, floor=0.35):
     return out
 
 
-# ---- What's changing: subjects that rose (or spiked) across sessions, and wording that changed.
-# Hand-picked from an automatic scan for phrases whose share of bills changed most, then checked,
-# since the raw scan mixes real subjects with drafting habits. Matched on title and summary.
-TRENDS = [
-    ("rise", "Artificial intelligence", r"artificial intelligence|\bAI\b|automated (?:employment )?decision|algorithmic", False),
-    ("rise", "Sports betting", r"sports wagering|mobile sports|sports betting", True),
-    ("rise", "E-bikes and scooters", r"electric assist|bicycles? with electric|e-bikes?\b|electric scooter", True),
-    ("rise", "Climate", r"climate|greenhouse gas|zero-emission", True),
-    ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen", True),
-    ("rise", "Batteries and energy storage", r"batter(?:y|ies)|energy storage", True),
-    ("rise", "Social media", r"social media|online platform|digital platform", True),
-    ("rise", "Cannabis", r"cannabis|marihuana|marijuana", True),
-    ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
-]
-# Old wording -> new wording, for the same thing.
-WORDING = [
-    (("“inmates”", r"\binmates?\b"), ("“incarcerated individuals”", r"incarcerated (?:individual|person|people)")),
-    (("“marihuana”", r"marihuana"), ("“cannabis”", r"cannabis"),
-     "“Marihuana,” with an h, is the spelling New York law used until the 2021 law legalizing adult use switched to “cannabis.”"),
-    (("“alcoholism” and “drug abuse”", r"alcoholism|drug abuse"), ("“substance use”", r"substance use")),
-    (("“his or her”, “he or she”", r"\bhis or her\b|\bhe or she\b"), ("“their”, “they”", r"\btheir\b|\bthey\b"),
-     "In 2025–26 bill summaries switched to gender-neutral wording: “his or her” almost vanished as “their” and “they” rose."),
-]
-
-
 def topic_ring(loaded):
     """The order of topics around the "Who works on what" ring: the arrangement where neighbors most often
     share bills, all the way around (exact, by dynamic programming; 13 topics is small). Fixed across
     sessions so the picture doesn't shift from day to day."""
-    topics = [t for t in TOPICS if t != "const"]
+    topics = [t for t in P.TOPICS if t != "const"]
     n, co = Counter(), Counter()
     for sn in loaded:
         for r in loaded[sn][0]:
@@ -1610,9 +1391,9 @@ def trends(loaded):
         return {"per": per, "bills": total, "laws": laws, "lead": lead,
                 "first": [first[1], first[2], first[0][0], first[0][2]] if first else None}
     out = {"sessions": sessions, "subjects": [], "wording": []}
-    for kind, label, pattern, nocase in TRENDS:
+    for kind, label, pattern, nocase in P.TRENDS:
         out["subjects"].append({"kind": kind, "label": label, **scan(pattern, nocase)})
-    for old, new, *note in WORDING:
+    for old, new, *note in P.WORDING:
         out["wording"].append({"old": [old[0], scan(old[1], True)["per"]], "new": [new[0], scan(new[1], True)["per"]] if new else None,
                                "note": note[0] if note else ""})
     return out
@@ -1736,7 +1517,7 @@ def main():
         rows = []
         sims = similar_bills(recs)
         for i, r in enumerate(recs):
-            flags = (r["local"] and 1) | (r["senDeleg"] and 2) | (r["budget"] and 4) | (r["asmDeleg"] and 8) | (r["passedS"] and 16) | (r["passedA"] and 32) | (NARROW_KINDS.index(r["narrow"]) << 6)
+            flags = (r["local"] and 1) | (r["senDeleg"] and 2) | (r["budget"] and 4) | (r["asmDeleg"] and 8) | (r["passedS"] and 16) | (r["passedA"] and 32) | (P.NARROW_KINDS.index(r["narrow"]) << 6)
             vers = [[v["p"], S(v["sponsor"]), v["cosp"], S(v["statusDesc"]), S(v["committee"]),
                      [[a[0].replace("-", ""), S(a[1])] for a in v["actions"]],
                      [S(n) for n in v["cosponsors"]] if session >= current else [], v.get("district") or 0] for v in r["vers"]]
@@ -1752,7 +1533,7 @@ def main():
                          [d.replace("-", "") for d in [r["first"] or ""] + r["keyDates"]],
                          bill_parties(r, party_of), enc_votes(r["votes"]),
                          [[S(c), w] for c, w in agenda_of(r)],
-                         [(COUNTIES + ["?"]).index(c) for c in r["places"]], r["mainTopic"], sims[i], r["memo"]])
+                         [(P.COUNTIES + ["?"]).index(c) for c in r["places"]], r["mainTopic"], sims[i], r["memo"]])
 
         data = {
             "session": session,
@@ -1760,7 +1541,7 @@ def main():
             "current": session >= current,
             "upcoming": session > current,
             "fetched": fetched,
-            "topics": {k: v[0] for k, v in TOPICS.items()},
+            "topics": {k: v[0] for k, v in P.TOPICS.items()},
             "lawList": sorted(law_count.items()),
             "commList": sorted(comm_count.items()),
             "delegation": names,
@@ -1776,9 +1557,9 @@ def main():
             # Stored column by column (all titles, then all summaries, ...), which compresses
             # about a fifth smaller than bill by bill; the page turns it back into rows.
             "cols": [list(c) for c in zip(*rows)] if rows else [],
-            "counties": COUNTIES,
+            "counties": P.COUNTIES,
             # Current Senate and Assembly districts in each county, for "Where you live".
-            "districtCounties": json.load(open(DISTRICTS_PATH)) if session == current and os.path.exists(DISTRICTS_PATH) else {},
+            "districtCounties": json.load(open(P.DISTRICTS_PATH)) if session == current and os.path.exists(P.DISTRICTS_PATH) else {},
         }
         if session < current:
             # Current legislators, so a past session opened for one of them can show their profile card.
@@ -1808,13 +1589,13 @@ def main():
                 f.write(payload)
         template = open(TEMPLATE).read()
         if session != current:
-            template = template.replace("<title>Albany Bill Tracker</title>",
-                                        f"<title>Albany Bill Tracker {session}–{str(session + 1)[2:]}</title>", 1)
+            template = template.replace(f"<title>{P.SITE_NAME}</title>",
+                                        f"<title>{P.SITE_NAME} {P.session_label(session)}</title>", 1)
         # The header line is written in now, matching what the page sets, so it doesn't change length
         # (and push the title down) when the data arrives.
-        label = f"New York State Legislature · {session}–{str(session + 1)[2:]} session" + (
+        label = f"{P.LEGISLATURE} · {P.session_label(session)} session" + (
             f" · updated {fetched}" if session == current else f" · prefiled bills · updated {fetched}" if session > current else " (final)")
-        template = template.replace('id="sessionLabel">New York State Legislature<', f'id="sessionLabel">{html_escape(label)}<', 1)
+        template = template.replace(f'id="sessionLabel">{P.LEGISLATURE}<', f'id="sessionLabel">{html_escape(label)}<', 1)
         marker = '<script type="application/json" id="bill-data"></script>'
         assert marker in template, "template is missing the data marker"
         # The Claude copies carry the data gzipped and base64-encoded (about a third the size), unpacked in the
@@ -1823,20 +1604,20 @@ def main():
         html = template.replace(marker, f'<script type="application/octet-stream" id="bill-data" data-enc="gzip64">{packed}</script>')
         if GITHUB:
             out = os.path.join(GITHUB, "index.html" if session == current else f"{session}.html")
-            html = github_page(template.replace(marker, f'<script type="application/json" id="bill-data" data-src="data/{session}.json" data-root="{SITE_URL}"></script>'))
+            html = github_page(template.replace(marker, f'<script type="application/json" id="bill-data" data-src="data/{session}.json" data-root="{P.SITE_URL}"></script>'))
             if session == current:
                 for leg in data.get("legislators", []):
-                    page = template.replace(marker, f'<script type="application/json" id="bill-data" data-src="../data/{session}.json" data-base="../" data-root="{SITE_URL}"></script>')
+                    page = template.replace(marker, f'<script type="application/json" id="bill-data" data-src="../data/{session}.json" data-base="../" data-root="{P.SITE_URL}"></script>')
                     preset = json.dumps({"who": leg["id"]}).replace('"', "&quot;")
-                    page = page.replace("<title>Albany Bill Tracker</title>",
-                                        f'<title>{leg["title"]} {leg["name"]} · Albany Bill Tracker</title>\n<meta name="abt-preset" content="{preset}">', 1)
+                    page = page.replace(f"<title>{P.SITE_NAME}</title>",
+                                        f'<title>{leg["title"]} {leg["name"]} · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{preset}">', 1)
                     os.makedirs(os.path.join(GITHUB, leg["slug"]), exist_ok=True)
                     with open(os.path.join(GITHUB, leg["slug"], "index.html"), "w") as f:
                         f.write(github_page(page))
                 # /watchlist/: the same page, opened to the visitor's own watchlist.
-                page = template.replace(marker, f'<script type="application/json" id="bill-data" data-src="../data/{session}.json" data-base="../" data-root="{SITE_URL}"></script>')
-                page = page.replace("<title>Albany Bill Tracker</title>",
-                                    '<title>Watchlist · Albany Bill Tracker</title>\n<meta name="abt-preset" content="{&quot;watch&quot;: true}">', 1)
+                page = template.replace(marker, f'<script type="application/json" id="bill-data" data-src="../data/{session}.json" data-base="../" data-root="{P.SITE_URL}"></script>')
+                page = page.replace(f"<title>{P.SITE_NAME}</title>",
+                                    f'<title>Watchlist · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{{&quot;watch&quot;: true}}">', 1)
                 os.makedirs(os.path.join(GITHUB, "watchlist"), exist_ok=True)
                 with open(os.path.join(GITHUB, "watchlist", "index.html"), "w") as f:
                     f.write(github_page(page))

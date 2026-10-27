@@ -13,12 +13,18 @@ from that repo. **Nothing here may change it.**
 - Order:
   1. Move New York's rules out of the code into an NY profile, with NY's pages unchanged. `test/check.sh`
      guards this.
-  2. Build one pilot: federal (/us/, from the Congress.gov API) or a state with good Open States data.
+  2. Build one pilot: New Jersey (/nj/), chosen 2026-10-27. Its Legislature publishes bulk files with
+     everything the site needs (see the nj-data-sources memory). Federal (/us/) comes after.
   3. Move New York here last. albanybilltracker.org must keep serving small pages that read each
      visitor's saved watchlist and pass it along while redirecting (a plain Porkbun forward would lose
      them). Map /kelles/ to /ny/kelles/, and so on. Interim forwards must be 302, never 301.
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
+- **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
+  governors, delegation, leaders, topics, places, trends) are in `states/ny/profile.py`, which
+  build_data.py reads as `P.<name>`. Still NY-only in build_data.py: the code that reads NY's own data
+  (Senate API milestones and action wording, Assembly vote codes, `memo_text()`), to be split out
+  as "the NY converter" when NJ gets one. Next: the page's settings (tracker.html).
 - While this is being built, the NY site keeps getting improvements in ny-bill-tracker. Carry them
   over here by hand (compare against `git log` there since b312227).
 
@@ -118,8 +124,8 @@ Read README.md for what each script downloads. This file covers how to change th
   likely to move: matching bills in both houses first, then the one that got further, then the
   sponsor's newer version.
 - **What's changing:** `renderTrends()` draws `DATA.insights.trends`, from `trends()` in build_data.py.
-  Its subjects (`TRENDS`) and wording pairs (`WORDING`) were picked by hand from an automatic phrase
-  scan; check new ones before adding.
+  Its subjects (`TRENDS`) and wording pairs (`WORDING`, both in states/ny/profile.py) were picked by
+  hand from an automatic phrase scan; check new ones before adding.
 - **Watchlist:**
   - Storage and actions: `WATCH` (localStorage), `ORDER` (drag order), `watchItems()` (splits bills
     into "Needs action" and "Can't move right now", then sorts them), `keyAction()` (the one ask on
@@ -195,7 +201,7 @@ Read README.md for what each script downloads. This file covers how to change th
   mode.
 - **Never print or commit secrets.** The NY Senate API key is in `~/.nysenate_api_key` and the GitHub
   secret `NYSENATE_API_KEY`. The lists admin token is in `~/.albany_lists_admin`, also the Worker
-  secret `ADMIN_TOKEN`. The analytics tokens in build_data.py are public by design.
+  secret `ADMIN_TOKEN`. The analytics tokens in states/ny/profile.py are public by design.
 - **Don't bulk-download from nyassembly.gov on the owner's computer.** That means
   `fetch_assembly_votes.py` and `fetch_agendas.py`. Let GitHub Actions do it, and pull its commits.
 - **Commits:**
@@ -227,13 +233,14 @@ Read README.md for what each script downloads. This file covers how to change th
 ## Each January of an odd year (new session)
 
 - The workflow switches sessions on its own (see README). Check `LEADERS` and `DELEGATION` in
-  build_data.py.
+  states/ny/profile.py.
 - Check that the Assembly agenda parser in `fetch_agendas.py` matches the real pages. It was
   written between sessions, without live agendas to test against. The freshness check now warns
   when it reads no bills.
 - Check `DELEGATION_NAMES` (Webb, Kelles) against the November election.
 - Add the year's scheduled last session day to `data/session_calendar.json` (from the Legislature's
   session calendar), each January, not just in odd years. `check_fresh.py` warns from February if it's missing.
-- If a new governor takes office, set `GOV_SINCE` in build_data.py (the "In past Octobers, the governor
-  usually asked for bills…" line on waiting bills uses only the current governor's record).
+- If a new governor takes office, add them to `GOVERNORS` in states/ny/profile.py (the "In past
+  Octobers, the governor usually asked for bills…" line on waiting bills uses only the current
+  governor's record).
 - Publish the new session's Claude copy (a new artifact) and add its URL to `artifact_urls.json`.

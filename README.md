@@ -35,7 +35,7 @@ Data: New York State Senate [Open Legislation API](https://legislation.nysenate.
   Oppose, with a "What to do" list grouped by person and email drafts. Watchlists are kept in each
   browser (localStorage); the share link (`/watchlist/#w=2025.S1234.-A5678`, "-" = oppose) carries a copy.
 - Floor leaders (Senate Majority Leader, Assembly Speaker) are set in `LEADERS` in
-  `build_data.py`; check them after leadership votes each January of odd years.
+  `states/ny/profile.py`; check them after leadership votes each January of odd years.
 - Votes: Senate floor and committee votes come from the API; Assembly floor votes from
   nyassembly.gov via `fetch_assembly_votes.py`, cached in `data/assembly_votes_SESSION.json`.
 - A bill's own link is the page address plus `#S1234` (or `#A1234`).
@@ -54,7 +54,7 @@ time it runs in a new session, it downloads the session that just ended one last
 commits it as `data/bills_YEAR.json.gz`. Until the new session has bills, the old one stays
 the current page. The Webb and Kelles checkboxes carry forward for Senate District 52 and
 Assembly District 125, and drop out on their own if someone else holds either seat
-(`DELEGATION` in `build_data.py`).
+(`DELEGATION` in `states/ny/profile.py`).
 
 ## Published watchlists
 
