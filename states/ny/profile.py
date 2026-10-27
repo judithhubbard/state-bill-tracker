@@ -5,7 +5,10 @@ the same names.
 """
 import json, os, re
 
-DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data")
+# Where this state's data files are, and the folder for its pages under site/ ("" for New York,
+# whose pages stay at site/<session>.html until it moves to the multi-state site).
+DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data"))
+SITE_DIR = ""
 
 # Names in page titles and the header line.
 SITE_NAME = "Albany Bill Tracker"

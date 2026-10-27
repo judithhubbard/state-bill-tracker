@@ -22,9 +22,11 @@ from that repo. **Nothing here may change it.**
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
   governors, delegation, leaders, topics, places, trends) are in `states/ny/profile.py`, which
-  build_data.py reads as `P.<name>`. Still NY-only in build_data.py: the code that reads NY's own data
-  (Senate API milestones and action wording, Assembly vote codes, `memo_text()`), to be split out
-  as "the NY converter" when NJ gets one. The page's NY settings and rules are in
+  build_data.py reads as `P.<name>`. The code that reads NY's own data (Senate API milestones and
+  action wording, Assembly vote codes, `memo_text()`) is in `states/ny/convert.py`, which build_data.py
+  calls as `C.sessions()` and `C.load_session()`; the shared stage numbers are in `stages.py`.
+  `--state nj` picks another state's folder. Still NY-shaped in build_data.py: contacts, legislators,
+  parties and the Assembly vote-name resolver, which read NY's contacts file. The page's NY settings and rules are in
   `states/ny/profile.js` (the `STATE` object; see the map below). Still NY-only in tracker.html: its
   explanations (How a bill becomes law, chapter amendments, "held for consideration"), `PLAIN` and
   the NY action wording, which move when NJ needs its own.
