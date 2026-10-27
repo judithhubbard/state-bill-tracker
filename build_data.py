@@ -1588,6 +1588,9 @@ def main():
             with open(os.path.join(GITHUB, "data", f"{session}.json"), "w", encoding="utf-8") as f:
                 f.write(payload)
         template = open(TEMPLATE).read()
+        # The state's page settings and rules, read by the main script as STATE.
+        state_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
+        template = template.replace('<script id="state-profile"></script>', f'<script id="state-profile">\n{state_js}</script>', 1)
         if session != current:
             template = template.replace(f"<title>{P.SITE_NAME}</title>",
                                         f"<title>{P.SITE_NAME} {P.session_label(session)}</title>", 1)

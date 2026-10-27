@@ -24,7 +24,10 @@ from that repo. **Nothing here may change it.**
   governors, delegation, leaders, topics, places, trends) are in `states/ny/profile.py`, which
   build_data.py reads as `P.<name>`. Still NY-only in build_data.py: the code that reads NY's own data
   (Senate API milestones and action wording, Assembly vote codes, `memo_text()`), to be split out
-  as "the NY converter" when NJ gets one. Next: the page's settings (tracker.html).
+  as "the NY converter" when NJ gets one. The page's NY settings and rules are in
+  `states/ny/profile.js` (the `STATE` object; see the map below). Still NY-only in tracker.html: its
+  explanations (How a bill becomes law, chapter amendments, "held for consideration"), `PLAIN` and
+  the NY action wording, which move when NJ needs its own.
 - While this is being built, the NY site keeps getting improvements in ny-bill-tracker. Carry them
   over here by hand (compare against `git log` there since b312227).
 
@@ -97,6 +100,12 @@ Read README.md for what each script downloads. This file covers how to change th
     `@media (prefers-color-scheme: dark)` and under `:root[data-theme="dark"]`. Change both.
   - The page markup: the header, `#notice`, the tabs, `#view-bills`, `#view-watch` (`#wl`,
     `#wlActions`, `#wlList`), `#view-act`, `#view-stats` and `#view-how`.
+- **The state's profile:** `states/ny/profile.js` defines `STATE`: the public site and lists
+  addresses, house names, the session label, the governor's contact links, links to bill text, the
+  governor's deadline (`govDeadline()`), the deadline for bills that passed both houses
+  (`passedBothBy()`, `passedBothGroup`), stage names and tips. build_data.py puts it in each page
+  just before the main script (`<script id="state-profile">`). tracker.html keeps short aliases
+  (`STAGE_TEXT`, `HOUSE`, `GOV_REACH`, `span`, `LISTS_API`, `PUBLIC_SITE` …), so it can't run unbuilt.
 - **Constants:** `STAGE_TEXT` (stage names, live vs. final sessions), `STAGE_TIPS`, and
   `PLAIN` / `plainAction()` (plain-language wording for actions).
 - **Bills list:** `matches()` (filters), `sortBills()`, `renderPipeline()` ("Where it is now"),
@@ -214,6 +223,10 @@ Read README.md for what each script downloads. This file covers how to change th
 1. Edit `tracker.html` (or `build_data.py` for data and statistics).
 2. Run `test/check.sh`. It checks that the script parses and has no duplicate functions, builds
    the current session, then has headless Chrome click every control and report errors.
+   - For a change that shouldn't change what visitors see (like moving code into a profile), run
+     `test/same.sh [commit] [sessions]`. It records every tab, How section, 25 open bills and a
+     watchlist (`test/snapshot.js`) from pages built here and at the commit (default HEAD), and
+     compares them.
 3. To look at the result, append a small `<script>` to a copy of `site/<session>.html`. The script
    should star bills, switch tabs and so on, then screenshot it with
    `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --window-size=1100,1400 --virtual-time-budget=9000 --screenshot=out.png file://…`.

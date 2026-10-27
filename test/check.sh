@@ -15,7 +15,7 @@ import re, sys
 s = open('tracker.html').read()
 open(sys.argv[1], 'w').write(max(re.findall(r'<script>(.*?)</script>', s, re.S), key=len))
 " "$TMP/main.js"
-node --check "$TMP/main.js" && echo "Script parses."
+node --check "$TMP/main.js" && for f in states/*/profile.js; do node --check "$f"; done && echo "Scripts parse."
 
 # Top-level functions declared twice silently replace each other (no error), so look for them.
 DUPES=$(grep -oE '^(async )?function [A-Za-z0-9_]+' tracker.html | awk '{print $NF}' | sort | uniq -d)

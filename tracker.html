@@ -1211,21 +1211,12 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 </div>
 
 <script type="application/json" id="bill-data"></script>
+<script id="state-profile"></script>
 <script>
 // Stage wording. "live" is the open session; "final" is a finished one.
 // pipe = stage boxes, long = bill status and history, chart = stats panel bars.
-const STAGE_TEXT = {
-  live: {
-    pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-    long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses, not yet requested by the governor", "On the governor's desk", "Signed into law", "Vetoed"],
-    chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both, not requested", "Governor's desk", "Signed", "Vetoed"],
-  },
-  final: {
-    pipe: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses", "Sent to the governor", "Signed into law", "Vetoed"],
-    long: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses, never requested by the governor", "Sent to the governor, no action recorded", "Signed into law", "Vetoed"],
-    chart: ["Died in committee", "Died awaiting vote", "Passed one house", "Passed both, not requested", "Sent, no action", "Signed", "Vetoed"],
-  },
-};
+// STATE is the state's profile (states/<code>/profile.js), which the build puts before this script.
+const STAGE_TEXT = STATE.stageText;
 // Bills filed before their session opens: committees get them on the first day.
 STAGE_TEXT.prefiled = Object.fromEntries(Object.entries(STAGE_TEXT.live).map(([k, v]) => [k, ["Prefiled", ...v.slice(1)]]));
 const KEY_DATES = ["intro", "floor", "passS", "passA", "died", "deliv", "signed", "vetoed"];
@@ -1271,18 +1262,6 @@ const num = (n) => n.toLocaleString("en-US");
 const fmtMonth = (d) => (d ? new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "");
 const isoToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
-// The governor has 10 days, Sundays excepted, after delivery; after the Legislature's final
-// adjournment, 30 days (NY Constitution, Art. IV, sec. 7).
-function deadline(iso) {
-  if (!iso) return null;
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  for (let n = 0; n < 10;) { dt.setDate(dt.getDate() + 1); if (dt.getDay() !== 0) n++; }
-  // After the Legislature's year ends, the governor has 30 days instead; unsigned bills are
-  // pocket-vetoed. Estimated from December 31.
-  if (dt.getFullYear() > y) return `${y + 1}-01-30`;
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
-}
 // District office phones with their towns ("Ithaca 607-277-8030 · Cortland 607-208-2024").
 // Email addresses and phone numbers as links (tap to write or call); "role" says who it is, for the counts.
 const telOf = (n) => { const d = String(n).replace(/\D/g, ""); return d.length === 10 ? `+1${d}` : d; };
@@ -1292,28 +1271,12 @@ const phonesHtml = (p, role = "legislator") => (p.phones && p.phones.length ? p.
 // Who someone is to a bill, in a word, for the contact counts.
 const roleKind = (roles = []) => roles.some((r) => /^chair/.test(r)) ? "chair" : roles.some((r) => /floor/.test(r)) ? "leader"
   : roles.some((r) => /^your /.test(r)) ? "your-legislator" : roles.some((r) => /^sponsor/.test(r)) ? "sponsor" : roles.some((r) => /^member/.test(r)) ? "committee-member" : "legislator";
-const GOV_REACH = `<a href="https://www.governor.ny.gov/content/governor-contact-form" target="_blank" rel="noopener" data-contact="online|governor">Send a message online</a> · <a class="phone" href="tel:+15184748390" data-contact="call|governor">(518) 474-8390</a>`;
-const span = (s) => `${s}–${String(s + 1).slice(2)}`;
-
+const GOV_REACH = STATE.govReach;
+const span = STATE.sessionLabel;
 const storeKey = (k) => `abt:${DATA.session}:${PRESET?.who ? "who:" + PRESET.who + ":" : ""}${k}`;
 function store(k, v) { try { localStorage.setItem(storeKey(k), JSON.stringify(v)); } catch (e) {} }
 function recall(k) { try { const v = localStorage.getItem(storeKey(k)); return v == null ? null : JSON.parse(v); } catch (e) { return null; } }
 
-function billUrl(p, session = DATA.session) {
-  return `https://www.nysenate.gov/legislation/bills/${session}/${p.replace(/[A-Z]$/, "")}`;
-}
-
-// The Senate's bill page has the text and, for Senate bills, the sponsor's memo; Assembly memos are on the Assembly's site.
-function asmUrl(p, session = DATA.session) {
-  return `https://nyassembly.gov/leg/?default_fld=&leg_video=&bn=A${p.slice(1).replace(/^\d+/, (n) => n.padStart(5, "0"))}&term=${session}&Summary=Y&Text=Y&Memo=Y`;
-}
-function textLinks(b) {
-  // Each house's site has its own version's text and its sponsor's memo.
-  const s = b.vers.find((v) => v.p[0] === "S"), a = b.vers.find((v) => v.p[0] === "A");
-  const link = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener" data-out="bill-text">${text} ↗</a>`;
-  return [s && link(billUrl(s.p), `${esc(s.p)} on the Senate's site: text and sponsor's memo`),
-    a && link(asmUrl(a.p), `${esc(a.p)} on the Assembly's site: text and sponsor's memo`)].filter(Boolean).join("<br>");
-}
 // A chapter amendment changes a law signed earlier, usually as agreed with the governor when she signed it.
 // The law code names the original bills: "as proposed in S.7359-A & A.7964-A".
 const CHAPTER_AMENDMENT = "Changes a law signed earlier. Governors often sign a bill on the condition that the Legislature passes agreed changes; this is that follow-up bill.";
@@ -1390,7 +1353,7 @@ const PROGRESS = {
   both: { label: "Passed both houses (whatever happened next)", test: (b) => b.stage >= 3 },
   never: { label: "Never passed either house", test: (b) => !b.passedS && !b.passedA },
 };
-const HOUSES = { both: "Both houses", S: "Senate only", A: "Assembly only" };
+const HOUSES = { both: "Both houses", S: `${STATE.houses.S} only`, A: `${STATE.houses.A} only` };
 const PARTIES = { D: "Democrats only", R: "Republicans only", DR: "Both parties" };
 
 // A legislator sponsored a bill if a version from their house names them as sponsor
@@ -1702,30 +1665,16 @@ addEventListener("scroll", hideTip, true);
 const TIP = (text) => `<button type="button" class="tip" aria-label="What this means" data-tip="${esc(text)}">i</button>`;
 // Inside a button or a summary a nested button isn't allowed, so this one is a focusable span.
 const TIPI = (text) => (text ? `<span class="tip" role="button" tabindex="0" aria-label="What this means" data-tip="${esc(text)}">i</span>` : "");
-const STAGE_TIPS = [
-  "Waiting in a committee. Most bills never get out of committee.",
-  "A committee approved it, and it's on the calendar waiting for a vote of the full Senate or Assembly. Leaders decide which bills get a vote.",
-  "Passed the Senate or the Assembly, but not both. Both houses have to pass the same text.",
-  "Passed both houses and waiting for the governor's office to request it. Her 10-day clock starts only when it's delivered.",
-  "Delivered to the governor. She has 10 days, not counting Sundays, to sign or veto it.",
-  "Signed into law and given a chapter number.",
-  "Vetoed by the governor. The Legislature can override a veto with two-thirds of each house, but rarely does.",
-];
+const STAGE_TIPS = STATE.stageTips;
 const HELD_TIP = "Put on a committee's agenda, then set aside without a vote: “held for consideration” in the Assembly, “tabled” in the Senate. Committees rarely vote bills down; they hold them instead.";
-const PAST_STAGE_TIPS = [
-  "Never got out of committee before the session ended.",
-  "A committee approved it, but it never got a vote of the full house.",
-  "Passed the Senate or the Assembly, but not both.",
-  "Passed both houses, but the governor's office never requested it, so it never reached her.",
-  "Sent to the governor, but the records show no signature or veto.",
-];
-const OUT_OF_TIME = "Floor votes for this session are over. A bill that hasn't passed both houses can move only if lawmakers return for a special session; otherwise it dies December 31 and has to be reintroduced.";
+const PAST_STAGE_TIPS = STATE.pastStageTips;
+const OUT_OF_TIME = STATE.outOfTime;
 const DECIDES = `<span class="decides">Decides</span>${TIP('The person whose decision moves the bill to its next step.')}`;
 // A button that copies a short email asking this person (house "G" is the governor) to do something about bill b.
 const draftBtn = (b, house, name, ask) => `<button class="act-btn small" type="button" data-draft="${b.idx}" data-house="${house}" data-name="${esc(name)}" data-ask="${esc(ask)}">${house === "G" ? "Copy message" : "Copy email"}</button>`;
 const govItem = (ask, b) => `<li class="key"><span class="contact">Governor's office ${DECIDES}</span><span class="ask">Ask: ${esc(ask)}</span><span class="reach">${draftBtn(b, "G", "", ask)} ${GOV_REACH}</span></li>`;
 const commKey = (n) => (n || "").toLowerCase().split("and").join("").replace(/[^a-z]/g, "");
-const HOUSE = { S: "Senate", A: "Assembly" };
+const HOUSE = STATE.houses;
 
 const lastName = (n) => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\s-]/g, "").split(/\s+/).filter((w) => !["jr", "sr", "ii", "iii"].includes(w)).pop() || "";
 
@@ -3175,7 +3124,7 @@ function lineage(b) {
   return `<div class="lineage"><h4>This bill in other sessions</h4><ol>${all.map((e) => {
     const [s, nums, st, ch, vt, isSelf] = e;
     const first = nums.split(" / ")[0];
-    const numHtml = isSelf ? esc(nums) : `<a href="${billUrl(first, s)}" target="_blank" rel="noopener">${esc(nums)}</a>`;
+    const numHtml = isSelf ? esc(nums) : `<a href="${STATE.billUrl(first, s)}" target="_blank" rel="noopener">${esc(nums)}</a>`;
     return `<li class="s${st}${isSelf ? " this" : ""}"><span class="yr">${span(s)}</span><span class="bn">${numHtml}</span><span class="oc oc${st}">${esc(outcomeLabel(st, s, ch, vt))}${isSelf ? " (this page)" : ""}</span></li>`;
   }).join("")}</ol></div>`;
 }
@@ -3378,8 +3327,7 @@ function deadlineOf(b) {
   const meet = nextMeeting(b);
   if (meet && soon(meet.when)) return { g: "soon", d: meet.when.slice(0, 10) };
   if (b.stage === 3) {
-    // Bills passed in the first year can still be sent to the governor the next year.
-    const end = `${DATA.session + 1}-12-31`;
+    const end = STATE.passedBothBy(DATA.session);
     return isoToday().startsWith(String(DATA.session + 1)) ? { g: soon(end) ? "soon" : "year", d: end } : { g: "later" };
   }
   if (b.stage <= 2 && !floorVotesOver()) {
@@ -3397,7 +3345,7 @@ const W_GROUPS = {
     if (e.date) return `The session was scheduled to end ${monthDay(e.date)}; it could end any day. ${then}`;
     return e.from ? `The session usually ends between ${monthDay(e.from)} and ${monthDay(e.to)}. ${then}` : then;
   }],
-  year: ["By December 31", () => "The governor's office has to request these and decide on them by the end of the year, or they die."],
+  year: STATE.passedBothGroup,
   later: ["No deadline yet", () => "Nothing is due soon on these."],
 };
 const W_GROUP_OPEN = new Map();
@@ -3431,7 +3379,7 @@ function watchButton(b, withStance = true) {
 }
 // ---- Published lists: kept online, updated by whoever holds the edit key, readable by anyone with the link.
 // Creating one needs an invite code from the site's owner (one per group).
-const LISTS_API = "https://albany-lists.lists-worker.workers.dev";
+const LISTS_API = STATE.listsApi;
 let SHARED_META = null;   // a published list being viewed: { slug, title, group, updated } or { error }
 const PUB_STORE = () => `abt:published:${DATA.session}`;
 function myPublished() { try { return JSON.parse(localStorage.getItem(PUB_STORE()) || "null"); } catch (e) { return null; } }
@@ -3870,7 +3818,7 @@ function fillDetail(el) {
   // On a watchlist card the summary and the key action are already shown above.
   const inCard = el.classList.contains("morebill");
   d.innerHTML = `${b.summary && !inCard ? `<p>${esc(b.summary)}</p>` : ""}
-    <p class="textlink">${textLinks(b)}</p>
+    <p class="textlink">${STATE.textLinks(b)}</p>
     ${chapterAmendment(b)}
     ${signingMemo(b)}
     <div class="linkrow"><span>Link to this bill:</span><input type="text" readonly value="${esc(billLink(b))}" aria-label="Link to this bill" onclick="this.select()"><button class="act-btn" type="button" data-copylink>Copy</button></div>
@@ -4258,7 +4206,7 @@ function wire() {
 
 // "How to use this site": shown until dismissed, and again from the link by the tabs.
 const INTRO_STORE = "abt:intro";
-const PUBLIC_SITE = "https://albanybilltracker.org/";
+const PUBLIC_SITE = STATE.publicSite;
 function renderIntro(force) {
   const box = $("howto");
   let hidden = false;
@@ -4461,7 +4409,7 @@ function decode(raw) {
       votes: (votes || []).map(([house, kind, cm, date, yes, no, ny]) => ({
         house, kind, committee: str(cm), date: day(date), yes, no, notYes: new Map(ny.map(([m, code]) => [T[m], code])),
       })),
-      due: raw.current && stage === 4 ? deadline(dates.deliv) : null,
+      due: raw.current && stage === 4 ? STATE.govDeadline(dates.deliv) : null,
       earlier: hist.filter((e) => e[0] < raw.session), later: hist.filter((e) => e[0] > raw.session),
       laws: laws.map(str), comms: comms.map(str), law: str(law), program: str(program), comm: str(comm),
       passedIn: passedIn || null, last: day(last),
