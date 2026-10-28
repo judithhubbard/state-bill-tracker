@@ -207,7 +207,7 @@ def legislators(session):
         slug = last(p) if counts[last(p)] == 1 else p["key"].replace(" ", "-")
         out.append({"id": seat, "slug": slug, "name": p["name"], "title": "Sen." if house == "S" else "Asm.",
                     "house": house, "district": int(district), "email": p.get("email"), "phone": p.get("phone"), "phones": p.get("phones"),
-                    "url": p.get("url"), "party": p.get("party"), "image": p.get("image"),
+                    "form": p.get("form"), "url": p.get("url"), "party": p.get("party"), "image": p.get("image"),
                     "since": since.get(seat), "committees": committees_of(seat, p)})
     return out
 
@@ -235,7 +235,7 @@ def contacts_for(session, recs, delegation_names):
                 hits = [v for k, v in seats.items() if k[0] == house and v["key"].split()[-1] == key.split()[-1]]
             p = hits[0] if len(hits) == 1 else None
         if p:
-            return {"url": p["url"], "email": p["email"], "phone": p["phone"], "phones": p.get("phones")}
+            return {"url": p["url"], "email": p["email"], "phone": p["phone"], "phones": p.get("phones"), "form": p.get("form")}
         if house == "S" and getattr(P, "SENATOR_URLS", False):
             return {"url": senate_url(name)}
         m = asm_members.get(key) or {}
@@ -1115,7 +1115,7 @@ def main():
     # Current legislators for past sessions' pages (profile card and the sessions they served in).
     legs_now = legislators(current)
     served_by = {seat: sorted({row[0] for row in rows}) for seat, rows in person_history(done, current, legs_now).items()}
-    keep = ("id", "slug", "name", "title", "party", "house", "district", "since", "image", "url", "email", "phone", "phones")
+    keep = ("id", "slug", "name", "title", "party", "house", "district", "since", "image", "url", "email", "phone", "phones", "form")
     _PEOPLE_NOW.update({L["slug"]: {**{k: L.get(k) for k in keep}, "served": served_by.get(L["id"], [])} for L in legs_now if L.get("slug")})
 
     for session in ONLY:

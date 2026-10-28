@@ -1266,6 +1266,8 @@ const isoToday = () => { const d = new Date(); return `${d.getFullYear()}-${Stri
 // District office phones with their towns ("Ithaca 607-277-8030 · Cortland 607-208-2024").
 // Email addresses and phone numbers as links (tap to write or call); "role" says who it is, for the counts.
 const telOf = (n) => { const d = String(n).replace(/\D/g, ""); return d.length === 10 ? `+1${d}` : d; };
+// A legislator's online contact form (New Jersey's), for those who'd rather not email.
+const formHtml = (f, role = "legislator") => f ? `<a href="${esc(f)}" target="_blank" rel="noopener" data-contact="form|${role}">Contact form</a>` : "";
 const emailHtml = (e, role = "legislator") => e ? `<a class="phone" href="mailto:${esc(e)}" data-contact="email|${role}">${esc(e)}</a>` : "";
 const phonesHtml = (p, role = "legislator") => (p.phones && p.phones.length ? p.phones : p.phone ? [["", p.phone]] : [])
   .map(([town, n]) => `${town ? `${esc(town)} ` : ""}<a class="phone" href="tel:${telOf(n)}" data-contact="call|${role}">${esc(n)}</a>`).join(" · ");
@@ -1874,7 +1876,7 @@ function contactBook(b, canMove = true, oppose = false) {
         const status = signed ? ` <span class="ours">co-sponsor</span>` : ours && !isSponsor ? ` <span class="muted">not a sponsor or co-sponsor</span>` : "";
         const name = info.url ? `<a href="${esc(info.url)}" target="_blank" rel="noopener">${title} ${esc(p.name)}</a>` : `${title} ${esc(p.name)}`;
         const kind = roleKind(p.roles);
-        const reach = [emailHtml(info.email, kind), phonesHtml(info, kind)].filter(Boolean).join(" · ");
+        const reach = [emailHtml(info.email, kind), formHtml(info.form, kind), phonesHtml(info, kind)].filter(Boolean).join(" · ");
         const draft = p.asks.length && (info.email || info.url) ? draftBtn(b, p.house, p.name, p.asks.join("; "), !info.email) + " " : "";
         const roles = p.roles.join("; ");
         const ask = p.asks.length ? `<span class="ask">Ask: ${esc(p.asks.join("; "))}</span>` : "";
@@ -3749,7 +3751,7 @@ function reintroAsk(b, stance) {
 function reachOf(p) {
   if (p.gov) return GOV_REACH;
   const i = p.info || {}, role = p.role || "legislator";
-  return [emailHtml(i.email, role), phonesHtml(i, role),
+  return [emailHtml(i.email, role), formHtml(i.form, role), phonesHtml(i, role),
     i.url && `<a href="${esc(i.url)}" target="_blank" rel="noopener">Official page</a>`].filter(Boolean).join(" · ");
 }
 
@@ -4618,7 +4620,7 @@ function renderPerson(L, past) {
   const signed = mine.filter((b) => b.stage === 5).length;
   const chairs = (L.committees || []).filter((c) => c.chair).map((c) => c.name);
   const member = (L.committees || []).filter((c) => !c.chair).map((c) => c.name);
-  const reach = [emailHtml(L.email, "legislator-page"), phonesHtml(L, "legislator-page"),
+  const reach = [emailHtml(L.email, "legislator-page"), formHtml(L.form, "legislator-page"), phonesHtml(L, "legislator-page"),
     L.url && `<a href="${esc(L.url)}" target="_blank" rel="noopener">Official page</a>`].filter(Boolean).join(" · ");
   $("person").innerHTML = `
     <div class="photo"><span>${esc(L.name.split(" ").filter((w) => /^[A-Z]/.test(w) && !/^(Jr|Sr|II|III)\.?$/.test(w)).map((w) => w[0]).filter((c, i, a) => i === 0 || i === a.length - 1).join(""))}</span>${L.image ? `<img src="${esc(L.image)}" alt="" onerror="this.remove()">` : ""}</div>
