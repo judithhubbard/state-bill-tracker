@@ -38,6 +38,11 @@ const STATE = {
 
   // Bills that passed both houses go straight to the governor; any others die when the session ends.
   passedBothBy: (session) => STATE.sessionEnds(session),
+  // The line under "Passed both houses", in the stage list and (with the bill) in its row. Most bills
+  // here were sent back with the governor's changes (a conditional veto).
+  passedBothNote: (live, b) => !live ? "Never sent to the governor"
+    : !b ? "Includes bills sent back with the governor's changes"
+    : b.vers.some((v) => v.actions.some(([, t]) => t === "CONDITIONALLY VETOED")) ? "Sent back with the governor's changes" : "Not yet sent to the governor",
   passedBothGroup: ["Before the session ends", () => "These go to the governor once they pass both houses. Any still waiting die when the two-year session ends in January."],
 
   // The Legislature meets, with long breaks, until the session's last day in January.
@@ -60,10 +65,10 @@ const STATE = {
     "Waiting in a committee. Most bills never get out of committee.",
     "A committee approved it, and it's waiting for a vote of the full Senate or Assembly. Leaders decide which bills get a vote.",
     "Passed the Senate or the Assembly, but not both. Both houses have to pass the same text.",
-    "Passed both houses.",
+    "Passed both houses. A bill the governor sent back with changes (a conditional veto) waits here until both houses vote to accept them.",
     "Passed both houses and sent to the governor, who has 45 days to sign it, veto it, or send it back with changes.",
     "Signed into law and given a chapter number.",
-    "Vetoed by the governor. A conditional veto sends it back with changes: if both houses agree to them, it goes back to the governor. Overriding a veto takes two-thirds of each house.",
+    "Vetoed by the governor. Overriding a veto takes two-thirds of each house, which is rare.",
   ],
   pastStageTips: [
     "Never got out of committee before the session ended.",
@@ -73,4 +78,42 @@ const STATE = {
     "Sent to the governor, but the records show no signature or veto.",
   ],
   outOfTime: "This two-year session is over. Bills that didn't become law have to be reintroduced in the next session.",
+
+  // How a bill becomes law: committees in the two houses that cover the same subject (Senate name ->
+  // [Assembly name, label]), notes on some, and which bills need a second committee.
+  commPairs: {
+    "Budget and Appropriations": ["Appropriations", "Budget and spending"],
+    "Environment and Energy": ["Environment and Solid Waste", "Environment and energy"],
+    "Health, Human Services and Senior Citizens": ["Health", "Health and human services"],
+    "Law and Public Safety": ["Public Safety and Preparedness", "Public safety"],
+    "Transportation": ["Transportation and Independent Authorities", "Transportation"],
+    "Community and Urban Affairs": ["Housing", "Housing and urban affairs"],
+    "State Government, Wagering, Tourism & Historic Preservation": ["State and Local Government", "State and local government"],
+    "Commerce": ["Commerce and Economic Development", "Business"],
+    "Economic Growth": ["Commerce and Economic Development", "Business"],
+  },
+  commNotes: {
+    "budget and spending": "Bills that cost the state money often come here after their subject committee.",
+  },
+  secondCommittee: "Bills that cost money often go to Assembly Appropriations or Senate Budget and Appropriations after their subject committee.",
+  // The two-year calendar: the Legislature's and the governor's bars ([class, from, to, text]), the
+  // events marked on it ([date, "up"/"down", row, when, text]; rows are LEG = 112, GOV = 150) and a
+  // note. It runs into January of the third year, when the session ends.
+  calendarDays: 20,
+  calendar(Y, end1, end2, MD) {
+    const LEG = 112, GOV = 150, open = STATE.sessionEnds(Y - 2), close = STATE.sessionEnds(Y);
+    return {
+      leg: [["", open, `${Y}-06-30`, "Budget season"], ["light", `${Y}-07-01`, `${Y + 1}-01-01`, "Fewer meetings"],
+        ["", `${Y + 1}-01-01`, `${Y + 1}-06-30`, "Budget season"], ["light", `${Y + 1}-07-01`, `${Y + 1}-11-10`, "Campaigns"],
+        ["", `${Y + 1}-11-10`, close, "Last push"]],
+      gov: [["", open, `${Y + 2}-01-20`, "Signs or vetoes each bill within 45 days, all year"]],
+      events: [
+        [open, "up", LEG, `January ${Y}`, "Session opens. Committees and floor votes happen all year, with breaks."],
+        [`${Y}-06-30`, "up", LEG, "June 30", "The budget is due, and many bills pass in the last weeks of June."],
+        [close, "up", LEG, `January ${Y + 2}`, "After a rush of votes, the session ends. Bills that aren't law die."],
+        [`${Y + 2}-01-${String(+close.slice(8) + 7).padStart(2, "0")}`, "down", GOV, "A week later", "Bills the governor hasn't signed die (a pocket veto)."],
+      ],
+      note: "Once a bill reaches the governor, there are 45 days to sign it, veto it, or send it back with changes.",
+    };
+  },
 };

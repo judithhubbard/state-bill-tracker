@@ -41,6 +41,8 @@ const STATE = {
   // Bills that passed both houses: the governor's office can request them through the end of the
   // session's second year, and they die if it doesn't.
   passedBothBy: (session) => `${session + 1}-12-31`,
+  // The line under "Passed both houses", in the stage list and (with the bill) in its row.
+  passedBothNote: (live) => `${live ? "Not yet requested" : "Never requested"} by the governor`,
   passedBothGroup: ["By December 31", () => "The governor's office has to request these and decide on them by the end of the year, or they die."],
 
   // Stage names (the stage numbers are build_data.py's), and their tips.
@@ -73,4 +75,56 @@ const STATE = {
     "Sent to the governor, but the records show no signature or veto.",
   ],
   outOfTime: "Floor votes for this session are over. A bill that hasn't passed both houses can move only if lawmakers return for a special session; otherwise it dies December 31 and has to be reintroduced.",
+
+  // How a bill becomes law: committees in the two houses that cover the same subject (Senate name ->
+  // [Assembly name, label]), notes on some, and which bills need a second committee.
+  commPairs: {
+    "Finance": ["Ways And Means", "Budget and taxes"],
+    "Alcoholism And Substance Use Disorders": ["Alcoholism And Drug Abuse", "Addiction"],
+    "Cities 1": ["Cities", "Cities"], "Cities 2": ["Cities", "Cities"],
+    "Civil Service And Pensions": ["Governmental Employees", "Public employees and pensions"],
+    "Commerce, Economic Development And Small Business": ["Economic Development", "Economic development"],
+    "Consumer Protection": ["Consumer Affairs And Protection", "Consumer protection"],
+    "Crime Victims, Crime And Correction": ["Correction", "Prisons and crime victims"],
+    "Cultural Affairs, Tourism, Parks And Recreation": ["Tourism, Parks, Arts And Sports Development", "Parks, tourism and the arts"],
+    "Disabilities": ["People With Disabilities", "Disabilities"],
+    "Elections": ["Election Law", "Elections"],
+    "Energy And Telecommunications": ["Energy", "Energy"],
+    "Ethics And Internal Governance": ["Ethics And Guidance", "Legislative ethics"],
+    "Housing, Construction And Community Development": ["Housing", "Housing"],
+    "Internet And Technology": ["Science And Technology", "Technology"],
+    "Investigations And Government Operations": ["Governmental Operations", "State government"],
+    "Libraries": ["Libraries And Education Technology", "Libraries"],
+    "Local Government": ["Local Governments", "Local government"],
+    "Racing, Gaming And Wagering": ["Racing And Wagering", "Racing and gambling"],
+    "Veterans, Homeland Security And Military Affairs": ["Veterans' Affairs", "Veterans"],
+  },
+  commNotes: {
+    codes: "Criminal law and the courts. Any bill that creates a crime or changes a penalty goes here, often after its subject committee.",
+    rules: "Chaired by the Senate Majority Leader and the Assembly Speaker. In the last weeks of the session, most bills get to a floor vote through Rules rather than their usual committees, so Rules decides which of them get a vote.",
+    "budget and taxes": "Any bill that costs the state money goes here after its subject committee.",
+    cities: "The Senate has two: Cities 1 for New York City and Cities 2 for other cities.",
+    "budget and revenue": "The Senate's tax committee. In the Assembly, tax bills go to Ways and Means.",
+  },
+  secondCommittee: "Bills that cost money go to Senate Finance or Assembly Ways and Means. Bills that create crimes or change penalties go to Codes. Near the end of the session, many bills go through Rules, which the leaders run.",
+  // The two-year calendar: the Legislature's and the governor's bars ([class, from, to, text]), the
+  // events marked on it ([date, "up"/"down", row, when, text]; rows are LEG = 112, GOV = 150) and a note.
+  // end1 and end2 are the last floor votes of each year; MD formats a date as "June 10".
+  calendar(Y, end1, end2, MD) {
+    const LEG = 112, GOV = 150;
+    return {
+      leg: [["", `${Y}-01-07`, end1, "In session"], ["", `${Y + 1}-01-07`, end2, "In session"]],
+      gov: [["light", `${Y}-01-01`, end1, "Signs or vetoes some bills"], ["", end1, `${Y}-12-31`, "Signs or vetoes most bills"],
+        ["light", `${Y + 1}-01-01`, end2, "Signs or vetoes some bills"], ["", end2, `${Y + 1}-12-31`, "Signs or vetoes most bills"]],
+      events: [
+        [`${Y}-01-07`, "up", LEG, `January ${Y}`, "Session opens. Committees meet and floor votes happen only in session."],
+        [end1, "up", LEG, MD(end1), "Session ends. Bills that didn't pass carry over to next year."],
+        [`${Y + 1}-01-07`, "up", LEG, `January ${Y + 1}`, "Bills that passed only one house go back to committee."],
+        [end2, "up", LEG, MD(end2), "Session ends: the last floor votes."],
+        [`${Y}-11-20`, "down", GOV, "November–December", "Most vetoes come now, though the governor acts on bills all year."],
+        [`${Y + 1}-12-31`, "down", LEG, `December 31, ${Y + 1}`, "Bills not passed by both houses die."],
+      ],
+      note: "Once a bill reaches her desk, the governor has 10 days, not counting Sundays, to sign or veto it.",
+    };
+  },
 };

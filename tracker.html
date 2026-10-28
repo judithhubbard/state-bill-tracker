@@ -1503,7 +1503,7 @@ function renderPipeline() {
   const subs = {
     1: "Approved by committee",
     2: `Senate ${num(oneHouse.Senate)} · Assembly ${num(oneHouse.Assembly)}`,
-    3: DATA.current ? "Not yet requested by the governor" : "Never requested by the governor",
+    3: STATE.passedBothNote(DATA.current),
     4: DATA.current ? (nextDue ? `Next decision due ${fmtDate(nextDue)}` : counts[4] ? "Deadlines have passed" : "Nothing waiting") : "No decision in the records",
   };
   // Bills on a committee agenda that hasn't met yet: a line under "In committee".
@@ -1618,7 +1618,7 @@ function statusText(b) {
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
   } else if (b.stage === 3) {
     t = "Passed both houses";
-    small = `${live ? "Not yet requested" : "Never requested"} by the governor · passed ${fmtDate([D.passS, D.passA].sort().pop())}`;
+    small = `${STATE.passedBothNote(live, b)} · passed ${fmtDate([D.passS, D.passA].sort().pop())}`;
   } else if (b.stage === 4) {
     t = live ? "On the governor's desk" : "Sent to the governor";
     small = live && b.due ? `Sent ${fmtDate(D.deliv)} · decision due ${fmtDate(b.due)} (est.)` : `Sent ${fmtDate(D.deliv)}`;
@@ -4233,34 +4233,8 @@ function showHowSec(id) {
 // The Committees section: what committees do, the few every bill may meet, and each subject's
 // Senate and Assembly committees side by side with their chairs and this session's numbers.
 // Committees that cover the same subject under different names (Senate name -> Assembly name, subject).
-const COMM_PAIRS = {
-  "Finance": ["Ways And Means", "Budget and taxes"],
-  "Alcoholism And Substance Use Disorders": ["Alcoholism And Drug Abuse", "Addiction"],
-  "Cities 1": ["Cities", "Cities"], "Cities 2": ["Cities", "Cities"],
-  "Civil Service And Pensions": ["Governmental Employees", "Public employees and pensions"],
-  "Commerce, Economic Development And Small Business": ["Economic Development", "Economic development"],
-  "Consumer Protection": ["Consumer Affairs And Protection", "Consumer protection"],
-  "Crime Victims, Crime And Correction": ["Correction", "Prisons and crime victims"],
-  "Cultural Affairs, Tourism, Parks And Recreation": ["Tourism, Parks, Arts And Sports Development", "Parks, tourism and the arts"],
-  "Disabilities": ["People With Disabilities", "Disabilities"],
-  "Elections": ["Election Law", "Elections"],
-  "Energy And Telecommunications": ["Energy", "Energy"],
-  "Ethics And Internal Governance": ["Ethics And Guidance", "Legislative ethics"],
-  "Housing, Construction And Community Development": ["Housing", "Housing"],
-  "Internet And Technology": ["Science And Technology", "Technology"],
-  "Investigations And Government Operations": ["Governmental Operations", "State government"],
-  "Libraries": ["Libraries And Education Technology", "Libraries"],
-  "Local Government": ["Local Governments", "Local government"],
-  "Racing, Gaming And Wagering": ["Racing And Wagering", "Racing and gambling"],
-  "Veterans, Homeland Security And Military Affairs": ["Veterans' Affairs", "Veterans"],
-};
-const COMM_NOTES = {
-  codes: "Criminal law and the courts. Any bill that creates a crime or changes a penalty goes here, often after its subject committee.",
-  rules: "Chaired by the Senate Majority Leader and the Assembly Speaker. In the last weeks of the session, most bills get to a floor vote through Rules rather than their usual committees, so Rules decides which of them get a vote.",
-  "budget and taxes": "Any bill that costs the state money goes here after its subject committee.",
-  cities: "The Senate has two: Cities 1 for New York City and Cities 2 for other cities.",
-  "budget and revenue": "The Senate's tax committee. In the Assembly, tax bills go to Ways and Means.",
-};
+const COMM_PAIRS = STATE.commPairs;
+const COMM_NOTES = STATE.commNotes;
 // How many committees each house has, and how many committees its bills go through.
 function commCounts(keys) {
   const NOT_SUBJECT = / · (Rules|Calendar)$/;
@@ -4287,9 +4261,9 @@ function commCounts(keys) {
       ${row("Bills sent to just one committee", (x) => `${x.one}%`)}
       ${row("Bills sent to two or more", (x) => `${x.more}%`)}
       ${row("Bills that passed: went through two or more committees", (x) => `${x.passedMore}%`)}
-      ${row("Bills that passed: went through Rules", (x) => `${x.passedRules}%`)}
+      ${S.passedRules || A.passedRules ? row("Bills that passed: went through Rules", (x) => `${x.passedRules}%`) : ""}
     </tbody></table></div>
-    <p class="note">${span(DATA.session)} session${DATA.current ? " so far" : ""}. Committee counts leave out Rules. Most bills never leave their first committee, so few are sent to a second; among bills that passed, needing more than one is common.</p>`;
+    <p class="note">${span(DATA.session)} session${DATA.current ? " so far" : ""}. ${S.passedRules || A.passedRules ? "Committee counts leave out Rules. " : ""}Most bills never leave their first committee, so few are sent to a second; among bills that passed, needing more than one is common.</p>`;
 }
 function renderHowComm() {
   const I = DATA.insights || {};
@@ -4338,7 +4312,7 @@ function renderHowComm() {
     <ul class="impact">
       <li><b>Every bill starts in a committee on its subject.</b> Each house has its own committees, with their own members and chair.</li>
       <li><b>The chair decides which bills come up.</b> A bill that never gets on the agenda dies there, which is what happens to most bills.</li>
-      <li><b>Some bills need a second committee.</b> Bills that cost money go to Senate Finance or Assembly Ways and Means. Bills that create crimes or change penalties go to Codes. Near the end of the session, many bills go through Rules, which the leaders run.</li>
+      <li><b>Some bills need a second committee.</b> ${STATE.secondCommittee}</li>
     </ul>
     ${commCounts(keys)}
     <p class="muted">Each subject's Senate and Assembly committees, busiest first. Click the number of bills to see them.</p>
@@ -4346,7 +4320,8 @@ function renderHowComm() {
 }
 
 function renderHowCal() {
-  const Y = DATA.session, start = Date.UTC(Y, 0, 1), span_ = Date.UTC(Y + 2, 0, 1) - start;
+  // The timeline runs two years, plus the January days some states' sessions run into (STATE.calendarDays).
+  const Y = DATA.session, start = Date.UTC(Y, 0, 1), span_ = Date.UTC(Y + 2, 0, 1 + (STATE.calendarDays || 0)) - start;
   const pos = (d) => +(((Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) - start) / span_) * 100).toFixed(2);
   const MD = (d) => new Date(d + "T12:00").toLocaleDateString("en-US", { month: "long", day: "numeric" });
   // The last floor vote of each year marks the end of that year's session.
@@ -4354,14 +4329,8 @@ function renderHowCal() {
   const end1 = last(String(Y)) || `${Y}-06-10`, end2 = last(String(Y + 1)) || `${Y + 1}-06-10`;
   // Rows: the Legislature's track, then the governor's; callouts go above (Legislature) or below.
   const LEG = 112, GOV = 150, H = 22, mid = (row) => row + H / 2;
-  const events = [
-    [`${Y}-01-07`, "up", LEG, `January ${Y}`, "Session opens. Committees meet and floor votes happen only in session."],
-    [end1, "up", LEG, MD(end1), "Session ends. Bills that didn't pass carry over to next year."],
-    [`${Y + 1}-01-07`, "up", LEG, `January ${Y + 1}`, "Bills that passed only one house go back to committee."],
-    [end2, "up", LEG, MD(end2), "Session ends: the last floor votes."],
-    [`${Y}-11-20`, "down", GOV, "November–December", "Most vetoes come now, though the governor acts on bills all year."],
-    [`${Y + 1}-12-31`, "down", LEG, `December 31, ${Y + 1}`, "Bills not passed by both houses die."],
-  ].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  const cal = STATE.calendar(Y, end1, end2, MD);
+  const events = cal.events.sort((a, b) => (a[0] < b[0] ? -1 : 1));
   const bar = (cls, a, z, text) => `<b${cls ? ` class="${cls}"` : ""} style="left:${pos(a)}%;width:${(pos(z) - pos(a)).toFixed(2)}%">${text}</b>`;
   const today = new Date().toISOString().slice(0, 10);
   const now = DATA.current && today < `${Y + 2}` ? `<span class="now" style="left:${pos(today)}%;top:${LEG - 4}px;height:${GOV + H - LEG + 8}px"><i>Today</i></span>` : "";
@@ -4370,15 +4339,15 @@ function renderHowCal() {
     <span class="rl" style="top:${LEG}px">Legislature</span><span class="rl" style="top:${GOV}px">Governor</span>
     <div class="plot">
       <div class="yrs"><span style="left:0">${Y}</span><span style="left:50%">${Y + 1}</span></div>
-      <div class="track leg" style="top:${LEG}px">${bar("", `${Y}-01-07`, end1, "In session")}${bar("", `${Y + 1}-01-07`, end2, "In session")}</div>
-      <div class="track gov" style="top:${GOV}px">${bar("light", `${Y}-01-01`, end1, "Signs or vetoes some bills")}${bar("", end1, `${Y}-12-31`, "Signs or vetoes most bills")}${bar("light", `${Y + 1}-01-01`, end2, "Signs or vetoes some bills")}${bar("", end2, `${Y + 1}-12-31`, "Signs or vetoes most bills")}</div>
+      <div class="track leg" style="top:${LEG}px">${cal.leg.map((b) => bar(...b)).join("")}</div>
+      <div class="track gov" style="top:${GOV}px">${cal.gov.map((b) => bar(...b)).join("")}</div>
       ${now}
       <ol>${events.map(([d, side, row, when, text]) => { const x = pos(d);
         const style = side === "up" ? `top:22px;height:${mid(row) - 22}px` : `top:${mid(row)}px;height:${BOTTOM - mid(row)}px`;
         return `<li class="${side}${x > 80 ? " right" : ""}" style="left:${x}%;${style}"><div><b>${esc(when)}</b>${esc(text)}</div></li>`; }).join("")}</ol>
     </div>
   </div>
-  <p class="note tl-note">Once a bill reaches her desk, the governor has 10 days, not counting Sundays, to sign or veto it.</p>`;
+  <p class="note tl-note">${cal.note}</p>`;
 }
 
 // Unpack the compact embedded data (see build_data.py) into one object per bill.
@@ -4583,6 +4552,9 @@ function hydrate(raw) {
   $("changedField").hidden = !raw.current;
   if (!raw.current) state.changed = "";
   $("homeCounty").innerHTML = (raw.counties || []).map((c) => `<option${c === HOME ? " selected" : ""}>${esc(c)}</option>`).join("");
+  // Until a state's bills are tied to places, there's no county to pick; without law names, no law filter.
+  document.querySelector(".field.you").hidden = !raw.bills.some((b) => b.places.length);
+  $("law").closest(".field").hidden = !raw.lawList.length;
   setupLegislators(raw);
   renderSessions(raw);
   loadWatch();

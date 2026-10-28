@@ -12,8 +12,13 @@ the page's plain-language rules work for both. The codes are explained at njleg.
 import csv, glob, io, os, re, zipfile
 from collections import defaultdict
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from stages import rank
 from . import profile as P
+
+CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 
 HOUSE = {"A": "Assembly", "S": "Senate"}
 
@@ -141,10 +146,11 @@ def decode(code, comment, comms, passed):
     return out
 
 
-def version_stage(steps):
+def version_stage(steps, live):
     """How far one bill got, 0-6, from its coded steps in order: (house, token) pairs. A conditional
     veto sends the bill back to both houses; it is with the governor again once they re-pass it.
-    One not yet re-passed counts as vetoed for now."""
+    Until then it counts as passed both houses in a session still under way (`live`), and as vetoed
+    once the session is over, since it died with the veto."""
     floor, passed, stage = set(), set(), 0
     for h, w in steps:
         if FLOOR.match(w) or re.fullmatch(r"2R[AS][CG]", w):
@@ -155,8 +161,10 @@ def version_stage(steps):
             stage = 4
         elif w == "APP":
             stage = 5
-        elif w in ("AV", "PV", "CV"):
+        elif w in ("AV", "PV"):
             stage = 6
+        elif w == "CV":
+            stage = 3 if live else 6
     if stage:
         return stage
     return 3 if len(passed) == 2 else 2 if passed else 1 if floor else 0
@@ -213,6 +221,27 @@ def read_votes(session, comms):
             out[bill].append([house, kind, comm, date, yes, no,
                               [[f"{house}?{person(n)}", VOTE_CODE.get(v, v)] for n, v in roll if v not in ("Y", "Yes")]])
     return out
+
+
+# ---- Committee agendas
+def agendas(session):
+    """Bills on committee agendas: bill -> [["Assembly Health", "2026-11-05T10:00:00"], ...], as New York's
+    agendas file has them. Floor sessions and meetings that were canceled or aren't meeting are left out."""
+    z = zipfile.ZipFile(os.path.join(P.DATA, f"DB{session}_TEXT.zip"))
+    comms = {r["Code"]: (r["House"], r["Description"]) for r in _rows(z, "COMMITTEE.TXT")}
+    off = {(r["CommHouse"], r["Date"], r["Time"]) for r in _rows(z, "AGENDAS.TXT") if r["Status"] != "Scheduled"}
+    out = defaultdict(list)
+    for r in _rows(z, "BAGENDA.TXT"):
+        house, name = comms.get(r["CommHouse"], ("", ""))
+        if r["Type"] == "Session" or house not in HOUSE or (r["CommHouse"], r["Date"], r["Time"]) in off:
+            continue
+        m = re.match(r"(\d+):(\d+) ([AP])M", r["Time"])
+        hour = (int(m.group(1)) % 12 + (12 if m.group(3) == "P" else 0)) if m else 0
+        entry = [f"{HOUSE[house]} {name}", f"{iso(r['Date'])}T{hour:02d}:{int(m.group(2)) if m else 0:02d}:00"]
+        bill = r["BillType"] + r["BillNumber"]
+        if entry not in out[bill]:
+            out[bill].append(entry)
+    return dict(out)
 
 
 # ---- Sponsors' parties, from each session's roster (filled by load_session).
@@ -302,7 +331,9 @@ def load_session(session):
         in_comm = status in comms and comms[status][0] in HOUSE
         if in_comm:
             desc = f"In {HOUSE[comms[status][0]]} committee"
-        elif re.fullmatch(r"2R[AS][CG]?", status):
+        elif re.fullmatch(r"2R[AS]G", status):
+            desc = f"Back on the {HOUSE[status[2]]} floor with the governor's changes"
+        elif re.fullmatch(r"2R[AS]C?", status):
             desc = f"On the {HOUSE[status[2]]} floor"
         else:
             desc = status_text(next((t for _, t in reversed(actions)), "INTRODUCED"))
@@ -317,7 +348,7 @@ def load_session(session):
             "committee": comms[status][1] if in_comm else None,
             "actions": actions,
             "_steps": steps,
-            "_stage": version_stage([(h, w) for h, w, _ in steps]),
+            "_stage": version_stage([(h, w) for h, w, _ in steps], session >= CURRENT),
             "_sub": status == "SUB",
         }
 
@@ -414,7 +445,7 @@ def load_session(session):
             "last": max(action_dates, default=intro or f"{session}-01-01"),
             "cosp": max(vers[p]["cosp"] for p in live),
             # Key dates: on the floor, passed the Senate, passed the Assembly, died (not recorded),
-            # sent to the governor (the day it passed both houses), signed, vetoed.
+            # sent to the governor (the day it passed both houses), signed, vetoed (not conditionally).
             "keyDates": [
                 dates(lambda h, w: bool(FLOOR.match(w)), "first"),
                 dates(lambda h, w: w == "PS", "all"),
@@ -422,7 +453,8 @@ def load_session(session):
                 "",
                 dates(lambda h, w: w == "PBH"),
                 dates(lambda h, w: w == "APP"),
-                dates(lambda h, w: w in ("AV", "PV", "CV")),
+                # A conditional veto isn't the end of a bill, so it shows only in the list of actions.
+                dates(lambda h, w: w in ("AV", "PV")),
             ],
             "votes": all_votes,
             "firstComms": first_comms,

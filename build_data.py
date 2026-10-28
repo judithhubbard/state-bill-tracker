@@ -1126,6 +1126,8 @@ def main():
         # Senate committee agendas (current session only): when a committee takes up the bill.
         apath = os.path.join(P.DATA, f"agendas_{session}.json")
         agendas = json.load(open(apath)) if session == current and os.path.exists(apath) else {}
+        if session == current and hasattr(C, "agendas"):
+            agendas = C.agendas(session)
 
         def agenda_of(r):
             seen = []
@@ -1224,6 +1226,13 @@ def main():
                 f.write(payload)
         # The template is written with New York's names (title, header and the script that updates them).
         template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)
+        template = template.replace("How a bill becomes law in New York", f"How a bill becomes law in {P.STATE_NAME}")
+        # A state's own explanation (states/<code>/how.html) replaces New York's sections of the How tab.
+        how = os.path.join(os.path.dirname(P.__file__), "how.html")
+        if os.path.exists(how):
+            start = template.index('    <div class="howsec" id="howSteps">')
+            end = template.index('  </section>', start)
+            template = template[:start] + open(how).read() + template[end:]
         # The state's page settings and rules, read by the main script as STATE.
         state_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
         template = template.replace('<script id="state-profile"></script>', f'<script id="state-profile">\n{state_js}</script>', 1)

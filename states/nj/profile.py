@@ -9,6 +9,7 @@ DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 SITE_DIR = "nj"
 
 # Names in page titles and the header line.
+STATE_NAME = "New Jersey"
 SITE_NAME = "New Jersey Bill Tracker"
 LEGISLATURE = "New Jersey Legislature"
 # Dates and times on the site are this state's.
