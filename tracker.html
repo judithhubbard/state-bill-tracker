@@ -1999,7 +1999,8 @@ function planFor(b, stance = "support") {
   // when the chair already sponsors it) and sometimes the governor, with the reason.
   const notes = [];
   const stuck = (v) => {
-    const h = holdUp(b, v, opp);
+    // Only while it can still move: after the last floor votes, who's holding it up doesn't matter.
+    const h = live && holdUp(b, v, opp);
     if (!h) return;
     if (!notes.includes(h.note)) notes.push(h.note);
     if (h.leader) book.leader(v.p[0], L(h.ask || "let it move out of committee"), live && h.chairBacks);
