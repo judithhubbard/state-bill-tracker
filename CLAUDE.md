@@ -19,10 +19,10 @@ from that repo. **Nothing here may change it.**
      visitor's saved watchlist and pass it along while redirecting (a plain Porkbun forward would lose
      them). Map /kelles/ to /ny/kelles/, and so on. Interim forwards must be 302, never 301.
 - **Decided 2026-10-28:** no new features on albanybilltracker.org (the ny-bill-tracker repo); only fixes and the
-  January chores. New work happens here. Before the 2027 session opens (aim: December 2026), switch the code
-  that builds albanybilltracker.org to this repo, at the same address with the same pages and lists: the
-  workflow and data commits move here, and the built site is pushed into the old repo for GitHub Pages
-  (this repo is private). The move to statebilltracker.org/ny stays a later, separate step.
+  January chores, made there and carried here by hand. New work happens here. **Decided 2026-10-29: leave
+  albanybilltracker.org on its own code** (an interim switch of its build to this repo was planned, dry-run on
+  2026-10-28 and dropped). New York moves only once, to statebilltracker.org/ny, with the forwarding pages
+  below; avoid doing that at the start of a session (aim before January or after June).
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
