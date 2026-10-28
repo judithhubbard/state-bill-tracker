@@ -18,6 +18,11 @@ from that repo. **Nothing here may change it.**
   3. Move New York here last. albanybilltracker.org must keep serving small pages that read each
      visitor's saved watchlist and pass it along while redirecting (a plain Porkbun forward would lose
      them). Map /kelles/ to /ny/kelles/, and so on. Interim forwards must be 302, never 301.
+- **Decided 2026-10-28:** no new features on albanybilltracker.org (the ny-bill-tracker repo); only fixes and the
+  January chores. New work happens here. Before the 2027 session opens (aim: December 2026), switch the code
+  that builds albanybilltracker.org to this repo, at the same address with the same pages and lists: the
+  workflow and data commits move here, and the built site is pushed into the old repo for GitHub Pages
+  (this repo is private). The move to statebilltracker.org/ny stays a later, separate step.
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
@@ -40,8 +45,8 @@ from that repo. **Nothing here may change it.**
   Not done yet: legislators, contacts and "Where you live" (two Assembly members per district breaks the
   `A:<district>` seat keys; the county picker hides until bills have places); 2022–23 (NJ's text download
   lacks MAINBILL; the full DB2022.zip is an Access file); published lists and the "public site" tip.
-- While this is being built, the NY site keeps getting improvements in ny-bill-tracker. Carry them
-  over here by hand (compare against `git log` there since b312227).
+- Fixes made in ny-bill-tracker still get carried over here by hand (compare against `git log` there since
+  b312227; 5fe4339 is already in).
 
 ## What's switched off in this copy (so it can't touch the live NY site)
 
