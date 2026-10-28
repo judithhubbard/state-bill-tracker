@@ -1153,6 +1153,18 @@ def main():
         def enc_votes(votes):
             return [[h, kind, S(comm), date.replace("-", ""), y, n, [[S(member_id(m)), code] for m, code in ny]]
                     for h, kind, comm, date, y, n, ny in votes]
+        def veto_note(i, r):
+            """[year, governor, reasons, bill numbers, 1 if this bill's own veto] or 0."""
+            if r["stage"] == 6 and r["vetoMemo"]:
+                m = r["vetoMemo"]
+                return [m["year"], m["signer"], S(m["text"]), " / ".join(r["nums"]), 1]
+            for (ps, j) in sorted((k for k in hist[session][i] if isinstance(k[1], int) and k[0] < session), reverse=True):
+                old = loaded[ps][0][j]
+                if old["stage"] == 6 and old.get("vetoMemo"):
+                    m = old["vetoMemo"]
+                    return [m["year"], m["signer"], S(m["text"]), " / ".join(old["nums"]), 0]
+            return 0
+
         rows = []
         sims = similar_bills(recs)
         for i, r in enumerate(recs):
@@ -1172,7 +1184,7 @@ def main():
                          [d.replace("-", "") for d in [r["first"] or ""] + r["keyDates"]],
                          bill_parties(r, party_of), enc_votes(r["votes"]),
                          [[S(c), w] for c, w in agenda_of(r)],
-                         [(P.COUNTIES + ["?"]).index(c) for c in r["places"]], r["mainTopic"], sims[i], r["memo"]])
+                         [(P.COUNTIES + ["?"]).index(c) for c in r["places"]], r["mainTopic"], sims[i], r["memo"], veto_note(i, r)])
 
         data = {
             "session": session,
@@ -1197,6 +1209,8 @@ def main():
             # about a fifth smaller than bill by bill; the page turns it back into rows.
             "cols": [list(c) for c in zip(*rows)] if rows else [],
             "counties": P.COUNTIES,
+            # The current governor, for telling whether an earlier veto was theirs.
+            "governor": P.GOVERNORS[-1][0],
             # Current Senate and Assembly districts in each county, for "Where you live".
             "districtCounties": json.load(open(P.DISTRICTS_PATH)) if session == current and os.path.exists(P.DISTRICTS_PATH) else {},
         }

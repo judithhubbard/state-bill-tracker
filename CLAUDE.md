@@ -149,6 +149,11 @@ Read README.md for what each script downloads. This file covers how to change th
   S.x & A.y" line; `chapterAmendment()` shows it. A bill signed with a memo (`b.memo`, from the API's
   `approvalMessage`, cleaned by `memo_text()` in build_data.py) gets `signingMemo()`: the memo text and
   its follow-up bills (`followUps()`) with their status.
+- **Veto messages:** `fetch_bills.py` keeps each vetoed bill's `vetoMemo` ({year, signer, text}); past sessions were
+  filled in 2026-10-28. `veto_text()` in states/ny/convert.py keeps the reasons (after "NOT APPROVED"). `vetoMemo()`
+  shows them on the vetoed bill and on a reintroduced version; if the current governor vetoed the earlier
+  version, `planFor()` lists the governor ("support it this time"). Before the year's budget passes, a bill
+  stuck in the money committee with most members sponsoring gets "include it in the budget".
 - **Near-identical bills:** `twinLine()` names them, and `likelierOf()` says which version is more
   likely to move: matching bills in both houses first, then the one that got further, then the
   sponsor's newer version.

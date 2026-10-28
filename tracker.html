@@ -1312,6 +1312,13 @@ function followUpStatus(x) {
   if (x.stage === 2 && x.passedIn) return `passed the ${x.passedIn}, not yet the ${x.passedIn === "Senate" ? "Assembly" : "Senate"}`;
   return DATA.current ? "not passed yet" : "never passed";
 }
+// Why the governor vetoed this bill, or an earlier version of it.
+function vetoMemo(b) {
+  const v = b.vetoNote;
+  if (!v) return "";
+  if (v.own) return `<div class="chapam">${memoText(v.text, "Why the governor vetoed it")}</div>`;
+  return `<div class="chapam"><b>Governor ${esc(v.governor)} vetoed an earlier version (${esc(v.nums)}) in ${esc(v.year)}.</b>${memoText(v.text, "What the governor wrote")}</div>`;
+}
 function signingMemo(b) {
   if (!b.memo) return "";
   if (!changesAgreed(b)) return `<div class="chapam">${memoText(b.memo, "What the governor wrote when signing")}</div>`;
@@ -1929,7 +1936,9 @@ function holdUp(b, v, oppose) {
   const most = members.filter((m) => sponsors.has(lastName(m))).length > members.length / 2;
   const money = commKey(STATE.moneyCommittees?.[house]) === commKey(cname);
   const skipChair = chairBacks ? ` The chair, ${chairName}, is a sponsor, so there's nothing to ask them.` : "";
-  if (money && most && skipped && budgetPassed()) return { leader: true, gov: true, chairBacks,
+  if (money && most && !budgetPassed()) return { leader: true, gov: true, chairBacks, ask: "include it in the budget",
+    note: `Bills that cost money often wait for the budget, which the governor and the ${lead ? leadTitle : "leaders"} negotiate until about April. Ask them to include it.${skipChair}` };
+  if (money && most && skipped) return { leader: true, gov: true, chairBacks,
     note: `Most of the committee's members sponsor this bill, but it's stuck in ${commPlain(c.name)}, where bills that cost money often wait on the budget. ${lead ? `The ${leadTitle} and the governor have` : "The governor has"} a big say in that.${skipChair}` };
   if (chairBacks && most && skipped) return { leader: true, chairBacks,
     note: `The chair, ${chairName}, and most of the committee's members sponsor this bill, but it hasn't had a vote. That might mean the decision is being made higher up${lead ? `, by the ${leadTitle}` : ""}.` };
@@ -1962,8 +1971,8 @@ function planFor(b, stance = "support") {
     const h = holdUp(b, v, opp);
     if (!h) return;
     if (!notes.includes(h.note)) notes.push(h.note);
-    if (h.leader) book.leader(v.p[0], L("let it move out of committee"), live && h.chairBacks);
-    if (h.gov && live) govAlso = "support this bill";
+    if (h.leader) book.leader(v.p[0], L(h.ask || "let it move out of committee"), live && h.chairBacks);
+    if (h.gov && live) govAlso = h.ask || "support this bill";
   };
   if (b.stage === 0) {
     what = `<p class="when">Next: a committee vote.</p>${stalled ? `<p>${stalled}</p>` : ""}`;
@@ -2002,6 +2011,8 @@ function planFor(b, stance = "support") {
     what = `<p class="when">Vetoed. The sponsors can reintroduce it next session.</p>`;
     b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
   }
+  const v = b.vetoNote;
+  if (v && !v.own && b.stage <= 2 && live && !opp && lastName(v.governor) === lastName(DATA.governor)) govAlso = govAlso || "support it this time";
   const actionable = b.stage <= 4 && (live || b.stage >= 3);
   // Why nothing can be done now, in plain words.
   let reason = "";
@@ -3919,7 +3930,7 @@ function fillDetail(el) {
   d.innerHTML = `${b.summary && !inCard ? `<p>${esc(b.summary)}</p>` : ""}
     <p class="textlink">${STATE.textLinks(b)}</p>
     ${chapterAmendment(b)}
-    ${signingMemo(b)}
+    ${signingMemo(b)}${vetoMemo(b)}
     <div class="linkrow"><span>Link to this bill:</span><input type="text" readonly value="${esc(billLink(b))}" aria-label="Link to this bill" onclick="this.select()"><button class="act-btn" type="button" data-copylink>Copy</button></div>
     ${inCard ? "" : nextSteps(b)}
     ${keyDates(b)}
@@ -4456,7 +4467,7 @@ function decode(raw) {
   // The bills arrive column by column; put each bill's fields back together.
   const cols = raw.cols || [], rows = raw.rows || (cols[0] || []).map((_, i) => cols.map((c) => c[i]));
   raw.bills = rows.map((r) => {
-    let [title, summary, laws, comms, topics, flags, stage, passedIn, chapter, veto, comm, last, cosp, act, lawCode, program, law, vers, intro, hist, kd, parties, votes, agenda, places, mainTopic, similar, memo] = r;
+    let [title, summary, laws, comms, topics, flags, stage, passedIn, chapter, veto, comm, last, cosp, act, lawCode, program, law, vers, intro, hist, kd, parties, votes, agenda, places, mainTopic, similar, memo, vetoNote] = r;
     if (summary && summary[0] === "\x01") summary = title + summary.slice(1);
     const dates = Object.fromEntries(KEY_DATES.map((k, i) => [k, kd[i] ? day(kd[i].split(";").pop()) : null]));
     // Every date each house passed it (a bill sent back in year two may pass twice).
@@ -4483,6 +4494,8 @@ function decode(raw) {
       passedIn: passedIn || null, last: day(last),
       sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: ["", "person", "org", "naming"][(flags >> 6) & 3],
       memo: memo || "",
+      // The governor's veto message: this bill's own, or an earlier version's.
+      vetoNote: vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: str(vetoNote[2]), nums: vetoNote[3], own: !!vetoNote[4] } : null,
       nums: v.map((x) => x.p), sponsors: v.map((x) => x.sponsor).filter(Boolean), vers: v,
     };
   });

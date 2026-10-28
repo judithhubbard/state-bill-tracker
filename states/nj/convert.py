@@ -439,6 +439,8 @@ def load_session(session):
             "chapter": chapter if stage == 5 else None,
             "veto": None,
             "memo": "",
+            # New Jersey's database doesn't carry the governor's veto messages.
+            "vetoMemo": None,
             "comm": lead["committee"] if stage == 0 else None,
             # A few bills carry no dates at all; they count from the session's start.
             "first": min(filter(None, [intro] + action_dates), default=f"{session}-01-01"),

@@ -129,6 +129,21 @@ def memo_text(raw):
     return "\n".join(paras)
 
 
+def veto_text(raw):
+    """The governor's reasons from a veto message: the part after "NOT APPROVED", up to the signature."""
+    if not raw or "NOT APPROVED" not in raw:
+        return ""
+    body = raw.split("NOT APPROVED", 1)[1].split("(signed)")[0]
+    body = re.sub(r"\s*(These bills are|The bills are|This bill is|The bill is) disapproved\.\s*$", "", body.rstrip())
+    paras = []
+    for para in re.split(r"\n\s*\n", body):
+        para = re.sub(r"(\w)-\n\s*(?=[a-z])", r"\1", para.strip())
+        para = re.sub(r"\s+", " ", para).strip()
+        if para:
+            paras.append(para)
+    return "\n".join(paras)
+
+
 def norm_comm(name):
     return "Rules" if name.startswith("Rules") else name
 
@@ -354,6 +369,9 @@ def load_session(session):
             "chapter": chapter,
             "veto": veto,
             "memo": next((memo_text(b.get("approvalMemo")) for b in members if b.get("approvalMemo")), ""),
+            # The governor's veto message: {year, signer, text} with the reasons.
+            "vetoMemo": next(({"year": m["year"], "signer": (m.get("signer") or "").title(), "text": veto_text(m["text"])}
+                              for b in members for m in [b.get("vetoMemo")] if m and veto_text(m.get("text"))), None),
             "comm": lead["status"]["committeeName"] if stage == 0 else None,
             "first": first,
             "last": last,
