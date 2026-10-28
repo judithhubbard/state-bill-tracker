@@ -105,17 +105,19 @@ const STATE = {
   calendar(Y, end1, end2, MD) {
     const LEG = 112, GOV = 150, open = STATE.sessionEnds(Y - 2), close = STATE.sessionEnds(Y);
     return {
-      leg: [["", open, `${Y}-06-30`, "Budget season"], ["light", `${Y}-07-01`, `${Y + 1}-01-01`, "Fewer meetings"],
-        ["", `${Y + 1}-01-01`, `${Y + 1}-06-30`, "Budget season"], ["light", `${Y + 1}-07-01`, `${Y + 1}-11-10`, "Campaigns"],
-        ["", `${Y + 1}-11-10`, close, "Last push"]],
+      leg: [["", open, `${Y}-06-30`, "In session"], ["light", `${Y}-07-01`, `${Y}-08-31`, "Summer"],
+        ["", `${Y}-09-01`, `${Y + 1}-06-30`, "In session"], ["light", `${Y + 1}-07-01`, `${Y + 1}-11-10`, "Campaigns"],
+        ["", `${Y + 1}-11-10`, close, "Rush"]],
       gov: [["", open, `${Y + 2}-01-20`, "Signs or vetoes each bill within 45 days, all year"]],
       events: [
-        [open, "up", LEG, `January ${Y}`, "Session opens. Committees and floor votes happen all year, with breaks."],
-        [`${Y}-06-30`, "up", LEG, "June 30", "The budget is due, and many bills pass in the last weeks of June."],
-        [close, "up", LEG, `January ${Y + 2}`, "After a rush of votes, the session ends. Bills that aren't law die."],
-        [`${Y + 2}-01-${String(+close.slice(8) + 7).padStart(2, "0")}`, "down", GOV, "A week later", "Bills the governor hasn't signed die (a pocket veto)."],
+        [open, "up", LEG, `January ${Y}`, "Session opens. Committees meet and bills pass all year, except in summer."],
+        [`${Y}-04-15`, "down", LEG, "April", "Committees mostly pause for budget hearings."],
+        [`${Y}-06-30`, "up", LEG, "June 30", "Each year's budget is due, and many bills pass in the last weeks of June."],
+        [`${Y}-11-01`, "down", LEG, "September to December", "Committees and floor votes start again after the summer break."],
+        [`${Y + 1}-10-01`, "down", LEG, "July to November", "Hardly any meetings while legislators campaign for the November election."],
+        [close, "up", LEG, `January ${Y + 2}`, "The busiest weeks of the session, then it ends. Bills that aren't law die."],
       ],
-      note: "Once a bill reaches the governor, there are 45 days to sign it, veto it, or send it back with changes.",
+      note: "Once a bill reaches the governor, there are 45 days to sign it, veto it, or send it back with changes. Bills passed at the very end have until a week after the session ends; any left unsigned die (a pocket veto).",
     };
   },
 };
