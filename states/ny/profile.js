@@ -45,6 +45,13 @@ const STATE = {
   passedBothNote: (live) => `${live ? "Not yet requested" : "Never requested"} by the governor`,
   passedBothGroup: ["By December 31", () => "The governor's office has to request these and decide on them by the end of the year, or they die."],
 
+  // What happens to a bill that passed both houses: the line under "Next:", and the asks (support, oppose).
+  passedBothNext: () => ({
+    what: "the governor's office requests it (any day through December), then she has 10 days to act.",
+    gov: ["request the bill and sign it", "veto it"],
+    reps: ["urge the governor to sign it", "urge the governor to veto it"],
+  }),
+
   // Stage names (the stage numbers are build_data.py's), and their tips.
   stageText: {
     live: {

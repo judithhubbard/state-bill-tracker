@@ -45,6 +45,29 @@ const STATE = {
     : b.vers.some((v) => v.actions.some(([, t]) => t === "CONDITIONALLY VETOED")) ? "Sent back with the governor's changes" : "Not yet sent to the governor",
   passedBothGroup: ["Before the session ends", () => "These go to the governor once they pass both houses. Any still waiting die when the two-year session ends in January."],
 
+  // What happens to a bill that passed both houses: the line under "Next:", and the asks (support, oppose).
+  // A bill sent back with the governor's changes needs both houses to accept them, one after the other:
+  // the house it's been delivered to since votes now.
+  passedBothNext(b) {
+    const acts = b.vers.flatMap((v) => v.actions).sort((x, y) => (x[0] < y[0] ? -1 : 1));
+    const cv = acts.map(([, t]) => t).lastIndexOf("CONDITIONALLY VETOED");
+    if (cv < 0) return {
+      what: "it goes to the governor, who then has 45 days to sign it, veto it, or send it back with changes.",
+      gov: ["sign it", "veto it"],
+      reps: ["urge the governor to sign it", "urge the governor to veto it"],
+    };
+    const after = acts.slice(cv).map(([, t]) => t);
+    const now = [...after].reverse().find((t) => t.startsWith("DELIVERED TO "))?.endsWith("ASSEMBLY") ? "A" : "S";
+    const other = now === "S" ? "A" : "S", done = after.some((t) => t === `REPASSED ${STATE.houses[other].toUpperCase()}`);
+    return {
+      what: done ? `the ${STATE.houses[now]} votes on the governor's changes; the ${STATE.houses[other]} already accepted them. Then it goes back to the governor to sign.`
+        : `the ${STATE.houses[now]} votes on the governor's changes, then the ${STATE.houses[other]}. If both accept them, it goes back to the governor to sign.`,
+      leaders: [now],
+      leaderAsk: ["bring it to a vote to accept the governor's changes", "keep it from coming to a vote"],
+      reps: ["vote to accept the governor's changes", "vote no"],
+    };
+  },
+
   // The Legislature meets, with long breaks, until the session's last day in January.
   floorVotesEnd: false,
 

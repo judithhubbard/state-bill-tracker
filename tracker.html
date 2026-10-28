@@ -1681,6 +1681,8 @@ const DECIDES = `<span class="decides">Decides</span>${TIP('The person whose dec
 // A button that copies a short email asking this person (house "G" is the governor) to do something about bill b.
 // "Copy email" for someone with an email address; "Copy message" for a contact form (the governor, and
 // legislators who publish no email).
+// The same for a watchlist card's key contact (keyAction()).
+const copyLabel = (key) => (key.gov || !key.info?.email ? "Copy message" : "Copy email");
 const draftBtn = (b, house, name, ask, form = false) => `<button class="act-btn small" type="button" data-draft="${b.idx}" data-house="${house}" data-name="${esc(name)}" data-ask="${esc(ask)}">${house === "G" || form ? "Copy message" : "Copy email"}</button>`;
 const govItem = (ask, b, key = true) => `<li class="${key ? "key" : ""}"><span class="contact">Governor's office${key ? ` ${DECIDES}` : ""}</span><span class="ask">Ask: ${esc(ask)}</span><span class="reach">${draftBtn(b, "G", "", ask)} ${GOV_REACH}</span></li>`;
 const commKey = (n) => (n || "").toLowerCase().split("and").join("").replace(/[^a-z]/g, "");
@@ -2023,9 +2025,12 @@ function planFor(b, stance = "support") {
     book.reps([other], L(A("vote yes", "vote no")));
     if (!live) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
   } else if (b.stage === 3) {
-    what = `<p class="when">Next: the governor's office requests it (any day through December), then she has 10 days to act.</p>`;
-    gov = A("request the bill and sign it", "veto it");
-    book.reps(["S", "A"], A("urge the governor to sign it", "urge the governor to veto it"));
+    // What comes next is the state's (STATE.passedBothNext): the governor, or both houses again.
+    const n = STATE.passedBothNext(b);
+    what = `<p class="when">Next: ${n.what}</p>`;
+    if (n.gov) gov = A(...n.gov);
+    (n.leaders || []).forEach((h) => book.leader(h, L(A(...n.leaderAsk)), live));
+    book.reps(n.leaders || ["S", "A"], A(...n.reps));
   } else if (b.stage === 4) {
     due = b.due;
     what = `<p class="when">Next: the governor signs or vetoes it${b.due ? `, by about ${fmtDate(b.due)}` : ""}.</p>`;
@@ -3452,6 +3457,8 @@ const monthDay = (d) => new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8,
 const daysUntil = (d) => (new Date(d.slice(0, 10)) - new Date(isoToday())) / 864e5;
 // This year's scheduled last session day (data/session_calendar.json), or when past sessions ended.
 function sessionEnd() {
+  // States whose Legislature meets until the session's last day: bills die only then.
+  if (STATE.floorVotesEnd === false) return { date: STATE.sessionEnds(DATA.session), last: true };
   const y = isoToday().slice(0, 4), date = DATA.sessionEnd?.[y];
   if (date) return { date };
   const past = (DATA.insights?.timing || []).map((t) => t.lastVote.slice(5)).sort();
@@ -3476,8 +3483,9 @@ function deadlineOf(b) {
 const W_GROUPS = {
   soon: ["Due soon", () => "A decision or committee meeting is coming up. Act before the date shown."],
   session: ["Before the session ends", () => {
-    const e = sessionEnd(), then = isoToday().startsWith(String(DATA.session + 1))
+    const e = sessionEnd(), then = e.last || isoToday().startsWith(String(DATA.session + 1))
       ? "Bills that haven't passed both houses by then die." : "After that, nothing moves until January.";
+    if (e.last) return `The session ends ${monthDay(e.date)}, ${e.date.slice(0, 4)}. ${then}`;
     if (e.date && daysUntil(e.date) >= 0) return `The session is scheduled to end ${monthDay(e.date)}. ${then}`;
     if (e.date) return `The session was scheduled to end ${monthDay(e.date)}; it could end any day. ${then}`;
     return e.from ? `The session usually ends between ${monthDay(e.from)} and ${monthDay(e.to)}. ${then}` : then;
@@ -3792,7 +3800,7 @@ function renderWatchView() {
     for (const x of xs) { const k = `${g}|${x.key.gov ? "gov" : `${x.key.house}:${lastName(x.key.name)}`}`; (byPerson.get(k) || byPerson.set(k, []).get(k)).push(x); }
     return [...byPerson.entries()].filter(([, ys]) => ys.length > 1).map(([k, ys]) => {
       multiAll[k] = ys;
-      return `<p class="multi">${num(ys.length)} of these need ${ys[0].key.gov ? "the governor's office" : esc(titleOf(ys[0].key))}. <button class="act-btn" type="button" data-multi="${esc(k)}">Copy one email about all ${num(ys.length)}</button></p>`;
+      return `<p class="multi">${num(ys.length)} of these need ${ys[0].key.gov ? "the governor's office" : esc(titleOf(ys[0].key))}. <button class="act-btn" type="button" data-multi="${esc(k)}">${copyLabel(ys[0].key).replace("Copy", "Copy one")} about all ${num(ys.length)}</button></p>`;
     }).join("");
   };
   $("wlActions").innerHTML = ""; $("wlActions").hidden = true;
@@ -3804,7 +3812,7 @@ function renderWatchView() {
       <div class="do">
         <p class="who"><b>${esc(titleOf(x.key))}</b> ${DECIDES}</p>
         <p class="askbig">Ask: ${esc(x.key.ask)}</p>
-        <p class="reach"><button class="act-btn primary" type="button" data-email="${b.idx}">Copy email</button> ${reachOf(x.key)}</p>
+        <p class="reach"><button class="act-btn primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button> ${reachOf(x.key)}</p>
         ${x.reps.length ? `<p class="also">Also: ${x.reps.map((r) => `${esc(titleOf(r))}, ${esc(r.ask)}${r.info?.email ? ` (${emailHtml(r.info.email, "your-legislator")})` : ""}`).join("; ")}.</p>` : ""}
       </div>` : "";
     const open = W_OPEN.has(billKey(b)), logged = SHARED ? 0 : logOf(b).length;
@@ -3816,7 +3824,7 @@ function renderWatchView() {
           ? `${watchButton(b, false)}<span class="stance fixed ${x.stance}" title="The position of whoever shared this list">${x.stance === "oppose" ? "Oppose" : "Support"}</span>`
           : watchButton(b)}</div><span class="spill p${b.stage}">${esc(TEXT.pipe[b.stage])}${esc(due)}</span></div>
         <h3>${esc(b.title)}${SHARED ? "" : newsTags(b)}</h3>
-        ${x.key ? `<div class="wask"><span><b>${esc(titleOf(x.key))}:</b> ${esc(x.key.ask)}</span><button class="act-btn small primary" type="button" data-email="${b.idx}">Copy email</button></div>` : ""}
+        ${x.key ? `<div class="wask"><span><b>${esc(titleOf(x.key))}:</b> ${esc(x.key.ask)}</span><button class="act-btn small primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button></div>` : ""}
         ${SHARED_META?.notes?.[baseNum(b.nums[0])] ? `<div class="pubnote"><b>Note from ${esc(SHARED_META.group)}:</b> ${esc(SHARED_META.notes[baseNum(b.nums[0])])}</div>` : ""}
         ${logged ? `<p class="wlogged">${num(logged)} action${logged === 1 ? "" : "s"} logged</p>` : ""}
       </div>
