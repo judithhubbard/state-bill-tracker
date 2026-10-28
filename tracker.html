@@ -4409,7 +4409,7 @@ function decode(raw) {
       votes: (votes || []).map(([house, kind, cm, date, yes, no, ny]) => ({
         house, kind, committee: str(cm), date: day(date), yes, no, notYes: new Map(ny.map(([m, code]) => [T[m], code])),
       })),
-      due: raw.current && stage === 4 ? STATE.govDeadline(dates.deliv) : null,
+      due: raw.current && stage === 4 ? STATE.govDeadline(dates.deliv, raw.session) : null,
       earlier: hist.filter((e) => e[0] < raw.session), later: hist.filter((e) => e[0] > raw.session),
       laws: laws.map(str), comms: comms.map(str), law: str(law), program: str(program), comm: str(comm),
       passedIn: passedIn || null, last: day(last),
@@ -4426,7 +4426,8 @@ function decode(raw) {
 // so it stays accurate as the year goes on. Returns "" while the Legislature is actively voting.
 // True once the current session's second year has had no floor votes for three weeks.
 function floorVotesOver() {
-  if (!DATA.current) return false;
+  // States whose Legislature meets until the session's last day turn this off.
+  if (!DATA.current || STATE.floorVotesEnd === false) return false;
   const lv = DATA.lastVote || "", today = isoToday();
   return lv.startsWith(String(DATA.session + 1)) && (new Date(today) - new Date(lv)) / 864e5 > 21;
 }

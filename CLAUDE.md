@@ -30,6 +30,15 @@ from that repo. **Nothing here may change it.**
   `states/ny/profile.js` (the `STATE` object; see the map below). Still NY-only in tracker.html: its
   explanations (How a bill becomes law, chapter amendments, "held for consideration"), `PLAIN` and
   the NY action wording, which move when NJ needs its own.
+- **New Jersey, milestone 1 (bills, stages, votes; built 2026-10-27):** `python3 states/nj/fetch.py`
+  downloads each session's database and vote files into data/nj/ (not in git yet), and
+  `python3 build_data.py --state nj` builds site/nj/<session>.html. `states/nj/convert.py` turns NJ's
+  action codes into NY's wording, so the page's plain-language rules work unchanged. Not done yet:
+  legislators, contacts and "Where you live" (two Assembly members per district breaks the `A:<district>`
+  seat keys); committee agendas (BAGENDA.TXT); 2022–23 (NJ's text download lacks MAINBILL; the full
+  DB2022.zip is an Access file); the How-a-bill-becomes-law text, the "Tompkins County" filter and
+  "Not yet requested by the governor", which are still New York's. A conditional veto the Legislature
+  hasn't acted on counts as Vetoed for now.
 - While this is being built, the NY site keeps getting improvements in ny-bill-tracker. Carry them
   over here by hand (compare against `git log` there since b312227).
 

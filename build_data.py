@@ -126,7 +126,10 @@ def assembly_resolver(session):
 def parties(session, recs):
     """Party ("D" or "R") for each legislator name as the bill data spells it, keyed by
     (house, name). Names are tied to parties through the seat each sponsor holds: sitting
-    members from the contacts file, earlier holders from the Open States archive."""
+    members from the contacts file, earlier holders from the Open States archive. A state's converter
+    can supply its own (New Jersey's come from each session's roster)."""
+    if hasattr(C, "parties"):
+        return C.parties(session, recs)
     path = os.path.join(P.DATA, f"contacts_{session}.json")
     seats = json.load(open(path)).get("people", {}) if os.path.exists(path) else {}
     hpath = os.path.join(P.DATA, "seat_parties.json")
@@ -638,6 +641,8 @@ def insights(loaded, hist, current):
 
 def profiles(session, recs, legs, party_of):
     """Each sitting legislator's numbers this session, and the median for their party in their house."""
+    if not legs:
+        return {}, {}
     resolve = assembly_resolver(session)
     by_seat = {L["id"]: L for L in legs}
     last_of = {L["id"]: name_key(L["name"]).split()[-1] for L in legs}
@@ -1132,6 +1137,9 @@ def main():
             return sorted(seen, key=lambda x: x[1])
 
         def member_id(m):
+            # A state's converter may name members by id already ("A?Name").
+            if isinstance(m, str):
+                return m
             house, who = m
             if house == "S":
                 return f"S:{who}"
@@ -1214,7 +1222,8 @@ def main():
                     dst.write(src.read())
             with open(os.path.join(GITHUB, "data", f"{session}.json"), "w", encoding="utf-8") as f:
                 f.write(payload)
-        template = open(TEMPLATE).read()
+        # The template is written with New York's names (title, header and the script that updates them).
+        template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)
         # The state's page settings and rules, read by the main script as STATE.
         state_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
         template = template.replace('<script id="state-profile"></script>', f'<script id="state-profile">\n{state_js}</script>', 1)
