@@ -97,7 +97,7 @@ def assembly_resolver(session):
     for seat, p in seats.items():
         if seat[0] == "A":
             words = p["key"].split()
-            by_last[words[-1]].append((words[0], int(seat[2:])))
+            by_last[words[-1]].append((words[0], int(re.match(r"\d+", seat[2:]).group())))
     cache = {}
 
     def resolve(short):
@@ -202,7 +202,8 @@ def legislators(session):
     house_counts = Counter((seat[0], last(p)) for seat, p in seats.items())
     out = []
     for seat, p in sorted(seats.items(), key=lambda kv: kv[1]["key"].split()[-1]):
-        house, district = seat.split(":")
+        # "A:12", or "A:12a" where a district has two Assembly members.
+        house, district = seat[0], re.match(r"\d+", seat[2:]).group()
         slug = last(p) if counts[last(p)] == 1 else p["key"].replace(" ", "-")
         out.append({"id": seat, "slug": slug, "name": p["name"], "title": "Sen." if house == "S" else "Asm.",
                     "house": house, "district": int(district), "email": p.get("email"), "phone": p.get("phone"), "phones": p.get("phones"),
@@ -235,7 +236,7 @@ def contacts_for(session, recs, delegation_names):
             p = hits[0] if len(hits) == 1 else None
         if p:
             return {"url": p["url"], "email": p["email"], "phone": p["phone"], "phones": p.get("phones")}
-        if house == "S":
+        if house == "S" and getattr(P, "SENATOR_URLS", False):
             return {"url": senate_url(name)}
         m = asm_members.get(key) or {}
         return {"url": m.get("url"), "email": m.get("email")}
@@ -648,6 +649,13 @@ def profiles(session, recs, legs, party_of):
     resolve = assembly_resolver(session)
     by_seat = {L["id"]: L for L in legs}
     last_of = {L["id"]: name_key(L["name"]).split()[-1] for L in legs}
+    match = member_matcher(legs)
+
+    def seat_of(house, v):
+        """The current seat of a version's sponsor: by district (a seat id like "S:52"), else by name
+        (New Jersey's two Assembly members per district have ids like "A:12a")."""
+        seat = f"{house}:{v.get('district')}"
+        return seat if seat in by_seat else match(house, v["sponsor"], v.get("district"))
     stats = {L["id"]: {"sponsored": 0, "floor": 0, "passedHouse": 0, "both": 0, "laws": 0, "lawsLocal": 0,
                        "otherParty": 0, "floorVotes": 0, "missed": 0, "comms": {}} for L in legs}
     first_bill, votes_seen = {}, []
@@ -656,7 +664,7 @@ def profiles(session, recs, legs, party_of):
         local = narrow_bill(r) or bool(CEREMONIAL.search(r["title"] or ""))
         for v in r["vers"]:
             house = v["p"][0]
-            seat = f"{house}:{v.get('district')}"
+            seat = seat_of(house, v)
             if seat not in stats or name_key(v["sponsor"] or "").split()[-1:] != [last_of[seat]]:
                 continue
             st = stats[seat]
@@ -678,14 +686,20 @@ def profiles(session, recs, legs, party_of):
             others = {party_of.get((vv["p"][0], n)) for vv in r["vers"] for n in [vv["sponsor"]] + vv.get("cosponsors", [])}
             st["otherParty"] += bool(mine and (others - {mine, None}))
         for v in r["vers"]:
-            seat = f"{v['p'][0]}:{v.get('district')}"
+            seat = seat_of(v["p"][0], v)
             if seat in stats and v["actions"] and name_key(v["sponsor"] or "").split()[-1:] == [last_of[seat]]:
                 first_bill[seat] = min(first_bill.get(seat, "9999"), v["actions"][0][0])
         for h, kind, comm, date, y, n, ny in r["votes"]:
             if kind != "F":
                 continue
             absent = set()
-            for (mh, who), code in ny:
+            for m, code in ny:
+                if isinstance(m, str):
+                    # Members named by seat already ("A:12a").
+                    if code in ("E", "A") and m in stats:
+                        absent.add(m)
+                    continue
+                mh, who = m
                 if code in ("E", "A"):
                     d = who if mh == "S" else resolve(who)
                     if d:
@@ -1213,6 +1227,8 @@ def main():
             "governor": P.GOVERNORS[-1][0],
             # Current Senate and Assembly districts in each county, for "Where you live".
             "districtCounties": json.load(open(P.DISTRICTS_PATH)) if session == current and os.path.exists(P.DISTRICTS_PATH) else {},
+            # States that find legislators by town: [[town, county, [[district, share of its people], ...]], ...].
+            **({"towns": json.load(open(P.TOWNS_PATH))} if session == current and os.path.exists(getattr(P, "TOWNS_PATH", "")) else {}),
         }
         if session < current:
             # Current legislators, so a past session opened for one of them can show their profile card.

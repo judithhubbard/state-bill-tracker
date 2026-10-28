@@ -1678,7 +1678,9 @@ const PAST_STAGE_TIPS = STATE.pastStageTips;
 const OUT_OF_TIME = STATE.outOfTime;
 const DECIDES = `<span class="decides">Decides</span>${TIP('The person whose decision moves the bill to its next step.')}`;
 // A button that copies a short email asking this person (house "G" is the governor) to do something about bill b.
-const draftBtn = (b, house, name, ask) => `<button class="act-btn small" type="button" data-draft="${b.idx}" data-house="${house}" data-name="${esc(name)}" data-ask="${esc(ask)}">${house === "G" ? "Copy message" : "Copy email"}</button>`;
+// "Copy email" for someone with an email address; "Copy message" for a contact form (the governor, and
+// legislators who publish no email).
+const draftBtn = (b, house, name, ask, form = false) => `<button class="act-btn small" type="button" data-draft="${b.idx}" data-house="${house}" data-name="${esc(name)}" data-ask="${esc(ask)}">${house === "G" || form ? "Copy message" : "Copy email"}</button>`;
 const govItem = (ask, b, key = true) => `<li class="${key ? "key" : ""}"><span class="contact">Governor's office${key ? ` ${DECIDES}` : ""}</span><span class="ask">Ask: ${esc(ask)}</span><span class="reach">${draftBtn(b, "G", "", ask)} ${GOV_REACH}</span></li>`;
 const commKey = (n) => (n || "").toLowerCase().split("and").join("").replace(/[^a-z]/g, "");
 const HOUSE = STATE.houses;
@@ -1711,16 +1713,20 @@ function setCounty(county) {
   }
   renderMyReps(); renderOpenNow(); render();
 }
+// "A and B", "A, B and C".
+const andList = (xs) => (xs.length < 3 ? xs.join(" and ") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
 function myReps() {
   const c = chosenReps() || countyReps(HOME);
   if (!c || !LEGS.length) return DATA.contacts?.reps || [];
-  return ["S", "A"].map((h) => LEGS.find((L) => L.id === `${h}:${c[h]}`)).filter(Boolean)
+  // A district can have more than one Assembly member (New Jersey's have two).
+  return ["S", "A"].flatMap((h) => LEGS.filter((L) => L.house === h && L.district === +c[h]))
     .map((L) => ({ title: L.title, name: L.name, house: L.house, last: lastName(L.name) }));
 }
 function renderMyReps() {
   const box = $("myReps");
   if (!box) return;
   if (!DATA.current || !LEGS.length || PRESET?.who) { box.hidden = true; return; }
+  if (DATA.towns) return renderTownReps(box);
   const reps = myReps(), c = chosenReps();
   const d = countyDistricts(HOME);
   const opts = (h) => {
@@ -1744,9 +1750,28 @@ function renderMyReps() {
     <div class="repsel"><label>Senate <select id="repS">${opts("S")}</select></label> <label>Assembly <select id="repA">${opts("A")}</select></label></div>
     <p>Your legislators: ${reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`).join(" and ") || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
 }
-function setReps(s, a) {
-  try { localStorage.setItem(REPS_STORE, JSON.stringify({ S: +s, A: +a })); } catch (e) {}
+function setReps(s, a, more = {}) {
+  try { localStorage.setItem(REPS_STORE, JSON.stringify({ S: +s, A: +a, ...more })); } catch (e) {}
   renderMyReps(); renderOpenNow(); render();
+}
+// States that find legislators by town (New Jersey): a town gives the district, whose senator and
+// Assembly members are one's legislators. A town split between districts asks which one.
+const townKey = (t) => `${t[0]}|${t[1]}`;
+function renderTownReps(box) {
+  const reps = myReps(), c = chosenReps(), towns = DATA.towns;
+  const town = c?.town ? towns.find((t) => townKey(t) === c.town) : null;
+  const named = (t) => towns.some((u) => u !== t && u[0] === t[0]) ? `${t[0]} (${t[1]} County)` : t[0];
+  const townOpts = `<option value="">Choose your town</option>` + towns.map((t) => `<option value="${esc(townKey(t))}"${t === town ? " selected" : ""}>${esc(named(t))}</option>`).join("");
+  const districts = [...new Set(LEGS.map((L) => L.district))].sort((a, b) => a - b);
+  const who = (d) => LEGS.filter((L) => L.district === d).sort((a, b) => (a.house === b.house ? 0 : a.house === "S" ? -1 : 1)).map((L) => L.name.split(" ").pop()).join(", ");
+  const distOpts = `<option value="">Choose your district</option>` + districts.map((d) => `<option value="${d}"${d === c?.S ? " selected" : ""}>District ${d}: ${esc(who(d))}</option>`).join("");
+  const where = !town ? "" : town[2].length > 1
+    ? `${esc(named(town))} is split between ${andList(town[2].map(([d]) => `District ${d}`))}. Pick yours below.`
+    : `${esc(named(town))} is in District ${town[2][0][0]}.`;
+  box.innerHTML = `<h2>Where you live</h2>
+    <div class="repsel"><label>Town <select id="repT">${townOpts}</select></label> <label>District <select id="repD">${distOpts}</select></label></div>
+    ${where ? `<p class="muted">${where}</p>` : ""}
+    <p>Your legislators: ${andList(reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`)) || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
 }
 // The Census geocoder answers in JSONP, so it works from a static page.
 function lookUpReps(address) {
@@ -1816,7 +1841,7 @@ function contactBook(b, canMove = true, oppose = false) {
       // Your own legislators who sit on this committee get a vote there.
       for (const r of myReps().filter((x) => x.house === house)) {
         const L = LEGS.find((x) => x.house === house && lastName(x.name) === r.last && x.name === r.name) || LEGS.find((x) => x.house === house && lastName(x.name) === r.last);
-        if (L && (L.committees || []).some((m) => commKey(m.name) === commKey(c.name)))
+        if (L && who(r.name, house) !== who(c.chair, house) && (L.committees || []).some((m) => commKey(m.name) === commKey(c.name)))
           add(r.name, house, `member of the ${c.name} Committee`, canMove && !backs(r.name, house) ? (oppose ? "vote no in committee" : "vote yes in committee") : "");
       }
     },
@@ -1847,7 +1872,7 @@ function contactBook(b, canMove = true, oppose = false) {
         const name = info.url ? `<a href="${esc(info.url)}" target="_blank" rel="noopener">${title} ${esc(p.name)}</a>` : `${title} ${esc(p.name)}`;
         const kind = roleKind(p.roles);
         const reach = [emailHtml(info.email, kind), phonesHtml(info, kind)].filter(Boolean).join(" · ");
-        const draft = p.asks.length && info.email ? draftBtn(b, p.house, p.name, p.asks.join("; ")) + " " : "";
+        const draft = p.asks.length && (info.email || info.url) ? draftBtn(b, p.house, p.name, p.asks.join("; "), !info.email) + " " : "";
         const roles = p.roles.join("; ");
         const ask = p.asks.length ? `<span class="ask">Ask: ${esc(p.asks.join("; "))}</span>` : "";
         return { star: p.star, html: `<li class="${p.star ? "key" : ""}"><span class="contact">${name}${status}${p.star ? ` ${DECIDES}` : ""}</span><span class="role">${esc(roles.charAt(0).toUpperCase() + roles.slice(1))}</span>${ask}${reach ? `<span class="reach">${draft}${reach}</span>` : ""}</li>` };
@@ -1919,7 +1944,8 @@ function holdUp(b, v, oppose) {
   const c = (DATA.contacts?.committees || {})[`${house}:${commKey(cname)}`];
   if (!c) return null;
   const lead = (DATA.contacts?.leaders || {})[house];
-  const leadTitle = lead ? lead.role.replace(/^(Senate|Assembly) /, "") : "";
+  // "the Speaker", "the Majority Leader"; "the Senate President" keeps its house.
+  const leadTitle = lead ? (/President/.test(lead.role) ? lead.role : lead.role.replace(/^(Senate|Assembly) /, "")) : "";
   const runsRules = lead ? `The ${leadTitle} runs the Rules Committee, so it's up to ${lead.pronoun} whether this gets a vote.` : "";
   if (commKey(cname) === "rules") return lead ? { note: runsRules } : null;
   // Sent to Rules earlier in the session and back in committee now (as happens each January).
@@ -3880,7 +3906,7 @@ function fillSelects() {
   $("votedField").hidden = !DATA.current || !votePeople().length;
   $("votedLabel").textContent = PRESET?.who ? "How they voted" : "How your legislators voted";
   const reps = PRESET?.who ? [] : votePeople();
-  $("youReps").innerHTML = reps.length ? `Your legislators: ${reps.map((L) => esc(L.name)).join(" and ")} · <button type="button" class="linkish" data-goreps>change</button>` : "";
+  $("youReps").innerHTML = reps.length ? `Your legislators: ${andList(reps.map((L) => esc(L.name)))} · <button type="button" class="linkish" data-goreps>change</button>` : "";
   if ($("homeCounty").value !== HOME) $("homeCounty").value = HOME;
   for (const id of ["who", "law", "voted", "changed", ...MORE_KEYS]) $(id)?.classList.toggle("on", !!state[id]);
   // How many more bills each "hide" box takes out, given the other filters.
@@ -4294,6 +4320,15 @@ function wire() {
   $("myReps").addEventListener("change", (e) => {
     if (e.target.id === "repC") setCounty(e.target.value);
     else if (e.target.id === "repS" || e.target.id === "repA") setReps($("repS").value, $("repA").value);
+    else if (e.target.id === "repT") {
+      // A town gives its district (the one with most of its people, if split).
+      const t = DATA.towns.find((x) => townKey(x) === e.target.value);
+      if (t) setReps(t[2][0][0], t[2][0][0], { town: townKey(t) });
+    } else if (e.target.id === "repD" && e.target.value) {
+      const t = DATA.towns.find((x) => townKey(x) === chosenReps()?.town);
+      const d = +e.target.value;
+      setReps(d, d, t && t[2].some(([x]) => x === d) ? { town: townKey(t) } : {});
+    }
   });
   $("statNet").addEventListener("change", (e) => {
     if (e.target.matches("[data-nethouse]")) netHouse = e.target.value;

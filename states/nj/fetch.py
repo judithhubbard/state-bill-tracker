@@ -67,6 +67,9 @@ def main():
                 print(f"{name}: {os.path.getsize(path) / 1e6:.1f} MB")
             else:
                 print(f"{name}: not published yet")
+    # The current session's legislators, committees and leaders.
+    from states.nj import contacts
+    contacts.main(CURRENT)
 
 
 if __name__ == "__main__":

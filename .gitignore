@@ -15,4 +15,5 @@ lists_worker/.wrangler/
 cron_worker/.wrangler/
 lists_worker/node_modules/
 # New Jersey downloads (states/nj/fetch.py); not kept in git yet.
-data/nj/
+data/nj/*
+!data/nj/district_towns.json

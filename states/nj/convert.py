@@ -60,6 +60,28 @@ def name_key(last, first):
     return (re.sub(r"[^a-z]", "", last.lower()), re.sub(r"[^a-z]", "", (first.split() or [""])[0].lower()))
 
 
+def seat_ids(z):
+    """Each legislator in a session's roster -> a seat id: "S:12" for a senator, "A:12a" and "A:12b" for
+    a district's two Assembly members (in order of last name). Keyed by (house, last, first)."""
+    rows = sorted(_rows(z, "ROSTER.TXT"), key=lambda r: (r["House"], int(r["District"] or 0), r["LastName"], r["Firstname"]))
+    out, n = {}, defaultdict(int)
+    for r in rows:
+        d = int(r["District"] or 0)
+        if r["House"] == "S":
+            sid = f"S:{d}"
+        else:
+            sid = f"A:{d}{'ab'[min(n[d], 1)]}"
+            n[d] += 1
+        out[(r["House"],) + name_key(r["LastName"], r["Firstname"])] = sid
+    return out
+
+
+def member_id(house, name, seats):
+    """A voter's id: their seat when they're in the roster passed in, else "A?Name"."""
+    last, _, first = name.partition(",")
+    return seats.get((house,) + name_key(last, first.strip())) or f"{house}?{person(name)}"
+
+
 # ---- Actions: the codes, in New York's wording.
 FLOOR = re.compile(r"^2R[AS]$")
 
@@ -155,6 +177,9 @@ def version_stage(steps, live):
     for h, w in steps:
         if FLOOR.match(w) or re.fullmatch(r"2R[AS][CG]", w):
             floor.add(h)
+        elif w in ("REF", "TRANS", "RCM"):
+            # Sent (back) to a committee, often Budget or Appropriations after a first one: off the floor.
+            floor.discard(h)
         elif w in ("PA", "PS"):
             passed.add(w[1])
         elif w == "PBH":
@@ -183,7 +208,7 @@ FLOOR_VOTE = re.compile(r"PASSAGE|CONCUR|OVERRIDE|RECOMMENDATION")
 VOTE_CODE = {"N": "N", "No": "N", "A": "B", "Abstain": "B", "": "A"}
 
 
-def read_votes(session, comms):
+def read_votes(session, comms, seats=None):
     """Every bill's floor and committee roll calls: bill -> [[house, "F"/"C", committee, date, yes, no,
     [[member, code], ...]], ...], listing only members who didn't vote yes. Members are "A?Name"."""
     calls = defaultdict(list)  # (bill, house, kind, committee, date, motion) -> [[name, vote], ...]
@@ -219,7 +244,7 @@ def read_votes(session, comms):
             yes = sum(v in ("Y", "Yes") for _, v in roll)
             no = sum(v in ("N", "No") for _, v in roll)
             out[bill].append([house, kind, comm, date, yes, no,
-                              [[f"{house}?{person(n)}", VOTE_CODE.get(v, v)] for n, v in roll if v not in ("Y", "Yes")]])
+                              [[member_id(house, n, seats or {}), VOTE_CODE.get(v, v)] for n, v in roll if v not in ("Y", "Yes")]])
     return out
 
 
@@ -288,7 +313,9 @@ def load_session(session):
     subjects = defaultdict(list)
     for r in _rows(z, "BILLSUBJ.TXT"):
         subjects[r["BillType"] + r["BillNumber"]].append(subj_names.get(r["SubjectKey"], r["SubjectKey"]))
-    votes = read_votes(session, comms)
+    # The current session's voters are tied to their seats, so the page can show how each legislator
+    # voted; earlier sessions' seats were held by others, so their voters keep their names.
+    votes = read_votes(session, comms, seat_ids(z) if session == CURRENT else None)
 
     # Union-find over identical bills and substitutions.
     parent = {p: p for p in main}

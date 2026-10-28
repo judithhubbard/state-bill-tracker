@@ -32,10 +32,12 @@ def session_label(session):
 CF_ANALYTICS_TOKEN = ""
 GOATCOUNTER_CODE = ""
 
-# Sponsor checkboxes for a local delegation, and the leaders who decide which bills reach the floor:
-# none yet (they come with legislators and contacts).
+# Sponsor checkboxes for a local delegation: none.
 DELEGATION_NAMES = set()
-LEADERS = {}
+# Who decides which bills reach each house's floor: name, title, and the pronoun the site uses for
+# them (from the roster's sex field). Check after leadership votes each January of an even year.
+LEADERS = {"S": ("Nicholas Scutari", "Senate President", "him"),
+           "A": ("Craig Coughlin", "Assembly Speaker", "him")}
 
 
 def delegation(session):
@@ -98,6 +100,9 @@ COUNTIES = ["Atlantic", "Bergen", "Burlington", "Camden", "Cape May", "Cumberlan
             "Hunterdon", "Mercer", "Middlesex", "Monmouth", "Morris", "Ocean", "Passaic", "Salem", "Somerset", "Sussex",
             "Union", "Warren"]
 DISTRICTS_PATH = os.path.join(DATA, "district_counties.json")
+# Each town's legislative district (states/nj/towns.py): "Where you live" picks a town. A town's Senate
+# and Assembly districts are the same, with one senator and two Assembly members.
+TOWNS_PATH = os.path.join(DATA, "district_towns.json")
 
 # Bills about one person, group or naming (their odds are compared only with their own kind).
 _NAMING = re.compile(r"^(?:Designates|Names|Renames|Redesignates|Dedicates)\b.*\b(?:portion|bridge|segment|section|route|"

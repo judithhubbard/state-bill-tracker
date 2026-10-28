@@ -53,6 +53,10 @@ LEADERS = {"S": ("Andrea Stewart-Cousins", "Senate Majority Leader", "her"),
            "A": ("Carl Heastie", "Assembly Speaker", "him")}
 
 
+# Senators the contacts file doesn't list get an address on nysenate.gov, made from their name.
+SENATOR_URLS = True
+
+
 def delegation(session):
     return DELEGATION.get(session, DEFAULT_DELEGATION if session >= 2023 else {})
 

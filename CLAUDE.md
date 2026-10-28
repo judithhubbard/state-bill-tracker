@@ -42,9 +42,14 @@ from that repo. **Nothing here may change it.**
   text is `states/<code>/how.html` (else New York's, in tracker.html); its committee pairings, calendar
   and "passed both houses" line are in its profile.js. Committee agendas come from `C.agendas()`. A
   conditional veto the Legislature hasn't acted on counts as passed both houses while the session runs.
-  Not done yet: legislators, contacts and "Where you live" (two Assembly members per district breaks the
-  `A:<district>` seat keys; the county picker hides until bills have places); 2022–23 (NJ's text download
-  lacks MAINBILL; the full DB2022.zip is an Access file); published lists and the "public site" tip.
+  Legislators (milestone 2, 2026-10-28): `states/nj/contacts.py` (run by fetch.py) writes
+  data/nj/contacts_<session>.json from the roster, biography and committee files in NY's shape. Seat ids
+  are "S:12", and "A:12a"/"A:12b" for a district's two Assembly members (`seat_ids()` in convert.py, which
+  also ties the current session's votes to them). "Where you live" picks a town (`renderTownReps()`, from
+  data/nj/district_towns.json, made once by `states/nj/towns.py` from the Apportionment Commission's table);
+  a town's district gives its senator and both Assembly members. NJ publishes no emails: "Copy message"
+  goes with the legislator's page. Not done yet: 2022–23 (NJ's text download lacks MAINBILL; the full
+  DB2022.zip is an Access file); published lists and the "public site" tip; the daily workflow for NJ.
 - Fixes made in ny-bill-tracker still get carried over here by hand (compare against `git log` there since
   b312227; 5fe4339 is already in).
 
