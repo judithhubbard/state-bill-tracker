@@ -263,6 +263,8 @@ def contacts_for(session, recs, delegation_names):
                 "meets": c.get("meets"),
                 "url": c.get("url"),
                 "ours": ours_on(c.get("members", []), house),
+                # For telling when a bill's sponsors make up most of the committee it's stuck in.
+                "members": c.get("members", []),
             }
     for r in recs:
         for v in r["vers"]:
@@ -276,10 +278,10 @@ def contacts_for(session, recs, delegation_names):
                 people.setdefault(name, lookup(name, house, district))
                 reps.append({"title": title, "name": name, "house": house, "last": seat["key"].split()[-1]})
     leaders = {}
-    for house, (name, role) in P.LEADERS.items():
+    for house, (name, role, pronoun) in P.LEADERS.items():
         if any(k[0] == house and v["key"] == name_key(name) for k, v in seats.items()):
             person(name, house)
-            leaders[house] = {"name": name, "role": role}
+            leaders[house] = {"name": name, "role": role, "pronoun": pronoun}
     return {"fetched": raw.get("fetched"), "committees": committees, "people": people, "reps": reps, "leaders": leaders}
 
 

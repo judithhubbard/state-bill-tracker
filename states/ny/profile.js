@@ -106,6 +106,8 @@ const STATE = {
     cities: "The Senate has two: Cities 1 for New York City and Cities 2 for other cities.",
     "budget and revenue": "The Senate's tax committee. In the Assembly, tax bills go to Ways and Means.",
   },
+  // The committees bills that cost money go to after their subject committee.
+  moneyCommittees: { S: "Finance", A: "Ways And Means" },
   secondCommittee: "Bills that cost money go to Senate Finance or Assembly Ways and Means. Bills that create crimes or change penalties go to Codes. Near the end of the session, many bills go through Rules, which the leaders run.",
   // The two-year calendar: the Legislature's and the governor's bars ([class, from, to, text]), the
   // events marked on it ([date, "up"/"down", row, when, text]; rows are LEG = 112, GOV = 150) and a note.

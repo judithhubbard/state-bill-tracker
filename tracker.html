@@ -1672,7 +1672,7 @@ const OUT_OF_TIME = STATE.outOfTime;
 const DECIDES = `<span class="decides">Decides</span>${TIP('The person whose decision moves the bill to its next step.')}`;
 // A button that copies a short email asking this person (house "G" is the governor) to do something about bill b.
 const draftBtn = (b, house, name, ask) => `<button class="act-btn small" type="button" data-draft="${b.idx}" data-house="${house}" data-name="${esc(name)}" data-ask="${esc(ask)}">${house === "G" ? "Copy message" : "Copy email"}</button>`;
-const govItem = (ask, b) => `<li class="key"><span class="contact">Governor's office ${DECIDES}</span><span class="ask">Ask: ${esc(ask)}</span><span class="reach">${draftBtn(b, "G", "", ask)} ${GOV_REACH}</span></li>`;
+const govItem = (ask, b, key = true) => `<li class="${key ? "key" : ""}"><span class="contact">Governor's office${key ? ` ${DECIDES}` : ""}</span><span class="ask">Ask: ${esc(ask)}</span><span class="reach">${draftBtn(b, "G", "", ask)} ${GOV_REACH}</span></li>`;
 const commKey = (n) => (n || "").toLowerCase().split("and").join("").replace(/[^a-z]/g, "");
 const HOUSE = STATE.houses;
 
@@ -1851,6 +1851,39 @@ function contactBook(b, canMove = true, oppose = false) {
   };
 }
 
+// Signs that a bill stuck in committee is being held above the committee: it's in Rules, which the
+// leader runs; or its sponsors make up most of the committee and either the chair is one of them or
+// it's the money committee, where bills that cost money wait on the budget. Returns the note to show
+// and whether to add the leader and the governor, or null when there's no sign. (In past New York
+// sessions, about half the bills sponsored by most of a house still died there, often in Ways and Means.)
+function holdUp(b, v, oppose) {
+  const house = v.p[0], cname = v.committee;
+  const c = (DATA.contacts?.committees || {})[`${house}:${commKey(cname)}`];
+  if (!c) return null;
+  const lead = (DATA.contacts?.leaders || {})[house];
+  const leadTitle = lead ? lead.role.replace(/^(Senate|Assembly) /, "") : "";
+  const runsRules = lead ? `The ${leadTitle} runs the Rules Committee, so it's up to ${lead.pronoun} whether this gets a vote.` : "";
+  if (commKey(cname) === "rules") return lead ? { note: runsRules } : null;
+  // Sent to Rules earlier in the session and back in committee now (as happens each January).
+  const toRules = v.actions.find(([, t]) => /^(REPORTED REFERRED|COMMITTED|REFERRED) TO RULES$/.test(t));
+  if (toRules && lead) return { leader: true, chairBacks: true,
+    note: `It got as far as the Rules Committee in ${toRules[0].slice(0, 4)} but didn't get a vote there. ${runsRules}` };
+  if (oppose) return null;
+  const chairName = `${house === "S" ? "Sen." : "Asm."} ${c.chair}`;
+  const sponsors = new Set(b.vers.filter((x) => x.p[0] === house).flatMap((x) => [x.sponsor, ...x.cosponsors]).map(lastName));
+  const chairBacks = !!c.chair && sponsors.has(lastName(c.chair));
+  const members = c.members || [];
+  const most = members.filter((m) => sponsors.has(lastName(m))).length > members.length / 2;
+  const money = commKey(STATE.moneyCommittees?.[house]) === commKey(cname);
+  const skipChair = chairBacks ? ` The chair, ${chairName}, is a sponsor, so there's nothing to ask them.` : "";
+  if (money && most) return { leader: true, gov: true, chairBacks,
+    note: `Most of the committee's members sponsor this bill, but it's stuck in ${commPlain(c.name)}, where bills that cost money often wait on the budget. ${lead ? `The ${leadTitle} and the governor have` : "The governor has"} a big say in that.${skipChair}` };
+  if (chairBacks && most) return { leader: true, chairBacks,
+    note: `The chair, ${chairName}, and most of the committee's members sponsor this bill, but it hasn't had a vote. That often means the decision is being made higher up${lead ? `, by the ${leadTitle}` : ""}.` };
+  if (chairBacks) return { chairBacks, note: skipChair.trim() };
+  return null;
+}
+
 // What happens next for a bill, who decides it, and what to ask each person. Asks follow
 // the reader's side: supporters by default, opponents for bills marked Oppose on the watchlist.
 function planFor(b, stance = "support") {
@@ -1867,11 +1900,22 @@ function planFor(b, stance = "support") {
   const live = !stalled || recess; // can anything move before the session ends?
   const book = contactBook(b, live || b.stage >= 3, opp);
   const inComm = b.vers.filter((v) => v.committee && /committee/i.test(v.statusDesc || ""));
-  let what = "", gov = null, due = null;
+  let what = "", gov = null, due = null, govAlso = null;
   const L = (x) => (live ? x : "");
+  // A bill stuck in a committee: signs the decision is above the committee add the leader (first,
+  // when the chair already sponsors it) and sometimes the governor, with the reason.
+  const notes = [];
+  const stuck = (v) => {
+    const h = holdUp(b, v, opp);
+    if (!h) return;
+    if (!notes.includes(h.note)) notes.push(h.note);
+    if (h.leader) book.leader(v.p[0], L("let it move out of committee"), live && h.chairBacks);
+    if (h.gov && live) govAlso = "support this bill";
+  };
   if (b.stage === 0) {
     what = `<p class="when">Next: a committee vote.</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     inComm.forEach((v) => book.chair(v.p[0], v.committee, L(A("put it on the committee agenda", "keep it off the committee agenda")), live));
+    inComm.forEach(stuck);
     if (!live) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
     book.reps(["S", "A"], L(A("", "oppose it")));
   } else if (b.stage === 1) {
@@ -1885,6 +1929,7 @@ function planFor(b, stance = "support") {
     const twin = b.vers.find((v) => v.p[0] === other);
     what = `<p class="when">Next: the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     if (twin && twin.committee) book.chair(other, twin.committee, L(A("put it on the committee agenda", "keep it off the committee agenda")), live);
+    if (twin && twin.committee) stuck(twin);
     else book.leader(other, L(A("bring it to a floor vote", "keep it from coming to a floor vote")), live);
     book.reps([other], L(A("vote yes", "vote no")));
     if (!live) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
@@ -1917,7 +1962,7 @@ function planFor(b, stance = "support") {
       ? `The session ended December 31, ${y2}. ${where} It would have to be reintroduced.`
       : `Floor votes for this session ended ${fmtDate(lv)}. ${where} It can move only if lawmakers return for a special session; otherwise it dies December 31, ${y2}.`;
   }
-  return { what, gov, due, book, actionable, opp, reason };
+  return { what, gov, govAlso, notes, due, book, actionable, opp, reason };
 }
 
 // Support or oppose, for the asks: from the watchlist if the bill is starred, else as last
@@ -1941,9 +1986,10 @@ function nextSteps(b) {
     const d = new Date(meet.when);
     what += `<p class="when">On the agenda: ${esc(meet.committee)} Committee, ${d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.</p>`;
   }
+  what += plan.notes.map((n) => `<p class="holdup">${esc(n)}</p>`).join("");
   if (plan.actionable && oddsLine(b)) what += `<p class="odds">${oddsLine(b)}</p>`;
   if (!plan.actionable) what += reintroAsk(b, panelStance(b));
-  const who = plan.book.html(plan.gov ? govItem(plan.gov, b) : "");
+  const who = plan.book.html((plan.gov ? govItem(plan.gov, b) : "") + (plan.govAlso ? govItem(plan.govAlso, b, false) : ""));
   if (plan.actionable && who) what += `<p class="hint">Asks if you <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${(plan.opp ? "oppose" : "support") === s}">${s}</button>`).join("")}</span> this bill</p>`;
   // The person who decides the next step comes first, set apart; everyone else folds away.
   const box = document.createElement("ul");

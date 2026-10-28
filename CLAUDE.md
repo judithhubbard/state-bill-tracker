@@ -125,6 +125,11 @@ Read README.md for what each script downloads. This file covers how to change th
   `fillDetail()` (the panel that opens under a bill) and `nextSteps()` / `planFor()` /
   `contactBook()` (who to contact and what to ask; `draftBtn()` adds "Copy email" / "Copy message",
   which uses `draftFor()`).
+  `holdUp()` adds the leader (and, for a money committee, the governor) when a bill stuck in committee
+  shows signs the decision is above the committee: it's in or reached Rules; its sponsors are most of
+  the committee and the chair is one; or it's in the money committee (`STATE.moneyCommittees`) with
+  most of the committee sponsoring. In 2017–24, about half of NY bills sponsored by most of a house
+  still died there, many in Ways and Means. Leaders' pronouns are in `LEADERS`.
 - **Your legislators:** `HOME` (county), `setCounty()`, `myReps()`, `votePeople()` and
   `lookUpReps()`. Legislator pages: `PRESET`, `PAST_WHO`, `renderPerson()` and `renderPersonStats()`.
 - **Statistics:** `renderStats()`, which builds every stats section, plus `sankey()` (odds),

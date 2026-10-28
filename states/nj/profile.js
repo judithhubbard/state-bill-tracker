@@ -95,6 +95,8 @@ const STATE = {
   commNotes: {
     "budget and spending": "Bills that cost the state money often come here after their subject committee.",
   },
+  // The committees bills that cost money go to after their subject committee.
+  moneyCommittees: { S: "Budget and Appropriations", A: "Appropriations" },
   secondCommittee: "Bills that cost money often go to Assembly Appropriations or Senate Budget and Appropriations after their subject committee.",
   // The two-year calendar: the Legislature's and the governor's bars ([class, from, to, text]), the
   // events marked on it ([date, "up"/"down", row, when, text]; rows are LEG = 112, GOV = 150) and a

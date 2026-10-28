@@ -46,10 +46,11 @@ DELEGATION = {
 DEFAULT_DELEGATION = {"SENATE": {52}, "ASSEMBLY": {125}}  # 2023 onward
 DELEGATION_NAMES = {"Webb", "Kelles"}
 
-# Who decides which bills reach each house's floor. Check after leadership votes in January
-# of odd years; a leader is shown only while the named person still holds a seat.
-LEADERS = {"S": ("Andrea Stewart-Cousins", "Senate Majority Leader"),
-           "A": ("Carl Heastie", "Assembly Speaker")}
+# Who decides which bills reach each house's floor: name, title, and the pronoun the site uses
+# for them. Check after leadership votes in January of odd years; a leader is shown only while the
+# named person still holds a seat.
+LEADERS = {"S": ("Andrea Stewart-Cousins", "Senate Majority Leader", "her"),
+           "A": ("Carl Heastie", "Assembly Speaker", "him")}
 
 
 def delegation(session):
