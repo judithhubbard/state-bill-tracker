@@ -125,7 +125,8 @@ Read README.md for what each script downloads. This file covers how to change th
 - **The state's profile:** `states/ny/profile.js` defines `STATE`: the public site and lists
   addresses, house names, the session label, the governor's contact links, links to bill text, the
   governor's deadline (`govDeadline()`), the deadline for bills that passed both houses
-  (`passedBothBy()`, `passedBothGroup`), stage names and tips. build_data.py puts it in each page
+  (`passedBothBy()`, `passedBothGroup`), what comes next for such a bill and whom to ask (`passedBothNext()`;
+  NJ: the governor, or the house voting on a conditional veto), stage names and tips. build_data.py puts it in each page
   just before the main script (`<script id="state-profile">`). tracker.html keeps short aliases
   (`STAGE_TEXT`, `HOUSE`, `GOV_REACH`, `span`, `LISTS_API`, `PUBLIC_SITE` …), so it can't run unbuilt.
 - **Constants:** `STAGE_TEXT` (stage names, live vs. final sessions), `STAGE_TIPS`, and
