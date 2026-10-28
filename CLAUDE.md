@@ -128,7 +128,10 @@ Read README.md for what each script downloads. This file covers how to change th
   `holdUp()` adds the leader (and, for a money committee, the governor) when a bill stuck in committee
   shows signs the decision is above the committee: it's in or reached Rules; its sponsors are most of
   the committee and the chair is one; or it's in the money committee (`STATE.moneyCommittees`) with
-  most of the committee sponsoring. In 2017–24, about half of NY bills sponsored by most of a house
+  most of the committee sponsoring. The last two wait until the committee has met `SKIPPED_ENOUGH` (5)
+  times since the bill arrived without taking it up (`meetingsSkipped()`, counting days it approved a bill,
+  so meetings on resolutions or nominations alone are missed), and the money one until the year's budget
+  bills pass (`budgetPassed()`). In 2017–24, about half of NY bills sponsored by most of a house
   still died there, many in Ways and Means. Leaders' pronouns are in `LEADERS`.
 - **Your legislators:** `HOME` (county), `setCounty()`, `myReps()`, `votePeople()` and
   `lookUpReps()`. Legislator pages: `PRESET`, `PAST_WHO`, `renderPerson()` and `renderPersonStats()`.

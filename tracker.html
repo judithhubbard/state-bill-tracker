@@ -1853,9 +1853,60 @@ function contactBook(b, canMove = true, oppose = false) {
 
 // Signs that a bill stuck in committee is being held above the committee: it's in Rules, which the
 // leader runs; or its sponsors make up most of the committee and either the chair is one of them or
-// it's the money committee, where bills that cost money wait on the budget. Returns the note to show
+// it's the money committee, where bills that cost money wait on the budget. The last two count only
+// after the committee has passed over the bill at several meetings (and, for money, after the budget
+// has passed), since waiting in committee is normal at first. Returns the note to show
 // and whether to add the leader and the governor, or null when there's no sign. (In past New York
 // sessions, about half the bills sponsored by most of a house still died there, often in Ways and Means.)
+// The days each committee met this session (days it approved a bill), by house and committee,
+// worked out from every bill's actions. A bill's house is followed as it moves, since both houses
+// have committees with the same names.
+const SENT_TO = /^(?:REPORTED (?:AND )?|COMMITTEE DISCHARGED AND )?(?:REFERRED|COMMITTED|RECOMMITTED|AMEND(?: \(T\))? AND RECOMMIT) TO (.+?)(?: \d+[A-Z]?)?$/;
+function walkCommittees(v, step) {
+  let house = v.p[0], comm = null;
+  for (const [d, t] of v.actions) {
+    const moved = /^(?:DELIVERED|RETURNED) TO (SENATE|ASSEMBLY)$/.exec(t);
+    if (moved) { house = moved[1][0]; comm = null; continue; }
+    // A committee approving a bill: to another committee or the floor ("1ST REPORT CAL." in the Senate).
+    if (/^(REPORTED|1ST REPORT CAL)/.test(t) && comm) step("met", house, comm, d);
+    const m = SENT_TO.exec(t);
+    if (m) { comm = commKey(m[1]); step("sent", house, comm, d); }
+    else if (/^(REPORTED|1ST REPORT CAL|ADVANCED|ORDERED|PASSED|REPASSED)/.test(t)) comm = null;
+  }
+}
+let MEETINGS = null;
+function meetings() {
+  if (MEETINGS) return MEETINGS;
+  const days = new Map();
+  for (const b of BILLS) for (const v of b.vers) walkCommittees(v, (kind, house, comm, d) => {
+    if (kind !== "met" || comm === "rules") return;
+    const k = `${house}:${comm}`;
+    if (!days.has(k)) days.set(k, new Set());
+    days.get(k).add(d);
+  });
+  return (MEETINGS = days);
+}
+// How many times a version's current committee has met since the bill was sent there (its first
+// referral there this session; the routine re-referral each January doesn't restart the count).
+function meetingsSkipped(v) {
+  let since = null, cur = null;
+  walkCommittees(v, (kind, house, comm, d) => {
+    if (kind !== "sent") return;
+    if (comm !== cur) { cur = comm; since = d; }
+  });
+  if (!since || cur !== commKey(v.committee)) return 0;
+  const days = meetings().get(`${v.p[0]}:${cur}`) || new Set();
+  return [...days].filter((d) => d > since).length;
+}
+// The year's budget has passed once its budget bills have passed both houses (if the data marks them).
+function budgetPassed() {
+  const y = isoToday().slice(0, 4), marked = BILLS.filter((b) => b.budget);
+  return !marked.length || marked.some((b) => b.stage >= 3 && [b.dates.passS, b.dates.passA].every((d) => d && d.startsWith(y)));
+}
+// A committee that has passed over a bill this many times: by then about 90% of the bills it
+// approves have been taken up (New York, 2023–26).
+const SKIPPED_ENOUGH = 5;
+
 function holdUp(b, v, oppose) {
   const house = v.p[0], cname = v.committee;
   const c = (DATA.contacts?.committees || {})[`${house}:${commKey(cname)}`];
@@ -1869,6 +1920,8 @@ function holdUp(b, v, oppose) {
   if (toRules && lead) return { leader: true, chairBacks: true,
     note: `It got as far as the Rules Committee in ${toRules[0].slice(0, 4)} but didn't get a vote there. ${runsRules}` };
   if (oppose) return null;
+  // Waiting in committee is normal at first.
+  const skipped = meetingsSkipped(v) >= SKIPPED_ENOUGH;
   const chairName = `${house === "S" ? "Sen." : "Asm."} ${c.chair}`;
   const sponsors = new Set(b.vers.filter((x) => x.p[0] === house).flatMap((x) => [x.sponsor, ...x.cosponsors]).map(lastName));
   const chairBacks = !!c.chair && sponsors.has(lastName(c.chair));
@@ -1876,10 +1929,10 @@ function holdUp(b, v, oppose) {
   const most = members.filter((m) => sponsors.has(lastName(m))).length > members.length / 2;
   const money = commKey(STATE.moneyCommittees?.[house]) === commKey(cname);
   const skipChair = chairBacks ? ` The chair, ${chairName}, is a sponsor, so there's nothing to ask them.` : "";
-  if (money && most) return { leader: true, gov: true, chairBacks,
+  if (money && most && skipped && budgetPassed()) return { leader: true, gov: true, chairBacks,
     note: `Most of the committee's members sponsor this bill, but it's stuck in ${commPlain(c.name)}, where bills that cost money often wait on the budget. ${lead ? `The ${leadTitle} and the governor have` : "The governor has"} a big say in that.${skipChair}` };
-  if (chairBacks && most) return { leader: true, chairBacks,
-    note: `The chair, ${chairName}, and most of the committee's members sponsor this bill, but it hasn't had a vote. That often means the decision is being made higher up${lead ? `, by the ${leadTitle}` : ""}.` };
+  if (chairBacks && most && skipped) return { leader: true, chairBacks,
+    note: `The chair, ${chairName}, and most of the committee's members sponsor this bill, but it hasn't had a vote. That might mean the decision is being made higher up${lead ? `, by the ${leadTitle}` : ""}.` };
   if (chairBacks) return { chairBacks, note: skipChair.trim() };
   return null;
 }
