@@ -106,6 +106,22 @@ from that repo. **Nothing here may change it.**
   `stageText`/`stageTips`/`pastStageTips`/`outOfTime`, `commPairs`/`commNotes`/`moneyCommittees`/`secondCommittee`,
   `calendar`/`calendarDays`; and write how.html and weighin.html. Then run the review: record every tab, Statistics
   section, How section, bill panels at each stage and a watchlist, and grep the text for other states' names and rules.
+- **Data traps found so far (check each new state's files for these before trusting them):**
+  - Status flags that disagree with the history (VA's Approved/Vetoed: both set, or neither). Decide stages from the
+    history, and count bills by stage against the Legislature's own totals (e.g. vetoes per year).
+  - "Passed" flags that mean one house (a VA bill that died in conference is still "Passed").
+  - Formats that change between years: dates ("3/14/2026" vs "2024-03-02T00:00:00"), and tables missing from an
+    older year's download (NJ 2022–23 lacked four; filled once by fill2022.py).
+  - Characters lost in the export: VA's summaries have "?" for §, dashes and apostrophes. Grep the text for
+    " ? " and a letter, "?", then a letter.
+  - Codes written two ways across files: committee "S2" vs "S02", member "S0100" vs "S100". Join on a normalized key
+    and count rows that fail to join.
+  - Empty columns that look filled in the documentation (NJ ROSTER.TXT's Email); vacant seats (VA House District 20).
+  - History wording in mixed case or plain English: match case-insensitively, and keep text the rules don't need as written.
+  - Settings left out fall back to New York's silently (above); grep the built pages for "Assembly", "Albany", "Hochul".
+  - A website that blocks automated requests (governor.virginia.gov): drop that data and tell the owner. Don't work
+    around the block.
+  - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
