@@ -153,9 +153,12 @@ def load_session(session):
     fetched = datetime.fromtimestamp(os.path.getmtime(os.path.join(folder(session), "BILLS.CSV")),
                                      ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
 
+    # The current session's members are tied to their seats ("S:34", "H:71"), so the page can show how each
+    # legislator voted and which bills they sponsor; earlier sessions' members keep their names.
+    seat_of, party_of = seats(session) if session == CURRENT else ({}, {})
+
     def member(mid):
-        # Members are named until legislators' seats are known (states/va/contacts.py).
-        return f"{mid[:1]}?{names.get(mid, mid)}"
+        return seat_of.get(mid) or f"{mid[:1]}?{names.get(mid, mid)}"
 
     recs, index = [], {}
     for p, b in sorted(bills.items(), key=lambda kv: (kv[0][:2], int(re.sub(r"\D", "", kv[0]) or 0))):
@@ -234,7 +237,12 @@ def load_session(session):
         chap = re.match(r"CHAP0*(\d+)", b["Chapter_id"] or "")
         intro = iso(b["Introduction_date"])
         action_dates = [d for d, _, _, _ in acts if d]
-        vers = {"p": p, "sponsor": sponsor, "district": 0,
+        chief_id = next((r["MEMBER_ID"] for r in sp if "Chief Patron" in r["PATRON_TYPE"]), b["Patron_id"])
+        for r in sp:
+            if r["MEMBER_ID"] in party_of:
+                _PARTIES.setdefault(session, {})[(r["MEMBER_ID"][0], re.sub(r"\s+", " ", r["MEMBER_NAME"]).strip())] = party_of[r["MEMBER_ID"]]
+        _PARTIES.setdefault(session, {})[(p[0], sponsor)] = party_of.get(chief_id, "")
+        vers = {"p": p, "sponsor": sponsor, "district": int(seat_of.get(chief_id, "X:0")[2:]),
                 "cosponsors": chief_co + co, "primes": 1 + len(chief_co), "cosp": len(chief_co) + len(co),
                 "statusDesc": desc, "committee": committee if stage == 0 else None,
                 "actions": [[d, t] for d, _, t, _ in acts]}
@@ -286,6 +294,26 @@ def agendas(session):
     return dict(out)
 
 
+# ---- Sponsors' parties, from the current legislators (filled by load_session).
+_PARTIES = {}
+
+
 def parties(session, recs):
-    """Sponsors' parties come with the legislators (states/va/contacts.py); none yet."""
-    return {}
+    """Party ("D" or "R") for each sponsor as the records name them, keyed by (house, name)."""
+    return {k: v for k, v in _PARTIES.get(session, {}).items() if v in ("D", "R")}
+
+
+def seats(session):
+    """Member id (as the data files write it, "H0386", "S0100") -> seat id, and -> party letter, from
+    data/va/contacts_<session>.json (states/va/contacts.py). The Senate's site writes "S100" for "S0100"."""
+    path = os.path.join(P.DATA, f"contacts_{session}.json")
+    if not os.path.exists(path):
+        return {}, {}
+    seat_of, party_of = {}, {}
+    for sid, p in json.load(open(path))["people"].items():
+        mid = p.get("id") or ""
+        if mid:
+            mid = mid[0] + mid[1:].zfill(4)
+            seat_of[mid] = sid
+            party_of[mid] = (p.get("party") or "")[:1]
+    return seat_of, party_of

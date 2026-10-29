@@ -62,6 +62,9 @@ const STATE = {
       reps: ["vote to accept the governor's amendments", "vote against the governor's amendments"],
     };
   },
+  // "Where you live" picks a county or city; a split one can look up the address on the Legislature's site.
+  townWord: "County or city",
+  findReps: "https://whosmy.virginiageneralassembly.gov/",
   diesAfterFloor: () => "The session is over, so it died with it.",
   outOfTimeLine: "Died when the session ended",
 

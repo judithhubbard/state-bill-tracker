@@ -1735,7 +1735,7 @@ function chosenReps() { try { return JSON.parse(localStorage.getItem(REPS_STORE)
 function countyDistricts(county) { return DATA.districtCounties?.[county] || null; }
 function countyReps(county) {
   const d = countyDistricts(county);
-  return d && d.S.length && d.A.length ? { S: d.S[0][0], A: d.A[0][0] } : null;
+  return d && d.S.length && d.A.length ? { S: d.S[0][0], [LOW]: d.A[0][0] } : null;
 }
 function setCounty(county) {
   HOME = county;
@@ -1791,7 +1791,7 @@ function renderMyReps() {
     <p>Your legislators: ${reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`).join(" and ") || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
 }
 function setReps(s, a, more = {}) {
-  try { localStorage.setItem(REPS_STORE, JSON.stringify({ S: +s, A: +a, ...more })); } catch (e) {}
+  try { localStorage.setItem(REPS_STORE, JSON.stringify({ S: +s || 0, [LOW]: +a || 0, ...more })); } catch (e) {}
   renderMyReps(); renderOpenNow(); render();
 }
 // States that find legislators by town (New Jersey): a town gives the district, whose senator and
@@ -1799,13 +1799,40 @@ function setReps(s, a, more = {}) {
 const townKey = (t) => `${t[0]}|${t[1]}`;
 // A town's name, with its county where two towns share a name; and the list to pick from.
 const townName = (t) => DATA.towns.some((u) => u !== t && u[0] === t[0]) ? `${t[0]} (${t[1]} County)` : t[0];
-const townOptions = (town) => `<option value="">Choose your town</option>` + DATA.towns.map((t) => `<option value="${esc(townKey(t))}"${t === town ? " selected" : ""}>${esc(townName(t))}</option>`).join("");
+// What a place is called in the picker: "Town" (New Jersey), "County or city" (Virginia).
+const TOWN_WORD = STATE.townWord || "Town";
+// Towns that carry their own Senate and lower-house districts (Virginia's localities), not one district for both.
+const townsSplitByHouse = () => (DATA.towns?.[0] || []).length > 3;
+const townOptions = (town) => `<option value="">Choose your ${TOWN_WORD.toLowerCase()}</option>` + DATA.towns.map((t) => `<option value="${esc(townKey(t))}"${t === town ? " selected" : ""}>${esc(townName(t))}</option>`).join("");
 // Choosing a town (here or in the Bills sidebar): its district, the one with most of its people if split.
 function setTown(key) {
   const t = DATA.towns.find((x) => townKey(x) === key);
-  if (t) setReps(t[2][0][0], t[2][0][0], { town: townKey(t) });
+  if (!t) return;
+  // Separate districts: set each house's when the place is in only one; a split place asks which.
+  if (townsSplitByHouse()) setReps(t[2].length === 1 ? t[2][0][0] : 0, t[3].length === 1 ? t[3][0][0] : 0, { town: townKey(t) });
+  else setReps(t[2][0][0], t[2][0][0], { town: townKey(t) });
+}
+function renderTownRepsByHouse(box) {
+  const reps = myReps(), c = chosenReps(), towns = DATA.towns;
+  const town = c?.town ? towns.find((t) => townKey(t) === c.town) : null;
+  const lists = { S: town?.[2], [LOW]: town?.[3] };
+  const opts = (h) => {
+    const mine = lists[h]?.length ? lists[h].map(([d]) => d) : [...new Set(LEGS.filter((L) => L.house === h).map((L) => L.district))].sort((a, b) => a - b);
+    const who = (d) => LEGS.find((L) => L.house === h && L.district === d)?.name.split(" ").pop() || "vacant";
+    return `<option value="">Choose your district</option>` + mine.map((d) => `<option value="${d}"${d === c?.[h] ? " selected" : ""}>District ${d}: ${esc(who(d))}</option>`).join("");
+  };
+  const split = town && (town[2].length > 1 || town[3].length > 1);
+  const where = !town ? "" : split
+    ? `${esc(townName(town))} is split among ${town[2].length} Senate and ${town[3].length} ${HOUSE[LOW]} district${town[3].length === 1 ? "" : "s"}. Pick yours below${STATE.findReps ? `, or <a href="${esc(STATE.findReps)}" target="_blank" rel="noopener">look up your address</a>` : ""}.`
+    : `${esc(townName(town))} is in Senate District ${town[2][0]?.[0] ?? "?"} and ${HOUSE[LOW]} District ${town[3][0]?.[0] ?? "?"}.`;
+  box.innerHTML = `<h2>Where you live</h2>
+    <div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOptions(town)}</select></label></div>
+    ${where ? `<p class="muted">${where}</p>` : ""}
+    <div class="repsel"><label>Senate <select id="repDS">${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repDL">${opts(LOW)}</select></label></div>
+    <p>Your legislators: ${andList(reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`)) || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
 }
 function renderTownReps(box) {
+  if (townsSplitByHouse()) return renderTownRepsByHouse(box);
   const reps = myReps(), c = chosenReps(), towns = DATA.towns;
   const town = c?.town ? towns.find((t) => townKey(t) === c.town) : null;
   const named = townName;
@@ -4465,7 +4492,10 @@ function wire() {
   $("myReps").addEventListener("change", (e) => {
     if (e.target.id === "repC") setCounty(e.target.value);
     else if (e.target.id === "repS" || e.target.id === "repA") setReps($("repS").value, $("repA").value);
-    else if (e.target.id === "repT") setTown(e.target.value); else if (e.target.id === "repD" && e.target.value) {
+    else if (e.target.id === "repDS" || e.target.id === "repDL") {
+      const c = chosenReps() || {};
+      setReps(e.target.id === "repDS" ? e.target.value : c.S, e.target.id === "repDL" ? e.target.value : c[LOW], c.town ? { town: c.town } : {});
+    } else if (e.target.id === "repT") setTown(e.target.value); else if (e.target.id === "repD" && e.target.value) {
       const t = DATA.towns.find((x) => townKey(x) === chosenReps()?.town);
       const d = +e.target.value;
       setReps(d, d, t && t[2].some(([x]) => x === d) ? { town: townKey(t) } : {});
@@ -4850,7 +4880,7 @@ function hydrate(raw) {
     you.hidden = false;
     you.querySelector(".hidebox").hidden = $("homeCounty").hidden = true;
     const label = you.querySelector("label");
-    label.textContent = "Your town"; label.htmlFor = "homeTown";
+    label.textContent = `Your ${TOWN_WORD.toLowerCase()}`; label.htmlFor = "homeTown";
     $("homeCounty").insertAdjacentHTML("afterend", `<select id="homeTown">${townOptions(raw.towns.find((t) => townKey(t) === chosenReps()?.town))}</select>`);
     $("homeTown").addEventListener("change", (e) => setTown(e.target.value));
   }

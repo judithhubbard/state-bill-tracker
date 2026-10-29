@@ -66,8 +66,12 @@ from that repo. **Nothing here may change it.**
   sessions. History lines are plain English and kept as written, except the steps the site's rules use. The
   file's Approved/Vetoed flags are unreliable (both set, or in 2025 neither): the history decides. A bill the
   governor sent back with amendments is "Passed both houses" until the reconvened session. Bills continued to
-  the next year appear in the next year's folder under the same number. Still to do: legislators and parties,
-  "Where you live", "What it does" from Summaries.csv, the How tab and Weigh in text, and a full review.
+  the next year appear in the next year's folder under the same number. Legislators (step 2, 2026-10-29): `states/va/contacts.py` (run daily by fetch.py) reads the House member list and
+  committee pages and the Senate's spreadsheet, email list and senator pages (committees marked "(Chair)"); seat ids
+  are "S:34"/"H:71", and the data files' member ids ("S0100") match the Senate site's ("S100") once zero-padded.
+  `states/va/towns.py` turns the districts' locality descriptions into data/va/district_towns.json, with separate
+  Senate and House districts per locality; `renderTownRepsByHouse()` shows it (a split locality picks each district).
+  Still to do: "What it does" from Summaries.csv, the How tab and Weigh in text, and a full review.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).

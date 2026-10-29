@@ -89,6 +89,8 @@ TOPIC_WORDS = {k: re.compile(v[3], re.I) for k, v in TOPICS.items() if v[3]}
 # Places come later ("Where you live" by locality).
 COUNTIES = []
 DISTRICTS_PATH = os.path.join(DATA, "district_counties.json")
+# Each locality's Senate and House districts (states/va/towns.py): "Where you live" picks a county or city.
+TOWNS_PATH = os.path.join(DATA, "district_towns.json")
 
 _NAMING = re.compile(r"\b(?:designat\w*|nam\w*)\b.*\b(?:bridge|interchange|highway|route|memorial|building|park)\b", re.I)
 NARROW_KINDS = ["", "person", "org", "naming"]

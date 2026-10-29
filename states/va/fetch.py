@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Download Virginia's legislative data files (the Legislative Information System's CSVs) into
 data/va/<year>1/, from lis.blob.core.windows.net. Finished sessions are downloaded once; the current one,
-and next year's (bills are prefiled from November), every run.
+and next year's (bills are prefiled from November), every run. Then the legislators (states/va/contacts.py,
+once a day) and each locality's districts (states/va/towns.py).
 
 Usage: python3 states/va/fetch.py [first_session]   (default 2024)
 """
@@ -57,5 +58,27 @@ def main():
             os.rmdir(folder)
 
 
+def legislators():
+    """The current legislators and committees (once a day; it's about 60 pages) and each locality's districts."""
+    import json
+    from states.va import contacts, towns
+    path = os.path.join(P.DATA, f"contacts_{CURRENT}.json")
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d")
+    try:
+        fresh = json.load(open(path)).get("fetched", "").startswith(today)
+    except (OSError, ValueError):
+        fresh = False
+    if fresh:
+        print(f"contacts_{CURRENT}.json: already refreshed today")
+    else:
+        try:
+            contacts.main(CURRENT)
+        except Exception as e:  # a site down for the day: keep yesterday's file
+            print(f"contacts not refreshed: {e}", file=sys.stderr)
+    if os.path.exists(path):
+        towns.main(CURRENT)
+
+
 if __name__ == "__main__":
     main()
+    legislators()
