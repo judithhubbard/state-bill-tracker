@@ -42,6 +42,8 @@ SESSIONS = C.sessions()
 # The lower house's letter ("A" for an Assembly, "H" for Virginia's House of Delegates) and members' titles.
 LOW = getattr(P, "LOWER", "A")
 TITLES = getattr(P, "TITLES", {"S": "Sen.", LOW: "Asm."})
+# How many years a session runs (two in New York and New Jersey, one in Virginia).
+YEARS = getattr(P, "YEARS", 2)
 # The current session by the calendar (P.session_of), as the workflow works it out,
 # or the newest one downloaded if that hasn't started yet. A later session in data/ is upcoming:
 # its prefiled bills get their own page before it opens.
@@ -144,7 +146,7 @@ def parties(session, recs):
                 by_last[(seat[0], name_key(h["last"]).split()[-1])].add(h["party"])
 
     def held(h):
-        return (not h["start"] or h["start"] <= str(session + 1)) and (not h["end"] or h["end"] >= str(session))
+        return (not h["start"] or h["start"] <= str(session + YEARS - 1)) and (not h["end"] or h["end"] >= str(session))
 
     out = {}
     for r in recs:
@@ -392,7 +394,7 @@ def insights(loaded, hist, current):
     # Timing: how much floor action comes at the very end of each year's session.
     timing = []
     for s in past:
-        for year in (s, s + 1):
+        for year in range(s, s + YEARS):
             dates = [d for r in loaded[s][0] for i in (1, 2) for d in r["keyDates"][i].split(";") if d.startswith(str(year))]
             if not dates:
                 continue
@@ -451,7 +453,7 @@ def insights(loaded, hist, current):
 
     # Bills that sat in committee all of the first year: [bills, approved by a committee in the second year, law].
     stuck = {t: [0, 0, 0] for t in topics}
-    for s in past:
+    for s in (past if YEARS > 1 else []):
         y2 = str(s + 1)
         for r in loaded[s][0]:
             kd = r["keyDates"]
@@ -542,14 +544,14 @@ def insights(loaded, hist, current):
     # When things happen, by month of the two-year session (0-11 first year, 12-23 second):
     # bills introduced, first approved by a committee, first passed by each house.
     def month_counts(sessions):
-        out = {t: {k: [0] * 24 for k in ("intro", "comm", "passS", "passA", "signed", "vetoed")} for t in topics}
+        out = {t: {k: [0] * (12 * YEARS) for k in ("intro", "comm", "passS", "passA", "signed", "vetoed")} for t in topics}
         for s in sessions:
             for r in loaded[s][0]:
                 k = r["keyDates"]
                 when = {"intro": r["first"] or "", "comm": k[0], "passS": k[1].split(";")[0], "passA": k[2].split(";")[0],
                         "signed": k[5] if r["stage"] == 5 else "", "vetoed": k[6] if r["stage"] == 6 else ""}
                 for key, d in when.items():
-                    if len(d) < 7 or d[:4] > str(s + 1):
+                    if len(d) < 7 or d[:4] > str(s + YEARS - 1):
                         continue
                     # Bills prefiled in late fall count as introduced when the session opens.
                     if d[:4] < str(s):
@@ -1241,7 +1243,7 @@ def main():
             # Past pages don't carry co-sponsor names, so their network is worked out here.
             "network": session_network(session, recs) if session < current else None,
             # Date of the last floor vote in either house this session.
-            "sessionEnd": {y: d for y, d in SESSION_END.items() if int(y) in (session, session + 1)},
+            "sessionEnd": {y: d for y, d in SESSION_END.items() if session <= int(y) < session + YEARS},
             "lastVote": max((d for r in recs for i in (1, 2) for d in r["keyDates"][i].split(";")), default=""),
             "strings": strings,
             # Stored column by column (all titles, then all summaries, ...), which compresses

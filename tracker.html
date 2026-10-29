@@ -1713,6 +1713,11 @@ const BOTH = ["S", LOW];
 const TITLE = STATE.titles || { S: "Sen.", [LOW]: "Asm." };
 const MEMBER = STATE.memberWords || { S: "state senator", [LOW]: "Assembly member" };
 const GREET = STATE.greetings || { S: "Senator", [LOW]: "Assemblymember" };
+// How many years a session runs (two in New York and New Jersey, one in Virginia), and its last year.
+const YEARS = STATE.years || 2;
+const lastYear = (s) => s + YEARS - 1;
+// When a bill that didn't pass both houses dies, once floor votes are over.
+const DIES = STATE.diesAfterFloor || ((y2) => `Unless lawmakers return for a special session, it dies December 31, ${y2}.`);
 
 const lastName = (n) => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\s-]/g, "").split(/\s+/).filter((w) => !["jr", "sr", "ii", "iii"].includes(w)).pop() || "";
 
@@ -2022,12 +2027,12 @@ function planFor(b, stance = "support") {
   if (!DATA.current || !DATA.contacts) return null;
   const opp = stance === "oppose";
   const A = (yes, no) => (opp ? no : yes);
-  const today = isoToday(), y2 = DATA.session + 1;
+  const today = isoToday(), y2 = lastYear(DATA.session);
   const lv = DATA.lastVote || "", quiet = lv && (new Date(today) - new Date(lv)) / 864e5 > 21;
   const adjourned = today > `${y2}-12-31` || (quiet && lv.startsWith(String(y2)));
   const recess = !adjourned && quiet && today.startsWith(String(DATA.session));
   const stalled = adjourned
-    ? `Floor votes are over for this session. Unless lawmakers return for a special session, it dies December 31, ${y2}.`
+    ? `Floor votes are over for this session. ${DIES(y2)}`
     : recess ? `The Legislature is out until January ${y2}.` : "";
   const live = !stalled || recess; // can anything move before the session ends?
   const book = contactBook(b, live || b.stage >= 3, opp);
@@ -2110,7 +2115,7 @@ function planFor(b, stance = "support") {
       : b.stage === 1 ? "It never got a floor vote." : "It never got out of committee.";
     reason = today > `${y2}-12-31`
       ? `The session ended December 31, ${y2}. ${where} It would have to be reintroduced.`
-      : `Floor votes for this session ended ${fmtDate(lv)}. ${where} It can move only if lawmakers return for a special session; otherwise it dies December 31, ${y2}.`;
+      : `Floor votes for this session ended ${fmtDate(lv)}. ${where} ${STATE.diesAfterFloor ? DIES(y2) : `It can move only if lawmakers return for a special session; otherwise it dies December 31, ${y2}.`}`;
   } else if (notes.length) reason = notes.join(" ");  // shown when there's no one to ask (the decider sponsors it)
   return { what, gov, govAlso, notes, due, book, actionable, opp, reason, leaderFirst };
 }
@@ -2689,7 +2694,7 @@ function renderNet() {
   const law = netBills === "law";
   const data = live ? netData(netHouse, t, law) : savedNet((saved[netBills] || saved)[netHouse]);
   const names = data.nodes.map((x) => x.L.label).sort((a, b) => lastName(a).localeCompare(lastName(b)));
-  const span_ = DATA.current ? (live ? "this session" : `${DATA.sessions[0].session}–${String(DATA.session + 1).slice(2)}, today's members`) : `the ${span(DATA.session)} session`;
+  const span_ = DATA.current ? (live ? "this session" : `${DATA.sessions[0].session}–${String(lastYear(DATA.session)).slice(2)}, today's members`) : `the ${span(DATA.session)} session`;
   box.innerHTML = `<h2>Who works with whom</h2>
     <div class="commctl">${DATA.current && DATA.networkSince ? `<label class="commsort">Period <select data-netperiod><option value="now"${netPeriod === "now" ? " selected" : ""}>This session</option><option value="since"${netPeriod === "since" ? " selected" : ""}>Since ${DATA.sessions[0].session}</option></select></label>` : ""}
     <label class="commsort">Bills <select data-netbills><option value="all"${!law ? " selected" : ""}>All bills</option><option value="law"${law ? " selected" : ""}>Became law</option></select></label>
@@ -2861,7 +2866,7 @@ function monthChart(I, t) {
     const avg = past[k].map((x) => x / n), cur = live ? now[k] : null;
     const max = Math.max(1, ...avg, ...(cur || []));
     const cols = avg.map((x, m) => ({ segs: [[(x / max) * 100, "a"]], tick: cur && m <= sofar ? (cur[m] / max) * 100 : null,
-      title: `${MONTH_NAMES[m % 12]}, ${m < 12 ? "first" : "second"} year: about ${num(Math.round(x))} a session${cur ? `; this session ${num(cur[m])}` : ""}` }));
+      title: `${MONTH_NAMES[m % 12]}${YEARS > 1 ? `, ${m < 12 ? "first" : "second"} year` : ""}: about ${num(Math.round(x))} a session${cur ? `; this session ${num(cur[m])}` : ""}` }));
     return colRow(label, "", cols, `<b class="big">${num(Math.round(avg.reduce((a, b) => a + b, 0)))}</b> a session`, 12);
   }).join("");
   // The governor's decisions on the same timeline: one row for signed, one for vetoed, each
@@ -2874,7 +2879,7 @@ function monthChart(I, t) {
       const avg = sv[k], cur = live ? now[k] : null;
       const max = Math.max(1, ...avg, ...(cur || []));
       const cols = avg.map((x, m) => ({ segs: [[(x / max) * 100, cls]], tick: cur && m <= sofar ? (cur[m] / max) * 100 : null,
-        title: `${MONTH_NAMES[m % 12]}, ${m < 12 ? "first" : "second"} year: about ${num(Math.round(x))} ${k} a session${cur ? `; this session ${num(cur[m])}` : ""}` }));
+        title: `${MONTH_NAMES[m % 12]}${YEARS > 1 ? `, ${m < 12 ? "first" : "second"} year` : ""}: about ${num(Math.round(x))} ${k} a session${cur ? `; this session ${num(cur[m])}` : ""}` }));
       const sum = avg.reduce((a, b) => a + b, 0);
       return colRow(label, "", cols, `<b class="big">${num(Math.round(sum))}</b> a session${k === "vetoed" ? `<small>${pctOf(sum, total)}% of decisions</small>` : ""}`, 12);
     }).join("");
@@ -3580,7 +3585,7 @@ function deadlineOf(b) {
   if (meet && soon(meet.when)) return { g: "soon", d: meet.when.slice(0, 10) };
   if (b.stage === 3) {
     const end = STATE.passedBothBy(DATA.session);
-    return isoToday().startsWith(String(DATA.session + 1)) ? { g: soon(end) ? "soon" : "year", d: end } : { g: "later" };
+    return isoToday().startsWith(String(lastYear(DATA.session))) ? { g: soon(end) ? "soon" : "year", d: end } : { g: "later" };
   }
   if (b.stage <= 2 && !floorVotesOver()) {
     const e = sessionEnd();
@@ -3591,7 +3596,7 @@ function deadlineOf(b) {
 const W_GROUPS = {
   soon: ["Due soon", () => "A decision or committee meeting is coming up. Act before the date shown."],
   session: ["Before the session ends", () => {
-    const e = sessionEnd(), then = e.last || isoToday().startsWith(String(DATA.session + 1))
+    const e = sessionEnd(), then = e.last || isoToday().startsWith(String(lastYear(DATA.session)))
       ? "Bills that haven't passed both houses by then die." : "After that, nothing moves until January.";
     if (e.last) return `The session ends ${monthDay(e.date)}, ${e.date.slice(0, 4)}. ${then}`;
     if (e.date && daysUntil(e.date) >= 0) return `The session is scheduled to end ${monthDay(e.date)}. ${then}`;
@@ -3856,7 +3861,7 @@ function reintroAsk(b, stance) {
   const rep = missing && votePeople().find((L) => L.house === missing && !sponsors.some((p) => p.house === missing));
   const carry = rep ? `<p class="who">It has no ${HOUSE[missing]} version. Ask ${esc(titleOf({ house: rep.house, name: rep.name }))} to sponsor one.</p>
     <p class="reach">${reachOf({ house: rep.house, name: rep.name, info: infoFor(rep.apiName || rep.name), role: "your-legislator" })}</p>` : "";
-  return `<div class="do reintro"><p class="who"><b>Next session</b> Ask the sponsor${sponsors.length > 1 ? "s" : ""} to reintroduce it in January ${DATA.session + 2}.</p>
+  return `<div class="do reintro"><p class="who"><b>Next session</b> Ask the sponsor${sponsors.length > 1 ? "s" : ""} to reintroduce it in January ${DATA.session + YEARS}.</p>
     ${sponsors.map((p) => `<p class="reach"><b>${esc(titleOf(p))}</b> ${reachOf(p)}</p>`).join("")}${carry}</div>`;
 }
 function reachOf(p) {
@@ -4009,7 +4014,7 @@ function refreshWatchButtons(b) {
 
 // The filter lists, with counts that follow every other active filter (so they agree with "Where it is now").
 function selectOptions() {
-  const years = [DATA.session, DATA.session + 1];
+  const years = YEARS > 1 ? [DATA.session, DATA.session + 1] : [];
   return {
     progress: ["Any", Object.entries(PROGRESS).map(([k, p]) => [k, p.label, p.test])],
     party: ["Any", Object.entries(PARTIES).map(([k, l]) => [k, l, (b) => b.parties === k])],
@@ -4672,7 +4677,7 @@ function floorVotesOver() {
   // States whose Legislature meets until the session's last day turn this off.
   if (!DATA.current || STATE.floorVotesEnd === false) return false;
   const lv = DATA.lastVote || "", today = isoToday();
-  return lv.startsWith(String(DATA.session + 1)) && (new Date(today) - new Date(lv)) / 864e5 > 21;
+  return lv.startsWith(String(lastYear(DATA.session))) && (new Date(today) - new Date(lv)) / 864e5 > 21;
 }
 
 function sessionNotice(raw) {
@@ -4681,6 +4686,8 @@ function sessionNotice(raw) {
     return `These bills were filed early for the ${span(raw.session)} session, which opens in January ${raw.session}. They go to committees on its first day. Stars you add here carry over when the session starts. ${cur?.url ? `<a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`;
   }
   if (!raw.current) return "";
+  // A state can word this itself (its own calendar and governor's rules).
+  if (STATE.sessionNotice) return STATE.sessionNotice(raw);
   const today = isoToday(), y1 = raw.session, y2 = raw.session + 1;
   const lv = raw.lastVote || "";
   const quiet = lv ? (new Date(today) - new Date(lv)) / 864e5 > 21 : false;
@@ -4839,6 +4846,8 @@ function hydrate(raw) {
     $("homeTown").addEventListener("change", (e) => setTown(e.target.value));
   }
   $("law").closest(".field").hidden = !raw.lawList.length;
+  // One-year sessions have no "first year or second year" filter.
+  if (YEARS < 2) $("intro")?.closest(".field")?.setAttribute("hidden", "");
   setupLegislators(raw);
   renderSessions(raw);
   loadWatch();
