@@ -58,6 +58,11 @@ from that repo. **Nothing here may change it.**
   Until launch it writes `robots.txt` and `_headers` telling search engines not to list anything (`LAUNCHED=1`
   turns that off). `.github/workflows/site.yml` downloads, builds and deploys, by hand only for now; it needs the
   secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. The domain stays parked at Porkbun until launch.
+  Until then the site is at https://statebilltracker.pages.dev/ (first put up 2026-10-29, built with
+  `SITE_URL=https://statebilltracker.pages.dev/nj/`; unlisted, and marked noindex). It's a classic Pages project
+  (created with `--force`, which isn't needed again). Deploy by hand from an empty folder, never from
+  lists_worker/ or cron_worker/ (wrangler picks up that folder's wrangler.toml):
+  `npx -y wrangler@4.152.0 pages deploy <repo>/_site --project-name=statebilltracker --branch=main --commit-dirty=true`.
 - Fixes made in ny-bill-tracker still get carried over here by hand (compare against `git log` there since
   b312227; 5fe4339 is already in).
 

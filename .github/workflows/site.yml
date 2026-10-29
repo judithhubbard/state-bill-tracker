@@ -35,7 +35,10 @@ jobs:
       - name: Download New Jersey
         run: python3 states/nj/fetch.py
 
+      # Until launch the site lives at statebilltracker.pages.dev, so its links point there.
       - name: Build the site
+        env:
+          SITE_URL: https://statebilltracker.pages.dev/nj/
         run: ./build_site.sh _site
 
       - name: Put it on Cloudflare Pages
