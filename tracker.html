@@ -165,7 +165,8 @@ footer p { margin: 0; max-width: 90ch; }
 /* Session notice and process explainer */
 .notice { background: var(--gold-soft); border-radius: 6px; padding: 10px 14px; font-size: 14px; max-width: none; margin: 0; }
 /* Key dates under each bill */
-.keydates h4 { margin: 0 0 4px; font: 600 11px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.sponsors h4, .keydates h4 { margin: 0 0 4px; font: 600 11px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.sponsors p { margin: 0 0 3px; font-size: 13.5px; }
 .keydates ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
 .keydates li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; }
 .keydates time { font-family: var(--mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -3231,6 +3232,22 @@ function pageRole(b) {
   return role ? `<span class="role-tag">${esc(L.name.split(" ").pop())}: ${role}</span>` : "";
 }
 
+// Everyone on each version, up front: its sponsors (New Jersey bills can have several "prime" sponsors),
+// then its co-sponsors. The page's legislator and your own legislators are in bold.
+function sponsorsBlock(b) {
+  const page = PRESET?.who && LEG_BY_ID[PRESET.who];
+  const rows = b.vers.map((v) => {
+    const mine = new Set([...myReps().filter((r) => r.house === v.p[0]).map((r) => r.last), ...(page && page.house === v.p[0] ? [lastName(page.name)] : [])]);
+    const nm = (n) => (mine.has(lastName(n)) ? `<b>${esc(n)}</b>` : esc(n));
+    const leads = [v.sponsor, ...v.cosponsors.slice(0, v.extraPrimes)].filter(Boolean);
+    const cos = v.cosponsors.slice(v.extraPrimes);
+    const coText = cos.length ? `; co-sponsor${cos.length === 1 ? "" : "s"}: ${cos.map(nm).join(", ")}`
+      : v.cosp > v.extraPrimes ? `; ${num(v.cosp - v.extraPrimes)} co-sponsor${v.cosp - v.extraPrimes === 1 ? "" : "s"}` : "";
+    return `<p><b>${esc(v.p)}</b> ${leads.length ? `${leads.length > 1 ? "Sponsors" : "Sponsor"}: ${andList(leads.map(nm))}` : "No sponsor listed"}${coText}</p>`;
+  });
+  return `<div class="sponsors"><h4>Who sponsors it</h4>${rows.join("")}</div>`;
+}
+
 // "31 co-sponsors", opening into the names (current session only). The page's legislator and
 // your own legislators come first, in bold.
 function cosponsorList(v) {
@@ -4011,6 +4028,7 @@ function fillDetail(el) {
     <p class="textlink">${STATE.textLinks(b)}</p>
     ${chapterAmendment(b)}
     ${signingMemo(b)}${vetoMemo(b)}
+    ${sponsorsBlock(b)}
     <div class="linkrow"><span>Link to this bill:</span><input type="text" readonly value="${esc(billLink(b))}" aria-label="Link to this bill" onclick="this.select()"><button class="act-btn" type="button" data-copylink>Copy</button></div>
     ${inCard ? "" : nextSteps(b)}
     ${keyDates(b)}
@@ -4561,8 +4579,8 @@ function decode(raw) {
     // Every date each house passed it (a bill sent back in year two may pass twice).
     dates.passSAll = kd[2] ? kd[2].split(";").map(day) : [];
     dates.passAAll = kd[3] ? kd[3].split(";").map(day) : [];
-    const v = vers.map(([p, sp, c, sd, cm, acts, cos, dist]) => ({
-      p, sponsor: str(sp), cosp: c, statusDesc: str(sd), committee: str(cm), cosponsors: (cos || []).map(str), district: dist || 0,
+    const v = vers.map(([p, sp, c, sd, cm, acts, cos, dist, xp]) => ({
+      p, sponsor: str(sp), cosp: c, extraPrimes: xp || 0, statusDesc: str(sd), committee: str(cm), cosponsors: (cos || []).map(str), district: dist || 0,
       actions: acts.map(([dt, t]) => [day(dt), T[t]]),
     }));
     return {

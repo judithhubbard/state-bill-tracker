@@ -376,7 +376,9 @@ def load_session(session):
             "sponsor": person(primes[0]) if primes else "",
             "district": seat(p[0], primes[0])[0] if primes else 0,
             # Other prime sponsors come first, then co-sponsors.
+            # The other prime sponsors come first among the co-sponsors; "primes" says how many there are.
             "cosponsors": [person(n) for n in primes[1:]] + cos,
+            "primes": len(primes),
             "cosp": max(0, len(primes) - 1) + len(cos),
             "statusDesc": desc,
             "committee": comms[status][1] if in_comm else None,
