@@ -1,6 +1,9 @@
 // Virginia: the page's settings and rules that are particular to this state. build_data.py puts this file
 // into every page, just before the main script; tracker.html reads it as STATE.
 const STATE = {
+  code: "va",
+  // Steps that aren't news on a watchlist card.
+  routine: /^(INTRODUCED|Prefiled|Placed on .*Agenda|Assigned .*sub|(Fiscal )?Impact [Ss]tatement|Bill text|Printed as|Committee substitute printed|Title replaced|Engrossed|Read (first|second) time|Constitutional reading|Enrolled$|Signed by (Speaker|President)|Governor's Action Deadline|Acts of Assembly Chapter text|Conference report released|Conference substitute printed|Taken up|Passed by for the day|Rules suspended|VOTE:)/,
   publicSite: "https://statebilltracker.org/va/",
   listsApi: "",
   // The House of Delegates ("H") is the lower house; its members are delegates.

@@ -1374,9 +1374,9 @@ const HIST_FILTERS = {
 const PROGRESS = {
   // Where a bill is now is the stage boxes; this is how far it ever got.
   passedS: { label: "Passed the Senate at some point", test: (b) => b.passedS },
-  passedA: { label: "Passed the Assembly at some point", test: (b) => b.passedA },
+  passedA: { label: `Passed the ${STATE.houses[Object.keys(STATE.houses).find((h) => h !== "S")]} at some point`, test: (b) => b.passedA },
   onlyS: { label: `Passed the Senate but not the ${STATE.houses[Object.keys(STATE.houses).find((h) => h !== "S")]}`, test: (b) => b.passedS && !b.passedA },
-  onlyA: { label: "Passed the Assembly but not the Senate", test: (b) => b.passedA && !b.passedS },
+  onlyA: { label: `Passed the ${STATE.houses[Object.keys(STATE.houses).find((h) => h !== "S")]} but not the Senate`, test: (b) => b.passedA && !b.passedS },
   both: { label: "Passed both houses (whatever happened next)", test: (b) => b.stage >= 3 },
   never: { label: "Never passed either house", test: (b) => !b.passedS && !b.passedA },
 };
@@ -1518,7 +1518,7 @@ const stageSet = () => (state.stage == null ? [] : String(state.stage).split(","
 const PIPE_GROUPS = {}; // "3,4" -> "Still in play"
 const AGENDA_TIP = "Bills listed for a committee meeting that hasn't happened yet. Committees post agendas about a week ahead; this is the time to write the chair and committee members. Includes bills that passed one house and are on the other house's committee agenda.";
 function renderPipeline() {
-  const counts = Array(7).fill(0), oneHouse = { Senate: 0, Assembly: 0 };
+  const counts = Array(7).fill(0), oneHouse = { [HOUSE.S]: 0, [HOUSE[LOW]]: 0 };
   const today = isoToday();
   let nextDue = null;
   for (const b of BILLS) {
@@ -1529,7 +1529,7 @@ function renderPipeline() {
   }
   const subs = {
     1: "Approved by committee",
-    2: `Senate ${num(oneHouse.Senate)} · Assembly ${num(oneHouse.Assembly)}`,
+    2: `${HOUSE.S} ${num(oneHouse[HOUSE.S] || 0)} · ${HOUSE[LOW]} ${num(oneHouse[HOUSE[LOW]] || 0)}`,
     3: STATE.passedBothNote(DATA.current),
     4: DATA.current ? (nextDue ? `Next decision due ${fmtDate(nextDue)}` : counts[4] ? "Deadlines have passed" : "Nothing waiting") : "No decision in the records",
   };
@@ -1886,7 +1886,7 @@ function downloadCsv() {
   for (const b of rows) lines.push([b.nums[0], b.nums.slice(1).join(" "), b.title, TEXT.long[b.stage], b.last, b.vers.map((v) => v.sponsor).filter(Boolean).join("; "), billLink(b)].map(cell).join(","));
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob(["\ufeff" + lines.join("\r\n")], { type: "text/csv" }));
-  a.download = `ny-bills-${DATA.session}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `${STATE.code || "ny"}-bills-${DATA.session}-${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
 }
 
@@ -2034,7 +2034,11 @@ function holdUp(b, v, oppose) {
   if (!c) return null;
   const lead = (DATA.contacts?.leaders || {})[house];
   const leadTitle = lead ? leaderTitle(lead) : "";
-  const runsRules = lead ? `The ${leadTitle} runs the Rules Committee, so it's up to ${lead.pronoun} whether this gets a vote.` : "";
+  // The leader runs Rules in New York and Virginia's House; Virginia's Senate Rules has its own chair.
+  const rules = (DATA.contacts?.committees || {})[`${house}:rules`];
+  const runsRules = lead && (!rules?.chair || lastName(rules.chair) === lastName(lead.name))
+    ? `The ${leadTitle} runs the Rules Committee, so it's up to ${lead.pronoun} whether this gets a vote.`
+    : rules?.chair ? `The Rules Committee's chair, ${TITLE[house]} ${rules.chair}, decides whether it gets a vote.` : "";
   if (commKey(cname) === "rules") return lead ? { note: runsRules } : null;
   // Sent to Rules earlier in the session and back in committee now (as happens each January).
   const toRules = v.actions.find(([, t]) => /^(REPORTED REFERRED|COMMITTED|REFERRED) TO RULES$/.test(t));
@@ -2068,7 +2072,8 @@ function planFor(b, stance = "support") {
   const A = (yes, no) => (opp ? no : yes);
   const today = isoToday(), y2 = lastYear(DATA.session);
   const lv = DATA.lastVote || "", quiet = lv && (new Date(today) - new Date(lv)) / 864e5 > 21;
-  const adjourned = today > `${y2}-12-31` || (quiet && lv.startsWith(String(y2)));
+  const adjourned = STATE.floorVotesEnd === false ? today > STATE.sessionEnds(DATA.session)
+    : today > `${y2}-12-31` || (quiet && lv.startsWith(String(y2)));
   const recess = !adjourned && quiet && today.startsWith(String(DATA.session));
   const stalled = adjourned
     ? `Floor votes are over for this session. ${DIES(y2, b)}`
@@ -2180,7 +2185,7 @@ function nextSteps(b) {
   const meet = nextMeeting(b);
   if (meet) {
     const d = new Date(meet.when);
-    what += `<p class="when">On the agenda: ${esc(meet.committee)} Committee, ${d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.</p>`;
+    what += `<p class="when">On the agenda: ${esc(meet.committee)} Committee, ${fmtMeet(meet.when, true)}.</p>`;
   }
   what += plan.notes.map((n) => `<p class="holdup">${esc(n)}</p>`).join("");
   if (plan.actionable && oddsLine(b)) what += `<p class="odds">${oddsLine(b)}</p>`;
@@ -2348,7 +2353,7 @@ function oddsLine(b) {
   const point = b.stage >= 3 ? "both" : b.stage === 2 ? (b.passedIn === "Senate" ? "passS" : "passA") : b.stage === 1 ? "floor" : "intro";
   const w = DATA.insights.waiting;
   // "Still waiting on the governor on <date>": New York's governor calls bills in through December.
-  const waiting = b.stage === 3 && w && STATE.floorVotesEnd !== false;
+  const waiting = b.stage === 3 && w && STATE.requestsBills;
   const pick = (t) => {
     if (waiting) { const x = w.kinds?.[t ? `${t}|${kind}` : kind]; return x && x[0] >= 30 ? x : null; }
     const o = DATA.insights.odds?.[`${t || "all"}|${kind}`]?.[point];
@@ -3558,7 +3563,7 @@ const watchStance = (b) => watchEntry(b)?.stance || null;
 const WATCH_COUNT = () => BILLS.filter(isWatched).length;
 // What's happened to a watched bill since its owner last opened it. Paperwork that comes with a
 // real step (a new print number, the "sent to the other house" after a pass) doesn't count.
-const ROUTINE = /^(PRINT NUMBER|INTRODUCED|DELIVERED TO (SENATE|ASSEMBLY)|RETURNED TO (SENATE|ASSEMBLY)|\d+(ST|ND) REPORT CAL|\d+RD READING CAL)/;
+const ROUTINE = STATE.routine || /^(PRINT NUMBER|INTRODUCED|DELIVERED TO (SENATE|ASSEMBLY)|RETURNED TO (SENATE|ASSEMBLY)|\d+(ST|ND) REPORT CAL|\d+RD READING CAL)/;
 // Most important first, so the tag names the step that matters.
 const WEIGHT = [/^SIGNED/, /^VETOED/, /^DELIVERED TO GOVERNOR/, /^(RE)?PASSED/, /^SUBSTITUTED/, /ENACTING CLAUSE STRICKEN/, /^DIED/,
   /THIRD READING|^REPORTED|RULES REPORT|DISCHARGED/, /^AMEND/, /HELD/, /REFERRED|COMMITTED/];
@@ -3571,7 +3576,8 @@ function newActions(b) {
     .sort((x, y) => weightOf(x[1]) - weightOf(y[1]) || y[0].localeCompare(x[0]));
 }
 const hasNews = (b) => newActions(b).length > 0;
-const fmtMeet = (when, time) => { const d = new Date(when); return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + (time ? `, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""); };
+// A meeting's day, and its time when known (Virginia's dockets give only the day, written as midnight).
+const fmtMeet = (when, time) => { const d = new Date(when); return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + (time && !/T00:00(:00)?$/.test(when) ? `, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""); };
 // The next committee meeting with this bill on the agenda (current session).
 function nextMeeting(b) {
   if (!DATA.current || !b.agenda.length) return null;

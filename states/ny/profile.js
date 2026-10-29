@@ -1,6 +1,9 @@
 // New York: the page's settings and rules that are particular to this state. build_data.py puts
 // this file into every page, just before the main script; tracker.html reads it as STATE.
 const STATE = {
+  code: "ny",
+  // The governor's office asks for ("requests") bills that passed both houses, in batches, through December.
+  requestsBills: true,
   // The public site, and the Worker that keeps published watchlists.
   publicSite: "https://albanybilltracker.org/",
   listsApi: "https://albany-lists.lists-worker.workers.dev",
