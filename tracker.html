@@ -1841,8 +1841,10 @@ function contactBook(b, canMove = true, oppose = false) {
     chair(house, cname, ask, star) {
       const c = (DATA.contacts?.committees || {})[`${house}:${commKey(cname)}`];
       if (!c || !c.chair) return;
+      // A chair who sponsors it still decides when it comes up.
       const mine = backs(c.chair, house) && !oppose;
-      add(c.chair, house, `chair of the ${HOUSE[house]} ${c.name} Committee${c.meets ? ` (meets ${c.meets} during session)` : ""}`, mine ? "" : ask, star && !mine);
+      add(c.chair, house, `chair of the ${HOUSE[house]} ${c.name} Committee${c.meets ? ` (meets ${c.meets} during session)` : ""}`,
+        mine && ask ? `${ask.replace("the committee agenda", "your committee's agenda")} (you sponsor it)` : ask, star);
       // Your own legislators who sit on this committee get a vote there.
       for (const r of myReps().filter((x) => x.house === house)) {
         const L = LEGS.find((x) => x.house === house && lastName(x.name) === r.last && x.name === r.name) || LEGS.find((x) => x.house === house && lastName(x.name) === r.last);
@@ -1850,12 +1852,13 @@ function contactBook(b, canMove = true, oppose = false) {
           add(r.name, house, `member of the ${c.name} Committee`, canMove && !backs(r.name, house) ? (oppose ? "vote no in committee" : "vote yes in committee") : "");
       }
     },
-    // Returns the leader when they already back the bill (so there's nothing to ask them).
+    // A leader who sponsors it still decides when it comes up; returns them then, for a note.
     leader(house, ask, star) {
       const L = (DATA.contacts?.leaders || {})[house];
-      if (L && backs(L.name, house) && !oppose) return L;
-      if (L) add(L.name, house, L.role.charAt(0).toLowerCase() + L.role.slice(1) + ", decides which bills come to the floor", ask, star);
-      return null;
+      if (!L) return null;
+      const mine = backs(L.name, house) && !oppose;
+      add(L.name, house, L.role.charAt(0).toLowerCase() + L.role.slice(1) + ", decides which bills come to the floor", mine && ask ? `${ask} (you sponsor it)` : ask, star);
+      return mine ? L : null;
     },
     reps(houses = ["S", "A"], ask) {
       for (const r of myReps()) if (houses.includes(r.house)) {
@@ -1970,7 +1973,7 @@ function holdUp(b, v, oppose) {
   const members = c.members || [];
   const most = members.filter((m) => sponsors.has(lastName(m))).length > members.length / 2;
   const money = commKey(STATE.moneyCommittees?.[house]) === commKey(cname);
-  const skipChair = chairBacks ? ` The chair, ${chairName}, is a sponsor, so there's nothing to ask them.` : "";
+  const skipChair = chairBacks ? ` The chair, ${chairName}, is a sponsor but hasn't brought it up for a vote.` : "";
   if (money && most && !budgetPassed()) return { leader: true, gov: true, chairBacks, ask: "include it in the budget",
     note: `Bills that cost money often wait for the budget, which the governor and the ${lead ? leadTitle : "leaders"} negotiate until about April. Ask them to include it.${skipChair}` };
   if (money && most && skipped) return { leader: true, gov: true, chairBacks,
@@ -2002,18 +2005,21 @@ function planFor(b, stance = "support") {
   // A bill stuck in a committee: signs the decision is above the committee add the leader (first,
   // when the chair already sponsors it) and sometimes the governor, with the reason.
   const notes = [];
+  let leaderFirst = false;
   const stuck = (v) => {
     // Only while it can still move: after the last floor votes, who's holding it up doesn't matter.
     const h = live && holdUp(b, v, opp);
     if (!h) return;
     if (!notes.includes(h.note)) notes.push(h.note);
     if (h.leader) book.leader(v.p[0], L(h.ask || "let it move out of committee"), live && h.chairBacks);
+    // When the decision looks higher up than a chair who backs it, the leader is the one to ask first.
+    if (h.leader && h.chairBacks) leaderFirst = true;
     if (h.gov && live) govAlso = h.ask || "support this bill";
   };
   // The leader who decides on a floor vote; if they sponsor it, say so instead.
   const floorLeader = (h) => {
     const lb = book.leader(h, L(A("bring it to a floor vote", "keep it from coming to a floor vote")), live);
-    if (lb && live) notes.push(`The ${leaderTitle(lb)}, ${lb.name}, is a sponsor, so there's nothing to ask ${lb.pronoun}.`);
+    if (lb && live) notes.push(`The ${leaderTitle(lb)}, ${lb.name}, is a sponsor but hasn't brought it to a floor vote.`);
   };
   if (b.stage === 0) {
     what = `<p class="when">Next: a committee vote.</p>${stalled ? `<p>${stalled}</p>` : ""}`;
@@ -2072,7 +2078,7 @@ function planFor(b, stance = "support") {
       ? `The session ended December 31, ${y2}. ${where} It would have to be reintroduced.`
       : `Floor votes for this session ended ${fmtDate(lv)}. ${where} It can move only if lawmakers return for a special session; otherwise it dies December 31, ${y2}.`;
   } else if (notes.length) reason = notes.join(" ");  // shown when there's no one to ask (the decider sponsors it)
-  return { what, gov, govAlso, notes, due, book, actionable, opp, reason };
+  return { what, gov, govAlso, notes, due, book, actionable, opp, reason, leaderFirst };
 }
 
 // Support or oppose, for the asks: from the watchlist if the bill is starred, else as last
@@ -3732,7 +3738,8 @@ function keyAction(b, stance) {
   let key = null;
   if (plan.gov) key = { gov: true, name: "Governor's office", ask: plan.gov };
   else {
-    const p = plan.book.entries().find((e) => e.star && e.asks.length);
+    const starred = plan.book.entries().filter((e) => e.star && e.asks.length);
+    const p = (plan.leaderFirst && starred.find((e) => e.roles.some((r) => r.includes("decides which bills come to the floor")))) || starred[0];
     if (p) key = { gov: false, name: p.name, house: p.house, ask: p.asks.join("; "), info: infoFor(p.name), role: roleKind(p.roles) };
   }
   // Anyone else who decides (the chair in the other house), then our own legislators, when they have

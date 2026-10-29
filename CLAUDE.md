@@ -152,7 +152,9 @@ Read README.md for what each script downloads. This file covers how to change th
   `holdUp()` adds the leader (and, for a money committee, the governor) when a bill stuck in committee
   shows signs the decision is above the committee: it's in or reached Rules; its sponsors are most of
   the committee and the chair is one; or it's in the money committee (`STATE.moneyCommittees`) with
-  most of the committee sponsoring. The last two wait until the committee has met `SKIPPED_ENOUGH` (5)
+  most of the committee sponsoring. A chair or leader who sponsors the bill is still asked to schedule it ("(you sponsor it)";
+  decided 2026-10-29); other sponsors aren't asked. A card shows one "Decides" person (the leader first when the
+  decision looks higher up, `leaderFirst`); anyone else who decides goes in its "Also" line. The last two wait until the committee has met `SKIPPED_ENOUGH` (5)
   times since the bill arrived without taking it up (`meetingsSkipped()`, counting days it approved a bill,
   so meetings on resolutions or nominations alone are missed), and the money one until the year's budget
   bills pass (`budgetPassed()`). In 2017–24, about half of NY bills sponsored by most of a house
