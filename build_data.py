@@ -284,7 +284,11 @@ def contacts_for(session, recs, delegation_names):
                 people.setdefault(name, lookup(name, house, district))
                 reps.append({"title": title, "name": name, "house": house, "last": seat["key"].split()[-1]})
     leaders = {}
-    for house, (name, role, pronoun) in P.LEADERS.items():
+    # Leaders as the state's own sites name them (Virginia's contacts carry them), else the profile's list. A
+    # leader's pronoun comes from the profile when it names the same person, else "them".
+    listed = {h: (v["name"], v["role"], next((pr for n, _, pr in [P.LEADERS.get(h, ("", "", ""))] if n and name_key(n) == name_key(v["name"])), "them"))
+              for h, v in raw.get("leaders", {}).items()}
+    for house, (name, role, pronoun) in {**P.LEADERS, **listed}.items():
         if any(k[0] == house and v["key"] == name_key(name) for k, v in seats.items()):
             person(name, house)
             leaders[house] = {"name": name, "role": role, "pronoun": pronoun}

@@ -2080,7 +2080,11 @@ function planFor(b, stance = "support") {
   const adjourned = STATE.floorVotesEnd === false ? today > STATE.sessionEnds(DATA.session)
     : today > `${y2}-12-31` || (quiet && lv.startsWith(String(y2)));
   const recess = !adjourned && quiet && today.startsWith(String(DATA.session));
-  const stalled = adjourned
+  // A state's deadline for passing a bill's own house (Virginia's crossover), once it has gone by.
+  const origin = !adjourned && b.stage <= 1 && DATA.current && STATE.originDeadline?.(b);
+  const missed = origin && today > origin ? origin : null;
+  const stalled = missed ? `It missed crossover on ${fmtDate(missed)}, the last day to pass its own house, so it can't pass this year.`
+    : adjourned
     ? `Floor votes are over for this session. ${DIES(y2, b)}`
     : recess ? `The Legislature is out until January ${y2}.` : "";
   const live = !stalled || recess; // can anything move before the session ends?
@@ -3662,6 +3666,9 @@ function deadlineOf(b) {
     const end = STATE.passedBothBy(DATA.session);
     return isoToday().startsWith(String(lastYear(DATA.session))) ? { g: soon(end) ? "soon" : "year", d: end } : { g: "later" };
   }
+  // A state's deadline for passing a bill's own house (Virginia's crossover).
+  const origin = b.stage <= 1 && STATE.originDeadline?.(b);
+  if (origin && daysUntil(origin) >= 0) return { g: soon(origin) ? "soon" : "session", d: origin, origin: true };
   if (b.stage <= 2 && !floorVotesOver()) {
     const e = sessionEnd();
     return { g: e.date && daysUntil(e.date) >= 0 && soon(e.date) ? "soon" : "session", d: e.date };
@@ -4013,7 +4020,7 @@ function renderWatchView() {
       </div>` : "";
     const open = W_OPEN.has(billKey(b)), logged = SHARED ? 0 : logOf(b).length;
     const dl = x.key ? deadlineOf(b) : {};
-    const due = !DATA.current || !dl.d ? "" : b.stage === 4 ? ` · due ${fmtDate(dl.d)}` : dl.g === "soon" && b.stage < 3 ? ` · ${dl.d === sessionEnd().date ? "session ends" : "meets"} ${fmtDate(dl.d)}` : "";
+    const due = !DATA.current || !dl.d ? "" : b.stage === 4 ? ` · due ${fmtDate(dl.d)}` : dl.g === "soon" && b.stage < 3 ? ` · ${dl.origin ? "crossover" : dl.d === sessionEnd().date ? "session ends" : "meets"} ${fmtDate(dl.d)}` : "";
     return `<article class="wcard${open ? " open" : ""}" data-idx="${b.idx}">
       <div class="whead" data-wtoggle="${b.idx}" role="button" tabindex="0" aria-expanded="${open}">
         <div class="wtop"><div class="nums">${!SHARED && list.length > 1 ? `<button class="whandle" type="button" data-whandle aria-label="Move ${esc(b.nums[0])} up or down" title="Drag to change the order (or use the arrow keys)">⠿</button>` : ""}<span class="chev" aria-hidden="true"></span>${esc(b.nums.join(" / "))}${SHARED

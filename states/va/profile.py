@@ -32,9 +32,6 @@ def session_label(session):
     return str(session)
 
 
-# The day each regular session adjourned (or is scheduled to), for the governor's deadline: 7 days for a bill
-# presented while the session still has more than 7 days to run, else 30 days after adjournment.
-ADJOURNED = {2024: "2024-03-09", 2025: "2025-02-22", 2026: "2026-03-14", 2027: "2027-02-27"}
 
 # Visitor counts: none until the site is public.
 CF_ANALYTICS_TOKEN = ""
@@ -42,7 +39,8 @@ GOATCOUNTER_CODE = ""
 
 DELEGATION_NAMES = set()
 # Who decides which bills reach each house's floor: name, title, and the pronoun the site uses for them.
-# In the Senate that's the majority leader (the president is the lieutenant governor). Check each January.
+# In the Senate that's the majority leader (the president is the lieutenant governor). The daily contacts
+# refresh reads the current ones from the two houses' sites; this list is the fallback, and gives the pronoun.
 LEADERS = {"S": ("Scott A. Surovell", "Senate Majority Leader", "him"),
            "H": ("Don Scott", "Speaker of the House", "him")}
 

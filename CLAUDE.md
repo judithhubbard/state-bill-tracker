@@ -85,6 +85,13 @@ from that repo. **Nothing here may change it.**
   drug-schedule bill). Checked by hand 2026-10-29: of 30 random links, 27 were plainly the same bill and 3 closely
   related; some heavily reworked repeats are missed), so "this bill in other sessions", repeat tries and watchlist carry-over work. One-year
   sessions use `YEARS` for "the next session" (build_data.py's comeback counts, carryCandidates()).
+- **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
+  states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
+  `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
+  (`STATE.originDeadline`), and after it the bill can't pass that year. Virginia's floor leaders and members' first
+  years come from the houses' sites (contacts.py). `check_site.py` runs last in site.yml and fails the run (GitHub
+  emails) when legislators are stale or too few, New Jersey's bill texts are missing, or Virginia's date rule stops
+  fitting the floor votes. Still by hand: a new governor (`GOVERNORS`) every four years, next January 2030.
 - **Saved settings are per state (2026-10-29):** the states share one web address, and a browser keeps one set of saved
   settings per address, so tracker.html prefixes every saved name with `STORE` ("abt:nj:", "abt:va:"; New York keeps
   plain "abt:" so its visitors' watchlists still load after the move). `adoptShared()` takes a state's own bills, once,

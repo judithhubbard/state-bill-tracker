@@ -24,9 +24,16 @@ const STATE = {
     return b.vers.map((v) => link(STATE.billUrl(v.p), `${esc(v.p)} on the Legislature's site: text, summary and history`)).join("<br>");
   },
 
-  // The day each regular session adjourned (or is scheduled to).
-  adjourned: { 2024: "2024-03-09", 2025: "2025-02-22", 2026: "2026-03-14", 2027: "2027-02-27" },
-  sessionEnds: (session) => STATE.adjourned[session] || `${session}-03-01`,
+  // The session's dates follow from its opening day (the second Wednesday of January): it runs 60 days in even
+  // years and 46 in odd ones, and crossover, the last day for each house to pass its own bills, has been the 35th
+  // day of a 60-day session and the 28th of a 46-day one (2024-26). A year that differs goes in `dated`.
+  dated: {},
+  day: (year, n) => { const [y, m, d] = STATE.opens(year).split("-").map(Number), t = new Date(y, m - 1, d + n - 1);
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; },
+  sessionEnds: (session) => STATE.dated[session]?.adjourns || STATE.day(session, session % 2 ? 46 : 60),
+  crossover: (session) => STATE.dated[session]?.crossover || STATE.day(session, session % 2 ? 28 : 35),
+  // A bill that hasn't passed its own house has to by crossover (a continued bill's starts over in the new session).
+  originDeadline: (b) => STATE.crossover(DATA.session),
   // The reconvened session, for the governor's amendments and vetoes: the sixth Wednesday after adjournment.
   reconvenes(session) {
     const [y, m, d] = STATE.sessionEnds(session).split("-").map(Number);
@@ -109,7 +116,7 @@ const STATE = {
       leg: [["", open, adj, "In session"], ["", back, `${back.slice(0, 8)}${String(+back.slice(8) + 3).padStart(2, "0")}`, ""]],
       gov: [["light", open, adj, "7 days a bill"], ["", adj, due, "30 days"]],
       events: [
-        [open, "up", LEG, `January ${Y}`, "Session opens. About halfway through, each house must have passed its own bills (crossover)."],
+        [open, "up", LEG, `January ${Y}`, `Session opens. By crossover, ${MD(STATE.crossover(Y))}, each house must have passed its own bills.`],
         [adj, "down", LEG, MD(adj), "Session adjourns. Bills that didn't pass die."],
         [back, "up", LEG, MD(back), "Reconvened session: votes on the governor's amendments and vetoes."],
         [`${Y}-07-01`, "down", LEG, "July 1", "Most new laws take effect."],

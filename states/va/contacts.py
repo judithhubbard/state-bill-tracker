@@ -64,6 +64,16 @@ def house(session, lis_names):
             "url": f"{HOUSE_SITE}/members/{mid}", "image": f"{HOUSE_SITE}/delegate_photos/thumbs/{mid}.jpg",
             "office": "", "position": None, "places": desc.group(1).strip() if desc else "",
         }
+    # Each delegate's own page: leadership role ("Speaker of the House") and first year ("Member Since: 2020").
+    since = {}
+    for seat, p in people.items():
+        t = text(get(p["url"]))
+        role = re.search(r"\d+(?:st|nd|rd|th) District [DRI] - .*? ((?:Speaker of the House|(?:Majority|Minority|Democratic|Republican) (?:Leader|Whip|Caucus Chair)))", t)
+        if role:
+            p["position"] = role.group(1)
+        first = re.search(r"Member Since: (?:[A-Z][a-z]+ \d{1,2}, )?(\d{4})", t)  # "2020" or "January 14, 2026"
+        if first:
+            since[seat] = int(first.group(1))
     by_id = {p["id"]: p["name"] for p in people.values()}
     for code, (chamber, cname) in {r["COM_COMNO"]: (r["CHAMBER"], r["COM_NAME"]) for r in rows(session, "Committees.csv")}.items():
         if chamber != "H":
@@ -75,7 +85,7 @@ def house(session, lis_names):
         # The chair as the member list names them (it may spell a middle initial differently).
         chair_name = next((m for m in members if chair_name and name_key(m).split()[-1] == name_key(chair_name).split()[-1]), chair_name)
         committees[committee_key(cname)] = {"name": cname, "chair": chair_name, "meets": None, "members": members}
-    return people, committees
+    return people, committees, since
 
 
 def senate(session, lis_names):
@@ -118,6 +128,7 @@ def senate(session, lis_names):
         phones = [["Capitol", col(r, "GABPHONE")]] if col(r, "GABPHONE") else []
         if col(r, "DISTRICTPHONE"):
             phones.append([col(r, "CITY") or "District", col(r, "DISTRICTPHONE")])
+        role = re.search(r"((?:Senate )?(?:Majority|Minority) (?:Leader|Whip)|President pro tempore), (?:Democrat|Republican|Independent), District", page)
         people[f"S:{d}"] = {
             "name": name, "key": name_key(name), "id": sid,
             "party": PARTY.get(col(r, "PARTY")[:1], ""),
@@ -125,7 +136,7 @@ def senate(session, lis_names):
             "phone": phones[0][1] if phones else None, "phones": phones,
             "url": f"{SENATE_SITE}/Senator/memberpage.php?id={sid}" if sid else None, "image": None,
             "office": " ".join(filter(None, [col(r, "ADDRESS1"), col(r, "ADDRESS2"), col(r, "CITY"), col(r, "ZIP")])),
-            "position": None, "places": places.group(1).strip() if places else "",
+            "position": role.group(1) if role else None, "places": places.group(1).strip() if places else "",
             "_since": int(since.group(1)) if since else None,
             "_comms": comms.group(1) if comms else "",
         }
@@ -141,9 +152,17 @@ def senate(session, lis_names):
 
 def build(session):
     lis_names = {r["MBR_MBRNO"]: re.sub(r"\s+", " ", r["MBR_NAME"]).strip() for r in rows(session, "Members.csv")}
-    h_people, h_comms = house(session, lis_names)
+    h_people, h_comms, h_since = house(session, lis_names)
     s_people, s_comms = senate(session, lis_names)
     since = {k: p.pop("_since") for k, p in s_people.items() if p.get("_since")}
+    since.update(h_since)
+    # Who decides which bills reach each floor, as the two houses' sites name them: the Speaker, and the Senate's
+    # majority leader (its president is the lieutenant governor).
+    leaders = {}
+    for h, members, role in (("H", h_people, "Speaker of the House"), ("S", s_people, "Senate Majority Leader")):
+        who = next((p["name"] for p in members.values() if p.get("position") == role), None)
+        if who:
+            leaders[h] = {"name": who, "role": role}
     for p in s_people.values():
         p.pop("_comms", None)
         p.pop("_since", None)
@@ -151,7 +170,7 @@ def build(session):
         "session": session,
         "fetched": datetime.now(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M ET"),
         "people": {**s_people, **h_people}, "since": since,
-        "senateCommittees": s_comms, "assemblyCommittees": h_comms,
+        "senateCommittees": s_comms, "assemblyCommittees": h_comms, "leaders": leaders,
         "assemblyMembers": {}, "kept": [],
     }
 
