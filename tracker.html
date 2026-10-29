@@ -2259,7 +2259,7 @@ function comingUp(mine) {
 const CARRY_STORE = () => `abt:carried:${DATA.session}`;
 function carryCandidates() {
   if (!DATA.current || SHARED || PRESET) return [];
-  const prev = DATA.session - 2, handled = new Set(recallCarry());
+  const prev = DATA.session - YEARS, handled = new Set(recallCarry());
   const old = new Map([...WATCH.entries()].filter(([k]) => k.startsWith(`${prev}:`)).map(([k, v]) => [k.slice(5), v]));
   if (!old.size) return [];
   const out = [];
@@ -2278,8 +2278,10 @@ function markCarried(nums) { try { localStorage.setItem(CARRY_STORE(), JSON.stri
 function carryBox() {
   const c = carryCandidates();
   if (!c.length) return "";
-  const prev = span(DATA.session - 2);
-  return `<div class="carry"><p><b>${num(c.length)} bill${c.length === 1 ? "" : "s"} from your ${prev} watchlist ${c.length === 1 ? "is" : "are"} back this session</b> with new numbers.</p>
+  const prev = span(DATA.session - YEARS);
+  // Virginia's continued bills keep their numbers; reintroduced bills elsewhere get new ones.
+  const renumbered = c.some((x) => x.was !== baseNum(x.b.nums[0]));
+  return `<div class="carry"><p><b>${num(c.length)} bill${c.length === 1 ? "" : "s"} from your ${prev} watchlist ${c.length === 1 ? "is" : "are"} back this session</b>${renumbered ? " with new numbers" : ""}.</p>
     <details><summary>Which ones</summary><ul>${c.map((x) => `<li>${esc(x.b.nums.join(" / "))} (was ${esc(x.was)}): ${esc(x.b.title)}</li>`).join("")}</ul></details>
     <p><button class="act-btn primary" type="button" data-wl="carry">Add ${c.length === 1 ? "it" : `all ${num(c.length)}`}</button> <button class="act-btn" type="button" data-wl="nocarry">No thanks</button></p></div>`;
 }
@@ -3088,7 +3090,9 @@ function renderStats() {
   // Persistence
   const [p0, p1, p2, p3, total] = I.persistence[t] || [0, 0, 0, 0, 0];
   const fate = I.fate?.[t] || {};
-  const lawSpan = `${I.pastSessions[1]}–${String(I.pastSessions[I.pastSessions.length - 1] + 1).slice(2)}`;
+  // From one session's first year to another's last ("2019–24"; "2025" for one-year sessions).
+  const yearsSpan = (a, b) => (lastYear(b) > a ? `${a}–${String(lastYear(b)).slice(2)}` : `${a}`);
+  const lawSpan = yearsSpan(I.pastSessions[1], I.pastSessions[I.pastSessions.length - 1]);
   const COMM_FATE = [["none", "Never acted on"], ["amended", "Revised by the sponsor, never voted on"], ["held", `${STATE.heldLabel || "Held without a vote"}${TIP(HELD_TIP)}`], ["defeated", "Voted down"], ["passed", "Passed one committee, died in the next"]]
     .filter(([k]) => (I.commFate?.[t]?.[k] || [0])[0] > 0);  // only what this state's records show
   const FATE = [["committee", "Died in committee"], ["floor", "Died awaiting a floor vote"], ["oneHouse", "Passed one house only"], ["vetoed", "Vetoed"]];
@@ -3109,7 +3113,7 @@ function renderStats() {
         return vrow(cl, `${num(cn)} bills`, [[pctOf(cb, cn), "a"], [pctOf(claw, cn), "l"]], `${pctOf(cb, cn)}% came back · <b class="big">${pctOf(claw, cn)}%</b> law`).replace('class="vrow"', 'class="vrow sub"'); }).join("")}</div>`);
     }).join("")}</div>
     ${COMM_FATE.some(([k]) => k === "held") ? `<p class="note">“${STATE.heldLabel || "Held without a vote"}”: ${STATE.heldNote || "put on a committee's agenda, then held for consideration (Assembly) or tabled (Senate). Committees rarely vote bills down; they hold them instead."}</p>` : ""}
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)} that died in ${I.pastSessions[0]}–${String(I.pastSessions[I.pastSessions.length - 2] + 1).slice(2)}, followed through ${I.pastSessions[I.pastSessions.length - 1] + 1}.</p>
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)} that died in ${yearsSpan(I.pastSessions[0], I.pastSessions[I.pastSessions.length - 2])}, followed through ${lastYear(I.pastSessions[I.pastSessions.length - 1])}.</p>
     ${(() => { const [n, moved, law] = I.stuck?.[t] || [0, 0, 0];
       return n ? `<p>Bills that sat in committee all of the first year: <b>${pctOf(moved, n)}%</b> were approved by a committee in the second year, <b>${pctOf(law, n)}%</b> became law.</p>
     <p class="note">${num(n)} bills${t === "all" ? "" : ` (${TOPICS[t]})`}, ${pastSpan()}.</p>` : ""; })()}

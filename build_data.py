@@ -439,7 +439,7 @@ def insights(loaded, hist, current):
                     persist[t][4] += 1
     comeback = {t: [0, 0, 0] for t in topics}  # died in committee; reintroduced next session; later became law
     for s in past[:-1]:
-        nxt = s + 2
+        nxt = s + YEARS
         for i, r in enumerate(loaded[s][0]):
             if r["stage"] != 0:
                 continue
@@ -476,13 +476,13 @@ def insights(loaded, hist, current):
                 if has(r, t):
                     c = comm_fate[t][r["commFate"]]
                     c[0] += 1
-                    c[1] += any(e[0] == s + 2 for e in later)
+                    c[1] += any(e[0] == s + YEARS for e in later)
                     c[2] += any(e[2] == 5 for e in later)
 
     # What happened to bills that died, by how far they got: [died, back next session, later law].
     fate = {t: {k: [0, 0, 0] for k in ("committee", "floor", "oneHouse", "vetoed")} for t in topics}
     for s in past[:-1]:
-        nxt = s + 2
+        nxt = s + YEARS
         for i, r in enumerate(loaded[s][0]):
             k = {0: "committee", 1: "floor", 2: "oneHouse", 6: "vetoed"}.get(r["stage"])
             if not k:

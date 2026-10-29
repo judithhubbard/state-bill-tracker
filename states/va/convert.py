@@ -142,6 +142,56 @@ VOTES = re.compile(r"^(Reported from|Failed to report|Passed by indefinitely|Con
                    r"(?:House|Senate) (?:concurred|rejected|agreed|sustained|overrode)|Passed (House|Senate))")
 
 
+# ---- The same bill in earlier years. Virginia's numbers start over each year and its files don't link a bill
+# to an earlier one, so: a bill continued from last year (same number, "Continued from last session"), or an
+# earlier bill with the same subject heading ("Minimum wage; ...") whose Legislative Services summary shares at
+# least 60% of its words, or 40% when the same legislator carries it. Up to two years back.
+_EARLIER = {}
+_SKIP = {"bill", "this", "that", "with", "from", "which", "shall", "such", "provides", "requires", "under", "certain"}
+
+
+def _heading(title):
+    return re.sub(r"[^a-z ]", "", title.split(";")[0].lower()).strip()
+
+
+def _words(text):
+    return set(re.findall(r"[a-z0-9]{3,}", text.lower())) - _SKIP
+
+
+def _year(session):
+    """Bill -> (heading, summary words, chief patron id), for matching."""
+    if session not in _EARLIER:
+        path = os.path.join(P.DATA, f"texts_{session}.json")
+        texts = json.load(open(path)) if os.path.exists(path) else {}
+        _EARLIER[session] = {num(r["Bill_id"]): (_heading(r["Bill_description"]),
+                                                 _words(texts.get(num(r["Bill_id"]), {}).get("statement") or r["Bill_description"]),
+                                                 r["Patron_id"])
+                             for r in rows(session, "BILLS.CSV") if r["Bill_id"][:2] in ("HB", "SB")}
+    return _EARLIER[session]
+
+
+def earlier(session, bill, continued):
+    """{(year, bill), ...}: this bill in the two years before."""
+    out = {(session - 1, bill)} if continued else set()
+    me = _year(session).get(bill)
+    if not me:
+        return out
+    for y in (session - 1, session - 2):
+        if not os.path.exists(os.path.join(folder(y), "BILLS.CSV")):
+            continue
+        best = None
+        for other, (head, words, patron) in _year(y).items():
+            if head != me[0] or not head:
+                continue
+            j = len(me[1] & words) / max(1, len(me[1] | words))
+            if j >= 0.6 or (j >= 0.4 and patron and patron == me[2]):
+                if not best or j > best[0]:
+                    best = (j, other)
+        if best:
+            out.add((y, best[1]))
+    return out
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     live = session >= CURRENT
@@ -256,7 +306,7 @@ def load_session(session):
                 "actions": [[d, t] for d, _, t, _ in acts]}
         rec = {
             "nums": [p], "base": [p],
-            "prev": set(),
+            "prev": earlier(session, p, any(re.match(r"Continued from (last|\d{4}) session", x) for _, _, _, x in acts)),
             "title": title, "summary": "", "act": "", "lawCode": "", "law": None, "laws": [],
             "comms": comm_list, "topics": topics, "places": [], "narrow": P.narrow_kind(title),
             "commFate": fate, "mainTopic": main_topic, "local": "local" in topics,

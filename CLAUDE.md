@@ -79,6 +79,10 @@ from that repo. **Nothing here may change it.**
   Senate version"). Statistics hide what a state's data can't support: repeat tries and "came back" without links
   across sessions (`linkedSessions()`), past party rows without past parties. The 2024 files write dates as
   "2024-03-02T00:00:00"; a bill that died in conference is still flagged "Passed" (it's one house's bill).
+  Earlier years (2026-10-29): `earlier()` in states/va/convert.py links a bill to the same bill up to two years back
+  (continued bills by number; otherwise the same subject heading and a summary sharing 60% of its words, or 40% with
+  the same chief patron), so "this bill in other sessions", repeat tries and watchlist carry-over work. One-year
+  sessions use `YEARS` for "the next session" (build_data.py's comeback counts, carryCandidates()).
 - **Adding a state (learned from NJ and VA):** missing settings fall back to New York's rules and wording, silently.
   Copy states/nj or states/va and decide each of these: in profile.py, `YEARS`, `LOWER`/`LOWER_NAME`/`TITLES`,
   `LEADERS`, `GOVERNORS`, `TOPICS`, `TOWNS_PATH`; in profile.js, `code`, `houses`, `titles`, `memberWords`,
