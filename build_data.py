@@ -1267,7 +1267,8 @@ def main():
             data["networkSince"] = network_since(done, data["legislators"])
             # Without legislators the site would lose every legislator page and contact; stop
             # so yesterday's site stays up rather than publishing a broken one.
-            if GITHUB and not data["legislators"]:
+            # (A state without legislators yet, with no contacts file at all, builds without them.)
+            if GITHUB and not data["legislators"] and os.path.exists(os.path.join(P.DATA, f"contacts_{session}.json")):
                 raise SystemExit("No legislators in the contacts file; not building")
             for seat, rows in person_history(done, current, data["legislators"]).items():
                 if seat in data["profiles"]:

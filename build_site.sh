@@ -6,9 +6,11 @@
 set -e
 cd "$(dirname "$0")"
 OUT=${1:-_site}
-STATES="nj"
+STATES="nj va"
 rm -rf "$OUT" && mkdir -p "$OUT"
 for s in $STATES; do
+  # SITE_BASE (the preview's address) gives each state its own: SITE_BASE/nj/, SITE_BASE/va/.
+  if [ -n "$SITE_BASE" ]; then export SITE_URL="${SITE_BASE}$s/"; fi
   python3 build_data.py --state "$s" --github "$OUT/$s"
 done
 cp home.html "$OUT/index.html"

@@ -59,6 +59,15 @@ from that repo. **Nothing here may change it.**
   estimate's summary) comes from `states/nj/texts.py` (current session; documents already read are kept in
   data/nj/docs_<session>.json); build_data.py's `bill_texts()` writes it to data/<session>-text/<A10>.json in pieces
   of 500 bill numbers (packed into Claude copies), and `whatItDoes()` shows it when a bill is opened. Not done yet: published lists and the "public site" tip; the daily workflow for NJ.
+- **Virginia, step 1 (bills, stages, votes; built 2026-10-29):** `python3 states/va/fetch.py` downloads the Legislative
+  Information System's CSVs into data/va/<year>1/ (see the va-data-sources memory); `states/va/convert.py` reads them.
+  Sessions run one year (`YEARS = 1`) and the lower house is the House of Delegates (`LOWER = "H"`, members "Del.");
+  tracker.html reads these as `YEARS`/`lastYear()` and `LOW`/`BOTH`/`TITLE`, so no code assumes "A" or two-year
+  sessions. History lines are plain English and kept as written, except the steps the site's rules use. The
+  file's Approved/Vetoed flags are unreliable (both set, or in 2025 neither): the history decides. A bill the
+  governor sent back with amendments is "Passed both houses" until the reconvened session. Bills continued to
+  the next year appear in the next year's folder under the same number. Still to do: legislators and parties,
+  "Where you live", "What it does" from Summaries.csv, the How tab and Weigh in text, and a full review.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
@@ -66,7 +75,7 @@ from that repo. **Nothing here may change it.**
   turns that off). `.github/workflows/site.yml` downloads, builds and deploys, by hand only for now; it needs the
   secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. The domain stays parked at Porkbun until launch.
   Until then the site is at https://statebilltracker.pages.dev/ (first put up 2026-10-29, built with
-  `SITE_URL=https://statebilltracker.pages.dev/nj/`; unlisted, and marked noindex). It's a classic Pages project
+  `SITE_BASE=https://statebilltracker.pages.dev/` (each state's SITE_URL is SITE_BASE/<state>/); unlisted, and marked noindex). It's a classic Pages project
   (created with `--force`, which isn't needed again). Deploy by hand from an empty folder, never from
   lists_worker/ or cron_worker/ (wrangler picks up that folder's wrangler.toml):
   `npx -y wrangler@4.152.0 pages deploy <repo>/_site --project-name=statebilltracker --branch=main --commit-dirty=true`.

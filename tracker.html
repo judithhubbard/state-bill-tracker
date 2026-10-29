@@ -1549,7 +1549,7 @@ function renderPipeline() {
   $("pipeline").innerHTML = floorVotesOver() ? `
     <div class="pg live">${head("Still in play", [3, 4])}${[3, 4].map(row).join("")}</div>
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
-    <div class="pg stale">${head("Out of time", [0, 1, 2], ` ${TIP(OUT_OF_TIME)}<span>Die December 31 unless lawmakers return</span>`)}${[0, 1, 2].map(row).join("")}</div>` : `
+    <div class="pg stale">${head("Out of time", [0, 1, 2], ` ${TIP(OUT_OF_TIME)}<span>${esc(STATE.outOfTimeLine || "Die December 31 unless lawmakers return")}</span>`)}${[0, 1, 2].map(row).join("")}</div>` : `
     ${!DATA.current ? `
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
     <div class="pg stale">${head("Died", [0, 1, 2, 3])}${[0, 1, 2, 3].map(row).join("")}</div>
@@ -1585,11 +1585,15 @@ function track(b) {
 const commPlain = (n) => (n || "").replace(/ And /g, " and ").replace(/ Committee$/, "");
 
 // The API's action log is in capitals with abbreviations: "ORDERED TO THIRD READING RULES CAL.897".
+// House names, for matching and capitalizing them in actions ("senate|assembly", "senate|house").
+const HOUSE_WORDS = Object.values(STATE.houses).map((h) => h.toLowerCase()).join("|");
 function plainAction(t) {
+  // Actions already written in plain English (Virginia's) are kept as written unless a rule below fits.
+  const written = /[a-z]/.test(t || "");
   let s = (t || "").toLowerCase()
     .replace(/\b([sa])(\d+[a-z]?)\b/g, (m, h, n) => h.toUpperCase() + n.toUpperCase())
     .replace(/\bcal\.(\d+)/g, "calendar $1").replace(/\bchap\.(\d+)/g, "chapter $1")
-    .replace(/\b(memo|veto)\.(\d+)/g, "$1 $2").replace(/\b(senate|assembly|governor|rules)\b/g, (w) => w[0].toUpperCase() + w.slice(1))
+    .replace(/\b(memo|veto)\.(\d+)/g, "$1 $2").replace(new RegExp(`\\b(${HOUSE_WORDS}|governor|rules)\\b`, "g"), (w) => w[0].toUpperCase() + w.slice(1))
     .replace(/\bthird reading (Rules) calendar/, "third reading, $1 calendar");
   // The state's shorthand, in plain words.
   const cap = (c) => c.replace(/\b[a-z]/g, (x) => x.toUpperCase()).replace(/ (And|Of|The|For|On)\b/g, (m, w) => ` ${w.toLowerCase()}`);
@@ -1613,18 +1617,20 @@ function plainAction(t) {
     [/^print number (\w+)$/, (m, n) => `New version printed (${n.toUpperCase()})`],
     [/^substituted by ([A-Z]+\d\w*)$/, (m, n) => `Replaced by the other house's version, ${n}`],
     [/^substituted for ([A-Z]+\d\w*)$/, (m, n) => `Took the place of this house's own version, ${n}`],
-    [/^passed (Senate|Assembly)$/, (m, h) => `Passed the ${h}`],
-    [/^repassed (Senate|Assembly)$/, (m, h) => `Passed the ${h} again`],
-    [/^delivered to (Senate|Assembly)$/, (m, h) => `Sent to the ${h}`],
-    [/^returned to (Senate|Assembly)$/, (m, h) => `Sent back to the ${h} after passing`],
+    [/^passed (Senate|Assembly|House)$/, (m, h) => `Passed the ${h}`],
+    [/^repassed (Senate|Assembly|House)$/, (m, h) => `Passed the ${h} again`],
+    [/^delivered to (Senate|Assembly|House)$/, (m, h) => `Sent to the ${h}`],
+    [/^returned to (Senate|Assembly|House)$/, (m, h) => `Sent back to the ${h} after passing`],
     [/^delivered to Governor$/, () => "Sent to the governor"],
-    [/^died in (Senate|Assembly)$/, (m, h) => `Died in the ${h}`],
+    [/^died in (Senate|Assembly|House)$/, (m, h) => `Died in the ${h}`],
     [/^signed chapter (\d+)$/, (m, n) => `Signed into law (chapter ${n})`],
     [/^vetoed memo (\d+)$/, (m, n) => `Vetoed (memo ${n})`],
     [/^approval memo (\d+)$/, (m, n) => `Governor's signing memo (memo ${n})`],
     [/^(?:recommit, )?enacting clause stricken$/, () => "Withdrawn by the sponsor"],
   ];
-  for (const [re, fn] of PLAIN) if (re.test(s)) { s = s.replace(re, fn); break; }
+  let ruled = false;
+  for (const [re, fn] of PLAIN) if (re.test(s)) { s = s.replace(re, fn); ruled = true; break; }
+  if (written && !ruled && !/^(?:re-)?referred to /.test(s)) return t;
   // Committee names after "referred to" and similar read as names.
   s = s.replace(/^((?:re-)?referred to|recommitted to|committed to|reported and committed to|reference changed to|held for consideration in|amend and recommit to) (.+)$/, (m, v, c) => `${v} ${c.replace(/\b[a-z]/g, (x) => x.toUpperCase()).replace(/ And /g, " and ")}`);
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -3301,7 +3307,10 @@ function sponsorsBlock(b) {
     const nm = (n) => (mine.has(lastName(n)) ? `<b>${esc(n)}</b>` : esc(n));
     const leads = [v.sponsor, ...v.cosponsors.slice(0, v.extraPrimes)].filter(Boolean);
     const cos = v.cosponsors.slice(v.extraPrimes);
-    const coText = cos.length ? `; co-sponsor${cos.length === 1 ? "" : "s"}: ${cos.map(nm).join(", ")}`
+    // A long list shows its first 20 (your legislators first), the rest folded.
+    const sorted = cos.slice().sort((a, b) => mine.has(lastName(b)) - mine.has(lastName(a)));
+    const shown = sorted.length > 24 ? sorted.slice(0, 20) : sorted, rest = sorted.slice(shown.length);
+    const coText = cos.length ? `; co-sponsor${cos.length === 1 ? "" : "s"}: ${shown.map(nm).join(", ")}${rest.length ? ` <details class="cosp more"><summary>and ${num(rest.length)} more</summary>${rest.map(nm).join(", ")}</details>` : ""}`
       : v.cosp > v.extraPrimes ? `; ${num(v.cosp - v.extraPrimes)} co-sponsor${v.cosp - v.extraPrimes === 1 ? "" : "s"}` : "";
     return `<p><b>${esc(v.p)}</b> ${leads.length ? `${leads.length > 1 ? "Sponsors" : "Sponsor"}: ${andList(leads.map(nm))}` : "No sponsor listed"}${coText}</p>`;
   });
