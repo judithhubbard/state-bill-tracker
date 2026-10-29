@@ -93,7 +93,8 @@ const STATE = {
     if (today <= end) return "";
     if (today <= back) return `The ${y} session adjourned ${fmtDate(end)}. The governor has until ${fmtDate(due)} to act on its bills, and the Legislature returns ${fmtDate(back)} to vote on the governor's amendments and vetoes.`;
     const next = y + 1, carried = raw.sessions.find((x) => x.session === next);
-    return `The ${y} session is over. The ${next} session opens ${fmtDate(STATE.opens(next))}; bills for it can be filed from November${carried ? `, and bills continued from ${y} are already on its <a href="${esc(carried.url)}">page</a>` : ""}.`;
+    // Between sessions is when bills for the next one are planned: the session itself is a sprint.
+    return `The ${y} session is over, and the ${next} session opens ${fmtDate(STATE.opens(next))}. Now is the time to ask your legislators to sponsor bills for it: they're drafted over the fall and can be filed from mid-November${carried ? `. Bills continued from ${y} are already on the ${next} <a href="${esc(carried.url)}">page</a>` : ""}.`;
   },
   // The year's calendar: the Legislature's and the governor's bars ([class, from, to, text]), the events marked on
   // it ([date, "up"/"down", row, when, text]; rows are LEG = 112, GOV = 150) and a note.
