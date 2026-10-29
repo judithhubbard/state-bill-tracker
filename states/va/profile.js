@@ -136,12 +136,21 @@ const STATE = {
       long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
       chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Signed", "Vetoed"],
     },
+    // Before the session opens (its page shows continued and early-filed bills, already in committees).
+    prefiled: {
+      pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
+      long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
+      chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Signed", "Vetoed"],
+    },
     final: {
       pipe: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses", "Sent to the governor", "Signed into law", "Vetoed"],
       long: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses", "Sent to the governor, no action recorded", "Signed into law", "Vetoed"],
       chart: ["Died in committee", "Died awaiting vote", "Passed one house", "Passed both", "Sent, no action", "Signed", "Vetoed"],
     },
   },
+  // The next session's page before it opens: bills continued from this year pick up where they stopped (one that
+  // passed its own house doesn't pass it again), and bills filed early for it go to committees as they're filed.
+  upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. This page has bills continued from ${raw.session - 1}, which pick up where they stopped (a bill that passed one house doesn't have to pass it again), and bills filed early for ${raw.session}. Stars you add here carry over when the session starts.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
   stageTips: [
     "Waiting in a committee or subcommittee. Most bills never get out of committee.",
     "A committee approved it, and it's waiting for a vote of the full House or Senate.",

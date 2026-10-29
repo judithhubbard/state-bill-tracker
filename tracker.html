@@ -1228,7 +1228,9 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 const STORE = STATE.code && STATE.code !== "ny" ? `abt:${STATE.code}:` : "abt:";
 const STAGE_TEXT = STATE.stageText;
 // Bills filed before their session opens: committees get them on the first day.
-STAGE_TEXT.prefiled = Object.fromEntries(Object.entries(STAGE_TEXT.live).map(([k, v]) => [k, ["Prefiled", ...v.slice(1)]]));
+// An upcoming session's bills: "Prefiled" waiting for committees (New York), unless the state words it
+// itself (Virginia's are continued bills already in committee, and prefiled bills already referred).
+STAGE_TEXT.prefiled = STATE.stageText.prefiled || Object.fromEntries(Object.entries(STAGE_TEXT.live).map(([k, v]) => [k, ["Prefiled", ...v.slice(1)]]));
 const KEY_DATES = ["intro", "floor", "passS", "passA", "died", "deliv", "signed", "vetoed"];
 const PAGE = 100;
 const FILTER_KEYS = ["stage", "topics", "law", "comm", "progress", "house", "hist", "intro", "sort", "who", "whoCos", "party", "nearby", "voted", "changed", "agenda"];
@@ -4769,6 +4771,7 @@ function floorVotesOver() {
 function sessionNotice(raw) {
   if (raw.upcoming) {
     const cur = raw.sessions.find((x) => x.session === LATEST);
+    if (STATE.upcomingNotice) return STATE.upcomingNotice(raw, cur);
     return `These bills were filed early for the ${span(raw.session)} session, which opens in January ${raw.session}. They go to committees on its first day. Stars you add here carry over when the session starts. ${cur?.url ? `<a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`;
   }
   if (!raw.current) return "";
