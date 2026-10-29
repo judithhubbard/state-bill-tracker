@@ -3,7 +3,7 @@
 so a problem fails the run and GitHub emails the owner; the site is already published by then).
 
 - Each state's legislators were refreshed in the last 3 days, and there are about as many as there should be.
-- New Jersey: the current session's bill texts ("What it does") are there.
+- New Jersey and California: the current session's bill texts ("What it does") are there.
 - Virginia: the rule for its session dates (60 days in even years, 46 in odd, from the second Wednesday of
   January; states/va/profile.js) still fits: each finished session's last floor votes come within 10 days of the
   computed adjournment. If a year breaks the rule, add it to `dated` in states/va/profile.js.
@@ -41,6 +41,12 @@ nj = TODAY.year if TODAY.year % 2 == 0 else TODAY.year - 1
 contacts("nj", nj, 115)
 if not os.path.exists(os.path.join(HERE, "data", "nj", f"texts_{nj}.json")):
     problems.append(f"nj: no bill texts for {nj}")
+
+# California: two-year sessions starting in odd years, and the bill texts ("What it does").
+ca = TODAY.year if TODAY.year % 2 else TODAY.year - 1
+contacts("ca", ca, 110)
+if not os.path.exists(os.path.join(HERE, "data", "ca", f"texts_{ca}.json")):
+    problems.append(f"ca: no bill texts for {ca}")
 
 # Virginia: a session a year.
 contacts("va", TODAY.year, 130)

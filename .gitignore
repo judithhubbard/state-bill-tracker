@@ -21,3 +21,6 @@ data/nj/*
 !data/nj/DB2022_TEXT.zip
 # Virginia downloads (states/va/fetch.py).
 data/va/*
+# California downloads (states/ca/fetch.py); its county table is made once by states/ca/towns.py.
+data/ca/*
+!data/ca/district_towns.json

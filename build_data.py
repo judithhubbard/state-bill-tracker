@@ -953,7 +953,8 @@ def similar_bills(recs, k=8, floor=0.35):
     n = len(recs)
     docs = []
     for r in recs:
-        tf = Counter(_sim_words(r["title"]) * 2 + _sim_words(r["summary"][:800]))
+        # A state can give a longer text to compare (California's digests) without putting it in the page.
+        tf = Counter(_sim_words(r["title"]) * 2 + _sim_words((r.get("simText") or r["summary"])[:800]))
         for t in _law_terms(r["lawCode"]):
             tf[t] += 2
         docs.append(tf)

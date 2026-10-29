@@ -24,7 +24,7 @@ from that repo. **Nothing here may change it.**
   2026-10-28 and dropped). New York moves only once, to statebilltracker.org/ny, with the forwarding pages
   below; avoid doing that at the start of a session (aim before January or after June).
 - **Decided 2026-10-29:** every state is built from its own legislature's official files and done thoroughly, like
-  New Jersey; not from Open States. Next: Virginia.
+  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29); more states before launch.
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
@@ -85,6 +85,22 @@ from that repo. **Nothing here may change it.**
   drug-schedule bill). Checked by hand 2026-10-29: of 30 random links, 27 were plainly the same bill and 3 closely
   related; some heavily reworked repeats are missed), so "this bill in other sessions", repeat tries and watchlist carry-over work. One-year
   sessions use `YEARS` for "the next session" (build_data.py's comeback counts, carryCandidates()).
+- **California (built 2026-10-29):** `python3 states/ca/fetch.py` reads the Legislature's database tables out of its pubinfo
+  zips (see the ca-data-sources memory) into data/ca/<session>/ (session = its odd first year); `states/ca/pubinfo.py`
+  reads only the wanted files from a remote zip by HTTP range (with curl: the server turns away Python's client), so
+  a day's run reads about 11 MB, not 1.2 GB. The daily zip's text files are numbered differently each day, so the
+  bill texts (the Legislative Counsel's Digest, `states/ca/texts.py`, cached by version in digests.json) and veto
+  messages (vetoes.json) are read from the same zip as the tables. `states/ca/convert.py` decodes the plain-English
+  history (each line also says where the bill went: house, Committee/Floor/Desk, committee code) and spells out the
+  committee abbreviations; "From committee chair, with author's amendments" is not a committee vote. Only regular-session
+  AB and SB bills are shown. Joint authors are all primes. Deadlines (`originBy()`, `lastDay()` in states/ca/profile.js)
+  were fitted to the 2021-26 floor votes; the governor has 12 days, or 30 days after the first year's last day, or
+  until September 30. `states/ca/contacts.py` reads the Senate's senator, committee and leadership pages and the
+  Assembly's member-data API; each member carries `dataName`, the name the database uses ("Limón"), to tie votes and
+  authors to seats ("S:21", "A:30"). "Where you live" picks a county (`states/ca/towns.py`, run once: the Senate's
+  counties PDF and the Assembly's list) and, on the public site, looks up an address with the Census geocoder
+  (`STATE.addressLookup`). Earlier sessions are linked by subject and digest (`earlier()`, like Virginia's), never
+  spot bills. A new governor takes office January 4, 2027: add them to `GOVERNORS`.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house

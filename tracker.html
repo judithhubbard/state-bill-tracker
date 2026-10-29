@@ -1751,6 +1751,8 @@ const linkedSessions = () => BILLS.some((b) => b.earlier?.length);
 const continuedTo = (b) => STATE.continuedTo?.(b) || null;
 const DIES = STATE.diesAfterFloor || ((y2) => `Unless lawmakers return for a special session, it dies December 31, ${y2}.`);
 
+// A last name as written, for lists of districts ("Jr." isn't one).
+const shortName = (n) => (n || "").replace(/,?\s+(Jr\.?|Sr\.?|II|III)$/, "").split(" ").pop();
 const lastName = (n) => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\s-]/g, "").split(/\s+/).filter((w) => !["jr", "sr", "ii", "iii"].includes(w)).pop() || "";
 
 // ---- Your legislators: chosen by address or from a list, kept in this browser; otherwise
@@ -1811,7 +1813,7 @@ function renderMyReps() {
   box.innerHTML = `<h2>Where you live</h2>
     <div class="repsel"><label>County <select id="repC">${counties}</select></label></div>
     ${where ? `<p class="muted">${where}</p>` : ""}
-    ${ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, NY" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
+    ${ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr || "NY"}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
     <p class="muted" id="repMsg">The address goes to the U.S. Census Bureau's address lookup; only your county and district numbers are kept, in this browser.</p>` : ""}
     <div class="repsel"><label>Senate <select id="repS">${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repA">${opts(LOW)}</select></label></div>
     <p>Your legislators: ${reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`).join(" and ") || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
@@ -1844,16 +1846,18 @@ function renderTownRepsByHouse(box) {
   const lists = { S: town?.[2], [LOW]: town?.[3] };
   const opts = (h) => {
     const mine = lists[h]?.length ? lists[h].map(([d]) => d) : [...new Set(LEGS.filter((L) => L.house === h).map((L) => L.district))].sort((a, b) => a - b);
-    const who = (d) => LEGS.find((L) => L.house === h && L.district === d)?.name.split(" ").pop() || "vacant";
+    const who = (d) => shortName(LEGS.find((L) => L.house === h && L.district === d)?.name) || "vacant";
     return `<option value="">Choose your district</option>` + mine.map((d) => `<option value="${d}"${d === c?.[h] ? " selected" : ""}>District ${d}: ${esc(who(d))}</option>`).join("");
   };
   const split = town && (town[2].length > 1 || town[3].length > 1);
   const where = !town ? "" : split
-    ? `${esc(townName(town))} is split among ${town[2].length} Senate and ${town[3].length} ${HOUSE[LOW]} district${town[3].length === 1 ? "" : "s"}. Pick yours below${STATE.findReps ? `, or <a href="${esc(STATE.findReps)}" target="_blank" rel="noopener">look up your address</a>` : ""}.`
+    ? `${esc(townName(town))} is split among ${town[2].length} Senate and ${town[3].length} ${HOUSE[LOW]} district${town[3].length === 1 ? "" : "s"}. ${STATE.addressLookup && ROOT ? "Look up your address, or pick yours below." : `Pick yours below${STATE.findReps ? `, or <a href="${esc(STATE.findReps)}" target="_blank" rel="noopener">look up your address</a>` : ""}.`}`
     : `${esc(townName(town))} is in Senate District ${town[2][0]?.[0] ?? "?"} and ${HOUSE[LOW]} District ${town[3][0]?.[0] ?? "?"}.`;
   box.innerHTML = `<h2>Where you live</h2>
     <div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOptions(town)}</select></label></div>
     ${where ? `<p class="muted">${where}</p>` : ""}
+    ${STATE.addressLookup && ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
+    <p class="muted" id="repMsg">The address goes to the U.S. Census Bureau's address lookup; only your district numbers are kept, in this browser.</p>` : ""}
     <div class="repsel"><label>Senate <select id="repDS">${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repDL">${opts(LOW)}</select></label></div>
     <p>Your legislators: ${andList(reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`)) || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
 }
@@ -1864,7 +1868,7 @@ function renderTownReps(box) {
   const named = townName;
   const townOpts = townOptions(town);
   const districts = [...new Set(LEGS.map((L) => L.district))].sort((a, b) => a - b);
-  const who = (d) => LEGS.filter((L) => L.district === d).sort((a, b) => (a.house === b.house ? 0 : a.house === "S" ? -1 : 1)).map((L) => L.name.split(" ").pop()).join(", ");
+  const who = (d) => LEGS.filter((L) => L.district === d).sort((a, b) => (a.house === b.house ? 0 : a.house === "S" ? -1 : 1)).map((L) => shortName(L.name)).join(", ");
   const distOpts = `<option value="">Choose your district</option>` + districts.map((d) => `<option value="${d}"${d === c?.S ? " selected" : ""}>District ${d}: ${esc(who(d))}</option>`).join("");
   const where = !town ? "" : town[2].length > 1
     ? `${esc(named(town))} is split between ${andList(town[2].map(([d]) => `District ${d}`))}. Pick yours below.`
@@ -1888,7 +1892,7 @@ function lookUpReps(address) {
     const sd = pick(/Upper/), ad = pick(/Lower/);
     const county = (g.Counties?.[0]?.BASENAME || "").replace(/ County$/, "");
     countUse(sd && ad ? "lookup/found" : "lookup/not-found");
-    if (!sd || !ad) return done("That address wasn't found in New York. Try adding the town and ZIP code, or choose from the lists below.");
+    if (!sd || !ad) return done(`That address wasn't found in ${STATE.name || "New York"}. Try adding the town and ZIP code, or choose from the lists below.`);
     done("");
     if (county && (DATA.counties || []).includes(county)) { HOME = county; try { localStorage.setItem(STORE + "county", HOME); } catch (e) {} }
     setReps(sd, ad);
@@ -2098,7 +2102,7 @@ function planFor(b, stance = "support") {
   // A state's deadline for passing a bill's own house (Virginia's crossover), once it has gone by.
   const origin = !adjourned && b.stage <= 1 && DATA.current && STATE.originDeadline?.(b);
   const missed = origin && today > origin ? origin : null;
-  const stalled = missed ? `It missed crossover on ${fmtDate(missed)}, the last day to pass its own house, so it can't pass this year.`
+  const stalled = missed ? `It missed ${STATE.originWord || "the deadline"} on ${fmtDate(missed)}, the last day to pass its own house, so it can't pass this ${YEARS > 1 ? "session" : "year"}.`
     : adjourned
     ? `Floor votes are over for this session. ${DIES(y2, b)}`
     : recess ? `The Legislature is out until January ${y2}.` : "";
@@ -4035,7 +4039,7 @@ function renderWatchView() {
       </div>` : "";
     const open = W_OPEN.has(billKey(b)), logged = SHARED ? 0 : logOf(b).length;
     const dl = x.key ? deadlineOf(b) : {};
-    const due = !DATA.current || !dl.d ? "" : b.stage === 4 ? ` · due ${fmtDate(dl.d)}` : dl.g === "soon" && b.stage < 3 ? ` · ${dl.origin ? "crossover" : dl.d === sessionEnd().date ? "session ends" : "meets"} ${fmtDate(dl.d)}` : "";
+    const due = !DATA.current || !dl.d ? "" : b.stage === 4 ? ` · due ${fmtDate(dl.d)}` : dl.g === "soon" && b.stage < 3 ? ` · ${dl.origin ? STATE.originWord || "deadline to pass its house" : dl.d === sessionEnd().date ? "session ends" : "meets"} ${fmtDate(dl.d)}` : "";
     return `<article class="wcard${open ? " open" : ""}" data-idx="${b.idx}">
       <div class="whead" data-wtoggle="${b.idx}" role="button" tabindex="0" aria-expanded="${open}">
         <div class="wtop"><div class="nums">${!SHARED && list.length > 1 ? `<button class="whandle" type="button" data-whandle aria-label="Move ${esc(b.nums[0])} up or down" title="Drag to change the order (or use the arrow keys)">⠿</button>` : ""}<span class="chev" aria-hidden="true"></span>${esc(b.nums.join(" / "))}${SHARED

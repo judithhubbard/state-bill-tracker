@@ -34,6 +34,7 @@ const STATE = {
   crossover: (session) => STATE.dated[session]?.crossover || STATE.day(session, session % 2 ? 28 : 35),
   // A bill that hasn't passed its own house has to by crossover (a continued bill's starts over in the new session).
   originDeadline: (b) => STATE.crossover(DATA.session),
+  originWord: "crossover",
   // The reconvened session, for the governor's amendments and vetoes: the sixth Wednesday after adjournment.
   reconvenes(session) {
     const [y, m, d] = STATE.sessionEnds(session).split("-").map(Number);

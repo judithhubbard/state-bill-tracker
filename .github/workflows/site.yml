@@ -38,11 +38,22 @@ jobs:
           key: nj-data-v2-${{ github.run_id }}
           restore-keys: nj-data-v2-
 
+      # California's in a cache of its own, so adding it didn't empty the one above.
+      - name: Restore California downloads
+        uses: actions/cache@v4
+        with:
+          path: data/ca
+          key: ca-data-v1-${{ github.run_id }}
+          restore-keys: ca-data-v1-
+
       - name: Download New Jersey
         run: python3 states/nj/fetch.py
 
       - name: Download Virginia
         run: python3 states/va/fetch.py
+
+      - name: Download California
+        run: python3 states/ca/fetch.py
 
       # Until launch the site lives at statebilltracker.pages.dev, so its links point there.
       - name: Build the site

@@ -6,7 +6,7 @@
 set -e
 cd "$(dirname "$0")"
 OUT=${1:-_site}
-STATES="nj va"
+STATES="ca nj va"
 rm -rf "$OUT" && mkdir -p "$OUT"
 for s in $STATES; do
   # SITE_BASE (the preview's address) gives each state its own: SITE_BASE/nj/, SITE_BASE/va/.
