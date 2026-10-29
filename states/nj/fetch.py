@@ -72,6 +72,9 @@ def main():
     for session in range(FIRST, CURRENT + 1, 2):
         if os.path.exists(os.path.join(P.DATA, f"DB{session}_TEXT.zip")):
             vetoes.main(session)
+    # What each current bill does, in the Legislature's words (only documents not read before).
+    from states.nj import texts
+    texts.main(CURRENT)
     # The current session's legislators, committees and leaders, once a day (it's one request per legislator).
     from states.nj import contacts
     path = os.path.join(P.DATA, f"contacts_{CURRENT}.json")

@@ -1061,6 +1061,25 @@ def outcomes(recs):
     return dict(out)
 
 
+def bill_texts(session, recs):
+    """Bill (base number, as the page keys it) -> [sponsor's statement, committee, date, committee statement,
+    fiscal summary], from data/<state>/texts_<session>.json when the state has one."""
+    path = os.path.join(P.DATA, f"texts_{session}.json")
+    if not os.path.exists(path):
+        return {}
+    raw = json.load(open(path))
+    out = {}
+    for r in recs:
+        ts = [raw[n] for n in r["nums"] if n in raw]
+        if not ts:
+            continue
+        stmt = next((t["statement"] for t in ts if t.get("statement")), "")
+        comm = max((t["committee"] for t in ts if t.get("committee")), key=lambda c: c[1], default=["", "", ""])
+        fisc = next((t["fiscal"] for t in ts if t.get("fiscal")), "")
+        out[re.sub(r"[A-Z]$", "", r["nums"][0])] = [stmt, comm[0], comm[1], comm[2], fisc]
+    return out
+
+
 def main():
     loaded = {s: C.load_session(s) for s in SESSIONS}
     urls = json.load(open(URLS_FILE)) if os.path.exists(URLS_FILE) else {}
@@ -1248,6 +1267,11 @@ def main():
             for seat, rows in person_history(done, current, data["legislators"]).items():
                 if seat in data["profiles"]:
                     data["profiles"][seat]["history"] = rows
+        # What each bill does, in the legislature's own words (states/<code>/texts.py), kept apart from the
+        # bill data and loaded when someone opens a bill.
+        texts = bill_texts(session, recs)
+        data["hasText"] = bool(texts)
+        tpayload = json.dumps(texts, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/") if texts else ""
         payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
         if GITHUB:
             # On GitHub Pages the data is a separate file the page fetches, so the
@@ -1259,6 +1283,16 @@ def main():
                     dst.write(src.read())
             with open(os.path.join(GITHUB, "data", f"{session}.json"), "w", encoding="utf-8") as f:
                 f.write(payload)
+            if texts:
+                # In pieces of 500 bill numbers (data/<session>-text/A10.json holds A5000-A5499), so opening
+                # a bill loads only its piece.
+                parts = defaultdict(dict)
+                for k, v in texts.items():
+                    parts[f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}"][k] = v
+                os.makedirs(os.path.join(GITHUB, "data", f"{session}-text"), exist_ok=True)
+                for name, part in parts.items():
+                    with open(os.path.join(GITHUB, "data", f"{session}-text", f"{name}.json"), "w", encoding="utf-8") as f:
+                        json.dump(part, f, separators=(",", ":"), ensure_ascii=False)
         # The template is written with New York's names (title, header and the script that updates them).
         template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)
         template = template.replace("How a bill becomes law in New York", f"How a bill becomes law in {P.STATE_NAME}")
@@ -1292,6 +1326,10 @@ def main():
         # browser; GitHub Pages pages load the shared JSON file instead, which the server compresses anyway.
         packed = base64.b64encode(gzip.compress(payload.encode("utf-8"), 9, mtime=0)).decode("ascii")
         html = template.replace(marker, f'<script type="application/octet-stream" id="bill-data" data-enc="gzip64">{packed}</script>')
+        if tpayload:
+            tpacked = base64.b64encode(gzip.compress(tpayload.encode("utf-8"), 9, mtime=0)).decode("ascii")
+            html = html.replace(f'data-enc="gzip64">{packed}</script>',
+                                f'data-enc="gzip64">{packed}</script>\n<script type="application/octet-stream" id="bill-text" data-enc="gzip64">{tpacked}</script>', 1)
         if GITHUB:
             out = os.path.join(GITHUB, "index.html" if session == current else f"{session}.html")
             html = github_page(template.replace(marker, f'<script type="application/json" id="bill-data" data-src="data/{session}.json" data-root="{P.SITE_URL}"></script>'))

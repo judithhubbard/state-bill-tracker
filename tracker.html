@@ -165,8 +165,11 @@ footer p { margin: 0; max-width: 90ch; }
 /* Session notice and process explainer */
 .notice { background: var(--gold-soft); border-radius: 6px; padding: 10px 14px; font-size: 14px; max-width: none; margin: 0; }
 /* Key dates under each bill */
-.sponsors h4, .keydates h4 { margin: 0 0 4px; font: 600 11px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.whatdoes h4, .sponsors h4, .keydates h4 { margin: 0 0 4px; font: 600 11px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 .sponsors p { margin: 0 0 3px; font-size: 13.5px; }
+.whatdoes { display: grid; gap: 6px; }
+.whatdoes .wd-stmt p { margin: 0 0 6px; font-size: 14px; }
+.whatdoes .wd-stmt p.muted { font-size: 12.5px; margin: 0; }
 .keydates ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
 .keydates li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; }
 .keydates time { font-family: var(--mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -3243,6 +3246,40 @@ function pageRole(b) {
   return role ? `<span class="role-tag">${esc(L.name.split(" ").pop())}: ${role}</span>` : "";
 }
 
+// What a bill does, in the legislature's own words (New Jersey: the sponsor's statement, the latest
+// committee statement and the fiscal estimate's summary). Kept apart from the bill data and loaded the
+// first time a bill is opened: a separate file on the public site, packed into the page on Claude copies.
+// On the public site the texts come in pieces of 500 bill numbers (data/<session>-text/A10.json).
+const BILL_TEXT = {}, BILL_TEXT_LOADING = {};
+const textPart = (b) => { const k = baseNum(b.nums[0]); return `${k[0]}${Math.floor(+k.replace(/\D/g, "") / 500)}`; };
+function loadBillText(b) {
+  const el = $("bill-text"), src = $("bill-data").dataset.src, part = el ? "all" : textPart(b);
+  if (!DATA.hasText || BILL_TEXT[part]) return Promise.resolve(BILL_TEXT[part]);
+  return (BILL_TEXT_LOADING[part] ||= (el ? unpack(el.textContent).then(JSON.parse)
+    : src ? fetch(src.replace(/\.json$/, `-text/${part}.json`)).then((r) => (r.ok ? r.json() : {})) : Promise.resolve({}))
+    .catch(() => ({})).then((t) => (BILL_TEXT[part] = t || {})));
+}
+const billTextOf = (b) => BILL_TEXT[$("bill-text") ? "all" : textPart(b)];
+const paras = (t) => t.split("\n").filter((p) => p.trim()).map((p) => `<p>${esc(p)}</p>`).join("");
+function whatItDoesHtml(b) {
+  const t = billTextOf(b)?.[baseNum(b.nums[0])];
+  if (!t) return "";
+  const [stmt, comm, when, commText, cost] = t;
+  // A long statement shows its first paragraph, the rest folded.
+  const ps = stmt.split("\n").filter((p) => p.trim());
+  const lead = ps.length > 1 && ps.join(" ").length > 700 ? `${paras(ps[0])}<details class="memo"><summary>Read the rest</summary>${paras(ps.slice(1).join("\n"))}</details>` : paras(stmt);
+  return `<div class="whatdoes"><h4>What it does</h4>${stmt ? `<div class="wd-stmt">${lead}<p class="muted">From the sponsor's statement.</p></div>` : ""}
+    ${commText ? `<details class="memo"><summary>As the ${esc(comm || "committee")} approved it${when ? `, ${fmtDate(when)}` : ""}</summary>${paras(commText)}</details>` : ""}
+    ${cost ? `<details class="memo"><summary>What it would cost (the Legislature's budget office)</summary>${paras(cost)}</details>` : ""}</div>`;
+}
+// In a bill panel: the text if it's loaded, else a spot filled in when it arrives.
+function whatItDoes(b) {
+  if (!DATA.hasText) return "";
+  if (billTextOf(b)) return whatItDoesHtml(b);
+  loadBillText(b).then(() => document.querySelectorAll(`[data-wd="${b.idx}"]`).forEach((el) => { el.outerHTML = whatItDoesHtml(b); }));
+  return `<div data-wd="${b.idx}"></div>`;
+}
+
 // Everyone on each version, up front: its sponsors (New Jersey bills can have several "prime" sponsors),
 // then its co-sponsors. The page's legislator and your own legislators are in bold.
 function sponsorsBlock(b) {
@@ -4039,6 +4076,7 @@ function fillDetail(el) {
     <p class="textlink">${STATE.textLinks(b)}</p>
     ${chapterAmendment(b)}
     ${signingMemo(b)}${vetoMemo(b)}
+    ${whatItDoes(b)}
     ${sponsorsBlock(b)}
     <div class="linkrow"><span>Link to this bill:</span><input type="text" readonly value="${esc(billLink(b))}" aria-label="Link to this bill" onclick="this.select()"><button class="act-btn" type="button" data-copylink>Copy</button></div>
     ${inCard ? "" : nextSteps(b)}
