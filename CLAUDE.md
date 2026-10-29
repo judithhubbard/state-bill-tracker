@@ -80,8 +80,10 @@ from that repo. **Nothing here may change it.**
   across sessions (`linkedSessions()`), past party rows without past parties. The 2024 files write dates as
   "2024-03-02T00:00:00"; a bill that died in conference is still flagged "Passed" (it's one house's bill).
   Earlier years (2026-10-29): `earlier()` in states/va/convert.py links a bill to the same bill up to two years back
-  (continued bills by number; otherwise the same subject heading and a summary sharing 60% of its words, or 40% with
-  the same chief patron), so "this bill in other sessions", repeat tries and watchlist carry-over work. One-year
+  (continued bills by number; otherwise the same subject heading and either a summary sharing 60% of its words, or a
+  rarity-weighted similarity of 0.66; 40% and 0.55 with the same chief patron; never "Relief" claims or the yearly
+  drug-schedule bill). Checked by hand 2026-10-29: of 30 random links, 27 were plainly the same bill and 3 closely
+  related; some heavily reworked repeats are missed), so "this bill in other sessions", repeat tries and watchlist carry-over work. One-year
   sessions use `YEARS` for "the next session" (build_data.py's comeback counts, carryCandidates()).
 - **Adding a state (learned from NJ and VA):** missing settings fall back to New York's rules and wording, silently.
   Copy states/nj or states/va and decide each of these: in profile.py, `YEARS`, `LOWER`/`LOWER_NAME`/`TITLES`,

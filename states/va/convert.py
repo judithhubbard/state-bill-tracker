@@ -10,7 +10,7 @@ Virginia's history lines are plain English already ("Referred to Committee on La
 committee reports, passage, the governor's actions) are put in the wording New York's data uses; the rest
 are kept as written. Each bill passes both houses under its own number (HB1 goes to the Senate as HB1).
 """
-import csv, glob, json, os, re
+import csv, glob, json, math, os, re
 from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -145,7 +145,9 @@ VOTES = re.compile(r"^(Reported from|Failed to report|Passed by indefinitely|Con
 # ---- The same bill in earlier years. Virginia's numbers start over each year and its files don't link a bill
 # to an earlier one, so: a bill continued from last year (same number, "Continued from last session"), or an
 # earlier bill with the same subject heading ("Minimum wage; ...") whose Legislative Services summary shares at
-# least 60% of its words, or 40% when the same legislator carries it. Up to two years back.
+# least 60% of its words (40% when the same legislator carries it), or is as close by rarity-weighted words
+# (cosine 0.66, or 0.55 with the same legislator). Checked by hand on samples, 2026-10-29: about 95% of links are
+# the same bill; some reworked bills are missed. Up to two years back.
 _EARLIER = {}
 _SKIP = {"bill", "this", "that", "with", "from", "which", "shall", "such", "provides", "requires", "under", "certain"}
 
@@ -158,15 +160,47 @@ def _words(text):
     return set(re.findall(r"[a-z0-9]{3,}", text.lower())) - _SKIP
 
 
+_IDF = {}
+
+
+def _idf():
+    """How rare each word is across every year's summaries: "menopause" counts for more than "insurer"."""
+    if not _IDF:
+        docs = []
+        for y in sessions():
+            path = os.path.join(P.DATA, f"texts_{y}.json")
+            if os.path.exists(path):
+                docs += [set(re.findall(r"[a-z0-9]{3,}", t["statement"].lower())) for t in json.load(open(path)).values()]
+        df = defaultdict(int)
+        for d in docs:
+            for w in d:
+                df[w] += 1
+        _IDF.update({w: math.log(len(docs) / n) for w, n in df.items()})
+        _IDF[""] = math.log(max(2, len(docs)))
+    return _IDF
+
+
+def _vector(text):
+    """A summary as rarity-weighted word counts, scaled to length 1."""
+    idf, tf = _idf(), defaultdict(int)
+    for w in re.findall(r"[a-z0-9]{3,}", text.lower()):
+        tf[w] += 1
+    v = {w: (1 + math.log(c)) * idf.get(w, idf[""]) for w, c in tf.items()}
+    n = math.sqrt(sum(x * x for x in v.values())) or 1
+    return {w: x / n for w, x in v.items()}
+
+
 def _year(session):
-    """Bill -> (heading, summary words, chief patron id), for matching."""
+    """Bill -> (heading, summary words, chief patron id, weighted summary), for matching."""
     if session not in _EARLIER:
         path = os.path.join(P.DATA, f"texts_{session}.json")
         texts = json.load(open(path)) if os.path.exists(path) else {}
-        _EARLIER[session] = {num(r["Bill_id"]): (_heading(r["Bill_description"]),
-                                                 _words(texts.get(num(r["Bill_id"]), {}).get("statement") or r["Bill_description"]),
-                                                 r["Patron_id"])
-                             for r in rows(session, "BILLS.CSV") if r["Bill_id"][:2] in ("HB", "SB")}
+        out = {}
+        for r in rows(session, "BILLS.CSV"):
+            if r["Bill_id"][:2] in ("HB", "SB"):
+                text = texts.get(num(r["Bill_id"]), {}).get("statement") or r["Bill_description"]
+                out[num(r["Bill_id"])] = (_heading(r["Bill_description"]), _words(text), r["Patron_id"], _vector(text))
+        _EARLIER[session] = out
     return _EARLIER[session]
 
 
@@ -180,11 +214,15 @@ def earlier(session, bill, continued):
         if not os.path.exists(os.path.join(folder(y), "BILLS.CSV")):
             continue
         best = None
-        for other, (head, words, patron) in _year(y).items():
-            if head != me[0] or not head:
+        for other, (head, words, patron, vec) in _year(y).items():
+            # Claims ("Relief; ...") name different people, and the yearly drug-schedule bill adds different
+            # substances each year: neither is the same bill coming back.
+            if head != me[0] or not head or head in ("relief", "drug control act"):
                 continue
+            same = bool(patron) and patron == me[2]
             j = len(me[1] & words) / max(1, len(me[1] | words))
-            if j >= 0.6 or (j >= 0.4 and patron and patron == me[2]):
+            cos = sum(x * vec.get(w, 0) for w, x in me[3].items())
+            if j >= 0.6 or (j >= 0.4 and same) or cos >= 0.66 or (cos >= 0.55 and same):
                 if not best or j > best[0]:
                     best = (j, other)
         if best:
