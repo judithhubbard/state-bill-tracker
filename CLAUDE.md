@@ -50,8 +50,9 @@ from that repo. **Nothing here may change it.**
   a town's district gives its senator and both Assembly members. ROSTER.TXT's Email column is empty, so
   contacts.py reads each legislator's email (`SenX@njleg.org`) and contact form from the Legislature's website
   (`/api/legislatorData/legislatorBio/<Roster Key>`), keeping the last copy's when a request fails; the page shows
-  the form as "Contact form" (`formHtml()`). Not done yet: 2022–23 (NJ's text download lacks MAINBILL; the full
-  DB2022.zip is an Access file); published lists and the "public site" tip; the daily workflow for NJ.
+  the form as "Contact form" (`formHtml()`). 2022–23's text download lacks MAINBILL, ROSTER, COMMITTEE and SUBJHEADINGS;
+  `states/nj/fill2022.py` filled them in once (2026-10-29) and the result, data/nj/DB2022_TEXT.zip, is in git. Earlier
+  versions come from LastSessionFullBillNumber (one session back) and OldBillNumber (two back). Not done yet: published lists and the "public site" tip; the daily workflow for NJ.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).

@@ -31,8 +31,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: data/nj
-          key: nj-data-${{ github.run_id }}
-          restore-keys: nj-data-
+          # v2: started fresh when the filled-in 2022-23 file went into git (states/nj/fill2022.py),
+          # so an older cached copy can't replace it.
+          key: nj-data-v2-${{ github.run_id }}
+          restore-keys: nj-data-v2-
 
       - name: Download New Jersey
         run: python3 states/nj/fetch.py

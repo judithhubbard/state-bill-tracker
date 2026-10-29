@@ -448,7 +448,9 @@ def load_session(session):
         rec = {
             "nums": live,
             "base": members,
-            "prev": {(session - 2, q) for p in members for q in bill_refs(main[p]["LastSessionFullBillNumber"])},
+            # Earlier versions: last session's, and (OldBillNumber) the one before that.
+            "prev": {(session - 2, q) for p in members for q in bill_refs(main[p]["LastSessionFullBillNumber"])}
+                    | {(session - 4, q) for p in members for q in bill_refs(main[p]["OldBillNumber"])},
             "title": title,
             "summary": "",
             "act": "",

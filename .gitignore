@@ -17,3 +17,5 @@ lists_worker/node_modules/
 # New Jersey downloads (states/nj/fetch.py); not kept in git yet.
 data/nj/*
 !data/nj/district_towns.json
+# 2022-23's download lacks tables; this copy is filled in once by states/nj/fill2022.py.
+!data/nj/DB2022_TEXT.zip
