@@ -4748,9 +4748,9 @@ function sessionNotice(raw) {
   if (today > `${y2}-12-31`)
     return `The ${span(y1)} session ended December 31, ${y2}. Bills that didn't pass both houses died. ${governor}`;
   if (quiet && lv.startsWith(String(y2)))
-    return `Floor votes ended ${fmtDate(lv)}. Bills that haven't passed both houses die December 31 unless lawmakers return for a special session. ${governor}`;
+    return `Floor votes ended ${fmtDate(lv)}. Bills that haven't passed both houses die December 31 unless lawmakers return for a special session. ${governor} Now is the time to ask your legislators to sponsor bills for the session that opens in January.`;
   if (quiet && lv.startsWith(String(y1)) && today.startsWith(String(y1)))
-    return `Floor votes for ${y1} ended ${fmtDate(lv)}. Bills carry over to January ${y2}; those that passed only one house must pass again. ${waiting + desk ? governor : ""}`.trim();
+    return `Floor votes for ${y1} ended ${fmtDate(lv)}. Bills carry over to January ${y2}; those that passed only one house must pass again. ${waiting + desk ? `${governor} ` : ""}Over the break, ask your legislators to sponsor new bills or to push ones that carry over.`;
   return "";
 }
 

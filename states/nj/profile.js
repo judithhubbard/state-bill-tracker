@@ -76,6 +76,17 @@ const STATE = {
     };
   },
 
+  // The note above the bill list during the Legislature's breaks (empty while it meets): the summer break of the
+  // first year, and the campaign break before November of the second, when all 80 Assembly seats are up.
+  sessionNotice(raw) {
+    const t = isoToday(), md = t.slice(5), y = raw.session;
+    if (t.startsWith(String(y)) && md >= "07-01" && md < "09-01")
+      return "The Legislature is on its summer break; committees usually start meeting again in September. It's a good time to meet your legislators at their district offices.";
+    if (t.startsWith(String(y + 1)) && md >= "07-01" && md < "11-10")
+      return "Legislators are campaigning for the November election, so committees rarely meet before it. It's a good time to ask your legislators where they stand; the session's busiest weeks come in December and January.";
+    return "";
+  },
+
   // The Legislature meets, with long breaks, until the session's last day in January.
   floorVotesEnd: false,
 
