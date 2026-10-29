@@ -45,6 +45,8 @@ const STATE = {
     : b.vers.some((v) => v.actions.some(([, t]) => t === "CONDITIONALLY VETOED")) ? "Sent back with the governor's changes" : "Not yet sent to the governor",
   passedBothGroup: ["Before the session ends", () => "These go to the governor once they pass both houses. Any still waiting die when the two-year session ends in January."],
 
+  // The governor's deadline in a bill's key dates (from govDeadline()).
+  dueLabel: () => "Governor's decision due (estimated: 45 days after it passed both houses, or a week after the session ends)",
   // What happens to a bill that passed both houses: the line under "Next:", and the asks (support, oppose).
   // A bill sent back with the governor's changes needs both houses to accept them, one after the other:
   // the house it's been delivered to since votes now.

@@ -1850,9 +1850,12 @@ function contactBook(b, canMove = true, oppose = false) {
           add(r.name, house, `member of the ${c.name} Committee`, canMove && !backs(r.name, house) ? (oppose ? "vote no in committee" : "vote yes in committee") : "");
       }
     },
+    // Returns the leader when they already back the bill (so there's nothing to ask them).
     leader(house, ask, star) {
       const L = (DATA.contacts?.leaders || {})[house];
-      if (L && !(backs(L.name, house) && !oppose)) add(L.name, house, L.role.charAt(0).toLowerCase() + L.role.slice(1) + ", decides which bills come to the floor", ask, star);
+      if (L && backs(L.name, house) && !oppose) return L;
+      if (L) add(L.name, house, L.role.charAt(0).toLowerCase() + L.role.slice(1) + ", decides which bills come to the floor", ask, star);
+      return null;
     },
     reps(houses = ["S", "A"], ask) {
       for (const r of myReps()) if (houses.includes(r.house)) {
@@ -1944,13 +1947,14 @@ function budgetPassed() {
 // approves have been taken up (New York, 2023–26).
 const SKIPPED_ENOUGH = 5;
 
+// "the Speaker", "the Majority Leader"; "the Senate President" keeps its house.
+const leaderTitle = (lead) => (/President/.test(lead.role) ? lead.role : lead.role.replace(/^(Senate|Assembly) /, ""));
 function holdUp(b, v, oppose) {
   const house = v.p[0], cname = v.committee;
   const c = (DATA.contacts?.committees || {})[`${house}:${commKey(cname)}`];
   if (!c) return null;
   const lead = (DATA.contacts?.leaders || {})[house];
-  // "the Speaker", "the Majority Leader"; "the Senate President" keeps its house.
-  const leadTitle = lead ? (/President/.test(lead.role) ? lead.role : lead.role.replace(/^(Senate|Assembly) /, "")) : "";
+  const leadTitle = lead ? leaderTitle(lead) : "";
   const runsRules = lead ? `The ${leadTitle} runs the Rules Committee, so it's up to ${lead.pronoun} whether this gets a vote.` : "";
   if (commKey(cname) === "rules") return lead ? { note: runsRules } : null;
   // Sent to Rules earlier in the session and back in committee now (as happens each January).
@@ -2006,6 +2010,11 @@ function planFor(b, stance = "support") {
     if (h.leader) book.leader(v.p[0], L(h.ask || "let it move out of committee"), live && h.chairBacks);
     if (h.gov && live) govAlso = h.ask || "support this bill";
   };
+  // The leader who decides on a floor vote; if they sponsor it, say so instead.
+  const floorLeader = (h) => {
+    const lb = book.leader(h, L(A("bring it to a floor vote", "keep it from coming to a floor vote")), live);
+    if (lb && live) notes.push(`The ${leaderTitle(lb)}, ${lb.name}, is a sponsor, so there's nothing to ask ${lb.pronoun}.`);
+  };
   if (b.stage === 0) {
     what = `<p class="when">Next: a committee vote.</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     inComm.forEach((v) => book.chair(v.p[0], v.committee, L(A("put it on the committee agenda", "keep it off the committee agenda")), live));
@@ -2015,7 +2024,9 @@ function planFor(b, stance = "support") {
   } else if (b.stage === 1) {
     const houses = b.vers.filter((v) => /floor/i.test(v.statusDesc || "")).map((v) => v.p[0]);
     what = `<p class="when">Next: a vote of the full ${houses.map((h) => HOUSE[h]).join(" and ") || "house"}.</p>${stalled ? `<p>${stalled}</p>` : ""}`;
-    houses.forEach((h) => book.leader(h, L(A("bring it to a floor vote", "keep it from coming to a floor vote")), live));
+    houses.forEach((h) => floorLeader(h));
+    // Its version in the other house still has to get out of committee there.
+    if (live) inComm.filter((v) => !houses.includes(v.p[0])).forEach((v) => book.chair(v.p[0], v.committee, A("put it on the committee agenda", "keep it off the committee agenda"), true));
     if (!live) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
     book.reps(houses.length ? houses : ["S", "A"], L(A("vote yes", "vote no")));
   } else if (b.stage === 2) {
@@ -2024,7 +2035,7 @@ function planFor(b, stance = "support") {
     what = `<p class="when">Next: the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     if (twin && twin.committee) book.chair(other, twin.committee, L(A("put it on the committee agenda", "keep it off the committee agenda")), live);
     if (twin && twin.committee) stuck(twin);
-    else book.leader(other, L(A("bring it to a floor vote", "keep it from coming to a floor vote")), live);
+    else floorLeader(other);
     book.reps([other], L(A("vote yes", "vote no")));
     if (!live) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
   } else if (b.stage === 3) {
@@ -2060,7 +2071,7 @@ function planFor(b, stance = "support") {
     reason = today > `${y2}-12-31`
       ? `The session ended December 31, ${y2}. ${where} It would have to be reintroduced.`
       : `Floor votes for this session ended ${fmtDate(lv)}. ${where} It can move only if lawmakers return for a special session; otherwise it dies December 31, ${y2}.`;
-  }
+  } else if (notes.length) reason = notes.join(" ");  // shown when there's no one to ask (the decider sponsors it)
   return { what, gov, govAlso, notes, due, book, actionable, opp, reason };
 }
 
@@ -3168,7 +3179,7 @@ function keyDates(b) {
     [D.signed, `Signed into law${b.chapter ? `, Chapter ${b.chapter}` : ""}`],
     [D.vetoed, `Vetoed${b.veto ? `, Memo ${b.veto}` : ""}`],
   ].filter(([d]) => d).sort((x, y) => x[0].localeCompare(y[0]));
-  if (DATA.current && b.stage === 4 && b.due) items.push([b.due, b.due.endsWith("-01-30") ? "Governor's decision due (estimated: 30 days after the Legislature's year ends)" : "Governor's decision due (estimated: 10 days after delivery, not counting Sundays)", true]);
+  if (DATA.current && b.stage === 4 && b.due) items.push([b.due, STATE.dueLabel(b.due), true]);
   return `<div class="keydates"><h4>Key dates</h4><ol>${items.map(([d, l, est]) =>
     `<li><time>${fmtDate(d)}</time><span class="${est ? "est" : ""}">${esc(l)}</span></li>`).join("")}</ol></div>`;
 }
@@ -3724,11 +3735,14 @@ function keyAction(b, stance) {
     const p = plan.book.entries().find((e) => e.star && e.asks.length);
     if (p) key = { gov: false, name: p.name, house: p.house, ask: p.asks.join("; "), info: infoFor(p.name), role: roleKind(p.roles) };
   }
-  // Our own legislators, when they have something to do on this bill.
-  const reps = plan.book.entries().filter((e) => e.asks.length && e.roles.some((r) => r.startsWith("your ")) && (!key || lastName(e.name) !== lastName(key.name || "")))
+  // Anyone else who decides (the chair in the other house), then our own legislators, when they have
+  // something to do on this bill.
+  const notKey = (e) => !key || key.gov || lastName(e.name) !== lastName(key.name || "") || e.house !== key.house;
+  const reps = plan.book.entries().filter((e) => e.asks.length && notKey(e) && (e.star || e.roles.some((r) => r.startsWith("your "))))
+    .sort((x, y) => y.star - x.star)
     .map((e) => {
       const L = LEGS.find((x) => x.house === e.house && lastName(x.name) === lastName(e.name));
-      return { name: L ? L.name : e.name, house: e.house, ask: e.asks.join("; "), info: infoFor(e.name), role: "your-legislator" };
+      return { name: L ? L.name : e.name, house: e.house, ask: e.asks.join("; "), info: infoFor(e.name), role: e.star ? roleKind(e.roles) : "your-legislator" };
     });
   return { plan, key, reps };
 }
@@ -3816,7 +3830,7 @@ function renderWatchView() {
         <p class="who"><b>${esc(titleOf(x.key))}</b> ${DECIDES}</p>
         <p class="askbig">Ask: ${esc(x.key.ask)}</p>
         <p class="reach"><button class="act-btn primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button> ${reachOf(x.key)}</p>
-        ${x.reps.length ? `<p class="also">Also: ${x.reps.map((r) => `${esc(titleOf(r))}, ${esc(r.ask)}${r.info?.email ? ` (${emailHtml(r.info.email, "your-legislator")})` : ""}`).join("; ")}.</p>` : ""}
+        ${x.reps.length ? `<p class="also">Also: ${x.reps.map((r) => `${esc(titleOf(r))}, ${esc(r.ask)}${r.info?.email ? ` (${emailHtml(r.info.email, r.role)})` : ""}`).join("; ")}.</p>` : ""}
       </div>` : "";
     const open = W_OPEN.has(billKey(b)), logged = SHARED ? 0 : logOf(b).length;
     const dl = x.key ? deadlineOf(b) : {};

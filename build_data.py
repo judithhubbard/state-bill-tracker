@@ -1265,6 +1265,13 @@ def main():
             start = template.index('    <div class="howsec" id="howSteps">')
             end = template.index('  </section>', start)
             template = template[:start] + open(how).read() + template[end:]
+        # And its own Weigh in text (states/<code>/weighin.html): how to weigh in, the governor's office and
+        # who decides at each stage.
+        weighin = os.path.join(os.path.dirname(P.__file__), "weighin.html")
+        if os.path.exists(weighin):
+            start = template.index('    <div class="act-sec">\n      <h2>How to weigh in</h2>')
+            end = template.index('  </section>', start)
+            template = template[:start] + open(weighin).read() + template[end:]
         # The state's page settings and rules, read by the main script as STATE.
         state_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
         template = template.replace('<script id="state-profile"></script>', f'<script id="state-profile">\n{state_js}</script>', 1)
