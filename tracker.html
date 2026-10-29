@@ -286,7 +286,8 @@ table.oc th { vertical-align: bottom; }
 .sortby select { width: auto; padding: 4px 8px; font-size: 13px; }
 .resultbar { align-items: center; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper); padding-top: 8px; }
 .resultbar { row-gap: 10px; padding-bottom: 8px; }
-.resultbar .q { flex: 1 1 100%; min-width: 0; width: auto; }
+.resultbar .qbox { flex: 1 1 100%; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.resultbar .q { flex: 1 1 auto; min-width: 0; width: auto; }
 .resultbar #count { font-size: 14px; }
 .resultbar .sortby { margin-left: auto; gap: 8px; }
 
@@ -1035,7 +1036,8 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 
     <div class="results" id="view-bills">
       <div class="resultbar">
-        <input type="search" id="q" class="q" placeholder="Search bills: number, words, sponsor" autocomplete="off" aria-label="Search bills">
+        <span class="qbox"><input type="search" id="q" class="q" placeholder="Search bills: number, words, sponsor" autocomplete="off" aria-label="Search bills">
+        <button type="button" class="tip" aria-label="How to search" data-tip="Bills must have every word you type. Use OR for either (climate OR energy), a minus to leave out a word (wage -farm), and quote marks for words together (&quot;paid sick leave&quot;).">i</button></span>
         <span id="count"></span>
         <button class="act-btn csv" type="button" id="csv" title="Download the bills shown, as a spreadsheet file">Download</button>
         <button class="act-btn" type="button" id="viewLinkBtn" hidden title="Copy a link that opens this list with these filters">Copy link</button>
@@ -1478,6 +1480,20 @@ function openNum(num_) {
   return true;
 }
 
+// The search box: every word must appear (AND, which can also be typed); OR between words or groups gives
+// alternatives ("climate OR energy"); a minus leaves out bills with a word ("wage -farm"); quote marks keep
+// words together ("paid sick leave"). Returns [[must, ...], ...] alternatives and the words to leave out.
+function parseQuery(q) {
+  const groups = [[]], not = [];
+  for (const tok of q.match(/-?"[^"]+"|\S+/g) || []) {
+    if (tok === "OR" || tok === "|") { groups.push([]); continue; }
+    if (tok === "AND") continue;
+    const neg = tok.startsWith("-") && tok.length > 1, term = tok.replace(/^-/, "").replace(/"/g, "").toLowerCase().trim();
+    if (term) (neg ? not : groups[groups.length - 1]).push(term);
+  }
+  return { groups: groups.filter((g) => g.length), not };
+}
+const queryMatches = ({ groups, not }, hay) => !not.some((t) => hay.includes(t)) && (!groups.length || groups.some((g) => g.every((t) => hay.includes(t))));
 function matches(b, skip) {
   if (ONE != null) return b.idx === ONE;
   if (PAST_WHO && !pastWhoTest(b)) return false;
@@ -1497,10 +1513,7 @@ function matches(b, skip) {
   if (skip !== "voted" && state.voted && !votedTest(state.voted)(b)) return false;
   if (skip !== "changed" && state.changed && !CHANGED[state.changed].test(b)) return false;
   if (skip !== "agenda" && state.agenda && !nextMeeting(b)) return false;
-  if (state.q) {
-    const words = state.q.toLowerCase().split(/\s+/).filter(Boolean);
-    for (const w of words) if (!b._hay.includes(w)) return false;
-  }
+  if (state.q && !queryMatches(parseQuery(state.q), b._hay)) return false;
   return true;
 }
 
@@ -3038,7 +3051,7 @@ function renderStats() {
   const [nI, lI] = odds.intro || [0, 0], [nF, lF] = odds.floor || [0, 0];
   $("statOdds").innerHTML = `<h2>Odds of becoming law</h2>
     ${sankey(odds, I.fate?.[t], I.commFate?.[t])}
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}. Band widths are numbers of bills; the percentage on each band is the share of the bills at that step that went that way.</p>
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}. Band widths are numbers of bills; the percentage on each band is the share of the bills at that step that went that way.${STATE.heldNote && (I.commFate?.[t]?.held || [0])[0] > 0 ? ` “${STATE.heldLabel}”: ${STATE.heldNote}` : ""}</p>
     <p class="key"><span><i class="k-law"></i>Share that became law</span></p>
     <div class="vlist">${ODDS_POINTS.map(([k, l]) => { const [n, law] = odds[k] || [0, 0];
       return vrow(l, `${num(n)} bills`, [[pctOf(law, n), "l"]], `<b class="big">${pctOf(law, n)}%</b> became law`); }).join("")}</div>
