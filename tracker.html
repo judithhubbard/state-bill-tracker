@@ -1699,7 +1699,7 @@ const TIP = (text) => `<button type="button" class="tip" aria-label="What this m
 // Inside a button or a summary a nested button isn't allowed, so this one is a focusable span.
 const TIPI = (text) => (text ? `<span class="tip" role="button" tabindex="0" aria-label="What this means" data-tip="${esc(text)}">i</span>` : "");
 const STAGE_TIPS = STATE.stageTips;
-const HELD_TIP = "Put on a committee's agenda, then set aside without a vote: “held for consideration” in the Assembly, “tabled” in the Senate. Committees rarely vote bills down; they hold them instead.";
+const HELD_TIP = STATE.heldTip || "Put on a committee's agenda, then set aside without a vote: “held for consideration” in the Assembly, “tabled” in the Senate. Committees rarely vote bills down; they hold them instead.";
 const PAST_STAGE_TIPS = STATE.pastStageTips;
 const OUT_OF_TIME = STATE.outOfTime;
 const DECIDES = `<span class="decides">Decides</span>${TIP('The person whose decision moves the bill to its next step.')}`;
@@ -1723,6 +1723,12 @@ const GREET = STATE.greetings || { S: "Senator", [LOW]: "Assemblymember" };
 const YEARS = STATE.years || 2;
 const lastYear = (s) => s + YEARS - 1;
 // When a bill that didn't pass both houses dies, once floor votes are over.
+// The session a bill was carried over to, where a state allows it (Virginia's even-year committees can continue
+// a bill to the next year), else null.
+// Whether the data links bills to their versions in other sessions (Virginia's bill numbers restart each year
+// with no link back), so statistics about bills coming back mean something.
+const linkedSessions = () => BILLS.some((b) => b.earlier?.length);
+const continuedTo = (b) => STATE.continuedTo?.(b) || null;
 const DIES = STATE.diesAfterFloor || ((y2) => `Unless lawmakers return for a special session, it dies December 31, ${y2}.`);
 
 const lastName = (n) => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\s-]/g, "").split(/\s+/).filter((w) => !["jr", "sr", "ii", "iii"].includes(w)).pop() || "";
@@ -2065,7 +2071,7 @@ function planFor(b, stance = "support") {
   const adjourned = today > `${y2}-12-31` || (quiet && lv.startsWith(String(y2)));
   const recess = !adjourned && quiet && today.startsWith(String(DATA.session));
   const stalled = adjourned
-    ? `Floor votes are over for this session. ${DIES(y2)}`
+    ? `Floor votes are over for this session. ${DIES(y2, b)}`
     : recess ? `The Legislature is out until January ${y2}.` : "";
   const live = !stalled || recess; // can anything move before the session ends?
   const book = contactBook(b, live || b.stage >= 3, opp);
@@ -2095,7 +2101,7 @@ function planFor(b, stance = "support") {
     what = `<p class="when">Next: a committee vote.</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     inComm.forEach((v) => book.chair(v.p[0], v.committee, L(A("put it on the committee agenda", "keep it off the committee agenda")), live));
     inComm.forEach(stuck);
-    if (!live) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
+    if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
     book.reps(BOTH, L(A("", "oppose it")));
   } else if (b.stage === 1) {
     const houses = b.vers.filter((v) => /floor/i.test(v.statusDesc || "")).map((v) => v.p[0]);
@@ -2103,11 +2109,13 @@ function planFor(b, stance = "support") {
     houses.forEach((h) => floorLeader(h));
     // Its version in the other house still has to get out of committee there.
     if (live) inComm.filter((v) => !houses.includes(v.p[0])).forEach((v) => book.chair(v.p[0], v.committee, A("put it on the committee agenda", "keep it off the committee agenda"), true));
-    if (!live) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
+    if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
     book.reps(houses.length ? houses : BOTH, L(A("vote yes", "vote no")));
   } else if (b.stage === 2) {
     const other = b.passedIn === HOUSE.S ? LOW : "S";
-    const twin = b.vers.find((v) => v.p[0] === other);
+    // Where each house numbers its own version (New York, New Jersey), the other house's version; where a bill
+    // keeps one number through both houses (Virginia), the bill itself, now in the other house.
+    const twin = STATE.oneNumber ? { ...b.vers[0], p: other + b.vers[0].p.slice(1) } : b.vers.find((v) => v.p[0] === other);
     // Back in the first house to agree to the second house's amendments (New Jersey's "2RSC").
     const agree = twin && /to agree to the/.test(twin.statusDesc || "");
     what = `<p class="when">Next: ${agree ? `the ${HOUSE[other]} votes on the ${b.passedIn}'s changes.` : `the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
@@ -2115,7 +2123,7 @@ function planFor(b, stance = "support") {
     if (twin && twin.committee) stuck(twin);
     else floorLeader(other);
     book.reps([other], L(A("vote yes", "vote no")));
-    if (!live) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
+    if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
   } else if (b.stage === 3) {
     // What comes next is the state's (STATE.passedBothNext): the governor, or both houses again.
     const n = STATE.passedBothNext(b);
@@ -2148,7 +2156,7 @@ function planFor(b, stance = "support") {
       : b.stage === 1 ? "It never got a floor vote." : "It never got out of committee.";
     reason = today > `${y2}-12-31`
       ? `The session ended December 31, ${y2}. ${where} It would have to be reintroduced.`
-      : `Floor votes for this session ended ${fmtDate(lv)}. ${where} ${STATE.diesAfterFloor ? DIES(y2) : `It can move only if lawmakers return for a special session; otherwise it dies December 31, ${y2}.`}`;
+      : `Floor votes for this session ended ${fmtDate(lv)}. ${where} ${STATE.diesAfterFloor ? DIES(y2, b) : `It can move only if lawmakers return for a special session; otherwise it dies December 31, ${y2}.`}`;
   } else if (notes.length) reason = notes.join(" ");  // shown when there's no one to ask (the decider sponsors it)
   return { what, gov, govAlso, notes, due, book, actionable, opp, reason, leaderFirst };
 }
@@ -2547,11 +2555,11 @@ function renderWho() {
   const names = WHO.nodes.map((x) => x.L.label).sort((a, b) => lastName(a).localeCompare(lastName(b)));
   box.innerHTML = `<h2>Who works on what</h2>
     <p>Each dot is a legislator, pulled toward the topics of the bills they sponsor this session. Legislators who focus on one subject sit out near it; those who spread their bills widely sit near the middle.</p>
-    <div class="commctl"><label class="commsort">Show <select data-whohouse><option value="B"${whoHouse === "B" ? " selected" : ""}>Both houses</option><option value="S"${whoHouse === "S" ? " selected" : ""}>Senate</option><option value="A"${whoHouse === "A" ? " selected" : ""}>Assembly</option></select></label>
+    <div class="commctl"><label class="commsort">Show <select data-whohouse><option value="B"${whoHouse === "B" ? " selected" : ""}>Both houses</option><option value="S"${whoHouse === "S" ? " selected" : ""}>Senate</option><option value="${LOW}"${whoHouse === LOW ? " selected" : ""}>${HOUSE[LOW]}</option></select></label>
       <label class="commsort">Find <input type="search" id="whoFind" list="whoNames" placeholder="Type a name" autocomplete="off"></label>
       <datalist id="whoNames">${names.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
       ${WHO.custom ? `<button type="button" class="act-btn small" data-whoreset>Reset topic order</button>` : ""}</div>
-    <p class="key"><span><i class="k-dem"></i>Democrat</span><span><i class="k-rep"></i>Republican</span><span>■ Senate · ● Assembly</span><span>Bigger dots: more bills became law</span><span><i class="k-split"></i>Split between two distant topics</span></p>
+    <p class="key"><span><i class="k-dem"></i>Democrat</span><span><i class="k-rep"></i>Republican</span><span>■ Senate · ● ${HOUSE[LOW]}</span><span>Bigger dots: more bills became law</span><span><i class="k-split"></i>Split between two distant topics</span></p>
     <div class="whowrap"><div class="who"><svg id="whoSvg" viewBox="0 0 ${WHO_W} ${WHO_H}" class="${whoSel ? "focus" : ""}" role="img" aria-label="Legislators placed by the topics of their bills">${whoSvg(anchor)}</svg></div>
       <div class="whosel">${whoPanel()}</div></div>
     <p class="note">${span(DATA.session)} session${DATA.current ? " so far" : ""}, bills each legislator sponsors (not co-sponsors). Bills about one place, person or group count toward each legislator's totals and dot size but not where the dot sits. Legislators with fewer than 5 subject bills are left out. Topics are ordered so that neighbors often share bills; a dot's place depends on that order, which is why you can rearrange it.</p>`;
@@ -2734,7 +2742,7 @@ function renderNet() {
     <label class="commsort">Show <select data-nethouse>${[["S", HOUSE.S], [LOW, HOUSE[LOW]], ["B", "Both houses"]].map(([k, l]) => `<option value="${k}"${netHouse === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>
     <label class="commsort">Find <input type="search" id="netFind" list="netNames" placeholder="Type a name" autocomplete="off"></label>
     <datalist id="netNames">${names.map((n) => `<option value="${esc(n)}">`).join("")}</datalist></div>
-    <p class="key"><span><i class="k-dem"></i>Democrat</span><span><i class="k-rep"></i>Republican</span>${both ? `<span>■ Senate</span><span>● Assembly</span><span><i class="k-cross"></i>Carry the same ${law ? "laws" : "bills"} in the two houses</span>` : ""}<span>Bigger: more ${law ? "laws" : "bills"} sponsored</span></p>
+    <p class="key"><span><i class="k-dem"></i>Democrat</span><span><i class="k-rep"></i>Republican</span>${both ? `<span>■ Senate</span><span>● ${HOUSE[LOW]}</span><span><i class="k-cross"></i>Carry the same ${law ? "laws" : "bills"} in the two houses</span>` : ""}<span>Bigger: more ${law ? "laws" : "bills"} sponsored</span></p>
     <div class="net" id="netBox"><p class="muted">Loading…</p></div>
     <p class="netsel" id="netSel"></p>
     <p class="note">${live && t !== "all" ? `${esc(TOPICS[t])} ${law ? "laws" : "bills"}` : law ? "Bills that became law" : "All bills"}, ${span_}. ${(() => { const w = law ? "laws" : "bills", min = law && (live || !DATA.current) ? 2 : 3;
@@ -2920,8 +2928,8 @@ function monthChart(I, t) {
 
   return `<h3 class="sub">Through the session, by month</h3>
     <p class="key"><span><i class="k-appr"></i>Average, ${pastSpan()}</span><span><i class="k-law"></i>Signed</span><span><i class="k-veto"></i>Vetoed</span>${live ? `<span><i class="k-tick now"></i>This session</span>` : ""}</p>
-    <div class="vlist">${rows}${gov}${monthAxis(24, 12)}
-    <div class="vrow wide"><div class="lab"></div><div class="myears"><span>First year</span><span>Second year</span></div><div></div></div></div>`;
+    <div class="vlist">${rows}${gov}${monthAxis(12 * YEARS, 12)}
+    <div class="vrow wide"><div class="lab"></div><div class="myears">${YEARS > 1 ? "<span>First year</span><span>Second year</span>" : `<span>${DATA.session}</span>`}</div><div></div></div></div>`;
 }
 
 // How bills move: a Sankey diagram. Bills flow left to right through each step; at each step a band
@@ -2937,7 +2945,7 @@ function sankey(odds, fate, cfate) {
   const band = (x0, a0, b0, x1, a1, b1, cls) => { const m = (x0 + x1) / 2;
     return `<path class="${cls}" d="M${x0},${a0} C${m},${a0} ${m},${a1} ${x1},${a1} L${x1},${b1} C${m},${b1} ${m},${b0} ${x0},${b0} Z"/>`; };
   const pct = (v, d = N[0]) => `${Math.round((v / d) * 100)}%`;
-  const back = (key) => { const f = fate?.[key]; return f && f[0] ? `${pct(f[1], f[0])} reintroduced next session` : ""; };
+  const back = (key) => { const f = fate?.[key]; return f && f[0] && linkedSessions() ? `${pct(f[1], f[0])} reintroduced next session` : ""; };
   const STEPS = ["Introduced", "Approved by a committee", "Passed one house", "Passed both houses"];
   const EXITS = [["Died in committee", "committee"], ["Died awaiting a floor vote", "floor"], ["Passed one house only", "oneHouse"]];
   // Each exit sits just under the step it leaves to, so the exits step down instead of sharing one line.
@@ -2959,7 +2967,7 @@ function sankey(odds, fate, cfate) {
     const [name, key] = EXITS[i];
     if (i === 0 && cfate) {
       // Died in committee, in four parts.
-      const PARTS = [["none", "Never acted on", "sk-c0"], ["amended", "Revised by the sponsor, never voted on", "sk-c1"], ["held", "Held without a vote", "sk-c2"], ["defeated", "Voted down", "sk-c4"], ["passed", "Passed one committee, died in the next", "sk-c3"]]
+      const PARTS = [["none", "Never acted on", "sk-c0"], ["amended", "Revised by the sponsor, never voted on", "sk-c1"], ["held", STATE.heldLabel || "Held without a vote", "sk-c2"], ["defeated", "Voted down", "sk-c4"], ["passed", "Passed one committee, died in the next", "sk-c3"]]
         .filter(([pk]) => (cfate[pk] || [0])[0] > 0);
       const tot = PARTS.reduce((a, [pk]) => a + ((cfate[pk] || [0])[0]), 0) || 1;
       let y = exitTop;
@@ -3068,15 +3076,15 @@ function renderStats() {
   $("statTiming").innerHTML = `<h2>Timing</h2>
     ${monthChart(I, t)}
     ${STATE.floorVotesEnd === false ? "" : `<h3 class="sub">End of session</h3>
-    <div class="vlist">${vrow("Floor votes in the session's last 3 weeks", `${years[0].year}–${years[years.length - 1].year}, except 2020`, [[mid, "a"]], `<b class="big">${mid}%</b> in a typical year<small>Range ${Math.min(...shares)}–${Math.max(...shares)}%</small>`)}
-    ${vrow("Laws signed in Oct.–Dec.", `${num(signed)} laws`, [[pctOf(late, signed), "l"]], `<b class="big">${pctOf(late, signed)}%</b>`)}</div>`}
+    <div class="vlist">${vrow("Floor votes in the session's last 3 weeks", `${years[0].year}–${years[years.length - 1].year}${I.timing.some((y) => y.year === 2020) ? ", except 2020" : ""}`, [[mid, "a"]], `<b class="big">${mid}%</b> in a typical year<small>Range ${Math.min(...shares)}–${Math.max(...shares)}%</small>`)}
+    ${YEARS > 1 ? vrow("Laws signed in Oct.–Dec.", `${num(signed)} laws`, [[pctOf(late, signed), "l"]], `<b class="big">${pctOf(late, signed)}%</b>`) : ""}</div>`}
     ${govTiming(I)}`;
 
   // Persistence
   const [p0, p1, p2, p3, total] = I.persistence[t] || [0, 0, 0, 0, 0];
   const fate = I.fate?.[t] || {};
   const lawSpan = `${I.pastSessions[1]}–${String(I.pastSessions[I.pastSessions.length - 1] + 1).slice(2)}`;
-  const COMM_FATE = [["none", "Never acted on"], ["amended", "Revised by the sponsor, never voted on"], ["held", `Held without a vote${TIP(HELD_TIP)}`], ["defeated", "Voted down"], ["passed", "Passed one committee, died in the next"]]
+  const COMM_FATE = [["none", "Never acted on"], ["amended", "Revised by the sponsor, never voted on"], ["held", `${STATE.heldLabel || "Held without a vote"}${TIP(HELD_TIP)}`], ["defeated", "Voted down"], ["passed", "Passed one committee, died in the next"]]
     .filter(([k]) => (I.commFate?.[t]?.[k] || [0])[0] > 0);  // only what this state's records show
   const FATE = [["committee", "Died in committee"], ["floor", "Died awaiting a floor vote"], ["oneHouse", "Passed one house only"], ["vetoed", "Vetoed"]];
   const pers = I.persistent?.[t] || [];
@@ -3095,7 +3103,7 @@ function renderStats() {
       return row + (!cf ? "" : `<div class="vsub"><p class="vsub-h">What happened to them in committee</p>${COMM_FATE.map(([ck, cl]) => { const [cn, cb, claw] = cf[ck] || [0, 0, 0];
         return vrow(cl, `${num(cn)} bills`, [[pctOf(cb, cn), "a"], [pctOf(claw, cn), "l"]], `${pctOf(cb, cn)}% came back · <b class="big">${pctOf(claw, cn)}%</b> law`).replace('class="vrow"', 'class="vrow sub"'); }).join("")}</div>`);
     }).join("")}</div>
-    ${COMM_FATE.some(([k]) => k === "held") ? `<p class="note">“Held without a vote”: put on a committee's agenda, then held for consideration (Assembly) or tabled (Senate). Committees rarely vote bills down; they hold them instead.</p>` : ""}
+    ${COMM_FATE.some(([k]) => k === "held") ? `<p class="note">“${STATE.heldLabel || "Held without a vote"}”: ${STATE.heldNote || "put on a committee's agenda, then held for consideration (Assembly) or tabled (Senate). Committees rarely vote bills down; they hold them instead."}</p>` : ""}
     <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)} that died in ${I.pastSessions[0]}–${String(I.pastSessions[I.pastSessions.length - 2] + 1).slice(2)}, followed through ${I.pastSessions[I.pastSessions.length - 1] + 1}.</p>
     ${(() => { const [n, moved, law] = I.stuck?.[t] || [0, 0, 0];
       return n ? `<p>Bills that sat in committee all of the first year: <b>${pctOf(moved, n)}%</b> were approved by a committee in the second year, <b>${pctOf(law, n)}%</b> became law.</p>
@@ -3117,11 +3125,13 @@ function renderStats() {
       `${pctOf(both, n)}% passed · <b class="big">${pctOf(law, n)}%</b> law`)).join("")}</div>
     <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}, by the most co-sponsors either version had.</p>
     <h3 class="sub">By party of sponsors and co-sponsors</h3>
-    <div class="vlist">${PARTY.map(([k, l]) => { const [n, both, law] = pPast[k] || [0, 0, 0]; const now = pNow[k];
+    <div class="vlist">${PARTY.map(([k, l]) => { const pastKnown = PARTY.some(([x]) => (pPast[x] || [0])[0] > 0);
+      // Without parties for past sessions' sponsors (Virginia's come only with today's legislators), this session's.
+      const [n, both, law] = pastKnown ? pPast[k] || [0, 0, 0] : pNow[k] || [0, 0, 0]; const now = pastKnown ? pNow[k] : null;
       return vrow(l, `${num(n)} bills`, [[(pctOf(both, n) / mixMax) * 100, "a"], [(pctOf(law, n) / mixMax) * 100, "l"]],
         `${pctOf(both, n)}% passed · <b class="big">${pctOf(law, n)}%</b> law${now ? `<small>This session so far: ${pctOf(now[1], now[0])}% passed · ${pctOf(now[2], now[0])}% law</small>` : ""}`,
         null); }).join("")}</div>
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}. “Both parties”: at least one sponsor or co-sponsor from each party on either version. ${STATE.partySource}.</p>`;
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${PARTY.some(([x]) => (pPast[x] || [0])[0] > 0) ? pastSpan() : `${span(DATA.session)} session`}. “Both parties”: at least one sponsor or co-sponsor from each party on either version. ${STATE.partySource}.</p>`;
 
   renderOutcomes();
   if (statSec === "statNet" && !$("view-stats").hidden) renderNet();
@@ -3133,7 +3143,7 @@ function renderOutcomes() {
   const rows = DATA.sessions.map(({ session }) => {
     const c = (DATA.outcomes[session] || {})[t] || [0, 0, 0, 0];
     return { session, c, share: c[0] ? c[2] / c[0] : 0 };
-  });
+  }).filter((r) => r.c[0] > 0);
   const max = Math.max(...rows.map((r) => r.share), 0.0001);
   $("ocUntil").textContent = STATE.openUntil(DATA.session);
   $("ocTable").innerHTML = `<thead><tr><th>Session</th><th>Bills introduced</th><th>Passed both houses</th><th>Signed into law</th><th>Vetoed</th><th>Became law, as % of bills introduced</th><th>Governor signed, as % of bills the governor acted on</th></tr></thead>
@@ -3887,13 +3897,13 @@ function keyAction(b, stance) {
 const titleOf = (p) => (p.gov ? "Governor's office" : `${TITLE[p.house]} ${p.name}`);
 // A bill that's out of time this session can come back next session only if its sponsors reintroduce it.
 function reintroAsk(b, stance) {
-  if (stance === "oppose" || !floorVotesOver() || b.stage >= 3) return "";
+  if (stance === "oppose" || !floorVotesOver() || b.stage >= 3 || continuedTo(b)) return "";
   const people = DATA.contacts?.people || {};
   const infoFor = (name) => people[name] || Object.entries(people).find(([n]) => lastName(n) === lastName(name))?.[1] || {};
   const sponsors = b.vers.filter((v) => v.sponsor).map((v) => ({ name: v.sponsor, house: v.p[0], info: infoFor(v.sponsor), role: "sponsor" }));
   if (!sponsors.length) return "";
   // A bill with a version in only one house needs a sponsor in the other to pass; your legislator there could carry it.
-  const missing = BOTH.find((h) => !b.vers.some((v) => v.p[0] === h));
+  const missing = !STATE.oneNumber && BOTH.find((h) => !b.vers.some((v) => v.p[0] === h));
   const rep = missing && votePeople().find((L) => L.house === missing && !sponsors.some((p) => p.house === missing));
   const carry = rep ? `<p class="who">It has no ${HOUSE[missing]} version. Ask ${esc(titleOf({ house: rep.house, name: rep.name }))} to sponsor one.</p>
     <p class="reach">${reachOf({ house: rep.house, name: rep.name, info: infoFor(rep.apiName || rep.name), role: "your-legislator" })}</p>` : "";
@@ -4636,8 +4646,8 @@ function renderHowComm() {
 }
 
 function renderHowCal() {
-  // The timeline runs two years, plus the January days some states' sessions run into (STATE.calendarDays).
-  const Y = DATA.session, start = Date.UTC(Y, 0, 1), span_ = Date.UTC(Y + 2, 0, 1 + (STATE.calendarDays || 0)) - start;
+  // The timeline runs the session's years, plus the January days some states' sessions run into (STATE.calendarDays).
+  const Y = DATA.session, start = Date.UTC(Y, 0, 1), span_ = Date.UTC(Y + YEARS, 0, 1 + (STATE.calendarDays || 0)) - start;
   const pos = (d) => +(((Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) - start) / span_) * 100).toFixed(2);
   const MD = (d) => new Date(d + "T12:00").toLocaleDateString("en-US", { month: "long", day: "numeric" });
   // The last floor vote of each year marks the end of that year's session.
@@ -4649,12 +4659,13 @@ function renderHowCal() {
   const events = cal.events.sort((a, b) => (a[0] < b[0] ? -1 : 1));
   const bar = (cls, a, z, text) => `<b${cls ? ` class="${cls}"` : ""} style="left:${pos(a)}%;width:${(pos(z) - pos(a)).toFixed(2)}%">${text}</b>`;
   const today = new Date().toISOString().slice(0, 10);
-  const now = DATA.current && today < `${Y + 2}` ? `<span class="now" style="left:${pos(today)}%;top:${LEG - 4}px;height:${GOV + H - LEG + 8}px"><i>Today</i></span>` : "";
+  const now = DATA.current && today < `${Y + YEARS}` ? `<span class="now" style="left:${pos(today)}%;top:${LEG - 4}px;height:${GOV + H - LEG + 8}px"><i>Today</i></span>` : "";
   const BOTTOM = 262;
   $("howCal").innerHTML = `<div class="tl">
     <span class="rl" style="top:${LEG}px">Legislature</span><span class="rl" style="top:${GOV}px">Governor</span>
     <div class="plot">
-      <div class="yrs"><span style="left:0">${Y}</span><span style="left:50%">${Y + 1}</span></div>
+      <div class="yrs">${YEARS > 1 ? `<span style="left:0">${Y}</span><span style="left:50%">${Y + 1}</span>`
+        : [[`January ${Y}`, `${Y}-01-01`], ["April", `${Y}-04-01`], ["July", `${Y}-07-01`], ["October", `${Y}-10-01`]].map(([t, d]) => `<span style="left:${pos(d)}%">${t}</span>`).join("")}</div>
       <div class="track leg" style="top:${LEG}px">${cal.leg.map((b) => bar(...b)).join("")}</div>
       <div class="track gov" style="top:${GOV}px">${cal.gov.map((b) => bar(...b)).join("")}</div>
       ${now}
@@ -4944,6 +4955,8 @@ function hydrate(raw) {
   // Claude artifact pages can't hand visitors a file; the download works on GitHub Pages.
   $("csv").hidden = !ROOT;
   try { const s = localStorage.getItem("abt:statsec"); if (s && $(s) && !(s === "statNet" && $("statNetBtn").hidden) && !(s === "statWho" && $("statWhoBtn").hidden)) statSec = s; } catch (e) {}
+  // "Repeat tries" needs bills linked across sessions.
+  if (!linkedSessions()) { document.querySelector('[data-sec="statPersist"]').hidden = true; if (statSec === "statPersist") statSec = "statOdds"; }
   showStatSec(statSec);
   const one = openFromHash();
   if (one) showView("bills");

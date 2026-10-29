@@ -72,8 +72,13 @@ from that repo. **Nothing here may change it.**
   `states/va/towns.py` turns the districts' locality descriptions into data/va/district_towns.json, with separate
   Senate and House districts per locality; `renderTownRepsByHouse()` shows it (a split locality picks each district).
   "What it does" (step 3): `states/va/texts.py` takes each bill's latest Legislative Services summary into
-  data/va/texts_<year>.json, with a label saying which version it describes. Still to do: the How tab, calendar and
-  Weigh in text, and a full review.
+  data/va/texts_<year>.json, with a label saying which version it describes. Step 4 (2026-10-29): states/va/how.html and
+  weighin.html, a one-year calendar (`STATE.calendar`, `opens()`, `reconvenes()`), the notice between sessions
+  (`STATE.sessionNotice`), "passed by indefinitely" (`heldLabel`/`heldTip`/`heldNote`), bills continued to next year
+  (`STATE.continuedTo`, no "reintroduce" ask), and one number through both houses (`STATE.oneNumber`: no "it has no
+  Senate version"). Statistics hide what a state's data can't support: repeat tries and "came back" without links
+  across sessions (`linkedSessions()`), past party rows without past parties. The 2024 files write dates as
+  "2024-03-02T00:00:00"; a bill that died in conference is still flagged "Passed" (it's one house's bill).
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).

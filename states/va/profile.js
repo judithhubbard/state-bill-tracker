@@ -65,9 +65,55 @@ const STATE = {
   // "Where you live" picks a county or city; a split one can look up the address on the Legislature's site.
   townWord: "County or city",
   findReps: "https://whosmy.virginiageneralassembly.gov/",
-  diesAfterFloor: () => "The session is over, so it died with it.",
+  // A bill keeps its number through both houses (HB1 goes to the Senate as HB1).
+  oneNumber: true,
+  // Once the session is over: dead, unless a committee continued it to next year's session.
+  continuedTo(b) {
+    const cont = b.vers.flatMap((v) => v.actions).map(([, t]) => t.match(/Continued to (?:next session|(\d{4}))/i)).find(Boolean);
+    return cont ? +(cont[1] || DATA.session + 1) : null;
+  },
+  diesAfterFloor: (y2, b) => (b && STATE.continuedTo(b) ? `It was continued to the ${STATE.continuedTo(b)} session, where it can be taken up again.`
+    : "The session is over, so it died with it."),
   outOfTimeLine: "Died when the session ended",
 
+  // A committee that "passes a bill by indefinitely" sets it aside; it's dead for the year.
+  heldLabel: "Passed by indefinitely",
+  heldTip: "Set aside by a committee vote instead of being voted down. In practice the bill is dead for the year.",
+  heldNote: "set aside by a committee vote instead of being voted down; in practice the bill is dead for the year.",
+
+  // The session opens on the second Wednesday of January.
+  opens(year) {
+    const first = new Date(year, 0, 1), wed = 1 + ((3 - first.getDay() + 7) % 7) + 7;
+    return `${year}-01-${String(wed).padStart(2, "0")}`;
+  },
+  // The note above the bill list once the session has adjourned (empty while it runs).
+  sessionNotice(raw) {
+    const today = isoToday(), y = raw.session, end = STATE.sessionEnds(y), back = STATE.reconvenes(y);
+    const due = STATE.govDeadline(end, y);
+    if (today <= end) return "";
+    if (today <= back) return `The ${y} session adjourned ${fmtDate(end)}. The governor has until ${fmtDate(due)} to act on its bills, and the Legislature returns ${fmtDate(back)} to vote on the governor's amendments and vetoes.`;
+    const next = y + 1, carried = raw.sessions.find((x) => x.session === next);
+    return `The ${y} session is over. The ${next} session opens ${fmtDate(STATE.opens(next))}; bills for it can be filed from November${carried ? `, and bills continued from ${y} are already on its <a href="${esc(carried.url)}">page</a>` : ""}.`;
+  },
+  // The year's calendar: the Legislature's and the governor's bars ([class, from, to, text]), the events marked on
+  // it ([date, "up"/"down", row, when, text]; rows are LEG = 112, GOV = 150) and a note.
+  calendarDays: 0,
+  calendar(Y, end1, end2, MD) {
+    const LEG = 112, GOV = 150, open = STATE.opens(Y), adj = STATE.sessionEnds(Y), back = STATE.reconvenes(Y);
+    const due = STATE.govDeadline(adj, Y);
+    return {
+      leg: [["", open, adj, "In session"], ["", back, `${back.slice(0, 8)}${String(+back.slice(8) + 3).padStart(2, "0")}`, ""]],
+      gov: [["light", open, adj, "7 days a bill"], ["", adj, due, "30 days"]],
+      events: [
+        [open, "up", LEG, `January ${Y}`, "Session opens. About halfway through, each house must have passed its own bills (crossover)."],
+        [adj, "down", LEG, MD(adj), "Session adjourns. Bills that didn't pass die."],
+        [back, "up", LEG, MD(back), "Reconvened session: votes on the governor's amendments and vetoes."],
+        [`${Y}-07-01`, "down", LEG, "July 1", "Most new laws take effect."],
+        [`${Y}-11-17`, "up", LEG, "November", "Bills for next year's session can be filed."],
+      ],
+      note: "The governor can sign a bill, veto it, or send it back with amendments: within 7 days during the session, or 30 days after it adjourns for bills that arrive in its last week. Overriding a veto takes two-thirds of the members present in each house.",
+    };
+  },
   waitingHead: "Sent back with the governor's amendments",
   govYearsNote: "",
   partySource: "Party from the Legislature's list of members",

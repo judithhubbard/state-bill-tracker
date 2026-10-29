@@ -40,8 +40,12 @@ def rows(session, name):
 
 
 def iso(d):
+    """"3/14/2026" or (the 2024 files) "2024-03-02T00:00:00" -> "2026-03-14"."""
     m = re.match(r"(\d+)/(\d+)/(\d{4})", d or "")
-    return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}" if m else ""
+    if m:
+        return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+    m = re.match(r"(\d{4})-(\d\d)-(\d\d)", d or "")
+    return m.group(0) if m else ""
 
 
 def num(bill):
@@ -95,7 +99,10 @@ def stage_of(b, acts, live):
         return 3  # amendments aren't a veto: a bill whose amendments failed died having passed both houses
     if "DELIVERED TO GOVERNOR" in texts:
         return 4
-    if b["Passed"] == "Y":
+    # The file marks a bill "Passed" when each house passed it, even if the two never agreed on one text
+    # ("Different conference report agreed to by each chamber (failed)"): that bill died between the houses.
+    failed = any(re.search(r"conference report.*\(failed\)|^Failed\b", t, re.I) for t in texts[-6:])
+    if b["Passed"] == "Y" and not failed:
         return 3
     if b["Passed_house"] == "Y" or b["Passed_senate"] == "Y":
         return 2
@@ -244,7 +251,8 @@ def load_session(session):
         _PARTIES.setdefault(session, {})[(p[0], sponsor)] = party_of.get(chief_id, "")
         vers = {"p": p, "sponsor": sponsor, "district": int(seat_of.get(chief_id, "X:0")[2:]),
                 "cosponsors": chief_co + co, "primes": 1 + len(chief_co), "cosp": len(chief_co) + len(co),
-                "statusDesc": desc, "committee": committee if stage == 0 else None,
+                # The committee it's in: in its own house, or (passed one house) the other house's.
+                "statusDesc": desc, "committee": committee if stage == 0 or (stage == 2 and not on_floor(acts)) else None,
                 "actions": [[d, t] for d, _, t, _ in acts]}
         rec = {
             "nums": [p], "base": [p],
