@@ -736,6 +736,8 @@ table.commcounts td { font-variant-numeric: tabular-nums; font-weight: 600; }
 #youReps { display: block; }
 .wcard .do:not(.reintro) { border-left: 0; background: var(--gold-soft); border-radius: 8px; padding: 10px 12px; gap: 5px; }
 .wcard .do .askbig { font-size: 16px; font-weight: 700; color: var(--ink); }
+.wcard .do .decider { display: grid; gap: 5px; }
+.wcard .do .decider + .decider { border-top: 1px solid var(--rule); padding-top: 9px; margin-top: 4px; }
 .act-btn.primary { background: var(--navy); color: var(--sheet); border-color: var(--navy); }
 .wcard .odds { font-size: 12.5px; }
 .pubbox { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); }
@@ -1762,11 +1764,19 @@ function setReps(s, a, more = {}) {
 // States that find legislators by town (New Jersey): a town gives the district, whose senator and
 // Assembly members are one's legislators. A town split between districts asks which one.
 const townKey = (t) => `${t[0]}|${t[1]}`;
+// A town's name, with its county where two towns share a name; and the list to pick from.
+const townName = (t) => DATA.towns.some((u) => u !== t && u[0] === t[0]) ? `${t[0]} (${t[1]} County)` : t[0];
+const townOptions = (town) => `<option value="">Choose your town</option>` + DATA.towns.map((t) => `<option value="${esc(townKey(t))}"${t === town ? " selected" : ""}>${esc(townName(t))}</option>`).join("");
+// Choosing a town (here or in the Bills sidebar): its district, the one with most of its people if split.
+function setTown(key) {
+  const t = DATA.towns.find((x) => townKey(x) === key);
+  if (t) setReps(t[2][0][0], t[2][0][0], { town: townKey(t) });
+}
 function renderTownReps(box) {
   const reps = myReps(), c = chosenReps(), towns = DATA.towns;
   const town = c?.town ? towns.find((t) => townKey(t) === c.town) : null;
-  const named = (t) => towns.some((u) => u !== t && u[0] === t[0]) ? `${t[0]} (${t[1]} County)` : t[0];
-  const townOpts = `<option value="">Choose your town</option>` + towns.map((t) => `<option value="${esc(townKey(t))}"${t === town ? " selected" : ""}>${esc(named(t))}</option>`).join("");
+  const named = townName;
+  const townOpts = townOptions(town);
   const districts = [...new Set(LEGS.map((L) => L.district))].sort((a, b) => a - b);
   const who = (d) => LEGS.filter((L) => L.district === d).sort((a, b) => (a.house === b.house ? 0 : a.house === "S" ? -1 : 1)).map((L) => L.name.split(" ").pop()).join(", ");
   const distOpts = `<option value="">Choose your district</option>` + districts.map((d) => `<option value="${d}"${d === c?.S ? " selected" : ""}>District ${d}: ${esc(who(d))}</option>`).join("");
@@ -3717,7 +3727,7 @@ function logBlock(x) {
   who.push("Someone else");
   return `<div class="log">
     ${entries.length ? `<ul class="logged">${entries.map((e) => `<li><time>${fmtDate(e.d)}</time> <b>${esc(e.how)}</b> · ${esc(e.who)}${e.note ? ` · <span class="note">${esc(e.note)}</span>` : ""} <button class="x" type="button" data-unlog="${e.id}" title="Delete this entry">×</button></li>`).join("")}</ul>` : ""}
-    <button class="act-btn small" type="button" data-logopen="${b.idx}">+ Log an action</button>
+    <button class="act-btn small" type="button" data-logopen="${b.idx}">+ Log an action</button> <button class="act-btn small" type="button" data-cardlink="${b.idx}">Copy link to this bill</button>
     <form class="logform" data-logform="${b.idx}" hidden>
       <label>Date <input type="date" name="d" value="${isoToday()}" required></label>
       <label>Who <select name="who">${who.map((w) => `<option>${esc(w)}</option>`).join("")}</select></label>
@@ -3742,16 +3752,17 @@ function keyAction(b, stance) {
     const p = (plan.leaderFirst && starred.find((e) => e.roles.some((r) => r.includes("decides which bills come to the floor")))) || starred[0];
     if (p) key = { gov: false, name: p.name, house: p.house, ask: p.asks.join("; "), info: infoFor(p.name), role: roleKind(p.roles) };
   }
-  // Anyone else who decides (the chair in the other house), then our own legislators, when they have
-  // something to do on this bill.
+  // Anyone else who decides (the chair in the other house) gets the same block on the card (`more`);
+  // our own legislators, when they have something to do on this bill, go in its "Also" line.
   const notKey = (e) => !key || key.gov || lastName(e.name) !== lastName(key.name || "") || e.house !== key.house;
-  const reps = plan.book.entries().filter((e) => e.asks.length && notKey(e) && (e.star || e.roles.some((r) => r.startsWith("your "))))
-    .sort((x, y) => y.star - x.star)
-    .map((e) => {
-      const L = LEGS.find((x) => x.house === e.house && lastName(x.name) === lastName(e.name));
-      return { name: L ? L.name : e.name, house: e.house, ask: e.asks.join("; "), info: infoFor(e.name), role: e.star ? roleKind(e.roles) : "your-legislator" };
-    });
-  return { plan, key, reps };
+  const person = (e, role) => {
+    const L = LEGS.find((x) => x.house === e.house && lastName(x.name) === lastName(e.name));
+    return { gov: false, name: L ? L.name : e.name, house: e.house, ask: e.asks.join("; "), info: infoFor(e.name), role };
+  };
+  const more = plan.book.entries().filter((e) => e.star && e.asks.length && notKey(e)).map((e) => person(e, roleKind(e.roles)));
+  const reps = plan.book.entries().filter((e) => e.asks.length && !e.star && notKey(e) && e.roles.some((r) => r.startsWith("your ")))
+    .map((e) => person(e, "your-legislator"));
+  return { plan, key, more, reps };
 }
 
 const titleOf = (p) => (p.gov ? "Governor's office" : `${p.house === "S" ? "Sen." : "Asm."} ${p.name}`);
@@ -3832,11 +3843,14 @@ function renderWatchView() {
   const cardFor = (x) => {
     const { b } = x;
     const summary = b.summary && b.summary !== b.title ? `<p class="sum">${esc(b.summary.length > 260 ? b.summary.slice(0, 257) + "…" : b.summary)}</p>` : "";
+    // Each person who decides gets the same block (two chairs, or a leader and chairs).
+    const deciders = x.key ? [x.key, ...(x.more || [])] : [];
     const action = x.key ? `
       <div class="do">
-        <p class="who"><b>${esc(titleOf(x.key))}</b> ${DECIDES}</p>
-        <p class="askbig">Ask: ${esc(x.key.ask)}</p>
-        <p class="reach"><button class="act-btn primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button> ${reachOf(x.key)}</p>
+        ${deciders.map((p, i) => `<div class="decider">
+        <p class="who"><b>${esc(titleOf(p))}</b> ${DECIDES}</p>
+        <p class="askbig">Ask: ${esc(p.ask)}</p>
+        <p class="reach"><button class="act-btn primary" type="button" data-email="${b.idx}" data-who="${i}">${copyLabel(p)}</button> ${reachOf(p)}</p></div>`).join("")}
         ${x.reps.length ? `<p class="also">Also: ${x.reps.map((r) => `${esc(titleOf(r))}, ${esc(r.ask)}${r.info?.email ? ` (${emailHtml(r.info.email, r.role)})` : ""}`).join("; ")}.</p>` : ""}
       </div>` : "";
     const open = W_OPEN.has(billKey(b)), logged = SHARED ? 0 : logOf(b).length;
@@ -3848,7 +3862,7 @@ function renderWatchView() {
           ? `${watchButton(b, false)}<span class="stance fixed ${x.stance}" title="The position of whoever shared this list">${x.stance === "oppose" ? "Oppose" : "Support"}</span>`
           : watchButton(b)}</div><span class="spill p${b.stage}">${esc(TEXT.pipe[b.stage])}${esc(due)}</span></div>
         <h3>${esc(b.title)}${SHARED ? "" : newsTags(b)}</h3>
-        ${x.key ? `<div class="wask"><span><b>${esc(titleOf(x.key))}:</b> ${esc(x.key.ask)}</span><button class="act-btn small primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button></div>` : ""}
+        ${x.key ? `<div class="wask"><span><b>${esc(andList([x.key, ...(x.more || [])].map(titleOf)))}:</b> ${esc(x.key.ask)}</span>${x.more?.length ? "" : `<button class="act-btn small primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button>`}</div>` : ""}
         ${SHARED_META?.notes?.[baseNum(b.nums[0])] ? `<div class="pubnote"><b>Note from ${esc(SHARED_META.group)}:</b> ${esc(SHARED_META.notes[baseNum(b.nums[0])])}</div>` : ""}
         ${logged ? `<p class="wlogged">${num(logged)} action${logged === 1 ? "" : "s"} logged</p>` : ""}
       </div>
@@ -3941,6 +3955,7 @@ function fillSelects() {
   const reps = PRESET?.who ? [] : votePeople();
   $("youReps").innerHTML = reps.length ? `Your legislators: ${andList(reps.map((L) => esc(L.name)))} · <button type="button" class="linkish" data-goreps>change</button>` : "";
   if ($("homeCounty").value !== HOME) $("homeCounty").value = HOME;
+  if ($("homeTown")) $("homeTown").value = chosenReps()?.town || "";
   for (const id of ["who", "law", "voted", "changed", ...MORE_KEYS]) $(id)?.classList.toggle("on", !!state[id]);
   // How many more bills each "hide" box takes out, given the other filters.
   $("nearbyCounty").textContent = `${HOME} County`;
@@ -4271,9 +4286,12 @@ function wire() {
     if (cancel) { const f = cancel.closest("form"); f.hidden = true; f.previousElementSibling.hidden = false; return; }
     const del = e.target.closest("[data-unlog]");
     if (del) { removeLog(+del.dataset.unlog); renderWatchView(); return; }
+    const link = e.target.closest("[data-cardlink]");
+    if (link) { countUse("bill-link-copied"); copyText(link, billLink(BILLS[+link.dataset.cardlink])); return; }
     const btn = e.target.closest("[data-email]"); if (!btn) return;
     const x = $("wlActions")._items.find((i) => i.b.idx === +btn.dataset.email);
-    if (x) { countUse(`email-copied/${baseNum(x.b.nums[0])}`); step("contacted"); copyText(btn, draftFor(x.key, [{ b: x.b, ask: x.key.ask }])); }
+    const p = x && ([x.key, ...(x.more || [])][+(btn.dataset.who || 0)] || x.key);
+    if (x) { countUse(`email-copied/${baseNum(x.b.nums[0])}`); step("contacted"); copyText(btn, draftFor(p, [{ b: x.b, ask: p.ask }])); }
   });
   $("wl").addEventListener("click", async (e) => {
     const pb = e.target.closest("[data-pub]");
@@ -4353,11 +4371,7 @@ function wire() {
   $("myReps").addEventListener("change", (e) => {
     if (e.target.id === "repC") setCounty(e.target.value);
     else if (e.target.id === "repS" || e.target.id === "repA") setReps($("repS").value, $("repA").value);
-    else if (e.target.id === "repT") {
-      // A town gives its district (the one with most of its people, if split).
-      const t = DATA.towns.find((x) => townKey(x) === e.target.value);
-      if (t) setReps(t[2][0][0], t[2][0][0], { town: townKey(t) });
-    } else if (e.target.id === "repD" && e.target.value) {
+    else if (e.target.id === "repT") setTown(e.target.value); else if (e.target.id === "repD" && e.target.value) {
       const t = DATA.towns.find((x) => townKey(x) === chosenReps()?.town);
       const d = +e.target.value;
       setReps(d, d, t && t[2].some(([x]) => x === d) ? { town: townKey(t) } : {});
@@ -4733,7 +4747,17 @@ function hydrate(raw) {
   if (!raw.current) state.changed = "";
   $("homeCounty").innerHTML = (raw.counties || []).map((c) => `<option${c === HOME ? " selected" : ""}>${esc(c)}</option>`).join("");
   // Until a state's bills are tied to places, there's no county to pick; without law names, no law filter.
-  document.querySelector(".field.you").hidden = !raw.bills.some((b) => b.places.length);
+  // States that find legislators by town (New Jersey) pick the town here instead.
+  const you = document.querySelector(".field.you");
+  you.hidden = !raw.bills.some((b) => b.places.length);
+  if (raw.towns && raw.current && !you.querySelector("#homeTown")) {
+    you.hidden = false;
+    you.querySelector(".hidebox").hidden = $("homeCounty").hidden = true;
+    const label = you.querySelector("label");
+    label.textContent = "Your town"; label.htmlFor = "homeTown";
+    $("homeCounty").insertAdjacentHTML("afterend", `<select id="homeTown">${townOptions(raw.towns.find((t) => townKey(t) === chosenReps()?.town))}</select>`);
+    $("homeTown").addEventListener("change", (e) => setTown(e.target.value));
+  }
   $("law").closest(".field").hidden = !raw.lawList.length;
   setupLegislators(raw);
   renderSessions(raw);
