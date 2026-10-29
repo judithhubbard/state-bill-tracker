@@ -8,7 +8,7 @@ Usage: python3 states/nj/fetch.py [first_session]   (default 2018, through the c
 Sessions start in even years and run two years (2026 = the 2026-27 session). Finished sessions'
 files don't change, so they are downloaded only once; the current session's every time.
 """
-import os, sys, time, urllib.error, urllib.request, zipfile
+import json, os, sys, time, urllib.error, urllib.request, zipfile
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -67,9 +67,18 @@ def main():
                 print(f"{name}: {os.path.getsize(path) / 1e6:.1f} MB")
             else:
                 print(f"{name}: not published yet")
-    # The current session's legislators, committees and leaders.
+    # The current session's legislators, committees and leaders, once a day (it's one request per legislator).
     from states.nj import contacts
-    contacts.main(CURRENT)
+    path = os.path.join(P.DATA, f"contacts_{CURRENT}.json")
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d")
+    try:
+        fresh = json.load(open(path)).get("fetched", "").startswith(today)
+    except (OSError, ValueError):
+        fresh = False
+    if fresh:
+        print(f"contacts_{CURRENT}.json: already refreshed today")
+    else:
+        contacts.main(CURRENT)
 
 
 if __name__ == "__main__":

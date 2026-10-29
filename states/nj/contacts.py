@@ -42,7 +42,8 @@ def build(session):
     people, since, names = {}, {}, {}
     for r in _rows(z, "ROSTER.TXT"):
         sid = seats[(r["House"],) + roster_key(r["LastName"], r["Firstname"])]
-        name = " ".join(filter(None, [r["Firstname"], r["MidName"], r["LastName"], r["Suffix"]]))
+        # "Esq." isn't part of the name (it would end up as their page's address).
+        name = " ".join(filter(None, [r["Firstname"], r["MidName"], r["LastName"], r["Suffix"] if r["Suffix"] != "Esq." else ""]))
         title = "senator" if r["House"] == "S" else "assemblywoman" if r["Sex"] == "F" else "assemblyman"
         office = f'{r["City"]} office' if r["City"] else "District office"
         bio = bios.get(r["Roster Key"], {})

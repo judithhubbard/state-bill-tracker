@@ -52,6 +52,12 @@ from that repo. **Nothing here may change it.**
   (`/api/legislatorData/legislatorBio/<Roster Key>`), keeping the last copy's when a request fails; the page shows
   the form as "Contact form" (`formHtml()`). Not done yet: 2022–23 (NJ's text download lacks MAINBILL; the full
   DB2022.zip is an Access file); published lists and the "public site" tip; the daily workflow for NJ.
+- **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
+  `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
+  list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
+  Until launch it writes `robots.txt` and `_headers` telling search engines not to list anything (`LAUNCHED=1`
+  turns that off). `.github/workflows/site.yml` downloads, builds and deploys, by hand only for now; it needs the
+  secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. The domain stays parked at Porkbun until launch.
 - Fixes made in ny-bill-tracker still get carried over here by hand (compare against `git log` there since
   b312227; 5fe4339 is already in).
 
