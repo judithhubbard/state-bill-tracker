@@ -67,6 +67,11 @@ def main():
                 print(f"{name}: {os.path.getsize(path) / 1e6:.1f} MB")
             else:
                 print(f"{name}: not published yet")
+    # The governor's veto messages (only ones not already saved are downloaded).
+    from states.nj import vetoes
+    for session in range(FIRST, CURRENT + 1, 2):
+        if os.path.exists(os.path.join(P.DATA, f"DB{session}_TEXT.zip")):
+            vetoes.main(session)
     # The current session's legislators, committees and leaders, once a day (it's one request per legislator).
     from states.nj import contacts
     path = os.path.join(P.DATA, f"contacts_{CURRENT}.json")

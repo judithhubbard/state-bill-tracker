@@ -9,7 +9,7 @@ New Jersey writes its actions in codes ("INT 1RA REF ATR", "REP/ACA 2RA", "PA PB
 into the same wording New York's data uses ("INTRODUCED", "REFERRED TO ...", "PASSED ASSEMBLY"), so
 the page's plain-language rules work for both. The codes are explained at njleg.state.nj.us/help.
 """
-import csv, glob, io, os, re, zipfile
+import csv, glob, io, json, os, re, zipfile
 from collections import defaultdict
 
 from datetime import datetime
@@ -391,6 +391,18 @@ def load_session(session):
     _PARTIES[session] = {(p[0], person(r["Sponsor"])): seat(p[0], r["Sponsor"])[1]
                          for p in main for r in spons[p] if seat(p[0], r["Sponsor"])[1] in ("D", "R")}
 
+    vpath = os.path.join(P.DATA, f"vetoes_{session}.json")
+    vetoes = json.load(open(vpath)) if os.path.exists(vpath) else {}
+
+    def veto_memo(members, steps):
+        """{year, signer, text, kind} for a bill with a veto message: the governor on the day of the veto."""
+        m = next((vetoes[p] for p in members if p in vetoes), None)
+        if not m:
+            return None
+        day = max((d for _, w, d in steps if w in ("AV", "CV", "PV", "W/LIV") and d), default="")
+        return {"year": int(day[:4]) if day else session, "signer": P.governor_on(day) if day else "",
+                "text": m["text"], "kind": m["kind"]}
+
     recs, index = [], {}
     for members in groups.values():
         live = sorted(members, key=lambda p: (-rank(vers[p]["_stage"]), vers[p]["_sub"],
@@ -477,8 +489,8 @@ def load_session(session):
             "chapter": chapter if stage == 5 else None,
             "veto": None,
             "memo": "",
-            # New Jersey's database doesn't carry the governor's veto messages.
-            "vetoMemo": None,
+            # The governor's veto message (states/nj/vetoes.py), absolute or conditional.
+            "vetoMemo": veto_memo(members, steps),
             "comm": lead["committee"] if stage == 0 else None,
             # A few bills carry no dates at all; they count from the session's start.
             "first": min(filter(None, [intro] + action_dates), default=f"{session}-01-01"),

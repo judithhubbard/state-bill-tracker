@@ -1299,7 +1299,7 @@ function chapterAmendment(b) {
 // When the governor signs a bill on the condition that it be changed, she files a memo saying why and what.
 const CHANGES_AGREED = "The governor signed it on the condition that the Legislature pass changes in a later bill (a chapter amendment).";
 const changesAgreed = (b) => /agree|chapter amendment|with these changes/i.test(b.memo) || followUps(b).length > 0;
-const memoText = (memo, label) => `<details class="memo"><summary>${label}</summary>${memo.split("\n").map((p) => `<p>${esc(p)}</p>`).join("")}</details>`;
+const memoText = (memo, label) => `<details class="memo"><summary>${label}</summary>${memo.split("\n").filter((p) => p.trim()).map((p) => `<p>${esc(p)}</p>`).join("")}</details>`;
 // The chapter amendments that change this bill (indexed once: bill number -> follow-ups).
 let FOLLOW_UPS = null;
 function followUps(b) {
@@ -1319,11 +1319,22 @@ function followUpStatus(x) {
   return DATA.current ? "not passed yet" : "never passed";
 }
 // Why the governor vetoed this bill, or an earlier version of it.
+// The governor's message on a vetoed bill, or on its earlier version. New Jersey's governor can also send a
+// bill back with changes (a conditional veto) or veto some spending items and sign the rest (line-item).
 function vetoMemo(b) {
   const v = b.vetoNote;
   if (!v) return "";
+  const gov = v.governor ? `Governor ${esc(v.governor)}` : "The governor";
+  if (v.own && v.kind === "conditional") {
+    const head = b.stage === 5 ? `Signed after the Legislature accepted ${gov}'s changes.`
+      : b.stage === 6 ? `${gov} sent it back with changes in ${esc(v.year)}, and the Legislature didn't accept them in time.`
+      : `${gov} sent it back with changes in ${esc(v.year)}. Both houses have to accept them.`;
+    return `<div class="chapam"><b>${head}</b>${memoText(v.text, "What the governor wrote")}</div>`;
+  }
+  if (v.own && v.kind === "line-item") return `<div class="chapam"><b>${gov} signed it but vetoed some spending items.</b>${memoText(v.text, "What the governor wrote")}</div>`;
   if (v.own) return `<div class="chapam">${memoText(v.text, "Why the governor vetoed it")}</div>`;
-  return `<div class="chapam"><b>Governor ${esc(v.governor)} vetoed an earlier version (${esc(v.nums)}) in ${esc(v.year)}.</b>${memoText(v.text, "What the governor wrote")}</div>`;
+  const what = v.kind === "conditional" ? "sent an earlier version" : "vetoed an earlier version";
+  return `<div class="chapam"><b>${gov} ${what} (${esc(v.nums)})${v.kind === "conditional" ? " back with changes" : ""} in ${esc(v.year)}.</b>${memoText(v.text, "What the governor wrote")}</div>`;
 }
 function signingMemo(b) {
   if (!b.memo) return "";
@@ -4601,7 +4612,7 @@ function decode(raw) {
       sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: ["", "person", "org", "naming"][(flags >> 6) & 3],
       memo: memo || "",
       // The governor's veto message: this bill's own, or an earlier version's.
-      vetoNote: vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: str(vetoNote[2]), nums: vetoNote[3], own: !!vetoNote[4] } : null,
+      vetoNote: vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: str(vetoNote[2]), nums: vetoNote[3], own: !!vetoNote[4], kind: vetoNote[5] || "absolute" } : null,
       nums: v.map((x) => x.p), sponsors: v.map((x) => x.sponsor).filter(Boolean), vers: v,
     };
   });
