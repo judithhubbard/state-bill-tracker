@@ -79,6 +79,16 @@ from that repo. **Nothing here may change it.**
   Senate version"). Statistics hide what a state's data can't support: repeat tries and "came back" without links
   across sessions (`linkedSessions()`), past party rows without past parties. The 2024 files write dates as
   "2024-03-02T00:00:00"; a bill that died in conference is still flagged "Passed" (it's one house's bill).
+- **Adding a state (learned from NJ and VA):** missing settings fall back to New York's rules and wording, silently.
+  Copy states/nj or states/va and decide each of these: in profile.py, `YEARS`, `LOWER`/`LOWER_NAME`/`TITLES`,
+  `LEADERS`, `GOVERNORS`, `TOPICS`, `TOWNS_PATH`; in profile.js, `code`, `houses`, `titles`, `memberWords`,
+  `greetings`, `years`, `sessionLabel`, `govReach`, `billUrl`/`textLinks`, `sessionEnds`, `govDeadline`, `dueLabel`,
+  `passedBothBy`/`passedBothNote`/`passedBothGroup`/`passedBothNext`, `floorVotesEnd`, `diesAfterFloor`,
+  `outOfTimeLine`, `sessionNotice`, `waitingHead`, `govYearsNote`, `partySource`, `openUntil`, `heldLabel`/`heldTip`/
+  `heldNote`, `routine`, `oneNumber`, `continuedTo`, `requestsBills` (New York only), `townWord`/`findReps`,
+  `stageText`/`stageTips`/`pastStageTips`/`outOfTime`, `commPairs`/`commNotes`/`moneyCommittees`/`secondCommittee`,
+  `calendar`/`calendarDays`; and write how.html and weighin.html. Then run the review: record every tab, Statistics
+  section, How section, bill panels at each stage and a watchlist, and grep the text for other states' names and rules.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
