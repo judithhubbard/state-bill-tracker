@@ -63,6 +63,17 @@ from that repo. **Nothing here may change it.**
   (created with `--force`, which isn't needed again). Deploy by hand from an empty folder, never from
   lists_worker/ or cron_worker/ (wrangler picks up that folder's wrangler.toml):
   `npx -y wrangler@4.152.0 pages deploy <repo>/_site --project-name=statebilltracker --branch=main --commit-dirty=true`.
+- **Launch checklist for statebilltracker.org** (do these together when the owner says to launch):
+  1. `.github/workflows/site.yml`: run more often (e.g. hourly on weekdays while the Legislature meets, every two
+     hours otherwise, like ny-bill-tracker's update.yml); mind GitHub's 2,000 free minutes a month for a private
+     repo (a run takes about 2) and Cloudflare Pages' monthly deployment limit.
+  2. Build with the real address: drop `SITE_URL` from the workflow (states use `PUBLIC_URL`), and set
+     `LAUNCHED=1` so `build_site.sh` stops telling search engines to stay away.
+  3. Point statebilltracker.org (and .com, forwarding with 302) at the Pages project: add it as a custom domain
+     in Cloudflare Pages and change the DNS at Porkbun.
+  4. Analytics: GoatCounter and Cloudflare Web Analytics codes in each state's profile.py (none yet).
+  5. Published lists: a KV namespace for the `state-lists` Worker and each state's `listsApi`.
+  6. Check every state's pages once more (test/crawl.js) and republish the private NJ Claude copy.
 - Fixes made in ny-bill-tracker still get carried over here by hand (compare against `git log` there since
   b312227; 5fe4339 is already in).
 

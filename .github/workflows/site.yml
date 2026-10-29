@@ -1,10 +1,12 @@
 name: Update statebilltracker.org
 
 # Downloads each state's data, builds the site (build_site.sh) and puts it on Cloudflare Pages
-# (project "statebilltracker"). Started by hand until launch; add a schedule then.
-# Needs two repository secrets: CLOUDFLARE_API_TOKEN (a token with Cloudflare Pages: Edit) and
-# CLOUDFLARE_ACCOUNT_ID.
+# (project "statebilltracker"). Needs two repository secrets: CLOUDFLARE_API_TOKEN (a token with
+# Cloudflare Pages: Edit) and CLOUDFLARE_ACCOUNT_ID.
 on:
+  # Once a day before launch. At launch, run it more often (see "Launch checklist" in CLAUDE.md).
+  schedule:
+    - cron: "23 10 * * *"   # UTC: about 6 a.m. Eastern in summer, 5 a.m. in winter
   workflow_dispatch:        # the "Run workflow" button on the Actions tab
 
 permissions:
