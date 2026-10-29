@@ -39,6 +39,9 @@ SITE = os.path.join(HERE, "site", P.SITE_DIR)
 # Published URL of each session's page, filled in after the first publish of each.
 URLS_FILE = os.path.join(HERE, "artifact_urls.json")
 SESSIONS = C.sessions()
+# The lower house's letter ("A" for an Assembly, "H" for Virginia's House of Delegates) and members' titles.
+LOW = getattr(P, "LOWER", "A")
+TITLES = getattr(P, "TITLES", {"S": "Sen.", LOW: "Asm."})
 # The current session by the calendar (P.session_of), as the workflow works it out,
 # or the newest one downloaded if that hasn't started yet. A later session in data/ is upcoming:
 # its prefiled bills get their own page before it opens.
@@ -205,7 +208,7 @@ def legislators(session):
         # "A:12", or "A:12a" where a district has two Assembly members.
         house, district = seat[0], re.match(r"\d+", seat[2:]).group()
         slug = last(p) if counts[last(p)] == 1 else p["key"].replace(" ", "-")
-        out.append({"id": seat, "slug": slug, "name": p["name"], "title": "Sen." if house == "S" else "Asm.",
+        out.append({"id": seat, "slug": slug, "name": p["name"], "title": TITLES[house],
                     "house": house, "district": int(district), "email": p.get("email"), "phone": p.get("phone"), "phones": p.get("phones"),
                     "form": p.get("form"), "url": p.get("url"), "party": p.get("party"), "image": p.get("image"),
                     "since": since.get(seat), "committees": committees_of(seat, p)})
@@ -246,7 +249,7 @@ def contacts_for(session, recs, delegation_names):
             people[name] = lookup(name, house, district)
         return name
 
-    ours = {"S": set(delegation_names.get("SENATE", [])), "A": set(delegation_names.get("ASSEMBLY", []))}
+    ours = {"S": set(delegation_names.get("SENATE", [])), LOW: set(delegation_names.get("ASSEMBLY", []))}
 
     def ours_on(members, house):
         return sorted({n for n in ours[house] for m in members if name_key(m).endswith(" " + n.lower())})
@@ -255,7 +258,7 @@ def contacts_for(session, recs, delegation_names):
         return bool(name) and (not seats or any(k[0] == house and v["key"].split()[-1] == name_key(name).split()[-1] for k, v in seats.items()))
 
     committees = {}
-    for house, key in (("S", "senateCommittees"), ("A", "assemblyCommittees")):
+    for house, key in (("S", "senateCommittees"), (LOW, "assemblyCommittees")):
         for k, c in raw.get(key, {}).items():
             committees[f"{house}:{k}"] = {
                 "name": c["name"],
@@ -271,7 +274,7 @@ def contacts_for(session, recs, delegation_names):
         for v in r["vers"]:
             person(v["sponsor"], v["p"][0], v.get("district"))
     reps = []
-    for house, title in (("S", "Sen."), ("A", "Asm.")):
+    for house, title in (("S", TITLES["S"]), (LOW, TITLES[LOW])):
         for district in sorted(P.delegation(session).get("SENATE" if house == "S" else "ASSEMBLY", ())):
             seat = seats.get(f"{house}:{district}")
             if seat and seat["key"].split()[-1] in {n.lower() for n in ours[house]}:
@@ -291,7 +294,7 @@ def choose_page(legs):
     last = legs[0]["name"].split()[-1]
     items = "\n".join(
         f'<li><a href="../{l["slug"]}/">{l["title"]} {html_escape(l["name"])}</a> '
-        f'<span>{"Senate" if l["house"] == "S" else "Assembly"} District {l["district"]}</span></li>' for l in legs)
+        f'<span>{"Senate" if l["house"] == "S" else getattr(P, "LOWER_NAME", "Assembly")} District {l["district"]}</span></li>' for l in legs)
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231d3b78'/><path d='M32 10 52 23H12z' fill='%23fff'/><rect x='14' y='25' width='36' height='4' fill='%23fff'/><rect x='17' y='31' width='6' height='16' fill='%23fff'/><rect x='29' y='31' width='6' height='16' fill='%23fff'/><rect x='41' y='31' width='6' height='16' fill='%23fff'/><rect x='11' y='49' width='42' height='5' fill='%23e3b04b'/></svg>"><title>Which {html_escape(last)}? · {P.SITE_NAME}</title>
@@ -815,7 +818,7 @@ def net_counts(recs, key):
     Senate sponsor -> Assembly sponsor counts for bills both carried."""
     spons, w, cross = Counter(), Counter(), Counter()
     for r in recs:
-        carriers = {"S": set(), "A": set()}
+        carriers = {"S": set(), LOW: set()}
         for v in r["vers"]:
             h = v["p"][0]
             s = key(h, v["sponsor"], v.get("district")) if v["sponsor"] else None
@@ -828,7 +831,7 @@ def net_counts(recs, key):
                 if ck and ck != s:
                     w[(ck, s)] += 1
         for a in carriers["S"]:
-            for z in carriers["A"]:
+            for z in carriers[LOW]:
                 cross[(a, z)] += 1
     return spons, w, cross
 
@@ -838,8 +841,8 @@ def net_views(spons, w, cross, info, minimum=3):
     {view: {"nodes": [[id, label, party, bills]], "links": [[a, b, share, kind]]}}. Each member
     keeps their strongest few ties; the same rules as the live chart on the current page."""
     out = {}
-    for sel in ("S", "A", "B"):
-        houses = ("S", "A") if sel == "B" else (sel,)
+    for sel in ("S", LOW, "B"):
+        houses = ("S", LOW) if sel == "B" else (sel,)
         ids = [k for k in spons if info.get(k) and k[0] in houses]
         idset = set(ids)
 
@@ -876,7 +879,7 @@ def session_network(s, recs):
     bills, and from laws only (fewer bills, so 2 shared laws make a tie)."""
     party_of = parties(s, recs)
     key = lambda h, n, d=None: f"{h}:{n}" if party_of.get((h, n)) else None
-    info = {f"{h}:{n}": [f"{'Sen.' if h == 'S' else 'Asm.'} {n}", p] for (h, n), p in party_of.items()}
+    info = {f"{h}:{n}": [f"{TITLES.get(h, h)} {n}", p] for (h, n), p in party_of.items()}
     laws = [r for r in recs if r["stage"] == 5]
     return {"all": net_views(*net_counts(recs, key), info), "law": net_views(*net_counts(laws, key), info, minimum=2)}
 
