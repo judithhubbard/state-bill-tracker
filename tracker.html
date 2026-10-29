@@ -1223,6 +1223,9 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 // Stage wording. "live" is the open session; "final" is a finished one.
 // pipe = stage boxes, long = bill status and history, chart = stats panel bars.
 // STATE is the state's profile (states/<code>/profile.js), which the build puts before this script.
+// Saved settings are per state (New Jersey's are "abt:nj:watch" and so on): states share one web address, and a
+// browser keeps one set of saved settings per address. New York keeps the plain names its visitors already have.
+const STORE = STATE.code && STATE.code !== "ny" ? `abt:${STATE.code}:` : "abt:";
 const STAGE_TEXT = STATE.stageText;
 // Bills filed before their session opens: committees get them on the first day.
 STAGE_TEXT.prefiled = Object.fromEntries(Object.entries(STAGE_TEXT.live).map(([k, v]) => [k, ["Prefiled", ...v.slice(1)]]));
@@ -1234,7 +1237,7 @@ const blank = () => ({ agenda: "", stage: null, topics: new Set(), q: "", law: "
 // "Places": leave out bills only about other counties, or keep only bills about yours.
 // A bill's places are the counties it's only about ([] for bills not about specific places).
 let HOME = "Tompkins";
-try { HOME = localStorage.getItem("abt:county") || HOME; } catch (e) {}
+try { HOME = localStorage.getItem(STORE + "county") || HOME; } catch (e) {}
 // The two "hide" checkboxes. A bill's places are the counties it's only about ([] if it isn't about specific places).
 // "Only bills that could affect your county": statewide bills plus bills about your county; hides bills only
 // about other counties, bills for one person or group, and road namings.
@@ -1243,9 +1246,9 @@ const farAway = (b) => (b.places.length > 0 || !!b.narrow) && !b.places.includes
 // The day of this browser's previous visit, for "new activity since your last visit".
 let LAST_VISIT = "";
 try {
-  const today = new Date().toISOString().slice(0, 10), seen = localStorage.getItem("abt:visit");
-  LAST_VISIT = seen && seen < today ? seen : localStorage.getItem("abt:visitPrev") || "";
-  if (seen !== today) { if (seen) localStorage.setItem("abt:visitPrev", seen); localStorage.setItem("abt:visit", today); }
+  const today = new Date().toISOString().slice(0, 10), seen = localStorage.getItem(STORE + "visit");
+  LAST_VISIT = seen && seen < today ? seen : localStorage.getItem(STORE + "visitPrev") || "";
+  if (seen !== today) { if (seen) localStorage.setItem(STORE + "visitPrev", seen); localStorage.setItem(STORE + "visit", today); }
 } catch (e) {}
 const CHANGED = {
   visit: { label: () => `Since your last visit${LAST_VISIT ? ` (${fmtDate(LAST_VISIT)})` : ""}`, test: (b) => !!LAST_VISIT && (b.last || "") > LAST_VISIT },
@@ -1282,7 +1285,7 @@ const roleKind = (roles = []) => roles.some((r) => /^chair/.test(r)) ? "chair" :
   : roles.some((r) => /^your /.test(r)) ? "your-legislator" : roles.some((r) => /^sponsor/.test(r)) ? "sponsor" : roles.some((r) => /^member/.test(r)) ? "committee-member" : "legislator";
 const GOV_REACH = STATE.govReach;
 const span = STATE.sessionLabel;
-const storeKey = (k) => `abt:${DATA.session}:${PRESET?.who ? "who:" + PRESET.who + ":" : ""}${k}`;
+const storeKey = (k) => `${STORE}${DATA.session}:${PRESET?.who ? "who:" + PRESET.who + ":" : ""}${k}`;
 function store(k, v) { try { localStorage.setItem(storeKey(k), JSON.stringify(v)); } catch (e) {} }
 function recall(k) { try { const v = localStorage.getItem(storeKey(k)); return v == null ? null : JSON.parse(v); } catch (e) { return null; } }
 
@@ -1424,7 +1427,7 @@ function applyViewLink() {
   const county = p.get("county");
   if (county && (DATA.counties || []).includes(county) && county !== HOME) {
     let mine = null;
-    try { mine = localStorage.getItem("abt:county"); } catch (e) {}
+    try { mine = localStorage.getItem(STORE + "county"); } catch (e) {}
     // Offer the viewer's own county only if they've chosen one.
     LINK_COUNTY = mine && mine !== county ? { from: county, mine } : null;
     HOME = county;
@@ -1545,9 +1548,11 @@ function renderPipeline() {
     PIPE_GROUPS[key] = label;
     return `<div class="pg-h pick${String(state.stage) === key ? " on" : ""}" data-g="${key}" role="button" tabindex="0" title="Show all ${esc(label.toLowerCase())} bills">${label}${extra}</div>`;
   };
-  // After the second year's last floor votes, only bills that passed both houses can still move.
+  // After the second year's last floor votes, only bills that passed both houses can still move: shown while any
+  // are left (once the governor has acted on all of them, there's nothing in play).
+  const inPlay = BILLS.some((b) => b.stage === 3 || b.stage === 4);
   $("pipeline").innerHTML = floorVotesOver() ? `
-    <div class="pg live">${head("Still in play", [3, 4])}${[3, 4].map(row).join("")}</div>
+    ${inPlay ? `<div class="pg live">${head("Still in play", [3, 4])}${[3, 4].map(row).join("")}</div>` : ""}
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
     <div class="pg stale">${head("Out of time", [0, 1, 2], ` ${TIP(OUT_OF_TIME)}<span>${esc(STATE.outOfTimeLine || "Die December 31 unless lawmakers return")}</span>`)}${[0, 1, 2].map(row).join("")}</div>` : `
     ${!DATA.current ? `
@@ -1735,7 +1740,7 @@ const lastName = (n) => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "
 
 // ---- Your legislators: chosen by address or from a list, kept in this browser; otherwise
 // the defaults the site was built with (Tompkins County: Sen. Webb, Asm. Kelles). ----
-const REPS_STORE = "abt:reps";
+const REPS_STORE = STORE + "reps";
 function chosenReps() { try { return JSON.parse(localStorage.getItem(REPS_STORE) || "null"); } catch (e) { return null; } }
 // Your county sets your legislators unless you picked them (or looked up an address).
 function countyDistricts(county) { return DATA.districtCounties?.[county] || null; }
@@ -1746,7 +1751,7 @@ function countyReps(county) {
 function setCounty(county) {
   HOME = county;
   countUse(`county/${county}`);
-  try { localStorage.setItem("abt:county", HOME); } catch (e) {}
+  try { localStorage.setItem(STORE + "county", HOME); } catch (e) {}
   // Keep a chosen legislator who represents part of the new county; otherwise use its largest district.
   const d = countyDistricts(county), c = chosenReps();
   if (d && c) {
@@ -1870,7 +1875,7 @@ function lookUpReps(address) {
     countUse(sd && ad ? "lookup/found" : "lookup/not-found");
     if (!sd || !ad) return done("That address wasn't found in New York. Try adding the town and ZIP code, or choose from the lists below.");
     done("");
-    if (county && (DATA.counties || []).includes(county)) { HOME = county; try { localStorage.setItem("abt:county", HOME); } catch (e) {} }
+    if (county && (DATA.counties || []).includes(county)) { HOME = county; try { localStorage.setItem(STORE + "county", HOME); } catch (e) {} }
     setReps(sd, ad);
   };
   s.src = `https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress?address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&vintage=Current_Current&layers=all&format=jsonp&callback=${cb}`;
@@ -2168,7 +2173,7 @@ function planFor(b, stance = "support") {
 
 // Support or oppose, for the asks: from the watchlist if the bill is starred, else as last
 // chosen in the bill panel (kept in this browser).
-const STANCE_STORE = "abt:stance";
+const STANCE_STORE = STORE + "stance";
 function panelStances() { try { return JSON.parse(localStorage.getItem(STANCE_STORE) || "{}"); } catch (e) { return {}; } }
 const panelStance = (b) => watchStance(b) || panelStances()[billKey(b)] || "support";
 function setPanelStance(b, st) {
@@ -2256,7 +2261,7 @@ function comingUp(mine) {
 }
 
 // Bills from the last session's watchlist that are back this session under new numbers.
-const CARRY_STORE = () => `abt:carried:${DATA.session}`;
+const CARRY_STORE = () => `${STORE}carried:${DATA.session}`;
 function carryCandidates() {
   if (!DATA.current || SHARED || PRESET) return [];
   const prev = DATA.session - YEARS, handled = new Set(recallCarry());
@@ -2422,7 +2427,7 @@ function showStatSec(id) {
   statSec = id;
   for (const s of document.querySelectorAll(".statsec")) s.hidden = s.id !== id;
   for (const b of document.querySelectorAll("#statTabs button")) b.setAttribute("aria-pressed", b.dataset.sec === id);
-  try { localStorage.setItem("abt:statsec", id); } catch (e) {}
+  try { localStorage.setItem(STORE + "statsec", id); } catch (e) {}
   if (id === "statNet") renderNet();
   // The topic choice and the "leave out" box don't apply to these two sections.
   document.querySelector(".stattopic").hidden = ["statWho", "statTrend"].includes(id);
@@ -2435,7 +2440,7 @@ function showStatSec(id) {
 // bills (worked out by the build); anyone can drag a topic to another place, and the dots follow.
 let whoHouse = "B", whoSel = null; // whoSel: { kind: "leg", id } or { kind: "topic", t }
 let WHO = null; // { house, order, nodes, avg }
-const WHO_ORDER = "abt:whoorder";
+const WHO_ORDER = STORE + "whoorder";
 const WHO_W = 860, WHO_H = 700, WHO_R = 250;
 function whoData() {
   const houses = whoHouse === "B" ? BOTH : [whoHouse];
@@ -2875,9 +2880,9 @@ function persCard(n, title) {
 
 let commAll = false;
 let commSort = "bills";
-try { commSort = localStorage.getItem("abt:commsort") || "bills"; } catch (e) {}
+try { commSort = localStorage.getItem(STORE + "commsort") || "bills"; } catch (e) {}
 let commMode = "share";
-try { commMode = localStorage.getItem("abt:commmode") || "share"; } catch (e) {}
+try { commMode = localStorage.getItem(STORE + "commmode") || "share"; } catch (e) {}
 const COMM_MODES = { share: "Share approved", count: "Number of bills" };
 const COMM_SORTS = { bills: "Most bills", low: "Lowest approval", high: "Highest approval", name: "Name" };
 // Plain names for committees whose official names don't explain themselves.
@@ -3548,13 +3553,27 @@ function clearFilter(k, v) {
 }
 
 // ---- Watchlist: kept in this browser; a share link carries a copy to someone else ----
-const WATCH_STORE = "abt:watch";
+const WATCH_STORE = STORE + "watch";
 let WATCH = new Map(); // "2025:S1234" -> { seen: date of the last action seen, stance: "support" | "oppose" }
 let SHARED = null;      // a watchlist opened from a share link: base number -> stance
 const baseNum = (n) => n.replace(/[A-Z]$/, "");
 const billKey = (b) => `${DATA.session}:${baseNum(b.nums[0])}`;
 const keysOf = (b) => b.nums.map((n) => `${DATA.session}:${baseNum(n)}`);
+// Before settings were per state, every state on the shared address saved under the plain names: take this
+// state's own bills from there, once.
+function adoptShared(name) {
+  if (STORE === "abt:") return;
+  try {
+    if (localStorage.getItem(STORE + name) !== null) return;
+    const old = JSON.parse(localStorage.getItem(`abt:${name}`) || "null");
+    if (!old || typeof old !== "object" || Array.isArray(old)) return;
+    const mine = new Set(BILLS.flatMap(keysOf));
+    const keep = Object.fromEntries(Object.entries(old).filter(([k]) => mine.has(k)));
+    localStorage.setItem(STORE + name, JSON.stringify(keep));
+  } catch (e) {}
+}
 function loadWatch() {
+  ["watch", "log", "stance"].forEach(adoptShared);
   try {
     const raw = JSON.parse(localStorage.getItem(WATCH_STORE) || "{}");
     WATCH = new Map(Object.entries(raw).map(([k, v]) => [k, typeof v === "string" ? { seen: v, stance: "support" } : v]));
@@ -3605,7 +3624,7 @@ function newsTags(b) {
 }
 function setWatch(b, entry) { keysOf(b).forEach((k) => WATCH.delete(k)); if (entry) WATCH.set(billKey(b), entry); saveWatch(); }
 // The order the person put their watchlist in (bill keys, first = top priority).
-const ORDER_STORE = "abt:worder";
+const ORDER_STORE = STORE + "worder";
 let ORDER = [];
 try { ORDER = JSON.parse(localStorage.getItem(ORDER_STORE) || "[]"); } catch (e) { ORDER = []; }
 function saveOrder() { try { localStorage.setItem(ORDER_STORE, JSON.stringify(ORDER)); } catch (e) {} }
@@ -3695,11 +3714,11 @@ function watchButton(b, withStance = true) {
 // Creating one needs an invite code from the site's owner (one per group).
 const LISTS_API = STATE.listsApi;
 let SHARED_META = null;   // a published list being viewed: { slug, title, group, updated } or { error }
-const PUB_STORE = () => `abt:published:${DATA.session}`;
+const PUB_STORE = () => `${STORE}published:${DATA.session}`;
 function myPublished() { try { return JSON.parse(localStorage.getItem(PUB_STORE()) || "null"); } catch (e) { return null; } }
 function setMyPublished(v) { try { v ? localStorage.setItem(PUB_STORE(), JSON.stringify(v)) : localStorage.removeItem(PUB_STORE()); } catch (e) {} }
 // The introduction and per-bill notes for my published list, kept in this browser until I update the list.
-const PUBTEXT_STORE = () => `abt:pubtext:${DATA.session}`;
+const PUBTEXT_STORE = () => `${STORE}pubtext:${DATA.session}`;
 function pubText() { try { return JSON.parse(localStorage.getItem(PUBTEXT_STORE()) || "null") || { intro: "", notes: {} }; } catch (e) { return { intro: "", notes: {} }; } }
 function setPubText(v) { try { localStorage.setItem(PUBTEXT_STORE(), JSON.stringify(v)); } catch (e) {} }
 const watchCodes = () => myOrdered().map((b) => (watchStance(b) === "oppose" ? "-" : "") + baseNum(b.nums[0]));
@@ -3749,10 +3768,10 @@ window.addEventListener("unhandledrejection", (e) => countError(e.reason?.messag
 function countVisit() {
   if (!ROOT) return;
   let last = null;
-  try { last = localStorage.getItem("abt:lastvisit"); } catch (e) { return; }
+  try { last = localStorage.getItem(STORE + "lastvisit"); } catch (e) { return; }
   const today = isoToday();
   if (last === today) return;
-  try { localStorage.setItem("abt:lastvisit", today); } catch (e) {}
+  try { localStorage.setItem(STORE + "lastvisit", today); } catch (e) {}
   countUse(last ? "visit/returning" : "visit/first");
   const n = [...WATCH.keys()].filter((k) => k.startsWith(`${DATA.session}:`)).length;
   countUse(`watchlist/${n === 0 ? "none" : n <= 5 ? "1-5 bills" : n <= 20 ? "6-20 bills" : "21+ bills"}`);
@@ -3846,7 +3865,7 @@ function shareLink() {
 const sharedStance = (b) => { for (const n of b.nums) if (SHARED.has(baseNum(n))) return SHARED.get(baseNum(n)); return null; };
 
 // ---- Personal log of actions taken (kept in this browser, never shared) ----
-const LOG_STORE = "abt:log";
+const LOG_STORE = STORE + "log";
 let LOG = {}; // "2025:S1234" -> [{ id, d: "2026-10-22", who, how, note }]
 const HOWS = ["Email", "Phone call", "Letter", "Meeting", "Testimony", "Social media", "Other"];
 function loadLog() { try { LOG = JSON.parse(localStorage.getItem(LOG_STORE) || "{}"); } catch (e) { LOG = {}; } }
@@ -4531,17 +4550,17 @@ function wire() {
   $("statComm").addEventListener("change", (e) => {
     if (e.target.matches("[data-commsort]")) {
       commSort = e.target.value;
-      try { localStorage.setItem("abt:commsort", commSort); } catch (err) {}
+      try { localStorage.setItem(STORE + "commsort", commSort); } catch (err) {}
     } else if (e.target.matches("[data-commmode]")) {
       commMode = e.target.value;
-      try { localStorage.setItem("abt:commmode", commMode); } catch (err) {}
+      try { localStorage.setItem(STORE + "commmode", commMode); } catch (err) {}
     } else return;
     renderStats();
   });
 }
 
 // "How to use this site": shown until dismissed, and again from the link by the tabs.
-const INTRO_STORE = "abt:intro";
+const INTRO_STORE = STORE + "intro";
 const PUBLIC_SITE = STATE.publicSite;
 function renderIntro(force) {
   const box = $("howto");
@@ -4563,7 +4582,7 @@ function showHowSec(id) {
   if (!$("view-how").hidden) countOnce(`how/${id}`);
   for (const s of document.querySelectorAll(".howsec")) s.hidden = s.id !== id;
   for (const b of document.querySelectorAll("#howTabs button")) b.setAttribute("aria-pressed", b.dataset.how === id);
-  try { localStorage.setItem("abt:howsec", id); } catch (e) {}
+  try { localStorage.setItem(STORE + "howsec", id); } catch (e) {}
 }
 
 // The Committees section: what committees do, the few every bill may meet, and each subject's
@@ -4870,7 +4889,7 @@ function hydrate(raw) {
   $("fetched").textContent = `Data as of ${raw.fetched}`;
   try { renderHowCal(); } catch (e) { console.error(e); }
   try { renderHowComm(); } catch (e) { console.error(e); }
-  try { const h = localStorage.getItem("abt:howsec"); if (h && $(h)?.classList.contains("howsec")) showHowSec(h); } catch (e) {}
+  try { const h = localStorage.getItem(STORE + "howsec"); if (h && $(h)?.classList.contains("howsec")) showHowSec(h); } catch (e) {}
   try { renderIntro(); } catch (e) { console.error(e); }
   const stale = staleNotice(raw);
   const notice = [stale, sessionNotice(raw)].filter(Boolean).join(" ");
@@ -4964,7 +4983,7 @@ function hydrate(raw) {
   $("statWhoBtn").hidden = !(DATA.current && LEGS.length);
   // Claude artifact pages can't hand visitors a file; the download works on GitHub Pages.
   $("csv").hidden = !ROOT;
-  try { const s = localStorage.getItem("abt:statsec"); if (s && $(s) && !(s === "statNet" && $("statNetBtn").hidden) && !(s === "statWho" && $("statWhoBtn").hidden)) statSec = s; } catch (e) {}
+  try { const s = localStorage.getItem(STORE + "statsec"); if (s && $(s) && !(s === "statNet" && $("statNetBtn").hidden) && !(s === "statWho" && $("statWhoBtn").hidden)) statSec = s; } catch (e) {}
   // "Repeat tries" needs bills linked across sessions.
   if (!linkedSessions()) { document.querySelector('[data-sec="statPersist"]').hidden = true; if (statSec === "statPersist") statSec = "statOdds"; }
   showStatSec(statSec);

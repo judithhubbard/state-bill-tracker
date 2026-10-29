@@ -85,6 +85,10 @@ from that repo. **Nothing here may change it.**
   drug-schedule bill). Checked by hand 2026-10-29: of 30 random links, 27 were plainly the same bill and 3 closely
   related; some heavily reworked repeats are missed), so "this bill in other sessions", repeat tries and watchlist carry-over work. One-year
   sessions use `YEARS` for "the next session" (build_data.py's comeback counts, carryCandidates()).
+- **Saved settings are per state (2026-10-29):** the states share one web address, and a browser keeps one set of saved
+  settings per address, so tracker.html prefixes every saved name with `STORE` ("abt:nj:", "abt:va:"; New York keeps
+  plain "abt:" so its visitors' watchlists still load after the move). `adoptShared()` takes a state's own bills, once,
+  from the watchlist, log and stances saved under the plain names before this.
 - **Adding a state (learned from NJ and VA):** missing settings fall back to New York's rules and wording, silently.
   Copy states/nj or states/va and decide each of these: in profile.py, `YEARS`, `LOWER`/`LOWER_NAME`/`TITLES`,
   `LEADERS`, `GOVERNORS`, `TOPICS`, `TOWNS_PATH`; in profile.js, `code`, `houses`, `titles`, `memberWords`,
