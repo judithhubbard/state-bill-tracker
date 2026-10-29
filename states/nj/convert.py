@@ -192,7 +192,10 @@ def version_stage(steps, live):
             stage = 3 if live else 6
     if stage:
         return stage
-    return 3 if len(passed) == 2 else 2 if passed else 1 if floor else 0
+    # Passed by both houses but not in the same text (the second house amended it, and the first hasn't
+    # agreed to the changes): New Jersey records real passage of both houses as PBH, so this is still
+    # one house's bill.
+    return 2 if passed else 1 if floor else 0
 
 
 def status_text(t):
@@ -360,7 +363,11 @@ def load_session(session):
             desc = f"In {HOUSE[comms[status][0]]} committee"
         elif re.fullmatch(r"2R[AS]G", status):
             desc = f"Back on the {HOUSE[status[2]]} floor with the governor's changes"
-        elif re.fullmatch(r"2R[AS]C?", status):
+        elif re.fullmatch(r"2R[AS]C", status):
+            desc = f"On the {HOUSE[status[2]]} floor, to agree to the {HOUSE['S' if status[2] == 'A' else 'A']}'s changes"
+        elif m["GovernorAction"].strip() in ("AV", "PV"):
+            desc = "Vetoed" if m["GovernorAction"].strip() == "AV" else "Pocket vetoed"
+        elif re.fullmatch(r"2R[AS]", status):
             desc = f"On the {HOUSE[status[2]]} floor"
         else:
             desc = status_text(next((t for _, t in reversed(actions)), "INTRODUCED"))

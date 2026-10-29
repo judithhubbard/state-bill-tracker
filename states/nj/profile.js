@@ -47,6 +47,12 @@ const STATE = {
 
   // The governor's deadline in a bill's key dates (from govDeadline()).
   dueLabel: () => "Governor's decision due (estimated: 45 days after it passed both houses, or a week after the session ends)",
+  // Wording on the Weigh in and Statistics tabs. "Passed both houses" here means sent back with the
+  // governor's changes (bills that pass both houses go straight to the governor).
+  waitingHead: "Sent back with the governor's changes",
+  govYearsNote: "2023 is missing because the 2022–23 session isn't included yet.",
+  partySource: "Party from each session's list of legislators",
+  openUntil: (s) => `the session ends in January ${s + 2}`,
   // What happens to a bill that passed both houses: the line under "Next:", and the asks (support, oppose).
   // A bill sent back with the governor's changes needs both houses to accept them, one after the other:
   // the house it's been delivered to since votes now.

@@ -130,13 +130,12 @@ def governor_on(day):
 
 
 # ---- What's changing: subjects that rose (or spiked) across sessions. Matched on the synopsis.
+# (Climate and cannabis were tried and left out: their share barely changed.)
 TRENDS = [
     ("rise", "Artificial intelligence", r"artificial intelligence|\bAI\b|automated (?:employment )?decision|algorithmic", False),
     ("rise", "E-bikes and scooters", r"electric (?:assist|bicycle|scooter)|e-bikes?\b|low-speed electric", True),
-    ("rise", "Climate", r"climate|greenhouse gas|zero-emission", True),
     ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen", True),
     ("rise", "Social media", r"social media|online platform", True),
-    ("rise", "Cannabis", r"cannabis|marijuana", True),
     ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
 ]
 # Old wording -> new wording, for the same thing: none picked yet for New Jersey.

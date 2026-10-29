@@ -48,6 +48,11 @@ const STATE = {
   // The governor's deadline in a bill's key dates (from govDeadline()).
   dueLabel: (due) => due.endsWith("-01-30") ? "Governor's decision due (estimated: 30 days after the Legislature's year ends)"
     : "Governor's decision due (estimated: 10 days after delivery, not counting Sundays)",
+  // Wording on the Weigh in and Statistics tabs.
+  waitingHead: "Passed both houses, not yet requested by her",
+  govYearsNote: "2020: short COVID session. 2021: Cuomo resigned in August, before year-end vetoes.",
+  partySource: "Party from Open States",
+  openUntil: () => "Dec. 31",
   // What happens to a bill that passed both houses: the line under "Next:", and the asks (support, oppose).
   passedBothNext: () => ({
     what: "the governor's office requests it (any day through December), then she has 10 days to act.",

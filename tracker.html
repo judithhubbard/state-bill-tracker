@@ -1082,7 +1082,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     <section class="act-sec statsec" id="statSessions" hidden aria-labelledby="ocHead">
       <h2 id="ocHead">Outcomes by session</h2>
       <div class="tablewrap"><table class="oc" id="ocTable"></table></div>
-      <p class="note">“Became law”: share of all bills introduced. “Governor signed”: share of bills the governor acted on. Current session changes until Dec. 31.</p>
+      <p class="note">“Became law”: share of all bills introduced. “Governor signed”: share of bills the governor acted on. Current session changes until <span id="ocUntil"></span>.</p>
     </section>
   </section>
 
@@ -2048,7 +2048,9 @@ function planFor(b, stance = "support") {
   } else if (b.stage === 2) {
     const other = b.passedIn === "Senate" ? "A" : "S";
     const twin = b.vers.find((v) => v.p[0] === other);
-    what = `<p class="when">Next: the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
+    // Back in the first house to agree to the second house's amendments (New Jersey's "2RSC").
+    const agree = twin && /to agree to the/.test(twin.statusDesc || "");
+    what = `<p class="when">Next: ${agree ? `the ${HOUSE[other]} votes on the ${b.passedIn}'s changes.` : `the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     if (twin && twin.committee) book.chair(other, twin.committee, L(A("put it on the committee agenda", "keep it off the committee agenda")), live);
     if (twin && twin.committee) stuck(twin);
     else floorLeader(other);
@@ -2149,7 +2151,7 @@ function renderOpenNow() {
     ${comingUp(mine)}
     <h3>On the governor's desk (${num(desk.length)}), soonest deadline first</h3>
     <div class="list">${desk.map(billRow).join("") || `<div class="empty">None right now.</div>`}</div>
-    <h3>Passed both houses, not yet requested by her (${num(waiting.length)})</h3>
+    <h3>${STATE.waitingHead} (${num(waiting.length)})</h3>
     <div class="list">${waiting.slice(0, openShown).map(billRow).join("") || `<div class="empty">None right now.</div>`}</div>
     ${more > 0 ? `<button class="more" type="button" data-more>Show ${num(Math.min(25, more))} more</button>` : ""}`;
 }
@@ -2277,7 +2279,8 @@ function oddsLine(b) {
   const kind = isNarrow(b) ? "n" : "g";
   const point = b.stage >= 3 ? "both" : b.stage === 2 ? (b.passedIn === "Senate" ? "passS" : "passA") : b.stage === 1 ? "floor" : "intro";
   const w = DATA.insights.waiting;
-  const waiting = b.stage === 3 && w;
+  // "Still waiting on the governor on <date>": New York's governor calls bills in through December.
+  const waiting = b.stage === 3 && w && STATE.floorVotesEnd !== false;
   const pick = (t) => {
     if (waiting) { const x = w.kinds?.[t ? `${t}|${kind}` : kind]; return x && x[0] >= 30 ? x : null; }
     const o = DATA.insights.odds?.[`${t || "all"}|${kind}`]?.[point];
@@ -2335,7 +2338,7 @@ function govTiming(I) {
   return `<h3 class="sub">The governor's decisions by year</h3>
     <p class="key"><span><i class="k-law"></i>Signed</span><span><i class="k-veto"></i>Vetoed</span></p>
     <div class="vlist">${yearRows}</div>
-    <p class="note">2020: short COVID session. 2021: Cuomo resigned in August, before year-end vetoes.</p>`;
+    ${STATE.govYearsNote ? `<p class="note">${STATE.govYearsNote}</p>` : ""}`;
 }
 
 let statSec = "statOdds";
@@ -2574,9 +2577,9 @@ function renderTrends() {
   box.innerHTML = `<h2>What's changing</h2>
     <p>Subjects that took up a growing share of bills, ${first} to ${lastS}, counted in bill titles and summaries.</p>
     <div class="tcards">${cards}</div>
-    <h3 class="sub">How the wording changed</h3>
+    ${words ? `<h3 class="sub">How the wording changed</h3>
     <p class="muted">The same things, described in new words. Gray is the old wording, gold the new.</p>
-    <div class="tcards">${words}</div>
+    <div class="tcards">${words}</div>` : ""}
     <p class="note">Bills per 1,000 introduced each session whose title or summary mentions the subject. Subjects were picked from an automatic scan for the phrases whose share changed most, then checked by hand. ${lastS} is still under way.</p>`;
 }
 
@@ -2896,7 +2899,8 @@ function sankey(odds, fate, cfate) {
     const [name, key] = EXITS[i];
     if (i === 0 && cfate) {
       // Died in committee, in four parts.
-      const PARTS = [["none", "Never acted on", "sk-c0"], ["amended", "Revised by the sponsor, never voted on", "sk-c1"], ["held", "Held without a vote", "sk-c2"], ["defeated", "Voted down", "sk-c4"], ["passed", "Passed one committee, died in the next", "sk-c3"]];
+      const PARTS = [["none", "Never acted on", "sk-c0"], ["amended", "Revised by the sponsor, never voted on", "sk-c1"], ["held", "Held without a vote", "sk-c2"], ["defeated", "Voted down", "sk-c4"], ["passed", "Passed one committee, died in the next", "sk-c3"]]
+        .filter(([pk]) => (cfate[pk] || [0])[0] > 0);
       const tot = PARTS.reduce((a, [pk]) => a + ((cfate[pk] || [0])[0]), 0) || 1;
       let y = exitTop;
       PARTS.forEach(([pk, , cls]) => { const hh = h(out) * ((cfate[pk] || [0])[0] / tot); g += `<rect class="${cls}" x="${ex}" y="${y}" width="${nodeW}" height="${hh}"/>`; y += hh; });
@@ -3003,16 +3007,17 @@ function renderStats() {
   const [late, signed] = I.lateSigning;
   $("statTiming").innerHTML = `<h2>Timing</h2>
     ${monthChart(I, t)}
-    <h3 class="sub">End of session</h3>
+    ${STATE.floorVotesEnd === false ? "" : `<h3 class="sub">End of session</h3>
     <div class="vlist">${vrow("Floor votes in the session's last 3 weeks", `${years[0].year}–${years[years.length - 1].year}, except 2020`, [[mid, "a"]], `<b class="big">${mid}%</b> in a typical year<small>Range ${Math.min(...shares)}–${Math.max(...shares)}%</small>`)}
-    ${vrow("Laws signed in Oct.–Dec.", `${num(signed)} laws`, [[pctOf(late, signed), "l"]], `<b class="big">${pctOf(late, signed)}%</b>`)}</div>
+    ${vrow("Laws signed in Oct.–Dec.", `${num(signed)} laws`, [[pctOf(late, signed), "l"]], `<b class="big">${pctOf(late, signed)}%</b>`)}</div>`}
     ${govTiming(I)}`;
 
   // Persistence
   const [p0, p1, p2, p3, total] = I.persistence[t] || [0, 0, 0, 0, 0];
   const fate = I.fate?.[t] || {};
   const lawSpan = `${I.pastSessions[1]}–${String(I.pastSessions[I.pastSessions.length - 1] + 1).slice(2)}`;
-  const COMM_FATE = [["none", "Never acted on"], ["amended", "Revised by the sponsor, never voted on"], ["held", `Held without a vote${TIP(HELD_TIP)}`], ["defeated", "Voted down"], ["passed", "Passed one committee, died in the next"]];
+  const COMM_FATE = [["none", "Never acted on"], ["amended", "Revised by the sponsor, never voted on"], ["held", `Held without a vote${TIP(HELD_TIP)}`], ["defeated", "Voted down"], ["passed", "Passed one committee, died in the next"]]
+    .filter(([k]) => (I.commFate?.[t]?.[k] || [0])[0] > 0);  // only what this state's records show
   const FATE = [["committee", "Died in committee"], ["floor", "Died awaiting a floor vote"], ["oneHouse", "Passed one house only"], ["vetoed", "Vetoed"]];
   const pers = I.persistent?.[t] || [];
   const TRIES = [[p0, "First try", "t0"], [p1, "Second try", "t1"], [p2, "Third try", "t2"], [p3, "Fourth or later", "t3"]];
@@ -3030,7 +3035,7 @@ function renderStats() {
       return row + (!cf ? "" : `<div class="vsub"><p class="vsub-h">What happened to them in committee</p>${COMM_FATE.map(([ck, cl]) => { const [cn, cb, claw] = cf[ck] || [0, 0, 0];
         return vrow(cl, `${num(cn)} bills`, [[pctOf(cb, cn), "a"], [pctOf(claw, cn), "l"]], `${pctOf(cb, cn)}% came back · <b class="big">${pctOf(claw, cn)}%</b> law`).replace('class="vrow"', 'class="vrow sub"'); }).join("")}</div>`);
     }).join("")}</div>
-    <p class="note">“Held without a vote”: put on a committee's agenda, then held for consideration (Assembly) or tabled (Senate). Committees rarely vote bills down; they hold them instead.</p>
+    ${COMM_FATE.some(([k]) => k === "held") ? `<p class="note">“Held without a vote”: put on a committee's agenda, then held for consideration (Assembly) or tabled (Senate). Committees rarely vote bills down; they hold them instead.</p>` : ""}
     <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)} that died in ${I.pastSessions[0]}–${String(I.pastSessions[I.pastSessions.length - 2] + 1).slice(2)}, followed through ${I.pastSessions[I.pastSessions.length - 1] + 1}.</p>
     ${(() => { const [n, moved, law] = I.stuck?.[t] || [0, 0, 0];
       return n ? `<p>Bills that sat in committee all of the first year: <b>${pctOf(moved, n)}%</b> were approved by a committee in the second year, <b>${pctOf(law, n)}%</b> became law.</p>
@@ -3056,7 +3061,7 @@ function renderStats() {
       return vrow(l, `${num(n)} bills`, [[(pctOf(both, n) / mixMax) * 100, "a"], [(pctOf(law, n) / mixMax) * 100, "l"]],
         `${pctOf(both, n)}% passed · <b class="big">${pctOf(law, n)}%</b> law${now ? `<small>This session so far: ${pctOf(now[1], now[0])}% passed · ${pctOf(now[2], now[0])}% law</small>` : ""}`,
         null); }).join("")}</div>
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}. “Both parties”: at least one sponsor or co-sponsor from each party on either version. Party from Open States.</p>`;
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}. “Both parties”: at least one sponsor or co-sponsor from each party on either version. ${STATE.partySource}.</p>`;
 
   renderOutcomes();
   if (statSec === "statNet" && !$("view-stats").hidden) renderNet();
@@ -3070,7 +3075,8 @@ function renderOutcomes() {
     return { session, c, share: c[0] ? c[2] / c[0] : 0 };
   });
   const max = Math.max(...rows.map((r) => r.share), 0.0001);
-  $("ocTable").innerHTML = `<thead><tr><th>Session</th><th>Bills introduced</th><th>Passed both houses</th><th>Signed into law</th><th>Vetoed</th><th>Became law, as % of bills introduced</th><th>Governor signed, as % of bills she acted on</th></tr></thead>
+  $("ocUntil").textContent = STATE.openUntil(DATA.session);
+  $("ocTable").innerHTML = `<thead><tr><th>Session</th><th>Bills introduced</th><th>Passed both houses</th><th>Signed into law</th><th>Vetoed</th><th>Became law, as % of bills introduced</th><th>Governor signed, as % of bills the governor acted on</th></tr></thead>
     <tbody>${rows.map(({ session, c, share }) => `<tr class="${session === DATA.session ? "here" : ""}">
       <td>${span(session)}${session === LATEST ? " (open)" : ""}</td><td>${num(c[0])}</td><td>${num(c[1])}</td><td>${num(c[2])}</td><td>${num(c[3])}</td>
       <td class="bar"><div class="sharebar"><i style="width:${(share / max) * 70}%"></i><b>${pct(c[2], c[0])}</b></div></td>
@@ -3681,7 +3687,7 @@ async function showPubViews() {
 }
 // The publish box under "My watchlist" (public site only).
 function publishBox() {
-  if (!ROOT) return "";
+  if (!ROOT || !LISTS_API) return "";  // a state without a lists Worker yet has no published lists
   const mine = myPublished();
   if (mine) return `<div class="pubbox"><p>Your published list, <b>“${esc(mine.title)}”</b>${mine.group ? ` (${esc(mine.group)})` : ""}. Share this link:</p>
     <p class="sharerow"><input type="text" readonly value="${esc(listUrl(mine.slug))}" aria-label="Published list link"> <button class="act-btn" type="button" data-pub="copy">Copy link</button></p>
