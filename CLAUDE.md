@@ -71,7 +71,9 @@ from that repo. **Nothing here may change it.**
   are "S:34"/"H:71", and the data files' member ids ("S0100") match the Senate site's ("S100") once zero-padded.
   `states/va/towns.py` turns the districts' locality descriptions into data/va/district_towns.json, with separate
   Senate and House districts per locality; `renderTownRepsByHouse()` shows it (a split locality picks each district).
-  Still to do: "What it does" from Summaries.csv, the How tab and Weigh in text, and a full review.
+  "What it does" (step 3): `states/va/texts.py` takes each bill's latest Legislative Services summary into
+  data/va/texts_<year>.json, with a label saying which version it describes. Still to do: the How tab, calendar and
+  Weigh in text, and a full review.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).

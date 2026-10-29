@@ -6,7 +6,7 @@ once a day) and each locality's districts (states/va/towns.py).
 
 Usage: python3 states/va/fetch.py [first_session]   (default 2024)
 """
-import os, sys, time, urllib.error, urllib.request
+import os, re, sys, time, urllib.error, urllib.request
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -82,3 +82,6 @@ def legislators():
 if __name__ == "__main__":
     main()
     legislators()
+    from states.va import texts  # "What it does", from the Legislature's summaries
+    for s in sorted(int(f[:4]) for f in os.listdir(P.DATA) if re.fullmatch(r"\d{4}1", f)):
+        texts.main(s)

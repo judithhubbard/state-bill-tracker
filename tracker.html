@@ -3309,11 +3309,11 @@ const paras = (t) => t.split("\n").filter((p) => p.trim()).map((p) => `<p>${esc(
 function whatItDoesHtml(b) {
   const t = billTextOf(b)?.[baseNum(b.nums[0])];
   if (!t) return "";
-  const [stmt, comm, when, commText, cost] = t;
+  const [stmt, comm, when, commText, cost, label] = t;
   // A long statement shows its first paragraph, the rest folded.
   const ps = stmt.split("\n").filter((p) => p.trim());
   const lead = ps.length > 1 && ps.join(" ").length > 700 ? `${paras(ps[0])}<details class="memo"><summary>Read the rest</summary>${paras(ps.slice(1).join("\n"))}</details>` : paras(stmt);
-  return `<div class="whatdoes"><h4>What it does</h4>${stmt ? `<div class="wd-stmt">${lead}<p class="muted">From the sponsor's statement.</p></div>` : ""}
+  return `<div class="whatdoes"><h4>What it does</h4>${stmt ? `<div class="wd-stmt">${lead}<p class="muted">${esc(label || "From the sponsor's statement.")}</p></div>` : ""}
     ${commText ? `<details class="memo"><summary>As the ${esc(comm || "committee")} approved it${when ? `, ${fmtDate(when)}` : ""}</summary>${paras(commText)}</details>` : ""}
     ${cost ? `<details class="memo"><summary>What it would cost (the Legislature's budget office)</summary>${paras(cost)}</details>` : ""}</div>`;
 }

@@ -1068,7 +1068,8 @@ def outcomes(recs):
 
 def bill_texts(session, recs):
     """Bill (base number, as the page keys it) -> [sponsor's statement, committee, date, committee statement,
-    fiscal summary], from data/<state>/texts_<session>.json when the state has one."""
+    fiscal summary, and (when the state's text isn't a sponsor's statement) where it's from], from
+    data/<state>/texts_<session>.json when the state has one."""
     path = os.path.join(P.DATA, f"texts_{session}.json")
     if not os.path.exists(path):
         return {}
@@ -1081,7 +1082,8 @@ def bill_texts(session, recs):
         stmt = next((t["statement"] for t in ts if t.get("statement")), "")
         comm = max((t["committee"] for t in ts if t.get("committee")), key=lambda c: c[1], default=["", "", ""])
         fisc = next((t["fiscal"] for t in ts if t.get("fiscal")), "")
-        out[re.sub(r"[A-Z]$", "", r["nums"][0])] = [stmt, comm[0], comm[1], comm[2], fisc]
+        label = next((t["label"] for t in ts if t.get("label")), "")
+        out[re.sub(r"[A-Z]$", "", r["nums"][0])] = [stmt, comm[0], comm[1], comm[2], fisc] + ([label] if label else [])
     return out
 
 
