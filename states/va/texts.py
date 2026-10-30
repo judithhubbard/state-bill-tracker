@@ -22,6 +22,7 @@ LABEL = {"SUMMARY AS INTRODUCED": "as introduced", "SUMMARY AS PASSED HOUSE": "a
 
 def plain(h):
     """The summary's HTML as paragraphs of text (its bold opening is the bill's short title)."""
+    h = re.sub(r"\s+", " ", h)  # line breaks in the file aren't paragraph breaks
     h = re.sub(r"(?i)</p>|<br\s*/?>", "\n", h)
     t = html.unescape(re.sub(r"<[^>]+>", "", h))
     # The files turn some characters into "?": "§ 2.2-1509", "2026–2027", "don't".

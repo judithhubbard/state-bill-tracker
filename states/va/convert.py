@@ -264,6 +264,12 @@ def load_session(session):
             text = desc[2:] if house else desc.strip()
             d = iso(h["History_date"])
             t = decode(text, comms)
+            # A passage the house undid ("Reconsideration of passage agreed to by Senate"); it's usually voted on again.
+            m = re.match(r"Reconsideration of (?:(?:House|Senate) )?passage agreed to by (House|Senate)", text)
+            if m:
+                k = next((k for k in range(len(acts) - 1, -1, -1) if acts[k][2] == f"PASSED {m.group(1).upper()}"), None)
+                if k is not None:
+                    acts[k] = acts[k][:2] + (acts[k][3], acts[k][3])
             acts.append((d, house, t, text))
             ref = h["History_refid"]
             if ref in calls and VOTES.match(text):
@@ -279,6 +285,8 @@ def load_session(session):
         stage = stage_of(b, acts, live)
         texts = [t for _, _, t, _ in acts]
         passed = {h for _, h, t, _ in acts if t.startswith("PASSED")}
+        if stage >= 3:
+            passed = {"S", "H"}  # it passed both houses, even where the history words a vote differently
         passed_in = None
         if stage == 2:
             last = max(((d, h) for d, h, t, _ in acts if t.startswith("PASSED")), default=None)

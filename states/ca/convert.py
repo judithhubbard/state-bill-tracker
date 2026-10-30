@@ -309,6 +309,8 @@ def load_session(session):
         stage = stage_of(steps, status)
         texts = [t for _, _, t, _, _ in steps]
         passed = {h for _, h, t, _, _ in steps if t.startswith("PASSED")}
+        if stage >= 3:
+            passed = {"S", "A"}  # it passed both houses, even where the history leaves out a vote (AB876 of 2023)
         passed_in = None
         if stage == 2:
             last = max(((d, h) for d, h, t, _, _ in steps if t.startswith("PASSED")), default=None)

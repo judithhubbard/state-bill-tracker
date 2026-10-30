@@ -137,6 +137,26 @@ from that repo. **Nothing here may change it.**
   - Settings left out fall back to New York's silently (above); grep the built pages for "Assembly", "Albany", "Hochul".
   - A website that blocks automated requests (governor.virginia.gov): drop that data and tell the owner. Don't work
     around the block.
+  - Every wording of a floor vote: list each history line that mentions "passed" but isn't read as a passage, and
+    look at the most common. CA writes "Read third time. Urgency clause adopted. Passed." (about 700 votes missed at
+    first). And votes the house undid: CA "Action rescinded whereby the bill was read third time, passed",
+    VA "Reconsideration of passage agreed to by Senate" (a bill then showed as passed by a house that undid it).
+  - Votes missing from the record: a bill that passed both houses passed each one, whatever its history says
+    (CA AB876 of 2023 has no Senate vote). Count bills at stage 3-6 without both passage flags; it should be 0.
+  - Steps that look like committee votes but aren't: CA "From committee chair, with author's amendments: Amend, and
+    re-refer" is the sponsor's amendment. Check committee pass rates look plausible.
+  - Summary text: the files' own line breaks aren't paragraph breaks (collapse whitespace before turning </p> into
+    a break); count paragraphs that end without punctuation (CA and VA had about 15% cut mid-sentence; NJ's are
+    real headings and list items). Lead with what the bill does when the text opens with background (CA's digests
+    start "Existing law ...").
+  - Ids padded in one file and not another (CA's text files write "AB__001698" for AB1698: every bill under 1000
+    failed to match at first). When a fixed share fails, suspect the matching, not the data.
+  - Names: degrees and titles ("Dr.", "M.D.", "Ph.D.", "Esq.") aren't part of a name; "Jr."/"III" are, but aren't the
+    last name (`shortName()`). Check each contacts file for duplicate phone numbers.
+  - Placeholder bills (CA "spot bills": technical, nonsubstantive changes; "intent" bills) and stock sentences
+    ("no reimbursement is required by this act") make unrelated bills look alike; keep them out of matching.
+  - The other state's settings in shared slots: each `keyDates` entry means the same thing in every state (the 4th
+    is New York's return to committee in a new year; leave it "" elsewhere).
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
