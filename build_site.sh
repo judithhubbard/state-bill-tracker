@@ -7,6 +7,11 @@ set -e
 cd "$(dirname "$0")"
 OUT=${1:-_site}
 STATES="ca nj va"
+# New York from this shared code (/ny/, not linked from the front page until New York moves here; until then
+# albanybilltracker.org runs from its own repo), when the current session's bills are here (the workflow
+# downloads them with the Senate API key).
+NY=$(python3 -c "import datetime; y = datetime.date.today().year; print(y if y % 2 else y - 1)")
+if [ -f "data/bills_$NY.json" ]; then STATES="$STATES ny"; fi
 rm -rf "$OUT" && mkdir -p "$OUT"
 for s in $STATES; do
   # SITE_BASE (the preview's address) gives each state its own: SITE_BASE/nj/, SITE_BASE/va/.

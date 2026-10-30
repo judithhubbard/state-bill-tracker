@@ -1324,6 +1324,10 @@ def main():
             template = template[:start] + open(weighin).read() + template[end:]
         # The state's page settings and rules, read by the main script as STATE.
         state_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
+        # A preview copy on statebilltracker.pages.dev of a state whose live site is elsewhere (New York's) doesn't
+        # send published watchlists to that site's lists service.
+        if "pages.dev" in P.SITE_URL and not P.SITE_URL.startswith(P.PUBLIC_URL.rstrip("/")):
+            state_js = re.sub(r'listsApi: "[^"]*"', 'listsApi: ""', state_js)
         template = template.replace('<script id="state-profile"></script>', f'<script id="state-profile">\n{state_js}</script>', 1)
         if session != current:
             template = template.replace(f"<title>{P.SITE_NAME}</title>",

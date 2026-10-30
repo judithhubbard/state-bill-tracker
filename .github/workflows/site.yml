@@ -55,6 +55,21 @@ jobs:
       - name: Download California
         run: python3 states/ca/fetch.py
 
+      # New York from this shared code (statebilltracker.pages.dev/ny/, not linked; albanybilltracker.org runs
+      # from its own repo until New York moves here). The data albanybilltracker.org's repo commits (past sessions,
+      # contacts, Assembly votes) is copied from it, so nothing is downloaded from nyassembly.gov twice; the current
+      # session's bills come from the Senate's API, which needs the NYSENATE_API_KEY secret (without it, New York
+      # is left out).
+      - name: Download New York
+        env:
+          NYSENATE_API_KEY: ${{ secrets.NYSENATE_API_KEY }}
+        run: |
+          if [ -z "$NYSENATE_API_KEY" ]; then echo "No NYSENATE_API_KEY secret: New York left out"; exit 0; fi
+          git clone -q --depth 1 https://github.com/judithhubbard/ny-bill-tracker.git "$RUNNER_TEMP/ny"
+          cp "$RUNNER_TEMP"/ny/data/*.json "$RUNNER_TEMP"/ny/data/*.json.gz data/
+          NY=$(python3 -c "import datetime; y = datetime.date.today().year; print(y if y % 2 else y - 1)")
+          python3 fetch_bills.py "$NY" || { echo "New York's bills didn't download: left out"; rm -f "data/bills_$NY.json"; }
+
       # Until launch the site lives at statebilltracker.pages.dev, so its links point there.
       - name: Build the site
         env:
