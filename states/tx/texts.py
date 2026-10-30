@@ -52,7 +52,7 @@ def clean(text):
     opens with background, then "H.B. 6 seeks to ..."."""
     text = text.replace("ï¿½", "—")  # a dash read with the wrong encoding before
     # A statement that only repeats the caption ("C.S.H.B. 2 amends current law relating to ...") says nothing.
-    if re.fullmatch(r"(?:C\.S\.)?[HS]\.B\. \d+ amends current law relating to [^.]*\.?", text):
+    if re.fullmatch(r"(?:As proposed, |— |-- )?(?:C\.S\.)?[HS]\.B\. \d+ amends current law relating to [^.]*\.?", text.strip()):
         return ""
     aim = re.search(r"(?:C\.S\.)?[HS]\.B\. \d+(?:, [^,]{1,80},)? (?:seeks|would|is intended|aims|attempts|proposes)", text) or \
         re.search(r"\bFirst, (?:C\.S\.)?[HS]\.B\. \d+", text) or \
