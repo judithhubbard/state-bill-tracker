@@ -1667,6 +1667,15 @@ function statusText(b) {
     t = `${live ? "In" : "Died in"} ${b.comm ? `the ${commPlain(b.comm)} Committee` : "committee"}`;
     const passed = D.passS ? HOUSE.S : D.passA ? HOUSE[LOW] : null;
     if (passed && D.died) small = `Passed ${passed} ${fmtDate((D.passSAll[0] || D.passAAll[0]))}; sent back to committee ${fmtMonth(D.died)}`;
+    // Illinois: back in Rules or Assignments after a committee approved it means it missed a deadline.
+    const gv = STATE.gates && b.vers.find((v) => v.committee === b.comm && STATE.gates[v.p[0]] === b.comm);
+    const acts = gv ? gv.actions : [];
+    const back = acts.map(([, x]) => x).lastIndexOf(`REFERRED TO ${(b.comm || "").toUpperCase()}`);
+    const ok = acts.slice(0, Math.max(back, 0)).filter(([, x]) => x === "REPORTED").pop();
+    if (ok) {
+      t = live ? `Sent back to ${b.comm}` : `Died in the ${b.comm} Committee`;
+      small = `Approved by committee ${fmtDate(ok[0])}; missed a deadline ${fmtDate(acts[back][0])}`;
+    }
   } else if (b.stage === 2 && b.passedIn) {
     t = `Passed one house${live ? "" : " only"} (${b.passedIn})`;
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
