@@ -130,6 +130,11 @@ def legislators():
 if __name__ == "__main__":
     main()
     legislators()
+    from states.tx import journals  # floor votes, from the House and Senate journals
+    for year in range(FIRST, CURRENT + 1, 2):
+        if os.path.isdir(os.path.join(P.DATA, P.code_of(year), "billhistory")):
+            journals.main(year)
+            journals.senate(year, journals.senate_dates(year))
     from states.tx import texts  # "What it does", from the current session's bill analyses
     if os.path.isdir(os.path.join(P.DATA, P.code_of(CURRENT), "billhistory")):
         texts.main(CURRENT)

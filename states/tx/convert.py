@@ -205,10 +205,52 @@ def earlier(session, bill):
     return out
 
 
+def _plain(s):
+    import unicodedata
+    s = unicodedata.normalize("NFD", s or "").encode("ascii", "ignore").decode().lower()
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z]", " ", s)).strip()
+
+
+def floor_members(session, house="H"):
+    """The journal's name for a member ("Bell, C.", "Wu", "Speaker"; the Senate's "A. Hinojosa") -> seat id, for the
+    current session."""
+    path = os.path.join(P.DATA, f"contacts_{session}.json")
+    if session != CURRENT or not os.path.exists(path):
+        return {}
+    people = [(sid, p) for sid, p in json.load(open(path))["people"].items() if sid[0] == house]
+    out = {}
+    for sid, p in people:
+        last = _plain((p.get("dataName") or "").split(",")[0])
+        out.setdefault(last, []).append((sid, _plain(p["name"])[:1]))
+        if p.get("position") == "Speaker of the House":
+            out["speaker"] = [(sid, "")]
+    return out
+
+
+def floor_vote(name, members):
+    """A journal name's seat, or None."""
+    name = re.sub(r"\(C\)$", "", name.strip())  # "(C)": the member presiding
+    m = re.match(r"(.+?),\s*([A-Z])\.?$", name) or re.match(r"([A-Z])\.\s+(.+)$", name)
+    if m and m.re.pattern.startswith("([A-Z])"):
+        last, initial = _plain(m.group(2)), m.group(1).lower()
+    else:
+        last, initial = (_plain(m.group(1)), m.group(2).lower()) if m else (_plain(name), "")
+    hits = members.get(last, [])
+    if initial and len(hits) > 1:
+        hits = [h for h in hits if h[1] == initial]
+    return hits[0][0] if len(hits) == 1 else None
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     data = bills(session)
     seat_of, party_of, full = seats()
+    vpath = os.path.join(P.DATA, P.code_of(session), "house_votes.json")
+    house_votes = json.load(open(vpath)) if os.path.exists(vpath) else {}
+    members = floor_members(session)
+    spath = os.path.join(P.DATA, P.code_of(session), "senate_votes.json")
+    senate_votes = json.load(open(spath)) if os.path.exists(spath) else {}
+    senators = floor_members(session, "S")
     stamp = max((os.path.getmtime(f) for f in glob.glob(os.path.join(folder(session), "*.xml"))), default=0)
     fetched = datetime.fromtimestamp(stamp, ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
 
@@ -279,6 +321,32 @@ def load_session(session):
             if yes or no:
                 when = dates(lambda hh, t, n: hh == h and (t == "REPORTED" or n in (249, 280)))
                 votes.append([h, "C", cname, when or dates(lambda hh, t, n: hh == h), yes, no, []])
+        # House floor votes (the House Journal's record votes): final passage, agreeing to the Senate's changes, and
+        # adopting a conference report; second reading's vote only when third reading had none.
+        floor, prev = [], None
+        for d, h, n, desc, comment in acts:
+            rv = re.search(r"RV#(\d+)", comment) if (h, n) == ("H", 630) else None
+            if rv and rv.group(1) in house_votes and prev in (535, 536, 555, 556, 701, 750):
+                floor.append((prev in (535, 536), d, house_votes[rv.group(1)]))
+            elif h == "H" and n not in (630, 631, 633):
+                prev = n
+        if any(not second for second, _, _ in floor):
+            floor = [f for f in floor if not f[0]]
+        for _, d, v in floor:
+            def who(name):
+                return floor_vote(name, members) or f"H?{name}"
+            votes.append(["H", "F", None, d, len(v["Y"]), len(v["N"]),
+                          [[who(n), "N"] for n in v["N"]] + [[who(n), "B"] for n in v["P"]] + [[who(n), "A"] for n in v["A"]]])
+        # Senate floor votes (the Senate Journal): final passage, agreeing to the House's changes, conference reports;
+        # second reading's only when third reading's wasn't found.
+        sv = senate_votes.get(p, [])
+        keep = [x for x in sv if x[1] != "second"] or [x for x in sv if x[1] == "second"][-1:]
+        for d, kind, yes, no, v in keep:
+            def sname(name):
+                return floor_vote(name, senators) or f"S?{name}"
+            votes.append(["S", "F", None, d, yes, no,
+                          [[sname(n), "N"] for n in v["N"]] + [[sname(n), "B"] for n in v["P"]] + [[sname(n), "A"] for n in v["A"]]])
+        votes.sort(key=lambda x: x[3] or "")
         action_dates = [d for d, _, _, _, _ in steps if d]
         for h, n in [(origin, x) for x in b["authors"] + b["coauthors"]] + [(other, x) for x in b["sponsors"] + b["cosponsors"]]:
             if (h, n) in party_of:

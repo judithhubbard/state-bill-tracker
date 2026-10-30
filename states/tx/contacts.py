@@ -189,6 +189,8 @@ def build(session):
         lasts = [name_key(p["name"]).split()[-1] for p in people.values()]
         for p in people.values():
             raw = p.pop("_bill", None) or ", ".join(reversed(p["name"].rsplit(" ", 1)))
+            # "Dutton Jr., Harold V." is "Dutton" in the bill histories and journals.
+            raw = re.sub(r"\s+(Jr\.?|Sr\.?|II|III|lll|IV)(?=,|$)", "", raw)
             last = raw.split(",")[0].strip()
             p["dataName"] = raw.strip() if lasts.count(name_key(p["name"]).split()[-1]) > 1 else last
     people = {**s_people, **h_people}
