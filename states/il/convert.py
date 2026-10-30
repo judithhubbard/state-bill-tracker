@@ -134,12 +134,21 @@ def synopsis(t):
             and (i == 0 or re.fullmatch(r"(?:House|Senate) (?:Floor|Committee) Amendment No\. \d+", text(title)))]
     if not secs:
         return {"synopsis": "", "filed": "", "what": "", "whatLabel": ""}
+    # "Replaces everything ... Reinserts the provisions of the introduced bill with the following changes" isn't a rewrite.
+    secs = [(h, x.replace(REWRITE, "", 1).strip() if x.startswith(REWRITE + " Reinserts") else x) for h, x in secs]
     base = max((i for i, (_, x) in enumerate(secs) if x.startswith(REWRITE)), default=0)
     what = "\n".join([secs[base][1].replace(REWRITE, "", 1).strip()] + [f"Then changed by {h}: {x}" for h, x in secs[base + 1:]])
     label = f"From the Legislative Reference Bureau's synopsis of {secs[base][0]}, which rewrote the bill." if base else \
         "From the Legislative Reference Bureau's synopsis."
     return {"synopsis": " ".join([secs[base][1].replace(REWRITE, "", 1).strip()] + [x for _, x in secs[base + 1:]]),
             "filed": secs[0][1], "what": what, "whatLabel": label}
+
+
+def is_shell(b):
+    """A shell bill: a placeholder kept to be rewritten later ("Makes a technical change", or a $2 appropriation). Once an
+    amendment rewrites it, its synopsis is the new one and it's a real bill."""
+    syn = b["synopsis"]
+    return bool(syn) and len(syn) < 250 and bool(re.search(r"technical change", syn) or re.match(r"Appropriates \$[12] ", syn))
 
 
 def bills(session):
@@ -375,7 +384,7 @@ def load_session(session):
             "title": title, "summary": "", "act": "", "lawCode": "", "law": None, "laws": [],
             "comms": comm_list, "topics": topics, "places": [], "narrow": P.narrow_kind(title),
             "commFate": fate, "mainTopic": main_topic, "local": "local" in topics,
-            "senDeleg": False, "asmDeleg": False, "budget": bool(re.search(r"\bBUDGET\b|APPROPRIATION", b["short"], re.I)),
+            "senDeleg": False, "asmDeleg": False, "budget": bool(re.search(r"\bBUDGET\b|APPROPRIATION", b["short"], re.I)), "shell": is_shell(b),
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": passed_in,
             "chapter": int(pa) if pa and stage == 5 else None,

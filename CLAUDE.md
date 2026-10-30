@@ -136,7 +136,10 @@ from that repo. **Nothing here may change it.**
   synopsis of the last amendment that rewrote the bill ("Replaces everything after the enacting clause"; more than half
   the laws), else of the bill as filed, then each later adopted amendment's (`synopsis()` in convert.py; the file's
   synopsis block also holds fiscal notes and veto messages, left out). About 30% of bills are shells ("Makes a technical
-  change"), which the House Executive Committee approves in bulk. Rules and Assignments are `STATE.gates`: no New York
+  change", $2 appropriations; `is_shell()`), which the House Executive Committee approves in bulk: decided 2026-10-30,
+  the statistics leave out shells never rewritten (`without_shells()` in build_data.py, and `outcomes()`), each Statistics
+  note says so (`shellsOut()`), the list tags them "Shell bill" with a tip (`SHELL_TIP`), and they get no odds line. An
+  amendment that "Reinserts the provisions of the introduced bill" is a change, not a rewrite. Rules and Assignments are `STATE.gates`: no New York
   "got as far as Rules" line, and a bill waiting there says the leader controls it; `STATE.commIntro` words the How
   tab's Committees points. "Where you live" lists cities, villages and counties from the Census Bureau's 2024 district relationship
   files (`states/il/towns.py`, run once; no key needed; works for any state). Bill links go to the repository's

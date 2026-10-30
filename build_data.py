@@ -355,7 +355,17 @@ def reached(r):
     }
 
 
+def without_shells(loaded, hist):
+    """Illinois's shell bills (placeholders never rewritten into real bills) left out of the statistics, with each
+    session's history renumbered to match."""
+    keep = {s: [i for i, r in enumerate(loaded[s][0]) if not r.get("shell")] for s in loaded}
+    return ({s: ([loaded[s][0][i] for i in keep[s]],) + tuple(loaded[s][1:]) for s in loaded},
+            {s: defaultdict(dict, {k: hist[s][i] for k, i in enumerate(keep[s]) if i in hist[s]}) for s in loaded})
+
+
 def insights(loaded, hist, current):
+    shells = sum(1 for s in loaded for r in loaded[s][0] if r.get("shell"))
+    loaded, hist = without_shells(loaded, hist)
     past = [s for s in sorted(loaded) if s != current]
     # Each topic also comes as "t|g" (general bills only: not about one place, person or group, nor a
     # naming), and "all|n" covers the narrow ones, for the Statistics switch and each bill's odds line.
@@ -636,6 +646,7 @@ def insights(loaded, hist, current):
                     "later": sorted([int(m), round(100 * n / total)] for m, n in later.items()) if total >= 30 else []}
 
     return {
+        "shells": shells,
         "waiting": waiting,
         "requests": requests,
         "months": month_counts(past),
@@ -1068,6 +1079,8 @@ def outcomes(recs):
     """Counts per topic: [bills, passed both houses or further, signed, vetoed, passed one house only]."""
     out = defaultdict(lambda: [0, 0, 0, 0, 0])
     for r in recs:
+        if r.get("shell"):  # Illinois's shell bills, as in insights()
+            continue
         for t in ["all"] + r["topics"]:
             c = out[t]
             c[0] += 1
@@ -1222,7 +1235,7 @@ def main():
         rows = []
         sims = similar_bills(recs)
         for i, r in enumerate(recs):
-            flags = (r["local"] and 1) | (r["senDeleg"] and 2) | (r["budget"] and 4) | (r["asmDeleg"] and 8) | (r["passedS"] and 16) | (r["passedA"] and 32) | (P.NARROW_KINDS.index(r["narrow"]) << 6)
+            flags = (r["local"] and 1) | (r["senDeleg"] and 2) | (r["budget"] and 4) | (r["asmDeleg"] and 8) | (r["passedS"] and 16) | (r["passedA"] and 32) | (P.NARROW_KINDS.index(r["narrow"]) << 6) | (256 if r.get("shell") else 0)
             vers = [[v["p"], S(v["sponsor"]), v["cosp"], S(v["statusDesc"]), S(v["committee"]),
                      [[a[0].replace("-", ""), S(a[1])] for a in v["actions"]],
                      [S(n) for n in v["cosponsors"]] if session >= current else [], v.get("district") or 0,

@@ -1088,7 +1088,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     <section class="act-sec statsec" id="statSessions" hidden aria-labelledby="ocHead">
       <h2 id="ocHead">Outcomes by session</h2>
       <div class="tablewrap"><table class="oc" id="ocTable"></table></div>
-      <p class="note">“Became law”: share of all bills introduced. “Governor signed”: share of bills the governor acted on. Current session changes until <span id="ocUntil"></span>.</p>
+      <p class="note">“Became law”: share of all bills introduced. “Governor signed”: share of bills the governor acted on. Current session changes until <span id="ocUntil"></span>.<span id="ocShells"></span></p>
     </section>
   </section>
 
@@ -1717,6 +1717,9 @@ document.addEventListener("focusout", (e) => { if (e.target.matches?.(".tip")) {
 addEventListener("scroll", hideTip, true);
 const TIP = (text) => `<button type="button" class="tip" aria-label="What this means" data-tip="${esc(text)}">i</button>`;
 // Inside a button or a summary a nested button isn't allowed, so this one is a focusable span.
+// Illinois's shell bills: left out of the statistics, tagged in the list.
+const SHELL_TIP = "A placeholder that only makes a technical change. Leaders file these so they can later rewrite one into a real bill, often late in the session. Most are never used.";
+const shellsOut = () => (DATA.insights?.shells ? " Shell bills (placeholders that only make a technical change) are left out unless they were rewritten into real bills." : "");
 const TIPI = (text) => (text ? `<span class="tip" role="button" tabindex="0" aria-label="What this means" data-tip="${esc(text)}">i</span>` : "");
 const STAGE_TIPS = STATE.stageTips;
 const HELD_TIP = STATE.heldTip || "Put on a committee's agenda, then set aside without a vote: “held for consideration” in the Assembly, “tabled” in the Senate. Committees rarely vote bills down; they hold them instead.";
@@ -2388,7 +2391,8 @@ const isNarrow = (b) => !!(b.narrow || b.places.length);
 function oddsLine(b) {
   // Constitutional amendments don't go to the governor.
   if (b.topics.includes("const")) return "A constitutional amendment doesn't go to the governor: it has to pass two separately elected Legislatures, then the voters.";
-  if (b.stage > 4 || !DATA.insights) return "";
+  // A shell's chances depend on whether the leaders pick it up, not on how past bills fared.
+  if (b.stage > 4 || !DATA.insights || b.shell) return "";
   // Compared with past bills of the same kind (about one place, person or group, or not) and, where there
   // were enough of them, the same topic: one plain sentence.
   const kind = isNarrow(b) ? "n" : "g";
@@ -3067,11 +3071,11 @@ function renderStats() {
   const [nI, lI] = odds.intro || [0, 0], [nF, lF] = odds.floor || [0, 0];
   $("statOdds").innerHTML = `<h2>Odds of becoming law</h2>
     ${sankey(odds, I.fate?.[t], I.commFate?.[t])}
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}. Band widths are numbers of bills; the percentage on each band is the share of the bills at that step that went that way.${STATE.heldNote && (I.commFate?.[t]?.held || [0])[0] > 0 ? ` “${STATE.heldLabel}”: ${STATE.heldNote}` : ""}</p>
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}. Band widths are numbers of bills; the percentage on each band is the share of the bills at that step that went that way.${STATE.heldNote && (I.commFate?.[t]?.held || [0])[0] > 0 ? ` “${STATE.heldLabel}”: ${STATE.heldNote}` : ""}${shellsOut()}</p>
     <p class="key"><span><i class="k-law"></i>Share that became law</span></p>
     <div class="vlist">${ODDS_POINTS.map(([k, l]) => { const [n, law] = odds[k] || [0, 0];
       return vrow(l, `${num(n)} bills`, [[pctOf(law, n), "l"]], `<b class="big">${pctOf(law, n)}%</b> became law`); }).join("")}</div>
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}.</p>`;
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}.${shellsOut()}</p>`;
 
   // Where bills die: Assembly and Senate committees in separate lists.
   const nPast = (I.pastSessions || []).length || 1;
@@ -3111,7 +3115,7 @@ function renderStats() {
     <div class="commctl"><label class="commsort">Show <select data-commmode>${Object.entries(COMM_MODES).map(([k, l]) => `<option value="${k}"${k === commMode ? " selected" : ""}>${l}</option>`).join("")}</select></label>
     <label class="commsort">Sort by <select data-commsort>${Object.entries(COMM_SORTS).map(([k, l]) => `<option value="${k}"${k === commSort ? " selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <p class="key">${counts ? `<span><i class="k-n"></i>Referred</span>` : ""}<span><i class="k-appr"></i>Approved by committee</span><span><i class="k-law"></i>Became law</span></p>
-    <p class="note">${counts ? `Average bills a session for ${topicName}` : `Share of ${topicName} referred to each committee`}, ${pastSpan()}. Committees with few bills left out.</p>
+    <p class="note">${counts ? `Average bills a session for ${topicName}` : `Share of ${topicName} referred to each committee`}, ${pastSpan()}. Committees with few bills left out.${shellsOut()}</p>
     <div class="houses">${houseList(LOW, `${HOUSE[LOW]} committees`)}${houseList("S", "Senate committees")}</div>
     ${rows.length > 16 ? `<button class="act-btn" type="button" data-commall>${commAll ? "Show fewer" : `Show all ${rows.length} committees`}</button>` : ""}`;
 
@@ -3142,7 +3146,7 @@ function renderStats() {
     <h3 class="sub">Sessions it took laws to pass</h3>
     <div class="stack">${TRIES.map(([n, , cls]) => `<i class="${cls}" style="width:${pctOf(n, total)}%"></i>`).join("")}</div>
     <p class="key">${TRIES.map(([n, l, cls]) => `<span><i class="${cls}"></i>${l}: <b>${pctOf(n, total)}%</b></span>`).join("")}</p>
-    <p class="note">${num(total)} laws passed in ${lawSpan}${t === "all" ? "" : ` (${TOPICS[t]})`}.</p>
+    <p class="note">${num(total)} laws passed in ${lawSpan}${t === "all" ? "" : ` (${TOPICS[t]})`}.${shellsOut()}</p>
     <h3 class="sub">Bills that died</h3>
     <p class="key"><span><i class="k-appr"></i>Came back the next session</span><span><i class="k-law"></i>Later became law</span></p>
     <div class="vlist">${FATE.map(([k, l]) => { const [n, back, law] = fate[k] || [0, 0, 0];
@@ -3153,10 +3157,10 @@ function renderStats() {
         return vrow(cl, `${num(cn)} bills`, [[pctOf(cb, cn), "a"], [pctOf(claw, cn), "l"]], `${pctOf(cb, cn)}% came back · <b class="big">${pctOf(claw, cn)}%</b> law`).replace('class="vrow"', 'class="vrow sub"'); }).join("")}</div>`);
     }).join("")}</div>
     ${COMM_FATE.some(([k]) => k === "held") ? `<p class="note">“${STATE.heldLabel || "Held without a vote"}”: ${STATE.heldNote || "put on a committee's agenda, then held for consideration (Assembly) or tabled (Senate). Committees rarely vote bills down; they hold them instead."}</p>` : ""}
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)} that died in ${yearsSpan(I.pastSessions[0], I.pastSessions[I.pastSessions.length - 2])}, followed through ${lastYear(I.pastSessions[I.pastSessions.length - 1])}.</p>
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)} that died in ${yearsSpan(I.pastSessions[0], I.pastSessions[I.pastSessions.length - 2])}, followed through ${lastYear(I.pastSessions[I.pastSessions.length - 1])}.${shellsOut()}</p>
     ${(() => { const [n, moved, law] = I.stuck?.[t] || [0, 0, 0];
       return n ? `<p>Bills that sat in committee all of the first year: <b>${pctOf(moved, n)}%</b> were approved by a committee in the second year, <b>${pctOf(law, n)}%</b> became law.</p>
-    <p class="note">${num(n)} bills${t === "all" ? "" : ` (${TOPICS[t]})`}, ${pastSpan()}.</p>` : ""; })()}
+    <p class="note">${num(n)} bills${t === "all" ? "" : ` (${TOPICS[t]})`}, ${pastSpan()}.${shellsOut()}</p>` : ""; })()}
     ${pers.length ? `<h3 class="sub">This session's most persistent bills</h3>
     <p class="key track-key">${[["s-1", "Introduced, outcome not available"], ["s0", "Died in committee"], ["s2", "Passed one house"], ["s3", "Passed both houses"], ["s6", "Vetoed"], ["s5", "Signed"]].map(([c, l]) => `<span><i class="dot ${c}"></i>${l}</span>`).join("")}</p>
     <div class="perscards">${pers.map(([n, title]) => persCard(n, title)).join("")}</div>` : ""}`;
@@ -3172,7 +3176,7 @@ function renderStats() {
     <h3 class="sub">By number of co-sponsors</h3>
     <div class="vlist">${cs.map(([n, both, law], i) => vrow(CB[i], `${num(n)} bills`, [[pctOf(both, n), "a"], [pctOf(law, n), "l"]],
       `${pctOf(both, n)}% passed · <b class="big">${pctOf(law, n)}%</b> law`)).join("")}</div>
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}, by the most co-sponsors either version had.</p>
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}, by the most co-sponsors either version had.${shellsOut()}</p>
     <h3 class="sub">By party of sponsors and co-sponsors</h3>
     <div class="vlist">${PARTY.map(([k, l]) => { const pastKnown = PARTY.some(([x]) => (pPast[x] || [0])[0] > 0);
       // Without parties for past sessions' sponsors (Virginia's come only with today's legislators), this session's.
@@ -3180,7 +3184,7 @@ function renderStats() {
       return vrow(l, `${num(n)} bills`, [[(pctOf(both, n) / mixMax) * 100, "a"], [(pctOf(law, n) / mixMax) * 100, "l"]],
         `${pctOf(both, n)}% passed · <b class="big">${pctOf(law, n)}%</b> law${now ? `<small>This session so far: ${pctOf(now[1], now[0])}% passed · ${pctOf(now[2], now[0])}% law</small>` : ""}`,
         null); }).join("")}</div>
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${PARTY.some(([x]) => (pPast[x] || [0])[0] > 0) ? pastSpan() : `${span(DATA.session)} session`}. “Both parties”: at least one sponsor or co-sponsor from each party on either version. ${STATE.partySource}.</p>`;
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${PARTY.some(([x]) => (pPast[x] || [0])[0] > 0) ? pastSpan() : `${span(DATA.session)} session`}. “Both parties”: at least one sponsor or co-sponsor from each party on either version. ${STATE.partySource}.${shellsOut()}</p>`;
 
   renderOutcomes();
   if (statSec === "statNet" && !$("view-stats").hidden) renderNet();
@@ -3195,6 +3199,7 @@ function renderOutcomes() {
   }).filter((r) => r.c[0] > 0);
   const max = Math.max(...rows.map((r) => r.share), 0.0001);
   $("ocUntil").textContent = STATE.openUntil(DATA.session);
+  $("ocShells").textContent = shellsOut();
   $("ocTable").innerHTML = `<thead><tr><th>Session</th><th>Bills introduced</th><th>Passed both houses</th><th>Signed into law</th><th>Vetoed</th><th>Became law, as % of bills introduced</th><th>Governor signed, as % of bills the governor acted on</th></tr></thead>
     <tbody>${rows.map(({ session, c, share }) => `<tr class="${session === DATA.session ? "here" : ""}">
       <td>${span(session)}${session === LATEST ? " (open)" : ""}</td><td>${num(c[0])}</td><td>${num(c[1])}</td><td>${num(c[2])}</td><td>${num(c[3])}</td>
@@ -3521,7 +3526,7 @@ function billRow(b) {
       const chap = amendedBills(b) ? `<span class="tag chap">Chapter amendment${TIPI(CHAPTER_AMENDMENT)}</span>`
         : b.memo && changesAgreed(b) ? `<span class="tag chap">${changesMade(b) ? "Changed by a later bill" : "Changes to come"}${TIPI(CHANGES_AGREED)}</span>` : "";
       const narrowTag = { person: "For one person", org: "For one group", naming: "Road or place naming" }[b.narrow];
-      const tags = (narrowTag ? `<span class="tag narrow">${narrowTag}</span>` : "") + chap + noes.map((L) => `<span class="tag vno">${esc(shortName(L.name))} voted no</span>`).join("") + partyTag(b) + b.topics.map((t) => `<span class="tag${t === "env" ? " env" : ""}">${esc(TOPICS[t])}</span>`).join("") + historyTags(b);
+      const tags = (b.shell ? `<span class="tag narrow">Shell bill${TIPI(SHELL_TIP)}</span>` : "") + (narrowTag ? `<span class="tag narrow">${narrowTag}</span>` : "") + chap + noes.map((L) => `<span class="tag vno">${esc(shortName(L.name))} voted no</span>`).join("") + partyTag(b) + b.topics.map((t) => `<span class="tag${t === "env" ? " env" : ""}">${esc(TOPICS[t])}</span>`).join("") + historyTags(b);
       const intro = DATA.current && b.intro ? `<span>Introduced ${b.intro}</span>` : "";
       const meet = isWatched(b) ? null : nextMeeting(b);
       return `<details class="bill" data-idx="${b.idx}">
@@ -4778,7 +4783,7 @@ function decode(raw) {
       earlier: hist.filter((e) => e[0] < raw.session), later: hist.filter((e) => e[0] > raw.session),
       laws: laws.map(str), comms: comms.map(str), law: str(law), program: str(program), comm: str(comm),
       passedIn: passedIn || null, last: day(last),
-      sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: ["", "person", "org", "naming"][(flags >> 6) & 3],
+      sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: ["", "person", "org", "naming"][(flags >> 6) & 3], shell: !!(flags & 256),
       memo: memo || "",
       // The governor's veto message: this bill's own, or an earlier version's.
       vetoNote: vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: str(vetoNote[2]), nums: vetoNote[3], own: !!vetoNote[4], kind: vetoNote[5] || "absolute" } : null,
