@@ -74,7 +74,8 @@ TOPICS = {
               r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*)\b"),
     "housing": ("Housing", {"Housing"}, NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|rent|eviction\w*)\b"),
     "ag": ("Agriculture", {"Agriculture & Conservation", "Agriculture"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
-    "gov": ("Elections & state government", {"Ethics & Elections", "State Government Administration", "Executive", "Elections"},
+    # Not the Executive Committees: they get bills on every subject.
+    "gov": ("Elections & state government", {"Ethics & Elections", "State Government Administration", "Elections"},
             NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics)\b"),
     "biz": ("Business & consumers", {"Consumer Protection", "Financial Institutions and Licensing", "Financial Institutions",
             "Commerce", "Licensed Activities", "Insurance"}, NO_SUBJECTS,
