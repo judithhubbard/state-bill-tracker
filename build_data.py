@@ -1268,7 +1268,7 @@ def main():
             "outcomes": {str(s): summary[s] for s in summary},
             "insights": insight,
             # Past pages don't carry co-sponsor names, so their network is worked out here.
-            "network": session_network(session, recs) if session < current else None,
+            "network": session_network(session, [r for r in recs if not r.get("shell")]) if session < current else None,
             # Date of the last floor vote in either house this session.
             "sessionEnd": {y: d for y, d in SESSION_END.items() if session <= int(y) < session + YEARS},
             "lastVote": max((d for r in recs for i in (1, 2) for d in r["keyDates"][i].split(";")), default=""),
@@ -1290,14 +1290,16 @@ def main():
         if session == current:
             data["contacts"] = contacts_for(session, recs, names)
             data["legislators"] = legislators(session)
-            data["profiles"], data["peers"] = profiles(session, recs, data["legislators"], party_of)
-            data["networkSince"] = network_since(done, data["legislators"])
+            # Legislators' numbers leave out Illinois's shell bills, like the statistics.
+            real, real_done = [r for r in recs if not r.get("shell")], without_shells(done, {s: {} for s in done})[0]
+            data["profiles"], data["peers"] = profiles(session, real, data["legislators"], party_of)
+            data["networkSince"] = network_since(real_done, data["legislators"])
             # Without legislators the site would lose every legislator page and contact; stop
             # so yesterday's site stays up rather than publishing a broken one.
             # (A state without legislators yet, with no contacts file at all, builds without them.)
             if GITHUB and not data["legislators"] and os.path.exists(os.path.join(P.DATA, f"contacts_{session}.json")):
                 raise SystemExit("No legislators in the contacts file; not building")
-            for seat, rows in person_history(done, current, data["legislators"]).items():
+            for seat, rows in person_history(real_done, current, data["legislators"]).items():
                 if seat in data["profiles"]:
                     data["profiles"][seat]["history"] = rows
         # What each bill does, in the legislature's own words (states/<code>/texts.py), kept apart from the

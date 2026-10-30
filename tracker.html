@@ -511,11 +511,12 @@ table.st.comm thead tr:nth-child(2) th { top: calc(env(safe-area-inset-top, 0px)
 .twobar em { font-style: normal; color: var(--signed); font-weight: 600; }
 .commsort { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ink-2); margin: 4px 0 8px; }
 .commsort select { width: auto; padding: 4px 8px; font-size: 13px; }
-.key > span { white-space: nowrap; }
-.key { flex-wrap: wrap; }
-.key { display: flex; gap: 16px; font-size: 12.5px; color: var(--ink-2); margin: 0; }
-.key span { display: inline-flex; align-items: center; gap: 6px; }
-.key i { width: 12px; height: 10px; border-radius: 2px; display: inline-block; }
+/* Chart legends. Only p.key: a contact card's main person is li.key, and nowrap there pushed phone pages sideways. */
+p.key > span { white-space: nowrap; }
+p.key { flex-wrap: wrap; }
+p.key { display: flex; gap: 16px; font-size: 12.5px; color: var(--ink-2); margin: 0; }
+p.key span { display: inline-flex; align-items: center; gap: 6px; }
+p.key i { width: 12px; height: 10px; border-radius: 2px; display: inline-block; }
 .key .k-appr { background: var(--navy); }
 .key .k-law { background: var(--law-bar); }
 .key .k-veto { background: var(--veto); }
@@ -2490,6 +2491,7 @@ function whoData() {
   // bills about one place, person or group say little about a legislator's interests.
   const per = new Map(); // id -> { L, n (all bills), laws (all), placed (subject bills), w: {topic: weight} }
   for (const b of BILLS) {
+    if (b.shell) continue;
     const T = isNarrow(b) ? [] : b.topics.filter((t) => topics.includes(t));
     for (const v of b.vers) {
       const L = byName.get(`${v.p[0]}:${v.sponsor}`);
@@ -2725,6 +2727,7 @@ function netData(sel, t, lawOnly) {
   const spons = new Map(), w = new Map(), cross = new Map();
   const bump = (m, k) => m.set(k, (m.get(k) || 0) + 1);
   for (const b of BILLS) {
+    if (b.shell) continue; // Illinois's placeholders, left out like the statistics
     if (t !== "all" && !b.topics.includes(t)) continue;
     if (lawOnly && b.stage !== 5) continue;
     const carriers = { S: new Set(), A: new Set() };
@@ -3401,7 +3404,7 @@ function sponsorsBlock(b) {
     // A long list shows its first 20 (your legislators first), the rest folded.
     const sorted = cos.slice().sort((a, b) => mine.has(lastName(b)) - mine.has(lastName(a)));
     const shown = sorted.length > 24 ? sorted.slice(0, 20) : sorted, rest = sorted.slice(shown.length);
-    const coText = cos.length ? `; co-sponsor${cos.length === 1 ? "" : "s"}: ${shown.map(nm).join(", ")}${rest.length ? ` <details class="cosp more"><summary>and ${num(rest.length)} more</summary>${rest.map(nm).join(", ")}</details>` : ""}`
+    const coText = cos.length ? `; co-sponsor${cos.length === 1 ? "" : "s"}: ${shown.map(nm).join(", ")}${rest.length ? ` <details class="cosp"><summary>and ${num(rest.length)} more</summary>${rest.map(nm).join(", ")}</details>` : ""}`
       : v.cosp > v.extraPrimes ? `; ${num(v.cosp - v.extraPrimes)} co-sponsor${v.cosp - v.extraPrimes === 1 ? "" : "s"}` : "";
     return `<p><b>${esc(v.p)}</b> ${leads.length ? `${leads.length > 1 ? "Sponsors" : "Sponsor"}: ${andList(leads.map(nm))}` : "No sponsor listed"}${coText}</p>`;
   });

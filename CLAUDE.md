@@ -137,7 +137,9 @@ from that repo. **Nothing here may change it.**
   the laws), else of the bill as filed, then each later adopted amendment's (`synopsis()` in convert.py; the file's
   synopsis block also holds fiscal notes and veto messages, left out). About 30% of bills are shells ("Makes a technical
   change", $2 appropriations; `is_shell()`), which the House Executive Committee approves in bulk: decided 2026-10-30,
-  the statistics leave out shells never rewritten (`without_shells()` in build_data.py, and `outcomes()`), each Statistics
+  the statistics and legislators' numbers (profiles, history, networks) leave out shells never rewritten
+  (`without_shells()` in build_data.py, `outcomes()`, and `b.shell` in `netData()`/`whoData()`; the Speaker "sponsored"
+  883 bills with them, 15 without), each Statistics
   note says so (`shellsOut()`), the list tags them "Shell bill" with a tip (`SHELL_TIP`), and they get no odds line. An
   amendment that "Reinserts the provisions of the introduced bill" is a change, not a rewrite. Rules and Assignments are `STATE.gates`: no New York
   "got as far as Rules" line, and a bill waiting there says the leader controls it; `STATE.commIntro` words the How
@@ -211,7 +213,9 @@ from that repo. **Nothing here may change it.**
   - Summaries that only repeat the title (TX "C.S.H.B. 2 amends current law relating to ...") say nothing: drop them, or
     use an earlier version's.
   - Look at every part of a bill panel at phone width (375px iframe): the similar-bills list once collapsed its number
-    column in every state.
+    column in every state. Class names shared by unrelated parts: chart legends' `.key` (nowrap) also styled the
+    contact card's `li.key` and pushed IL and NJ panels sideways; the co-sponsor list's `more` took the "Show more"
+    button's box. Check `document.documentElement.scrollWidth` with a bill open.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
