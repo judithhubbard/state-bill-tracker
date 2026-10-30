@@ -217,7 +217,7 @@ from that repo. **Nothing here may change it.**
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
   Until launch it writes `robots.txt` and `_headers` telling search engines not to list anything (`LAUNCHED=1`
-  turns that off). `.github/workflows/site.yml` downloads, builds and deploys, by hand only for now; it needs the
+  turns that off). `.github/workflows/site.yml` downloads, builds and deploys, once a day (10:23 UTC; GitHub often starts it hours late) and by hand; it needs the
   secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. The domain stays parked at Porkbun until launch.
   Until then the site is at https://statebilltracker.pages.dev/ (first put up 2026-10-29, built with
   `SITE_BASE=https://statebilltracker.pages.dev/` (each state's SITE_URL is SITE_BASE/<state>/); unlisted, and marked noindex). It's a classic Pages project

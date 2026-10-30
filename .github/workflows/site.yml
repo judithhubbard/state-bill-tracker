@@ -71,10 +71,18 @@ jobs:
       - name: Download California
         run: python3 states/ca/fetch.py
 
+      # A server that stops answering mustn't hold the whole run (a Texas download once hung for hours): after
+      # 60 minutes the site is built from the copy saved last time.
       - name: Download Texas
+        timeout-minutes: 60
+        continue-on-error: true
         run: python3 states/tx/fetch.py
 
+      # A server that stops answering mustn't hold the whole run (a Texas download once hung for hours): after
+      # 90 minutes the site is built from the copy saved last time.
       - name: Download Illinois
+        timeout-minutes: 90
+        continue-on-error: true
         run: python3 states/il/fetch.py
 
       # Saved here, not at the end of the job: a failed check later would skip the save, and the next run would
