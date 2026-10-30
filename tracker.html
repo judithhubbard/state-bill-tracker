@@ -2064,9 +2064,12 @@ function holdUp(b, v, oppose) {
   const runsRules = lead && (!rules?.chair || lastName(rules.chair) === lastName(lead.name))
     ? `The ${leadTitle} runs the Rules Committee, so it's up to ${lead.pronoun} whether this gets a vote.`
     : rules?.chair ? `The Rules Committee's chair, ${TITLE[house]} ${rules.chair}, decides whether it gets a vote.` : "";
+  // Illinois: every bill starts in a gatekeeper committee the leader controls, and goes back there when it misses a deadline.
+  const gate = STATE.gates?.[house];
+  if (gate && cname === gate) return lead ? { leader: true, note: `The ${leadTitle} controls the ${gate} Committee, so it's up to ${lead.pronoun} whether this goes to a committee for a hearing.` } : null;
   if (commKey(cname) === "rules") return lead ? { note: runsRules } : null;
   // Sent to Rules earlier in the session and back in committee now (as happens each January).
-  const toRules = v.actions.find(([, t]) => /^(REPORTED REFERRED|COMMITTED|REFERRED) TO RULES$/.test(t));
+  const toRules = !gate && v.actions.find(([, t]) => /^(REPORTED REFERRED|COMMITTED|REFERRED) TO RULES$/.test(t));
   if (toRules && lead) return { leader: true, chairBacks: true,
     note: `It got as far as the Rules Committee in ${toRules[0].slice(0, 4)} but didn't get a vote there. ${runsRules}` };
   if (oppose) return null;
@@ -2180,8 +2183,10 @@ function planFor(b, stance = "support") {
     what = `<p class="when">Signed into law${b.chapter ? `, Chapter ${b.chapter}` : ""}.</p>`;
     b.vers.forEach((v) => book.sponsor(v));
   } else if (b.stage === 6) {
-    what = `<p class="when">Vetoed. The sponsors can reintroduce it next session.</p>`;
-    b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
+    // A two-year session can still take a new bill after a first-year veto.
+    const again = live ? "file it again as a new bill this session" : "reintroduce it next session";
+    what = `<p class="when">Vetoed. The sponsors can ${again}.</p>`;
+    b.vers.forEach((v) => book.sponsor(v, A(again, "")));
   }
   const v = b.vetoNote;
   if (v && !v.own && b.stage <= 2 && live && !opp && lastName(v.governor) === lastName(DATA.governor)) govAlso = govAlso || "support it this time";
@@ -2189,7 +2194,7 @@ function planFor(b, stance = "support") {
   // Why nothing can be done now, in plain words.
   let reason = "";
   if (b.stage === 5) reason = `Signed into law${b.chapter ? ` as Chapter ${b.chapter}` : ""}. Changing it would take a new bill.`;
-  else if (b.stage === 6) reason = `Vetoed${b.veto ? ` (veto memo ${b.veto})` : ""}. To revive it, the sponsors would reintroduce it next session.`;
+  else if (b.stage === 6) reason = `Vetoed${b.veto ? ` (veto memo ${b.veto})` : ""}. To revive it, the sponsors would ${live ? "file it again as a new bill" : "reintroduce it next session"}.`;
   else if (!actionable && adjourned) {
     const other = b.passedIn === HOUSE.S ? HOUSE[LOW] : HOUSE.S;
     const where = b.stage === 2 ? `It passed the ${b.passedIn} but not the ${other}.`
@@ -2356,7 +2361,7 @@ function votesBlock(b) {
   const rows = b.votes.map((v) => {
     const what = v.kind === "F" ? `${HOUSE[v.house]} floor` : `${HOUSE[v.house]} ${esc(v.committee || "")} Committee`;
     const other = [...v.notYes.values()].filter((c) => c !== "N").length;
-    const theirs = people.map((L) => { const x = voteOf(v, L); return x ? `${L.title} ${esc(L.name.split(" ").pop())}: <b class="v${x === "Yes" ? "y" : x === "No" ? "n" : "o"}">${x}</b>` : ""; }).filter(Boolean).join(" · ");
+    const theirs = people.map((L) => { const x = voteOf(v, L); return x ? `${L.title} ${esc(shortName(L.name))}: <b class="v${x === "Yes" ? "y" : x === "No" ? "n" : "o"}">${x}</b>` : ""; }).filter(Boolean).join(" · ");
     return `<li><time>${fmtDate(v.date)}</time><span>${what}: <b>${v.yes}–${v.no}</b>${other ? ` <span class="muted">(${other} not voting)</span>` : ""}${theirs ? `<br><span class="theirs">${theirs}</span>` : ""}</span></li>`;
   }).join("");
   return `<div class="keydates votes"><h4>Votes</h4><ol>${rows}</ol></div>`;
@@ -2819,7 +2824,7 @@ function drawNet({ nodes, links }) {
   for (const x of nodes) { x.x = dx + k * (x.x - x0); x.y = dy + k * (x.y - y0); }
   const nb = new Map(nodes.map((x) => [x.id, new Set([x.id])]));
   for (const l of links) { nb.get(l.source.id).add(l.target.id); nb.get(l.target.id).add(l.source.id); }
-  const last = (x) => x.L.name.split(" ").pop();
+  const last = (x) => shortName(x.L.name);
   const shape = (x) => {
     const cls = `${x.party === "D" ? "dem" : x.party === "R" ? "rep" : ""}`, t = `<title>${esc(x.L.label)}: ${num(x.n)} ${netBills === "law" ? "laws" : "bills"}</title>`;
     if (x.L.house === "S" && netHouse === "B") { const s = r(x) * 1.7; return `<rect data-id="${x.id}" class="${cls}" x="${(x.x - s / 2).toFixed(1)}" y="${(x.y - s / 2).toFixed(1)}" width="${s.toFixed(1)}" height="${s.toFixed(1)}">${t}</rect>`; }
@@ -3212,7 +3217,7 @@ function renderPersonStats(L) {
   const party = /Democrat/.test(L.party || "") ? "D" : /Republican/.test(L.party || "") ? "R" : null;
   const peer = party && DATA.peers?.[`${L.house}:${party}`];
   const typical = peer ? `Typical ${party === "D" ? "Democrat" : "Republican"} in the ${HOUSE[L.house]}` : "";
-  const last = esc(L.name.split(" ").pop());
+  const last = esc(shortName(L.name));
   const laws = me.laws + me.lawsLocal;
 
   // Their bills this session: how far they got.
@@ -3342,7 +3347,7 @@ function pageRole(b) {
   const L = PRESET?.who && LEG_BY_ID[PRESET.who];
   if (!L) return "";
   const role = sponsoredBy(b, L, false) ? "sponsor" : sponsoredBy(b, L, true) ? "co-sponsor" : "";
-  return role ? `<span class="role-tag">${esc(L.name.split(" ").pop())}: ${role}</span>` : "";
+  return role ? `<span class="role-tag">${esc(shortName(L.name))}: ${role}</span>` : "";
 }
 
 // What a bill does, in the legislature's own words (New Jersey: the sponsor's statement, the latest
@@ -3516,7 +3521,7 @@ function billRow(b) {
       const chap = amendedBills(b) ? `<span class="tag chap">Chapter amendment${TIPI(CHAPTER_AMENDMENT)}</span>`
         : b.memo && changesAgreed(b) ? `<span class="tag chap">${changesMade(b) ? "Changed by a later bill" : "Changes to come"}${TIPI(CHANGES_AGREED)}</span>` : "";
       const narrowTag = { person: "For one person", org: "For one group", naming: "Road or place naming" }[b.narrow];
-      const tags = (narrowTag ? `<span class="tag narrow">${narrowTag}</span>` : "") + chap + noes.map((L) => `<span class="tag vno">${esc(L.name.split(" ").pop())} voted no</span>`).join("") + partyTag(b) + b.topics.map((t) => `<span class="tag${t === "env" ? " env" : ""}">${esc(TOPICS[t])}</span>`).join("") + historyTags(b);
+      const tags = (narrowTag ? `<span class="tag narrow">${narrowTag}</span>` : "") + chap + noes.map((L) => `<span class="tag vno">${esc(shortName(L.name))} voted no</span>`).join("") + partyTag(b) + b.topics.map((t) => `<span class="tag${t === "env" ? " env" : ""}">${esc(TOPICS[t])}</span>`).join("") + historyTags(b);
       const intro = DATA.current && b.intro ? `<span>Introduced ${b.intro}</span>` : "";
       const meet = isWatched(b) ? null : nextMeeting(b);
       return `<details class="bill" data-idx="${b.idx}">
@@ -4100,7 +4105,7 @@ function actionRecord(list) {
 
 // A short, plain email: one person, one or more bills.
 function draftFor(person, xs) {
-  const greet = person.gov ? "Dear Governor," : `Dear ${GREET[person.house]} ${person.name.split(" ").pop()},`;
+  const greet = person.gov ? "Dear Governor," : `Dear ${GREET[person.house]} ${shortName(person.name)},`;
   const lines = xs.map((x) => `- ${x.b.nums.join(" / ")}, ${x.b.title}: please ${x.ask}.`).join("\n");
   return `${greet}\n\nI'm writing about ${xs.length === 1 ? "this bill" : "these bills"}:\n\n${lines}\n\nThank you,\n[Your name]\n[Your address]`;
 }
@@ -4131,7 +4136,7 @@ function selectOptions() {
     voted: ["Any vote", DATA.current ? (() => {
       const people = votePeople(), out = [];
       if (people.length > 1) out.push(["any|No", "Either of them voted no"]);
-      for (const L of people) for (const how of ["No", "Yes", "miss"]) out.push([`${L.id}|${how}`, `${L.name.split(" ").pop()} ${VOTED[how]}`]);
+      for (const L of people) for (const how of ["No", "Yes", "miss"]) out.push([`${L.id}|${how}`, `${shortName(L.name)} ${VOTED[how]}`]);
       return out.map(([k, l]) => [k, l, votedTest(k)]);
     })() : []],
     changed: ["Any time", Object.entries(CHANGED).filter(([k]) => !/visit/i.test(k) || LAST_VISIT).map(([k, c]) => [k, c.label(), c.test])],
@@ -4651,7 +4656,7 @@ function commCounts(keys) {
       ${row("Bills that passed: went through two or more committees", (x) => `${x.passedMore}%`)}
       ${S.passedRules || A.passedRules ? row("Bills that passed: went through Rules", (x) => `${x.passedRules}%`) : ""}
     </tbody></table></div>
-    <p class="note">${span(DATA.session)} session${DATA.current ? " so far" : ""}. ${S.passedRules || A.passedRules ? "Committee counts leave out Rules. " : ""}Most bills never leave their first committee, so few are sent to a second; among bills that passed, needing more than one is common.</p>`;
+    <p class="note">${span(DATA.session)} session${DATA.current ? " so far" : ""}. ${S.passedRules || A.passedRules ? "Committee counts leave out Rules. " : ""}${Math.max(S.passedMore, A.passedMore) >= 20 ? "Most bills never leave their first committee, so few are sent to a second; among bills that passed, needing more than one is common." : "Nearly every bill goes to just one committee."}</p>`;
 }
 function renderHowComm() {
   const I = DATA.insights || {};
@@ -4698,9 +4703,11 @@ function renderHowComm() {
   });
   $("howComm").innerHTML = `<h2>Committees</h2>
     <ul class="impact">
-      <li><b>Every bill starts in a committee on its subject.</b> Each house has its own committees, with their own members and chair.</li>
-      <li><b>The chair decides which bills come up.</b> A bill that never gets on the agenda dies there, which is what happens to most bills.</li>
-      <li><b>Some bills need a second committee.</b> ${STATE.secondCommittee}</li>
+      ${(STATE.commIntro || [
+        ["Every bill starts in a committee on its subject.", "Each house has its own committees, with their own members and chair."],
+        ["The chair decides which bills come up.", "A bill that never gets on the agenda dies there, which is what happens to most bills."],
+        ["Some bills need a second committee.", STATE.secondCommittee],
+      ]).map(([head, text]) => `<li><b>${head}</b> ${text}</li>`).join("")}
     </ul>
     ${commCounts(keys)}
     <p class="muted">Each subject's ${HOUSE.S} and ${HOUSE[LOW]} committees, busiest first. Click the number of bills to see them.</p>
@@ -5020,6 +5027,8 @@ function hydrate(raw) {
   try { const s = localStorage.getItem(STORE + "statsec"); if (s && $(s) && !(s === "statNet" && $("statNetBtn").hidden) && !(s === "statWho" && $("statWhoBtn").hidden)) statSec = s; } catch (e) {}
   // "Repeat tries" needs bills linked across sessions.
   if (!linkedSessions()) { document.querySelector('[data-sec="statPersist"]').hidden = true; if (statSec === "statPersist") statSec = "statOdds"; }
+  // "What's changing" needs subjects picked by hand (TRENDS in the state's profile.py).
+  if (!DATA.insights?.trends?.subjects?.length) { document.querySelector('[data-sec="statTrend"]').hidden = true; if (statSec === "statTrend") statSec = "statOdds"; }
   showStatSec(statSec);
   const one = openFromHash();
   if (one) showView("bills");

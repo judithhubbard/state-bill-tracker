@@ -123,8 +123,7 @@ def texts():
     """"What it does": each bill's synopsis by the Legislative Reference Bureau, as data/il/texts_<session>.json."""
     from states.il import convert as C
     for s in C.sessions():
-        out = {p: {"statement": b["synopsis"], "label": "From the Legislative Reference Bureau's synopsis."}
-               for p, b in C.bills(s).items() if b["synopsis"]}
+        out = {p: {"statement": b["what"], "label": b["whatLabel"]} for p, b in C.bills(s).items() if b["what"]}
         json.dump(out, open(os.path.join(P.DATA, f"texts_{s}.json"), "w"), ensure_ascii=False)
         print(f"texts_{s}.json: {len(out)} synopses")
 

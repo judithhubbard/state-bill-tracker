@@ -133,7 +133,12 @@ from that repo. **Nothing here may change it.**
   "held"; amendments' own referrals aren't the bill's. Sponsor lists join the chief sponsors with hyphens
   (`split_sponsors()` splits them against that Assembly's members). Votes are tallies only (no roll calls in the
   repository). An amendatory veto is "passed both houses" until both houses accept it. "What it does" is the
-  synopsis. "Where you live" lists cities, villages and counties from the Census Bureau's 2024 district relationship
+  synopsis of the last amendment that rewrote the bill ("Replaces everything after the enacting clause"; more than half
+  the laws), else of the bill as filed, then each later adopted amendment's (`synopsis()` in convert.py; the file's
+  synopsis block also holds fiscal notes and veto messages, left out). About 30% of bills are shells ("Makes a technical
+  change"), which the House Executive Committee approves in bulk. Rules and Assignments are `STATE.gates`: no New York
+  "got as far as Rules" line, and a bill waiting there says the leader controls it; `STATE.commIntro` words the How
+  tab's Committees points. "Where you live" lists cities, villages and counties from the Census Bureau's 2024 district relationship
   files (`states/il/towns.py`, run once; no key needed; works for any state). Bill links go to the repository's
   status pages and texts.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
@@ -198,6 +203,8 @@ from that repo. **Nothing here may change it.**
   - A conference report passes only when both houses adopt it (TX HB3104 of 2023: the House adopted it, the Senate never
     did, and it showed as passed both houses). Same for any step one house can take alone.
   - A file's encoding: read UTF-8 first ("bedï¿½a" in TX analyses read as Windows text). Grep built texts for "ï¿½" and "\ufffd".
+  - Summaries of the bill as filed when an amendment rewrote it: IL laws summarized as shell bills ("Makes a technical
+    change"). Read every amendment's summary the files carry; the check counts laws summarized as placeholders.
   - Summaries that only repeat the title (TX "C.S.H.B. 2 amends current law relating to ...") say nothing: drop them, or
     use an earlier version's.
   - Look at every part of a bill panel at phone width (375px iframe): the similar-bills list once collapsed its number

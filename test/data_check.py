@@ -85,6 +85,23 @@ def check(state):
             say(state, "LOOK", f"{name}: {100 * cut // len(texts)}% of texts have a paragraph without end punctuation "
                                f"(cut mid-sentence, or real headings and lists)")
 
+    # Laws whose "What it does" describes a placeholder: the summary of the bill as filed, when an amendment rewrote it
+    # (Illinois's shell bills: "Makes a technical change"; California's spot bills).
+    for s, recs in loaded.items():
+        path = os.path.join(P.DATA, f"texts_{s}.json")
+        if not os.path.exists(path):
+            continue
+        T = json.load(open(path))
+        laws = [r["nums"][0] for r in recs if r["stage"] == 5]
+        found = [n for n in laws if n in T]
+        # Short ones only: real summaries often also mention "technical changes".
+        shell = [n for n in found if len(T[n].get("statement") or "") < 300 and re.search(
+            r"technical change|nonsubstantive change|intent of the Legislature to enact legislation", T[n].get("statement") or "", re.I)]
+        if found and len(shell) > 0.01 * len(found):
+            say(state, "FAIL", f"{s}: {len(shell)} of {len(found)} laws are summarized as placeholders, e.g. {shell[:3]}")
+        elif laws and len(found) < 0.5 * len(laws):
+            say(state, "LOOK", f"{s}: only {len(found)} of {len(laws)} laws have a summary in {os.path.basename(path)}")
+
     # Legislators: degrees in names, odd spacing, duplicate phones, missing parties or phones.
     for path in sorted(glob.glob(os.path.join(P.DATA, "contacts_*.json")))[-1:]:
         people = json.load(open(path))["people"]

@@ -82,6 +82,7 @@ const STATE = {
   heldTip: "Missed a deadline and went back to the House Rules Committee or the Senate Assignments Committee, where most such bills stay.",
   heldNote: "missed a deadline and went back to the Rules (House) or Assignments (Senate) Committee, where most such bills stay.",
   // Every bill starts in the Rules (House) or Assignments (Senate) Committee, which sends it to a committee or keeps it.
+  gates: { H: "Rules", S: "Assignments" },
   committeeNext: {
     "Rules": "the Rules Committee decides whether to send it to a committee for a hearing.",
     "Assignments": "the Assignments Committee decides whether to send it to a committee for a hearing.",
@@ -157,19 +158,41 @@ const STATE = {
   ],
   outOfTime: "This General Assembly is over. Bills that didn't become law have to be filed again in the next one.",
 
+  // Each Senate committee's House counterpart (the 104th General Assembly's names) and the subject it's shown under.
   commPairs: {
     "Executive": ["Executive", "Executive"],
     "Appropriations": ["Appropriations-General Services", "Budget and spending"],
+    "Appropriations- Health and Human Services": ["Appropriations-Health and Human Services", "Spending on health and human services"],
+    "Appropriations- Education": ["Appropriations-Elementary & Secondary Education", "Spending on schools"],
+    "Appropriations- Public Safety and Infrastructure": ["Appropriations-Public Safety and Infrastructure", "Spending on public safety and infrastructure"],
     "Criminal Law": ["Judiciary - Criminal", "Criminal law"],
     "Judiciary": ["Judiciary - Civil", "Courts and civil law"],
     "Revenue": ["Revenue & Finance", "Taxes"],
     "Environment and Conservation": ["Energy & Environment", "Environment and energy"],
-    "Education": ["Elementary & Secondary Education: School Curriculum & Policies", "Education"],
-    "Health and Human Services": ["Public Health", "Health"],
+    "Energy and Public Utilities": ["Public Utilities", "Utilities"],
+    "Education": ["Education Policy", "Schools"],
+    "Higher Education": ["Higher Education", "Colleges and universities"],
+    "Health and Human Services": ["Human Services", "Human services"],
+    "Behavioral and Mental Health": ["Mental Health & Addiction", "Mental health"],
+    "Child Welfare": ["Adoption & Child Welfare", "Child welfare"],
+    "State Government": ["State Government Administration", "State government"],
+    "Transportation": ["Transportation: Vehicles & Safety", "Transportation"],
     "Labor": ["Labor & Commerce", "Labor"],
     "Local Government": ["Counties & Townships", "Local government"],
+    "Agriculture": ["Agriculture & Conservation", "Agriculture"],
+    "Pensions": ["Personnel & Pensions", "Pensions"],
+    "Financial Institutions": ["Financial Institutions and Licensing", "Banks and financial institutions"],
+    "Veterans Affairs": ["Veterans' Affairs", "Veterans"],
+    "Human Rights": ["Immigration & Human Rights", "Human rights"],
   },
+
   commNotes: {},
   moneyCommittees: { S: "Appropriations", H: "Appropriations-General Services" },
+  // The How tab's Committees section opens with these instead of the usual three points.
+  commIntro: [
+    ["Every bill starts in the Rules or Assignments Committee.", "The House Rules Committee and the Senate Assignments Committee, which the leaders control, decide which bills go to a committee on their subject for a hearing. Most bills never leave."],
+    ["The chair decides which bills come up.", "A bill the committee never takes up stays there."],
+    ["Bills that miss a deadline go back.", "A bill that misses a committee or floor deadline returns to Rules or Assignments, where most such bills stay."],
+  ],
   secondCommittee: "Every bill starts in the House Rules Committee or the Senate Assignments Committee, which sends it to a committee for a hearing, or keeps it.",
 };

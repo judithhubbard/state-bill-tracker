@@ -119,6 +119,29 @@ def titled(short, lower_words):
     return "".join(out)
 
 
+REWRITE = "Replaces everything after the enacting clause."
+
+
+def synopsis(t):
+    """The Legislative Reference Bureau's synopses: the bill as filed, then each adopted amendment's (the block also holds
+    fiscal and other notes and the governor's veto messages, left out). More than half of the laws were rewritten by an
+    amendment ("Replaces everything after the enacting clause", often a shell bill's), so what the bill does now starts
+    from the last such amendment, and each later one follows as a paragraph of its own."""
+    block = re.search(r"<synopsis>(.*?)</synopsis>", t, re.S)
+    parts = re.findall(r"<synopsistitle>(.*?)</synopsistitle>(.*?)(?=<synopsistitle>|$)", block.group(1), re.S) if block else []
+    secs = [(text(title), text(re.sub(r"<[^>]+>", " ", body.group(1))))
+            for i, (title, rest) in enumerate(parts) if (body := re.search(r"<SynopsisText>(.*?)</SynopsisText>", rest, re.S))
+            and (i == 0 or re.fullmatch(r"(?:House|Senate) (?:Floor|Committee) Amendment No\. \d+", text(title)))]
+    if not secs:
+        return {"synopsis": "", "filed": "", "what": "", "whatLabel": ""}
+    base = max((i for i, (_, x) in enumerate(secs) if x.startswith(REWRITE)), default=0)
+    what = "\n".join([secs[base][1].replace(REWRITE, "", 1).strip()] + [f"Then changed by {h}: {x}" for h, x in secs[base + 1:]])
+    label = f"From the Legislative Reference Bureau's synopsis of {secs[base][0]}, which rewrote the bill." if base else \
+        "From the Legislative Reference Bureau's synopsis."
+    return {"synopsis": " ".join([secs[base][1].replace(REWRITE, "", 1).strip()] + [x for _, x in secs[base + 1:]]),
+            "filed": secs[0][1], "what": what, "whatLabel": label}
+
+
 def bills(session):
     out = {}
     for f in glob.glob(os.path.join(folder(session), "*.xml")):
@@ -135,7 +158,7 @@ def bills(session):
             "short": text(re.search(r"<shortdesc>(.*?)</shortdesc>", t, re.S).group(1)) if "<shortdesc>" in t else "",
             "sponsors": text(re.search(r"<sponsors>(.*?)</sponsors>", t, re.S).group(1)) if "<sponsors>" in t else "",
             "alt": text(re.search(r"<altsponsors>(.*?)</altsponsors>", t, re.S).group(1)) if "<altsponsors>" in t else "",
-            "synopsis": text(re.sub(r"<[^>]+>", " ", re.search(r"<SynopsisText>(.*?)</SynopsisText>", t, re.S).group(1))) if "<SynopsisText>" in t else "",
+            **synopsis(t),
             "refs": re.findall(r"<reference>([^<]+)</reference>", t),
             "actions": acts,
         }
