@@ -27,3 +27,6 @@ data/ca/*
 # Texas downloads (states/tx/fetch.py); its county table is made once by states/tx/towns.py.
 data/tx/*
 !data/tx/district_towns.json
+# Illinois downloads (states/il/fetch.py); its place table is made once by states/il/towns.py.
+data/il/*
+!data/il/district_towns.json

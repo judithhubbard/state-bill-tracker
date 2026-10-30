@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ca", "nj", "tx", "va") if os.path.isdir(os.path.join(HERE, "data", s))]
+STATES = [s for s in ("ca", "il", "nj", "tx", "va") if os.path.isdir(os.path.join(HERE, "data", s))]
 fails = []
 
 
@@ -48,7 +48,7 @@ def check(state):
             for _, t in r["vers"][0]["actions"]:
                 if re.search(r"\bpassed\b|rescind|reconsider", t, re.I) and not t.startswith("PASSED") and \
                         not re.search(r"passed (to (engrossment|third|3rd|second|2nd)|by indefinitely|over)|Passed by|"
-                                      r"to engrossment|Bill text as passed|Reported|Committee", t, re.I):
+                                      r"to engrossment|Bill text as passed|Reported|Committee|Passed Both Houses|Motion (Filed )?to Reconsider", t, re.I):
                     odd[re.sub(r"\(.*", "", re.sub(r"\d+", "#", t))[:70]] += 1
         if odd:
             say(state, "LOOK", f"{s}: history lines mentioning passage not read as one: " +

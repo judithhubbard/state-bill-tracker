@@ -24,7 +24,7 @@ from that repo. **Nothing here may change it.**
   2026-10-28 and dropped). New York moves only once, to statebilltracker.org/ny, with the forwarding pages
   below; avoid doing that at the start of a session (aim before January or after June).
 - **Decided 2026-10-29:** every state is built from its own legislature's official files and done thoroughly, like
-  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas (2026-10-30); more states before launch.
+  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30); more states before launch.
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
@@ -122,6 +122,20 @@ from that repo. **Nothing here may change it.**
   governor 10 days without Sundays or 20 after adjournment). Leaders: the Speaker, and for the Senate the Lieutenant
   Governor (not a senator). Totals for 2025 to check against: 1,047 signed, 140 filed without signature, 26 vetoed
   (reports/signedbygov.htm etc. on the FTP site).
+- **Illinois (started 2026-10-30):** `python3 states/il/fetch.py` downloads each bill's status XML from the General
+  Assembly's public file repository, https://ftp.ilga.gov/ (see the il-data-sources memory: www.ilga.gov turns automated
+  requests away and points to it), only files whose listing date changed; plus each General Assembly's member and
+  committee XML, from which `states/il/contacts.py` builds the contacts (no web pages). Both servers omit an
+  intermediate certificate: `ca_bundle()` adds Sectigo's to a copy of the system's (data/il/ca.pem); verification
+  stays on. Sessions are General Assemblies (`assembly_of()`: 2025 -> 104). `states/il/convert.py` reads the plain-English
+  actions: every bill starts in the House Rules or Senate Assignments Committee (the gatekeepers: `committeeNext` and
+  `chairAsks` word their asks), "Assigned to X Committee" is the real referral, "Rule 19(a) / Re-referred to Rules" is
+  "held"; amendments' own referrals aren't the bill's. Sponsor lists join the chief sponsors with hyphens
+  (`split_sponsors()` splits them against that Assembly's members). Votes are tallies only (no roll calls in the
+  repository). An amendatory veto is "passed both houses" until both houses accept it. "What it does" is the
+  synopsis. "Where you live" lists cities, villages and counties from the Census Bureau's 2024 district relationship
+  files (`states/il/towns.py`, run once; no key needed; works for any state). Bill links go to the repository's
+  status pages and texts.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house

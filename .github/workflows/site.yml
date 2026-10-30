@@ -55,6 +55,13 @@ jobs:
           key: tx-data-v1-${{ github.run_id }}
           restore-keys: tx-data-v1-
 
+      - name: Restore Illinois downloads
+        uses: actions/cache@v4
+        with:
+          path: data/il
+          key: il-data-v1-${{ github.run_id }}
+          restore-keys: il-data-v1-
+
       - name: Download New Jersey
         run: python3 states/nj/fetch.py
 
@@ -66,6 +73,9 @@ jobs:
 
       - name: Download Texas
         run: python3 states/tx/fetch.py
+
+      - name: Download Illinois
+        run: python3 states/il/fetch.py
 
       # New York from this shared code (statebilltracker.pages.dev/ny/, not linked; albanybilltracker.org runs
       # from its own repo until New York moves here). The data albanybilltracker.org's repo commits (past sessions,

@@ -48,6 +48,9 @@ contacts("ca", ca, 110)
 if not os.path.exists(os.path.join(HERE, "data", "ca", f"texts_{ca}.json")):
     problems.append(f"ca: no bill texts for {ca}")
 
+# Illinois: two-year General Assemblies starting in odd years.
+contacts("il", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 170)
+
 # Texas: regular sessions in odd years.
 contacts("tx", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 170)
 
