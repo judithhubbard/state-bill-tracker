@@ -28,7 +28,7 @@ jobs:
       # Finished sessions' files never change, so keep them between runs; the current session's are
       # downloaded every run, and contacts once a day.
       - name: Restore downloads
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: |
             data/nj
@@ -40,7 +40,7 @@ jobs:
 
       # California's in a cache of its own, so adding it didn't empty the one above.
       - name: Restore California downloads
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: data/ca
           key: ca-data-v1-${{ github.run_id }}
@@ -49,14 +49,14 @@ jobs:
       # Texas's bill histories: one file per bill, so the first download takes a couple of hours; then only the
       # files that changed.
       - name: Restore Texas downloads
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: data/tx
           key: tx-data-v1-${{ github.run_id }}
           restore-keys: tx-data-v1-
 
       - name: Restore Illinois downloads
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: data/il
           key: il-data-v1-${{ github.run_id }}
@@ -76,6 +76,38 @@ jobs:
 
       - name: Download Illinois
         run: python3 states/il/fetch.py
+
+      # Saved here, not at the end of the job: a failed check later would skip the save, and the next run would
+      # download everything again (Illinois's 30,000 files, Texas's histories).
+      - name: Save New Jersey and Virginia downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/nj
+            data/va
+          key: nj-data-v2-${{ github.run_id }}
+
+      - name: Save California downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/ca
+          key: ca-data-v1-${{ github.run_id }}
+
+      - name: Save Texas downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/tx
+          key: tx-data-v1-${{ github.run_id }}
+
+      - name: Save Illinois downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/il
+          key: il-data-v1-${{ github.run_id }}
 
       # New York from this shared code (statebilltracker.pages.dev/ny/, not linked; albanybilltracker.org runs
       # from its own repo until New York moves here). The data albanybilltracker.org's repo commits (past sessions,

@@ -81,6 +81,8 @@ def main(session):
         cache = json.load(open(path))
     except (OSError, ValueError):
         cache = {}
+    # Analyses read as Windows text before they were read as UTF-8 ("bedï¿½a"): read them again.
+    cache = {u: t for u, t in cache.items() if not re.search("ï¿½|�|â€|Ã©", t or "")}
     urls = analysis_urls(session)
     # Each bill's latest analysis; an earlier one when the latest says nothing (its statement only repeats the caption).
     todo = sorted({us[0] for us in urls.values()} - set(cache))
