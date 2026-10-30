@@ -109,8 +109,12 @@ from that repo. **Nothing here may change it.**
   Senate passed, E015 sent to the governor, E020/E025/E030 signed/filed without signature/signed with line-item vetoes,
   E035 vetoed; H/S 0xx-1xx referrals, 25x/28x reports, H245/S275 "left pending"); a reported House bill is shown in the
   Calendars Committee until it's placed on a calendar. H825/S825 "Transmitted to the Governor" is NOT a sending (it's on
-  bills still in committee). One record per bill; companions show as similar bills. Votes are committee totals only
-  (member floor votes are in the houses' journals: a later step). `states/tx/contacts.py`: the House's member and
+  bills still in committee). One record per bill; companions show as similar bills. Committee votes are totals from the histories;
+  floor votes by member come from the journals (`states/tx/journals.py`): the House Journal's record votes by the "RV#"
+  numbers in the histories, and the Senate Journal by each bill's heading (it has no record numbers), including the
+  Local and Uncontested Calendar's list format and a date's second journal ("...SJ04-12-F1.HTM"); "(Same as previous
+  roll call)" means the vote just before, motions included. About 98% of Senate passages are found; every list's
+  count matches its tally. `states/tx/contacts.py`: the House's member and
   committee JSON, each senator's page, parties from the Legislative Reference Library; `dataName` is the last name, or
   "Bell, Keith" where two members share it. Counties with each district's share (`states/tx/towns.py`, run once, from the
   Texas Legislative Council's r4.pdf district reports). "What it does": the current session's bill analyses
