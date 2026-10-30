@@ -1975,7 +1975,8 @@ function contactBook(b, canMove = true, oppose = false) {
       const items = this.entries().map((p) => {
         const people = DATA.contacts?.people || {};
         const info = people[p.name] || Object.entries(people).find(([n]) => who(n, p.house) === who(p.name, p.house))?.[1] || Object.entries(people).find(([n]) => lastName(n) === lastName(p.name))?.[1] || {};
-        const title = TITLE[p.house];
+        // A leader who isn't a member (Texas's Lieutenant Governor) has a title of their own.
+        const title = info.title || TITLE[p.house];
         const isSponsor = p.roles.some((r) => r.startsWith("sponsor"));
         const signed = !isSponsor && cos(p.house).includes(who(p.name, p.house));
         const ours = p.roles.some((r) => r.startsWith("your "));
@@ -2088,6 +2089,10 @@ function holdUp(b, v, oppose) {
   return null;
 }
 
+// What to ask a committee's chair (support, oppose): a state can word it for committees that schedule floor votes
+// (Texas's House Calendars Committee).
+const agendaAsk = (committee) => STATE.chairAsks?.[committee] || ["put it on the committee agenda", "keep it off the committee agenda"];
+
 // What happens next for a bill, who decides it, and what to ask each person. Asks follow
 // the reader's side: supporters by default, opponents for bills marked Oppose on the watchlist.
 function planFor(b, stance = "support") {
@@ -2132,7 +2137,7 @@ function planFor(b, stance = "support") {
   };
   if (b.stage === 0) {
     what = `<p class="when">Next: a committee vote.</p>${stalled ? `<p>${stalled}</p>` : ""}`;
-    inComm.forEach((v) => book.chair(v.p[0], v.committee, L(A("put it on the committee agenda", "keep it off the committee agenda")), live));
+    inComm.forEach((v) => book.chair(v.p[0], v.committee, L(A(...agendaAsk(v.committee))), live));
     inComm.forEach(stuck);
     if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
     book.reps(BOTH, L(A("", "oppose it")));
@@ -2141,7 +2146,7 @@ function planFor(b, stance = "support") {
     what = `<p class="when">Next: a vote of the full ${houses.map((h) => HOUSE[h]).join(" and ") || "house"}.</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     houses.forEach((h) => floorLeader(h));
     // Its version in the other house still has to get out of committee there.
-    if (live) inComm.filter((v) => !houses.includes(v.p[0])).forEach((v) => book.chair(v.p[0], v.committee, A("put it on the committee agenda", "keep it off the committee agenda"), true));
+    if (live) inComm.filter((v) => !houses.includes(v.p[0])).forEach((v) => book.chair(v.p[0], v.committee, A(...agendaAsk(v.committee)), true));
     if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
     book.reps(houses.length ? houses : BOTH, L(A("vote yes", "vote no")));
   } else if (b.stage === 2) {
@@ -2152,7 +2157,7 @@ function planFor(b, stance = "support") {
     // Back in the first house to agree to the second house's amendments (New Jersey's "2RSC").
     const agree = twin && /to agree to the/.test(twin.statusDesc || "");
     what = `<p class="when">Next: ${agree ? `the ${HOUSE[other]} votes on the ${b.passedIn}'s changes.` : `the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
-    if (twin && twin.committee) book.chair(other, twin.committee, L(A("put it on the committee agenda", "keep it off the committee agenda")), live);
+    if (twin && twin.committee) book.chair(other, twin.committee, L(A(...agendaAsk(twin.committee))), live);
     if (twin && twin.committee) stuck(twin);
     else floorLeader(other);
     book.reps([other], L(A("vote yes", "vote no")));

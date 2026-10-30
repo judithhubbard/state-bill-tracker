@@ -46,6 +46,15 @@ jobs:
           key: ca-data-v1-${{ github.run_id }}
           restore-keys: ca-data-v1-
 
+      # Texas's bill histories: one file per bill, so the first download takes a couple of hours; then only the
+      # files that changed.
+      - name: Restore Texas downloads
+        uses: actions/cache@v4
+        with:
+          path: data/tx
+          key: tx-data-v1-${{ github.run_id }}
+          restore-keys: tx-data-v1-
+
       - name: Download New Jersey
         run: python3 states/nj/fetch.py
 
@@ -54,6 +63,9 @@ jobs:
 
       - name: Download California
         run: python3 states/ca/fetch.py
+
+      - name: Download Texas
+        run: python3 states/tx/fetch.py
 
       # New York from this shared code (statebilltracker.pages.dev/ny/, not linked; albanybilltracker.org runs
       # from its own repo until New York moves here). The data albanybilltracker.org's repo commits (past sessions,

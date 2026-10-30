@@ -292,6 +292,13 @@ def contacts_for(session, recs, delegation_names):
         if any(k[0] == house and v["key"] == name_key(name) for k, v in seats.items()):
             person(name, house)
             leaders[house] = {"name": name, "role": role, "pronoun": pronoun}
+        elif (raw.get("leaders", {}).get(house) or {}).get("phone"):
+            # A leader who isn't a member (Texas's Lieutenant Governor, who presides over the Senate): the contacts
+            # file gives their own details and title.
+            v = raw["leaders"][house]
+            people[name] = {"url": v.get("url"), "email": v.get("email"), "phone": v["phone"], "phones": v.get("phones"),
+                            "form": v.get("form"), "title": v.get("title")}
+            leaders[house] = {"name": name, "role": role, "pronoun": pronoun}
     return {"fetched": raw.get("fetched"), "committees": committees, "people": people, "reps": reps, "leaders": leaders}
 
 

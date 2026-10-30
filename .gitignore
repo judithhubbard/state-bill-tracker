@@ -24,3 +24,6 @@ data/va/*
 # California downloads (states/ca/fetch.py); its county table is made once by states/ca/towns.py.
 data/ca/*
 !data/ca/district_towns.json
+# Texas downloads (states/tx/fetch.py); its county table is made once by states/tx/towns.py.
+data/tx/*
+!data/tx/district_towns.json

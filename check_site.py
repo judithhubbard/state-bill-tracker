@@ -48,6 +48,9 @@ contacts("ca", ca, 110)
 if not os.path.exists(os.path.join(HERE, "data", "ca", f"texts_{ca}.json")):
     problems.append(f"ca: no bill texts for {ca}")
 
+# Texas: regular sessions in odd years.
+contacts("tx", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 170)
+
 # Virginia: a session a year.
 contacts("va", TODAY.year, 130)
 for year in range(TODAY.year - 2, TODAY.year + 1):

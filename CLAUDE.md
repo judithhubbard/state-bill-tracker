@@ -24,7 +24,7 @@ from that repo. **Nothing here may change it.**
   2026-10-28 and dropped). New York moves only once, to statebilltracker.org/ny, with the forwarding pages
   below; avoid doing that at the start of a session (aim before January or after June).
 - **Decided 2026-10-29:** every state is built from its own legislature's official files and done thoroughly, like
-  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29); more states before launch.
+  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas (2026-10-30); more states before launch.
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
@@ -101,6 +101,23 @@ from that repo. **Nothing here may change it.**
   counties PDF and the Assembly's list) and, on the public site, looks up an address with the Census geocoder
   (`STATE.addressLookup`). Earlier sessions are linked by subject and digest (`earlier()`, like Virginia's), never
   spot bills. A new governor takes office January 4, 2027: add them to `GOVERNORS`.
+- **Texas (started 2026-10-30):** `python3 states/tx/fetch.py` downloads each bill's history XML from the Legislature's FTP
+  site (see the tx-data-sources memory; its Acceptable Use file asks data users to use it, not the TLO website), only
+  files whose listing date changed, six folders at a time (about a second a file: the first full copy of three sessions
+  takes hours). `complete()` re-downloads files cut off mid-transfer. Sessions are the Legislature's codes (`code_of()`:
+  2025 -> "89R"); special sessions aren't shown. `states/tx/convert.py` reads the action codes (H555 House passed, S576
+  Senate passed, E015 sent to the governor, E020/E025/E030 signed/filed without signature/signed with line-item vetoes,
+  E035 vetoed; H/S 0xx-1xx referrals, 25x/28x reports, H245/S275 "left pending"); a reported House bill is shown in the
+  Calendars Committee until it's placed on a calendar. H825/S825 "Transmitted to the Governor" is NOT a sending (it's on
+  bills still in committee). One record per bill; companions show as similar bills. Votes are committee totals only
+  (member floor votes are in the houses' journals: a later step). `states/tx/contacts.py`: the House's member and
+  committee JSON, each senator's page, parties from the Legislative Reference Library; `dataName` is the last name, or
+  "Bell, Keith" where two members share it. Counties with each district's share (`states/tx/towns.py`, run once, from the
+  Texas Legislative Council's r4.pdf district reports). "What it does": the current session's bill analyses
+  (`states/tx/texts.py`). Session dates are computed (`opens()`, `sessionEnds()` = day 140, House deadline day 122,
+  governor 10 days without Sundays or 20 after adjournment). Leaders: the Speaker, and for the Senate the Lieutenant
+  Governor (not a senator). Totals for 2025 to check against: 1,047 signed, 140 filed without signature, 26 vetoed
+  (reports/signedbygov.htm etc. on the FTP site).
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
