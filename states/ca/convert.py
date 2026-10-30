@@ -380,9 +380,13 @@ def load_session(session):
                 vh, kind, cname = comms[loc][0], "C", comms[loc][1]
             else:
                 continue
-            roll = detail.get((bid, loc, r[2], r[3], r[4]), [])
-            votes.append([vh, kind, cname, iso(r[2]), int(r[5] or 0), int(r[6] or 0),
-                          [[member(vh, n), VOTE_CODE.get(v, "A")] for n, v in roll if v != "AYE"]])
+            roll = list(dict.fromkeys(detail.get((bid, loc, r[2], r[3], r[4]), [])))
+            names = [[member(vh, n), VOTE_CODE.get(v, "A")] for n, v in roll if v != "AYE"]
+            # Two roll calls with the same time, sequence and motion share one list (SB99 of 2023): when it can't be
+            # this one's, leave the names off rather than show the wrong ones.
+            if sum(1 for _, c in names if c == "N") != int(r[6] or 0):
+                names = []
+            votes.append([vh, kind, cname, iso(r[2]), int(r[5] or 0), int(r[6] or 0), names])
 
         action_dates = [d for d, _, _, _, _ in steps if d]
         for h, n in leads + co:

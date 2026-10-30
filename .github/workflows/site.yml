@@ -97,3 +97,8 @@ jobs:
       # Last, so the site is already published: a problem fails the run, and GitHub emails the owner.
       - name: Check the data is sound
         run: python3 check_site.py
+
+      # Every state against the "Data traps found so far" list in CLAUDE.md.
+      - name: Check every state for the known data traps
+        if: always()
+        run: python3 test/data_check.py

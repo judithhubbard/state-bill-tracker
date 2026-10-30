@@ -143,7 +143,10 @@ from that repo. **Nothing here may change it.**
   `stageText`/`stageTips`/`pastStageTips`/`outOfTime`, `commPairs`/`commNotes`/`moneyCommittees`/`secondCommittee`,
   `calendar`/`calendarDays`; and write how.html and weighin.html. Then run the review: record every tab, Statistics
   section, How section, bill panels at each stage and a watchlist, and grep the text for other states' names and rules.
-- **Data traps found so far (check each new state's files for these before trusting them):**
+- **Data traps found so far.** `python3 test/data_check.py` checks every state for all of these that a program can
+  check (FAIL), and prints what a person should read over (LOOK: totals to compare with the official ones, odd wording);
+  the daily run runs it too. Run it after any change to a state's data code, and when a new trap goes on this list,
+  add its check there and run it against every state, not just the one where it turned up:
   - Status flags that disagree with the history (VA's Approved/Vetoed: both set, or neither). Decide stages from the
     history, and count bills by stage against the Legislature's own totals (e.g. vetoes per year).
   - "Passed" flags that mean one house (a VA bill that died in conference is still "Passed").
