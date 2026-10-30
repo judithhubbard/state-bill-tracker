@@ -24,6 +24,7 @@ LABEL = {"Introduced": "as introduced", "Amended Assembly": "as amended in the A
 def plain(h):
     # Processing instructions (<?xm-replace_text ... ?>) hold markup of their own; drop them whole.
     h = re.sub(r"(?s)<\?.*?\?>", "", h)
+    h = re.sub(r"\s+", " ", h)  # line breaks in the file aren't paragraph breaks
     h = re.sub(r"(?i)</(?:xhtml:)?p>|<br\s*/?>", "\n", h)
     t = html.unescape(re.sub(r"<[^>]+>", "", h))
     return "\n".join(p for p in (re.sub(r"\s+", " ", x).strip() for x in t.split("\n")) if p)
@@ -80,7 +81,18 @@ def write(session):
     for vid, (p, _, action) in latest(session).items():
         c = cache.get(vid)
         if c and c["digest"]:
-            out[p] = {"statement": c["digest"], "label": f"From the Legislative Counsel's Digest of the bill {LABEL.get(action, 'as amended')}."}
+            # What the bill would do first: the digest opens with existing law, so its first "This bill would"
+            # paragraph moves to the top.
+            # (Texts read before line breaks were handled have paragraphs split mid-sentence: join them back.)
+            paras = []
+            for x in c["digest"].split("\n"):
+                if paras and not re.search(r"[.:;?!)\"”]$", paras[-1]):
+                    paras[-1] += " " + x
+                else:
+                    paras.append(x)
+            i = next((k for k, x in enumerate(paras) if re.match(r"(This|The) bill would", x)), 0)
+            text = "\n".join([paras[i]] + paras[:i] + paras[i + 1:])
+            out[p] = {"statement": text, "label": f"From the Legislative Counsel's Digest of the bill {LABEL.get(action, 'as amended')}."}
     json.dump(out, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     print(f"texts_{session}.json: {len(out)} digests")
 

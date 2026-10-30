@@ -60,7 +60,7 @@ def decode(text, kind, house, code, comms):
     """One history line in the site's shared wording (only the steps its rules use), else as written."""
     t = re.sub(r"\s+", " ", text).strip()
     name = comms.get(code, ("", ""))[1].upper() if code else ""
-    if re.match(r"(Read third time[.,] (?:and )?(?:amended\. )?[Pp]assed|Read third time, urgency clause adopted\. Passed)", t):
+    if re.match(r"Read third time[.,] (?:and )?(?:amended\. )?(?:[Uu]rgency clause adopted\. )?[Pp]assed", t):
         return f"PASSED {HOUSE[house].upper()}"
     # "From committee: Do pass and re-refer to Com. on APPR." is a committee vote; "From committee chair, with
     # author's amendments: Amend, and re-refer" is the sponsor's amendment going back to the same committee.
@@ -299,6 +299,11 @@ def load_session(session):
             house = LETTER.get(r[9] or "", "")
             raw = re.sub(r"\s+", " ", r[3] or "").strip()
             t = decode(raw, r[10] or "", house or origin, r[11], comms)
+            # A passage the house undid ("Action rescinded whereby the bill was read third time, passed, ...").
+            if re.match(r"Action rescinded whereby (?:the )?bill was read (?:a )?third time", raw):
+                k = next((k for k in range(len(steps) - 1, -1, -1) if steps[k][2].startswith("PASSED")), None)
+                if k is not None:
+                    steps[k] = steps[k][:2] + (steps[k][3],) + steps[k][3:]
             steps.append((iso(r[2]), house, t if t != raw else spell(raw, house or origin), raw, r[10] or ""))
         status = b[17] or ""
         stage = stage_of(steps, status)
@@ -402,12 +407,13 @@ def load_session(session):
             "first": min(action_dates, default=f"{session}-01-01"),
             "last": max(action_dates, default=f"{session}-01-01"),
             "cosp": vers["cosp"],
-            # Key dates: on the floor, passed the Senate, passed the Assembly, died, sent to the governor, signed, vetoed.
+            # Key dates: on the floor, passed the Senate, passed the Assembly, (New York's return to committee in the new
+            # year: none here), sent to the governor, signed, vetoed.
             "keyDates": [
                 dates(lambda h, t, x: h == origin and t == "REPORTED", "first"),
                 dates(lambda h, t, x: t == "PASSED SENATE", "all"),
                 dates(lambda h, t, x: t == "PASSED ASSEMBLY", "all"),
-                dates(lambda h, t, x: bool(re.match(r"Died|.*pursuant to Joint Rule", x))),
+                "",
                 dates(lambda h, t, x: t == "DELIVERED TO GOVERNOR"),
                 dates(lambda h, t, x: t.startswith("SIGNED")),
                 dates(lambda h, t, x: t == "VETOED"),

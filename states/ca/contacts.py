@@ -141,7 +141,9 @@ def assembly(session):
         phones = []
         for sec, body in re.findall(r"<h2[^>]*>(Capitol Offices|District Offices)</h2>(.*?)</section>", page, re.S):
             for town, n in re.findall(r'card-header">([^<]+)</h3>.*?card-phone">\s*([^<]+?)\s*</p>', body, re.S):
-                phones.append(["Capitol" if sec.startswith("Capitol") else html.unescape(town).strip(), phone_of(n) or n])
+                ph = ["Capitol" if sec.startswith("Capitol") else html.unescape(town).strip(), phone_of(n) or n]
+                if ph not in phones:
+                    phones.append(ph)
         try:
             roles[d] = get(f"{API}/{d}/committees")
         except RuntimeError:
