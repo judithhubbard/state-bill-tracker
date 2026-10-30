@@ -123,8 +123,9 @@ def stage_of(p, acts):
     # Passed both houses: enrolled, the first house agreed to the second's changes, or the second passed it unchanged
     # ("Senate passage reported" on a House bill), or both adopted a conference report.
     origin = p[0]
-    if codes & {("H", 840), ("S", 840), ("H", 701), ("S", 706), ("H", 750), ("S", 761)} or \
-            (origin, 805) in codes:
+    # A conference report passes only when both houses adopt it (House 750 + Senate's 751/761, or the reverse).
+    conference = (("H", 750) in codes and codes & {("H", 751), ("S", 761)}) or (("S", 761) in codes and codes & {("S", 762), ("H", 750)})
+    if codes & {("H", 840), ("S", 840), ("H", 701), ("S", 706)} or conference or (origin, 805) in codes:
         return 3
     if any(decode(h, n, d).startswith("PASSED") for _, h, n, d, _ in acts) or (origin, 806) in codes:
         return 2

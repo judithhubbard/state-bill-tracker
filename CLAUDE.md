@@ -178,6 +178,13 @@ from that repo. **Nothing here may change it.**
     ("no reimbursement is required by this act") make unrelated bills look alike; keep them out of matching.
   - The other state's settings in shared slots: each `keyDates` entry means the same thing in every state (the 4th
     is New York's return to committee in a new year; leave it "" elsewhere).
+  - A conference report passes only when both houses adopt it (TX HB3104 of 2023: the House adopted it, the Senate never
+    did, and it showed as passed both houses). Same for any step one house can take alone.
+  - A file's encoding: read UTF-8 first ("bedï¿½a" in TX analyses read as Windows text). Grep built texts for "ï¿½" and "\ufffd".
+  - Summaries that only repeat the title (TX "C.S.H.B. 2 amends current law relating to ...") say nothing: drop them, or
+    use an earlier version's.
+  - Look at every part of a bill panel at phone width (375px iframe): the similar-bills list once collapsed its number
+    column in every state.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the

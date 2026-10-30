@@ -22,7 +22,7 @@ LABEL = {"H": "the House committee's", "S": "the Senate committee's", "E": "the 
 
 
 def analysis_urls(session):
-    """Bill -> the address of its latest analysis (the last listed version)."""
+    """Bill -> the addresses of its analyses, latest first."""
     out = {}
     for f in os.listdir(folder(session)):
         p = num(f)
@@ -36,7 +36,7 @@ def analysis_urls(session):
         urls = [v.findtext("FTPHTMLURL") for v in a.iter("version")] if a is not None else []
         urls = [u for u in urls if u]
         if urls:
-            out[p] = urls[-1]
+            out[p] = urls[::-1]  # latest first
     return out
 
 
@@ -44,11 +44,19 @@ def statement(page):
     """The analysis's summary paragraph(s), as plain text."""
     t = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", re.sub(r"(?is)<(script|style).*?</\1>", "", page))))
     m = re.search(r"(?:BACKGROUND AND PURPOSE|STATEMENT OF INTENT)\s*(.+?)\s*(?:\(Original Author's/Sponsor's Statement of Intent\)|CRIMINAL JUSTICE IMPACT|RULEMAKING AUTHORITY|ANALYSIS\b)", t)
-    if not m:
+    return clean(m.group(1).strip()) if m else ""
+
+
+def clean(text):
+    """A statement with what the bill does first, or "" if it says nothing. What the bill does: the statement usually
+    opens with background, then "H.B. 6 seeks to ..."."""
+    text = text.replace("ï¿½", "—")  # a dash read with the wrong encoding before
+    # A statement that only repeats the caption ("C.S.H.B. 2 amends current law relating to ...") says nothing.
+    if re.fullmatch(r"(?:C\.S\.)?[HS]\.B\. \d+ amends current law relating to [^.]*\.?", text):
         return ""
-    text = m.group(1).strip()
-    # What the bill does first: the statement usually opens with background, then "H.B. 6 seeks to ...".
-    aim = re.search(r"(?:C\.S\.)?[HS]\.B\. \d+ (?:seeks|would|is intended|aims|attempts|proposes)", text)
+    aim = re.search(r"(?:C\.S\.)?[HS]\.B\. \d+(?:, [^,]{1,80},)? (?:seeks|would|is intended|aims|attempts|proposes)", text) or \
+        re.search(r"\bFirst, (?:C\.S\.)?[HS]\.B\. \d+", text) or \
+        re.search(r"(?:^|(?<=\. ))[^.]*?(?:C\.S\.)?[HS]\.B\. \d+ [a-z]", text)
     if aim and aim.start() > 0:
         text = text[aim.start():] + "\n" + text[:aim.start()].strip()
     return text
@@ -58,7 +66,11 @@ def get(url):
     for attempt in range(3):
         r = subprocess.run(["curl", "-sS", "--max-time", "120", url], capture_output=True)
         if r.returncode == 0:
-            return r.stdout.decode("cp1252", "replace")
+            try:
+                text = r.stdout.decode("utf-8")
+            except UnicodeDecodeError:
+                text = r.stdout.decode("cp1252", "replace")
+            return text.replace("\ufffd", "—")  # the files' own unknown characters are almost always dashes
         time.sleep(3 * (attempt + 1))
     return None
 
@@ -70,7 +82,9 @@ def main(session):
     except (OSError, ValueError):
         cache = {}
     urls = analysis_urls(session)
-    todo = sorted(set(urls.values()) - set(cache))
+    # Each bill's latest analysis; an earlier one when the latest says nothing (its statement only repeats the caption).
+    todo = sorted({us[0] for us in urls.values()} - set(cache))
+    todo += sorted({u for us in urls.values() if not cache.get(us[0], "x") for u in us[1:2]} - set(cache) - set(todo))
     with ThreadPoolExecutor(6) as pool:
         for k, (url, page) in enumerate(zip(todo, pool.map(get, todo))):
             if page:
@@ -79,8 +93,9 @@ def main(session):
                 json.dump(cache, open(path, "w"), ensure_ascii=False)
     json.dump(cache, open(path, "w"), ensure_ascii=False)
     out = {}
-    for p, url in urls.items():
-        text = cache.get(url)
+    for p, us in urls.items():
+        url = next((u for u in us if cache.get(u)), None)
+        text = cache.get(url) if url else None
         if text:
             v = re.search(r"([HSEF])\.htm$", url, re.I)
             out[p] = {"statement": text, "label": f"From {LABEL.get(v.group(1).upper() if v else '', 'the')} bill analysis."}

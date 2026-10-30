@@ -160,6 +160,10 @@ const STATE = {
     "budget and spending": "Bills that cost the state money often go here; the state budget itself is written here and in the Senate Finance Committee.",
   },
   // The House Calendars Committee decides which bills reach the floor.
+  committeeNext: {
+    "Calendars": "the Calendars Committee decides whether it gets a House floor vote.",
+    "Local & Consent Calendars": "the Local and Consent Calendars Committee decides whether it gets a House floor vote.",
+  },
   chairAsks: {
     "Calendars": ["schedule it for a floor vote", "keep it off the floor calendar"],
     "Local & Consent Calendars": ["schedule it for a floor vote", "keep it off the floor calendar"],

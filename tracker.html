@@ -228,12 +228,12 @@ table.oc th { vertical-align: bottom; }
 .lineage li.this { font-weight: 700; }
 .lineage li.this::before { border-color: var(--ink); }
 .lineage .yr { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
-.lineage .bn { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.lineage .bn { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
 .lineage .oc5 { color: var(--signed); font-weight: 600; }
 .lineage.similar li { grid-template-columns: minmax(0, 130px) minmax(0, 1fr) minmax(0, 150px); }
 .lineage.similar .sim-t { min-width: 0; }
 .lineage .twin { display: inline-block; font: 600 11px var(--body); background: var(--gold-soft); border-radius: 3px; padding: 0 5px; }
-@media (max-width: 600px) { .lineage.similar li { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+@media (max-width: 600px) { .lineage.similar li { grid-template-columns: minmax(0, 1fr); gap: 2px; } .lineage.similar li .oc { grid-column: auto; } }
 .lineage .oc6 { color: var(--veto); font-weight: 600; }
 .lineage .oc3, .lineage .oc4 { color: var(--gold); font-weight: 600; }
 
@@ -2136,7 +2136,9 @@ function planFor(b, stance = "support") {
     if (lb && live) notes.push(`The ${leaderTitle(lb)}, ${lb.name}, is a sponsor but hasn't brought it to a floor vote.`);
   };
   if (b.stage === 0) {
-    what = `<p class="when">Next: a committee vote.</p>${stalled ? `<p>${stalled}</p>` : ""}`;
+    // A state can word the next step for committees that schedule floor votes (Texas's House Calendars Committee).
+    const nextText = inComm.map((v) => STATE.committeeNext?.[v.committee]).find(Boolean) || "a committee vote.";
+    what = `<p class="when">Next: ${nextText}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     inComm.forEach((v) => book.chair(v.p[0], v.committee, L(A(...agendaAsk(v.committee))), live));
     inComm.forEach(stuck);
     if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
