@@ -51,6 +51,9 @@ if not os.path.exists(os.path.join(HERE, "data", "ca", f"texts_{ca}.json")):
 # Illinois: two-year General Assemblies starting in odd years.
 contacts("il", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 170)
 
+# Washington: two-year bienniums starting in odd years.
+contacts("wa", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 140)
+
 # Texas: regular sessions in odd years.
 contacts("tx", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 170)
 

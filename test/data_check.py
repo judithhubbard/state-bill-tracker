@@ -10,7 +10,9 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ca", "il", "nj", "tx", "va") if os.path.isdir(os.path.join(HERE, "data", s))]
+STATES = [s for s in ("ca", "il", "nj", "tx", "va", "wa") if os.path.isdir(os.path.join(HERE, "data", s))
+          and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
+    (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
 
 
@@ -36,7 +38,7 @@ def check(state):
         if missing:
             say(state, "FAIL", f"{s}: {len(missing)} bills past both houses without both houses' passage, e.g. {missing[:4]}")
         # The 4th key date is New York's alone (return to committee in a new year).
-        if any(r["keyDates"][3] for r in recs):
+        if state != "ny" and any(r["keyDates"][3] for r in recs):
             say(state, "FAIL", f"{s}: the 4th key date (New York's return to committee) is filled in")
         # Committee pass rates that look wrong (sponsors' amendments read as committee votes).
         fate = collections.Counter(r["commFate"] for r in recs)
@@ -117,9 +119,23 @@ def check(state):
         if noparty or nophone:
             say(state, "LOOK", f"{os.path.basename(path)}: no party {noparty[:3]}, no phone {nophone[:3]}")
 
+    # A label that means a different procedure in different states. "Constitutional amendments" in New York are
+    # resolutions that never go to the governor (STATE.amendments in profile.js); in Virginia they're bills that set up
+    # the ballot question, which the governor signs. Where the profile says amendments skip the governor, none may reach
+    # the governor's desk; elsewhere the tag is only a topic.
+    skips = re.search(r"^\s*amendments:\s*true", open(os.path.join(HERE, "states", state, "profile.js")).read(), re.M)
+    for s, recs in loaded.items():
+        tagged = [r for r in recs if "const" in r["topics"]]
+        sent = [r["nums"][0] for r in tagged if r["stage"] >= 4]
+        if skips and sent:
+            say(state, "FAIL", f"{s}: {len(sent)} constitutional amendments went to the governor, though they skip the governor: {sent[:4]}")
+        elif sent:
+            say(state, "LOOK", f"{s}: {len(sent)} bills tagged constitutional amendments went to the governor (bills, not the amendments; "
+                               f"the page mustn't say they skip the governor): {sent[:3]}")
+
     # Other states' names and rules on this state's pages (settings that fell back to New York's).
     words = r"Albany|Hochul|Heastie|Stewart-Cousins|Kelles|Tompkins|New York State|nysenate|nyassembly"
-    pages = sorted(glob.glob(os.path.join(HERE, "site", P.SITE_DIR, "*.html")))[-1:] + \
+    pages = [] if state == "ny" else sorted(glob.glob(os.path.join(HERE, "site", P.SITE_DIR, "*.html")))[-1:] + \
         glob.glob(os.path.join(HERE, "_site", P.SITE_DIR, "index.html"))  # the Claude copy, or the public build
     for page in pages:
         html = open(page).read()

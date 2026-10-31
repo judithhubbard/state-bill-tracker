@@ -6,7 +6,7 @@
 set -e
 cd "$(dirname "$0")"
 OUT=${1:-_site}
-STATES="ca il nj tx va"
+STATES="ca il nj tx va wa"
 # New York from this shared code (/ny/, not linked from the front page until New York moves here; until then
 # albanybilltracker.org runs from its own repo), when the current session's bills are here (the workflow
 # downloads them with the Senate API key).
@@ -14,6 +14,9 @@ NY=$(python3 -c "import datetime; y = datetime.date.today().year; print(y if y %
 if [ -f "data/bills_$NY.json" ]; then STATES="$STATES ny"; fi
 rm -rf "$OUT" && mkdir -p "$OUT"
 for s in $STATES; do
+  # A state whose first full download is still building up over several runs (data/<state>/incomplete, written by
+  # its fetch.py) waits: a partial copy would make a misleading site, or fail the build for every state.
+  if [ -f "data/$s/incomplete" ]; then echo "$s: download not complete yet; not built"; continue; fi
   # SITE_BASE (the preview's address) gives each state its own: SITE_BASE/nj/, SITE_BASE/va/.
   if [ -n "$SITE_BASE" ]; then export SITE_URL="${SITE_BASE}$s/"; fi
   python3 build_data.py --state "$s" --github "$OUT/$s"

@@ -1888,7 +1888,7 @@ function renderTownReps(box) {
     ? `${esc(named(town))} is split between ${andList(town[2].map(([d]) => `District ${d}`))}. Pick yours below.`
     : `${esc(named(town))} is in District ${town[2][0][0]}.`;
   box.innerHTML = `<h2>Where you live</h2>
-    <div class="repsel"><label>Town <select id="repT">${townOpts}</select></label> <label>District <select id="repD">${distOpts}</select></label></div>
+    <div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOpts}</select></label> <label>District <select id="repD">${distOpts}</select></label></div>
     ${where ? `<p class="muted">${where}</p>` : ""}
     <p>Your legislators: ${andList(reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`)) || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
 }

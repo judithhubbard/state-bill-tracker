@@ -146,6 +146,34 @@ from that repo. **Nothing here may change it.**
   tab's Committees points. "Where you live" lists cities, villages and counties from the Census Bureau's 2024 district relationship
   files (`states/il/towns.py`, run once; no key needed; works for any state). Bill links go to the repository's
   status pages and texts.
+- **Washington (started 2026-10-30):** `python3 states/wa/fetch.py` reads the Legislature's web services
+  (https://wslwebservices.leg.wa.gov/, plain GET, XML; see the wa-data-sources memory: their robots.txt says
+  `Disallow: /`, but their documentation invites applications, and the owner decided to use them, politely). Each bill
+  goes into data/wa/<session>/bills/<HB1003>.json: its versions (substitutes like "E2SHB 1003" are versions of HB1003),
+  history, sponsors in order (with member ids) and, when the history shows a vote, its roll calls (every member, by id).
+  A finished biennium is read once; the current one asks the change feed (GetLegislativeStatusChangesByDateRange) which
+  bills changed since the last run. The first full copy (about 9,000 bills, three requests at a time) takes about 2½
+  hours, so on GitHub it builds up over several runs (`began` in state.json). `states/wa/convert.py` reads the
+  plain-English history. The lines don't say which house acted: committee steps carry the committee's acronym
+  ("HSG - Majority; do pass."), passages match a roll call (which names its house), and otherwise the bill is in its
+  house of origin until it passes. A bill a committee approves goes to that house's Rules Committee, which decides which
+  reach the floor (shown in the Rules Committee, like Texas's Calendars; its "X file" is "held"). Two-year bienniums
+  with a 105-day and a 60-day session (`opens()`, `adjourns()` in profile.js); the governor has 5 days, Sundays
+  excepted, during a session and 20 after it (`govDeadline()`). `states/wa/contacts.py`: leg.wa.gov's legislator list
+  (147 cards with the member ids the roll calls use) and committee pages (chairs, members matched by name and
+  district); phones and emails from the web services' member list. Seat ids "S:21", "H:21a"/"H:21b" (New Jersey's
+  scheme); the same districts for both houses. "What it does": the House or Senate staff's bill report
+  (`states/wa/texts.py`: the Final Bill Report, else the latest report or analysis; its summary, not the background).
+  Committee agendas for three weeks ahead (CommitteeMeetingService). Places from the Census relationship files
+  (`states/wa/towns.py`; one district list per place, since both houses use the same districts). Earlier bienniums
+  linked by short description and description words (`earlier()`). The history repeats lines (once per version) and
+  isn't in date order: sorted and deduplicated. "Passed both houses" comes from the passage roll calls' motions
+  (`both_agreed()`: "as Amended by the House" needs the Senate's agreement; a conference report needs both houses; the
+  first house passing it again on third reading is starting over). A few histories stop early (HB 2134 of 2023-24):
+  a version's newer current status is added, "C 310 L 24" meaning chapter 310 of 2024. Laws include ones without the
+  governor's signature, overridden vetoes and initiatives to the Legislature, so the governor's "signed" lists are a
+  few short. Until the first full copy is complete, fetch.py writes data/wa/incomplete and build_site.sh and the
+  checks skip Washington; add it to home.html once GitHub's copy is complete.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
@@ -177,7 +205,12 @@ from that repo. **Nothing here may change it.**
   - Formats that change between years: dates ("3/14/2026" vs "2024-03-02T00:00:00"), and tables missing from an
     older year's download (NJ 2022–23 lacked four; filled once by fill2022.py).
   - Characters lost in the export: VA's summaries have "?" for §, dashes and apostrophes. Grep the text for
-    " ? " and a letter, "?", then a letter.
+    " ? " and a letter, "?", then a letter. WA's bill reports (a few) have "?" for an "fi"/"ff" ligature ("speci?c")
+    and for non-breaking spaces ("establish?rate", ".??"): put back what makes words the other texts use.
+  - Labels that mean a different procedure in different states: "Constitutional amendments" in NY are resolutions
+    that never go to the governor (they pass two separately elected Legislatures, then the voters); in VA they're
+    bills that set up the ballot question, which the governor signs. Rules that follow from a tag belong in a state
+    setting (`STATE.amendments`), not in shared code; the check fails if a tagged NY amendment reaches the governor.
   - Codes written two ways across files: committee "S2" vs "S02", member "S0100" vs "S100". Join on a normalized key
     and count rows that fail to join.
   - Empty columns that look filled in the documentation (NJ ROSTER.TXT's Email); vacant seats (VA House District 20).

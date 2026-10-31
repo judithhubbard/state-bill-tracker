@@ -62,6 +62,13 @@ jobs:
           key: il-data-v1-${{ github.run_id }}
           restore-keys: il-data-v1-
 
+      - name: Restore Washington downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: data/wa
+          key: wa-data-v1-${{ github.run_id }}
+          restore-keys: wa-data-v1-
+
       - name: Download New Jersey
         run: python3 states/nj/fetch.py
 
@@ -84,6 +91,13 @@ jobs:
         timeout-minutes: 90
         continue-on-error: true
         run: python3 states/il/fetch.py
+
+      # Washington's web services: the first full copy (about 9,000 bills, three requests at a time) takes a few runs;
+      # each run keeps what it got.
+      - name: Download Washington
+        timeout-minutes: 90
+        continue-on-error: true
+        run: python3 states/wa/fetch.py
 
       # Saved here, not at the end of the job: a failed check later would skip the save, and the next run would
       # download everything again (Illinois's 30,000 files, Texas's histories).
@@ -116,6 +130,13 @@ jobs:
         with:
           path: data/il
           key: il-data-v1-${{ github.run_id }}
+
+      - name: Save Washington downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/wa
+          key: wa-data-v1-${{ github.run_id }}
 
       # New York from this shared code (statebilltracker.pages.dev/ny/, not linked; albanybilltracker.org runs
       # from its own repo until New York moves here). The data albanybilltracker.org's repo commits (past sessions,

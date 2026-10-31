@@ -30,3 +30,6 @@ data/tx/*
 # Illinois downloads (states/il/fetch.py); its place table is made once by states/il/towns.py.
 data/il/*
 !data/il/district_towns.json
+# Washington downloads (states/wa/fetch.py); its place table is made once by states/wa/towns.py.
+data/wa/*
+!data/wa/district_towns.json
