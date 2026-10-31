@@ -24,7 +24,7 @@ from that repo. **Nothing here may change it.**
   2026-10-28 and dropped). New York moves only once, to statebilltracker.org/ny, with the forwarding pages
   below; avoid doing that at the start of a session (aim before January or after June).
 - **Decided 2026-10-29:** every state is built from its own legislature's official files and done thoroughly, like
-  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30), then Washington (chosen 2026-10-30; see the wa-data-sources memory), then Ohio, Connecticut, Oregon, Massachusetts, Pennsylvania and Maryland (2026-10-31); the owner will do every state, in no particular order (see the state-survey-2026-10-31 memory: Oregon next); more states before launch.
+  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30), then Washington (chosen 2026-10-30; see the wa-data-sources memory), then Ohio, Connecticut, Oregon, Massachusetts, Pennsylvania, Maryland and Georgia (2026-10-31); the owner will do every state, in no particular order (see the state-survey-2026-10-31 memory: Oregon next); more states before launch.
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
@@ -261,6 +261,20 @@ from that repo. **Nothing here may change it.**
   and three delegates, some from subdistricts ("44A"): as in New Jersey, a district's senator and all its delegates are its
   legislators ("S:44", "H:44a/b/c"); the towns list (cities, towns, Census-designated communities and counties) gives one
   district list for both houses. `dataName` is the bill list's form ("Ebersole", "Lewis, R."). One 90-day session a year.
+- **Georgia (started 2026-10-31):** `python3 states/ga/fetch.py` reads the General Assembly's SOAP web services (plain
+  HTTP; see the ga-data-sources memory): each regular session's legislation list (session ids in P.SESSION_IDS), each
+  bill's detail (sponsors in order, committees, coded status history, floor votes) into data/ga/<year>/bills/, each
+  floor vote member by member (votes/), members and committees. The first copy takes about an hour; the current
+  session's bills are read again every run (no change feed). `states/ga/convert.py` decodes the status codes (the first
+  letter is the house where the step happened; referrals don't name the committee: it's the bill's committee in that
+  house). Agreeing to the other house's changes "As Amended" changes the bill again, disagreeing leads to conference, and
+  a conference report needs both houses (`agreed()`; HB 196 of 2023-24). Laws are "Act 696" (`STATE.lawWord`). "What it
+  does" is the long title's "so as to ..." clauses (`purpose()`); there are no plain summaries and no committee votes.
+  Local legislation (one city or county) is narrow kind "place" ("For one city or county"), kept out of similar-bill
+  matching. Bill pages are addressed by legislation id: a version's `link` (shared: build_data.py passes it, the page
+  reads `v.link`). Two-year General Assemblies, 40-day sessions each year; each year's last day is in `STATE.dated`
+  (add the new year's after its session). Governor 6 days in session, 40 after it. The Lieutenant Governor presides over
+  the Senate (not a senator).
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
@@ -327,6 +341,8 @@ from that repo. **Nothing here may change it.**
     ("no reimbursement is required by this act") make unrelated bills look alike; keep them out of matching.
   - The other state's settings in shared slots: each `keyDates` entry means the same thing in every state (the 4th
     is New York's return to committee in a new year; leave it "" elsewhere).
+  - Agreeing to the other house's changes "as amended" is a new change, not the end (GA's "House Agreed Senate Amend or
+    Sub As Amended": HB 196 of 2023-24 then died in conference).
   - A conference report passes only when both houses adopt it (TX HB3104 of 2023: the House adopted it, the Senate never
     did, and it showed as passed both houses). Same for any step one house can take alone.
   - Passing each house isn't passing both: when the second house amends a bill, the first has to agree (WA's "Final

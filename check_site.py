@@ -65,6 +65,10 @@ contacts("wa", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 140)
 if not os.path.exists(os.path.join(HERE, "data", "ma", "incomplete")):
     contacts("ma", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 190)
 
+# Georgia: two-year General Assemblies starting in odd years (contacts once its first full download is done).
+if not os.path.exists(os.path.join(HERE, "data", "ga", "incomplete")):
+    contacts("ga", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 220)
+
 # Maryland: a session a year.
 contacts("md", TODAY.year, 180)
 

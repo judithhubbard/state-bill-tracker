@@ -1244,11 +1244,11 @@ def main():
         rows = []
         sims = similar_bills(recs)
         for i, r in enumerate(recs):
-            flags = (r["local"] and 1) | (r["senDeleg"] and 2) | (r["budget"] and 4) | (r["asmDeleg"] and 8) | (r["passedS"] and 16) | (r["passedA"] and 32) | (P.NARROW_KINDS.index(r["narrow"]) << 6) | (256 if r.get("shell") else 0)
+            flags = (r["local"] and 1) | (r["senDeleg"] and 2) | (r["budget"] and 4) | (r["asmDeleg"] and 8) | (r["passedS"] and 16) | (r["passedA"] and 32) | (P.NARROW_KINDS.index(r["narrow"]) << 6 if r["narrow"] != "place" else 512) | (256 if r.get("shell") else 0)
             vers = [[v["p"], S(v["sponsor"]), v["cosp"], S(v["statusDesc"]), S(v["committee"]),
                      [[a[0].replace("-", ""), S(a[1])] for a in v["actions"]],
                      [S(n) for n in v["cosponsors"]] if session >= current else [], v.get("district") or 0,
-                      max(0, (v.get("primes") or 1) - 1)] for v in r["vers"]]
+                      max(0, (v.get("primes") or 1) - 1)] + ([S(v["link"])] if v.get("link") else []) for v in r["vers"]]
             h = sorted(hist[session][i].values(), key=lambda e: (e[0], e[1]))
             summ = r["summary"][:2500]
             # A summary that repeats the title is stored as the rest of it, marked with \x01.

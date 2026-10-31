@@ -54,3 +54,6 @@ data/md/*
 !data/md/district_towns.json
 # Michigan downloads (started 2026-10-31; not built yet).
 data/mi/*
+# Georgia downloads (started 2026-10-31; not built yet).
+data/ga/*
+!data/ga/district_towns.json

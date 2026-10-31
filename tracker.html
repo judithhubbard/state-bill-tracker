@@ -3579,7 +3579,7 @@ function billRow(b) {
       const noes = DATA.current ? votePeople().filter((L) => floorVote(b, L) === "No") : [];
       const chap = amendedBills(b) ? `<span class="tag chap">Chapter amendment${TIPI(CHAPTER_AMENDMENT)}</span>`
         : b.memo && changesAgreed(b) ? `<span class="tag chap">${changesMade(b) ? "Changed by a later bill" : "Changes to come"}${TIPI(CHANGES_AGREED)}</span>` : "";
-      const narrowTag = { person: "For one person", org: "For one group", naming: "Road or place naming" }[b.narrow];
+      const narrowTag = { person: "For one person", org: "For one group", naming: "Road or place naming", place: "For one city or county" }[b.narrow];
       const tags = (b.shell ? `<span class="tag narrow">Shell bill${TIPI(SHELL_TIP)}</span>` : "") + (narrowTag ? `<span class="tag narrow">${narrowTag}</span>` : "") + chap + noes.map((L) => `<span class="tag vno">${esc(shortName(L.name))} voted no</span>`).join("") + partyTag(b) + b.topics.map((t) => `<span class="tag${t === "env" ? " env" : ""}">${esc(TOPICS[t])}</span>`).join("") + historyTags(b);
       const intro = DATA.current && b.intro ? `<span>Introduced ${b.intro}</span>` : "";
       const meet = isWatched(b) ? null : nextMeeting(b);
@@ -4819,8 +4819,10 @@ function decode(raw) {
     // Every date each house passed it (a bill sent back in year two may pass twice).
     dates.passSAll = kd[2] ? kd[2].split(";").map(day) : [];
     dates.passAAll = kd[3] ? kd[3].split(";").map(day) : [];
-    const v = vers.map(([p, sp, c, sd, cm, acts, cos, dist, xp]) => ({
+    // link: the version's page where it isn't addressed by its number (Georgia's legislation ids).
+    const v = vers.map(([p, sp, c, sd, cm, acts, cos, dist, xp, link]) => ({
       p, sponsor: str(sp), cosp: c, extraPrimes: xp || 0, statusDesc: str(sd), committee: str(cm), cosponsors: (cos || []).map(str), district: dist || 0,
+      link: link == null ? "" : str(link),
       actions: acts.map(([dt, t]) => [day(dt), T[t]]),
     }));
     return {
@@ -4838,7 +4840,7 @@ function decode(raw) {
       earlier: hist.filter((e) => e[0] < raw.session), later: hist.filter((e) => e[0] > raw.session),
       laws: laws.map(str), comms: comms.map(str), law: str(law), program: str(program), comm: str(comm),
       passedIn: passedIn || null, last: day(last),
-      sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: ["", "person", "org", "naming"][(flags >> 6) & 3], shell: !!(flags & 256),
+      sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: flags & 512 ? "place" : ["", "person", "org", "naming"][(flags >> 6) & 3], shell: !!(flags & 256),
       memo: memo || "",
       // The governor's veto message: this bill's own, or an earlier version's.
       vetoNote: vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: str(vetoNote[2]), nums: vetoNote[3], own: !!vetoNote[4], kind: vetoNote[5] || "absolute" } : null,
