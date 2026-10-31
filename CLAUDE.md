@@ -24,7 +24,9 @@ from that repo. **Nothing here may change it.**
   2026-10-28 and dropped). New York moves only once, to statebilltracker.org/ny, with the forwarding pages
   below; avoid doing that at the start of a session (aim before January or after June).
 - **Decided 2026-10-29:** every state is built from its own legislature's official files and done thoroughly, like
-  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30), then Washington (chosen 2026-10-30; see the wa-data-sources memory), then Ohio, Connecticut, Oregon, Massachusetts, Pennsylvania, Maryland, Georgia, Michigan and Wisconsin (2026-10-31); the owner will do every state, in no particular order (see the state-survey-2026-10-31 memory: Oregon next); more states before launch.
+  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30), then Washington (chosen 2026-10-30; see the wa-data-sources memory), then Ohio, Connecticut, Oregon, Massachusetts, Pennsylvania, Maryland, Georgia, Michigan and Wisconsin (2026-10-31); Arizona is the exception (decided 2026-10-31): its Legislature's data service, apps.azleg.gov, has robots.txt
+  "Disallow: /", and the owner chose not to ask permission, so Arizona's bills come from Open States, supplemented where
+  needed from azleg.gov pages its robots.txt allows, at its 120-second crawl delay; the owner will do every state, in no particular order (see the state-survey-2026-10-31 memory: Oregon next); more states before launch.
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
