@@ -140,6 +140,8 @@ def main(session):
         # The rest were spaces: a real question mark follows a letter, not punctuation or a space.
         text = re.sub(r"(?<=[^A-Za-z0-9\n])\?+|(?<=\n)\?+|^\?+|(?<=\band)\?(?=\s)|(?<=\bor)\?(?=\s)", " ", text)
         text = "\n".join(re.sub(r"[ \t]{2,}", " ", l).strip() for l in text.split("\n"))
+        # Run-in headings ("The Clemency and Pardons Board.") are paragraphs of their own: join each to what follows.
+        text = re.sub(r"(?m)^([A-Z][^.\n]{0,60}\.)\n(?=[A-Z])", r"\1 ", text)
         if text:
             out[key] = {"statement": text, "label": label(name)}
     json.dump(out, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)

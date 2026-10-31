@@ -144,7 +144,8 @@ def steps_of(bill, d, comms):
             t = "FAILED"
         elif line.startswith("Delivered to Governor"):
             t = "DELIVERED TO GOVERNOR"
-        elif re.match(r"^Governor (?:signed|partially vetoed)|^Chapter \d+, \d+ Laws|^Without Governor's signature|^Became law", line):
+        # "Governor partially vetoed." stays as written (the chapter line marks it law), so the veto shows.
+        elif re.match(r"^Governor signed|^Chapter \d+, \d+ Laws|^Without Governor's signature|^Became law", line):
             t = "SIGNED"
         elif re.match(r"^Governor vetoed", line):
             t = "VETOED"

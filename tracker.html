@@ -2211,7 +2211,9 @@ function planFor(b, stance = "support") {
     gov = A("sign it", "veto it") + (b.due ? ` by ${fmtDate(b.due)}` : "");
     book.reps(BOTH, A("urge the governor to sign it", "urge the governor to veto it"));
   } else if (b.stage === 5) {
-    what = `<p class="when">Signed into law${b.chapter ? `, Chapter ${b.chapter}` : ""}.</p>`;
+    // A governor who can veto parts of a bill (Washington's sections, appropriation items elsewhere) and did.
+    const partly = b.vers.some((v) => v.actions.some(([, t]) => /partially vetoed|line-item veto|item veto/i.test(t)));
+    what = `<p class="when">Signed into law${b.chapter ? `, Chapter ${b.chapter}` : ""}.${partly ? " The governor vetoed part of it." : ""}</p>`;
     b.vers.forEach((v) => book.sponsor(v));
   } else if (b.stage === 6) {
     // A two-year session can still take a new bill after a first-year veto.
