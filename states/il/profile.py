@@ -77,6 +77,8 @@ TOPICS = {
     # Not the Executive Committees: they get bills on every subject.
     "gov": ("Elections & state government", {"Ethics & Elections", "State Government Administration", "Elections"},
             NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics)\b"),
+    # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words).
+    "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
     "biz": ("Business & consumers", {"Consumer Protection", "Financial Institutions and Licensing", "Financial Institutions",
             "Commerce", "Licensed Activities", "Insurance"}, NO_SUBJECTS,
             r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),

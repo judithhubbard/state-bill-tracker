@@ -2,8 +2,9 @@
 """Download Washington's bills from the Legislature's web services (https://wslwebservices.leg.wa.gov/), which it
 offers free "to all interested parties ... for their in-house applications" (see the wa-data-sources memory).
 
-- Each biennium's bill list (LegislationService GetLegislationByYear, both years); only bills (House 1000s-4000s,
-  Senate 5000s-8000s of type "B"), not resolutions, memorials or the governor's appointments.
+- Each biennium's bill list (LegislationService GetLegislationByYear, both years): bills (House 1000s-4000s, Senate
+  5000s-8000s of type "B") and joint resolutions (type "JR", HJR 4200s and SJR 8200s), which propose constitutional
+  amendments; not other resolutions, memorials or the governor's appointments.
 - For each bill, into data/wa/<session>/bills/<HB1003>.json: every version's record (GetLegislation), its history
   (GetLegislativeStatusChangesByBillNumber) and, when the history shows a vote, its roll calls (GetRollCalls).
 - A finished biennium is downloaded once. The current one asks which bills changed since the last run
@@ -62,9 +63,14 @@ def rows(el):
     return [plain(k) for k in el] if el is not None else []
 
 
+KINDS = {"B": "B", "JR": "JR"}  # the legislation types downloaded: bills and joint resolutions
+BILL_ID = re.compile(r"(?:\d?E?\d?S?)(HB|SB|HJR|SJR) (\d+)")  # "E2SHB 1003", "SSJR 8201" -> HB1003, SJR8201
+
+
 def key(info):
-    """A bill's key, "HB1003" or "SB5001", from its record."""
-    return ("HB" if info["OriginalAgency"] == "House" else "SB") + info["BillNumber"]
+    """A bill's key, "HB1003", "SB5001" or "SJR8201", from its record."""
+    kind = KINDS[info["ShortLegislationType"]["ShortLegislationType"]]
+    return ("H" if info["OriginalAgency"] == "House" else "S") + kind + info["BillNumber"]
 
 
 def bill_list(session):
@@ -73,14 +79,14 @@ def bill_list(session):
         if year > TODAY.year:
             continue
         for info in rows(call("LegislationService", "GetLegislationByYear", year=year)):
-            if info.get("ShortLegislationType", {}).get("ShortLegislationType") == "B" and info.get("BillNumber", "").isdigit():
+            if info.get("ShortLegislationType", {}).get("ShortLegislationType") in KINDS and info.get("BillNumber", "").isdigit():
                 ids[key(info)] = info["BillNumber"]
     return ids
 
 
 def sponsors(session, bill):
     """A bill's sponsors in order (the prime sponsor first), with member ids; None when the service didn't answer."""
-    el = call("LegislationService", "GetSponsors", biennium=P.biennium(session), billId=f"{bill[:2]} {bill[2:]}")
+    el = call("LegislationService", "GetSponsors", biennium=P.biennium(session), billId=re.sub(r"^([A-Z]+)", r"\1 ", bill))
     return None if el is None else rows(el)
 
 
@@ -130,7 +136,7 @@ def session(session):
         changes = rows(call("LegislationService", "GetLegislativeStatusChangesByDateRange", biennium=P.biennium(session),
                             beginDate=since, endDate=(TODAY + timedelta(days=1)).isoformat()))
         for c in changes:
-            m = re.match(r"(?:\d?E?\d?S?)(HB|SB) (\d+)", c.get("BillId", ""))
+            m = BILL_ID.match(c.get("BillId", ""))
             if m and m.group(1) + m.group(2) in ids:
                 todo.add(m.group(1) + m.group(2))
     elif session >= CURRENT - 2:
@@ -188,7 +194,7 @@ def agendas(session):
         c = (cs if isinstance(cs, list) else [cs])[0] if cs else {}
         name = f"{m.get('Agency', '')} {c.get('Name', '')}".strip()
         for item in rows(call("CommitteeMeetingService", "GetCommitteeMeetingItems", agendaId=m["AgendaId"])):
-            b = re.match(r"(?:\d?E?\d?S?)(HB|SB) (\d+)", item.get("BillId") or "")
+            b = BILL_ID.match(item.get("BillId") or "")
             if b and [name, m.get("Date")] not in out.setdefault(b.group(1) + b.group(2), []):
                 out[b.group(1) + b.group(2)].append([name, m.get("Date")])
     json.dump(out, open(os.path.join(P.DATA, str(session), "agendas.json"), "w"))

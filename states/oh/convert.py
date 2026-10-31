@@ -7,6 +7,9 @@ are put in the shared wording: "Refer to Committee" -> "REFERRED TO <committee>"
 bill to another ("Reported - Re-referred to Finance") is a referral to that one. The governor's signature isn't an
 action: it's the enrolled version's governor_signed_date (and to_governor_date for its delivery). Votes list each
 member, committee votes included.
+
+Joint resolutions proposing constitutional amendments ("HJR1", "SJR2") are records too: each house "Adopted" them, by
+three-fifths, and an adopted resolution goes to the voters, never the governor (its enrolled version has no signing).
 """
 import glob, json, os, re
 from datetime import datetime
@@ -43,6 +46,15 @@ def purpose(long_title):
     of the Revised Code to modify the law that ..." -> "Modifies the law that ..."). The purpose can also follow as
     "regarding ...", "relating to ...", a participle ("authorizing ..."), or after an effective date."""
     t = text(long_title)
+    # A joint resolution: "Proposing to amend Section 2 of Article XII of the Constitution of the State of Ohio to
+    # require ..." -> "Requires ...".
+    if re.match(r"Proposing\b", t):
+        parts = re.split(r"\bof the Constitution of the State of Ohio\b,?\s*", t, maxsplit=1)
+        rest = re.sub(r"^and\s+", "", parts[-1]) if len(parts) > 1 else ""
+        lead = re.match(r"to, ([^,]+), (.+)$", rest)  # "to, beginning in 2027, exempt ..."
+        if lead:
+            return lead.group(1)[:1].upper() + lead.group(1)[1:] + ", " + third_person(lead.group(2)).lower()[:1] + third_person(lead.group(2))[1:]
+        return third_person(rest) if re.match(r"to\s+[a-z]", rest) else t
     listing = r"(?:amend|enact|repeal|codify)\s+(?:new\s+)?(?:sections?|Sections?|for the purpose)\b"
     parts = re.split(r"\bof the Revised Code\b,?\s*", t)
     s = parts[-1].strip() if len(parts) > 1 else t
@@ -67,13 +79,21 @@ def purpose(long_title):
     w, _, rest = s.partition(" ")
     if w.lower() in GERUND:
         return GERUND[w.lower()].capitalize() + " " + rest
+    return third_person(s)
+
+
+def third_person(s):
+    """"to modify the law" -> "Modifies the law": the long title's verbs are "to ..." forms. An adverb first ("partially
+    exempt", "no longer prohibit") leaves the verb after it."""
     s = re.sub(r"^[Tt]o\s+", "", s)
-    # "modify the law" -> "Modifies the law": the long title's verbs are "to ..." forms.
+    m = re.match(r"((?:\w+ly|no longer|not)\s+)(.*)$", s, re.I)
+    head, s = (m.group(1), m.group(2)) if m else ("", s)
     w, _, rest = s.partition(" ")
     lw = w.lower()
     if lw.isalpha() and lw not in ("the", "a", "an"):
         lw = lw[:-1] + "ies" if re.search(r"[^aeiou]y$", lw) else lw + "es" if re.search(r"(?:s|sh|ch|x|z|o)$", lw) else lw + "s"
         s = f"{lw} {rest}"
+    s = head + s
     return s[:1].upper() + s[1:]
 
 
@@ -92,9 +112,9 @@ def step(a):
         t = f"REFERRED TO {cm.upper()}" if cm else act
     elif code == "crpt" and (a.get("result") or "").startswith("Favorable"):
         t = "REPORTED"
-    elif code == "pass" and (a.get("result") or "Passed") == "Passed":
+    elif code == "pass" and (a.get("result") or "Passed") in ("Passed", "Adopted"):
         t = f"PASSED {HOUSE[h].upper()}"
-    elif re.match(r"Concurred in (?:House|Senate) amendments|Conference report agreed to", act) and (a.get("result") or "Passed") == "Passed":
+    elif re.match(r"Concurred in (?:House|Senate) amendments|Conference report agreed to", act) and (a.get("result") or "Passed") in ("Passed", "Adopted"):
         t = f"AGREED {HOUSE[h].upper()}"
     elif re.search(r"passed notwithstanding objections of the Governor|veto overridden", act, re.I) and "item" not in act.lower():
         t = "OVERRIDDEN"
@@ -190,6 +210,7 @@ def load_session(session):
             continue
         top = vers[-1] if vers else item
         origin, other = p[0], ("S" if p[0] == "H" else "H")
+        amendment = p[1:3] == "JR"  # a joint resolution proposing a constitutional amendment
         raw = sorted(d.get("actions") or [], key=lambda a: a.get("occurred") or "")
         steps = [step(a)[:4] for a in raw]
         comms_of = [step(a)[4] for a in raw]
@@ -199,7 +220,9 @@ def load_session(session):
         # A few enrolled bills have no signing date (HB 110 of the 134th, the budget): in a finished General Assembly an
         # enrolled bill the governor didn't veto became law.
         vetoed = any(step(a)[2] == "VETOED" for a in raw)
-        if not signed and en and not live and not vetoed:
+        if amendment:
+            signed = sent = None  # goes to the voters, not the governor
+        if not signed and en and not live and not vetoed and not amendment:
             signed = en.get("effective_date") or en.get("concurrence_date") or (raw[-1].get("occurred") or "")[:10] or None
         if signed:
             steps.append((signed, "G", "SIGNED", "Signed by the governor"))
@@ -214,7 +237,7 @@ def load_session(session):
             stage = 6
         elif "DELIVERED TO GOVERNOR" in texts:
             stage = 4
-        elif en or (live and len(passed) == 2 and agreed(raw, origin)):
+        elif en or ((live or amendment) and len(passed) == 2 and agreed(raw, origin)):
             stage = 3  # enrolled; while it runs, also passed unamended by the second house or agreed to by the first
         elif passed:
             stage = 2
@@ -244,9 +267,15 @@ def load_session(session):
         comm_names = {c for _, c in refs}
         comm_list = sorted({f"{h} · {c}" for h, c in refs if c not in gate})
         title = text(top.get("short_title") or item.get("short_title"))
+        if amendment:
+            # "CA: Require 60% vote ..." -> "Constitutional amendment: Require 60% vote ..."
+            rest = re.sub(r"^CA\s*:\s*", "", title)
+            title = "Constitutional amendment: " + rest[:1].upper() + rest[1:]
         what = purpose(top.get("long_title") or (vers[0].get("long_title") if vers else ""))
         topics = [k for k, (label, cset, _, _) in P.TOPICS.items()
                   if comm_names & cset or (k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(title + " " + what[:400]))]
+        if amendment:
+            topics.insert(0, "const")
         own = [c for h, c in refs if h == origin and c not in gate]
         first_comms = []
         if own:

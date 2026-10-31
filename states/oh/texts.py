@@ -17,8 +17,10 @@ def main():
             vers = json.load(open(f)).get("versions") or []
             if vers and vers[-1].get("long_title"):
                 v = vers[-1]
-                out[os.path.basename(f)[:-5]] = {"statement": C.purpose(v["long_title"]),
-                                                 "label": f"From the bill's title ({v.get('version', '').lower()})."}
+                key = os.path.basename(f)[:-5]
+                kind = "resolution" if key[1:3] == "JR" else "bill"
+                out[key] = {"statement": C.purpose(v["long_title"]),
+                            "label": f"From the {kind}'s title ({v.get('version', '').lower()})."}
         json.dump(out, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
         print(f"texts_{session}.json: {len(out)} titles")
 

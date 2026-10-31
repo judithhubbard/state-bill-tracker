@@ -9,7 +9,9 @@ Senate Assignments Committee, which assigns it to a committee ("Assigned to Exec
 that miss a deadline go back there ("Rule 19(a) / Re-referred to Rules Committee"). Committee and floor votes are
 tallies ("012-000-000": yes, no, present); the repository has no member-by-member roll calls. A bill keeps its number
 through both houses. The governor can approve, veto, or send it back with changes (an amendatory veto), which both
-houses can accept. Only House and Senate bills are shown (not resolutions or constitutional amendments).
+houses can accept. House and Senate bills are shown, and joint resolutions proposing constitutional amendments (the
+files' HC and SC, shown as HJRCA and SJRCA): those pass each house by three-fifths ("Be Adopted" in committee, "Adopted
+Both Houses") and go to the voters, not the governor. Other resolutions are left out.
 """
 import glob, json, os, re
 from collections import defaultdict
@@ -154,16 +156,17 @@ def is_shell(b):
 def bills(session):
     out = {}
     for f in glob.glob(os.path.join(folder(session), "*.xml")):
-        m = re.search(r"\d{5}(HB|SB)0*(\d+)\.xml$", f)
+        m = re.search(r"\d{5}(HB|SB|HC|SC)0*(\d+)\.xml$", f)
         if not m:
             continue
+        kind = {"HC": "HJRCA", "SC": "SJRCA"}.get(m.group(1), m.group(1))
         t = open(f, encoding="utf-8", errors="replace").read()
         if not t.rstrip().endswith("</xml>"):
             continue
         acts = [(iso(d), {"House": "H", "Senate": "S"}.get(text(ch), "G"), text(a))
                 for d, ch, a in re.findall(r"<statusdate>([^<]*)</statusdate><chamber>([^<]*)</chamber><action>(.*?)</action>",
                                            (re.search(r"<actions>(.*?)</actions>", t, re.S) or re.search(r"(.*)", "")).group(1), re.S)]
-        out[m.group(1) + m.group(2)] = {
+        out[kind + m.group(2)] = {
             "short": text(re.search(r"<shortdesc>(.*?)</shortdesc>", t, re.S).group(1)) if "<shortdesc>" in t else "",
             "sponsors": text(re.search(r"<sponsors>(.*?)</sponsors>", t, re.S).group(1)) if "<sponsors>" in t else "",
             "alt": text(re.search(r"<altsponsors>(.*?)</altsponsors>", t, re.S).group(1)) if "<altsponsors>" in t else "",
@@ -185,7 +188,7 @@ def decode(h, a):
         return f"REFERRED TO {m.group(1).upper()}"
     if re.match(r"(?:Referred to|Rule \S+ / Re-referred to) (Rules Committee|Assignments)", a):
         return f"REFERRED TO {GATE.get(h, 'RULES').upper()}"
-    if re.match(r"(?:Do Pass|Recommends Do Pass)\b", a):
+    if re.match(r"(?:Do Pass|Recommends Do Pass|(?:Recommends )?Be Adopted)\b", a):
         return "REPORTED"
     if PASS.match(a) or re.match(r"Third Reading.* - Passed", a):
         return f"PASSED {HOUSE.get(h, 'HOUSE').upper()}"
@@ -212,7 +215,7 @@ def stage_of(steps, live):
         return 3 if live else 6
     if "DELIVERED TO GOVERNOR" in texts:
         return 4
-    if "Passed Both Houses" in raw:
+    if "Passed Both Houses" in raw or "Adopted Both Houses" in raw:
         return 3
     if any(t.startswith("PASSED") for t in texts):
         return 2
@@ -304,12 +307,15 @@ def load_session(session):
     fetched = datetime.fromtimestamp(stamp, ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
 
     recs, index = [], {}
-    for p, b in sorted(data.items(), key=lambda kv: (kv[0][:2], int(kv[0][2:]))):
+    for p, b in sorted(data.items(), key=lambda kv: (re.sub(r"\d", "", kv[0]), int(re.sub(r"\D", "", kv[0])))):
+        amendment = "JRCA" in p
         origin, other = p[0], ("S" if p[0] == "H" else "H")
         # The files list a few actions out of order (a veto's outcome before "Sent to the Governor"): by date, keeping
         # the file's order within a day.
         steps = [(d, h, decode(h, a), a) for d, h, a in sorted(b["actions"], key=lambda x: x[0])]
         stage = stage_of(steps, live)
+        if amendment:
+            stage = min(stage, 3)  # never to the governor: after both houses, the voters
         texts = [t for _, _, t, _ in steps]
         passed = {h for _, h, t, _ in steps if t.startswith("PASSED")}
         if stage >= 3:
@@ -322,9 +328,14 @@ def load_session(session):
         comm_names = {c for _, c in refs}
         comm_list = sorted({f"{h} · {c}" for h, c in refs})
         title = titled(b["short"], lower_words) if b["short"].isupper() else b["short"]
+        if amendment:
+            # "CON AMEND-WORKERS' RIGHTS" -> "Constitutional amendment: Workers' Rights"
+            title = "Constitutional amendment: " + (re.sub(r"^Con[\s-]*Amend(?:ment)?\.?\s*[-:]?\s*", "", title, flags=re.I) or title)
         synopsis = re.sub(r"^\s*(Amends|Creates)\b", r"\1", b["synopsis"])
         topics = [k for k, (label, cset, _, _) in P.TOPICS.items()
                   if comm_names & cset or (k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(b["short"] + " " + synopsis[:300]))]
+        if amendment:
+            topics.insert(0, "const")
         own = [c for h, c in refs if h == origin]
         first_comms = []
         if own:

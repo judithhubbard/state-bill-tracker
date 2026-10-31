@@ -4,7 +4,8 @@ the oh-data-sources memory: the legislature's, House's and Senate's websites tur
 doesn't).
 
 - Each General Assembly's legislation list (one call: every bill with its sponsors, co-sponsors and subjects); House
-  and Senate bills only.
+  and Senate bills, and the joint resolutions that propose constitutional amendments (short titles "CA: ..."; not the
+  ones applying to Congress for a convention or confirming an appointment). Other resolutions are left out.
 - For each bill, into data/oh/<session>/bills/<HB1>.json: its versions (as introduced, as reported, as passed, as
   enrolled: titles, dates sent to and signed by the governor) and its actions (each with its votes, member by member).
   Versions are read again when the bill's entry in the list changes; the current General Assembly's actions every run
@@ -52,6 +53,14 @@ def save(path, data):
     os.replace(path + ".tmp", path)
 
 
+def wanted(i):
+    """A House or Senate bill, or a joint resolution proposing a constitutional amendment ("CA: Require 60% vote ...")."""
+    num = i.get("number", "")
+    if num[:2] in ("hb", "sb") and num[2:].isdigit():
+        return True
+    return num[:3] in ("hjr", "sjr") and num[3:].isdigit() and bool(re.match(r"CA\s*:", i.get("short_title") or ""))
+
+
 def session(session):
     ga = P.assembly_of(session)
     base = f"{API}/general_assembly_{ga}"
@@ -62,7 +71,7 @@ def session(session):
         print(f"{session}: no legislation list (the API didn't answer); kept the last copy")
         INCOMPLETE.add(session)
         return
-    bills = {i["number"].upper(): i for i in items if i.get("number", "")[:2] in ("hb", "sb") and i["number"][2:].isdigit()}
+    bills = {i["number"].upper(): i for i in items if wanted(i)}
     save(os.path.join(folder, "legislation.json"), list(bills.values()))
     path = os.path.join(folder, "revs.json")
     try:
@@ -136,10 +145,11 @@ def agendas(session):
                 continue
             n += 1
             name = names.get(m.get("committee_lpid"), house.title())
-            for kind, num in re.findall(r"\b([HS])\. B\. No\. (\d+)", m.get("agenda_summary") or ""):
+            for kind, jr, num in re.findall(r"\b([HS])\. (B|J\. R)\. No\. (\d+)", m.get("agenda_summary") or ""):
+                key = f"{kind}{'JR' if jr != 'B' else 'B'}{num}"
                 entry = [name, f"{when}T{m.get('meeting_time') or '00:00'}"]
-                if entry not in out.setdefault(f"{kind}B{num}", []):
-                    out[f"{kind}B{num}"].append(entry)
+                if entry not in out.setdefault(key, []):
+                    out[key].append(entry)
     save(os.path.join(P.DATA, str(session), "agendas.json"), out)
     print(f"agendas: {len(out)} bills on {n} meetings")
 

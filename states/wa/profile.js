@@ -14,14 +14,20 @@ const STATE = {
   greetings: { S: "Senator", H: "Representative" },
   // How a session is written: 2025–26 (a biennium).
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
+  // Constitutional amendments (joint resolutions, HJR and SJR) pass both houses once, by two-thirds of the members, and
+  // go to the voters at the next general election, held every November; never to the governor (Washington
+  // Constitution, Art. XXIII, Sec. 1).
+  amendments: true,
+  amendmentOnce: true,
+  amendmentVote: "both houses, by two-thirds of their members",
   govReach: `<a href="https://governor.wa.gov/contacting-governor/contacting-governors-office/send-gov-ferguson-e-message" target="_blank" rel="noopener" data-contact="online|governor">Message the governor</a> · Olympia <a class="phone" href="tel:+13609024111" data-contact="call|governor">(360) 902-4111</a>`,
 
   // The Legislature's bill summary page, and the bill as introduced.
-  billUrl: (p, session = DATA.session) => `https://app.leg.wa.gov/billsummary?BillNumber=${p.slice(2)}&Year=${session}`,
+  billUrl: (p, session = DATA.session) => `https://app.leg.wa.gov/billsummary?BillNumber=${p.replace(/^\D+/, "")}&Year=${session}`,
   textLinks(b) {
     const link = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener" data-out="bill-text">${text} ↗</a>`;
     const bien = `${DATA.session}-${String(DATA.session + 1).slice(2)}`;
-    return b.vers.map((v) => `${link(STATE.billUrl(v.p), `${esc(v.p)}: status and history`)} · ${link(`https://lawfilesext.leg.wa.gov/biennium/${bien}/Htm/Bills/${v.p[0] === "H" ? "House" : "Senate"} Bills/${v.p.slice(2)}.htm`, "text as introduced")}`).join("<br>");
+    return b.vers.map((v) => `${link(STATE.billUrl(v.p), `${esc(v.p)}: status and history`)} · ${link(`https://lawfilesext.leg.wa.gov/biennium/${bien}/Htm/Bills/${v.p[0] === "H" ? "House" : "Senate"} ${v.p.includes("JR") ? "Joint Resolutions" : "Bills"}/${v.p.replace(/^\D+/, "")}.htm`, "text as introduced")}`).join("<br>");
   },
 
   // Each year's session starts the second Monday of January: 105 days in the first year, 60 in the second

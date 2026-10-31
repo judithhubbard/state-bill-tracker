@@ -14,18 +14,33 @@ const STATE = {
   greetings: { S: "Senator", H: "Representative" },
   // How a session is written: 2025–26 (the 104th General Assembly).
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
+  // Constitutional amendments (HJRCA, SJRCA) pass both houses once, by three-fifths of the members elected, and go to
+  // the voters at the next general election (even years) at least six months later; never to the governor (Illinois
+  // Constitution, Art. XIV, Sec. 2).
+  amendments: true,
+  amendmentOnce: true,
+  amendmentVote: "both houses, by three-fifths of their members",
+  // The voters decide at the next general election (even years) at least six months after it passes (Art. XIV, sec. 2).
+  ballotYear(d) {
+    const t = new Date(+d.slice(0, 4), +d.slice(5, 7) - 1 + 6, +d.slice(8, 10));
+    let y = t.getFullYear() + (t.getMonth() > 9 ? 1 : 0);
+    return y % 2 ? y + 1 : y;
+  },
+  ballotEvenYears: true,
   govReach: `<a href="https://gov.illinois.gov/contact-us.html" target="_blank" rel="noopener" data-contact="online|governor">Governor's website</a> · Springfield <a class="phone" href="tel:+12177820244" data-contact="call|governor">(217) 782-0244</a> · Chicago <a class="phone" href="tel:+13128142121" data-contact="call|governor">(312) 814-2121</a>`,
 
   // The General Assembly's public file repository has each bill's status page and text.
+  // Files name a constitutional amendment HC or SC (HJRCA 12 -> 10400HC0012), in the HJRCA or SJRCA folder.
+  fileCode: (p) => `${p.startsWith("HJRCA") ? "HC" : p.startsWith("SJRCA") ? "SC" : p.slice(0, 2)}${p.replace(/^\D+/, "").padStart(4, "0")}`,
   billUrl(p, session = DATA.session) {
-    const ga = (session - 1817) / 2, n = `${p.slice(0, 2)}${p.slice(2).padStart(4, "0")}`;
-    return `https://ftp.ilga.gov/Legislation/${ga}/BillStatus/HTML/${ga}00${n}.html`;
+    const ga = (session - 1817) / 2;
+    return `https://ftp.ilga.gov/Legislation/${ga}/BillStatus/HTML/${ga}00${STATE.fileCode(p)}.html`;
   },
   textLinks(b) {
     const link = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener" data-out="bill-text">${text} ↗</a>`;
     return b.vers.map((v) => {
-      const ga = (DATA.session - 1817) / 2, n = `${v.p.slice(0, 2)}${v.p.slice(2).padStart(4, "0")}`;
-      return `${link(STATE.billUrl(v.p), `${esc(v.p)}: status and history`)} · ${link(`https://ftp.ilga.gov/Legislation/${ga}/${v.p.slice(0, 2)}/${ga}00${n}.htm`, "text as introduced")}`;
+      const ga = (DATA.session - 1817) / 2, n = STATE.fileCode(v.p);
+      return `${link(STATE.billUrl(v.p), `${esc(v.p)}: status and history`)} · ${link(`https://ftp.ilga.gov/Legislation/${ga}/${v.p.replace(/\d+$/, "")}/${ga}00${n}.htm`, "text as introduced")}`;
     }).join("<br>");
   },
 

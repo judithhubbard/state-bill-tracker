@@ -2,7 +2,8 @@
 """Download Illinois bill status files, members and committees from the General Assembly's public file repository
 (https://ftp.ilga.gov/), the place it asks automated programs to use (www.ilga.gov turns them away).
 
-- /Legislation/<GA>/BillStatus/XML/: one XML per bill; the folder listing's dates decide which changed since the last
+- /Legislation/<GA>/BillStatus/XML/: one XML per bill (HB, SB) and per joint resolution proposing a constitutional
+  amendment (HC = HJRCA, SC = SJRCA); other resolutions are left out. The folder listing's dates decide which changed since the last
   run, and only those are downloaded (six at a time). Into data/il/<GA>/billstatus/, with listing dates in dates.json.
 - /Members/<GA>HouseMembers.xml, <GA>SenateMembers.xml and /Committees/<GA>...CommitteeMembers.xml, every run.
 
@@ -77,7 +78,7 @@ def session(ga):
         seen = json.load(open(path))
     except (OSError, ValueError):
         seen = {}
-    files = {n: s for n, s in listing(f"{REPO}/Legislation/{ga}/BillStatus/XML/").items() if re.fullmatch(r"\d{5}(HB|SB)\d+\.xml", n)}
+    files = {n: s for n, s in listing(f"{REPO}/Legislation/{ga}/BillStatus/XML/").items() if re.fullmatch(r"\d{5}(HB|SB|HC|SC)\d+\.xml", n)}
     todo = sorted(n for n, s in files.items() if seen.get(n) != s or not complete(os.path.join(folder, n)))
 
     def get(name):

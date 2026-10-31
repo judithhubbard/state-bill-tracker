@@ -2139,8 +2139,10 @@ const secondPassage = (b) => STATE.amendmentFinal ? !!STATE.amendmentFinal(b) : 
 // After its second passage it goes on the ballot in November: that year's if it passed by July (it has to be at least
 // three months before the election), else the next year's.
 function ballotLine(b) {
+  // A state whose legislature picks the election (Ohio: May, August or November) says so itself.
+  if (STATE.ballotLine) return STATE.ballotLine(b);
   const d = [b.dates.passS, b.dates.passA].sort().pop() || "";
-  let y = +d.slice(0, 4) + (d.slice(5, 7) > "07" ? 1 : 0);
+  let y = STATE.ballotYear ? STATE.ballotYear(d) : +d.slice(0, 4) + (d.slice(5, 7) > "07" ? 1 : 0);
   if (STATE.ballotEvenYears && y % 2) y++;  // Maryland votes on amendments at general elections, in even years
   return isoToday() > `${y}-11-10` ? `It went to the voters in November ${y}; the records here don't show the result.` : `Next: the voters, in November ${y}.`;
 }

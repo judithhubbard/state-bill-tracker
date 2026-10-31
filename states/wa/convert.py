@@ -7,6 +7,9 @@ committee steps carry the committee's acronym ("HSG - Majority; do pass."), floo
 its house), and otherwise the bill is in its house of origin until it passes, then in the other one. A bill a committee
 approves goes to that house's Rules Committee, which decides which bills reach the floor (shown as in the Rules
 Committee, like Texas's Calendars); "X file" is Rules' list of bills it won't move.
+
+Joint resolutions ("HJR4200", "SJR8201") propose constitutional amendments: they pass each house by two-thirds, the
+Speaker and President sign them, and they're filed with the Secretary of State for the voters, never the governor.
 """
 import glob, html, json, os, re
 from collections import defaultdict
@@ -276,10 +279,13 @@ def load_session(session):
             continue
         top = vers[-1]
         origin, other = p[0], ("S" if p[0] == "H" else "H")
+        amendment = p[1:3] == "JR"  # a joint resolution proposing a constitutional amendment
         steps = steps_of(p, d, comms)
         rolls = [{"house": "S" if r.get("Agency") == "Senate" else "H", "date": (r.get("VoteDate") or "")[:10],
                   "motion": r.get("Motion") or ""} for r in d.get("rollCalls", [])]
         stage = stage_of(steps, live, both_agreed(origin, rolls))
+        if amendment:
+            stage = min(stage, 3)  # goes to the voters, not the governor
         texts = [t for _, _, t, _ in steps]
         passed = {h for _, h, t, _ in steps if t.startswith("PASSED")}
         if stage >= 3:
@@ -297,6 +303,9 @@ def load_session(session):
         about = text(top.get("LongDescription"))
         topics = [k for k, (label, cset, _, _) in P.TOPICS.items()
                   if comm_names & cset or (k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(title + " " + about))]
+        if amendment:
+            topics.insert(0, "const")
+            title = "Constitutional amendment: " + title[:1].upper() + title[1:]  # "Investment/LTSS accounts" 
         own = [c for h, c in refs if h == origin]
         first_comms = []
         if own:

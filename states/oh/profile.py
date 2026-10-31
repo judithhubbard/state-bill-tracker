@@ -73,6 +73,8 @@ TOPICS = {
     "ag": ("Agriculture", {"Agriculture", "Agriculture and Natural Resources"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
     "gov": ("Elections & state government", {"General Government", "Government Oversight", "Local Government and Elections", "State and Local Government"},
             NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics)\b"),
+    # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words).
+    "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
     "biz": ("Business & consumers", {"Commerce and Labor", "Financial Institutions", "Insurance", "Development", "Technology and Innovation",
             "Economic Development"}, NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
 }

@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ca", "ct", "ga", "il", "ma", "md", "mi", "nj", "oh", "or", "pa", "tx", "va", "wa", "wi") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("az", "ca", "ct", "ga", "il", "ma", "md", "mi", "nj", "oh", "or", "pa", "tx", "va", "wa", "wi") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -29,7 +29,8 @@ def check(state):
     loaded = {s: C.load_session(s)[0] for s in C.sessions()}
 
     for s, recs in loaded.items():
-        stages = collections.Counter(r["stage"] for r in recs)
+        # (Constitutional amendments stop at "passed both houses": they go to the voters, not the governor.)
+        stages = collections.Counter(r["stage"] for r in recs if not (r["stage"] == 3 and "const" in r["topics"]))
         # Count bills by stage against the Legislature's own totals (signed, vetoed).
         say(state, "LOOK", f"{s}: {len(recs)} bills; signed {stages[5]}, vetoed {stages[6]}, passed both houses but not "
                            f"sent {stages[3]}, on the governor's desk {stages[4]} (compare with the official totals)")

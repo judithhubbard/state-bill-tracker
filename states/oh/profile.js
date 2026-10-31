@@ -14,6 +14,19 @@ const STATE = {
   greetings: { S: "Senator", H: "Representative" },
   // How a session is written: 2025–26 (the 136th General Assembly).
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
+  // Constitutional amendments (joint resolutions, HJR and SJR) pass both houses once, by three-fifths of the members,
+  // and go to the voters on a day the General Assembly picks, at least 90 days later, at a general or special election;
+  // never to the governor (Ohio Constitution, Art. XVI, Sec. 1). Ohio holds elections every November, so no even-year rule.
+  amendments: true,
+  amendmentOnce: true,
+  amendmentVote: "both houses, by three-fifths of their members",
+  // The resolution names the election (it can be in May, August or November), so the page doesn't guess the date.
+  ballotLine(b) {
+    const d = [b.dates.passS, b.dates.passA].sort().pop() || "";
+    return d && d.slice(0, 4) < isoToday().slice(0, 4)
+      ? "It went to the voters at the election the resolution named; the records here don't show the result."
+      : "Next: the voters, at the election the resolution names (in May, August or November).";
+  },
   govReach: `<a href="https://governor.ohio.gov/" target="_blank" rel="noopener" data-contact="online|governor">Governor's website</a> · Columbus <a class="phone" href="tel:+16146444357" data-contact="call|governor">(614) 644-4357</a>`,
 
   // The Legislative Service Commission's API serves each bill's texts.

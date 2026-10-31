@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states.wa import profile as P
-from states.wa.fetch import AGENT, call, rows
+from states.wa.fetch import AGENT, BILL_ID, call, rows
 
 # The report's own name says what it is: "1003 HBR FBR 25" (Final Bill Report), "1003 HBR HOUS 25" (House Bill Report
 # as reported by Housing), "1003 HBA HOUS 25" (House Bill Analysis), "5001 SBR ..." / "SBA" for the Senate's.
@@ -70,7 +70,7 @@ def reports(session):
     """Bill key ("HB1003") -> the report to use: (name, date, url)."""
     bien = P.biennium(session)
     out = {}
-    for digit in "124568":
+    for digit in "124568":  # bills 1000s-2000s and 5000s-6000s; joint resolutions 4200s and 8200s
         for d in rows(call("LegislativeDocumentService", "GetDocumentsByClass", biennium=bien, documentClass="Bill Reports", namedLike=digit)):
             parts = (d.get("Name") or "").split()
             if len(parts) < 3 or not parts[0].split("-")[0].isdigit():
@@ -79,7 +79,13 @@ def reports(session):
             kind = "FBR" if parts[2] == "FBR" else parts[1]
             if kind not in RANK or d.get("BillId", "").split(" ")[-1:] == []:
                 continue
-            key = ("HB" if int(num) < 5000 else "SB") + num
+            jr = BILL_ID.match(d.get("BillId") or "")
+            if jr and jr.group(1).endswith("JR"):
+                key = jr.group(1) + jr.group(2)  # a joint resolution (a constitutional amendment): "SJR8201"
+            elif num[0] in "48":
+                continue  # memorials and other resolutions
+            else:
+                key = ("HB" if int(num) < 5000 else "SB") + num
             date = d.get("PdfLastModifiedDate") or d.get("HtmLastModifiedDate") or ""
             cand = (RANK[kind], date, d["Name"], (d.get("HtmUrl") or "").replace("http://", "https://"))
             if cand[3] and (key not in out or cand[:2] > out[key][:2]):
