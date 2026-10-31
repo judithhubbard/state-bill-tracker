@@ -21,19 +21,31 @@ FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else YEAR - 2
 
 def curl(url):
     for attempt in range(3):
-        r = subprocess.run(["curl", "-sS", "--max-time", "300", url], capture_output=True)
+        # A stuck server mustn't hold the run (one hung GitHub's 20-minute limit): give up on a slow or silent file.
+        r = subprocess.run(["curl", "-sS", "--connect-timeout", "20", "--max-time", "120", "--speed-limit", "2000",
+                            "--speed-time", "30", url], capture_output=True)
         if r.returncode == 0:
             return r.stdout
     return None
 
 
+_NEWEST = []
+
+
+def newest():
+    """The year whose files are in the top folder (read once)."""
+    if not _NEWEST:
+        top = curl(f"{FTP}/bill_info.csv") or b""
+        m = re.search(rb'"\w+","\d+","(\d{4})"', top)
+        _NEWEST.append(int(m.group(1)) if m else YEAR)
+    return _NEWEST[0]
+
+
 def year(y):
     folder = os.path.join(P.DATA, str(y))
     os.makedirs(folder, exist_ok=True)
-    # The top folder holds the newest year's files; check which year that is.
-    top = curl(f"{FTP}/bill_info.csv") or b""
-    newest = int(re.search(rb'"\w+","\d+","(\d{4})"', top).group(1)) if re.search(rb'"\w+","\d+","(\d{4})"', top) else YEAR
-    base = FTP if y == newest else f"{FTP}/archive/{y}"
+    newest_ = newest()
+    base = FTP if y == newest_ else f"{FTP}/archive/{y}"
     got = 0
     for name in FILES:
         body = curl(f"{base}/{name}.csv")

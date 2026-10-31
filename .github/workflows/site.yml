@@ -76,6 +76,14 @@ jobs:
           key: oh-data-v1-${{ github.run_id }}
           restore-keys: oh-data-v1-
 
+      # Connecticut's files are small, but a stuck FTP server once left a run with none: keep the last copy.
+      - name: Restore Connecticut downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: data/ct
+          key: ct-data-v1-${{ github.run_id }}
+          restore-keys: ct-data-v1-
+
       - name: Restore Massachusetts downloads
         uses: actions/cache/restore@v4
         with:
@@ -120,7 +128,7 @@ jobs:
         continue-on-error: true
         run: python3 states/wa/fetch.py
 
-      # Connecticut's data files: a few MB a year, read again every run (nothing to keep between runs).
+      # Connecticut's data files: a few MB a year, read again every run (the last copy is kept in case the server hangs).
       - name: Download Connecticut
         timeout-minutes: 20
         continue-on-error: true
@@ -197,6 +205,13 @@ jobs:
         with:
           path: data/oh
           key: oh-data-v1-${{ github.run_id }}
+
+      - name: Save Connecticut downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/ct
+          key: ct-data-v1-${{ github.run_id }}
 
       - name: Save Massachusetts downloads
         if: always()
