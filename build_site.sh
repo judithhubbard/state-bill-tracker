@@ -6,7 +6,7 @@
 set -e
 cd "$(dirname "$0")"
 OUT=${1:-_site}
-STATES="ca ct ga il ma md mi nj oh or pa tx va wa"
+STATES="ca ct ga il ma md mi nj oh or pa tx va wa wi"
 # New York from this shared code (/ny/, not linked from the front page until New York moves here; until then
 # albanybilltracker.org runs from its own repo), when the current session's bills are here (the workflow
 # downloads them with the Senate API key).

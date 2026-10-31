@@ -58,3 +58,6 @@ data/mi/*
 # Georgia downloads (started 2026-10-31; not built yet).
 data/ga/*
 !data/ga/district_towns.json
+# Wisconsin downloads (states/wi/fetch.py).
+data/wi/*
+!data/wi/district_towns.json
