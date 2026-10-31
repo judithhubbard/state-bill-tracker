@@ -173,7 +173,7 @@ from that repo. **Nothing here may change it.**
   a version's newer current status is added, "C 310 L 24" meaning chapter 310 of 2024. Laws include ones without the
   governor's signature, overridden vetoes and initiatives to the Legislature, so the governor's "signed" lists are a
   few short. Until the first full copy is complete, fetch.py writes data/wa/incomplete and build_site.sh and the
-  checks skip Washington; add it to home.html once GitHub's copy is complete.
+  checks skip Washington. GitHub downloaded the first full copy in one run (2026-10-31), and Washington is on the front page.
 - **Ohio (started 2026-10-31):** `python3 states/oh/fetch.py` reads the Legislative Service Commission's API
   (https://search-prod.lis.state.oh.us/api/v2/, JSON; see the oh-data-sources memory). legislature.ohio.gov,
   ohiohouse.gov, ohiosenate.gov and ohiosos.gov all answer automated requests with 403, so (decided 2026-10-31)
