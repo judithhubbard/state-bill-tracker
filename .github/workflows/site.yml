@@ -112,6 +112,12 @@ jobs:
         continue-on-error: true
         run: python3 states/ct/fetch.py
 
+      # Oregon's open data service: whole tables per session, a few minutes (nothing to keep between runs).
+      - name: Download Oregon
+        timeout-minutes: 30
+        continue-on-error: true
+        run: python3 states/or/fetch.py
+
       # Ohio's legislative data service: the first full copy (about 4,500 bills) takes a few runs; then each run reads
       # the current General Assembly's actions again (about 1,500 requests).
       - name: Download Ohio

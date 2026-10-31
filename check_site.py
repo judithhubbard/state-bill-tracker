@@ -61,6 +61,9 @@ if not os.path.exists(os.path.join(HERE, "data", "oh", "incomplete")):
 # Washington: two-year bienniums starting in odd years.
 contacts("wa", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 140)
 
+# Oregon: a regular session a year.
+contacts("or", TODAY.year, 85)
+
 # Texas: regular sessions in odd years.
 contacts("tx", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 170)
 

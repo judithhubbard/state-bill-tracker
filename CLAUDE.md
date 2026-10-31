@@ -205,6 +205,19 @@ from that repo. **Nothing here may change it.**
   statement of purpose. Legislators (phones, emails, committees, leadership) from the database; Capitol phones are the
   caucus offices' shared lines. Towns from the Census county-subdivision files (169). Earlier years linked by title and
   purpose words.
+- **Oregon (started 2026-10-31):** `python3 states/or/fetch.py` reads the Legislature's OData API
+  (https://api.oregonlegislature.gov/odata/odataservice.svc/; see the state-survey-2026-10-31 memory): whole tables per
+  regular session ("2025R1") into data/or/<key>/<Table>.json, in a few minutes, every run. The package is named "or", a
+  Python keyword: its files load each other with importlib. One session a year (`years: 1`; long in odd years from the
+  second Monday of January, short in even years from the first Monday of February). History lines carry their house;
+  "Do pass and be referred to Ways and Means" is a referral; "by prior reference" and "X, then Ways and Means" are
+  stripped from committee names; "Passed." alone (after a motion) and consent-calendar lines are passages. Floor votes
+  belong to a history action (MeasureHistoryId); committee votes are by member (CommitteeVotes). Laws and vetoes match
+  the API's ChapterNumber and Vetoed flags. Title: the official "Relating to ..." short title without the stock ";
+  declaring an emergency"; the catch line is the one-line summary; "What it does" is the staff digest (tags stripped).
+  Bills filed before the session "by order of the President" have no member sponsor: the "at the request of" field names
+  who asked. Joint committees (Ways and Means) are listed for both houses. Governor 5 weekdays, or 30 business days after
+  adjournment. Separate Senate (30) and House (60) districts by city or county.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
@@ -263,6 +276,8 @@ from that repo. **Nothing here may change it.**
     start "Existing law ...").
   - Ids padded in one file and not another (CA's text files write "AB__001698" for AB1698: every bill under 1000
     failed to match at first). When a fixed share fails, suspect the matching, not the data.
+  - Members who change house or name mid-session: OR's "Rep Neron" became "Sen Neron Misslin", and a session's member
+    list shows only the end state; look the old code up in other years' lists.
   - Names: degrees and titles ("Dr.", "M.D.", "Ph.D.", "Esq.") aren't part of a name; "Jr."/"III" are, but aren't the
     last name (`shortName()`). Check each contacts file for duplicate phone numbers.
   - Placeholder bills (CA "spot bills": technical, nonsubstantive changes; "intent" bills) and stock sentences
