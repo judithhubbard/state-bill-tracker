@@ -1657,6 +1657,8 @@ function plainAction(t) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// A governor who can veto parts of a bill (Washington's sections, appropriation items elsewhere) and did.
+const partlyVetoed = (b) => b.stage === 5 && b.vers.some((v) => v.actions.some(([, t]) => /partially vetoed|line-item veto|item veto/i.test(t)));
 function statusText(b) {
   const D = b.dates, live = DATA.current;
   // Say what the latest action was ("Amended by the sponsor"), not just when.
@@ -1687,7 +1689,7 @@ function statusText(b) {
     t = live ? "On the governor's desk" : "Sent to the governor";
     small = live && b.due ? `Sent ${fmtDate(D.deliv)} · decision due ${fmtDate(b.due)} (est.)` : `Sent ${fmtDate(D.deliv)}`;
   } else if (b.stage === 5) {
-    t = b.chapter ? `Signed · Chapter ${b.chapter}` : "Signed into law";
+    t = (b.chapter ? `Signed · Chapter ${b.chapter}` : "Signed into law") + (partlyVetoed(b) ? " · part vetoed" : "");
     small = fmtDate(D.signed);
   } else if (b.stage === 6) {
     t = b.veto ? `Vetoed · Memo ${b.veto}` : "Vetoed";
@@ -2211,9 +2213,7 @@ function planFor(b, stance = "support") {
     gov = A("sign it", "veto it") + (b.due ? ` by ${fmtDate(b.due)}` : "");
     book.reps(BOTH, A("urge the governor to sign it", "urge the governor to veto it"));
   } else if (b.stage === 5) {
-    // A governor who can veto parts of a bill (Washington's sections, appropriation items elsewhere) and did.
-    const partly = b.vers.some((v) => v.actions.some(([, t]) => /partially vetoed|line-item veto|item veto/i.test(t)));
-    what = `<p class="when">Signed into law${b.chapter ? `, Chapter ${b.chapter}` : ""}.${partly ? " The governor vetoed part of it." : ""}</p>`;
+    what = `<p class="when">Signed into law${b.chapter ? `, Chapter ${b.chapter}` : ""}.${partlyVetoed(b) ? " The governor vetoed part of it." : ""}</p>`;
     b.vers.forEach((v) => book.sponsor(v));
   } else if (b.stage === 6) {
     // A two-year session can still take a new bill after a first-year veto.
@@ -4950,7 +4950,8 @@ function hydrate(raw) {
   STAGES = TEXT.chart;
   BILLS = raw.bills.map((b, idx) => {
     b.idx = idx;
-    b._hay = [b.title, b.summary, b.law, ...b.sponsors, ...b.nums, ...b.nums.map((n) => n.replace(/[A-Z]$/, ""))].join(" ").toLowerCase();
+    // "partial veto" finds the laws the governor vetoed part of.
+    b._hay = [b.title, b.summary, b.law, ...b.sponsors, ...b.nums, ...b.nums.map((n) => n.replace(/[A-Z]$/, "")), partlyVetoed(b) ? "partial veto part vetoed" : ""].join(" ").toLowerCase();
     b.sortKey = (b.nums[0][0] === "S" ? 0 : 1e6) + parseInt(b.nums[0].slice(1), 10);
     const houses = new Set(b.nums.map((n) => n[0]));
     b.house = houses.size === 2 ? "both" : [...houses][0];

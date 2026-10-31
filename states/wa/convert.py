@@ -98,6 +98,8 @@ def steps_of(bill, d, comms):
         if isinstance(cs, dict) and (cs.get("ActionDate") or "")[:10] > last:
             m = re.match(r"C (\d+) L (\d\d)$", cs.get("Status") or "")
             if m:
+                if cs.get("PartialVeto") == "true":
+                    hist.append({"ActionDate": cs["ActionDate"], "HistoryLine": "Governor partially vetoed."})
                 hist.append({"ActionDate": cs["ActionDate"], "HistoryLine": f"Chapter {m.group(1)}, 20{m.group(2)} Laws."})
             elif cs.get("HistoryLine"):
                 hist.append({"ActionDate": cs["ActionDate"], "HistoryLine": cs["HistoryLine"]})
