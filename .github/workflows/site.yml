@@ -98,6 +98,13 @@ jobs:
           key: ga-data-v1-${{ github.run_id }}
           restore-keys: ga-data-v1-
 
+      - name: Restore Michigan downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: data/mi
+          key: mi-data-v1-${{ github.run_id }}
+          restore-keys: mi-data-v1-
+
       - name: Restore Pennsylvania downloads
         uses: actions/cache/restore@v4
         with:
@@ -174,6 +181,13 @@ jobs:
         continue-on-error: true
         run: python3 states/ga/fetch.py
 
+      # Michigan: each bill's status file at one request a second (the Legislature's limit), so the first copy takes a
+      # few runs; then only files the folder listing shows as changed.
+      - name: Download Michigan
+        timeout-minutes: 90
+        continue-on-error: true
+        run: python3 states/mi/fetch.py
+
       # Pennsylvania: the bill history files, then each voted-on bill's roll calls at one request a second, so the first
       # copy takes several runs; then only bills whose history changed.
       - name: Download Pennsylvania
@@ -240,6 +254,13 @@ jobs:
         with:
           path: data/ga
           key: ga-data-v1-${{ github.run_id }}
+
+      - name: Save Michigan downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/mi
+          key: mi-data-v1-${{ github.run_id }}
 
       - name: Save Pennsylvania downloads
         if: always()

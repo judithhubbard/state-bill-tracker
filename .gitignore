@@ -52,8 +52,9 @@ data/pa/*
 # Maryland downloads (states/md/fetch.py); its place table is made once by states/md/towns.py.
 data/md/*
 !data/md/district_towns.json
-# Michigan downloads (started 2026-10-31; not built yet).
+# Michigan downloads (states/mi/fetch.py); its place table is made once by states/mi/towns.py.
 data/mi/*
+!data/mi/district_towns.json
 # Georgia downloads (started 2026-10-31; not built yet).
 data/ga/*
 !data/ga/district_towns.json

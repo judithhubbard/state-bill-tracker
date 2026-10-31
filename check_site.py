@@ -69,6 +69,10 @@ if not os.path.exists(os.path.join(HERE, "data", "ma", "incomplete")):
 if not os.path.exists(os.path.join(HERE, "data", "ga", "incomplete")):
     contacts("ga", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 220)
 
+# Michigan: two-year sessions starting in odd years (contacts once its first full download is done).
+if not os.path.exists(os.path.join(HERE, "data", "mi", "incomplete")):
+    contacts("mi", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 140)
+
 # Maryland: a session a year.
 contacts("md", TODAY.year, 180)
 
