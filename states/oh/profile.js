@@ -14,7 +14,7 @@ const STATE = {
   greetings: { S: "Senator", H: "Representative" },
   // How a session is written: 2025–26 (the 136th General Assembly).
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
-  govReach: `<a href="https://governor.ohio.gov/" target="_blank" rel="noopener" data-contact="online|governor">Governor's website</a> · Columbus <a class="phone" href="tel:+16144663555" data-contact="call|governor">(614) 466-3555</a>`,
+  govReach: `<a href="https://governor.ohio.gov/" target="_blank" rel="noopener" data-contact="online|governor">Governor's website</a> · Columbus <a class="phone" href="tel:+16146444357" data-contact="call|governor">(614) 644-4357</a>`,
 
   // The Legislative Service Commission's API serves each bill's texts.
   billUrl: (p, session = DATA.session) => `https://www.legislature.ohio.gov/legislation/${(session - 1753) / 2}/${p.toLowerCase()}`,

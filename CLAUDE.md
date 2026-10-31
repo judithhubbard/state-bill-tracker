@@ -188,8 +188,8 @@ from that repo. **Nothing here may change it.**
   referral to X. Each house's Rules and Reference Committee schedules floor votes. "What it does" is the long title's
   purpose clause, after the last list of sections, its verb turned into "Modifies ..." (`purpose()`, `texts.py`).
   Full-time Legislature (`floorVotesEnd: false`); governor 10 days, Sundays excepted. Separate Senate (33) and House
-  (99) districts by city, village or county (`states/oh/towns.py`). The governor's phone and address were written
-  from memory (governor.ohio.gov answers "not found"): check them. Built only once data/oh/incomplete is gone.
+  (99) districts by city, village or county (`states/oh/towns.py`). The governor's phone and address are from the
+  governor's contact page, checked by the owner 2026-10-31 (governor.ohio.gov answers automated requests "not found"). Built only once data/oh/incomplete is gone.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
