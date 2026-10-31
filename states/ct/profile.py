@@ -66,6 +66,8 @@ TOPICS = {
     "ag": ("Agriculture", {"ENV"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
     "gov": ("Elections & state government", {"GAE", "GL"}, NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics)\b"),
     "biz": ("Business & consumers", {"CE", "BA", "INS", "GL"}, NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
+    # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words).
+    "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }
 TOPIC_WORDS = {k: re.compile(v[3], re.I) for k, v in TOPICS.items() if v[3]}
 

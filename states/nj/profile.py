@@ -91,7 +91,8 @@ TOPICS = {
              "Regulated Professions", "Science, Innovation and Technology", "Commerce", "Economic Growth"},
             re.compile(r"^(COMMERCE|CONSUMER AFFAIRS|BANKING|INSURANCE(?! - HEALTH)|CORPORATIONS|REGULATED PROFESSIONS|ECONOMIC DEV)"),
             None),
-    "const": ("Constitutional amendments", set(), re.compile(r"^CONSTITUTIONAL AMENDMENTS"), None),
+    # Concurrent resolutions proposing constitutional amendments (tagged by convert.py, not by subjects or words).
+    "const": ("Constitutional amendments", set(), re.compile(r"(?!)"), None),
 }
 TOPIC_WORDS = {k: re.compile(v[3], re.I) for k, v in TOPICS.items() if v[3]}
 

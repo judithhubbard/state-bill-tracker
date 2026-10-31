@@ -7,6 +7,13 @@ the record carries every number and takes its stage from the last. A study order
 bill in committee. Each branch first passes a bill "to be engrossed"; both then enact it, and the Senate lays it before
 the governor. Votes: the tallies are in the history lines ("154 YEAS to 3 NAYS"); the Senate's members' votes come from
 the roll calls the lines cite ("see Roll Call #215"); the House's aren't in the API.
+
+Constitutional amendments the Legislature proposes are "Proposal for a legislative amendment to the Constitution"
+documents (other resolutions and orders are left out). They go to a joint committee, then to the joint session of both
+houses (the constitutional convention), never to the governor. Approved there by a majority of all members ("Amendment
+agreed to"), one is taken up by the next General Court as a new document ("Proposal taken from the files of the
+preceding General Court", "See H 86 of the 2019"); approved again ("Amendment again agreed to"), it goes to the voters
+(Amendments, Art. 48, The Initiative, part IV).
 """
 import glob, json, os, re
 from collections import defaultdict
@@ -26,6 +33,19 @@ def folder(session):
 def sessions():
     return sorted(int(os.path.basename(f)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4))
                   if os.path.exists(os.path.join(f, "documents.json")) and glob.glob(os.path.join(f, "bills", "*.json")))
+
+
+PROPOSAL = re.compile(r"Proposal for a legislative amendment to the (?:Massachusetts )?Constitution\b", re.I)
+
+
+def amendment_title(t):
+    """ "Proposal for a legislative amendment to the Constitution relative to voting rights" -> "Constitutional amendment:
+    voting rights"; "... to cap the state income tax" -> "Constitutional amendment to cap the state income tax"."""
+    rest = re.sub(r"^Proposal for a legislative amendment to the (?:Massachusetts )?Constitution,?\s*", "", text(t), flags=re.I).rstrip(".")
+    m = re.match(r"(?:relative to|regarding|concerning)\s+(?:the\s+)?(.+)", rest, re.I)
+    if m:
+        return f"Constitutional amendment: {m.group(1)}"
+    return f"Constitutional amendment {rest}" if rest else "Constitutional amendment"
 
 
 def text(x):
@@ -124,7 +144,7 @@ def _titles(session):
     if session not in _TITLES:
         out = defaultdict(list)
         for d in load(session, "documents.json", []):
-            if re.match(r"(?:An Act|Resolve)\b", text(d.get("Title")), re.I):
+            if re.match(r"(?:An Act|Resolve)\b", text(d.get("Title")), re.I) or PROPOSAL.match(text(d.get("Title"))):
                 out[key(d["Title"])].append((d["BillNumber"], text((d.get("PrimarySponsor") or {}).get("Name"))))
         _TITLES[session] = out
     return _TITLES[session]
@@ -147,9 +167,11 @@ def earlier(session, title, sponsor):
 
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
-    # Bills and resolves (both become law); not orders, study orders, reports or proposed constitutional amendments.
+    # Bills and resolves (both become law), and the Legislature's proposed constitutional amendments; not orders, study
+    # orders, reports or other resolutions.
     docs = {d["BillNumber"]: d for d in load(session, "documents.json", [])
-            if re.match(r"(?:An Act|Resolve)\b", text(d.get("Title")), re.I) and re.match(r"[HS]\d+$", d.get("BillNumber") or "")}
+            if (re.match(r"(?:An Act|Resolve)\b", text(d.get("Title")), re.I) or PROPOSAL.match(text(d.get("Title"))))
+            and re.match(r"[HS]\d+$", d.get("BillNumber") or "")}
     hist = {}
     for f in glob.glob(os.path.join(folder(session), "bills", "*.json")):
         hist[os.path.basename(f)[:-5]] = sorted(json.load(open(f)), key=lambda a: (a.get("Date") or "")[:10])
@@ -229,6 +251,11 @@ def load_session(session):
             stage = 2
         else:
             stage = None
+        amendment = bool(PROPOSAL.match(text(d.get("Title"))))
+        approved = sorted({s[0] for s in own if s[0] and re.match(r"Amendment (?:again )?agreed to\b", s[3], re.I)})
+        if amendment:
+            # Approved by the joint session of both houses is as far as the Legislature takes it (stage 3).
+            stage = 3 if approved else None
         if stage is not None and stage >= 3:
             passed = {"S", "H"}
         where_h, place, committee = origin, "desk", None
@@ -242,15 +269,20 @@ def load_session(session):
                 where_h = "S" if h == "H" else "H"
             elif t == "SENT TO STUDY":
                 place = "committee"
+        if amendment and stage is None and any(re.search(r"(?:Called for consideration in|Placed on the calendar for) the joint session|^Read\b|third reading", s[3], re.I)
+                                               for s in own):
+            where_h, place, committee = origin, "floor", None  # before the joint session
         if stage is None:
             stage = 1 if place == "floor" else 0
         refs = [(s[1] or origin, s[2][len("REFERRED TO "):]) for s in steps if s[2].startswith("REFERRED TO")]
         proper = lambda c: re.sub(r"\b(And|Of|The|On|For|To|In)\b", lambda m: m.group(1).lower(), c.title())
         committee = proper(committee) if committee else None
         comm_list = sorted({f"{h} · {proper(c)}" for h, c in refs})
-        title = titled(d.get("Title"))
+        title = amendment_title(d.get("Title")) if amendment else titled(d.get("Title"))
         topics = [P.COMMITTEE_TOPICS[w] for w in P.COMMITTEE_TOPICS if any(w.lower() in c.lower() for _, c in refs)]
         topics = list(dict.fromkeys(topics + [k for k, v in P.TOPICS.items() if k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(title)]))
+        # Constitutional amendments are the proposals, tagged here and only here.
+        topics = (["const"] if amendment else []) + [t for t in topics if t != "const"]
         first = next((i for i, s in enumerate(steps) if s[2].startswith("REFERRED TO")), None)
         first_comms = []
         if first is not None:
@@ -270,6 +302,12 @@ def load_session(session):
                     4: "On the governor's desk", 5: "Signed into law", 6: "Vetoed"}[stage]
         else:
             desc = own[-1][3] if own else "Filed"
+        if amendment and stage == 3:
+            desc = "Approved by the joint session of both houses"
+        elif amendment and stage == 1:
+            desc = "Before the joint session of both houses"
+        elif amendment and any(re.search(r"(?:reported adversely|ought not to pass).*placed on file", s[3], re.I) for s in own):
+            desc = "Reported adversely by the committee and placed on file"
         last_pass = max(((s[0], s[1]) for s in own if s[2].startswith("PASSED")), default=None)
         passed_in = HOUSE.get(last_pass[1]) if stage == 2 and last_pass else None
 
@@ -295,8 +333,14 @@ def load_session(session):
                  "statusDesc": desc if b == p else f"Rewritten as {p}",
                  "committee": committee if b == p and place == "committee" and stage in (0, 2) else None,
                  "actions": [[s[0], s[2]] for s in steps if s[4] == b]} for b in nums]
+        prev = earlier(session, d.get("Title") if amendment else title, sponsor)
+        # A proposal the last General Court approved, taken up again: "See H 86 of the 2019".
+        for s in own:
+            m = re.search(r"\bSee ([HS])\.? ?(\d+) of the (\d{4})", s[3])
+            if amendment and m:
+                prev.add((int(m.group(3)), m.group(1) + m.group(2)))
         rec = {
-            "nums": nums, "base": nums, "prev": earlier(session, title, sponsor),
+            "nums": nums, "base": nums, "prev": prev,
             "title": title, "summary": "", "act": "", "lawCode": "", "law": None, "laws": [],
             "comms": comm_list, "topics": topics, "places": [], "narrow": P.narrow_kind(title),
             "commFate": fate, "mainTopic": topics[0] if topics else "", "local": "local" in topics,
@@ -311,8 +355,8 @@ def load_session(session):
             "cosp": len(cos),
             "keyDates": [
                 dates(lambda h, t, a: t in ("REPORTED", "PLACED ON FLOOR"), "first"),
-                dates(lambda h, t, a: t == "PASSED SENATE", "all"),
-                dates(lambda h, t, a: t == "PASSED HOUSE", "all"),
+                ";".join(approved) if amendment else dates(lambda h, t, a: t == "PASSED SENATE", "all"),
+                ";".join(approved) if amendment else dates(lambda h, t, a: t == "PASSED HOUSE", "all"),
                 "",
                 dates(lambda h, t, a: t == "DELIVERED TO GOVERNOR"),
                 law[1] if law else dates(lambda h, t, a: t == "SIGNED"),

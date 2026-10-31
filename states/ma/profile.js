@@ -14,6 +14,15 @@ const STATE = {
   greetings: { S: "Senator", H: "Representative" },
   // How a session is written: 2025–26 (a two-year General Court).
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
+  // Constitutional amendments the Legislature proposes never go to the governor. The House and Senate meet together in a
+  // joint session (a constitutional convention); approved there by a majority of all 200 members in two General Courts
+  // in a row, one goes to the voters at the next state election, in an even year (Amendments, Art. 48). The second
+  // approval is recorded as "Amendment again agreed to", on the document the next General Court takes "from the files".
+  amendments: true,
+  amendmentVote: "a joint session of both houses, by a majority of all members, in two General Courts in a row",
+  ballotEvenYears: true,
+  amendmentFinal: (b) => b.vers.some((v) => v.actions.some(([, t]) => /^Amendment again agreed to\b/i.test(t))),
+  amendmentAgain: (b) => `Next: the next General Court, elected in November ${DATA.session + 1}, has to approve it again in a joint session; then it goes to the voters.`,
   govReach: `<a href="https://www.mass.gov/orgs/office-of-the-governor" target="_blank" rel="noopener" data-contact="online|governor">The governor's office</a> · Boston <a class="phone" href="tel:+16177254005" data-contact="call|governor">(617) 725-4005</a> · toll-free in Massachusetts <a class="phone" href="tel:+18888707770" data-contact="call|governor">(888) 870-7770</a>`,
 
   // The General Court's bill page (status, text and history). 2025 is the 194th General Court.

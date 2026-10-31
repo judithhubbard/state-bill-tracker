@@ -15,10 +15,30 @@ const STATE = {
   // One session a year; bills die when it adjourns.
   years: 1,
   sessionLabel: (s) => String(s),
+  // Constitutional amendments (joint resolutions, HJ and SJ) never go to the governor. Adopted by three-fourths of each
+  // house's members, one goes to the voters at the next general election (even Novembers); adopted by a majority but
+  // less, it has to be adopted again, by a majority, by the Legislature elected next, then goes to the voters
+  // (Connecticut Constitution, Art. XII). The files have no votes, but the history says when a house adopted it "but
+  // not by the necessary 3/4ths" or "failed to adopt by 3/4".
+  amendments: true,
+  amendmentOnce: true,
+  ballotEvenYears: true,
+  amendmentVote: "both houses by three-fourths, or by a majority in two Legislatures with an election between",
+  amendmentFinal(b) {
+    const short = b.vers.some((v) => v.actions.some(([, t]) => /3\/4/.test(t)));
+    if (!short) return true;
+    // A second adoption: the same amendment passed both houses in a session before the last election (even years).
+    return b.earlier.some((e) => e[2] >= 3 && (e[0] % 2 ? e[0] + 1 : e[0]) < DATA.session);
+  },
+  amendmentAgain(b) {
+    const y = +([b.dates.passS, b.dates.passA].sort().pop() || String(DATA.session)).slice(0, 4), vote = y % 2 ? y + 1 : y;
+    return `Next: it passed with less than three-fourths, so the Legislature elected in November ${vote} has to pass it again, by a majority of each house; then it goes to the voters.`;
+  },
   govReach: `<a href="https://portal.ct.gov/governor/contact/email-governor-lamont" target="_blank" rel="noopener" data-contact="online|governor">Email the governor</a> · Hartford <a class="phone" href="tel:+18605664840" data-contact="call|governor">(860) 566-4840</a>`,
 
   // The General Assembly's bill status page, and the bill as introduced.
-  billUrl: (p, session = DATA.session) => `https://www.cga.ct.gov/asp/cgabillstatus/cgabillstatus.asp?selBillType=Bill&which_year=${session}&bill_num=${p.slice(2)}`,
+  // A resolution's number is written in full ("HJ00032"), since resolutions and bills are numbered separately.
+  billUrl: (p, session = DATA.session) => `https://www.cga.ct.gov/asp/cgabillstatus/cgabillstatus.asp?selBillType=Bill&which_year=${session}&bill_num=${p[1] === "J" ? p.slice(0, 2) + p.slice(2).padStart(5, "0") : p.slice(2)}`,
   textLinks(b) {
     const link = (url, text) => `<a href="${esc(url)}" target="_blank" rel="noopener" data-out="bill-text">${text} ↗</a>`;
     return b.vers.map((v) => link(STATE.billUrl(v.p), `${esc(v.p)}: status, text and votes`)).join("<br>");

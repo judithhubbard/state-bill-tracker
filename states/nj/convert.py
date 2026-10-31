@@ -46,8 +46,25 @@ def iso(d):
 
 
 def bill_refs(text):
-    """Bill numbers in a note or list ("S3022 (1R)", "A274 S883") -> ["S3022", "A274", "S883"]."""
-    return re.findall(r"\b[AS]\d+\b", text or "")
+    """Bill numbers in a note or list ("S3022 (1R)", "A274 S883", "ACR27 SCR114") -> ["S3022", "A274", "S883", ...]."""
+    return re.findall(r"\b[AS](?:CR)?\d+\b", text or "")
+
+
+# ---- Constitutional amendments: concurrent resolutions (ACR, SCR) that propose amending the State Constitution. Other
+# concurrent resolutions (urging Congress, joint committees, joint rules, ratifying federal amendments) are left out. The
+# files don't say which is which, so: the synopsis mentions the Constitution, or the subject list has CONSTITUTION, and it
+# doesn't open with what other resolutions do ("Urges", "Memorializes", "Expresses Legislature's intent ...").
+NOT_AMENDMENT = re.compile(r"^(?:Strongly )?(?:Urges|Memorializes|Claims|Post-ratifies|Ratifies|Rescinds|Expresses|Rejects|"
+                           r"Applies|Condemns|Commemorates|Designates|Recognizes|Celebrates|Directs|Requests|Honors|Calls|"
+                           r"Supports|Opposes|Encourages|Determines|Congratulates|Reconstitutes|Constitutes|Establishes|"
+                           r"Creates|Commends|Approves|Disapproves|Invalidates|Finds|Objects|Petitions|Acknowledges|Affirms)\b", re.I)
+
+
+def is_amendment(row, subject_keys):
+    syn = row["Synopsis"]
+    return (row["BillType"] in ("ACR", "SCR") and not NOT_AMENDMENT.match(syn)
+            and ("CONSTITUTION" in subject_keys or bool(re.search(r"\bconstitution", syn, re.I)))
+            and not re.search(r"(?:U\.\s?S\.|United States|federal) Constitution", syn, re.I))
 
 
 def person(name):
@@ -131,7 +148,7 @@ def decode(code, comment, comms, passed):
         elif w == "PBH":
             out.append("PASSED BOTH HOUSES")
         elif w == "FILE":
-            out.append("FILED")
+            out.append("FILED WITH THE SECRETARY OF STATE")  # a concurrent resolution both houses passed
         elif w == "SUB" and nxt in ("FOR", "BY"):
             other = (bill_refs(comment) or ["another bill"])[0]
             out.append(f"SUBSTITUTED {nxt} {other}")
@@ -168,11 +185,12 @@ def decode(code, comment, comms, passed):
     return out
 
 
-def version_stage(steps, live):
+def version_stage(steps, live, resolution=False):
     """How far one bill got, 0-6, from its coded steps in order: (house, token) pairs. A conditional
     veto sends the bill back to both houses; it is with the governor again once they re-pass it.
     Until then it counts as passed both houses in a session still under way (`live`), and as vetoed
-    once the session is over, since it died with the veto."""
+    once the session is over, since it died with the veto. A concurrent resolution (a constitutional amendment) never goes
+    to the governor: passed by both houses, it is filed with the Secretary of State (stage 3) and goes to the voters."""
     floor, passed, stage = set(), set(), 0
     for h, w in steps:
         if FLOOR.match(w) or re.fullmatch(r"2R[AS][CG]", w):
@@ -190,6 +208,10 @@ def version_stage(steps, live):
             stage = 6
         elif w == "CV":
             stage = 3 if live else 6
+        elif w == "FILE" and resolution and len(passed) == 2:
+            stage = 3
+    if resolution:
+        stage = min(stage, 3)
     if stage:
         return stage
     # Passed by both houses but not in the same text (the second house amended it, and the first hasn't
@@ -298,9 +320,12 @@ def load_session(session):
         last, _, first = sponsor.partition(",")
         return roster.get((house,) + name_key(last, first.strip()), (0, ""))
 
+    subj_keys = defaultdict(set)
+    for r in _rows(z, "BILLSUBJ.TXT"):
+        subj_keys[r["BillType"] + r["BillNumber"]].add(r["SubjectKey"])
     main = {}
     for r in _rows(z, "MAINBILL.TXT"):
-        if r["BillType"] in ("A", "S") and r["CurrentStatus"] != "WAPP":
+        if r["CurrentStatus"] != "WAPP" and (r["BillType"] in ("A", "S") or is_amendment(r, subj_keys[r["BillType"] + r["BillNumber"]])):
             main[r["BillType"] + r["BillNumber"]] = r
     hist = defaultdict(list)
     for r in _rows(z, "BILLHIST.TXT"):
@@ -365,6 +390,8 @@ def load_session(session):
             desc = f"Back on the {HOUSE[status[2]]} floor with the governor's changes"
         elif re.fullmatch(r"2R[AS]C", status):
             desc = f"On the {HOUSE[status[2]]} floor, to agree to the {HOUSE['S' if status[2] == 'A' else 'A']}'s changes"
+        elif "CR" in p[:3] and status == "FSS":
+            desc = "Passed both houses; filed with the Secretary of State"
         elif m["GovernorAction"].strip() in ("AV", "PV"):
             desc = "Vetoed" if m["GovernorAction"].strip() == "AV" else "Pocket vetoed"
         elif re.fullmatch(r"2R[AS]", status):
@@ -384,7 +411,7 @@ def load_session(session):
             "committee": comms[status][1] if in_comm else None,
             "actions": actions,
             "_steps": steps,
-            "_stage": version_stage([(h, w) for h, w, _ in steps], session >= CURRENT),
+            "_stage": version_stage([(h, w) for h, w, _ in steps], session >= CURRENT, len(p) > 1 and p[1:3] == "CR"),
             "_sub": status == "SUB",
         }
 
@@ -432,6 +459,9 @@ def load_session(session):
         for k, (label, cset, sre, _) in P.TOPICS.items():
             if comm_names & cset or any(sre.search(s) for s in subj) or (k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(title)):
                 topics.append(k)
+        # Constitutional amendments are the concurrent resolutions, tagged here and only here (never a bill).
+        resolution = live[0][1:3] == "CR"
+        topics = (["const"] if resolution else []) + [t for t in topics if t != "const"]
 
         # Each version's first committee in its own house, and whether the bill got out of it.
         first_comms = []

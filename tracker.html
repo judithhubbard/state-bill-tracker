@@ -1690,7 +1690,7 @@ function statusText(b) {
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
   } else if (b.stage === 3) {
     t = "Passed both houses";
-    small = `${isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters") : "First passage: must pass again in the next Legislature")
+    small = `${isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters") : `First passage: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
       : STATE.passedBothNote(live, b)} · passed ${fmtDate([D.passS, D.passA].sort().pop())}`;
   } else if (b.stage === 4) {
     t = live ? "On the governor's desk" : "Sent to the governor";

@@ -66,6 +66,8 @@ TOPICS = {
     "ag": ("Agriculture", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
     "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics|public records)\b"),
     "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
+    # Proposals for legislative amendments to the Constitution (tagged by convert.py, not by words).
+    "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }
 # Committee name words -> topic (the committees are mostly joint and their names are long).
 COMMITTEE_TOPICS = {"Environment": "env", "Energy": "env", "Municipalities": "local", "Revenue": "tax", "Judiciary": "safety",

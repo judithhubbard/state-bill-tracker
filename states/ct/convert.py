@@ -6,6 +6,12 @@ members), so a referral belongs to the house the bill is in; floor steps name th
 PASSED, HO. AMEND. SCH.", "FAV. RPT., TAB. FOR CAL., SEN."). A Public Act number comes when a bill passes both houses,
 before the governor acts (HB 7004 of 2025 got one and was vetoed), so it marks passing both houses, not a law; only
 "SIGNED BY GOVERNOR" does. The files have no votes.
+
+Constitutional amendments are House and Senate joint resolutions (HJ, SJ) "proposing an amendment to the State
+Constitution"; other resolutions (nominations, claims, ratifying federal amendments) are left out. They never go to the
+governor. Adopted by three-fourths of each house's members, one goes to the voters at the next general election; adopted
+by a majority but less ("HOUSE ADOPTED, BUT NOT BY THE NECESSARY 3/4THS"), it has to be adopted again by the Legislature
+elected next, then goes to the voters (Constitution of Connecticut, Art. XII).
 """
 import csv, glob, io, os, re
 from datetime import datetime
@@ -48,6 +54,36 @@ def titled(t):
     return t[:1].upper() + t[1:]
 
 
+AMENDMENT = re.compile(r"^RESOLUTION (?:PROPOSING (?:AN? )?(?:AMENDMENTS? TO THE (?:STATE )?CONSTITUTION|(?:STATE )?CONSTITUTIONAL AMENDMENTS?)"
+                       r"|AMENDING THE (?:STATE )?CONSTITUTION)\b", re.I)
+
+
+def is_amendment(num, title):
+    """A joint resolution proposing an amendment to the State Constitution (not the federal one)."""
+    return num[:2] in ("HJ", "SJ") and bool(AMENDMENT.match(title.strip())) and not re.search(r"UNITED STATES", title, re.I)
+
+
+def amendment_subject(title):
+    """ "RESOLUTION PROPOSING A STATE CONSTITUTIONAL AMENDMENT CONCERNING ENVIRONMENTAL RIGHTS." -> "environmental rights";
+    "... CONSTITUTION TO MAKE REFERENCES ... GENDER-NEUTRAL." -> "to make references ... gender-neutral"."""
+    t = re.sub(r"^RESOLUTION (?:PROPOSING|AMENDING) (?:AN? |THE )?(?:AMENDMENTS? TO THE )?(?:STATE )?(?:CONSTITUTION(?:AL AMENDMENTS?)?(?: OF THE STATE)?)\s*",
+               "", title.strip(), flags=re.I)
+    t = re.sub(r"^(?:CONCERNING|REGARDING|RELATING TO|RELATIVE TO)\s+(?:THE\s+)?", "", t, flags=re.I).rstrip(".").lower()
+    return re.sub(r"\b(connecticut|yale)\b", lambda m: m.group(1).title(), t)
+
+
+def amendment_title(title):
+    sub = amendment_subject(title)
+    if not sub:
+        return "Constitutional amendment"
+    return f"Constitutional amendment {sub}" if sub.startswith(("to ", "requiring ", "prohibiting ", "increasing ", "modifying ")) else f"Constitutional amendment: {sub}"
+
+
+# A joint resolution's adoption by one house ("ADOPTED, HOUSE", "ADOPTED SEN. AS AMENDED BY HO.", "HOUSE ADOPTED, BUT NOT
+# BY THE NECESSARY 3/4THS"), not a house adopting an amendment schedule ("HOUSE ADOPTED HOUSE AMEND. SCH.").
+ADOPTED = re.compile(r"^(?:(?:RE-)?ADOPTED,?\s+(HOUSE|HO\.|SENATE|SEN\.)|RULES SUSPENDED, ADOPTED (HOUSE|SEN)|(HOUSE|SEN\.|SENATE) ADOPTED, (?:BUT NOT|R/S))")
+
+
 def committees(session):
     return {r["comm_code"]: re.sub(r"\s+Committee$", "", re.sub(r"^(?:Joint )?Committee on\s+", "", r["comm_name"]))
             for r in rows(session, "committee")}
@@ -80,6 +116,10 @@ def decode(line, q1, origin, house, comms):
         return house, "REPORTED"
     if re.match(r"(?:FAV\. RPT\., )?TAB(?:LED|\.) FOR (?:HOUSE )?CAL", up):
         return ("S" if "SEN" in up else "H"), "PLACED ON FLOOR"
+    m = ADOPTED.match(up)
+    if m:
+        h = "H" if (m.group(1) or m.group(2) or m.group(3)).startswith("H") else "S"
+        return h, f"PASSED {HOUSE[h].upper()}"
     if re.match(r"(HOUSE|SENATE|SEN\.) PASSED\b", up):
         return ("H" if up.startswith("HOUSE") else "S"), f"PASSED {'HOUSE' if up.startswith('HOUSE') else 'SENATE'}"
     if re.match(r"(?:TRANSMITTED BY SECRETARY OF THE STATE TO GOVERNOR|RULES SUSPENDED, TRANSMITTED TO THE GOVERNOR|IMMEDIATE TRANSMITTAL TO THE GOV)", up):
@@ -114,6 +154,11 @@ def _session(session):
         out = {}
         for r in rows(session, "bill_info"):
             num = r.get("bill_num", "")
+            if is_amendment(num, r.get("bill_title", "")):
+                # Amendments have no statement of purpose: matched with amendments by the words of what they'd change.
+                words = set(re.findall(r"[a-z0-9]{3,}", amendment_subject(r.get("bill_title", "")))) - _SKIP
+                out[num[:2] + str(int(num[2:]))] = ("AMENDMENT", words, intro.get(num))
+                continue
             title = titled(r.get("bill_title", ""))
             if num[:2] not in ("HB", "SB") or re.search(r"technical revisions|appropriations|budget|bonds of the state", title, re.I):
                 continue
@@ -126,7 +171,7 @@ def _session(session):
 def earlier(session, bill):
     out = set()
     me = _session(session).get(bill)
-    if not me or len(me[1]) < 5:
+    if not me or len(me[1]) < (1 if me[0] == "AMENDMENT" else 5):
         return out
     for y in (session - 1, session - 2):
         if not os.path.exists(os.path.join(folder(y), "bill_info.csv")):
@@ -149,10 +194,11 @@ def load_session(session):
     live = session >= CURRENT
     comms = committees(session)
     legs = legislators(session)
-    info = {r["bill_num"]: r for r in rows(session, "bill_info") if r.get("bill_num", "")[:2] in ("HB", "SB")}
+    info = {r["bill_num"]: r for r in rows(session, "bill_info")
+            if r.get("bill_num", "")[:2] in ("HB", "SB") or is_amendment(r.get("bill_num", ""), r.get("bill_title", ""))}
     hist = {}
     for r in rows(session, "bill_history"):
-        if r.get("bill_num", "")[:2] in ("HB", "SB"):
+        if r.get("bill_num", "") in info:
             hist.setdefault(r["bill_num"], []).append(r)
     intro = {}
     for r in rows(session, "introducer"):
@@ -180,7 +226,21 @@ def load_session(session):
             steps.append((day, h, t, line))
         texts = [t for _, _, t, _ in steps]
         passed = {h for _, h, t, _ in steps if t.startswith("PASSED")}
-        if "SIGNED" in texts or "OVERRIDDEN" in texts:
+        amendment = is_amendment(raw_num, b.get("bill_title", ""))
+        if amendment:
+            # Never to the governor. Both houses adopted it, in the same text: the second house's last adoption wasn't
+            # as amended by its own amendments, or the first house adopted it again after that.
+            stage = None
+            if len(passed) == 2:
+                ps = [(i, h, a) for i, (_, h, t, a) in enumerate(steps) if t.startswith("PASSED")]
+                last_i, last_h, last_a = ps[-1]
+                other_before = any(h != last_h for _, h, _ in ps)
+                own = "HO" if last_h == "H" else "SEN"
+                self_amended = re.search(r"AS AMENDED BY " + own, last_a.upper())
+                stage = 2 if self_amended and other_before else 3
+            elif passed:
+                stage = 2
+        elif "SIGNED" in texts or "OVERRIDDEN" in texts:
             stage = 5
         elif "VETOED" in texts:
             stage = 6
@@ -215,10 +275,12 @@ def load_session(session):
         comm_names = {c for _, c in refs}
         comm_codes = {k for k, v in comms.items() if v in comm_names}
         comm_list = sorted({f"{h} · {c}" for h, c in refs})
-        title = titled(b.get("bill_title", ""))
+        title = amendment_title(b.get("bill_title", "")) if amendment else titled(b.get("bill_title", ""))
         about = b.get("stmt_purp", "")
         topics = [k for k, (label, cset, _, _) in P.TOPICS.items()
                   if comm_codes & cset or (k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(title + " " + about))]
+        # Constitutional amendments are the joint resolutions, tagged here and only here.
+        topics = (["const"] if amendment else []) + [t for t in topics if t != "const"]
         own = [c for h, c in refs if h == origin]
         first_comms = []
         if own:

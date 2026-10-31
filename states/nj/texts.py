@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states.nj import profile as P
-from states.nj.convert import _rows
+from states.nj.convert import _rows, is_amendment
 
 BASE = "https://pub.njleg.gov/Bills"
 
@@ -53,7 +53,8 @@ def fiscal(ps):
 
 
 def doc_url(path):
-    m = re.search(r"(\d{4})BILL[\\/]+([AS]\d+)[\\/]+([^\\/]+)\.\w+$", path, re.I)
+    # Bills are in folders of 500 ("A0500"); concurrent resolutions in "ACR" and "SCR".
+    m = re.search(r"(\d{4})BILL[\\/]+([AS]\d+|[AS]CR)[\\/]+([^\\/]+)\.\w+$", path, re.I)
     return f"{BASE}/{m.group(1)}/{m.group(2)}/{m.group(3)}.HTM" if m else None
 
 
@@ -68,9 +69,14 @@ def main(session):
     docs = json.load(open(docs_path)) if os.path.exists(docs_path) else {}  # address -> the part we keep
     # Each bill's documents: its text as introduced, its committee statements, its fiscal estimates.
     wanted = {}
+    # Bills, and the concurrent resolutions that propose constitutional amendments (the only resolutions shown).
+    subj = {}
+    for r in _rows(z, "BILLSUBJ.TXT"):
+        subj.setdefault(r["BillType"] + r["BillNumber"], set()).add(r["SubjectKey"])
+    amendments = {r["BillType"] + r["BillNumber"] for r in _rows(z, "MAINBILL.TXT") if is_amendment(r, subj.get(r["BillType"] + r["BillNumber"], set()))}
     for r in _rows(z, "BILLWP.TXT"):
         bill, kind, url = r["BillType"].strip() + r["BillNumber"].strip(), r["DocType"].strip(), doc_url(r["Document"])
-        if bill[:1] not in ("A", "S") or not url or kind not in ("I", "S", "FE"):
+        if not (r["BillType"].strip() in ("A", "S") or bill in amendments) or not url or kind not in ("I", "S", "FE"):
             continue
         wanted.setdefault(bill, []).append((kind, url, day(r["ModDate"])))
     # Identical bills in the two houses carry the same sponsor's statement: read the text of one of them.

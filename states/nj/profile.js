@@ -10,6 +10,30 @@ const STATE = {
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
   // The governor's office, wherever it's the one to contact.
   govReach: `<a href="https://www.nj.gov/governor/" target="_blank" rel="noopener" data-contact="online|governor">Governor's website</a> · <a class="phone" href="tel:+16092926000" data-contact="call|governor">(609) 292-6000</a>`,
+  // Constitutional amendments (concurrent resolutions, ACR and SCR) never go to the governor. Passed by three-fifths of
+  // all members of each house (24 senators and 48 Assembly members), one goes to the voters at the next general
+  // election; passed by a smaller majority, it has to pass both houses again, by a majority of all members, in the next
+  // legislative year (NJ Constitution, Art. IX, para. 1).
+  amendments: true,
+  amendmentOnce: true,
+  amendmentVote: "both houses by three-fifths of all members, or by a majority two years running",
+  amendmentFinal(b) {
+    const d = b.dates, last = [d.passS, d.passA].sort().pop() || "";
+    if (!d.passS || !d.passA) return false;
+    const floor = (h, day) => b.votes.filter((v) => v.kind === "F" && v.house === h && v.date === day && v.yes > v.no);
+    const s = floor("S", d.passS), a = floor("A", d.passA);
+    // Without a recorded vote, count it as three-fifths (nearly all that pass do).
+    if ((!s.length || s.some((v) => v.yes >= 24)) && (!a.length || a.some((v) => v.yes >= 48))) return true;
+    // A second passage by a majority: both houses passed it the year before, as this resolution or (a new session's
+    // first year) as the last session's.
+    const y = +last.slice(0, 4), before = (all) => all.some((x) => x.startsWith(String(y - 1)));
+    if (before(d.passSAll) && before(d.passAAll)) return true;
+    return y === DATA.session && b.earlier.some((e) => e[0] === DATA.session - 2 && e[2] >= 3);
+  },
+  amendmentAgain(b) {
+    const y = +([b.dates.passS, b.dates.passA].sort().pop() || String(DATA.session)).slice(0, 4);
+    return `Next: it passed with less than three-fifths, so both houses have to pass it again, by a majority of all members, in ${y + 1}; then it goes to the voters.`;
+  },
 
   billUrl(p, session = DATA.session) {
     return `https://www.njleg.gov/bill-search/${session}/${p}`;

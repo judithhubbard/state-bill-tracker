@@ -9,6 +9,12 @@ Virginia's history lines are plain English already ("Referred to Committee on La
 "Read third time and passed House (64-Y 34-N 0-A)"). The steps the site's rules depend on (referrals,
 committee reports, passage, the governor's actions) are put in the wording New York's data uses; the rest
 are kept as written. Each bill passes both houses under its own number (HB1 goes to the Senate as HB1).
+
+Constitutional amendments are joint resolutions (HJ, SJ) whose description starts "Constitutional amendment"; other
+joint resolutions (commendations, studies, confirmations) are left out. They never go to the governor: one passes both
+houses in two sessions with a House of Delegates election between ("first reference", "second reference"), then goes to
+the voters (Constitution of Virginia, Art. XII, sec. 1). The bill that puts the question on the ballot is an ordinary
+bill, signed by the governor.
 """
 import csv, glob, json, math, os, re
 from collections import defaultdict
@@ -48,6 +54,22 @@ def iso(d):
     return m.group(0) if m else ""
 
 
+def is_amendment(r):
+    """A joint resolution proposing a constitutional amendment (BILLS.CSV row)."""
+    return r["Bill_id"][:2] in ("HJ", "SJ") and bool(re.match(r"Constitutional amendment\b", r["Bill_description"], re.I))
+
+
+def amendment_title(desc, summary):
+    """ "Constitutional amendment (second reference); marriage between two adult persons; repeal ..." ->
+    "Constitutional amendment, second passage: marriage between two adult persons; repeal ...". Which passage it is comes
+    from the description, else the Legislative Services summary."""
+    m = re.search(r"\((first|second)\s+reference\)", desc, re.I) or re.search(r"\((first|second)\s+reference\)", summary or "", re.I)
+    rest = re.sub(r"\s*\((?:first|second)\s+reference\)", "", desc, flags=re.I)
+    rest = re.sub(r"^Constitutional amendment[;:,.]?\s*", "", rest, flags=re.I).strip().rstrip(".")
+    head = f"Constitutional amendment, {m.group(1).lower()} passage" if m else "Constitutional amendment"
+    return f"{head}: {rest}" if rest else head
+
+
 def num(bill):
     """"HB0001" or "HB1" -> "HB1"."""
     m = re.match(r"([A-Z]+)0*(\d+)", bill or "")
@@ -71,6 +93,10 @@ def decode(desc, comms):
     m = re.match(r"(?:Read third time and )?passed (House|Senate)\b", d, re.I)
     if m and not re.match(r"Passed by\b", d, re.I):
         return f"PASSED {m.group(1).upper()}"
+    # A joint resolution's passage ("Agreed to by House (64-Y 34-N 0-A)"; bills' lines never start this way).
+    m = re.match(r"(?:Read third time and )?agreed to by (House|Senate)\b", d, re.I)
+    if m:
+        return f"PASSED {m.group(1).upper()}"
     if re.match(r"(?:Enrolled Bill )?[Cc]ommunicated to Governor", d):
         return "DELIVERED TO GOVERNOR"
     # Signed, or enacted once the Legislature accepted the governor's amendments.
@@ -84,8 +110,24 @@ def decode(desc, comms):
     return re.sub(r"\s+", " ", d)
 
 
+def resolution_stage(b, acts):
+    """How far a constitutional amendment got, 0-3: it never goes to the governor. Passed both houses once it's enrolled
+    (the same text agreed by both); the file's Approved flag and chapter number don't mean a governor's signature here."""
+    texts = [t for _, h, t, _ in acts]
+    passed = {h for _, h, t, _ in acts if t.startswith("PASSED")}
+    failed = any(re.search(r"conference report.*\(failed\)|^Failed\b", t, re.I) for t in texts[-6:])
+    if any(re.match(r"Enrolled\b|Bill text as passed (?:House and Senate|Senate and House)|Signed by (?:Speaker|President)|Assigned Chapter", x)
+           for _, _, _, x in acts) or (len(passed) == 2 and b["Passed"] == "Y" and not failed):
+        return 3
+    if passed:
+        return 2
+    return 1 if on_floor(acts) else 0
+
+
 def stage_of(b, acts, live):
     """How far a bill got, 0-6, from BILLS.CSV's flags and its history."""
+    if is_amendment(b):
+        return resolution_stage(b, acts)
     texts = [t for _, h, t, _ in acts]
     # The file's Approved and Vetoed flags are sometimes both set, or (2025) neither: the history decides,
     # and a signature after a veto (a vetoed bill can come back amended) wins.
@@ -139,7 +181,7 @@ def read_votes(session, members):
 
 VOTE_CODE = {"N": "N", "A": "B", "X": "A"}  # the page's codes: N no, B abstain, A absent or not voting
 VOTES = re.compile(r"^(Reported from|Failed to report|Passed by indefinitely|Continued to|(?:Read third time and )?[Pp]assed (House|Senate)|"
-                   r"(?:House|Senate) (?:concurred|rejected|agreed|sustained|overrode)|Passed (House|Senate))")
+                   r"(?:House|Senate) (?:concurred|rejected|agreed|sustained|overrode)|Passed (House|Senate)|(?:Read third time and )?[Aa]greed to by (House|Senate))")
 
 
 # ---- The same bill in earlier years. Virginia's numbers start over each year and its files don't link a bill
@@ -191,7 +233,9 @@ def _vector(text):
 
 
 def _year(session):
-    """Bill -> (heading, summary words, chief patron id, weighted summary), for matching."""
+    """Bill -> (heading, summary words, chief patron id, weighted summary), for matching. A constitutional amendment's
+    heading is "" and it's matched only with amendments: their descriptions all start "Constitutional amendment" and
+    name the passage ("first reference"), which isn't part of what it does."""
     if session not in _EARLIER:
         path = os.path.join(P.DATA, f"texts_{session}.json")
         texts = json.load(open(path)) if os.path.exists(path) else {}
@@ -200,6 +244,10 @@ def _year(session):
             if r["Bill_id"][:2] in ("HB", "SB"):
                 text = texts.get(num(r["Bill_id"]), {}).get("statement") or r["Bill_description"]
                 out[num(r["Bill_id"])] = (_heading(r["Bill_description"]), _words(text), r["Patron_id"], _vector(text))
+            elif is_amendment(r):
+                text = texts.get(num(r["Bill_id"]), {}).get("statement") or r["Bill_description"]
+                text = re.sub(r"\((?:first|second)\s+reference\)|\b(?:first|second)\s+reference\b", " ", text, flags=re.I)
+                out[num(r["Bill_id"])] = ("", _words(text), r["Patron_id"], _vector(text))
         _EARLIER[session] = out
     return _EARLIER[session]
 
@@ -216,8 +264,8 @@ def earlier(session, bill, continued):
         best = None
         for other, (head, words, patron, vec) in _year(y).items():
             # Claims ("Relief; ...") name different people, and the yearly drug-schedule bill adds different
-            # substances each year: neither is the same bill coming back.
-            if head != me[0] or not head or head in ("relief", "drug control act"):
+            # substances each year: neither is the same bill coming back. Amendments (heading "") match amendments.
+            if head != me[0] or (not head and (other[1] != "J" or bill[1] != "J")) or head in ("relief", "drug control act"):
                 continue
             same = bool(patron) and patron == me[2]
             j = len(me[1] & words) / max(1, len(me[1] | words))
@@ -235,7 +283,11 @@ def load_session(session):
     live = session >= CURRENT
     comms = {r["COM_COMNO"]: (r["CHAMBER"], r["COM_NAME"]) for r in rows(session, "Committees.csv")}
     names = {r["MBR_MBRNO"]: re.sub(r"\s+", " ", r["MBR_NAME"]).strip() for r in rows(session, "Members.csv")}
-    bills = {num(r["Bill_id"]): r for r in rows(session, "BILLS.CSV") if r["Bill_id"][:2] in ("HB", "SB")}
+    bills = {num(r["Bill_id"]): r for r in rows(session, "BILLS.CSV") if r["Bill_id"][:2] in ("HB", "SB") or is_amendment(r)}
+    summaries = {}
+    for r in rows(session, "Summaries.csv"):
+        if num(r["SUM_BILNO"])[1:2] == "J":
+            summaries.setdefault(num(r["SUM_BILNO"]), r["SUMMARY_TEXT"])
     hist = defaultdict(list)
     for r in rows(session, "HISTORY.CSV"):
         b = num(r["Bill_id"])
@@ -302,10 +354,14 @@ def load_session(session):
         by_upper = {name.upper(): (ch, name) for ch, name in comms.values()}
         comm_list = sorted({f"{h or by_upper.get(c, ('', ''))[0]} · {by_upper.get(c, ('', c.title()))[1]}" for h, c in refs if h or c in by_upper})
         comm_names = {by_upper.get(c, ("", c.title()))[1] for _, c in refs}
-        title = b["Bill_description"].strip()
+        amendment = is_amendment(b)
+        title = amendment_title(b["Bill_description"].strip(), summaries.get(p)) if amendment else b["Bill_description"].strip()
 
         topics = [k for k, (label, cset, _, _) in P.TOPICS.items()
                   if comm_names & cset or (k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(title))]
+        # Constitutional amendments are the joint resolutions, tagged here and only here (the bill that puts one on the
+        # ballot is a bill, which the governor signs).
+        topics = (["const"] if amendment else []) + [t for t in topics if t != "const"]
         own = [by_upper.get(c, ("", c.title()))[1] for h, c in refs if h == p[0]]
         first_comms = []
         if own:
@@ -359,7 +415,7 @@ def load_session(session):
             "senDeleg": False, "asmDeleg": False, "budget": bool(re.match(r"Budget Bill", title)),
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": passed_in,
-            "chapter": int(chap.group(1)) if chap and stage == 5 else None,
+            "chapter": int(chap.group(1)) if chap and stage == 5 and not amendment else None,
             "veto": None, "memo": "", "vetoMemo": None,
             "comm": committee if stage == 0 else None,
             "first": min(filter(None, [intro] + action_dates), default=f"{session}-01-01"),

@@ -14,6 +14,22 @@ const STATE = {
   // Sessions run one year, and bill numbers start over each year.
   years: 1,
   sessionLabel: (s) => String(s),
+  // Constitutional amendments (joint resolutions, HJ and SJ) never go to the governor: one passes both houses, then again
+  // in the first session after the next House of Delegates election (odd Novembers), then goes to the voters
+  // (Constitution of Virginia, Art. XII, sec. 1). The resolution says which passage it is ("first reference"; the title
+  // reads "first passage"); without that, the same amendment passed in an earlier session before a House election.
+  // The bill that puts the question on the ballot is an ordinary bill, signed by the governor.
+  amendments: true,
+  amendmentVote: "both houses twice, with a House of Delegates election between",
+  amendmentFinal(b) {
+    if (/\bsecond passage\b/i.test(b.title)) return true;
+    if (/\bfirst passage\b/i.test(b.title)) return false;
+    return b.earlier.some((e) => e[2] >= 3 && (e[0] % 2 ? e[0] : e[0] + 1) < DATA.session);
+  },
+  amendmentAgain(b) {
+    const y = +([b.dates.passS, b.dates.passA].sort().pop() || String(DATA.session)).slice(0, 4), vote = y % 2 ? y : y + 1;
+    return `Next: it has to pass both houses again in ${vote + 1}, after the House of Delegates election in November ${vote}; then it goes to the voters.`;
+  },
   govReach: `<a href="https://www.governor.virginia.gov/constituent-services/" target="_blank" rel="noopener" data-contact="online|governor">Governor's website</a> · <a class="phone" href="tel:+18047862211" data-contact="call|governor">(804) 786-2211</a>`,
 
   billUrl(p, session = DATA.session) {
