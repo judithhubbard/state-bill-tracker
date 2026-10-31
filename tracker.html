@@ -2133,7 +2133,9 @@ const agendaAsk = (committee) => STATE.chairAsks?.[committee] || ["put it on the
 const isAmendment = (b) => !!STATE.amendments && b.topics.includes("const");
 // Its second passage: the version in the session two years earlier (the Legislature before this one) passed both houses.
 // In Maryland (STATE.amendmentOnce) one passage, by three-fifths, sends it to the voters.
-const secondPassage = (b) => !!STATE.amendmentOnce || b.earlier.some((e) => e[0] === DATA.session - 2 && e[2] >= 3);
+// A state can decide it per bill (STATE.amendmentFinal: Connecticut and New Jersey send one to the voters after a single
+// supermajority passage, otherwise after two).
+const secondPassage = (b) => STATE.amendmentFinal ? !!STATE.amendmentFinal(b) : !!STATE.amendmentOnce || b.earlier.some((e) => e[0] === DATA.session - 2 && e[2] >= 3);
 // After its second passage it goes on the ballot in November: that year's if it passed by July (it has to be at least
 // three months before the election), else the next year's.
 function ballotLine(b) {
@@ -2214,7 +2216,7 @@ function planFor(b, stance = "support") {
   } else if (b.stage === 3 && isAmendment(b)) {
     what = secondPassage(b)
       ? `<p class="when">${STATE.amendmentOnce ? "" : "Second passage. "}${ballotLine(b)}</p>`
-      : `<p class="when">Next: the Legislature elected in November ${DATA.session + 1} has to pass it again; then it goes to the voters.</p>`;
+      : `<p class="when">${STATE.amendmentAgain ? STATE.amendmentAgain(b) : `Next: the Legislature elected in November ${DATA.session + 1} has to pass it again; then it goes to the voters.`}</p>`;
     if (!secondPassage(b)) book.reps(BOTH, A("pass it again in the next Legislature", "vote against it when it comes back"));
   } else if (b.stage === 3) {
     // What comes next is the state's (STATE.passedBothNext): the governor, or both houses again.
@@ -2442,7 +2444,7 @@ const ODDS_POINTS = [
 const isNarrow = (b) => !!(b.narrow || b.places.length);
 function oddsLine(b) {
   // Constitutional amendments don't go to the governor.
-  if (isAmendment(b)) return `A constitutional amendment doesn't go to the governor: it has to pass ${STATE.amendmentOnce ? "both houses by three-fifths" : "two separately elected Legislatures"}, then the voters.`;
+  if (isAmendment(b)) return `A constitutional amendment doesn't go to the governor: it has to pass ${STATE.amendmentVote || (STATE.amendmentOnce ? "both houses" : "two separately elected Legislatures")}, then the voters.`;
   // A shell's chances depend on whether the leaders pick it up, not on how past bills fared.
   if (b.stage > 4 || !DATA.insights || b.shell) return "";
   // Compared with past bills of the same kind (about one place, person or group, or not) and, where there
