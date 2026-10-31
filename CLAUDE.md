@@ -24,7 +24,7 @@ from that repo. **Nothing here may change it.**
   2026-10-28 and dropped). New York moves only once, to statebilltracker.org/ny, with the forwarding pages
   below; avoid doing that at the start of a session (aim before January or after June).
 - **Decided 2026-10-29:** every state is built from its own legislature's official files and done thoroughly, like
-  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30), then Washington (chosen 2026-10-30; see the wa-data-sources memory), then Ohio, Connecticut, Oregon and Massachusetts (2026-10-31); the owner will do every state, in no particular order (see the state-survey-2026-10-31 memory: Oregon next); more states before launch.
+  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30), then Washington (chosen 2026-10-30; see the wa-data-sources memory), then Ohio, Connecticut, Oregon, Massachusetts and Pennsylvania (2026-10-31); the owner will do every state, in no particular order (see the state-survey-2026-10-31 memory: Oregon next); more states before launch.
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
@@ -233,6 +233,22 @@ from that repo. **Nothing here may change it.**
   the Third Reading counts as the floor. Formal sessions end July 31 of the second year (`formalEnds()`), informal ones
   when the court ends. Governor 10 days. No summaries in the data ("What it does" isn't shown); House votes are tallies,
   Senate votes by member. Earlier courts linked by identical title (`earlier()`). Cities and towns (351) by district.
+- **Pennsylvania (started 2026-10-31):** `python3 states/pa/fetch.py` downloads each session's bill history file
+  (https://www.palegis.us/data, a zipped XML refreshed hourly: sponsors with house, district and party; actions with
+  chamber, verb, committee and date) into data/pa/billhistory_<year>_0.zip, then, at one request a second, each voted-on
+  bill's page and its roll calls (floor and committee, member by member; committee ones carry a "Brief Description",
+  used as "What it does"). The first full copy takes several hours. robots.txt limits only an accessibility scanner.
+  `states/pa/convert.py`: "Third consideration and final passage" is a passage ("Vote on final passage reconsidered"
+  undoes it); "First consideration" puts a bill on the floor; most bills are re-committed to Appropriations before the
+  final vote; "Presented to the Governor", "Approved by the Governor", "Act No. 28 of 2025" (`STATE.lawWord` = "Act").
+  An action's date comes from its wording: "(Remarks see House Journal ...)" lines are dated when the remarks were filed.
+  Titles are the co-sponsorship memo's ("Mandating Cursive Handwriting"), with the official title as the summary.
+  Joint resolutions proposing constitutional amendments are bills here (HB/SB) and never go to the governor
+  (`STATE.amendments`, topic "const"). Earlier sessions linked by the memo's "(Former HB 1934)", else the same official
+  title and prime sponsor. Legislators (`contacts.py`): the member and committee feeds (phones, offices; majority chairs);
+  emails from Open States (owner's decision 2026-10-31: the Senate's pages hide them behind an anti-collection script).
+  The 2,572 municipalities by district (`towns.py`); townships that share a name carry their county. Full-time
+  Legislature (`floorVotesEnd: false`); the session ends November 30 of the even year; governor 10 days, Sundays excepted.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
@@ -307,6 +323,8 @@ from that repo. **Nothing here may change it.**
     but not sent" in a finished session, which should be about 0.
   - Histories where some lines carry a time and some only a date (MA's S2913: sorting by the full time put "Read second"
     after "Laid before the Governor"). Sort by day and keep the file's order within a day; the check counts out-of-order lines.
+  - Dates that aren't the event's: PA's "(Remarks see House Journal ...)" lines carry the day the remarks were filed,
+    months after the vote their wording names. The out-of-order check catches these.
   - Dates missing from a few records: OH's HB 110 of the 134th (the budget) has no signing date; WA's HB 2134 of
     2023-24 has a history that stops in committee. Fall back to what else the record says (enrolled and not vetoed in a
     finished session; a "C 310 L 24" status), and compare totals with the legislature's own lists.
