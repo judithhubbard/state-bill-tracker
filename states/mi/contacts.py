@@ -4,15 +4,18 @@ Legislature's web service (https://legislature.mi.gov/litwebservices/litwebservi
 (names, districts, emails, Capitol phones) and GetLegislatorInformationBySession (each member's website). Party comes
 from the website: the caucuses host Democrats' pages (housedems.com, senatedems.com) and Republicans' (gophouse.org, or
 "rep..."/"senator..." sites); a member whose site says neither gets the party from Open States' public-domain file.
-Committees aren't in the web service, so the file has none yet. Seat ids "S:15", "H:47".
+Committees aren't in the web service: the House's come from www.house.mi.gov (each standing committee's page: members
+with party, district and role; the site omits its DigiCert intermediate certificate, which ca_bundle() adds to a copy of
+the system's, so verification stays on), the Senate's from senate.michigan.gov's committee list (chair and meeting
+time). Seat ids "S:15", "H:47".
 Usage: python3 states/mi/contacts.py [session]
 """
-import csv, html, io, json, os, re, sys, time, urllib.request
+import csv, html, io, json, os, re, subprocess, sys, time, urllib.request
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
-from fetch_contacts import name_key
+from fetch_contacts import committee_key, name_key
 from states.mi import profile as P
 
 SERVICE = "https://legislature.mi.gov/litwebservices/litwebservices.asmx"
@@ -35,6 +38,74 @@ def call(op, body=""):
         except Exception:
             time.sleep(10 * (attempt + 1))
     return []
+
+
+INTERMEDIATE = "http://cacerts.digicert.com/DigiCertGlobalG3TLSECCSHA3842020CA1-1.crt"
+SYSTEM_CAS = ["/etc/ssl/certs/ca-certificates.crt", "/etc/ssl/cert.pem", "/etc/pki/tls/certs/ca-bundle.crt"]
+CA = os.path.join(P.DATA, "ca.pem")
+
+
+def ca_bundle():
+    if os.path.exists(CA) and time.time() - os.path.getmtime(CA) < 30 * 86400:
+        return CA
+    der = subprocess.run(["curl", "-sSf", "--max-time", "60", INTERMEDIATE], capture_output=True, check=True).stdout
+    pem = subprocess.run(["openssl", "x509", "-inform", "DER"], input=der, capture_output=True, check=True).stdout
+    system = next(p for p in SYSTEM_CAS if os.path.exists(p))
+    with open(CA + ".tmp", "wb") as f:
+        f.write(open(system, "rb").read() + b"\n" + pem)
+    os.replace(CA + ".tmp", CA)
+    return CA
+
+
+def page(url, ca=None):
+    time.sleep(1)
+    r = subprocess.run(["curl", "-sSL", "--max-time", "60", "-A", AGENT] + (["--cacert", ca] if ca else []) + [url], capture_output=True)
+    return r.stdout.decode("utf-8", "replace") if r.returncode == 0 else ""
+
+
+def plain(s):
+    s = re.sub(r"(?s)<script.*?</script>|<style.*?</style>", " ", s)
+    return re.sub(r"(?:\|\s*)+", "| ", re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " | ", s))))
+
+
+def house_committees(people):
+    """Each House standing committee: {name, chair, members}, matched to seats by district."""
+    out = {}
+    try:
+        ca = ca_bundle()
+    except Exception:
+        return out
+    listing = page("https://www.house.mi.gov/StandingCommittees", ca)
+    for code in sorted(set(re.findall(r'href="/Committee/([A-Z]+)"', listing))):
+        t = plain(page(f"https://www.house.mi.gov/Committee/{code}", ca))
+        m = re.search(r"\| ([^|]+?) \| Committee Members \|", t)
+        if not m:
+            continue
+        name = m.group(1).strip()
+        members, chair = [], None
+        for mm in re.finditer(r"Rep\. ([^|(]+?) \((Republican|Democrat)\) District-(\d+) (?:\| (Chair|Majority Vice Chair|Minority Vice Chair) )?(?=\|)", t.split("| Chair, Rep.")[0]):
+            p = people.get(f"H:{int(mm.group(3))}")
+            nm = p["name"] if p else mm.group(1).strip()
+            if nm not in members:
+                members.append(nm)
+            if mm.group(4) == "Chair":
+                chair = nm
+        out[committee_key(name)] = {"name": name, "chair": chair, "meets": None, "members": sorted(members)}
+    return out
+
+
+def senate_committees(people):
+    """The Senate's committees and chairs (last names, matched to senators) from its committee list."""
+    out = {}
+    t = plain(page("https://senate.michigan.gov/information/committees/all-committees/"
+                   f"{P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)}-{P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year) + 1}/"))
+    senators = {p["name"].split()[-1].lower(): p["name"] for sid, p in people.items() if sid[0] == "S"}
+    for name, meets, chair in re.findall(r"\| ([^|]+?) \| MEETINGS: ([^|]+?) \| CHAIR: ([^|]+?) (?=\|)", t):
+        if name.startswith("Appropriations Subcommittee"):
+            continue
+        out[committee_key(name)] = {"name": name.strip(), "chair": senators.get(chair.strip().split()[-1].lower(), chair.strip()),
+                                    "meets": meets.strip(), "members": []}
+    return out
 
 
 def phone(p):
@@ -78,7 +149,7 @@ def build(session):
             hit["position"] = role
             leaders[h] = {"name": hit["name"], "role": role}
     return {"session": session, "fetched": datetime.now(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M ET"),
-            "people": people, "since": {}, "senateCommittees": {}, "assemblyCommittees": {},
+            "people": people, "since": {}, "senateCommittees": senate_committees(people), "assemblyCommittees": house_committees(people),
             "leaders": leaders, "assemblyMembers": {}, "kept": []}
 
 

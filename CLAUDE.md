@@ -286,8 +286,9 @@ from that repo. **Nothing here may change it.**
   the year introduced ("2026-SB-0968"): a version's `link`. Legislators from the web service
   (https://legislature.mi.gov/litwebservices/litwebservices.asmx: GetLegislatorInformation for emails and phones,
   GetLegislatorInformationBySession for websites); party from the caucus website (housedems/senatedems = Democratic,
-  gophouse or "rep..."/"senator..." sites = Republican; Open States for any other). No committees or chairs yet (not in the
-  web service; www.house.mi.gov omits an intermediate certificate). Cities and townships by district (`towns.py`).
+  gophouse or "rep..."/"senator..." sites = Republican; Open States for any other). Committees: the House's from www.house.mi.gov
+  (each standing committee's page; the site omits its DigiCert intermediate certificate: `ca_bundle()` adds it, as for
+  Illinois), the Senate's chairs and meeting times from senate.michigan.gov's committee list. Cities and townships by district (`towns.py`).
   Full-time Legislature; governor 14 days, Sundays excepted.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
