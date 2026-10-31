@@ -1678,6 +1678,9 @@ function statusText(b) {
       t = live ? `Sent back to ${b.comm}` : `Died in the ${b.comm} Committee`;
       small = `Approved by committee ${fmtDate(ok[0])}; missed a deadline ${fmtDate(acts[back][0])}`;
     }
+    // Massachusetts: a study order ends a bill in its committee.
+    if (STATE.heldAction && b.vers.some((v) => v.actions.some(([, x]) => x === STATE.heldAction)))
+      t = `${STATE.heldLabel}${b.comm ? ` by the ${commPlain(b.comm)} Committee` : ""}`;
   } else if (b.stage === 2 && b.passedIn) {
     t = `Passed one house${live ? "" : " only"} (${b.passedIn})`;
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
@@ -1846,6 +1849,10 @@ const townName = (t) => DATA.towns.some((u) => u !== t && u[0] === t[0]) ? `${t[
 // What a place is called in the picker: "Town" (New Jersey), "County or city" (Virginia).
 const TOWN_WORD = STATE.townWord || "Town";
 // Towns that carry their own Senate and lower-house districts (Virginia's localities), not one district for both.
+// Districts with names (Massachusetts's "8th Middlesex"): DATA.districtNames, from the state's file; else numbers.
+const DNAME = (h, d) => DATA.districtNames?.[h]?.[d];
+const distLabel = (h, d) => DNAME(h, d) || `District ${d}`;
+const distPhrase = (h, d) => (DNAME(h, d) ? `the ${DNAME(h, d)} ${HOUSE[h]} district` : `${HOUSE[h]} District ${d}`);
 const townsSplitByHouse = () => (DATA.towns?.[0] || []).length > 3;
 const townOptions = (town) => `<option value="">Choose your ${TOWN_WORD.toLowerCase()}</option>` + DATA.towns.map((t) => `<option value="${esc(townKey(t))}"${t === town ? " selected" : ""}>${esc(townName(t))}</option>`).join("");
 // Choosing a town (here or in the Bills sidebar): its district, the one with most of its people if split.
@@ -1863,14 +1870,14 @@ function renderTownRepsByHouse(box) {
   const opts = (h) => {
     const mine = lists[h]?.length ? lists[h].map(([d]) => d) : [...new Set(LEGS.filter((L) => L.house === h).map((L) => L.district))].sort((a, b) => a - b);
     const who = (d) => shortName(LEGS.find((L) => L.house === h && L.district === d)?.name) || "vacant";
-    return `<option value="">Choose your district</option>` + mine.map((d) => `<option value="${d}"${d === c?.[h] ? " selected" : ""}>District ${d}: ${esc(who(d))}</option>`).join("");
+    return `<option value="">Choose your district</option>` + mine.map((d) => `<option value="${d}"${d === c?.[h] ? " selected" : ""}>${esc(distLabel(h, d))}: ${esc(who(d))}</option>`).join("");
   };
   const split = town && (town[2].length > 1 || town[3].length > 1);
   const where = !town ? "" : split
     ? `${esc(townName(town))} ${town[2].length > 1 && town[3].length > 1 ? `is split among ${town[2].length} Senate and ${town[3].length} ${HOUSE[LOW]} districts`
-        : [["S", town[2]], [LOW, town[3]]].map(([h, ds], i) => ds.length === 1 ? `${i ? "" : "is "}in ${HOUSE[h]} District ${ds[0][0]}`
+        : [["S", town[2]], [LOW, town[3]]].map(([h, ds], i) => ds.length === 1 ? `${i ? "" : "is "}in ${esc(distPhrase(h, ds[0][0]))}`
         : `${i ? "" : "is "}split among ${ds.length} ${HOUSE[h]} districts`).join(" and ")}. ${STATE.addressLookup && ROOT ? "Look up your address, or pick yours below." : `Pick yours below${STATE.findReps ? `, or <a href="${esc(STATE.findReps)}" target="_blank" rel="noopener">look up your address</a>` : ""}.`}`
-    : `${esc(townName(town))} is in Senate District ${town[2][0]?.[0] ?? "?"} and ${HOUSE[LOW]} District ${town[3][0]?.[0] ?? "?"}.`;
+    : `${esc(townName(town))} is in ${esc(distPhrase("S", town[2][0]?.[0] ?? "?"))} and ${esc(distPhrase(LOW, town[3][0]?.[0] ?? "?"))}.`;
   box.innerHTML = `<h2>Where you live</h2>
     <div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOptions(town)}</select></label></div>
     ${where ? `<p class="muted">${where}</p>` : ""}
@@ -4909,7 +4916,7 @@ function renderPerson(L, past) {
     <div class="photo"><span>${esc(L.name.split(" ").filter((w) => /^[A-Z]/.test(w) && !/^(Jr|Sr|II|III)\.?$/.test(w)).map((w) => w[0]).filter((c, i, a) => i === 0 || i === a.length - 1).join(""))}</span>${L.image ? `<img src="${esc(L.image)}" alt="" onerror="this.remove()">` : ""}</div>
     <div class="who-body">
       <h2>${esc(L.label)}</h2>
-      <p>${[L.party, `${house} District ${L.district}`, since].filter(Boolean).map(esc).join(" · ")}</p>
+      <p>${[L.party, DNAME(L.house, L.district) ? `${house}, ${DNAME(L.house, L.district)} district` : `${house} District ${L.district}`, since].filter(Boolean).map(esc).join(" · ")}</p>
       ${!past && chairs.length ? `<p><b>Chairs:</b> ${chairs.map(esc).join(", ")}</p>` : ""}
       ${!past && member.length ? `<p><b>Committees:</b> ${member.map(esc).join(", ")}</p>` : ""}
       <p>Sponsored ${num(mine.length)} bill${mine.length === 1 ? "" : "s"} ${past ? `in ${span(DATA.session)}` : "this session"}; ${num(signed)} signed into law.</p>

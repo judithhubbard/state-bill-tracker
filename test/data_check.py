@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ca", "ct", "il", "nj", "oh", "or", "tx", "va", "wa") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ca", "ct", "il", "ma", "nj", "oh", "or", "tx", "va", "wa") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -55,6 +55,17 @@ def check(state):
         if odd:
             say(state, "LOOK", f"{s}: history lines mentioning passage not read as one: " +
                 "; ".join(f"{n}× {k}" for k, n in odd.most_common(4)))
+        # Histories out of order: some lines with a time and some with only a date (MA's S2913: sorting by the full
+        # time put "Read second" after "Laid before the Governor"). Sort by day and keep the file's order within a day.
+        unsorted = [r["nums"][0] for r in recs for v in r["vers"] if any(a[0] > b[0] for a, b in zip(v["actions"], v["actions"][1:]) if a[0] and b[0])]
+        # (A few are the source's own order: New York's Senate lines after a substitution.)
+        if unsorted:
+            say(state, "FAIL" if len(unsorted) > 0.01 * len(recs) else "LOOK",
+                f"{s}: {len(unsorted)} bills with history lines out of date order, e.g. {unsorted[:4]}")
+        after = [r["nums"][0] for r in recs for v in r["vers"] for i, (d, t) in enumerate(v["actions"])
+                 if t == "DELIVERED TO GOVERNOR" and any(d2 == d and re.match(r"PASSED|PLACED ON FLOOR|REFERRED", t2) for d2, t2 in v["actions"][i + 1:])]
+        if after:
+            say(state, "LOOK", f"{s}: {len(after)} bills with a passage or referral after going to the governor the same day, e.g. {after[:4]}")
         # Vote lists that don't match their tallies.
         bad = sum(1 for r in recs for v in r["votes"] if sum(1 for _, c in v[6] if c == "N") > v[5])
         if bad:

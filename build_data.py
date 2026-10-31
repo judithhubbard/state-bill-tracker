@@ -1286,6 +1286,8 @@ def main():
             "districtCounties": json.load(open(P.DISTRICTS_PATH)) if session == current and os.path.exists(P.DISTRICTS_PATH) else {},
             # States that find legislators by town: [[town, county, [[district, share of its people], ...]], ...].
             **({"towns": json.load(open(P.TOWNS_PATH))} if session == current and os.path.exists(getattr(P, "TOWNS_PATH", "")) else {}),
+            # Districts with names (Massachusetts): {"S": {"3": "1st Middlesex"}, "H": {...}}, keyed by the seat number.
+            **({"districtNames": json.load(open(P.DISTRICT_NAMES_PATH))} if session == current and os.path.exists(getattr(P, "DISTRICT_NAMES_PATH", "")) else {}),
         }
         if session < current:
             # Current legislators, so a past session opened for one of them can show their profile card.

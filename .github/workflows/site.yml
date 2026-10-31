@@ -76,6 +76,13 @@ jobs:
           key: oh-data-v1-${{ github.run_id }}
           restore-keys: oh-data-v1-
 
+      - name: Restore Massachusetts downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: data/ma
+          key: ma-data-v1-${{ github.run_id }}
+          restore-keys: ma-data-v1-
+
       - name: Download New Jersey
         run: python3 states/nj/fetch.py
 
@@ -125,6 +132,13 @@ jobs:
         continue-on-error: true
         run: python3 states/oh/fetch.py
 
+      # Massachusetts's API: each bill's history (about 17,000 for two General Courts, three requests at a time), so the
+      # first copy takes a run or two; then the current General Court's bills with recent activity.
+      - name: Download Massachusetts
+        timeout-minutes: 90
+        continue-on-error: true
+        run: python3 states/ma/fetch.py
+
       # Saved here, not at the end of the job: a failed check later would skip the save, and the next run would
       # download everything again (Illinois's 30,000 files, Texas's histories).
       - name: Save New Jersey and Virginia downloads
@@ -163,6 +177,13 @@ jobs:
         with:
           path: data/oh
           key: oh-data-v1-${{ github.run_id }}
+
+      - name: Save Massachusetts downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/ma
+          key: ma-data-v1-${{ github.run_id }}
 
       - name: Save Washington downloads
         if: always()

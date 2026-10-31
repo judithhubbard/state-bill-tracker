@@ -42,3 +42,11 @@ data/ct/*
 # Oregon downloads (states/or/fetch.py); its place table is made once by states/or/towns.py.
 data/or/*
 !data/or/district_towns.json
+# Massachusetts downloads (states/ma/fetch.py); its place table is made once by states/ma/towns.py.
+data/ma/*
+!data/ma/district_towns.json
+# Pennsylvania, Maryland and Michigan downloads (started 2026-10-31; their states are not built yet).
+data/pa/*
+data/md/*
+data/mi/*
+!data/ma/district_names.json
