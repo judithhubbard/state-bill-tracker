@@ -146,6 +146,12 @@ jobs:
         continue-on-error: true
         run: python3 states/ma/fetch.py
 
+      # Maryland: one bill list a year and the members' pages, a few minutes (nothing to keep between runs).
+      - name: Download Maryland
+        timeout-minutes: 20
+        continue-on-error: true
+        run: python3 states/md/fetch.py
+
       # Pennsylvania: the bill history files, then each voted-on bill's roll calls at one request a second, so the first
       # copy takes several runs; then only bills whose history changed.
       - name: Download Pennsylvania

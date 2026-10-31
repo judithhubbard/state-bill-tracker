@@ -24,7 +24,7 @@ from that repo. **Nothing here may change it.**
   2026-10-28 and dropped). New York moves only once, to statebilltracker.org/ny, with the forwarding pages
   below; avoid doing that at the start of a session (aim before January or after June).
 - **Decided 2026-10-29:** every state is built from its own legislature's official files and done thoroughly, like
-  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30), then Washington (chosen 2026-10-30; see the wa-data-sources memory), then Ohio, Connecticut, Oregon, Massachusetts and Pennsylvania (2026-10-31); the owner will do every state, in no particular order (see the state-survey-2026-10-31 memory: Oregon next); more states before launch.
+  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30), then Washington (chosen 2026-10-30; see the wa-data-sources memory), then Ohio, Connecticut, Oregon, Massachusetts, Pennsylvania and Maryland (2026-10-31); the owner will do every state, in no particular order (see the state-survey-2026-10-31 memory: Oregon next); more states before launch.
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
@@ -249,6 +249,18 @@ from that repo. **Nothing here may change it.**
   emails from Open States (owner's decision 2026-10-31: the Senate's pages hide them behind an anti-collection script).
   The 2,572 municipalities by district (`towns.py`); townships that share a name carry their county. Full-time
   Legislature (`floorVotesEnd: false`); the session ends November 30 of the even year; governor 10 days, Sundays excepted.
+- **Maryland (started 2026-10-31):** `python3 states/md/fetch.py` reads each regular session's bill list
+  (https://mgaleg.maryland.gov/<year>RS/misc/billsmasterlist/legislation.json; no robots.txt: sponsors, committees, the date
+  and result of each reading in each house, the Department of Legislative Services' synopsis ("What it does"), chapter
+  number and status) and the members' pages (district, party, committees with "(Chair)", Annapolis phone, email).
+  `states/md/convert.py` builds each bill's steps from those dates; there are no votes and no dates for the governor's
+  actions (shown on the bill's last day). Every bill the General Assembly passes gets a chapter number unless vetoed, so
+  after mid-June a passed bill without one is vetoed (some vetoed bills' statuses show a later motion on the veto).
+  Constitutional amendments pass once by three-fifths and go to the voters at the next even-year election
+  (`STATE.amendmentOnce`, `ballotEvenYears`); they get chapter numbers but aren't laws. 47 districts, each with a senator
+  and three delegates, some from subdistricts ("44A"): as in New Jersey, a district's senator and all its delegates are its
+  legislators ("S:44", "H:44a/b/c"); the towns list (cities, towns, Census-designated communities and counties) gives one
+  district list for both houses. `dataName` is the bill list's form ("Ebersole", "Lewis, R."). One 90-day session a year.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
