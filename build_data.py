@@ -369,6 +369,11 @@ def insights(loaded, hist, current):
     shells = sum(1 for s in loaded for r in loaded[s][0] if r.get("shell"))
     loaded, hist = without_shells(loaded, hist)
     past = [s for s in sorted(loaded) if s != current]
+    # States whose sessions alternate between long and short (Oregon, Connecticut): compare a session only with past
+    # sessions of the same kind, when there is one. A 35-day session with 300 bills isn't a slow 160-day one.
+    past_kind = P.session_kind(current) if hasattr(P, "session_kind") else ""
+    if past_kind and any(P.session_kind(s) == past_kind for s in past):
+        past = [s for s in past if P.session_kind(s) == past_kind]
     # Each topic also comes as "t|g" (general bills only: not about one place, person or group, nor a
     # naming), and "all|n" covers the narrow ones, for the Statistics switch and each bill's odds line.
     base = ["all"] + list(P.TOPICS)
@@ -660,6 +665,7 @@ def insights(loaded, hist, current):
         "commFate": comm_fate,
         "persistent": persistent,
         "pastSessions": past,
+        "pastKind": past_kind if past_kind and all(P.session_kind(s) == past_kind for s in past) else "",
         "committees": {"current": committee_table([current], minimum=False), "past": committee_table(past)},
         "odds": {t: dict(v) for t, v in odds.items()},
         "timing": timing,

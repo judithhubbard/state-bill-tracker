@@ -2413,9 +2413,15 @@ function votesBlock(b) {
 
 // ---- Statistics: questions people act on ----
 const pctOf = (n, d) => (d ? Math.round((n / d) * 100) : 0);
+// The past sessions statistics compare with: "2023–26" (a run of sessions), "2024" (one), "2022 and 2024" (short
+// sessions only, in a state that alternates).
 const pastSpan = () => {
   const p = DATA.insights?.pastSessions || [];
-  return p.length ? `${p[0]}–${String(p[p.length - 1] + 1).slice(2)}` : "";
+  if (!p.length) return "";
+  const run = p.every((s, i) => !i || s - p[i - 1] === YEARS);
+  const out = p.length === 1 ? span(p[0]) : run ? `${p[0]}–${String(p[p.length - 1] + YEARS - 1).slice(2)}` : andList(p.map((s) => span(s)));
+  // Where a state compares only sessions of one kind (Oregon, Connecticut): "2024 (short sessions)".
+  return DATA.insights?.pastKind ? `${out} (${DATA.insights.pastKind} session${p.length > 1 ? "s" : ""})` : out;
 };
 const ODDS_POINTS = [
   ["intro", "Introduced"],
@@ -2493,7 +2499,9 @@ function govTiming(I) {
   // By year: bar length is how many bills the governor decided; green signed, red vetoed.
   const years = (I.govYears || []).filter(([y]) => y >= "2017");
   const maxY = Math.max(1, ...years.map(([, , s, v]) => s + v));
-  const yearRows = years.map(([y, who, s, v]) => vrow(`${y}${+y === new Date().getFullYear() ? " (so far)" : ""} · ${who}`, "",
+  // "(so far)" only while this year's bills can still reach the governor.
+  const govDone = STATE.sessionEnds && STATE.govDeadline && isoToday() > (STATE.govDeadline(STATE.sessionEnds(DATA.session)) || "9999");
+  const yearRows = years.map(([y, who, s, v]) => vrow(`${y}${+y === new Date().getFullYear() && !govDone ? " (so far)" : ""} · ${who}`, "",
     [[((s + v) / maxY) * 100, "v"], [(s / maxY) * 100, "l"]], `<b class="big">${num(s + v)}</b> decisions · ${pctOf(v, s + v)}% vetoed`)).join("");
   return `<h3 class="sub">The governor's decisions by year</h3>
     <p class="key"><span><i class="k-law"></i>Signed</span><span><i class="k-veto"></i>Vetoed</span></p>
@@ -3170,7 +3178,7 @@ function renderStats() {
   $("statTiming").innerHTML = `<h2>Timing</h2>
     ${monthChart(I, t)}
     ${STATE.floorVotesEnd === false ? "" : `<h3 class="sub">End of session</h3>
-    <div class="vlist">${vrow("Floor votes in the session's last 3 weeks", `${years[0].year}–${years[years.length - 1].year}${I.timing.some((y) => y.year === 2020) ? ", except 2020" : ""}`, [[mid, "a"]], `<b class="big">${mid}%</b> in a typical year<small>Range ${Math.min(...shares)}–${Math.max(...shares)}%</small>`)}
+    <div class="vlist">${vrow("Floor votes in the session's last 3 weeks", `${YEARS === 1 ? pastSpan() : `${years[0].year}–${years[years.length - 1].year}`}${I.timing.some((y) => y.year === 2020) ? ", except 2020" : ""}`, [[mid, "a"]], years.length > 1 ? `<b class="big">${mid}%</b> in a typical year<small>Range ${Math.min(...shares)}–${Math.max(...shares)}%</small>` : `<b class="big">${mid}%</b>`)}
     ${YEARS > 1 ? vrow("Laws signed in Oct.–Dec.", `${num(signed)} laws`, [[pctOf(late, signed), "l"]], `<b class="big">${pctOf(late, signed)}%</b>`) : ""}</div>`}
     ${govTiming(I)}`;
 

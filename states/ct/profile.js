@@ -62,7 +62,7 @@ const STATE = {
   sessionNotice(raw) {
     const t = isoToday(), y = raw.session, end = STATE.sessionEnds(y);
     if (t > end && t.startsWith(String(y)))
-      return `The ${y} session adjourned ${fmtDate(end)}. Bills that didn't pass both houses died; the ${y + 1} session opens ${fmtDate(STATE.opens(y + 1))}.`;
+      return `The ${y} session adjourned ${fmtDate(end)}. Bills that didn't pass both houses died; the ${y + 1} session opens ${fmtDate(STATE.opens(y + 1))}.${y % 2 ? "" : " It was a short session (three months), with far fewer bills than a long one."}`;
     return "";
   },
   upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,

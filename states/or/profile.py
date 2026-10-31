@@ -26,6 +26,11 @@ def session_of(year):
     return year
 
 
+def session_kind(session):
+    """Sessions alternate: a long session in odd years (up to 160 days), a short one in even years (35 days, with fewer bills allowed). Statistics compare a session only with past sessions of the same kind."""
+    return "long" if session % 2 else "short"
+
+
 def session_label(session):
     return str(session)
 
