@@ -142,10 +142,15 @@ def main():
         contacts.main(CURRENT)
     except SystemExit as e:
         print(e)
+    # Every session's bill history first (small, and enough for the pages), then the roll calls, the current session's
+    # first: a first copy of the roll calls takes several runs.
+    got = {}
     for s in range(FIRST, CURRENT + 1, 2):
         bills = history(s)
         if bills is not None:
-            votes(s, list(bills))
+            got[s] = list(bills)
+    for s in sorted(got, reverse=True):
+        votes(s, got[s])
     marker = os.path.join(DATA, "incomplete")
     if INCOMPLETE:
         open(marker, "w").write(" ".join(map(str, sorted(INCOMPLETE))) + "\n")

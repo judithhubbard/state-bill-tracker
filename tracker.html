@@ -1539,17 +1539,19 @@ const AGENDA_TIP = "Bills listed for a committee meeting that hasn't happened ye
 function renderPipeline() {
   const counts = Array(7).fill(0), oneHouse = { [HOUSE.S]: 0, [HOUSE[LOW]]: 0 };
   const today = isoToday();
-  let nextDue = null;
+  let nextDue = null, voters = 0;  // constitutional amendments that passed: they go to the voters, not the governor
   for (const b of BILLS) {
     if (!matches(b, "stage")) continue;
     counts[b.stage]++;
+    if (b.stage === 3 && isAmendment(b) && secondPassage(b)) voters++;
     if (b.stage === 2 && b.passedIn) oneHouse[b.passedIn]++;
     if (b.stage === 4 && b.due && b.due >= today && (!nextDue || b.due < nextDue)) nextDue = b.due;
   }
   const subs = {
     1: "Approved by committee",
     2: `${HOUSE.S} ${num(oneHouse[HOUSE.S] || 0)} · ${HOUSE[LOW]} ${num(oneHouse[HOUSE[LOW]] || 0)}`,
-    3: STATE.passedBothNote(DATA.current),
+    3: !voters ? STATE.passedBothNote(DATA.current) : voters === counts[3] ? "Going to the voters"
+      : `${num(counts[3] - voters)} to the governor · ${num(voters)} to the voters`,
     4: DATA.current ? (nextDue ? `Next decision due ${fmtDate(nextDue)}` : counts[4] ? "Deadlines have passed" : "Nothing waiting") : "No decision in the records",
   };
   // Bills on a committee agenda that hasn't met yet: a line under "In committee".
