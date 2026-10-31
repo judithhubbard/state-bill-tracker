@@ -426,7 +426,8 @@ def insights(loaded, hist, current):
             # A one-day special session (e.g. July 2022) isn't the end of the regular session:
             # use the last day with a full slate of votes.
             per_day = Counter(regular)
-            last = max(d for d, n in per_day.items() if n >= 20)
+            # (Ohio's Legislature meets all year, and some years have no day with 20 passages: then the last one.)
+            last = max((d for d, n in per_day.items() if n >= 20), default=max(regular))
             from datetime import date, timedelta
             cut = (date.fromisoformat(last) - timedelta(days=21)).isoformat()
             timing.append({"year": year, "votes": len(regular), "lastVote": last,

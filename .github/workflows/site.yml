@@ -69,6 +69,13 @@ jobs:
           key: wa-data-v1-${{ github.run_id }}
           restore-keys: wa-data-v1-
 
+      - name: Restore Ohio downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: data/oh
+          key: oh-data-v1-${{ github.run_id }}
+          restore-keys: oh-data-v1-
+
       - name: Download New Jersey
         run: python3 states/nj/fetch.py
 
@@ -98,6 +105,13 @@ jobs:
         timeout-minutes: 90
         continue-on-error: true
         run: python3 states/wa/fetch.py
+
+      # Ohio's legislative data service: the first full copy (about 4,500 bills) takes a few runs; then each run reads
+      # the current General Assembly's actions again (about 1,500 requests).
+      - name: Download Ohio
+        timeout-minutes: 90
+        continue-on-error: true
+        run: python3 states/oh/fetch.py
 
       # Saved here, not at the end of the job: a failed check later would skip the save, and the next run would
       # download everything again (Illinois's 30,000 files, Texas's histories).
@@ -130,6 +144,13 @@ jobs:
         with:
           path: data/il
           key: il-data-v1-${{ github.run_id }}
+
+      - name: Save Ohio downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/oh
+          key: oh-data-v1-${{ github.run_id }}
 
       - name: Save Washington downloads
         if: always()

@@ -174,6 +174,22 @@ from that repo. **Nothing here may change it.**
   governor's signature, overridden vetoes and initiatives to the Legislature, so the governor's "signed" lists are a
   few short. Until the first full copy is complete, fetch.py writes data/wa/incomplete and build_site.sh and the
   checks skip Washington; add it to home.html once GitHub's copy is complete.
+- **Ohio (started 2026-10-31):** `python3 states/oh/fetch.py` reads the Legislative Service Commission's API
+  (https://search-prod.lis.state.oh.us/api/v2/, JSON; see the oh-data-sources memory). legislature.ohio.gov,
+  ohiohouse.gov, ohiosenate.gov and ohiosos.gov all answer automated requests with 403, so (decided 2026-10-31)
+  everything comes from the API except legislators' emails and page links, which come from Open States' public-domain
+  file (data/oh/openstates_people.csv; it has no phones), named as the source in "About this data". Sessions are
+  General Assemblies (`assembly_of()`: 2025 -> 136). Each bill's versions (read again when its entry in the
+  legislation list changes) and actions (the current General Assembly's every run; about 1,500 requests, no change
+  feed) go into data/oh/<session>/bills/<HB96>.json. Actions are structured, with each vote's members: committee and
+  floor votes are member by member. The governor's signature is the enrolled version's governor_signed_date, not an
+  action; a few have none (HB 110 of the 134th), so in a finished General Assembly an enrolled bill without "Veto
+  receipt" is law. "Line item veto receipt" stays as written (a law, part vetoed). "Reported - Re-referred to X" is a
+  referral to X. Each house's Rules and Reference Committee schedules floor votes. "What it does" is the long title's
+  purpose clause, after the last list of sections, its verb turned into "Modifies ..." (`purpose()`, `texts.py`).
+  Full-time Legislature (`floorVotesEnd: false`); governor 10 days, Sundays excepted. Separate Senate (33) and House
+  (99) districts by city, village or county (`states/oh/towns.py`). The governor's phone and address were written
+  from memory (governor.ohio.gov answers "not found"): check them. Built only once data/oh/incomplete is gone.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
@@ -240,6 +256,15 @@ from that repo. **Nothing here may change it.**
     is New York's return to committee in a new year; leave it "" elsewhere).
   - A conference report passes only when both houses adopt it (TX HB3104 of 2023: the House adopted it, the Senate never
     did, and it showed as passed both houses). Same for any step one house can take alone.
+  - Passing each house isn't passing both: when the second house amends a bill, the first has to agree (WA's "Final
+    Passage as Amended by the House", OH's "Passed - Amended" or a substitute: 19 OH bills of 2023-24 and 5 WA bills of
+    2021-22 showed as passed both houses). Use enrollment, or the roll calls' motions; count bills "passed both houses
+    but not sent" in a finished session, which should be about 0.
+  - Dates missing from a few records: OH's HB 110 of the 134th (the budget) has no signing date; WA's HB 2134 of
+    2023-24 has a history that stops in committee. Fall back to what else the record says (enrolled and not vetoed in a
+    finished session; a "C 310 L 24" status), and compare totals with the legislature's own lists.
+  - A record the server fails on every time (OH's HB 178 of the 134th: its actions answer 500): keep the last copy or
+    what loads, mark it, and don't let one record hold the whole download "incomplete".
   - A file's encoding: read UTF-8 first ("bedï¿½a" in TX analyses read as Windows text). Grep built texts for "ï¿½" and "\ufffd".
   - Summaries of the bill as filed when an amendment rewrote it: IL laws summarized as shell bills ("Makes a technical
     change"). Read every amendment's summary the files carry; the check counts laws summarized as placeholders.

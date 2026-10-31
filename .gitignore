@@ -33,3 +33,9 @@ data/il/*
 # Washington downloads (states/wa/fetch.py); its place table is made once by states/wa/towns.py.
 data/wa/*
 !data/wa/district_towns.json
+# Ohio downloads (states/oh/fetch.py); its place table is made once by states/oh/towns.py.
+data/oh/*
+!data/oh/district_towns.json
+# Connecticut downloads (states/ct/fetch.py); its place table is made once by states/ct/towns.py.
+data/ct/*
+!data/ct/district_towns.json
