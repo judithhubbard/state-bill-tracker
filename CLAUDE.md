@@ -361,6 +361,8 @@ from that repo. **Nothing here may change it.**
     start "Existing law ...").
   - Ids padded in one file and not another (CA's text files write "AB__001698" for AB1698: every bill under 1000
     failed to match at first). When a fixed share fails, suspect the matching, not the data.
+  - Two file formats from one server: MI's status files come in an older and a newer layout; reading only the newer one
+    left 3,088 of 3,494 bills of 2023-24 with no history ("In committee"). Count bills with no history lines.
   - Members who change house or name mid-session: OR's "Rep Neron" became "Sen Neron Misslin", and a session's member
     list shows only the end state; look the old code up in other years' lists.
   - Names: degrees and titles ("Dr.", "M.D.", "Ph.D.", "Esq.") aren't part of a name; "Jr."/"III" are, but aren't the
@@ -665,3 +667,10 @@ Read README.md for what each script downloads. This file covers how to change th
   Octobers, the governor usually asked for bills…" line on waiting bills uses only the current
   governor's record).
 - Publish the new session's Claude copy (a new artifact) and add its URL to `artifact_urls.json`.
+
+- **Constitutional amendments (2026-10-31):** shown in every state where the data has them, tagged "const": as bills (PA, MD),
+  concurrent resolutions (NY), or joint resolutions the converters now include (OH, WA, IL, GA, MI, WI; CA, OR, AZ, TX, CT,
+  NJ, MA, VA in progress). Each state's profile.js says how they pass (`amendments`, `amendmentOnce`, `amendmentVote`,
+  `amendmentFinal()`, `amendmentAgain()`) and when the voters decide (`ballotEvenYears`, `ballotYear()`, `ballotLine()`
+  when the resolution names the election: OH, WI). They never reach the governor's stages, even where the state logs the
+  governor receiving them (GA numbers them as Acts).

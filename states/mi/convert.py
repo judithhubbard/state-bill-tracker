@@ -1,5 +1,11 @@
 """Michigan's bills (downloaded by states/mi/fetch.py: each bill's status file from the Legislature's document server) in
-the shape build_data.py reads. House and Senate bills of each two-year Legislature; resolutions are left out.
+the shape build_data.py reads. House and Senate bills of each two-year Legislature, and the joint resolutions proposing
+amendments to the state constitution (lettered: "HJR A" is HJRA); other resolutions are left out. An amendment needs
+two-thirds of the members of each house and goes to the voters at the next general election (Michigan Constitution,
+Art. XII, Sec. 1), never to the governor; its floor votes read "adopted by 2/3 vote Roll Call #..." or "not adopted".
+
+The server writes the files in two formats: older ones repeat <historyitems>, <sponsors> and <categories> for each
+item, newer ones wrap <HistoryItem>, <Sponsor> and <Category> elements in one of each (`kids()`).
 
 Each status file has the digest title ("Labor: hours and wages; minimum hourly wage rate; modify."), sponsors in order
 with member codes, tie-barred bills, subject categories, the public act number, and the history: each line with the
@@ -44,6 +50,35 @@ CATEGORY_TOPICS = {"Environmental": "env", "Energy": "env", "Natural resources":
                    "Aeronautics": "transp"}
 
 
+def kids(r, inner, outer):
+    """Repeated elements in either format: <outer><Inner>...</Inner>...</outer> or <outer>...</outer> repeated."""
+    return list(r.iter(inner)) or r.findall(outer)
+
+
+def is_amendment(r):
+    """A joint resolution amending the state constitution (not one ratifying a federal amendment: HJR T of 2024)."""
+    amends = text(r.findtext("amends"))
+    return (r.findtext("prefix") in ("HJR", "SJR") and bool(re.search(r"\bstate constitution\b", amends, re.I))
+            and not re.match(r"Ratifies", amends))
+
+
+def kept(r):
+    return r.findtext("prefix") in ("HB", "SB") or is_amendment(r)
+
+
+def number(r):
+    """"HB4001", "HJRA" (joint resolutions are lettered: A ... Z, AA ...)."""
+    i = text(r.findtext("identifier"))
+    return f"{r.findtext('prefix')}{int(i) if i.isdigit() else i}"
+
+
+def order(f):
+    """Files in number order: house, then bills by number, then joint resolutions by letter (Z before AA)."""
+    m = re.match(r"\d{4}-([HS])(B|JR)-(\w+)\.xml$", os.path.basename(f))
+    i = m.group(3)
+    return (m.group(1), m.group(2) != "B", int(i) if i.isdigit() else 0, len(i), i)
+
+
 def session_dir(session):
     return os.path.join(P.DATA, f"{session}-{session + 1}")
 
@@ -70,8 +105,12 @@ def decode(item):
     a = text(item.findtext("historyaction"))
     h = {"house": "H", "senate": "S"}.get((item.findtext("journal/chamber") or "").lower(), "")
     low = a.lower()
-    if re.match(r"passed by (house|senate)", low) or re.search(r"\bpassed by (house|senate) with", low):
+    if re.match(r"(passed|adopted) by (house|senate)", low) or re.search(r"\b(passed|adopted) by (house|senate) with", low):
         return h, a  # the other house's passage, noted on arrival
+    if re.match(r"not adopted\b", low) and "roll call" in low:
+        return h, "FAILED"  # a joint resolution short of two-thirds
+    if re.match(r"adopted\b", low) and "roll call" in low:
+        return h, f"PASSED {HOUSE.get(h, 'HOUSE').upper()}"  # a joint resolution: "adopted by 2/3 vote Roll Call #12"
     m = re.search(r"referred to committee on (.+?)(?: with substitute.*)?$", a, re.I)
     if m and "committee of the whole" not in low:
         return h, f"REFERRED TO {m.group(1).strip().upper()}"
@@ -83,7 +122,7 @@ def decode(item):
         return h, f"PASSED {HOUSE.get(h, 'HOUSE').upper()}"
     if re.search(r"failed to pass|^defeated", low) and "roll call" in low:
         return h, "FAILED"
-    if re.search(r"vote on passage reconsidered|vote reconsidered", low):
+    if re.search(r"vote on (?:passage|adoption) reconsidered|vote reconsidered", low):
         return h, "RECONSIDERED"
     if re.search(r"concurred in", low) and "roll call" in low:
         return h, "CONCURRED"
@@ -113,10 +152,11 @@ def load_session(session):
     parties = _PARTIES.setdefault(session, {})
     from fetch_contacts import name_key
 
-    def person(name):
-        """"Sen. Jeff Irwin" -> "Jeff Irwin" (the contacts file's spelling where it's a sitting member)."""
+    def person(name, sid=""):
+        """"Sen. Jeff Irwin" -> "Jeff Irwin" (the contacts file's spelling where it's a sitting member). Older files
+        write bare names; their sponsor ids ("S012A", "H078A") give the house."""
         n = text(name)
-        h = "S" if re.search(r"\bSen\b", n) else "H"
+        h = sid[:1] if sid[:1] in ("S", "H") else "S" if re.search(r"\bSen\b", n) else "H"
         m = re.match(r"([^,]+), (?:Sen|Rep)\.?\s+(.+)", n)  # "Roth, Rep. John R."
         bare = f"{m.group(2)} {m.group(1)}" if m else re.sub(r"^(Sen|Rep)\.?\s+", "", n)
         last = name_key(bare).split()[-1:]
@@ -130,13 +170,14 @@ def load_session(session):
     files = sorted(glob.glob(os.path.join(session_dir(session), "*", "*.xml")))
     fetched = datetime.fromtimestamp(max(os.path.getmtime(f) for f in files), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
     recs, index = [], {}
-    for f in sorted(files, key=lambda f: (os.path.basename(f)[5], int(os.path.basename(f)[8:-4]))):
+    for f in sorted(files, key=order):
         r = ET.parse(f).getroot()
-        if r.findtext("prefix") not in ("HB", "SB"):
+        if not kept(r):
             continue
-        p = f"{r.findtext('prefix')}{int(r.findtext('identifier'))}"
+        amend = is_amendment(r)
+        p = number(r)
         origin = p[0]
-        items = sorted(r.iter("HistoryItem"), key=lambda h: ((h.findtext("historydate") or "")[:10], int(h.findtext("sequence") or 0)))
+        items = sorted(kids(r, "HistoryItem", "historyitems"), key=lambda h: ((h.findtext("historydate") or "")[:10], int(h.findtext("sequence") or 0)))
         steps = [((h.findtext("historydate") or "")[:10],) + decode(h) + (text(h.findtext("historyaction")),) for h in items]
         passed = set()
         for d, h, t, a in steps:
@@ -145,8 +186,17 @@ def load_session(session):
             elif t == "RECONSIDERED":
                 passed.discard(h)
         texts_ = [s[2] for s in steps]
-        pa = text(r.findtext("publicact/panumber"))
-        if "VETOED" in texts_:
+        pa = "" if amend else text(r.findtext("publicact/panumber"))
+        if amend:
+            # Never the governor's: passed both houses once the second house adopted the same text (or the first
+            # concurred in its changes), "ordered enrolled" or "filed with the Secretary of State".
+            last = max((i for i, s in enumerate(steps) if s[2].startswith("PASSED") and s[1] != origin), default=None)
+            agreed = last is not None and (not re.search(r"substitute|amend", steps[last][3], re.I)
+                                           or any(s[2] == "CONCURRED" and s[1] == origin for s in steps[last + 1:]))
+            filed = any(re.search(r"secretary of state", s[3], re.I) for s in steps)
+            stage = 3 if "ENROLLED" in texts_ or filed or (len(passed) == 2 and agreed) else 2 if passed else None
+            steps = [(d, h, a if t in ("DELIVERED TO GOVERNOR", "SIGNED", "VETOED") else t, a) for d, h, t, a in steps]
+        elif "VETOED" in texts_:
             stage = 6
         elif "SIGNED" in texts_ or pa:
             stage = 5
@@ -176,14 +226,16 @@ def load_session(session):
         refs = [(s[1] if s[1] in HOUSE else origin, proper(s[2][len("REFERRED TO "):])) for s in steps if s[2].startswith("REFERRED TO")]
         comm_list = sorted({f"{h} · {c}" for h, c in refs})
         title, subject = titled(r.findtext("digesttitle"))
-        cats = [text(c.findtext("maincategory")) for c in r.iter("Category")]
-        topics = list(dict.fromkeys([v for c in cats for k, v in CATEGORY_TOPICS.items() if c.startswith(k)]))
+        if amend:
+            title = "Constitutional amendment: " + title[:1].lower() + title[1:]
+        cats = [text(c.findtext("maincategory")) for c in kids(r, "Category", "categories")]
+        topics = list(dict.fromkeys((["const"] if amend else []) + [v for c in cats for k, v in CATEGORY_TOPICS.items() if c.startswith(k)]))
         topics = list(dict.fromkeys(topics + [k for k in P.TOPIC_WORDS if P.TOPIC_WORDS[k].search(title)]))
         first = next((i for i, s in enumerate(steps) if s[2].startswith("REFERRED TO")), None)
         left = first is not None and any(t in ("REPORTED",) or t.startswith("PASSED") for _, _, t, _ in steps[first + 1:])
         fate = "passed" if left else "none"
-        sps = sorted(r.iter("Sponsor"), key=lambda s: int(s.findtext("sequence") or 0))
-        names = [person(text(s.findtext("name"))) for s in sps]
+        sps = sorted(kids(r, "Sponsor", "sponsors"), key=lambda s: int(s.findtext("sequence") or 0))
+        names = [person(text(s.findtext("name")), text(s.findtext("sponsorid"))) for s in sps]
         sponsor = names[0] if names else (person(text(r.findtext("introduced_by"))) if r.findtext("introduced_by") else "—")
         cos = names[1:]
         if stage == 0 and committee:
@@ -247,10 +299,10 @@ def _digests(session):
         out = {}
         for f in glob.glob(os.path.join(session_dir(session), "*", "*.xml")):
             r = ET.parse(f).getroot()
-            if r.findtext("prefix") in ("HB", "SB"):
-                sp = next(iter(r.iter("Sponsor")), None)
+            if kept(r):
+                sp = min(kids(r, "Sponsor", "sponsors"), key=lambda s: int(s.findtext("sequence") or 0), default=None)
                 out.setdefault(text(r.findtext("digesttitle")).lower(), []).append(
-                    (f"{r.findtext('prefix')}{int(r.findtext('identifier'))}", re.sub(r"^(Sen|Rep)\.?\s+", "", text(sp.findtext("name"))) if sp is not None else ""))
+                    (number(r), re.sub(r"^(Sen|Rep)\.?\s+", "", text(sp.findtext("name"))) if sp is not None else ""))
         _DIGESTS[session] = out
     return _DIGESTS[session]
 

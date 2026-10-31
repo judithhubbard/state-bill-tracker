@@ -5,7 +5,9 @@ delay). One request at a time, a second apart.
 
 For each two-year session (2023 = 2023-2024, 2025 = 2025-2026; regular session only, not special sessions):
 - The Assembly and Senate bill lists (/<year>/proposals/reg/asm/bill, .../sen/bill: every bill with its status line
-  and relating clause) into data/wi/<year>/list.json.
+  and relating clause) into data/wi/<year>/list.json, with the joint resolutions that propose constitutional
+  amendments (/<year>/proposals/reg/asm/joint_resolution, .../sen/...: those whose relating clause says "(first
+  consideration)" or "(second consideration)"; AJR5, SJR12). Other resolutions are left out. Below, "bill" includes them.
 - Each bill's history page (/<year>/proposals/reg/asm/bill/ab1) parsed into data/wi/<year>/bills/<AB1>.json: the
   title, status, authors (first-house members, in order) and cosponsors (the other house's), each history line with
   its date, house, plain text and the vote, committee, amendment and act it links to, and the page's document links
@@ -37,6 +39,23 @@ YEAR = date.today().year
 CURRENT = YEAR if YEAR % 2 else YEAR - 1
 FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else CURRENT - 2
 HOUSES = {"asm": ("AB", "assembly"), "sen": ("SB", "senate")}
+# The lists read: (house, kind, number prefix). Joint resolutions are kept only for constitutional amendments.
+KINDS = [("asm", "bill", "AB"), ("sen", "bill", "SB"), ("asm", "joint_resolution", "AJR"), ("sen", "joint_resolution", "SJR")]
+AMENDMENT = re.compile(r"\((?:first|second) consideration\)", re.I)
+
+
+def split_num(num):
+    """"AJR12" -> ("AJR", 12)."""
+    m = re.match(r"([A-Z]+)(\d+)$", num)
+    return m.group(1), int(m.group(2))
+
+
+def page_path(year, num):
+    """A bill's or joint resolution's page: /2025/proposals/reg/asm/bill/ab1, .../sen/joint_resolution/sjr3."""
+    prefix, _ = split_num(num)
+    house = "asm" if prefix[0] == "A" else "sen"
+    kind = "joint_resolution" if prefix.endswith("JR") else "bill"
+    return f"/{year}/proposals/reg/{house}/{kind}/{num.lower()}"
 REFRESH_DAYS = 7  # every current-session bill is read again at least this often
 INCOMPLETE = set()
 MISSING = object()  # a page that answers 404
@@ -91,15 +110,18 @@ def main_part(page):
 
 # ---------------------------------------------------------------- bill lists
 
-def bill_list(year, house):
-    """{"AB1": {"status": "A - Veto Sustained", "relating": "Relating to: ..."}} from a house's bill list, or None."""
-    page = get(f"/{year}/proposals/reg/{house}/bill")
+def bill_list(year, house, kind="bill"):
+    """{"AB1": {"status": "A - Veto Sustained", "relating": "Relating to: ..."}} from a house's bill (or joint
+    resolution) list, or None."""
+    page = get(f"/{year}/proposals/reg/{house}/{kind}")
     if not isinstance(page, str):
         return None
     out = {}
-    for m in re.finditer(r'<a href="/\d+/proposals/reg/\w+/bill/([a-z]+)(\d+)">[^<]*</a></div>\s*'
+    for m in re.finditer(rf'<a href="/\d+/proposals/reg/\w+/{kind}/([a-z]+)(\d+)">[^<]*</a></div>\s*'
                          r'<div class="span3">(.*?)</div>\s*<div class="span6">(.*?)</div>', page, re.S):
         out[f"{m.group(1).upper()}{m.group(2)}"] = {"status": text(m.group(3)), "relating": text(m.group(4))}
+    if kind == "joint_resolution":
+        out = {k: v for k, v in out.items() if AMENDMENT.search(v["relating"])}
     return out
 
 
@@ -127,12 +149,12 @@ def journal_bills(year, folder):
                 INCOMPLETE.add(f"{year}:journals")
                 continue
             body = text(main_part(page))
-            for kind, num in re.findall(r"\b(Assembly|Senate) Bills? (\d+)", body):
-                named.add(("AB" if kind == "Assembly" else "SB") + num)
+            for kind, jr, num in re.findall(r"\b(Assembly|Senate) (Joint Resolutions?|Bills?) (\d+)", body):
+                named.add(kind[0] + ("JR" if jr.startswith("Joint") else "B") + num)
             # "Senate Bills 12, 15 and 20" lists
-            for kind, nums in re.findall(r"\b(Assembly|Senate) Bills ((?:\d+, )*\d+,? and \d+)", body):
+            for kind, jr, nums in re.findall(r"\b(Assembly|Senate) (Joint Resolutions|Bills) ((?:\d+, )*\d+,? and \d+)", body):
                 for num in re.findall(r"\d+", nums):
-                    named.add(("AB" if kind == "Assembly" else "SB") + num)
+                    named.add(kind[0] + ("JR" if jr.startswith("Joint") else "B") + num)
             read.append(d)
     return named, read, seen
 
@@ -399,13 +421,14 @@ def session(year):
     live = year >= CURRENT
 
     listing = {}
-    for house in HOUSES:
-        got = bill_list(year, house)
+    for house, kind, prefix in KINDS:
+        got = bill_list(year, house, kind)
         if got is None:
-            print(f"{year} {house}: no bill list; kept the last copy")
-            INCOMPLETE.add(f"{year}:list")
+            print(f"{year} {house} {kind}: no list; kept the last copy")
+            if kind == "bill":  # a missing amendment list shouldn't hold back the bills
+                INCOMPLETE.add(f"{year}:list")
             got = {k: v for k, v in (load(os.path.join(folder, "list.json"), {}) or {}).items()
-                   if k.startswith(HOUSES[house][0])}
+                   if split_num(k)[0] == prefix}
         listing.update(got)
     if listing:
         save(os.path.join(folder, "list.json"), listing)
@@ -428,14 +451,12 @@ def session(year):
     if live:
         stale.sort()
         todo += [n for f, n in stale[:math.ceil(len(listing) / REFRESH_DAYS)]]
-    todo = sorted(dict.fromkeys(todo), key=lambda n: (n[:2], int(n[2:])))
+    todo = sorted(dict.fromkeys(todo), key=split_num)
     print(f"{year}: {len(listing)} bills listed, {len(todo)} to read", flush=True)
 
     got = failed = 0
     for num in todo:
-        prefix = num[:2].lower()
-        house = "asm" if prefix == "ab" else "sen"
-        page = get(f"/{year}/proposals/reg/{house}/bill/{num.lower()}")
+        page = get(page_path(year, num))
         if not isinstance(page, str):
             failed += 1
             continue

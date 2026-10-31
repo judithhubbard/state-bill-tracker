@@ -5,7 +5,7 @@ const STATE = {
   name: "Georgia",
   abbr: "GA",
   // Steps that aren't news on a watchlist card.
-  routine: /^(House Hopper|Senate Hopper|House Second Readers|House Prefiled|Effective Date|Senate Engrossed|House Immediately Transmitted|Senate Transmitted|Act \d+)/i,
+  routine: /^(House Hopper|Senate Hopper|House Second Readers|House Prefiled|Effective Date|Numbered Act \d+|Senate Engrossed|House Immediately Transmitted|Senate Transmitted|Act \d+)/i,
   publicSite: "https://statebilltracker.org/ga/",
   listsApi: "",
   houses: { S: "Senate", H: "House" },
@@ -17,6 +17,13 @@ const STATE = {
   govReach: `<a href="https://gov.georgia.gov/contact-us" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Atlanta <a class="phone" href="tel:+14046561776" data-contact="call|governor">(404) 656-1776</a>`,
   // A law's number: "Act 696".
   lawWord: "Act",
+  // House and Senate resolutions proposing constitutional amendments pass each house once, by two-thirds of its members,
+  // then go to the voters at the next general election in an even year; the governor can't veto them (Georgia
+  // Constitution, Art. X, Sec. I, Para. II).
+  amendments: true,
+  amendmentOnce: true,
+  amendmentVote: "both houses by two-thirds",
+  ballotEvenYears: true,
 
   // The General Assembly's bill page is addressed by its legislation id ("link", from convert.py), not its number.
   billUrl(p) {

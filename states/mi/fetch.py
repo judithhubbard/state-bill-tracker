@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Download Michigan's bill status files from the Legislature's file server
+"""Download Michigan's bill and joint resolution status files from the Legislature's file server
 (https://www.legislature.mi.gov/documents/<session>/status/<house|senate>/xml/; see the state-survey-2026-10-31
 memory). Its Automated Data Collection Policy allows at most one request per second, so this waits a second between
-requests. A finished session's files are read once; the current session's when the folder listing shows them newer.
+requests. Joint resolutions ("2025-HJR-A.xml", lettered) are kept for the constitutional
+amendments they propose; other resolutions are left out. A finished session's files are read once; the current
+session's when the folder listing shows them newer.
 Usage: python3 states/mi/fetch.py   (2023-2024 and 2025-2026)
 """
 import json, os, re, sys, time, urllib.request
@@ -41,7 +43,7 @@ def main():
             os.makedirs(folder, exist_ok=True)
             listing = (get(f"{SITE}/documents/{session}/status/{house}/xml/") or b"").decode("utf-8", "replace")
             entries = {m.group(3): f"{m.group(1)} {m.group(2)}" for m in
-                       re.finditer(r"(\d+/\d+/\d{4}\s+\d+:\d+ [AP]M)\s+(\d+) <A HREF=\"[^\"]*/((?:\d{4})-[HS]B-\d+\.xml)\"", listing)}
+                       re.finditer(r"(\d+/\d+/\d{4}\s+\d+:\d+ [AP]M)\s+(\d+) <A HREF=\"[^\"]*/((?:\d{4})-(?:[HS]B-\d+|[HS]JR-[A-Z]+)\.xml)\"", listing)}
             if not entries:
                 print(f"{session} {house}: no listing; kept the last copies")
                 incomplete.append(f"{session}:{house}")

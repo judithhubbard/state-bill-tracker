@@ -1,5 +1,8 @@
 """Georgia's bills (downloaded by states/ga/fetch.py from the General Assembly's web services) in the shape build_data.py
-reads. House and Senate bills of each two-year regular session; resolutions and special sessions are left out.
+reads. House and Senate bills of each two-year regular session, and the House and Senate resolutions proposing amendments
+to the state Constitution (LegislationType "CA"); other resolutions and special sessions are left out. An amendment needs
+two-thirds of each house and then goes to the voters at the next even-year general election (Constitution, Art. X,
+Sec. I, Para. II); the governor can't veto it, though passed ones are still "sent to the Governor" and get Act numbers.
 
 Each bill's status history is coded, with the house where the step happened as the code's first letter: HFR/HSR (House
 first and second readers: read and sent to committee), SRAR (Senate read and referred), HCFR/SCFR (committee favorably
@@ -57,6 +60,17 @@ def purpose(summary):
     return (out[:1].upper() + out[1:]).rstrip(" ;,") + "."
 
 
+def is_amendment(b):
+    """A House or Senate resolution proposing an amendment to the Georgia Constitution (SR 55 of 2023, also typed "CA",
+    ratifies a federal amendment)."""
+    return (b.get("DocumentType") in ("HR", "SR") and b.get("LegislationType") == "CA"
+            and bool(re.match(r"A RESOLUTION proposing (?:an amendment|amendments) to the Constitution", text(b.get("Summary")), re.I)))
+
+
+def kept(b):
+    return b.get("DocumentType") in ("HB", "SB") or is_amendment(b)
+
+
 def decode(h):
     """One status step -> (house, shared wording)."""
     code, desc = h.get("Code") or "", text(h.get("Description"))
@@ -95,7 +109,7 @@ def _captions(session):
         out = {}
         for f in glob.glob(os.path.join(folder(session), "bills", "*.json")):
             b = json.load(open(f))
-            if b.get("DocumentType") in ("HB", "SB"):
+            if kept(b):
                 a = min(b.get("Authors") or [{}], key=lambda a: int(a.get("Sequence") or 0))
                 out.setdefault(text(b.get("Caption")).lower(), []).append((f"{b['DocumentType']}{int(b['Number'])}", a.get("MemberId")))
         _CAPTIONS[session] = out
@@ -154,8 +168,9 @@ def load_session(session):
     texts, recs, index = {}, [], {}
     for f in sorted(files, key=lambda f: (os.path.basename(f)[0], int(re.sub(r"\D", "", os.path.basename(f)) or 0))):
         b = json.load(open(f))
-        if b.get("DocumentType") not in ("HB", "SB"):
+        if not kept(b):
             continue
+        amend = is_amendment(b)
         p = f"{b['DocumentType']}{int(b['Number'])}"
         origin = p[0]
         hist = sorted(b.get("StatusHistory") or [], key=lambda h: (h.get("Date") or "", int(h.get("StatusListingId") or 0)))
@@ -165,6 +180,10 @@ def load_session(session):
         steps = [(d, h, f"REFERRED TO {comms[HOUSE[h]].upper()}" if t == "REFERRED" and comms.get(HOUSE.get(h)) else t, a)
                  for d, h, t, a in steps if not (t == "REFERRED" and not comms.get(HOUSE.get(h)) and a == "House Second Readers")]
         steps = [s for s in steps if s[2] != "REFERRED"]
+        if amend:
+            # The governor's part is a formality for an amendment: keep the lines as written, not as the steps of a bill.
+            steps = [(d, h, (f"Numbered {t}" if re.match(r"Act \d+", t) else f"{a} (the governor can't veto an amendment)"
+                             if t in ("DELIVERED TO GOVERNOR", "SIGNED", "VETOED") else t), a) for d, h, t, a in steps]
         passed = set()
         for d, h, t, a in steps:
             if t.startswith("PASSED"):
@@ -172,7 +191,7 @@ def load_session(session):
             elif t == "RECONSIDERED":
                 passed.discard(h)
         texts_ = [s[2] for s in steps]
-        act = re.search(r"\d+", b.get("ActVetoNumber") or "") if any(re.match(r"Act \d+", t) for t in texts_) else None
+        act = None if amend else re.search(r"\d+", b.get("ActVetoNumber") or "") if any(re.match(r"Act \d+", t) for t in texts_) else None
         if "VETOED" in texts_:
             stage = 6
         elif "SIGNED" in texts_ or act:
@@ -203,9 +222,11 @@ def load_session(session):
         refs.sort(key=lambda r: r[0] != origin)
         comm_list = sorted({f"{h} · {c}" for h, c in refs})
         title = text(b.get("Caption"))
+        if amend:
+            title = "Constitutional amendment: " + re.sub(r"\s*-\s*CA\s*$", "", title).strip(" ;")
         local = b.get("LegislationType") == "LOC"
         topics = [v for k, v in P.COMMITTEE_TOPICS.items() if any(k.lower() in c.lower() for _, c in refs)]
-        topics = list(dict.fromkeys((["local"] if local else []) + topics + [k for k in P.TOPIC_WORDS if P.TOPIC_WORDS[k].search(title)]))
+        topics = list(dict.fromkeys((["const"] if amend else []) + (["local"] if local else []) + topics + [k for k in P.TOPIC_WORDS if P.TOPIC_WORDS[k].search(title)]))
         first = next((i for i, s in enumerate(steps) if s[2].startswith("REFERRED TO")), None)
         left = first is not None and any(t in ("REPORTED",) or t.startswith("PASSED") for _, _, t, _ in steps[first + 1:])
         fate = "passed" if left else "defeated" if any(s[2].startswith("Committee reported unfavorably") for s in steps) else "none"
@@ -237,7 +258,8 @@ def load_session(session):
         for v in b.get("Votes") or []:
             h = "S" if v.get("Branch") == "Senate" else "H"
             d = (v.get("Date") or "")[:10]
-            if (h, d) not in days or re.search(r"AMENDMENT|MOTION|TABLE|RECONSIDER|PREVIOUS QUESTION|AGENDA", v.get("Caption") or "", re.I):
+            cap = re.sub(r"(?:ADOPTION OF )?CONSTITUTIONAL AMENDMENT", "", v.get("Caption") or "")  # an amendment's own passage
+            if (h, d) not in days or re.search(r"AMENDMENT|MOTION|TABLE|RECONSIDER|PREVIOUS QUESTION|AGENDA", cap, re.I):
                 continue
             full = load(session, os.path.join("votes", f"{v.get('VoteId')}.json"), {})
             # Roll calls list vacant seats as "VACANT".
@@ -293,6 +315,8 @@ def agreed(steps):
             pending = bool(re.search(r"As Amended", a))
         elif re.search(r"Disagreed|Insisted|Conference Committee Appointed", a):
             pending = True
+        elif re.search(r"Recede", a):
+            pending = False  # it withdrew its own changes, so it agrees to the other house's version (HR 1022 of 2023-24)
         elif re.search(r"Conference (?:Committee )?Report Adopted", a):
             conference.add(h)
             if conference >= {"H", "S"}:

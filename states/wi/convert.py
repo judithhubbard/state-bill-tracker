@@ -1,5 +1,9 @@
 """Wisconsin's bills (downloaded by states/wi/fetch.py from docs.legis.wisconsin.gov) in the shape build_data.py reads.
-Assembly and Senate bills of each two-year regular session; joint resolutions and special sessions are left out.
+Assembly and Senate bills of each two-year regular session, and the joint resolutions proposing constitutional amendments
+(AJR/SJR whose relating clause ends "(first consideration)" or "(second consideration)"); other resolutions and special
+sessions are left out. An amendment must pass two successive Legislatures by a majority of each house, then go to the
+voters (Wisconsin Constitution, Art. XII, Sec. 1); it never goes to the governor. A joint resolution is "adopted" in the
+first house ("Read a third time and adopted, Ayes 54, Noes 44") and "concurred in" by the second.
 
 Each bill's history line has its date, house and action: "Read first time and referred to committee on X", "Report
 passage recommended by committee on X, Ayes 4, Noes 2", "Placed on calendar 2-13-2024", "Read a third time and passed,
@@ -57,7 +61,7 @@ def decode(h):
         return house, "Committee recommended it fail"
     if re.match(r"placed on calendar|available for scheduling|read a second time", low):
         return house, "PLACED ON FLOOR"
-    if re.match(r"read a third time and (?:passed|concurred in)|concurred in as amended, ayes", low):
+    if re.match(r"read a third time and (?:passed|concurred in|adopted)|(?:concurred in as amended|adopted), ayes", low):
         return house, f"PASSED {HOUSE.get(house, 'ASSEMBLY').upper()}"
     if re.match(r"(?:assembly|senate) (?:substitute )?amendment .*concurred in", low):
         return house, "CONCURRED"
@@ -69,9 +73,9 @@ def decode(h):
         return "G", "SIGNED"
     if re.match(r"report vetoed by the governor", low):
         return "G", "VETOED"
-    if re.search(r"failed to pass pursuant to|failed to concur in pursuant to", low):
+    if re.search(r"failed to (?:pass|adopt|concur in) pursuant to", low):
         return house, "Died at the end of the session"
-    if re.match(r"(?:failed|refused) to pass|indefinitely postponed", low):
+    if re.match(r"(?:failed|refused) to (?:pass|adopt|concur)|indefinitely postponed", low):
         return house, "FAILED" if "ayes" in low else a
     return house or "G", a
 
@@ -79,6 +83,37 @@ def decode(h):
 def tally(a):
     m = re.search(r"Ayes (\d+), Noes (\d+)", a)
     return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+CONSIDERATION = re.compile(r"\s*\((first|second) consideration\)", re.I)
+
+
+def is_amendment(b):
+    return bool(re.match(r"[AS]JR\d+$", b.get("number") or "")) and bool(CONSIDERATION.search(text(b.get("relating"))))
+
+
+_RELATING = {}
+
+
+def _amendments(session):
+    """Relating clause without "(first consideration)" -> [(number, stage reached)] for a session's amendments."""
+    if session not in _RELATING:
+        out = {}
+        for f in glob.glob(os.path.join(folder(session), "bills", "?JR*.json")):
+            b = json.load(open(f))
+            if is_amendment(b):
+                out.setdefault(CONSIDERATION.sub("", text(b.get("relating"))).lower().rstrip(". "), []).append(b["number"])
+        _RELATING[session] = out
+    return _RELATING[session]
+
+
+def earlier(session, b):
+    """A second-consideration amendment's first consideration: the joint resolution of the Legislature before with the
+    same relating clause."""
+    if not is_amendment(b):
+        return set()
+    old = _amendments(session - 2).get(CONSIDERATION.sub("", text(b.get("relating"))).lower().rstrip(". "), [])
+    return {(session - 2, old[0])} if len(old) == 1 else set()
 
 
 def members_index(session):
@@ -120,7 +155,8 @@ def load_session(session):
     for f in sorted(files, key=lambda f: (os.path.basename(f)[0], int(re.sub(r"\D", "", os.path.basename(f)) or 0))):
         b = json.load(open(f))
         p = b["number"]
-        if p[:2] not in ("AB", "SB"):
+        amend = is_amendment(b)
+        if p[:2] not in ("AB", "SB") and not amend:
             continue
         origin = p[0]
         steps = [(h.get("date") or "",) + decode(h) + (text(h.get("action")), h) for h in b.get("history") or []]
@@ -133,7 +169,13 @@ def load_session(session):
                 passed.add(s[1])
         texts_ = [s[2] for s in steps]
         act = next((re.search(r"Wisconsin Act (\d+)", s[3]).group(1) for s in steps if re.search(r"Wisconsin Act \d+", s[3])), None)
-        if "VETOED" in texts_:
+        if amend:
+            # Passed both houses: the second house concurred in the same text, or the first agreed to its changes.
+            last = max((i for i, s in enumerate(steps) if s[2].startswith("PASSED") and s[1] != origin), default=None)
+            agreed = last is not None and (not re.search(r"as amended", steps[last][3], re.I)
+                                           or any(s[2] == "CONCURRED" and s[1] == origin for s in steps[last + 1:]))
+            stage = 3 if "ENROLLED" in texts_ or (len(passed) == 2 and agreed) else 2 if passed else None
+        elif "VETOED" in texts_:
             stage = 6
         elif "SIGNED" in texts_:
             stage = 5
@@ -164,7 +206,9 @@ def load_session(session):
         comm_list = sorted({f"{h} · {c}" for h, c in refs})
         relating = re.sub(r"\s*\((?:FE|FE\))\)?$", "", text(b.get("relating"))).rstrip(". ")  # "(FE)": has a fiscal estimate
         title = relating[:1].upper() + relating[1:] if relating else text(b.get("title"))
-        topics = list(dict.fromkeys([v for k, v in P.COMMITTEE_TOPICS.items() if any(k.lower() in c.lower() for _, c in refs)] +
+        if amend:
+            title = "Constitutional amendment: " + relating  # keeps "(first consideration)": page's amendmentFinal reads it
+        topics = list(dict.fromkeys((["const"] if amend else []) + [v for k, v in P.COMMITTEE_TOPICS.items() if any(k.lower() in c.lower() for _, c in refs)] +
                                     [k for k in P.TOPIC_WORDS if P.TOPIC_WORDS[k].search(title)]))
         first = next((i for i, s in enumerate(steps) if s[2].startswith("REFERRED TO")), None)
         left = first is not None and any(t in ("REPORTED",) or t.startswith("PASSED") for _, _, t, _, _ in steps[first + 1:])
@@ -205,7 +249,7 @@ def load_session(session):
             votes.append([h, "F", None, d] + list(tally(a)) + [names_])
         action_dates = [s[0] for s in steps if s[0]]
         rec = {
-            "nums": [p], "base": [p], "prev": set(),
+            "nums": [p], "base": [p], "prev": earlier(session, b),
             "title": title, "summary": "", "act": "", "lawCode": "", "law": None, "laws": [],
             "comms": comm_list, "topics": topics, "places": [], "narrow": P.narrow_kind(title),
             "commFate": fate, "mainTopic": topics[0] if topics else "", "local": "local" in topics,

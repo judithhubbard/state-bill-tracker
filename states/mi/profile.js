@@ -16,6 +16,13 @@ const STATE = {
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
   // A law's number: "Public Act 2 of 2025".
   lawWord: "Public Act",
+  // Joint resolutions proposing constitutional amendments pass each house once, by two-thirds of the members elected and
+  // serving, then go to the voters at the next general election (or a special election the Legislature calls); never to
+  // the governor (Michigan Constitution, Art. XII, Sec. 1).
+  amendments: true,
+  amendmentOnce: true,
+  amendmentVote: "both houses by two-thirds",
+  ballotEvenYears: true,
   govReach: `<a href="https://somgovweb.state.mi.us/ContactGovernor" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Lansing <a class="phone" href="tel:+15173357858" data-contact="call|governor">(517) 335-7858</a>`,
 
   // The Legislature's bill page is addressed by the year the bill was introduced ("2026-SB-0968"): a version's "link".

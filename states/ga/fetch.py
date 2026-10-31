@@ -7,7 +7,8 @@ its operations; www.legis.ga.gov's robots.txt has no rules).
   data/ga/<year>/legislation.json (year = the session's first year: 2025 for 2025-2026).
 - Each House and Senate bill's detail (GetLegislationDetail: sponsors in order, committees, status history with
   dates, the long title as Summary, footnotes, act or veto number, versions, and its floor votes' listings) into
-  data/ga/<year>/bills/<HB123>.json. Resolutions are left out. A finished session's are read once; the current
+  data/ga/<year>/bills/<HB123>.json; also the House and Senate resolutions proposing amendments to the state
+  Constitution (their captions end "- CA": data/ga/<year>/bills/<HR18>.json). Other resolutions are left out. A finished session's are read once; the current
   one's every run (the service has no change feed; about 2,300 bills, a few minutes).
 - Each vote the bills list (GetVote: every member's vote, by member id) into data/ga/<year>/votes/<id>.json, once.
 - The members (GetMembersBySession, then GetMember for addresses, phones, emails, titles and committee roles) and
@@ -15,7 +16,7 @@ its operations; www.legis.ga.gov's robots.txt has no rules).
   committees.json; a finished session's once.
 Three requests at a time. Usage: python3 states/ga/fetch.py [first_year]   (default: the session before this one)
 """
-import json, os, sys, time, urllib.request
+import json, os, re, sys, time, urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
@@ -95,6 +96,12 @@ def session_ids():
     return out
 
 
+def is_amendment(x):
+    """A House or Senate resolution proposing an amendment to the state Constitution: its caption ends "- CA"
+    ("Right to Register and Vote; clarify -CA"). convert.py checks its long title too (one ratifies a federal amendment)."""
+    return x["Description"].split(" ")[0] in ("HR", "SR") and bool(re.search(r"\bCA\s*$", x.get("Caption") or ""))
+
+
 def pool_map(fn, items):
     with ThreadPoolExecutor(3) as pool:
         return list(pool.map(fn, items))
@@ -117,7 +124,7 @@ def session(year, sid):
     else:
         save(os.path.join(folder, "legislation.json"), index)
     bills = {x["Description"].replace(" ", ""): x["Id"] for x in index
-             if x["Description"].split(" ")[0] in ("HB", "SB")}
+             if x["Description"].split(" ")[0] in ("HB", "SB") or is_amendment(x)}
 
     def one(item):
         num, lid = item

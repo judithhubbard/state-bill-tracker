@@ -17,6 +17,20 @@ const STATE = {
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
   // A law's number: "2025 Wisconsin Act 12".
   lawWord: "Act",
+  // Joint resolutions proposing constitutional amendments pass two successive Legislatures by a majority of the members
+  // elected to each house ("first consideration", then "second consideration"), then go to the voters at an election
+  // the second resolution sets; never to the governor (Wisconsin Constitution, Art. XII, Sec. 1). The title keeps the
+  // "(second consideration)" that marks the final passage, so it's known even when the first isn't in these records.
+  amendments: true,
+  amendmentFinal: (b) => /\(second consideration\)/i.test(b.title),
+  amendmentVote: "two successive Legislatures, each by a majority of the members of both houses",
+  // The second-consideration resolution names the election (often the April spring election or the August primary).
+  ballotLine(b) {
+    const d = [b.dates.passS, b.dates.passA].sort().pop() || "";
+    return d && d.slice(0, 4) < isoToday().slice(0, 4)
+      ? "It went to the voters at the election the resolution named; the records here don't show the result."
+      : "Next: the voters, at the election the resolution names (often the April spring election).";
+  },
   govReach: `<a href="https://wi.accessgov.com/public/Forms/Page/governor/voice-an-opinion" target="_blank" rel="noopener" data-contact="online|governor">Share your opinion with the governor</a> · Madison <a class="phone" href="tel:+16082661212" data-contact="call|governor">(608) 266-1212</a>`,
 
   // The Legislature's bill page (history, text, analysis, votes).

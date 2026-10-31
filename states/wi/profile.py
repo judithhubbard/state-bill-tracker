@@ -61,6 +61,8 @@ TOPICS = {
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|rent|eviction\w*)\b"),
     "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunting|timber)\b"),
     "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics|open records)\b"),
+    # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words).
+    "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
     "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
 }
 # Committee name words -> topic.
