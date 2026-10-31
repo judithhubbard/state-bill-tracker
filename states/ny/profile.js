@@ -45,6 +45,8 @@ const STATE = {
   // session's second year, and they die if it doesn't.
   passedBothBy: (session) => `${session + 1}-12-31`,
   // The line under "Passed both houses", in the stage list and (with the bill) in its row.
+  // Constitutional amendments (concurrent resolutions) pass two separately elected Legislatures, then the voters.
+  amendments: true,
   passedBothNote: (live) => `${live ? "Not yet requested" : "Never requested"} by the governor`,
   passedBothGroup: ["By December 31", () => "The governor's office has to request these and decide on them by the end of the year, or they die."],
 
