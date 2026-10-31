@@ -347,8 +347,8 @@ def load_session(session):
         }
         index[p] = len(recs)
         recs.append(rec)
-    if session == CURRENT or not os.path.exists(os.path.join(P.DATA, f"texts_{session}.json")):
-        json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
+    # Rewritten every build: the descriptions come from roll calls, which a first download fills in over several runs.
+    json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 
