@@ -81,7 +81,9 @@ def session(session):
     with ThreadPoolExecutor(3) as pool:
         for ok in pool.map(one, sorted(bills)):
             got += ok
-    if got < len(bills):
+    # A few bills whose history the API fails on every time mustn't hold back the whole state (Ohio's HB 178 trap):
+    # incomplete only when more than 1% are missing.
+    if got < 0.99 * len(bills):
         INCOMPLETE.add(session)
     print(f"{session}: {got} of {len(bills)} bills read", flush=True)
     for name, url in (("members", f"{API}/GeneralCourts/{gc}/LegislativeMembers"),
