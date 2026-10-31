@@ -76,6 +76,8 @@ TOPICS = {
             r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*)\b"),
     "biz": ("Business & consumers", set(), re.compile(r"^(Business|Consumer Protection|Insurance|Financial|Occupational Regulation|Commerce)", re.I),
             r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
+    # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by subjects or words).
+    "const": ("Constitutional amendments", set(), re.compile(r"(?!)"), ""),
 }
 TOPIC_WORDS = {k: re.compile(v[3], re.I) for k, v in TOPICS.items() if v[3]}
 

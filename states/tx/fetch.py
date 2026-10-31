@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Download Texas bill histories from the Legislature's FTP site (ftp.legis.state.tx.us), the source the Texas
 Legislative Council asks data users to use instead of its website. Each bill has its own XML file
-(/bills/<session>/billhistory/house_bills/HB00001_HB00099/HB 12.xml); there's no bulk file, so the folder listings'
+(/bills/<session>/billhistory/house_bills/HB00001_HB00099/HB 12.xml; joint resolutions too, in
+house_joint_resolutions and senate_joint_resolutions); there's no bulk file, so the folder listings'
 dates decide which files changed since the last run, and only those are downloaded (one connection per folder, six at a time).
 
 Sessions are the Legislature's codes: 89R is the regular session of 2025 (the 89th Legislature); special sessions
@@ -20,7 +21,8 @@ from states.tx import profile as P
 FTP = "ftp://ftp.legis.state.tx.us/bills"
 FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else 2021
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
-KINDS = ["house_bills", "senate_bills"]
+# Bills, and joint resolutions (HJR/SJR: constitutional amendments, which go to the voters, not the governor).
+KINDS = ["house_bills", "senate_bills", "house_joint_resolutions", "senate_joint_resolutions"]
 
 
 def curl(args, check=True):
@@ -96,15 +98,17 @@ def session(code):
     print(f"{code}: {got} bill histories downloaded, {len(seen)} in all")
     # A full pass with nothing left cut off: a finished session needn't be listed again.
     if all(complete(os.path.join(folder, f)) for f in seen):
-        open(os.path.join(P.DATA, code, "complete"), "w").write(datetime.now().isoformat())
+        open(os.path.join(P.DATA, code, "complete"), "w").write(datetime.now().isoformat() + "\n" + " ".join(KINDS))
 
 
 def main():
     for year in sorted(range(FIRST, CURRENT + 3, 2), reverse=True):  # newest first
         code = P.code_of(year)
         done = os.path.join(P.DATA, code, "complete")
-        if year < CURRENT and os.path.exists(done) and os.path.getmtime(done) > datetime(year + 2, 1, 1).timestamp():
-            continue  # a finished session, downloaded in full after it ended
+        # A finished session, downloaded in full after it ended, with every kind of record wanted now.
+        if (year < CURRENT and os.path.exists(done) and os.path.getmtime(done) > datetime(year + 2, 1, 1).timestamp()
+                and set(KINDS) <= set(open(done).read().split()[1:])):
+            continue
         if listing(f"{FTP}/{code}/billhistory")[1]:
             session(code)
 

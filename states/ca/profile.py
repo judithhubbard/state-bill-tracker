@@ -91,6 +91,8 @@ TOPICS = {
     "biz": ("Business & consumers",
             {"Banking and Finance", "Business and Professions", "Privacy and Consumer Protection", "Insurance", "Insurance, Banking and Financial Institutions", "Business, Professions and Economic Development", "Privacy, Digital Technologies, and Consumer Protection", "Banking and Financial Institutions", "Economic Development, Growth, and Household Impact"}, NO_SUBJECTS,
             r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*|corporation\w*|privacy|data)\b"),
+    # Constitutional amendments (ACA, SCA; tagged by convert.py, not by words).
+    "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }
 TOPIC_WORDS = {k: re.compile(v[3], re.I) for k, v in TOPICS.items() if v[3]}
 

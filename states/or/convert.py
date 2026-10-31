@@ -1,5 +1,7 @@
 """Oregon's bills (downloaded by states/or/fetch.py from the Legislature's OData API) in the shape build_data.py reads.
-One regular session a year (the API's "2025R1"); House and Senate bills only.
+One regular session a year (the API's "2025R1"); House and Senate bills, and the joint resolutions (HJR/SJR) that
+propose constitutional amendments or revisions. Those go to the voters, never the governor (Oregon Constitution,
+Art. XVII); other resolutions and memorials are left out.
 
 The history lines carry their house; the steps the site's rules use are put in the shared wording, the rest kept as
 written. A committee's recommendation that sends a bill on ("Do pass and be referred to Ways and Means") is a referral
@@ -32,6 +34,37 @@ def table(session, name):
         return json.load(open(os.path.join(folder(session), f"{name}.json")))
     except (OSError, ValueError):
         return []
+
+
+def is_amendment(m):
+    """A joint resolution proposing a constitutional amendment or revision ("Proposing an amendment to the Oregon
+    Constitution relating to fees.")."""
+    return m.get("MeasurePrefix") in ("HJR", "SJR") and bool(
+        re.match(r"proposing\s+(?:an?\s+)?(?:amendments?|revision)\b", text(m.get("RelatingTo")), re.I))
+
+
+def wanted(m):
+    return m.get("MeasurePrefix") in ("HB", "SB") or is_amendment(m)
+
+
+def amendment_title(relating):
+    """ "Proposing amendment to Oregon Constitution relating to a state property tax." -> "Constitutional amendment: a
+    state property tax"; "... to exclude partial exemptions ..." -> "Constitutional amendment to exclude ..." """
+    t = text(relating).rstrip(".")
+    kind = "Constitutional revision" if re.match(r"proposing\s+revision", t, re.I) else "Constitutional amendment"
+    t = re.sub(r"^proposing\s+(?:an?\s+)?(?:amendments?|revision)\s+(?:of|to)\s+(?:the\s+)?Oregon\s+Constitution\s*", "", t, flags=re.I)
+    if re.match(r"relating to\s", t, re.I):
+        t = re.sub(r"^relating to\s+", "", t, flags=re.I)
+        return f"{kind}: {t}"
+    return f"{kind} {t}".strip()
+
+
+def stock(t):
+    """An amendment's text without the wording every one shares, which made unrelated amendments look alike."""
+    t = re.sub(r"^Constitutional (?:amendment|revision):?\s*", "", t)
+    t = re.sub(r"(?:Proposes|Amends) (?:an )?(?:amendments?|revision) (?:to|of) the Oregon Constitution(?: to)?|Amends the Oregon Constitution(?: to)?|"
+               r"Refers the proposed (?:amendments?|revision) to the (?:people|voters)[^.]*\.", " ", t, flags=re.I)
+    return text(t)
 
 
 def text(x):
@@ -83,16 +116,19 @@ def decode(line, house, comms):
         hit = find_committee(m.group(1), house, comms)
         if hit:
             return f"REFERRED TO {hit[1].upper()}", hit
-    if re.match(r"(?:Recommendation:\s*)?(?:Do pass|Without recommendation)", t, re.I):
+    # Resolutions: "Recommendation: Be adopted." / "Do adopt"; "Final reading. Carried by X. Adopted."
+    if re.match(r"(?:Recommendation:\s*)?(?:Do pass|Without recommendation|Be adopted|Do adopt)", t, re.I):
         return "REPORTED", None
     if re.match(r"Second reading", t, re.I):
         return "PLACED ON FLOOR", None
     # "Passed." alone follows motions made after the third reading ("Motion to refer to Rules failed."); consent-calendar
     # bills pass in one line.
     if re.search(r"\b(?:Third reading|third time)\b.*\bPassed\.?$", t, re.I) or re.fullmatch(r"Passed\.?", t) or \
-            re.search(r"concurred in (?:House|Senate) amendments and repassed", t, re.I):
+            re.search(r"concurred in (?:House|Senate) amendments and repassed", t, re.I) or \
+            re.search(r"\b(?:Third|Final) reading\b.*\bAdopted\.?$|^(?:Rules suspended\.\s*)?Read\..*\bAdopted\.?$|^Adopted\.?$", t, re.I) or \
+            re.search(r"concurred in (?:House|Senate) amendments and readopted", t, re.I):
         return f"PASSED {HOUSE[house].upper()}", None
-    if re.search(r"\bThird reading\b.*\bFailed\.?$", t, re.I):
+    if re.search(r"\b(?:Third|Final) reading\b.*\bFailed\.?$", t, re.I):
         return "FAILED", None
     if re.match(r"(?:Speaker|President) signed", t, re.I):
         return "ENROLLED", None
@@ -119,10 +155,11 @@ def _session(session):
                 chief.setdefault((s["MeasurePrefix"], s["MeasureNumber"]), s["LegislatoreCode"])
         out = {}
         for m in table(session, "Measures"):
-            if m.get("MeasurePrefix") not in ("HB", "SB"):
+            if not wanted(m):
                 continue
             words = set(re.findall(r"[a-z0-9]{3,}", digest(m.get("MeasureSummary")).lower())) - _SKIP
-            out[f"{m['MeasurePrefix']}{m['MeasureNumber']}"] = (titled(m.get("RelatingTo")).upper(), words,
+            short = amendment_title(m.get("RelatingTo")) if is_amendment(m) else titled(m.get("RelatingTo"))
+            out[f"{m['MeasurePrefix']}{m['MeasureNumber']}"] = (short.upper(), words,
                                                                  chief.get((m["MeasurePrefix"], m["MeasureNumber"])))
         _EARLIER[session] = out
     return _EARLIER[session]
@@ -153,7 +190,7 @@ def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     live = session >= CURRENT
     comms = committees(session)
-    measures = [m for m in table(session, "Measures") if m.get("MeasurePrefix") in ("HB", "SB")]
+    measures = [m for m in table(session, "Measures") if wanted(m)]
     hist, votes, cvotes, spons = defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(list)
     for h in table(session, "MeasureHistoryActions"):
         hist[(h["MeasurePrefix"], h["MeasureNumber"])].append(h)
@@ -193,7 +230,13 @@ def load_session(session):
             house = hh
         texts = [s[2] for s in steps]
         passed = {s[1] for s in steps if s[2].startswith("PASSED")}
-        if "SIGNED" in texts or m.get("ChapterNumber"):
+        amend = is_amendment(m)
+        if amend:
+            # Never to the governor: passing both houses (and being filed with the Secretary of State) sends it to the
+            # voters, which is stage 3 here.
+            stage = 3 if "ENROLLED" in texts or {"S", "H"} <= passed or any(re.match(r"Filed with Secretary of State", s[3], re.I) for s in steps) \
+                else 2 if passed else None
+        elif "SIGNED" in texts or m.get("ChapterNumber"):
             stage = 5
         elif "VETOED" in texts or m.get("Vetoed"):
             stage = 6
@@ -224,10 +267,12 @@ def load_session(session):
         passed_in = HOUSE[last_pass[1]] if stage == 2 and last_pass else None
         comm_list = sorted({f"{h} · {n}" for h, n, _ in refs})
         codes = {c for _, _, c in refs}
-        title = titled(m.get("RelatingTo")) or text(m.get("CatchLine"))
+        title = (amendment_title(m.get("RelatingTo")) if amend else titled(m.get("RelatingTo"))) or text(m.get("CatchLine"))
         about = digest(m.get("MeasureSummary")) or text(m.get("CatchLine"))
         topics = [k for k, (label, cset, _, _) in P.TOPICS.items()
                   if codes & cset or (k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(title + " " + about[:400]))]
+        if amend:
+            topics = ["const"] + [k for k in topics if k != "const"]
         own = [(h, n) for h, n, _ in refs if h == origin]
         first_comms = []
         if own:
@@ -261,7 +306,7 @@ def load_session(session):
         elif stage <= 1 and place == "floor":
             desc = f"On the {HOUSE[where_h]} floor"
         elif stage >= 2:
-            desc = {2: f"Passed the {passed_in}", 3: "Passed both houses", 4: "On the governor's desk",
+            desc = {2: f"Passed the {passed_in}", 3: "Goes to the voters" if amend else "Passed both houses", 4: "On the governor's desk",
                     5: "Signed into law", 6: "Vetoed"}[stage]
         else:
             desc = steps[-1][3] if steps else "Introduced"
@@ -304,7 +349,7 @@ def load_session(session):
             "stage": stage, "passedIn": passed_in,
             "chapter": int(re.sub(r"\D", "", str(chapter)) or 0) if chapter and stage == 5 else None,
             "veto": None, "memo": "", "vetoMemo": None,
-            "simText": f"{title}. {about}",
+            "simText": stock(f"{title}. {about}") if amend else f"{title}. {about}",
             "comm": committee if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),
             "last": max(action_dates, default=f"{session}-01-01"),
@@ -331,7 +376,7 @@ def agendas(session):
     today = datetime.now(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d")
     out = {}
     for a in table(session, "CommitteeAgendaItems"):
-        if not a.get("MeasurePrefix") in ("HB", "SB") or (a.get("MeetingDate") or "") < today:
+        if not a.get("MeasurePrefix") in ("HB", "SB", "HJR", "SJR") or (a.get("MeetingDate") or "") < today:
             continue
         c = comms.get(a.get("CommitteCode"), ("", a.get("CommitteCode"), ""))
         name = f"{ {'H': 'House', 'S': 'Senate', 'J': 'Joint'}.get(c[0], '')} {c[1]}".strip()

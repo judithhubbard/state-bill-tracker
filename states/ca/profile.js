@@ -14,6 +14,21 @@ const STATE = {
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
   govReach: `<a href="https://www.gov.ca.gov/contact/" target="_blank" rel="noopener" data-contact="online|governor">Governor's website</a> · <a class="phone" href="tel:+19164452841" data-contact="call|governor">(916) 445-2841</a>`,
 
+  // Constitutional amendments (ACA, SCA) pass each house by two-thirds of its members, then go to the voters at the next
+  // statewide election, never to the governor (California Constitution, Art. XVIII, sec. 1 and 4).
+  amendments: true,
+  amendmentOnce: true,
+  amendmentVote: "two-thirds of each house's members",
+  // The measure names its election: usually the next November general election, sometimes a special election (Prop 50,
+  // November 2025), and the Legislature can move it; so the page doesn't guess the date.
+  ballotLine(b) {
+    const d = [b.dates.passS, b.dates.passA].sort().pop() || "";
+    return d && d.slice(0, 4) < isoToday().slice(0, 4)
+      ? "It went to the voters at the election the measure named; the records here don't show the result."
+      : "Next: the voters, at the election the measure names (usually the next November general election).";
+  },
+  ballotEvenYears: true,
+
   billUrl(p, session = DATA.session) {
     return `https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=${session}${session + 1}0${p}`;
   },
@@ -43,7 +58,8 @@ const STATE = {
   },
   // A bill has to pass its own house: one introduced in the first year by January 31 of the second, one introduced
   // in the second year by its late-May deadline.
-  originDeadline: (b) => (b.first < `${DATA.session + 1}` ? `${DATA.session + 1}-01-31` : STATE.originBy(DATA.session + 1)),
+  // Constitutional amendments have no such deadline (ACA 5 of 2023 passed the Assembly in late June, ACA 13 in September).
+  originDeadline: (b) => b.topics.includes("const") ? null : (b.first < `${DATA.session + 1}` ? `${DATA.session + 1}-01-31` : STATE.originBy(DATA.session + 1)),
   originWord: "the deadline",
   // The governor has 12 days. Bills presented in the first year's last 12 days have until 30 days after it; in the
   // second year, bills that reach the governor near the end have until September 30 (Constitution, Art. IV, sec. 10).

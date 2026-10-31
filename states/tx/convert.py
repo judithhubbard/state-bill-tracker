@@ -10,7 +10,9 @@ Governor"). Stages come from the codes; the wording is kept, except the steps th
 the wording New York's data uses. A bill keeps its number through both houses (HB 12 goes to the Senate as HB 12);
 its companion in the other house is a separate bill. In the House, a bill a committee reports goes to the Calendars
 Committee, which decides which bills reach the floor: it's shown as in that committee until it's placed on a calendar.
-Only regular-session House and Senate bills are shown (not resolutions or special sessions' bills).
+Only regular-session House and Senate bills are shown, and joint resolutions (HJR/SJR) proposing constitutional
+amendments: those need two-thirds of each house's members, never go to the governor ("Filed with the Secretary of
+State" instead) and go to the voters (topic "const"). Other resolutions and special sessions' bills are left out.
 """
 import glob, json, os, re
 import xml.etree.ElementTree as ET
@@ -38,8 +40,8 @@ def sessions():
 
 
 def num(name):
-    """"HB 12.xml" -> "HB12"."""
-    m = re.match(r"([HS]B)\s*0*(\d+)", name)
+    """"HB 12.xml" -> "HB12", "HJR 4.xml" -> "HJR4"."""
+    m = re.match(r"([HS]B|[HS]JR)\s*0*(\d+)", name)
     return f"{m.group(1)}{m.group(2)}" if m else None
 
 
@@ -53,7 +55,8 @@ def names(s):
 
 
 def bills(session):
-    """Bill -> parsed history (dict), for every HB and SB file that parses."""
+    """Bill -> parsed history (dict), for every HB and SB file that parses, and every joint resolution proposing a
+    constitutional amendment (not ones applying to Congress for a convention or ratifying a federal amendment)."""
     out = {}
     for f in glob.glob(os.path.join(folder(session), "*.xml")):
         p = num(os.path.basename(f))
@@ -63,6 +66,8 @@ def bills(session):
             t = ET.parse(f).getroot()
         except ET.ParseError:
             continue  # a file cut off mid-download; the next run gets it again
+        if p[1:3] == "JR" and not amendment(t.findtext("caption")):
+            continue
         acts = []
         for a in t.iter("action"):
             code = a.findtext("actionNumber") or ""
@@ -85,6 +90,15 @@ def bills(session):
     return out
 
 
+def amendment(caption):
+    """A joint resolution's caption that proposes a change to the Texas Constitution."""
+    return bool(re.match(r"\s*Proposing (a |an )?(constitutional amendments?|amendments? to the (Texas )?Constitution)", caption or "", re.I))
+
+
+def is_jr(p):
+    return p[1:3] == "JR"
+
+
 # What each code range means (House "H" and Senate "S" codes share their numbers).
 def is_referral(n, desc):
     return n < 200 and desc.startswith("Referred to ")
@@ -100,7 +114,8 @@ def decode(house, n, desc):
         return f"REFERRED TO {desc[len('Referred to '):].upper()}"
     if house in HOUSE and is_report(n):
         return "REPORTED"
-    if (house, n) in (("H", 555), ("H", 556), ("S", 576), ("S", 577)):
+    # A joint resolution is "Adopted" (House 565/566, Senate 585/586) or "Passed" (Senate 576).
+    if (house, n) in (("H", 555), ("H", 556), ("S", 576), ("S", 577), ("H", 565), ("H", 566), ("S", 585), ("S", 586)):
         return f"PASSED {HOUSE[house].upper()}"
     if house == "E" and n == 15:
         return "DELIVERED TO GOVERNOR"
@@ -114,6 +129,8 @@ def decode(house, n, desc):
 def stage_of(p, acts):
     """How far a bill got, 0-6, from its history's codes."""
     codes = {(h, n) for _, h, n, _, _ in acts}
+    if is_jr(p):  # a constitutional amendment never goes to the governor: passing both houses is as far as it goes here
+        return min(3, stage_of(p.replace("JR", "B"), [a for a in acts if a[1] != "E"]))
     if codes & {("E", 20), ("E", 25), ("E", 30)}:
         return 5
     if ("E", 35) in codes:
@@ -147,7 +164,7 @@ def where(p, acts):
             place, comm = ("committee", "Calendars") if h == "H" else ("floor", None)
         elif h == "H" and n in (400, 405, 410, 475):
             place, comm = "committee", ("Local & Consent Calendars" if n == 410 else "Calendars")
-        elif (h == "H" and n in (430, 435, 465)) or (h == "S" and n in (400, 430)):
+        elif (h == "H" and n in (425, 430, 435, 465)) or (h == "S" and n in (400, 430)):  # H425: Constitutional Amendments Calendar
             place, comm = "floor", None
         elif decode(h, n, d).startswith("PASSED"):
             house, place, comm = ("S" if h == "H" else "H"), "desk", None
@@ -259,7 +276,7 @@ def load_session(session):
         return full.get((h, n), n if "," not in n else " ".join(reversed([x.strip() for x in n.split(",", 1)])))
 
     recs, index = [], {}
-    for p, b in sorted(data.items(), key=lambda kv: (kv[0][:2], int(kv[0][2:]))):
+    for p, b in sorted(data.items(), key=lambda kv: (re.match(r"\D+", kv[0]).group(), int(re.search(r"\d+", kv[0]).group()))):
         origin, other = p[0], ("S" if p[0] == "H" else "H")
         acts = sorted(b["actions"], key=lambda a: a[0])
         steps = [(d, h, decode(h, n, desc), desc, n) for d, h, n, desc, _ in acts]
@@ -284,10 +301,16 @@ def load_session(session):
         comm_list = sorted({f"{h} · {by_upper.get((h, c), c.title())}" for h, c in refs})
         title = re.sub(r"^Relating to (the )?", "", b["caption"]).rstrip(".").strip()
         title = (title[:1].upper() + title[1:] + ".") if title else p
+        if is_jr(p):  # "Proposing a constitutional amendment to ..." -> "Constitutional amendment to ..."
+            rest = re.sub(r"^Proposing (a |an )?(constitutional amendments?|amendments? to the (Texas )?Constitution)\s*", "",
+                          b["caption"], flags=re.I).rstrip(".").strip()
+            title = f"Constitutional amendment {rest}." if rest else "Constitutional amendment."
 
         topics = [k for k, (label, cset, sre, _) in P.TOPICS.items()
                   if comm_names & cset or any(sre.search(s) for s in b["subjects"]) or
                   (k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(title))]
+        if is_jr(p):
+            topics = ["const"] + [k for k in topics if k != "const"]
         own = [by_upper.get((h, c), c.title()) for h, c in refs if h == origin]
         first_comms = []
         if own:
@@ -327,7 +350,7 @@ def load_session(session):
         floor, prev = [], None
         for d, h, n, desc, comment in acts:
             rv = re.search(r"RV#(\d+)", comment) if (h, n) == ("H", 630) else None
-            if rv and rv.group(1) in house_votes and prev in (535, 536, 555, 556, 701, 750):
+            if rv and rv.group(1) in house_votes and prev in (535, 536, 555, 556, 565, 566, 701, 750):
                 floor.append((prev in (535, 536), d, house_votes[rv.group(1)]))
             elif h == "H" and n not in (630, 631, 633):
                 prev = n
@@ -373,7 +396,7 @@ def load_session(session):
             # Key dates: on the floor, passed the Senate, passed the House, (New York's return to committee in a new
             # year: none here), sent to the governor, signed, vetoed.
             "keyDates": [
-                dates(lambda h, t, n: h == origin and n in (430, 435, 465, 400) and h == "H" or (h == origin == "S" and t == "REPORTED"), "first"),
+                dates(lambda h, t, n: h == origin and n in (425, 430, 435, 465, 400) and h == "H" or (h == origin == "S" and t == "REPORTED"), "first"),
                 dates(lambda h, t, n: t == "PASSED SENATE", "all"),
                 dates(lambda h, t, n: t == "PASSED HOUSE", "all"),
                 "",

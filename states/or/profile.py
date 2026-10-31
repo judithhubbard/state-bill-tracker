@@ -57,6 +57,8 @@ def delegation(session):
 # Senate "S...", joint "J...").
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
+    # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words).
+    "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
     "env": ("Environment & energy", {"HCEE", "SEE", "HALNRW", "SNRW", "JWMNR"}, NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind|pollut\w*|water|energy|utilit\w*|wildfire\w*|forest\w*)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|county|counties|cities|city|local government|special district\w*)\b"),
     "tax": ("Taxes", {"HREV", "SFR"}, NO_SUBJECTS, r"\b(tax\w*|revenue)\b"),

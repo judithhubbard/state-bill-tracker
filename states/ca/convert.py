@@ -8,8 +8,9 @@ California's history lines are plain English, with each committee abbreviated ("
 each line also says where the bill went (house, "Committee"/"Floor"/"Desk", and the committee's code). The steps
 the site's rules depend on are put in the wording New York's data uses; the rest are kept as written, with the
 committees' full names. A bill keeps its number through both houses (AB 1 goes to the Senate as AB 1). Only
-regular-session Assembly and Senate bills are shown (not resolutions, constitutional amendments, or special
-sessions' bills).
+regular-session Assembly and Senate bills and constitutional amendments (ACA, SCA) are shown (not other resolutions,
+or special sessions' bills). A constitutional amendment passes each house by two-thirds ("Read third time. Adopted.")
+and is filed with the Secretary of State ("Res. Chapter 176"), who puts it on the ballot; it never goes to the governor.
 """
 import json, math, os, re
 from collections import defaultdict
@@ -21,6 +22,20 @@ from . import profile as P
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 HOUSE = {"A": "Assembly", "S": "Senate"}
 LETTER = {"Assembly": "A", "Senate": "S"}
+# The measures shown: bills, and constitutional amendments (which go to the voters, not the governor).
+KINDS = ("AB", "SB", "ACA", "SCA")
+AMENDMENTS = ("ACA", "SCA")
+NUM = re.compile(r"\d{8}0(AB|SB|ACA|SCA)(\d+)$")
+
+
+def is_amendment(p):
+    return re.match(r"[A-Z]+", p)[0] in AMENDMENTS
+
+
+def withdrawal(p, subject):
+    """A measure taking an earlier amendment off the ballot ("Withdrawal of Assembly Constitutional Amendment No. 13"
+    of 2025, ACA 21): a resolution that doesn't go to the voters, so it's left out like the others."""
+    return is_amendment(p) and re.match(r"Withdrawal of", subject or "")
 
 
 def folder(session):
@@ -62,9 +77,12 @@ def decode(text, kind, house, code, comms):
     name = comms.get(code, ("", ""))[1].upper() if code else ""
     if re.match(r"Read third time[.,] (?:and )?(?:amended\. )?(?:[Uu]rgency clause adopted\. )?[Pp]assed", t):
         return f"PASSED {HOUSE[house].upper()}"
+    # A constitutional amendment (a resolution) is adopted, not passed.
+    if re.match(r"(?:Read third time[.,] |Read\. )?Adopted(?: as amended)?(?:\.| and to (?:Senate|Assembly))", t):
+        return f"PASSED {HOUSE[house].upper()}"
     # "From committee: Do pass and re-refer to Com. on APPR." is a committee vote; "From committee chair, with
     # author's amendments: Amend, and re-refer" is the sponsor's amendment going back to the same committee.
-    if re.match(r"From committee:.*\bdo pass\b.*re-?refer", t, re.I) and kind == "Committee" and name:
+    if re.match(r"From committee:.*\b(do pass|be adopted)\b.*re-?refer", t, re.I) and kind == "Committee" and name:
         return f"REPORTED REFERRED TO {name}"
     if re.match(r"From committee:.*\b(Do pass|Be adopted|Ordered to (third|second) reading|Be ordered to)", t, re.I):
         return "REPORTED"
@@ -111,7 +129,7 @@ def veto_messages(session):
     texts = json.load(open(path)) if os.path.exists(path) else {}
     out = {}
     for r in rows(session, "VETO_MESSAGE"):
-        m = re.match(r"\d{8}0(AB|SB)(\d+)$", r[0] or "")
+        m = NUM.match(r[0] or "")
         t = texts.get(r[2] or "")
         if not (m and t):
             continue
@@ -140,7 +158,7 @@ _PLACE = re.compile(r"\b(?:County|City|Cities|Town) of ([A-Z][a-z]+(?: [A-Z][a-z
 def _own(text):
     """The digest's sentences about what the bill would do, without the stock ones."""
     sents = re.split(r"(?<=[.;])\s+", text.replace("\n", " "))
-    return " ".join(x for x in sents if re.match(r"(The|This) bill (would|also)", x) and not _STOCK.search(x))
+    return " ".join(x for x in sents if re.match(r"(The|This) (bill|measure) (?:instead )?(would|also)", x) and not _STOCK.search(x))
 
 
 def _texts(session):
@@ -179,12 +197,12 @@ def _session(session):
             if r[4] == "LEAD_AUTHOR" and r[0] not in lead:
                 lead[r[0]] = r[3]
         for r in rows(session, "BILL"):
-            if r[2] != "0" or r[3] not in ("AB", "SB"):
+            if r[2] != "0" or r[3] not in KINDS:
                 continue
             p, subj = f"{r[3]}{r[4]}", subject.get(r[10], "")
             text = texts.get(p, {}).get("statement", "")
             own = _own(text)
-            if len(own) < 80 or re.match(r"(Budget Act|Claims against the state|Validations)", subj):
+            if len(own) < 80 or re.match(r"(Budget Act|Claims against the state|Validations)", subj) or withdrawal(p, subj):
                 continue
             head = re.sub(r"[^a-z ]", "", subj.split(":")[0].lower()).strip()
             places = {x or y for x, y in _PLACE.findall(subj + " " + own)}
@@ -204,7 +222,7 @@ def earlier(session, bill):
             continue
         best = None
         for other, (head, author, places, vec) in _session(y).items():
-            if head != me[0] or not head or (places and me[2] and not places & me[2]):
+            if is_amendment(other) != is_amendment(bill) or head != me[0] or not head or (places and me[2] and not places & me[2]):
                 continue
             cos = sum(x * vec.get(w, 0) for w, x in me[3].items())
             if cos >= 0.6 or (cos >= 0.5 and author and author == me[1]):
@@ -223,7 +241,7 @@ def load_session(session):
     comms = committees(session)
     bills = {}
     for r in rows(session, "BILL"):
-        if r[2] == "0" and r[3] in ("AB", "SB"):
+        if r[2] == "0" and r[3] in KINDS:
             bills[r[0]] = r
     p_of = {bid: f"{r[3]}{r[4]}" for bid, r in bills.items()}
 
@@ -307,6 +325,11 @@ def load_session(session):
             steps.append((iso(r[2]), house, t if t != raw else spell(raw, house or origin), raw, r[10] or ""))
         status = b[17] or ""
         stage = stage_of(steps, status)
+        amendment = is_amendment(p)
+        # A constitutional amendment both houses adopted is filed with the Secretary of State ("Res. Chapter 176") and
+        # goes to the voters: it never reaches the governor.
+        if amendment and (stage >= 3 or status == "Chaptered" or any("Res. Chapter" in x for _, _, _, x, _ in steps)):
+            stage = 3
         texts = [t for _, _, t, _, _ in steps]
         passed = {h for _, h, t, _, _ in steps if t.startswith("PASSED")}
         if stage >= 3:
@@ -328,9 +351,15 @@ def load_session(session):
         comm_list = sorted({f"{h} · {by_upper.get((h, c), c.title())}" for h, c in refs if h})
         latest = b[10]
         title = (subject.get(latest) or "").strip() or p
+        if withdrawal(p, title):
+            continue
+        if amendment and not re.search(r"constitution", title, re.I):
+            title = f"Constitutional amendment: {title}"
 
         topics = [k for k, (label, cset, _, _) in P.TOPICS.items()
                   if comm_names & cset or (k in P.TOPIC_WORDS and P.TOPIC_WORDS[k].search(title))]
+        if amendment:
+            topics = ["const"] + [t for t in topics if t != "const"]
         own = [by_upper.get((h, c), c.title()) for h, c in refs if h == origin]
         first_comms = []
         if own:
@@ -436,7 +465,7 @@ def agendas(session):
     comms = committees(session)
     out = defaultdict(list)
     for r in rows(session, "COMMITTEE_HEARING"):
-        m = re.match(r"\d{8}0(AB|SB)(\d+)$", r[0] or "")
+        m = NUM.match(r[0] or "")
         if not m or r[4] not in comms:
             continue
         h, name = comms[r[4]]

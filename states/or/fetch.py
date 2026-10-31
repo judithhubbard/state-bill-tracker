@@ -63,7 +63,7 @@ def texts():
         out = {}
         for m in C.table(y, "Measures"):
             d = C.digest(m.get("MeasureSummary"))
-            if m.get("MeasurePrefix") in ("HB", "SB") and d:
+            if C.wanted(m) and d:
                 out[f"{m['MeasurePrefix']}{m['MeasureNumber']}"] = {"statement": d, "label": "From the bill's digest."}
         json.dump(out, open(os.path.join(DATA, f"texts_{y}.json"), "w"), ensure_ascii=False)
         print(f"texts_{y}.json: {len(out)} digests")

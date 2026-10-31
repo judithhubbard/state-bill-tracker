@@ -83,8 +83,9 @@ def main(session):
 # ON THIRD READING", "SENATE BILL 3 WITH HOUSE AMENDMENTS"), then "was passed by the following vote: Yeas 25, Nays 6."
 # with the exceptions by name ("Nays: Alvarado, Cook." "Absent-excused: King."), or "(Same as previous roll call)".
 SURL = "https://journals.senate.texas.gov/sjrnl/{code}/html/{CODE}SJ{md}-F.HTM"
-HEAD = re.compile(r"(?:COMMITTEE SUBSTITUTE )?(SENATE|HOUSE) BILL (\d+) (ON (?:SECOND|THIRD) READING|WITH HOUSE AMENDMENTS?|WITH SENATE AMENDMENTS?|CONFERENCE COMMITTEE REPORT|ON .{0,40}?MOTION)"
-                  r"|(CONFERENCE COMMITTEE REPORT) ON (?:COMMITTEE SUBSTITUTE )?(SENATE|HOUSE) BILL (\d+)")
+# Joint resolutions (constitutional amendments) have the same headings: "HOUSE JOINT RESOLUTION 7 ON THIRD READING".
+HEAD = re.compile(r"(?:COMMITTEE SUBSTITUTE )?(SENATE|HOUSE) (BILL|JOINT RESOLUTION) (\d+) (ON (?:SECOND|THIRD) READING|WITH HOUSE AMENDMENTS?|WITH SENATE AMENDMENTS?|CONFERENCE COMMITTEE REPORT|ON .{0,40}?MOTION)"
+                  r"|(CONFERENCE COMMITTEE REPORT) ON (?:COMMITTEE SUBSTITUTE )?(SENATE|HOUSE) (BILL|JOINT RESOLUTION) (\d+)")
 VOTE = re.compile(r"([^.]{0,160}?) by the following vote: Yeas (\d+), Nays (\d+)\.")
 # A list ends at the next label or a new sentence (not at an initial: "A. Hinojosa, J. Hinojosa").
 LIST = re.compile(r"\s*(Yeas|Nays|Present-not voting|Absent-excused|Absent): ([^:]*?)\.(?=\s+(?:Yeas|Nays|Present-not voting|Absent-excused|Absent):|\s+(?:The|On|Senator|Question|Pursuant|[A-Z]{2,})\b|\s*\(|\s*$)")
@@ -96,8 +97,8 @@ def senate_day(text):
     out, last = [], {"N": [], "P": [], "A": []}
     heads = list(HEAD.finditer(text))
     for k, h in enumerate(heads):
-        house, number, what = (h.group(1), h.group(2), h.group(3)) if h.group(1) else (h.group(5), h.group(6), h.group(4))
-        bill = ("SB" if house == "SENATE" else "HB") + number
+        house, kind_, number, what = (h.group(1), h.group(2), h.group(3), h.group(4)) if h.group(1) else (h.group(6), h.group(7), h.group(8), h.group(5))
+        bill = ("S" if house == "SENATE" else "H") + ("B" if kind_ == "BILL" else "JR") + number
         kind = "third" if "THIRD" in what else "second" if "SECOND" in what else "conference" if "CONFERENCE" in what else "concur"
         seg = text[h.end():heads[k + 1].start() if k + 1 < len(heads) else h.end() + 20000]
         for m in VOTE.finditer(seg):
@@ -117,6 +118,10 @@ def senate_day(text):
                 last = v
             before = m.group(1)
             final = re.search(r"was (?:finally )?passed$|was passed$|finally passed$", before.strip()) and kind == "third"
+            # A joint resolution "was adopted" (the Senate passes a House joint resolution that way, on second or third
+            # reading); "The resolution" keeps amendments' adoptions out.
+            final = final or (bill[1:3] == "JR" and kind in ("second", "third") and
+                              re.search(r"[Rr]esolution was (?:read (?:second|third) time and was )?(?:finally )?adopted$", before.strip()))
             # Agreeing to the House's changes reads "moved to concur in the House amendments ... The motion prevailed".
             concur = kind == "concur" and re.search(r"concurred|adopted|motion prevailed", before) and \
                 re.search(r"moved to concur|concur in the House amendment", seg[:m.start()])
@@ -134,7 +139,7 @@ def local_calendar(text):
         body = sec.group(1)
         away = re.findall(r"Senators? ((?:[A-Z]\. )?[A-Z][\w'-]+(?:(?:,| and) (?:[A-Z]\. )?[A-Z][\w'-]+)*) (?:was|were) previously granted (?:a )?leaves? of absence", body)
         absent = [n.strip() for a in away for n in re.split(r",\s*|\s+and\s+", a) if n.strip()]
-        items = list(re.finditer(r"(?:CS)?(SB|HB) (\d+) \(", body))
+        items = list(re.finditer(r"(?:CS)?(SB|HB|SJR|HJR) (\d+) \(", body))
         for k, it in enumerate(items):
             entry = body[it.start():items[k + 1].start() if k + 1 < len(items) else len(body)]
             tallies = list(re.finditer(r"\((\d+)-(\d+)\)(?:\s*\"Nays?\"\s*((?:[A-Z]\. )?[A-Z][\w'-]+(?:,\s*(?:[A-Z]\. )?[A-Z][\w'-]+)*))?", entry))

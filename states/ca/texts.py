@@ -14,7 +14,7 @@ import html, json, os, re, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states.ca import profile as P
-from states.ca.convert import folder, rows, sessions
+from states.ca.convert import KINDS, folder, is_amendment, rows, sessions
 
 LABEL = {"Introduced": "as introduced", "Amended Assembly": "as amended in the Assembly",
          "Amended Senate": "as amended in the Senate", "Enrolled": "as passed", "Chaptered": "as enacted",
@@ -42,8 +42,9 @@ def load(session):
 
 
 def latest(session):
-    """Each regular-session AB and SB's latest version: version id -> (bill, its .lob file in the zip, action)."""
-    want = {r[10]: f"{r[3]}{r[4]}" for r in rows(session, "BILL") if r[2] == "0" and r[3] in ("AB", "SB") and r[10]}
+    """Each regular-session bill's and constitutional amendment's latest version: version id -> (bill, its .lob file in
+    the zip, action)."""
+    want = {r[10]: f"{r[3]}{r[4]}" for r in rows(session, "BILL") if r[2] == "0" and r[3] in KINDS and r[10]}
     out = {}
     for r in rows(session, "BILL_VERSION"):
         if r[0] in want and r[14]:
@@ -90,9 +91,14 @@ def write(session):
                     paras[-1] += " " + x
                 else:
                     paras.append(x)
-            i = next((k for k, x in enumerate(paras) if re.match(r"(This|The) bill would", x)), 0)
+            i = next((k for k, x in enumerate(paras) if re.match(r"(This|The) (bill|measure) (?:instead )?would", x)), 0)
             text = "\n".join([paras[i]] + paras[:i] + paras[i + 1:])
-            out[p] = {"statement": text, "label": f"From the Legislative Counsel's Digest of the bill {LABEL.get(action, 'as amended')}."}
+            if is_amendment(p):
+                # A constitutional amendment the Legislature adopted goes to the voters; it isn't "enacted".
+                how = "as adopted by the Legislature" if action in ("Enrolled", "Chaptered") else LABEL.get(action, "as amended")
+                out[p] = {"statement": text, "label": f"From the Legislative Counsel's Digest of the measure {how}."}
+            else:
+                out[p] = {"statement": text, "label": f"From the Legislative Counsel's Digest of the bill {LABEL.get(action, 'as amended')}."}
     json.dump(out, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     print(f"texts_{session}.json: {len(out)} digests")
 

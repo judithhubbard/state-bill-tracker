@@ -15,6 +15,13 @@ const STATE = {
   // One session a year; bills die when it adjourns.
   years: 1,
   sessionLabel: (s) => String(s),
+  // Joint resolutions proposing constitutional amendments pass once, by a majority of each house's members, then go to
+  // the voters at the next general election (in November of an even year) unless the Legislature calls a special
+  // election; never to the governor (Oregon Constitution, Art. XVII, sec. 1). A revision needs two-thirds (sec. 2).
+  amendments: true,
+  amendmentOnce: true,
+  amendmentVote: "a majority of each house's members (two-thirds for a revision)",
+  ballotEvenYears: true,
   govReach: `<a href="https://www.oregon.gov/gov/Pages/share-your-opinion.aspx" target="_blank" rel="noopener" data-contact="online|governor">Share your opinion with the governor</a> · Salem <a class="phone" href="tel:+15033784582" data-contact="call|governor">(503) 378-4582</a>`,
 
   // The Legislature's bill page (OLIS).

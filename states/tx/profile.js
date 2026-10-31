@@ -16,6 +16,13 @@ const STATE = {
   sessionLabel: (s) => String(s),
   govReach: `<a href="https://gov.texas.gov/contact" target="_blank" rel="noopener" data-contact="online|governor">Governor's website</a> · <a class="phone" href="tel:+18008435789" data-contact="call|governor">(800) 843-5789</a>`,
 
+  // Joint resolutions (HJR/SJR) proposing constitutional amendments pass once, by two-thirds of all the members elected
+  // to each house, then go to the voters at an election the resolution sets (usually that November, odd years too);
+  // never to the governor (Texas Constitution, Art. XVII, Sec. 1).
+  amendments: true,
+  amendmentOnce: true,
+  amendmentVote: "two-thirds of each house's members",
+
   billUrl(p, session = DATA.session) {
     return `https://capitol.texas.gov/BillLookup/History.aspx?LegSess=${(session - 1847) / 2}R&Bill=${p}`;
   },
