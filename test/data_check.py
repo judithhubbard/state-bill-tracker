@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ca", "il", "nj", "oh", "tx", "va", "wa") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ca", "ct", "il", "nj", "oh", "tx", "va", "wa") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -98,7 +98,8 @@ def check(state):
         found = [n for n in laws if n in T]
         # Short ones only: real summaries often also mention "technical changes".
         shell = [n for n in found if len(T[n].get("statement") or "") < 300 and re.search(
-            r"technical change|nonsubstantive change|intent of the Legislature to enact legislation", T[n].get("statement") or "", re.I)]
+            r"technical change in a section|nonsubstantive change|intent of the Legislature to enact legislation", T[n].get("statement") or "", re.I)]
+        # (Not "technical changes" alone: Connecticut's technical-revisions acts are real laws, and say so.)
         if found and len(shell) > 0.01 * len(found):
             say(state, "FAIL", f"{s}: {len(shell)} of {len(found)} laws are summarized as placeholders, e.g. {shell[:3]}")
         elif laws and len(found) < 0.5 * len(laws):

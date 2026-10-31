@@ -24,7 +24,7 @@ from that repo. **Nothing here may change it.**
   2026-10-28 and dropped). New York moves only once, to statebilltracker.org/ny, with the forwarding pages
   below; avoid doing that at the start of a session (aim before January or after June).
 - **Decided 2026-10-29:** every state is built from its own legislature's official files and done thoroughly, like
-  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30), then Washington (chosen 2026-10-30; see the wa-data-sources memory); more states before launch.
+  New Jersey; not from Open States. Virginia came next, then California (chosen 2026-10-29), then Texas and Illinois (2026-10-30), then Washington (chosen 2026-10-30; see the wa-data-sources memory), then Ohio and Connecticut (2026-10-31); the owner will do every state, in no particular order (see the state-survey-2026-10-31 memory: Oregon next); more states before launch.
 - Generalize only what the pilot shows really varies. Label watchlists by jurisdiction, so a combined
   state + federal list is possible later.
 - **Progress:** step 1 has started. New York's build settings (names, addresses, session rule,
@@ -190,6 +190,21 @@ from that repo. **Nothing here may change it.**
   Full-time Legislature (`floorVotesEnd: false`); governor 10 days, Sundays excepted. Separate Senate (33) and House
   (99) districts by city, village or county (`states/oh/towns.py`). The governor's phone and address are from the
   governor's contact page, checked by the owner 2026-10-31 (governor.ohio.gov answers automated requests "not found"). Built only once data/oh/incomplete is gone.
+- **Connecticut (started 2026-10-31):** `python3 states/ct/fetch.py` reads the General Assembly's CSV files from its FTP
+  server (ftp://ftp.cga.ct.gov/pub/data/; see the ct-data-sources memory): bill_info (titles, statements of purpose, act
+  numbers), bill_history, introducer, comm_ref, committee, subject and the legislator database, for the current year (top
+  folder) and archive/<year>; small, so read in full each run. One session a year (`years: 1`; long in odd years, short
+  in even: `opens()`/`sessionEnds()` in profile.js are the Wednesday after the first Monday of January or February, June
+  or May). Committees are joint (both houses' members); `commIntro` says so. Sponsors are codes: "006" a House
+  district, "S06" a Senate district, letters a committee (committee bills). A Public Act number comes when both houses
+  pass the same text, before the governor acts (HB 7004 of 2025 got one and was vetoed): it decides "passed both
+  houses", and only "SIGNED BY GOVERNOR" is a law. History lines kept as written are in sentence case so "REFERRED TO
+  OLR, OFA" (research and fiscal offices) can't pass for a committee referral. The files are UTF-8 with a few
+  Windows-1252 bytes (decoded as one or the other). No votes: the vote sheets' only index is the bill status pages,
+  which robots.txt disallows (and the site omits GoDaddy's G2 intermediate certificate). "What it does" is the
+  statement of purpose. Legislators (phones, emails, committees, leadership) from the database; Capitol phones are the
+  caucus offices' shared lines. Towns from the Census county-subdivision files (169). Earlier years linked by title and
+  purpose words.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
@@ -263,6 +278,8 @@ from that repo. **Nothing here may change it.**
   - Dates missing from a few records: OH's HB 110 of the 134th (the budget) has no signing date; WA's HB 2134 of
     2023-24 has a history that stops in committee. Fall back to what else the record says (enrolled and not vetoed in a
     finished session; a "C 310 L 24" status), and compare totals with the legislature's own lists.
+  - Numbers that look final but aren't: CT gives a Public Act number when a bill passes both houses, before the
+    governor signs or vetoes it (HB 7004 of 2025 got one, then a veto). Decide "law" from the signature, not the number.
   - A record the server fails on every time (OH's HB 178 of the 134th: its actions answer 500): keep the last copy or
     what loads, mark it, and don't let one record hold the whole download "incomplete".
   - A file's encoding: read UTF-8 first ("bedï¿½a" in TX analyses read as Windows text). Grep built texts for "ï¿½" and "\ufffd".

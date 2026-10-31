@@ -231,6 +231,8 @@ def contacts_for(session, recs, delegation_names):
     def lookup(name, house, district=None):
         """Contact details for a legislator, by seat when known (checking it's the same person)."""
         key = name_key(name)
+        if not key.split():
+            return {}  # no name ("—" for a bill with no listed sponsor)
         p = seats.get(f"{house}:{district}") if district else None
         if p and p["key"].split()[-1] != key.split()[-1]:
             p = None  # someone else holds that seat now

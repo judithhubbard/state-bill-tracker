@@ -1867,7 +1867,9 @@ function renderTownRepsByHouse(box) {
   };
   const split = town && (town[2].length > 1 || town[3].length > 1);
   const where = !town ? "" : split
-    ? `${esc(townName(town))} is split among ${town[2].length} Senate and ${town[3].length} ${HOUSE[LOW]} district${town[3].length === 1 ? "" : "s"}. ${STATE.addressLookup && ROOT ? "Look up your address, or pick yours below." : `Pick yours below${STATE.findReps ? `, or <a href="${esc(STATE.findReps)}" target="_blank" rel="noopener">look up your address</a>` : ""}.`}`
+    ? `${esc(townName(town))} ${town[2].length > 1 && town[3].length > 1 ? `is split among ${town[2].length} Senate and ${town[3].length} ${HOUSE[LOW]} districts`
+        : [["S", town[2]], [LOW, town[3]]].map(([h, ds], i) => ds.length === 1 ? `${i ? "" : "is "}in ${HOUSE[h]} District ${ds[0][0]}`
+        : `${i ? "" : "is "}split among ${ds.length} ${HOUSE[h]} districts`).join(" and ")}. ${STATE.addressLookup && ROOT ? "Look up your address, or pick yours below." : `Pick yours below${STATE.findReps ? `, or <a href="${esc(STATE.findReps)}" target="_blank" rel="noopener">look up your address</a>` : ""}.`}`
     : `${esc(townName(town))} is in Senate District ${town[2][0]?.[0] ?? "?"} and ${HOUSE[LOW]} District ${town[3][0]?.[0] ?? "?"}.`;
   box.innerHTML = `<h2>Where you live</h2>
     <div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOptions(town)}</select></label></div>

@@ -106,6 +106,12 @@ jobs:
         continue-on-error: true
         run: python3 states/wa/fetch.py
 
+      # Connecticut's data files: a few MB a year, read again every run (nothing to keep between runs).
+      - name: Download Connecticut
+        timeout-minutes: 20
+        continue-on-error: true
+        run: python3 states/ct/fetch.py
+
       # Ohio's legislative data service: the first full copy (about 4,500 bills) takes a few runs; then each run reads
       # the current General Assembly's actions again (about 1,500 requests).
       - name: Download Ohio
