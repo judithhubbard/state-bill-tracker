@@ -69,9 +69,11 @@ data/nc/*
 # Arizona downloads (states/az/fetch.py, from Open States).
 data/az/*
 !data/az/district_towns.json
-# South Dakota downloads (states/sd/fetch.py).
+# South Dakota downloads (states/sd/fetch.py); its place table is made once by states/sd/towns.py.
 data/sd/*
-# Wyoming downloads (states/wy/fetch.py).
+!data/sd/district_towns.json
+# Wyoming downloads (states/wy/fetch.py); its place table is made once by states/wy/towns.py.
 data/wy/*
+!data/wy/district_towns.json
 # Utah downloads (states/ut/fetch.py, from the Legislature's developer API).
 data/ut/*

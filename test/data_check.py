@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("az", "ca", "ct", "ga", "il", "ma", "md", "mi", "nc", "nj", "oh", "or", "pa", "tx", "va", "wa", "wi") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("az", "ca", "ct", "ga", "il", "ma", "md", "mi", "nc", "nj", "oh", "or", "pa", "sd", "tx", "va", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -83,6 +83,11 @@ def check(state):
         bad = sum(1 for r in recs for v in r["votes"] if sum(1 for _, c in v[6] if c == "N") > v[5])
         if bad:
             say(state, "FAIL", f"{s}: {bad} votes list more noes than their tally")
+        # Fewer: a name list split wrongly (WY's "Brown, G, Larson, JT" read as four names, then joined too eagerly).
+        few = [r["nums"][0] for r in recs for v in r["votes"] if 0 < sum(1 for _, c in v[6] if c == "N") < v[5]]
+        if few:
+            say(state, "FAIL" if len(few) > 0.01 * sum(len(r["votes"]) for r in recs) else "LOOK",
+                f"{s}: {len(few)} votes list fewer noes than their tally, e.g. {few[:4]}")
 
     # The current session's votes should name seats, not leftover names.
     cur = max(loaded)

@@ -326,6 +326,46 @@ from that repo. **Nothing here may change it.**
   amendments are bills too ("Constitutional Amendment ..."), three-fifths, then the voters. Roll-call pages print "None"
   for an empty vote group. Emails from Open States (the pages hide them behind Cloudflare's script); members who resigned
   stay on the member list with a note. No summaries (PDFs). Counties and places by district (`towns.py`).
+- **Wyoming (started 2026-11-01):** `python3 states/wy/fetch.py` reads the Legislative Service Office's JSON API, the one
+  wyoleg.gov's pages use (lsoservice.wyoleg.gov/api and api.wyoleg.gov; no robots.txt), a request a second: each year's
+  bill list, each HB, SF, HJ and SJ in full (actions, sponsors, roll calls member by member in committee and on the floor,
+  the LSO's bill summary), members and the joint committees; `states/wy/contacts.py` (run after it in the workflow) builds
+  the contacts (93 members with emails and phones; a past year adds members who left, for seats no one else holds).
+  One session a year: a general session in odd years (from the second Tuesday of January, 40 legislative days), a budget
+  session in even years (from the second Monday of February, 20 days), where a bill other than the budget needs
+  two-thirds to be introduced; "Failed Introduction" and "Did not Consider for Introduction" are `STATE.heldAction`
+  ("Not introduced"). Each year's last day is in `STATE.dated` (add each new year's). `states/wy/convert.py`: actions
+  begin with their house ("H 3rd Reading:Passed 53-4-5-0-0" is the passage; a tally is yes, no, excused, absent,
+  conflict); the API lists them newest first. Each house's twelve standing committees have the same numbers and names
+  ("H09 - Minerals" and "S09 - Minerals"); only single-subject ones give a topic. Both houses passing isn't passing both
+  houses: a bill sent back for concurrence needs "Concur:Passed" (or a recede) or enrollment ("Assigned Number HEA
+  No."); several died in conference. A law is decided by its chapter number: veto overrides appear only among the roll
+  calls ("Veto Override 45-16-1-0-0", "Did Not Override Veto 35-27"), added to the history as written. Roll-call names:
+  floor "Campbell, K" (the members' voteName), committee "CAMPBELL" (a shared surname resolved by committee membership);
+  name lists split on commas, so initials, "Jr" and first names ("Larsen, Lloyd") rejoin the name before them; a roll
+  call's chamber field is sometimes wrong (the action's house letter decides). Committee sponsors' full names ("Joint
+  Judiciary Interim Committee") come from the digest's "Sponsored By:" line. "What it does" is the LSO's bill summary
+  (mostly laws; background-first summaries reordered), else the official title's clauses (`purpose()`: "specifying" ->
+  "Specifies"). Earlier years linked by catch title and prime sponsor, never to a bill that became law (yearly bills like
+  "Omnibus water bill-construction" share titles). Governor 3 days, Sundays excepted, in session; 15 days after
+  adjournment. The governor's phone and contact page (governor.wyo.gov/contact/governor) haven't been checked by the
+  owner. A new governor takes office January 4, 2027 (Gordon is term-limited): add them to `GOVERNORS`.
+- **South Dakota (started 2026-11-01):** `python3 states/sd/fetch.py` reads the Legislature's JSON API
+  (https://sdlegislature.gov/api/, the one its own pages use; no key): each regular session's bill list and action logs,
+  each bill's detail (sponsors in order, subject keywords), every vote member by member (votes/<id>.json, by
+  SessionMemberId), members, committees, and the Legislature's lists of bills signed and vetoed (logs.json, to check
+  totals: 2026's 240 and 2 match). `states/sd/contacts.py` runs after it. `states/sd/convert.py` reads each action's
+  kind (ActionId) and who acted: "Do Pass" is a committee's report when a committee acts and the house's passage when
+  the whole house does (ActionCommittee.FullBody); "Deferred to the 41st legislative day" (there are 40) and tabling kill
+  a bill in committee (`heldLabel`); "Reconsidered" undoes the house's earlier vote, and a new vote follows. A floor
+  "Do Pass Amended" in the second house doesn't mean it changed the bill: passed both houses needs the presiding
+  officers' signatures, a concurrence or a conference report adopted in both. Topics from the subject keywords
+  (`KEYWORD_TOPICS`). No summaries: the title is the act's one-line description ("Provide for ..."). Bill pages are
+  addressed by the Legislature's bill id (a version's `link`). Each district elects a senator and two representatives
+  (26 and 28 from subdistricts 26A/26B): seats "S:12", "H:12a"/"H:12b" (New Jersey's scheme), one district list for both
+  houses. Members' phones are the House's and Senate's switchboards. One session a year from the second Tuesday of
+  January (40 days in odd years, 35 in even), plus a veto day near the end of March (`vetoDay()`); each year's last
+  regular day is in `STATE.dated` (add each year's). Governor 5 days, Sundays excepted, in session; 15 after.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
@@ -435,6 +475,10 @@ from that repo. **Nothing here may change it.**
     column in every state. Class names shared by unrelated parts: chart legends' `.key` (nowrap) also styled the
     contact card's `li.key` and pushed IL and NJ panels sideways; the co-sponsor list's `more` took the "Show more"
     button's box. Check `document.documentElement.scrollWidth` with a bill open.
+  - A field that names the wrong house: a few of WY's roll calls say "H" for a Senate vote ("S Introduced and Referred to
+    S04 ..."); senators then looked like House voters who didn't match a seat. Take the house from the action's text.
+  - Lists split on commas when names contain commas: WY's "Brown, G, Larson, JT, Burkhart, Jr" (initials, suffixes and
+    first names belong to the name before). Count each vote list against its tally.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the

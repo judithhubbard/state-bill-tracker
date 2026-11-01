@@ -143,6 +143,13 @@ jobs:
           key: sd-data-v1-${{ github.run_id }}
           restore-keys: sd-data-v1-
 
+      - name: Restore Wyoming downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: data/wy
+          key: wy-data-v1-${{ github.run_id }}
+          restore-keys: wy-data-v1-
+
       - name: Restore Pennsylvania downloads
         uses: actions/cache/restore@v4
         with:
@@ -261,11 +268,18 @@ jobs:
         continue-on-error: true
         run: python3 states/co/fetch.py
 
-      # South Dakota: the Legislature's JSON API; the first copy (about 3 hours) builds up over several runs, then two requests show each day's changes. Not built into the site until its converter exists.
+      # South Dakota: the Legislature's JSON API; the first copy (about 3 hours) builds up over several runs, then two requests show each day's changes.
       - name: Download South Dakota
         timeout-minutes: 25
         continue-on-error: true
-        run: python3 states/sd/fetch.py
+        run: python3 states/sd/fetch.py && python3 states/sd/contacts.py
+
+      # Wyoming: the Legislative Service Office's JSON API, a request a second; the first copy takes about 25 minutes,
+      # then the bills its list shows as changed.
+      - name: Download Wyoming
+        timeout-minutes: 25
+        continue-on-error: true
+        run: python3 states/wy/fetch.py && python3 states/wy/contacts.py
 
       # Pennsylvania: the bill history files, then each voted-on bill's roll calls at one request a second, so the first
       # copy takes several runs; then only bills whose history changed.
@@ -375,6 +389,13 @@ jobs:
         with:
           path: data/sd
           key: sd-data-v1-${{ github.run_id }}
+
+      - name: Save Wyoming downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/wy
+          key: wy-data-v1-${{ github.run_id }}
 
       - name: Save Pennsylvania downloads
         if: always()
