@@ -21,7 +21,22 @@ for s in $STATES; do
   if [ -n "$SITE_BASE" ]; then export SITE_URL="${SITE_BASE}$s/"; fi
   python3 build_data.py --state "$s" --github "$OUT/$s"
 done
-cp home.html "$OUT/index.html"
+# The front page lists exactly the states built in this run (home.html's own list is replaced), so a state appears there
+# as soon as its pages are published; New York's link to the Albany Bill Tracker stays as written.
+python3 - "$OUT" <<'PY'
+import importlib, os, re, sys
+out = sys.argv[1]
+page = open("home.html").read()
+items = []
+for s in sorted(os.listdir(out)):
+    if len(s) == 2 and s != "ny" and os.path.exists(os.path.join(out, s, "index.html")):
+        P = importlib.import_module(f"states.{s}.profile")
+        items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b><span>Bills in the {P.LEGISLATURE}</span></a></li>\n'))
+block = "".join(i for _, i in sorted(items))
+page = re.sub(r'(<ul>\n)(?:    <li><a href="[a-z]{2}/">.*?</li>\n)*', lambda m: m.group(1) + block, page, count=1, flags=re.S)
+open(os.path.join(out, "index.html"), "w").write(page)
+print("front page:", ", ".join(n for n, _ in sorted(items)))
+PY
 # The pages ask for their icons at the top of the site.
 cp "$OUT/nj/favicon.ico" "$OUT/nj/favicon-32.png" "$OUT/nj/apple-touch-icon.png" "$OUT/"
 if [ "${LAUNCHED:-0}" = 1 ]; then
