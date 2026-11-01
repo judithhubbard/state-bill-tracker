@@ -5,7 +5,7 @@ const STATE = {
   // The governor's office asks for ("requests") bills that passed both houses, in batches, through December.
   requestsBills: true,
   // The public site, and the Worker that keeps published watchlists.
-  publicSite: "https://albanybilltracker.org/",
+  publicSite: "https://statebilltracker.org/ny/",
   listsApi: "https://albany-lists.lists-worker.workers.dev",
   houses: { S: "Senate", A: "Assembly" },
   // How a session is written: 2025–26.

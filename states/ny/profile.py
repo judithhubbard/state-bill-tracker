@@ -12,12 +12,12 @@ SITE_DIR = ""
 
 # Names in page titles and the header line.
 STATE_NAME = "New York"
-SITE_NAME = "Albany Bill Tracker"
+SITE_NAME = "New York Bill Tracker"
 LEGISLATURE = "New York State Legislature"
 # Dates and times on the site are this state's.
 TIMEZONE = "America/New_York"
 # The public address; analytics are added only to builds for it.
-PUBLIC_URL = "https://albanybilltracker.org/"
+PUBLIC_URL = "https://statebilltracker.org/ny/"
 # The GitHub Pages address, used for share links and links to single bills.
 SITE_URL = os.environ.get("SITE_URL", PUBLIC_URL)
 
@@ -33,8 +33,9 @@ def session_label(session):
 
 # Visitor counts on the public site only (both are public values that appear in the page source).
 # Cloudflare Web Analytics: the token from its JS snippet. GoatCounter: the site code, as in <code>.goatcounter.com.
-CF_ANALYTICS_TOKEN = "4124cfe282c84c29990753f76caa2319"
-GOATCOUNTER_CODE = "albanybilltracker"
+# The Albany Bill Tracker's codes stay in ny-bill-tracker: pages built here mustn't count in its statistics.
+CF_ANALYTICS_TOKEN = ""
+GOATCOUNTER_CODE = ""
 
 
 # Sponsor checkboxes: only Sen. Webb (SD 52, from 2023) and Asm. Kelles (AD 125, from 2021).

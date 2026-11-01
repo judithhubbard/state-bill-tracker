@@ -22,14 +22,14 @@ for s in $STATES; do
   python3 build_data.py --state "$s" --github "$OUT/$s"
 done
 # The front page lists exactly the states built in this run (home.html's own list is replaced), so a state appears there
-# as soon as its pages are published; New York's link to the Albany Bill Tracker stays as written.
+# as soon as its pages are published (New York's too, at /ny/).
 python3 - "$OUT" <<'PY'
 import importlib, os, re, sys
 out = sys.argv[1]
 page = open("home.html").read()
 items = []
 for s in sorted(os.listdir(out)):
-    if len(s) == 2 and s != "ny" and os.path.exists(os.path.join(out, s, "index.html")):
+    if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
         P = importlib.import_module(f"states.{s}.profile")
         items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b><span>Bills in the {P.LEGISLATURE}</span></a></li>\n'))
 block = "".join(i for _, i in sorted(items))
