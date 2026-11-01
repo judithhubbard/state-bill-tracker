@@ -129,6 +129,20 @@ jobs:
           key: nc-data-v1-${{ github.run_id }}
           restore-keys: nc-data-v1-
 
+      - name: Restore Colorado downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: data/co
+          key: co-data-v1-${{ github.run_id }}
+          restore-keys: co-data-v1-
+
+      - name: Restore South Dakota downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: data/sd
+          key: sd-data-v1-${{ github.run_id }}
+          restore-keys: sd-data-v1-
+
       - name: Restore Pennsylvania downloads
         uses: actions/cache/restore@v4
         with:
@@ -241,6 +255,18 @@ jobs:
         continue-on-error: true
         run: python3 states/nc/fetch.py
 
+      # Colorado: leg.colorado.gov's bill pages and votes, 3 seconds apart (it answers 'too many requests' faster), so the first copy (about 17 hours) builds up over many runs. Not built into the site until its converter exists.
+      - name: Download Colorado
+        timeout-minutes: 25
+        continue-on-error: true
+        run: python3 states/co/fetch.py
+
+      # South Dakota: the Legislature's JSON API; the first copy (about 3 hours) builds up over several runs, then two requests show each day's changes. Not built into the site until its converter exists.
+      - name: Download South Dakota
+        timeout-minutes: 25
+        continue-on-error: true
+        run: python3 states/sd/fetch.py
+
       # Pennsylvania: the bill history files, then each voted-on bill's roll calls at one request a second, so the first
       # copy takes several runs; then only bills whose history changed.
       - name: Download Pennsylvania
@@ -335,6 +361,20 @@ jobs:
         with:
           path: data/nc
           key: nc-data-v1-${{ github.run_id }}
+
+      - name: Save Colorado downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/co
+          key: co-data-v1-${{ github.run_id }}
+
+      - name: Save South Dakota downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/sd
+          key: sd-data-v1-${{ github.run_id }}
 
       - name: Save Pennsylvania downloads
         if: always()
