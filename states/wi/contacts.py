@@ -25,7 +25,7 @@ def build(session):
         h = "S" if m.get("house") == "senate" else "A"
         if not str(m.get("district") or "").isdigit():
             continue
-        name = m.get("fullName") or m.get("name")
+        name = " ".join((m.get("fullName") or m.get("name") or "").split())
         phones = [p for p in m.get("telephone") or [] if p]
         sid = f"{h}:{int(m['district'])}"
         if sid in people and not (m.get("email") or m.get("telephone")):

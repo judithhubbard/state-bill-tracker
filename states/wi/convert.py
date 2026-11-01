@@ -61,7 +61,7 @@ def decode(h):
         return house, "Committee recommended it fail"
     if re.match(r"placed on calendar|available for scheduling|read a second time", low):
         return house, "PLACED ON FLOOR"
-    if re.match(r"read a third time and (?:passed|concurred in|adopted)|(?:concurred in as amended|adopted), ayes", low):
+    if re.match(r"read a third time and (?:passed|concurred in|adopted)|(?:concurred in as amended|adopted|passed), ayes", low):
         return house, f"PASSED {HOUSE.get(house, 'ASSEMBLY').upper()}"
     if re.match(r"(?:assembly|senate) (?:substitute )?amendment .*concurred in", low):
         return house, "CONCURRED"
@@ -107,13 +107,39 @@ def _amendments(session):
     return _RELATING[session]
 
 
+_BILLS = {}
+
+
+def _bills(session):
+    """Relating clause -> [(bill, first author's name)] for a session's bills."""
+    if session not in _BILLS:
+        out = {}
+        for f in glob.glob(os.path.join(folder(session), "bills", "[AS]B*.json")):
+            b = json.load(open(f))
+            a = (b.get("authors") or [{}])[0]
+            out.setdefault(text(b.get("relating")).lower().rstrip(". "), []).append((b["number"], text(a.get("name")).lower()))
+        _BILLS[session] = out
+    return _BILLS[session]
+
+
 def earlier(session, b):
-    """A second-consideration amendment's first consideration: the joint resolution of the Legislature before with the
-    same relating clause."""
-    if not is_amendment(b):
+    """The same measure in the Legislature before. A second-consideration amendment: the joint resolution with the same
+    relating clause. A bill: the same relating clause and the same first author, or a clause of six words or more that only
+    one bill has in each session."""
+    if is_amendment(b):
+        old = _amendments(session - 2).get(CONSIDERATION.sub("", text(b.get("relating"))).lower().rstrip(". "), [])
+        return {(session - 2, old[0])} if len(old) == 1 else set()
+    if not os.path.isdir(os.path.join(folder(session - 2), "bills")):
         return set()
-    old = _amendments(session - 2).get(CONSIDERATION.sub("", text(b.get("relating"))).lower().rstrip(". "), [])
-    return {(session - 2, old[0])} if len(old) == 1 else set()
+    k = text(b.get("relating")).lower().rstrip(". ")
+    who = text((b.get("authors") or [{}])[0].get("name")).lower()  # by name: member ids change each session
+    old = _bills(session - 2).get(k, [])
+    same = [n for n, a in old if a and a == who]
+    if same:
+        return {(session - 2, same[0])}
+    if len(old) == 1 and len(_bills(session).get(k, [])) == 1 and len(k.split()) >= 6:
+        return {(session - 2, old[0][0])}
+    return set()
 
 
 def members_index(session):
@@ -125,10 +151,11 @@ def members_index(session):
         h = sid[0]
         last = p["name"].split()[-1].upper() if not re.search(r"\b(Jr|Sr|II|III)\.?$", p["name"]) else p["name"].split()[-2].rstrip(",").upper()
         first = p["name"][:1].upper()
-        out.setdefault((h, last), []).append(sid)
-        out[(h, f"{last}, {first}")] = [sid]
-        out.setdefault((h, last[:14]), []).append(sid)
-    return {k: v[0] for k, v in out.items() if len(v) == 1}
+        two = " ".join(re.sub(r",?\s+(?:Jr|Sr|II|III)\.?$", "", p["name"]).split()[-2:]).upper()  # "MOORE OMOKUNDE"
+        for k in {(h, last), (h, last[:14]), (h, two), (h, two[:14])}:  # (the same key when the name is short)
+            out.setdefault(k, set()).add(sid)
+        out[(h, f"{last}, {first}")] = {sid}
+    return {k: next(iter(v)) for k, v in out.items() if len(v) == 1}
 
 
 def load_session(session):
@@ -238,15 +265,19 @@ def load_session(session):
         for d, h, t, a, raw in steps:
             if h not in HOUSE or not (t.startswith("PASSED") or t in ("CONCURRED", "FAILED")) or not tally(a):
                 continue
-            names_ = []
+            names_, totals = [], None
             for vid in raw.get("votes") or []:
                 v = load(session, os.path.join("votes", f"{vid}.json"), {})
+                if v.get("totals"):
+                    t = v["totals"]
+                    totals = (t.get("Y", t.get("yes", 0)), t.get("N", t.get("no", 0)))
                 for m in v.get("members") or []:
                     if m.get("vote") == "Y":
                         continue
                     n = text(m.get("name")).upper()
                     names_.append([seat.get((h, n)) or seat.get((h, n[:14])) or f"{h}?{n.title()}", "N" if m.get("vote") == "N" else "A"])
-            votes.append([h, "F", None, d] + list(tally(a)) + [names_])
+            # The roll call's own totals over the history line's (SB 541 of 2023: "Noes 8", nine noes by name).
+            votes.append([h, "F", None, d] + list(totals or tally(a)) + [names_])
         action_dates = [s[0] for s in steps if s[0]]
         rec = {
             "nums": [p], "base": [p], "prev": earlier(session, b),

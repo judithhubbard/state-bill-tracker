@@ -373,6 +373,8 @@ from that repo. **Nothing here may change it.**
     failed to match at first). When a fixed share fails, suspect the matching, not the data.
   - Two file formats from one server: MI's status files come in an older and a newer layout; reading only the newer one
     left 3,088 of 3,494 bills of 2023-24 with no history ("In committee"). Count bills with no history lines.
+  - Tallies that disagree within the source: WI's history line for SB 541 of 2023 says "Noes 8"; its roll call lists nine
+    noes by name. Prefer the roll call's own totals; the check counts vote lists with more noes than their tally.
   - Members who change house or name mid-session: OR's "Rep Neron" became "Sen Neron Misslin", and a session's member
     list shows only the end state; look the old code up in other years' lists.
   - Names: degrees and titles ("Dr.", "M.D.", "Ph.D.", "Esq.") aren't part of a name; "Jr."/"III" are, but aren't the
