@@ -1,4 +1,7 @@
-# State Bill Tracker: the multi-state version (private, in progress)
+# State Bill Tracker: the multi-state version (in progress)
+
+The repository is public (made so 2026-11-01, for unlimited free GitHub Actions minutes). Never commit secrets: keys
+live in ~/.<name> files and GitHub secrets; check `git log -p` before committing anything that reads a key.
 
 This is a separate project, started 2026-10-27 as a copy of ny-bill-tracker (commit b312227), in
 /Users/jk/Dropbox/Claude/AlbanyBillTracker. The live New York site, albanybilltracker.org, still runs
@@ -423,7 +426,7 @@ from that repo. **Nothing here may change it.**
     button's box. Check `document.documentElement.scrollWidth` with a bill open.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
-  `statebilltracker`), since this repo is private. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
+  `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
   Until launch it writes `robots.txt` and `_headers` telling search engines not to list anything (`LAUNCHED=1`
   turns that off). `.github/workflows/site.yml` downloads, builds and deploys, once a day (10:23 UTC; GitHub often starts it hours late) and by hand; it needs the
@@ -435,8 +438,8 @@ from that repo. **Nothing here may change it.**
   `npx -y wrangler@4.152.0 pages deploy <repo>/_site --project-name=statebilltracker --branch=main --commit-dirty=true`.
 - **Launch checklist for statebilltracker.org** (do these together when the owner says to launch):
   1. `.github/workflows/site.yml`: run more often (e.g. hourly on weekdays while the Legislature meets, every two
-     hours otherwise, like ny-bill-tracker's update.yml); mind GitHub's 2,000 free minutes a month for a private
-     repo (a run takes about 2) and Cloudflare Pages' monthly deployment limit.
+     hours otherwise, like ny-bill-tracker's update.yml); Actions minutes are free (public repo), but runs take about
+     2 hours while states are slow to download, and mind Cloudflare Pages' monthly deployment limit.
   2. Build with the real address: drop `SITE_URL` from the workflow (states use `PUBLIC_URL`), and set
      `LAUNCHED=1` so `build_site.sh` stops telling search engines to stay away.
   3. Point statebilltracker.org (and .com, forwarding with 302) at the Pages project: add it as a custom domain
@@ -450,7 +453,7 @@ from that repo. **Nothing here may change it.**
 ## What's switched off in this copy (so it can't touch the live NY site)
 
 - **The workflow** (`.github/workflows/update.yml`) runs only when started by hand: no schedule, no
-  push trigger. The repo is private, so it has no GitHub Pages site anyway.
+  push trigger. It has no GitHub Pages site.
 - **The Workers are renamed:** `state-lists` (with no KV namespace yet) and `state-cron` (with no timer,
   aimed at this repo). Never deploy them under the names `albany-lists` or `albany-cron`.
 - **`lists_admin.py`** and the `LISTS_API` address in tracker.html still point at the live NY lists
