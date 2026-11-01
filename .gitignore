@@ -61,3 +61,10 @@ data/ga/*
 # Wisconsin downloads (states/wi/fetch.py).
 data/wi/*
 !data/wi/district_towns.json
+# Colorado downloads (states/co/fetch.py).
+data/co/*
+# North Carolina downloads (states/nc/fetch.py).
+data/nc/*
+# Arizona downloads (states/az/fetch.py, from Open States).
+data/az/*
+!data/az/district_towns.json

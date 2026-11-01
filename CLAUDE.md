@@ -303,6 +303,16 @@ from that repo. **Nothing here may change it.**
   (`members_index()`). The last general-business floor period's date is `STATE.dated` (add each session's). The Assembly
   Committee on Rules and the Committee on Senate Organization schedule floor votes. Cities and villages crossing county
   lines are one entry (`towns.py`); towns that share a name carry their county.
+- **Arizona (started 2026-10-31, from Open States: see the az-open-states memory):** `python3 states/az/fetch.py` reads
+  v3.openstates.org with the owner's free API key (~/.openstates_api_key; GitHub secret OPENSTATES_API_KEY). The free tier
+  allows 250 requests a day (20 bills each): the first copy of three sessions takes two days, resuming from the saved page,
+  and stops cleanly at the daily limit; then a day's changes (updated_since) are a few requests. Local runs and GitHub's
+  share the quota. `states/az/azleg.py` reads www.azleg.gov at its 120-second crawl delay (member rosters for phones and
+  rooms; the committee pages list meetings only, so there are no chairs yet; resolutions' official titles to tell
+  constitutional amendments from referred measures). `states/az/convert.py` uses Open States' action classifications;
+  some committee reports don't name their committee. Open States has no chapter numbers, and about 10 bills a year stop
+  after passing both houses (gaps in its records). 30 districts with a senator and two representatives each (New Jersey's
+  scheme, "H:12a"/"H:12b"). Earlier years linked by short title.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house

@@ -112,6 +112,13 @@ jobs:
           key: wi-data-v1-${{ github.run_id }}
           restore-keys: wi-data-v1-
 
+      - name: Restore Arizona downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: data/az
+          key: az-data-v1-${{ github.run_id }}
+          restore-keys: az-data-v1-
+
       - name: Restore Pennsylvania downloads
         uses: actions/cache/restore@v4
         with:
@@ -202,6 +209,21 @@ jobs:
         continue-on-error: true
         run: python3 states/wi/fetch.py
 
+      # Arizona: bills from Open States (the Legislature's data service asks robots not to use it; the owner's decision),
+      # with the free API key in the OPENSTATES_API_KEY secret; then committees and phones from azleg.gov at its
+      # two-minute crawl delay, re-read weekly (a full pass takes about 80 minutes).
+      - name: Download Arizona
+        timeout-minutes: 60
+        continue-on-error: true
+        env:
+          OPENSTATES_API_KEY: ${{ secrets.OPENSTATES_API_KEY }}
+        run: python3 states/az/fetch.py
+
+      - name: Download Arizona's committees and phones (azleg.gov)
+        timeout-minutes: 90
+        continue-on-error: true
+        run: python3 states/az/azleg.py && python3 states/az/contacts.py
+
       # Pennsylvania: the bill history files, then each voted-on bill's roll calls at one request a second, so the first
       # copy takes several runs; then only bills whose history changed.
       - name: Download Pennsylvania
@@ -282,6 +304,13 @@ jobs:
         with:
           path: data/wi
           key: wi-data-v1-${{ github.run_id }}
+
+      - name: Save Arizona downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/az
+          key: az-data-v1-${{ github.run_id }}
 
       - name: Save Pennsylvania downloads
         if: always()
