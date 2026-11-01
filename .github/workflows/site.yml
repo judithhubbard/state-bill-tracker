@@ -19,6 +19,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # GitHub stops a job at 6 hours, before it publishes; the slow downloads below are each limited to 25 minutes so a
+    # run stays near 2 hours even while several states make their first copies.
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -145,14 +148,14 @@ jobs:
       # A server that stops answering mustn't hold the whole run (a Texas download once hung for hours): after
       # 90 minutes the site is built from the copy saved last time.
       - name: Download Illinois
-        timeout-minutes: 90
+        timeout-minutes: 25
         continue-on-error: true
         run: python3 states/il/fetch.py
 
       # Washington's web services: the first full copy (about 9,000 bills, three requests at a time) takes a few runs;
       # each run keeps what it got.
       - name: Download Washington
-        timeout-minutes: 90
+        timeout-minutes: 25
         continue-on-error: true
         run: python3 states/wa/fetch.py
 
@@ -171,14 +174,14 @@ jobs:
       # Ohio's legislative data service: the first full copy (about 4,500 bills) takes a few runs; then each run reads
       # the current General Assembly's actions again (about 1,500 requests).
       - name: Download Ohio
-        timeout-minutes: 90
+        timeout-minutes: 25
         continue-on-error: true
         run: python3 states/oh/fetch.py
 
       # Massachusetts's API: each bill's history (about 17,000 for two General Courts, three requests at a time), so the
       # first copy takes a run or two; then the current General Court's bills with recent activity.
       - name: Download Massachusetts
-        timeout-minutes: 90
+        timeout-minutes: 25
         continue-on-error: true
         run: python3 states/ma/fetch.py
 
@@ -191,21 +194,21 @@ jobs:
       # Georgia's web services: the first copy (two sessions' bills and votes) takes about an hour; then each run reads the
       # current session's bills again (about 15 minutes; the service has no change feed).
       - name: Download Georgia
-        timeout-minutes: 90
+        timeout-minutes: 25
         continue-on-error: true
         run: python3 states/ga/fetch.py
 
       # Michigan: each bill's status file at one request a second (the Legislature's limit), so the first copy takes a
       # few runs; then only files the folder listing shows as changed.
       - name: Download Michigan
-        timeout-minutes: 90
+        timeout-minutes: 25
         continue-on-error: true
         run: python3 states/mi/fetch.py
 
       # Wisconsin: each bill's history and analysis, its roll calls and committee records, one request a second, so the
       # first copy (about 6 hours) takes several runs; then the bills the lists or journals show as changed.
       - name: Download Wisconsin
-        timeout-minutes: 90
+        timeout-minutes: 25
         continue-on-error: true
         run: python3 states/wi/fetch.py
 
@@ -213,21 +216,21 @@ jobs:
       # with the free API key in the OPENSTATES_API_KEY secret; then committees and phones from azleg.gov at its
       # two-minute crawl delay, re-read weekly (a full pass takes about 80 minutes).
       - name: Download Arizona
-        timeout-minutes: 60
+        timeout-minutes: 30
         continue-on-error: true
         env:
           OPENSTATES_API_KEY: ${{ secrets.OPENSTATES_API_KEY }}
         run: python3 states/az/fetch.py
 
       - name: Download Arizona's committees and phones (azleg.gov)
-        timeout-minutes: 90
+        timeout-minutes: 25
         continue-on-error: true
         run: python3 states/az/azleg.py && python3 states/az/contacts.py
 
       # Pennsylvania: the bill history files, then each voted-on bill's roll calls at one request a second, so the first
       # copy takes several runs; then only bills whose history changed.
       - name: Download Pennsylvania
-        timeout-minutes: 90
+        timeout-minutes: 25
         continue-on-error: true
         run: python3 states/pa/fetch.py
 
