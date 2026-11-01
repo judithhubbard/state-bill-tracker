@@ -122,6 +122,13 @@ jobs:
           key: az-data-v1-${{ github.run_id }}
           restore-keys: az-data-v1-
 
+      - name: Restore North Carolina downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: data/nc
+          key: nc-data-v1-${{ github.run_id }}
+          restore-keys: nc-data-v1-
+
       - name: Restore Pennsylvania downloads
         uses: actions/cache/restore@v4
         with:
@@ -227,6 +234,13 @@ jobs:
         continue-on-error: true
         run: python3 states/az/azleg.py && python3 states/az/contacts.py
 
+      # North Carolina: ncleg.gov's bill pages and roll calls, two seconds apart (its robots.txt crawl delay), so the
+      # first copy (about 6 hours) builds up over many runs; then the bills its list shows as changed.
+      - name: Download North Carolina
+        timeout-minutes: 25
+        continue-on-error: true
+        run: python3 states/nc/fetch.py
+
       # Pennsylvania: the bill history files, then each voted-on bill's roll calls at one request a second, so the first
       # copy takes several runs; then only bills whose history changed.
       - name: Download Pennsylvania
@@ -314,6 +328,13 @@ jobs:
         with:
           path: data/az
           key: az-data-v1-${{ github.run_id }}
+
+      - name: Save North Carolina downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/nc
+          key: nc-data-v1-${{ github.run_id }}
 
       - name: Save Pennsylvania downloads
         if: always()

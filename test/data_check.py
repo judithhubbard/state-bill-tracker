@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("az", "ca", "ct", "ga", "il", "ma", "md", "mi", "nj", "oh", "or", "pa", "tx", "va", "wa", "wi") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("az", "ca", "ct", "ga", "il", "ma", "md", "mi", "nc", "nj", "oh", "or", "pa", "tx", "va", "wa", "wi") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []

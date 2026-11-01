@@ -587,6 +587,12 @@ def main():
             f.write("running\n")
     for y in range(FIRST, CURRENT + 1, 2):
         session(y)
+    sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
+    from states.nc import contacts
+    try:
+        contacts.main(CURRENT)
+    except (SystemExit, OSError) as e:
+        print(e)
     finish()
 
 
