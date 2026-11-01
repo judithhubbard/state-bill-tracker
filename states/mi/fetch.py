@@ -34,7 +34,19 @@ def main():
     listing's date and size, kept in data/mi/<session>/<house>/listing.json)."""
     only = int(sys.argv[1]) if len(sys.argv) > 1 else None
     incomplete = []
-    for start in (CURRENT - 2, CURRENT):
+    marker = os.path.join(DATA, "incomplete")
+    # A run cut off by its time limit leaves this, so a partial copy isn't published (cleared after a clean run).
+    if not only and not os.path.exists(marker):
+        os.makedirs(DATA, exist_ok=True)
+        open(marker, "w").write("running\n")
+    # The legislators first: a quick step, and the site's check needs them even when a run is cut off.
+    sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
+    from states.mi import contacts
+    try:
+        contacts.main(CURRENT)
+    except SystemExit as e:
+        print(e)
+    for start in (CURRENT, CURRENT - 2):  # the current session first
         if only and start != only:
             continue
         session = f"{start}-{start + 1}"
@@ -67,13 +79,6 @@ def main():
             if got < len(todo):
                 incomplete.append(f"{session}:{house}")
             print(f"{session} {house}: {got} of {len(todo)} read ({len(entries)} listed)", flush=True)
-    sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
-    from states.mi import contacts
-    try:
-        contacts.main(CURRENT)
-    except SystemExit as e:
-        print(e)
-    marker = os.path.join(DATA, "incomplete")
     if incomplete:
         open(marker, "w").write(" ".join(incomplete) + "\n")
     elif os.path.exists(marker) and not only:
