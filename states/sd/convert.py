@@ -71,6 +71,8 @@ def decode(a):
         return h, (f"PASSED {HOUSE[h].upper()}" if r == "P" else "FAILED"), line.strip()
     if k == 58 and whole and r == "P":
         return h, "RECONSIDERED", f"{HOUSE.get(h, '')} reconsidered its vote".strip()
+    if k in (91, 93) and h not in HOUSE:  # the conference committee's own vote, not a house's
+        return "G", f"Conference committee: {raw.lower()}", f"Conference committee: {raw.lower()}"
     if k == 91 and r == "P":
         return h, "CONCURRED", f"{HOUSE.get(h, '')} concurred in amendments".strip()
     if k == 93 and r == "P":
@@ -129,7 +131,10 @@ def load_session(session):
                 passed.discard(h)
         if "OVERRIDDEN" in texts_:
             passed = {"S", "H"}
-        agreed = "ENROLLED" in texts_ or "CONCURRED" in texts_ or texts_.count("CONFERENCE REPORT ADOPTED") >= 2
+        # Agreement: the presiding officers' signatures, the first house concurring, or both houses adopting a conference
+        # report (HB 1140 of 2024: the Senate adopted it, the House didn't).
+        agreed = ("ENROLLED" in texts_ or "CONCURRED" in texts_
+                  or {s[1] for s in steps if s[2] == "CONFERENCE REPORT ADOPTED"} >= {"S", "H"})
         overridden = {s[1] for s in steps if s[2] == "OVERRIDDEN"} >= {"S", "H"}
         if amendment:
             stage = 3 if len(passed) == 2 and agreed else None

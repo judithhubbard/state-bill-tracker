@@ -359,7 +359,8 @@ from that repo. **Nothing here may change it.**
   the whole house does (ActionCommittee.FullBody); "Deferred to the 41st legislative day" (there are 40) and tabling kill
   a bill in committee (`heldLabel`); "Reconsidered" undoes the house's earlier vote, and a new vote follows. A floor
   "Do Pass Amended" in the second house doesn't mean it changed the bill: passed both houses needs the presiding
-  officers' signatures, a concurrence or a conference report adopted in both. Topics from the subject keywords
+  officers' signatures, a concurrence or a conference report adopted in both (steps with no house are the conference
+  committee's own votes, "Concurred in amendments 4-2", and don't count; HB 1140 of 2024 died in conference). Topics from the subject keywords
   (`KEYWORD_TOPICS`). No summaries: the title is the act's one-line description ("Provide for ..."). Bill pages are
   addressed by the Legislature's bill id (a version's `link`). Each district elects a senator and two representatives
   (26 and 28 from subdistricts 26A/26B): seats "S:12", "H:12a"/"H:12b" (New Jersey's scheme), one district list for both
