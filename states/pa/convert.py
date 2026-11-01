@@ -308,7 +308,7 @@ def load_session(session):
             else:
                 votes.append([r["house"], "C", cname(r.get("committee") or ""), d, yes, no, [[member(m), code.get(m[2], "A")] for m in ms if m[2] != "Yea"]])
                 if r.get("description"):
-                    texts[p] = {"statement": r["description"], "label": "The committee's description"}
+                    texts[p] = {"statement": r["description"], "label": "From the committee's description of the bill."}
         for d, h, t, a in steps:
             m = re.search(r"\((\d+)-(\d+)\)", a)
             if m and h in HOUSE and (t.startswith("PASSED") or t in ("CONCURRED", "FAILED")) and (h, d) not in floor_days:

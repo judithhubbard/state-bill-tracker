@@ -14,6 +14,12 @@ STATES = [s for s in ("az", "ca", "ct", "ga", "il", "ma", "md", "mi", "nc", "nj"
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
+# The topics every state uses, with the same names, so states can be compared ("Shared conventions" in CLAUDE.md).
+TOPICS = {"ag": "Agriculture & natural resources", "biz": "Business & consumers", "const": "Constitutional amendments",
+          "edu": "Education", "env": "Environment & energy", "gov": "Elections & state government",
+          "health": "Health & mental health", "housing": "Housing", "human": "Human services",
+          "labor": "Labor & public employees", "local": "Local government", "safety": "Public safety & courts",
+          "tax": "Taxes", "transp": "Transportation"}
 
 
 def say(state, kind, msg):
@@ -27,6 +33,12 @@ def check(state):
     C = importlib.import_module(f"states.{state}.convert")
     print(f"== {P.STATE_NAME}")
     loaded = {s: C.load_session(s)[0] for s in C.sessions()}
+
+    # The shared topics, with the shared names.
+    mine = {k: v[0] for k, v in P.TOPICS.items()}
+    off = {k: mine.get(k) for k in TOPICS if mine.get(k) != TOPICS[k]} | {k: v for k, v in mine.items() if k not in TOPICS}
+    if off:
+        say(state, "FAIL", f"topics differ from the shared list: {off}")
 
     for s, recs in loaded.items():
         # (Constitutional amendments stop at "passed both houses": they go to the voters, not the governor.)
@@ -80,6 +92,13 @@ def check(state):
         share = 100 * len(loose) / len(who)
         say(state, "FAIL" if share > 10 else "LOOK", f"{cur}: {share:.1f}% of named votes aren't tied to a seat "
             f"(former members are expected), e.g. {collections.Counter(loose).most_common(3)}")
+
+    # "What it does" says where it's from, as a sentence: "From the Legislative Reference Bureau's synopsis."
+    for path in sorted(glob.glob(os.path.join(P.DATA, "texts_*.json")))[-1:]:
+        labels = {v.get("label") for v in json.load(open(path)).values() if v.get("label")}
+        odd = sorted(l for l in labels if not re.match(r"From the .*\.$", l))
+        if odd:
+            say(state, "FAIL", f"{os.path.basename(path)}: source notes not written as 'From the ....': {odd[:3]}")
 
     # Summary text: encoding, characters lost in the export, paragraphs cut mid-sentence, title-only summaries.
     for path in sorted(glob.glob(os.path.join(P.DATA, "texts_*.json"))):

@@ -168,7 +168,7 @@ def load_session(session):
         sponsor = who(b.get("SponsorPrimary")) if b.get("SponsorPrimary") else (names[0] if names else "—")
         cos = [n for n in names if n != sponsor]
         if text(b.get("Synopsis")):
-            texts[p] = {"statement": text(b["Synopsis"]), "label": "The Department of Legislative Services' synopsis"}
+            texts[p] = {"statement": text(b["Synopsis"]), "label": "From the Department of Legislative Services' synopsis."}
         if stage == 0 and committee:
             desc = f"In {HOUSE[where_h]} committee"
         elif stage <= 1 and on_floor:

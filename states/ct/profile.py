@@ -63,7 +63,7 @@ TOPICS = {
     "transp": ("Transportation", {"TRA"}, NO_SUBJECTS, r"\b(vehicle\w*|highway\w*|road\w*|traffic|transit|driver\w*|motor)\b"),
     "labor": ("Labor & public employees", {"LAB"}, NO_SUBJECTS, r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*)\b"),
     "housing": ("Housing", {"HSG"}, NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|rent|eviction\w*)\b"),
-    "ag": ("Agriculture", {"ENV"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
+    "ag": ("Agriculture & natural resources", {"ENV"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
     "gov": ("Elections & state government", {"GAE", "GL"}, NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics)\b"),
     "biz": ("Business & consumers", {"CE", "BA", "INS", "GL"}, NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
     # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words).

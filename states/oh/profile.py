@@ -70,7 +70,7 @@ TOPICS = {
     "labor": ("Labor & public employees", {"Workforce and Higher Education", "Commerce and Labor", "Pensions"}, NO_SUBJECTS,
               r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*)\b"),
     "housing": ("Housing", {"Housing"}, NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|rent|eviction\w*)\b"),
-    "ag": ("Agriculture", {"Agriculture", "Agriculture and Natural Resources"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
+    "ag": ("Agriculture & natural resources", {"Agriculture", "Agriculture and Natural Resources"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
     "gov": ("Elections & state government", {"General Government", "Government Oversight", "Local Government and Elections", "State and Local Government"},
             NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics)\b"),
     # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words).

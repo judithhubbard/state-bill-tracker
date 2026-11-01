@@ -236,7 +236,7 @@ def load_session(session):
         cos = names[1:]
         what = purpose(b.get("Summary"))
         if what:
-            texts[p] = {"statement": what, "label": "From the bill's official title"}
+            texts[p] = {"statement": what, "label": "From the bill's official title."}
         if stage == 0 and committee:
             desc = f"In {HOUSE[where_h]} committee"
         elif stage <= 1 and place == "floor":

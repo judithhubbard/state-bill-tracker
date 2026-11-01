@@ -347,6 +347,17 @@ from that repo. **Nothing here may change it.**
   `stageText`/`stageTips`/`pastStageTips`/`outOfTime`, `commPairs`/`commNotes`/`moneyCommittees`/`secondCommittee`,
   `calendar`/`calendarDays`; and write how.html and weighin.html. Then run the review: record every tab, Statistics
   section, How section, bill panels at each stage and a watchlist, and grep the text for other states' names and rules.
+- **Shared conventions (2026-11-01), so states can be compared later** (a "Compare states" page waits until most
+  states are built). Every state follows these; `test/data_check.py` fails when one doesn't:
+  - The same 14 topics with the same names (`TOPICS` in data_check.py): ag, biz, const, edu, env, gov, health, housing,
+    human, labor, local, safety, tax, transp. A state maps its own committees, subjects or keywords onto them.
+  - "What it does" names its source as a sentence: "From the Legislative Reference Bureau's synopsis."
+  - Bills only (each chamber's bill type), plus constitutional amendments tagged "const"; other resolutions left out.
+  - What skews comparisons is marked on the record: narrow bills (`narrow`: "place" for local bills for one city or
+    county, as in GA and NC; "person", "org", "naming"), placeholder bills (`shell`, IL), and the session length
+    (`YEARS`, `session_kind()` for states alternating long and short sessions).
+  - Laws are stage 5 whatever the route (signed, without signature, over a veto, local bills ratified in NC); amendments
+    stop at stage 3.
 - **Data traps found so far.** `python3 test/data_check.py` checks every state for all of these that a program can
   check (FAIL), and prints what a person should read over (LOOK: totals to compare with the official ones, odd wording);
   the daily run runs it too. Run it after any change to a state's data code, and when a new trap goes on this list,

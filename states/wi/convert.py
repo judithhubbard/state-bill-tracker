@@ -246,7 +246,7 @@ def load_session(session):
         sponsor = names[0] if names else (re.sub(r"^Introduced by\s+", "", text(b.get("by"))).split(",")[0] or "—")
         analysis = [t for kind, t in b.get("analysis") or [] if kind == "text" and text(t)]
         if analysis:
-            texts[p] = {"statement": "\n".join(text(t) for t in analysis[:6]), "label": "The Legislative Reference Bureau's analysis"}
+            texts[p] = {"statement": "\n".join(text(t) for t in analysis[:6]), "label": "From the Legislative Reference Bureau's analysis."}
         if stage == 0 and comm:
             desc = f"In {HOUSE[where_h]} committee"
         elif stage <= 1 and place == "floor":
