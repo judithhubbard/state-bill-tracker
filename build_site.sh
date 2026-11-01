@@ -33,7 +33,7 @@ for s in sorted(os.listdir(out)):
         P = importlib.import_module(f"states.{s}.profile")
         items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b><span>Bills in the {P.LEGISLATURE}</span></a></li>\n'))
 block = "".join(i for _, i in sorted(items))
-page = re.sub(r'(<ul>\n)(?:    <li><a href="[a-z]{2}/">.*?</li>\n)*', lambda m: m.group(1) + block, page, count=1, flags=re.S)
+page = re.sub(r'(<ul id="states">\n)(?:    <li><a href="[a-z]{2}/">.*?</li>\n)*', lambda m: m.group(1) + block, page, count=1, flags=re.S)
 open(os.path.join(out, "index.html"), "w").write(page)
 print("front page:", ", ".join(n for n, _ in sorted(items)))
 PY
