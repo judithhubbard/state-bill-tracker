@@ -63,14 +63,15 @@ def keep(name, path, fresh=WEEK):
 def official_title(body):
     """The resolution's title sentence ("A Concurrent Resolution proposing an amendment ..."), from its text page."""
     t = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", body)))
-    m = re.search(r"\b(A Concurrent Resolution\b.*?)(?:\(TEXT OF BILL BEGINS|Be it resolved\b)", t, re.I)
+    # A few are drafted "AN ACT proposing an amendment ..." (SCR 1016 of 2026).
+    m = re.search(r"\b((?:A Concurrent Resolution|AN ACT)\b.*?)(?:\(TEXT OF BILL BEGINS|Be it resolved\b)", t, re.I)
     return m.group(1).strip() if m else ""
 
 
 def kind_of(title):
     if re.search(r"proposing (an )?amendments? to the Constitution of Arizona", title, re.I):
         return "amendment"
-    if re.search(r"submission to the people of a measure", title, re.I):
+    if re.search(r"submission to the people (of )?a measure", title, re.I):
         return "measure"
     return "other"
 
@@ -90,7 +91,9 @@ def resolutions():
         acts = b.get("actions") or []
         ses = sum(1 for a in acts if (a.get("description") or "").startswith("DPA/SE"))
         k = known.get(str(year), {}).get(num)
-        if (k and k.get("se", 0) == ses) or CEREMONIAL.search(b.get("title") or ""):
+        # Read again after a strike-everything amendment, and a week after a read that found no title.
+        retry = k and k.get("kind") == "unread" and time.time() - k.get("checked", 0) > 7 * 86400
+        if (k and k.get("se", 0) == ses and not retry) or CEREMONIAL.search(b.get("title") or ""):
             continue
         # The version to read: as filed, or after a strike-everything amendment the one the amending house passed
         # (House engrossed "H", Senate engrossed "S").
@@ -112,7 +115,8 @@ def resolutions():
         if body is None and not missing:
             continue  # a failed request: try again next run
         title = official_title(body or "")
-        known.setdefault(str(year), {})[num] = {"title": title, "kind": kind_of(title) if title else "unread", "version": ver, "se": ses}
+        known.setdefault(str(year), {})[num] = {"title": title, "kind": kind_of(title) if title else "unread", "version": ver, "se": ses,
+                                                "checked": int(time.time())}
         json.dump(known, open(path + ".tmp", "w"), indent=0, sort_keys=True)
         os.replace(path + ".tmp", path)
         done += 1
