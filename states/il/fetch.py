@@ -18,6 +18,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from listing_dates import same
 from states.il import profile as P
 
 REPO = "https://ftp.ilga.gov"
@@ -79,7 +80,7 @@ def session(ga):
     except (OSError, ValueError):
         seen = {}
     files = {n: s for n, s in listing(f"{REPO}/Legislation/{ga}/BillStatus/XML/").items() if re.fullmatch(r"\d{5}(HB|SB|HC|SC)\d+\.xml", n)}
-    todo = sorted(n for n, s in files.items() if seen.get(n) != s or not complete(os.path.join(folder, n)))
+    todo = sorted(n for n, s in files.items() if not same(seen.get(n), s) or not complete(os.path.join(folder, n)))
 
     def get(name):
         body = curl([f"{REPO}/Legislation/{ga}/BillStatus/XML/{name}"], check=False)

@@ -16,6 +16,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from listing_dates import same
 from states.tx import profile as P
 
 FTP = "ftp://ftp.legis.state.tx.us/bills"
@@ -76,7 +77,7 @@ def session(code):
         _, groups = listing(f"{FTP}/{code}/billhistory/{kind}")
         for g in groups:
             files, _ = listing(f"{FTP}/{code}/billhistory/{kind}/{g}")
-            todo = [f for f, stamp in files.items() if f.endswith(".xml") and (seen.get(f) != stamp or not complete(os.path.join(folder, f)))]
+            todo = [f for f, stamp in files.items() if f.endswith(".xml") and (not same(seen.get(f), stamp) or not complete(os.path.join(folder, f)))]
             if todo:
                 jobs.append((f"{FTP}/{code}/billhistory/{kind}/{g}", todo, files))
 

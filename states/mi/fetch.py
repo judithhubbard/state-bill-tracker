@@ -42,6 +42,7 @@ def main():
     # The legislators first: a quick step, and the site's check needs them even when a run is cut off.
     sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
     from states.mi import contacts
+    from listing_dates import same
     try:
         contacts.main(CURRENT)
     except SystemExit as e:
@@ -65,7 +66,7 @@ def main():
                 seen = json.load(open(seen_path))
             except (OSError, ValueError):
                 seen = {}
-            todo = [n for n, stamp in sorted(entries.items()) if not os.path.exists(os.path.join(folder, n)) or seen.get(n) != stamp]
+            todo = [n for n, stamp in sorted(entries.items()) if not os.path.exists(os.path.join(folder, n)) or not same(seen.get(n), stamp)]
             got = 0
             for n in todo:
                 body = get(f"{SITE}/documents/{session}/status/{house}/xml/{n}")

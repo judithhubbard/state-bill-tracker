@@ -479,6 +479,10 @@ from that repo. **Nothing here may change it.**
     S04 ..."); senators then looked like House voters who didn't match a seat. Take the house from the action's text.
   - Lists split on commas when names contain commas: WY's "Brown, G, Larson, JT, Burkhart, Jr" (initials, suffixes and
     first names belong to the name before). Count each vote list against its tally.
+  - Folder listings whose dates are on the server's local clock (TX, IL, MI): when daylight saving time ends or starts
+    every file's time moves an hour, so every file looked changed and runs downloaded everything again (2026-11-01:
+    Texas took 41 minutes, Illinois ran out of time). `listing_dates.same()` treats the same size an hour apart as
+    unchanged; use it for any download that compares listing dates.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
