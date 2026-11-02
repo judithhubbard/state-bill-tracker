@@ -56,6 +56,9 @@ jobs:
           - { name: "Colorado", key: co-data-v1, path: "data/co", minutes: 50, run: "python3 states/co/fetch.py" }
           - { name: "South Dakota", key: sd-data-v1, path: "data/sd", minutes: 50, run: "python3 states/sd/fetch.py && python3 states/sd/contacts.py" }
           - { name: "Wyoming", key: wy-data-v1, path: "data/wy", minutes: 40, run: "python3 states/wy/fetch.py && python3 states/wy/contacts.py" }
+          # Utah: the Legislature's developer API (UTAH_API_TOKEN secret), then member votes from le.utah.gov at its 10-second
+          # crawl delay, 40 minutes a run (about 12,000 votes, read once each); not built into the site until its converter exists.
+          - { name: "Utah", key: ut-data-v1, path: "data/ut", minutes: 85, run: "python3 states/ut/fetch.py --votes-minutes 40" }
           # Pennsylvania: roll calls at one request a second.
           - { name: "Pennsylvania", key: pa-data-v1, path: "data/pa", minutes: 50, run: "python3 states/pa/fetch.py" }
     steps:
@@ -76,6 +79,7 @@ jobs:
         continue-on-error: true
         env:
           OPENSTATES_API_KEY: ${{ secrets.OPENSTATES_API_KEY }}
+          UTAH_API_TOKEN: ${{ secrets.UTAH_API_TOKEN }}
         run: ${{ matrix.run }}
       - name: Save the copy
         if: always()
@@ -203,6 +207,12 @@ jobs:
           path: "data/wy"
           key: wy-data-v1-${{ github.run_id }}
           restore-keys: wy-data-v1-
+      - name: Restore Utah
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/ut"
+          key: ut-data-v1-${{ github.run_id }}
+          restore-keys: ut-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
