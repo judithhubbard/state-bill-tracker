@@ -31,10 +31,12 @@ def out_of_time():
 
 def get(url):
     for attempt in range(3):
+        if out_of_time():
+            return None
         time.sleep(1)  # the Legislature's limit: one request a second
         try:
             req = urllib.request.Request(url, headers={"User-Agent": AGENT})
-            with urllib.request.urlopen(req, timeout=120) as r:
+            with urllib.request.urlopen(req, timeout=30) as r:
                 return r.read()
         except Exception as e:
             FAILS[f"HTTP {e.code}" if hasattr(e, "code") else type(e).__name__] += 1

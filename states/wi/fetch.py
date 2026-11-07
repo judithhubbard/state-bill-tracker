@@ -72,18 +72,20 @@ def out_of_time():
 
 
 def progress(label, i, total, got):
-    if i and i % 100 == 0:
+    if i and i % 25 == 0:
         print(f"{label}: {i} of {total} tried, {got} read, {round((time.time() - START) / 60)} min"
               + (f"; failures {dict(FAILS)}" if FAILS else ""), flush=True)
 
 
 def get(path):
     """The page's text; MISSING for a 404, None when it can't be read. Stops the run if the site refuses us."""
-    for attempt in range(4):
+    for attempt in range(3):
+        if out_of_time():
+            return None
         time.sleep(1)
         try:
             req = urllib.request.Request(SITE + path, headers={"User-Agent": AGENT})
-            with urllib.request.urlopen(req, timeout=180) as r:
+            with urllib.request.urlopen(req, timeout=30) as r:
                 return r.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
             if e.code == 404:
