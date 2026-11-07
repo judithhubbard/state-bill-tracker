@@ -211,6 +211,17 @@
    "minutes": 50,
    "run": "python3 states/pa/fetch.py",
    "note": "Roll calls at one request a second."
+  },
+  {
+   "name": "Indiana",
+   "code": "in",
+   "key": "in-data-v1",
+   "paths": [
+    "data/in"
+   ],
+   "minutes": 60,
+   "run": "python3 states/in/fetch.py",
+   "note": "The General Assembly's API (INDIANA_API_KEY); not built into the site until its converter exists."
   }
  ]
 }

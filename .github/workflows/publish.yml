@@ -149,6 +149,12 @@ jobs:
           path: "data/ut"
           key: ut-data-v1-latest
           restore-keys: ut-data-v1-
+      - name: Restore Indiana
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/in"
+          key: in-data-v1-latest
+          restore-keys: in-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
