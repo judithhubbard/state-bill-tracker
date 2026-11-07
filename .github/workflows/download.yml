@@ -66,10 +66,19 @@ jobs:
           path: ${{ matrix.path }}
           key: ${{ matrix.key }}-${{ github.run_id }}
           restore-keys: ${{ matrix.key }}-
+      # When the copy was last checked (data/<state>/last_checked, set below after a successful download): the pages
+      # say "updated" from it, since between sessions no bill file may change for weeks.
       - name: Mark the time
-        run: touch "$RUNNER_TEMP/started"
+        env:
+          PATHS: ${{ matrix.path }}
+        run: |
+          touch "$RUNNER_TEMP/started"
+          prev=0
+          for d in $PATHS; do [ -f "$d/last_checked" ] && prev=$(stat -c %Y "$d/last_checked"); done
+          echo "PREV_CHECKED=$prev" >> "$GITHUB_ENV"
       # A server that stops answering mustn't hold the job: after its time limit the state keeps what it has.
       - name: Download
+        id: dl
         timeout-minutes: ${{ matrix.minutes }}
         continue-on-error: true
         env:
@@ -79,16 +88,23 @@ jobs:
           # Scripts that read it stop on their own 5 minutes before the step's limit, with a summary.
           FETCH_MINUTES: ${{ matrix.minutes }}
         run: ${{ matrix.run }}
-      # Saved only when something changed, so the cache isn't filled with identical copies.
+      - name: Mark the copy as checked
+        if: steps.dl.outcome == 'success'
+        env:
+          PATHS: ${{ matrix.path }}
+        run: for d in $PATHS; do mkdir -p "$d" && date -u +%Y-%m-%dT%H:%M:%SZ > "$d/last_checked"; done
+      # Saved when something changed, or when the saved "last checked" time is over 12 hours old (so the pages' "updated"
+      # stays current without filling the cache with identical copies every run).
       - name: See whether anything changed
         id: changed
         if: always()
         env:
           PATHS: ${{ matrix.path }}
         run: |
-          n=$(find $PATHS -newer "$RUNNER_TEMP/started" -type f 2>/dev/null | wc -l)
-          echo "$n files changed"
-          echo "any=$([ "$n" -gt 0 ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+          n=$(find $PATHS -newer "$RUNNER_TEMP/started" -type f ! -name last_checked 2>/dev/null | wc -l)
+          age=$(( $(date +%s) - PREV_CHECKED ))
+          echo "$n files changed; last checked mark saved $((age / 3600)) hours ago"
+          echo "any=$([ "$n" -gt 0 ] || [ "$age" -gt 43200 ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
       - name: Save the copy
         if: always() && steps.changed.outputs.any == 'yes'
         uses: actions/cache/save@v4

@@ -1121,6 +1121,19 @@ def bill_texts(session, recs):
     return out
 
 
+def last_checked():
+    """When the state's download last succeeded (data/<state>/last_checked), in the state's time zone, or None."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    folder = getattr(P, "DATA", os.path.join(HERE, "data"))
+    try:
+        stamp = open(os.path.join(folder, "last_checked")).read().strip()
+        t = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    except (OSError, ValueError):
+        return None
+    return t.astimezone(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
+
+
 def main():
     loaded = {s: C.load_session(s) for s in SESSIONS}
     urls = json.load(open(URLS_FILE)) if os.path.exists(URLS_FILE) else {}
@@ -1180,6 +1193,10 @@ def main():
 
     for session in ONLY:
         recs, _, fetched, names = loaded[session]
+        # The current session is as fresh as the last successful download (data/<state>/last_checked, written by
+        # download.yml), not its newest bill file: between sessions no bill may change for weeks.
+        if session == current:
+            fetched = max(fetched or "", last_checked() or "")
         law_count, comm_count = Counter(), Counter()
         for r in recs:
             law_count.update(r["laws"])
