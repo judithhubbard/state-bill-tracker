@@ -182,9 +182,35 @@ def check(state):
             say(state, "FAIL", f"{os.path.basename(page)}: New York's names on the page: {hits}")
 
 
+def check_balance(state):
+    """The balance of power (balance.py): every built state has its legislature in states/legislatures.json and a member
+    list, and each chamber's party counts and vacancies add up to its seats."""
+    sys.path.insert(0, HERE)
+    import balance
+    if state not in balance.table():
+        say(state, "FAIL", "not in states/legislatures.json (seats, veto override, governor)")
+        return
+    b = balance.current(state)
+    if not b:
+        say(state, "FAIL", "no member list for the balance of power")
+        return
+    for c, ch in b["chambers"].items():
+        if ch["vacant"] < 0:
+            say(state, "FAIL", f"{c}: {sum(ch['parties'].values())} members for {ch['seats']} seats")
+        elif ch["vacant"] > 0.05 * ch["seats"]:
+            say(state, "LOOK", f"{c}: {ch['vacant']} of {ch['seats']} seats vacant (a stale member list?)")
+        if "?" in ch["parties"]:
+            say(state, "FAIL", f"{c}: {ch['parties']['?']} members with no party")
+    say(state, "LOOK", "balance: " + " | ".join(f"{c} " + "-".join(f"{k}{v}" for k, v in ch["parties"].items())
+                                               + (f" +{ch['vacant']} vacant" if ch["vacant"] else "")
+                                               + (" (can override)" if ch["canOverride"] else "")
+                                               for c, ch in b["chambers"].items()) + f" | governor {b['governor'][1]}")
+
+
 def main():
     for state in (sys.argv[1:] or STATES):
         check(state)
+        check_balance(state)
     print(f"\n{len(fails)} problem(s)" + ("".join(f"\n- {f}" for f in fails) if fails else ""))
     sys.exit(1 if fails else 0)
 

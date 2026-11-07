@@ -18,7 +18,7 @@ from states.nc import profile as P
 
 PEOPLE = "https://data.openstates.org/people/current/nc.csv"
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
-PARTY = {"D": "Democratic", "R": "Republican"}
+PARTY = {"D": "Democratic", "R": "Republican", "U": "Unaffiliated"}
 
 
 def phone(p):
