@@ -3,6 +3,8 @@ data/*.json
 data/*.tmp
 site/
 _site/
+# Each state's pages from the last build (build_site.sh; kept by publish.yml between runs).
+built/
 __pycache__/
 .DS_Store
 !data/contacts_*.json
@@ -78,3 +80,6 @@ data/wy/*
 # Utah downloads (states/ut/fetch.py, from the Legislature's developer API).
 data/ut/*
 !data/ut/district_towns.json
+
+# Indiana downloads
+data/in/*

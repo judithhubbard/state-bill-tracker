@@ -2,9 +2,10 @@ name: Publish statebilltracker.org
 
 # Builds the site (build_site.sh) from each state's latest saved download (download.yml keeps them) and puts it on
 # Cloudflare Pages (project "statebilltracker"). Needs the secrets CLOUDFLARE_API_TOKEN (Cloudflare Pages: Edit) and
-# CLOUDFLARE_ACCOUNT_ID. It downloads nothing but New York's current bills, so it takes about 20-30 minutes whatever the
-# states are doing, and a design change goes live with `gh workflow run publish.yml`. Every 2 hours (about 360
-# publishes a month, under Cloudflare's 500); the data checks run once a day (the 10:50 UTC run) or when asked
+# CLOUDFLARE_ACCOUNT_ID. It downloads nothing but New York's current bills and rebuilds only the states whose data or
+# code changed (state_hash.py; the rest are copied from the last build), so it takes a few minutes whatever the states
+# are doing; a design change goes live with `gh workflow run publish.yml`. Every 2 hours (about 360 publishes a month,
+# under Cloudflare's 500); the data checks run once a day (the 10:50 UTC run) or when asked
 # (`gh workflow run publish.yml -f checks=true`). At launch, see "Launch checklist" in CLAUDE.md.
 on:
   schedule:
@@ -170,11 +171,31 @@ jobs:
           NY=$(python3 -c "import datetime; y = datetime.date.today().year; print(y if y % 2 else y - 1)")
           python3 fetch_bills.py "$NY" || { echo "New York's bills didn't download: left out"; rm -f "data/bills_$NY.json"; }
 
+      # Each state's pages from the last build: a state whose data and code haven't changed isn't rebuilt (state_hash.py).
+      - name: Restore the last build's pages
+        uses: actions/cache/restore@v4
+        with:
+          path: built
+          key: built-pages-latest
+          restore-keys: built-pages-
+
       # Until launch the site lives at statebilltracker.pages.dev, so its links point there.
       - name: Build the site
+        id: build
         env:
           SITE_BASE: https://statebilltracker.pages.dev/
-        run: ./build_site.sh _site
+        run: |
+          set -o pipefail
+          ./build_site.sh _site | tee "$RUNNER_TEMP/build.log"
+          grep -q '^rebuilt: none$' "$RUNNER_TEMP/build.log" || echo "rebuilt=yes" >> "$GITHUB_OUTPUT"
+
+      # Kept only when some state was rebuilt.
+      - name: Keep the pages for the next build
+        if: steps.build.outputs.rebuilt == 'yes'
+        uses: actions/cache/save@v4
+        with:
+          path: built
+          key: built-pages-${{ github.run_id }}
 
       - name: Put it on Cloudflare Pages
         env:

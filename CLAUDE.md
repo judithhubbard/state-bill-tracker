@@ -508,8 +508,9 @@ from that repo. **Nothing here may change it.**
   overlap; states never wait for each other; a copy is saved only when something changed); its states, commands and time
   limits are in `.github/states.json`. Test one state without touching the site: `gh workflow run download.yml -f
   states=wi`. `.github/workflows/publish.yml` builds from every state's latest saved copy and deploys, every 2 hours
-  (about 360 deploys a month; Cloudflare's free plan allows 500) and by hand (`gh workflow run publish.yml`, about 20-30
-  minutes, for a design change); the data checks run in its 10:50 UTC run or with `-f checks=true`. A new state needs an
+  (about 360 deploys a month; Cloudflare's free plan allows 500) and by hand (`gh workflow run publish.yml`, for a design change); it rebuilds only the states whose data, code or
+  settings changed (`state_hash.py`, which includes the date, so each state is rebuilt at least daily) and copies the rest
+  from the last build (the `built/` folder, kept in its cache; `ONLY="wy sd" ./build_site.sh` builds a few states locally); the data checks run in its 10:50 UTC run or with `-f checks=true`. A new state needs an
   entry in states.json and a restore step in publish.yml (check_site.py fails if one is missing); it needs the
   secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. The domain stays parked at Porkbun until launch.
   Until then the site is at https://statebilltracker.pages.dev/ (first put up 2026-10-29, built with
