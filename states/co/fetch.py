@@ -25,7 +25,7 @@ For each regular session (2024, 2025, 2026; one a year, January to May):
   assignments) into members.json; the House and Senate committees of reference and the year-round committees
   (/committees?sess=2025a, then each committee's page: members with "Chair"/"Vice Chair", meeting days) into
   committees.json. A finished session's once; the current one's once a week.
-data/co/incomplete lists what failed; it is removed when a run completes cleanly.
+data/co/incomplete lists what failed (votes not yet read don't count); it is removed when a run completes cleanly.
 Usage: python3 states/co/fetch.py [year]   (default: 2024, 2025 and 2026, i.e. this year and the two before)
 """
 import html, json, math, os, re, sys, time, urllib.error, urllib.parse, urllib.request
@@ -605,9 +605,9 @@ def session(year):
                 vgot += 1
         if vgot and vgot % 500 == 0:
             print(f"{year}: {vgot} of {len(vtodo)} votes read", flush=True)
-    if vgot < len(vtodo):
-        INCOMPLETE.add(f"{year}:votes")
-    print(f"{year}: {vgot} of {len(vtodo)} votes read now", flush=True)
+    # Votes still to read don't hold the state off the site: its bills are whole, and members' votes fill in run by run
+    # (each vote is read once), as Utah's do.
+    print(f"{year}: {vgot} of {len(vtodo)} votes read now" + (f"; {len(vtodo) - vgot} left for later runs" if vgot < len(vtodo) else ""), flush=True)
 
     members_and_committees(year, folder)
 

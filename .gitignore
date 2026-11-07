@@ -65,6 +65,7 @@ data/wi/*
 !data/wi/district_towns.json
 # Colorado downloads (states/co/fetch.py).
 data/co/*
+!data/co/district_towns.json
 # North Carolina downloads (states/nc/fetch.py).
 data/nc/*
 !data/nc/district_towns.json
@@ -83,3 +84,13 @@ data/ut/*
 
 # Indiana downloads
 data/in/*
+# LegiScan downloads (legiscan.py): Tennessee, Oklahoma, Maine, Rhode Island and Vermont, plus the shared query count.
+data/legiscan/
+data/tn/*
+data/ok/*
+data/me/*
+data/ri/*
+data/vt/*
+
+# Alaska downloads
+data/ak/*

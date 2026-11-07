@@ -167,8 +167,8 @@
     "data/co"
    ],
    "minutes": 50,
-   "run": "python3 states/co/fetch.py",
-   "note": "3 seconds apart; not built into the site until its converter exists."
+   "run": "python3 states/co/fetch.py && python3 states/co/contacts.py",
+   "note": "3 seconds apart (it answers \"too many requests\" faster); members' votes fill in over many runs."
   },
   {
    "name": "South Dakota",

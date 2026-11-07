@@ -381,6 +381,18 @@ from that repo. **Nothing here may change it.**
   General Description and Highlighted Provisions. Laws and vetoes match the Legislature's passed list bill for bill (2025:
   544 and 6; 2026: 493 and 2). One 45-day session a year from the third Tuesday of January; governor 10 days (Sundays
   excepted) in session, 20 after. Separate Senate (29) and House (75) districts by city, town or county.
+- **Colorado (built 2026-11-07):** `python3 states/co/fetch.py` reads leg.colorado.gov's pages (no API; three seconds
+  apart, since it answers "too many requests" faster; robots.txt bars the file downloads, which aren't read): each bill's
+  page (history, sponsors by slug, committees, subjects, the Legislative Council Staff summary, session laws), every
+  committee and floor vote member by member, members and committees; `states/co/contacts.py` runs after it. Members'
+  votes don't hold the state off the site: they fill in run by run. `states/co/convert.py`: history lines name their
+  house ("House Committee on Finance Refer Amended to Appropriations": approved and sent on; "Postpone Indefinitely":
+  killed; "Lay Over": held; "Third Reading Passed": the passage); the page lists them newest first but not always in
+  order (sorted by day). The bill's status ("Became Law", "Did Not Become Law") decides laws and vetoes, which match it
+  exactly; an override needs both houses (SB 25-086: only the Senate overrode). Floor votes count only the bill's own
+  motions (third reading "Bill", Concur, Repass, Adopt, Override), not amendments. Concurrent resolutions (constitutional
+  amendments) aren't downloaded. Leaders are named only for the current year: past years' member pages show today's
+  positions and houses.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
@@ -498,6 +510,14 @@ from that repo. **Nothing here may change it.**
     every file's time moves an hour, so every file looked changed and runs downloaded everything again (2026-11-01:
     Texas took 41 minutes, Illinois ran out of time). `listing_dates.same()` treats the same size an hour apart as
     unchanged; use it for any download that compares listing dates.
+  - A roll call that lists a member twice: CO's Senate President by name and as "President" (drop the title line when the
+    list is longer than the tally), and members who changed their vote, listed "Yes" and "No" (f21664 of 2025: leave them
+    out; which came last isn't shown). The "more noes than their tally" check catches both.
+  - A past year's member list showing today's positions and houses (CO: Lisa Frizell, a representative in 2024, listed as
+    a senator; James Coleman as 2024's Senate President). Don't take past leaders from it; match votes within the vote's
+    house and leave the rest as names.
+  - Stray records from links cut short: CO's site answers "HB25-104" with a jumbled page instead of an error. Check
+    numbers against the state's numbering (House bills from 1001).
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
