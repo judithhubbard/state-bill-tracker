@@ -53,12 +53,11 @@ p.lede { color: var(--ink-2); margin: 0 0 24px; font-size: 17px; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
 .find { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet);
   color: var(--ink); margin: 0 0 12px; }
-ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
-li a { display: block; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px;
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+li a { display: block; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px;
   color: var(--ink); text-decoration: none; height: 100%; }
 li a:hover, li a:focus-visible { border-color: var(--navy); }
-li b { display: block; font: 700 19px/1.2 var(--display); color: var(--navy); }
-li span { color: var(--ink-2); font-size: 14px; }
+li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
 .none { color: var(--ink-2); display: none; }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 </style>
@@ -73,7 +72,7 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
   <h2>States</h2>
   <input class="find" id="find" type="search" placeholder="Find a state" aria-label="Find a state" hidden>
   <ul id="states">
-    <li><a href="ca/"><b>California</b><span>Bills in the California State Legislature</span></a></li>
+    <li><a href="ca/"><b>California</b></a></li>
   </ul>
   <p class="none" id="none">No state by that name is ready yet.</p>
   <footer>Your watchlist stays in your browser.</footer>

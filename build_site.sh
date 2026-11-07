@@ -31,7 +31,7 @@ items = []
 for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
         P = importlib.import_module(f"states.{s}.profile")
-        items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b><span>Bills in the {P.LEGISLATURE}</span></a></li>\n'))
+        items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b></a></li>\n'))
 block = "".join(i for _, i in sorted(items))
 page = re.sub(r'(<ul id="states">\n)(?:    <li><a href="[a-z]{2}/">.*?</li>\n)*', lambda m: m.group(1) + block, page, count=1, flags=re.S)
 open(os.path.join(out, "index.html"), "w").write(page)
