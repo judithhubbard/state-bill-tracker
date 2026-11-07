@@ -64,5 +64,75 @@ def current(state):
     return out
 
 
+PARTY_NAME = {"D": "Democrats", "R": "Republicans", "I": "independents", "O": "others"}
+
+
+def badge(party):
+    """A party's letter in a small colored badge (the letter carries the meaning; the color helps)."""
+    name = {"D": "Democratic", "R": "Republican", "I": "Independent"}.get(party, "Other")
+    return f'<abbr class="bp-pty bp-{party}" title="{name}">{party}</abbr>'
+
+
+def chamber_html(name, ch):
+    """"Senate R 29–2 veto-proof": the majority's badge, its seats and the next party's."""
+    parties = list(ch["parties"].items())
+    if not parties:
+        return ""
+    lead, n = parties[0]
+    rest = parties[1][1] if len(parties) > 1 else 0
+    tip = ", ".join(f"{v} {PARTY_NAME.get(k, k)}" for k, v in parties) + (f", {ch['vacant']} vacant" if ch["vacant"] else "")
+    tag = (' <span class="bp-vp" title="Enough seats to override a veto (' + ch["override"].replace("2/3", "two-thirds").replace("3/5", "three-fifths")
+           + ')">veto-proof</span>') if ch["canOverride"] else ""
+    return f'<span class="bp-ch" title="{name}: {tip}">{name} {badge(lead)} {n}–{rest}{tag}</span>'
+
+
+def summary_html(state, lower_name="House", sep=" · "):
+    """A state's party control: "Senate R 29–2 · House R 56–6 · Gov. R" (the front page puts each part on its own line)."""
+    b = current(state)
+    if not b:
+        return ""
+    names = {"S": "Senate"}
+    parts = [chamber_html(names.get(c, re.sub(r" of Delegates$", "", lower_name)), ch) for c, ch in
+             sorted(b["chambers"].items(), key=lambda x: x[0] != "S")]
+    gov = b["governor"]
+    parts.append(f'<span class="bp-ch" title="Governor {gov[0]}">Governor {badge(gov[1])}</span>')
+    return sep.join(p for p in parts if p)
+
+
+ADJ = {"D": "Democratic", "R": "Republican"}
+NOUN = {"D": "Democrats", "R": "Republicans"}
+
+
+def meaning(state, lower_name="House"):
+    """One plain sentence on what the balance of power means for passing bills."""
+    b = current(state)
+    if not b:
+        return ""
+    if b.get("note"):
+        return b["note"]
+    names = {c: ("Senate" if c == "S" else re.sub(r" of Delegates$", "", lower_name)) for c in b["chambers"]}
+    chambers = b["chambers"]
+    majorities = {c: ch["majority"] for c, ch in chambers.items()}
+    gov = b["governor"][1]
+    if None in majorities.values() or len(set(majorities.values())) > 1:
+        held = ", ".join(f"{NOUN.get(m, 'no party')} hold{'s' if not m else ''} the {names[c]}" for c, m in majorities.items())
+        return f"Split legislature: {held}, so a bill needs support from both parties to pass."
+    party = next(iter(majorities.values()))
+    noun = NOUN.get(party, party)
+    over = {c: ch["canOverride"] for c, ch in chambers.items()}
+    if gov == party:
+        return f"{noun} hold both houses and the governor's office" + (
+            ", with enough seats to override a veto." if all(over.values()) else ".")
+    if all(over.values()):
+        return f"Divided government: a {ADJ.get(gov, gov)} governor, but {noun} hold enough seats in both houses to override a veto."
+    short = []
+    for c, ch in chambers.items():
+        if not ch["canOverride"]:
+            gap = ch["overrideSeats"] - ch["parties"].get(party, 0)
+            short.append(f"{gap} vote{'s' if gap != 1 else ''} short in the {names[c]}")
+    return (f"Divided government: a {ADJ.get(gov, gov)} governor; overriding a veto takes {noun} plus help from other members "
+            f"({' and '.join(short)}).")
+
+
 if __name__ == "__main__":
     print(json.dumps(current(sys.argv[1]), indent=1))

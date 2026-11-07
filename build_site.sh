@@ -41,13 +41,18 @@ echo "rebuilt:${REBUILT:- none}"
 # as soon as its pages are published (New York's too, at /ny/).
 python3 - "$OUT" <<'PY'
 import importlib, os, re, sys
+sys.path.insert(0, ".")
+import balance
 out = sys.argv[1]
 page = open("home.html").read()
 items = []
 for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
         P = importlib.import_module(f"states.{s}.profile")
-        items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b></a></li>\n'))
+        # Party control, a line each: "Senate R 29–2", "House R 56–6", "Governor R" (balance.py), from the latest member list.
+        power = balance.summary_html(s, getattr(P, "LOWER_NAME", "Assembly"), sep="")
+        power = f'<span class="power">{power}</span>' if power else ""
+        items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b>{power}</a></li>\n'))
 block = "".join(i for _, i in sorted(items))
 page = re.sub(r'(<ul id="states">\n)(?:    <li><a href="[a-z]{2}/">.*?</li>\n)*', lambda m: m.group(1) + block, page, count=1, flags=re.S)
 open(os.path.join(out, "index.html"), "w").write(page)

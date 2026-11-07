@@ -17,6 +17,7 @@
 :root {
   --paper: #f6f8fb; --sheet: #ffffff; --ink: #14213d; --ink-2: #4a5878; --rule: #d9e0ec; --navy: #1d3b78;
   --tile-off: #e3e8f1; --tile-off-ink: #8a96ad; --tile-on-ink: #ffffff; --mine: #c8901f;
+  --dem: #1f5bb5; --rep: #b3261e; --ind: #5f6b7a; --badge-ink: #ffffff;
   --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
@@ -24,12 +25,14 @@
   :root:not([data-theme="light"]) {
     --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0;
     --tile-off: #1f2a42; --tile-off-ink: #5d6a85; --tile-on-ink: #0f1626; --mine: #e0b04e;
+    --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1626;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0;
   --tile-off: #1f2a42; --tile-off-ink: #5d6a85; --tile-on-ink: #0f1626; --mine: #e0b04e;
+  --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1626;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -53,11 +56,18 @@ p.lede { color: var(--ink-2); margin: 0 0 24px; font-size: 17px; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
 .find { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet);
   color: var(--ink); margin: 0 0 12px; }
-ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 li a { display: block; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px;
   color: var(--ink); text-decoration: none; height: 100%; }
 li a:hover, li a:focus-visible { border-color: var(--navy); }
 li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
+/* Party control under each state's name: "Senate R 29–2 · House R 56–6 · Gov. R" (the letter carries the meaning). */
+.power { display: block; margin-top: 4px; color: var(--ink-2); font-size: 13px; line-height: 1.6; }
+.power .bp-ch { display: block; white-space: nowrap; }
+.bp-pty { display: inline-block; min-width: 1.3em; padding: 0 3px; border-radius: 3px; text-align: center; font-weight: 700;
+  font-size: 11px; line-height: 1.5; color: var(--badge-ink); text-decoration: none; vertical-align: 1px; }
+.bp-D { background: var(--dem); } .bp-R { background: var(--rep); } .bp-I, .bp-O { background: var(--ind); }
+.bp-vp { font-size: 11px; font-style: italic; }
 .none { color: var(--ink-2); display: none; }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 </style>
@@ -75,7 +85,7 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <li><a href="ca/"><b>California</b></a></li>
   </ul>
   <p class="none" id="none">No state by that name is ready yet.</p>
-  <footer>Your watchlist stays in your browser.</footer>
+  <footer>Party counts are from each legislature's current member list; "veto-proof" means the majority holds enough seats to override a veto on its own. Your watchlist stays in your browser.</footer>
 </main>
 <script>
 // Grid positions (row, column) of a common tile-map layout.

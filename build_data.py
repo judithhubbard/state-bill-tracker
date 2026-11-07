@@ -1370,6 +1370,14 @@ def main():
         label = f"{P.LEGISLATURE} · {P.session_label(session)} session" + (
             f" · updated {fetched}" if session == current else f" · prefiled bills · updated {fetched}" if session > current else " (final)")
         template = template.replace(f'id="sessionLabel">{P.LEGISLATURE}<', f'id="sessionLabel">{html_escape(label)}<', 1)
+        # Party control now (balance.py), on the current session's page only: written in, so nothing moves on load.
+        if session == current:
+            import balance
+            lower = getattr(P, "LOWER_NAME", "Assembly")
+            power = balance.summary_html(STATE, lower)
+            if power:
+                template = template.replace('<p class="power" id="power"></p>',
+                                            f'<p class="power" id="power">{power}<span class="bp-why">{html_escape(balance.meaning(STATE, lower))}</span></p>', 1)
         marker = '<script type="application/json" id="bill-data"></script>'
         assert marker in template, "template is missing the data marker"
         # The Claude copies carry the data gzipped and base64-encoded (about a third the size), unpacked in the
