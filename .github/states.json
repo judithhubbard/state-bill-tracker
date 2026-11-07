@@ -1,0 +1,216 @@
+{
+ "_about": "Each state's download, for .github/workflows/download.yml (and the restore steps in publish.yml, which check_site.py compares with this list). code: the data/<code> folder's name (nj covers nj and va); key: its cache's name; minutes: the download's time limit; run: the command.",
+ "states": [
+  {
+   "name": "New Jersey and Virginia",
+   "code": "nj",
+   "key": "nj-data-v2",
+   "paths": [
+    "data/nj",
+    "data/va"
+   ],
+   "minutes": 30,
+   "run": "python3 states/nj/fetch.py; nj=$?; python3 states/va/fetch.py && exit $nj",
+   "note": "v2: started fresh when the filled-in 2022-23 file went into git (states/nj/fill2022.py)."
+  },
+  {
+   "name": "California",
+   "code": "ca",
+   "key": "ca-data-v1",
+   "paths": [
+    "data/ca"
+   ],
+   "minutes": 30,
+   "run": "python3 states/ca/fetch.py"
+  },
+  {
+   "name": "Texas",
+   "code": "tx",
+   "key": "tx-data-v1",
+   "paths": [
+    "data/tx"
+   ],
+   "minutes": 60,
+   "run": "python3 states/tx/fetch.py",
+   "note": "One file per bill; only changed files after the first copy."
+  },
+  {
+   "name": "Illinois",
+   "code": "il",
+   "key": "il-data-v1",
+   "paths": [
+    "data/il"
+   ],
+   "minutes": 40,
+   "run": "python3 states/il/fetch.py"
+  },
+  {
+   "name": "Washington",
+   "code": "wa",
+   "key": "wa-data-v1",
+   "paths": [
+    "data/wa"
+   ],
+   "minutes": 40,
+   "run": "python3 states/wa/fetch.py"
+  },
+  {
+   "name": "Connecticut",
+   "code": "ct",
+   "key": "ct-data-v1",
+   "paths": [
+    "data/ct"
+   ],
+   "minutes": 20,
+   "run": "python3 states/ct/fetch.py",
+   "note": "A stuck FTP server once left a run with nothing: the last copy is kept."
+  },
+  {
+   "name": "Oregon",
+   "code": "or",
+   "key": "or-data-v1",
+   "paths": [
+    "data/or"
+   ],
+   "minutes": 30,
+   "run": "python3 states/or/fetch.py"
+  },
+  {
+   "name": "Ohio",
+   "code": "oh",
+   "key": "oh-data-v1",
+   "paths": [
+    "data/oh"
+   ],
+   "minutes": 40,
+   "run": "python3 states/oh/fetch.py"
+  },
+  {
+   "name": "Massachusetts",
+   "code": "ma",
+   "key": "ma-data-v1",
+   "paths": [
+    "data/ma"
+   ],
+   "minutes": 40,
+   "run": "python3 states/ma/fetch.py"
+  },
+  {
+   "name": "Maryland",
+   "code": "md",
+   "key": "md-data-v1",
+   "paths": [
+    "data/md"
+   ],
+   "minutes": 20,
+   "run": "python3 states/md/fetch.py"
+  },
+  {
+   "name": "Georgia",
+   "code": "ga",
+   "key": "ga-data-v1",
+   "paths": [
+    "data/ga"
+   ],
+   "minutes": 40,
+   "run": "python3 states/ga/fetch.py"
+  },
+  {
+   "name": "Michigan",
+   "code": "mi",
+   "key": "mi-data-v1",
+   "paths": [
+    "data/mi"
+   ],
+   "minutes": 50,
+   "run": "python3 states/mi/fetch.py",
+   "note": "One request a second (the Legislature's limit)."
+  },
+  {
+   "name": "Wisconsin",
+   "code": "wi",
+   "key": "wi-data-v1",
+   "paths": [
+    "data/wi"
+   ],
+   "minutes": 50,
+   "run": "python3 states/wi/fetch.py",
+   "note": "One request a second; the first copy takes several runs."
+  },
+  {
+   "name": "Arizona",
+   "code": "az",
+   "key": "az-data-v1",
+   "paths": [
+    "data/az"
+   ],
+   "minutes": 100,
+   "run": "python3 states/az/fetch.py; python3 states/az/azleg.py && python3 states/az/contacts.py",
+   "note": "Open States (the free tier's daily quota), then azleg.gov at its two-minute crawl delay."
+  },
+  {
+   "name": "North Carolina",
+   "code": "nc",
+   "key": "nc-data-v1",
+   "paths": [
+    "data/nc"
+   ],
+   "minutes": 50,
+   "run": "python3 states/nc/fetch.py",
+   "note": "Two seconds apart (its robots.txt crawl delay)."
+  },
+  {
+   "name": "Colorado",
+   "code": "co",
+   "key": "co-data-v1",
+   "paths": [
+    "data/co"
+   ],
+   "minutes": 50,
+   "run": "python3 states/co/fetch.py",
+   "note": "3 seconds apart; not built into the site until its converter exists."
+  },
+  {
+   "name": "South Dakota",
+   "code": "sd",
+   "key": "sd-data-v1",
+   "paths": [
+    "data/sd"
+   ],
+   "minutes": 50,
+   "run": "python3 states/sd/fetch.py && python3 states/sd/contacts.py"
+  },
+  {
+   "name": "Wyoming",
+   "code": "wy",
+   "key": "wy-data-v1",
+   "paths": [
+    "data/wy"
+   ],
+   "minutes": 40,
+   "run": "python3 states/wy/fetch.py && python3 states/wy/contacts.py"
+  },
+  {
+   "name": "Utah",
+   "code": "ut",
+   "key": "ut-data-v1",
+   "paths": [
+    "data/ut"
+   ],
+   "minutes": 85,
+   "run": "python3 states/ut/fetch.py --votes-minutes 40 && python3 states/ut/contacts.py",
+   "note": "The developer API (UTAH_API_TOKEN), then members' votes from le.utah.gov at its 10-second crawl delay, 40 minutes a run."
+  },
+  {
+   "name": "Pennsylvania",
+   "code": "pa",
+   "key": "pa-data-v1",
+   "paths": [
+    "data/pa"
+   ],
+   "minutes": 50,
+   "run": "python3 states/pa/fetch.py",
+   "note": "Roll calls at one request a second."
+  }
+ ]
+}

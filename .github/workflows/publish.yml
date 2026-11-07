@@ -1,109 +1,32 @@
-name: Update statebilltracker.org
+name: Publish statebilltracker.org
 
-# Downloads each state's data, builds the site (build_site.sh) and puts it on Cloudflare Pages
-# (project "statebilltracker"). Needs two repository secrets: CLOUDFLARE_API_TOKEN (a token with
-# Cloudflare Pages: Edit) and CLOUDFLARE_ACCOUNT_ID.
-#
-# Each state downloads in its own job, all at once, each keeping its files in its own cache. The site job then
-# builds and publishes from whatever every state has, even when some downloads failed or ran out of time, so one slow
-# or stuck state can't hold back the others or the front page. A run takes about as long as the slowest state.
+# Builds the site (build_site.sh) from each state's latest saved download (download.yml keeps them) and puts it on
+# Cloudflare Pages (project "statebilltracker"). Needs the secrets CLOUDFLARE_API_TOKEN (Cloudflare Pages: Edit) and
+# CLOUDFLARE_ACCOUNT_ID. It downloads nothing but New York's current bills, so it takes about 20-30 minutes whatever the
+# states are doing, and a design change goes live with `gh workflow run publish.yml`. Every 2 hours (about 360
+# publishes a month, under Cloudflare's 500); the data checks run once a day (the 10:50 UTC run) or when asked
+# (`gh workflow run publish.yml -f checks=true`). At launch, see "Launch checklist" in CLAUDE.md.
 on:
-  # Every 4 hours before launch, so states still building up their first copy get there sooner. At launch, see
-  # "Launch checklist" in CLAUDE.md.
   schedule:
-    - cron: "23 */4 * * *"
-  workflow_dispatch:        # the "Run workflow" button on the Actions tab
+    - cron: "50 10 * * *"                           # with the daily checks
+    - cron: "50 0,2,4,6,8,12,14,16,18,20,22 * * *"
+  workflow_dispatch:
     inputs:
-      quick:
-        # A design change (the pages, the front page) published in about 20 minutes: every state is rebuilt from the
-        # copy each saved last run, with nothing downloaded and the data checks skipped. Run it with
-        # `gh workflow run site.yml -f quick=true`. Runs never overlap (concurrency below), so an older copy can't
-        # replace a newer one.
-        description: "Publish now from the saved data (no downloads)"
+      checks:
+        description: "Also run the data checks (about 15 minutes more)"
         type: boolean
         default: false
 
 permissions:
   contents: read
 
+# One publish at a time, so an older build can never replace a newer one.
 concurrency:
   group: site
   cancel-in-progress: false
 
 jobs:
-  download:
-    if: ${{ !inputs.quick }}
-    name: Download ${{ matrix.name }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 110
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # New Jersey and Virginia: v2: started fresh when the filled-in 2022-23 file went into git (states/nj/fill2022.py).
-          - { name: "New Jersey and Virginia", key: nj-data-v2, path: "data/nj\ndata/va", minutes: 30, run: "python3 states/nj/fetch.py; nj=$?; python3 states/va/fetch.py && exit $nj" }
-          - { name: "California", key: ca-data-v1, path: "data/ca", minutes: 30, run: "python3 states/ca/fetch.py" }
-          # Texas: one file per bill; only changed files after the first copy.
-          - { name: "Texas", key: tx-data-v1, path: "data/tx", minutes: 60, run: "python3 states/tx/fetch.py" }
-          - { name: "Illinois", key: il-data-v1, path: "data/il", minutes: 40, run: "python3 states/il/fetch.py" }
-          - { name: "Washington", key: wa-data-v1, path: "data/wa", minutes: 40, run: "python3 states/wa/fetch.py" }
-          # Connecticut: a stuck FTP server once left a run with nothing: the last copy is kept.
-          - { name: "Connecticut", key: ct-data-v1, path: "data/ct", minutes: 20, run: "python3 states/ct/fetch.py" }
-          - { name: "Oregon", key: or-data-v1, path: "data/or", minutes: 30, run: "python3 states/or/fetch.py" }
-          - { name: "Ohio", key: oh-data-v1, path: "data/oh", minutes: 40, run: "python3 states/oh/fetch.py" }
-          - { name: "Massachusetts", key: ma-data-v1, path: "data/ma", minutes: 40, run: "python3 states/ma/fetch.py" }
-          - { name: "Maryland", key: md-data-v1, path: "data/md", minutes: 20, run: "python3 states/md/fetch.py" }
-          - { name: "Georgia", key: ga-data-v1, path: "data/ga", minutes: 40, run: "python3 states/ga/fetch.py" }
-          # Michigan: one request a second (the Legislature's limit).
-          - { name: "Michigan", key: mi-data-v1, path: "data/mi", minutes: 50, run: "python3 states/mi/fetch.py" }
-          # Wisconsin: one request a second; the first copy takes several runs.
-          - { name: "Wisconsin", key: wi-data-v1, path: "data/wi", minutes: 50, run: "python3 states/wi/fetch.py" }
-          # Arizona: Open States (the free tier's daily quota), then azleg.gov at its two-minute crawl delay.
-          - { name: "Arizona", key: az-data-v1, path: "data/az", minutes: 100, run: "python3 states/az/fetch.py; python3 states/az/azleg.py && python3 states/az/contacts.py" }
-          # North Carolina: two seconds apart (its robots.txt crawl delay).
-          - { name: "North Carolina", key: nc-data-v1, path: "data/nc", minutes: 50, run: "python3 states/nc/fetch.py" }
-          # Colorado: 3 seconds apart; not built into the site until its converter exists.
-          - { name: "Colorado", key: co-data-v1, path: "data/co", minutes: 50, run: "python3 states/co/fetch.py" }
-          - { name: "South Dakota", key: sd-data-v1, path: "data/sd", minutes: 50, run: "python3 states/sd/fetch.py && python3 states/sd/contacts.py" }
-          - { name: "Wyoming", key: wy-data-v1, path: "data/wy", minutes: 40, run: "python3 states/wy/fetch.py && python3 states/wy/contacts.py" }
-          # Utah: the Legislature's developer API (UTAH_API_TOKEN secret), then member votes from le.utah.gov at its 10-second
-          # crawl delay, 40 minutes a run (about 12,000 votes, read once each).
-          - { name: "Utah", key: ut-data-v1, path: "data/ut", minutes: 85, run: "python3 states/ut/fetch.py --votes-minutes 40 && python3 states/ut/contacts.py" }
-          # Pennsylvania: roll calls at one request a second.
-          - { name: "Pennsylvania", key: pa-data-v1, path: "data/pa", minutes: 50, run: "python3 states/pa/fetch.py" }
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      # Finished sessions' files never change, so each state keeps its files between runs.
-      - name: Restore the last copy
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ matrix.path }}
-          key: ${{ matrix.key }}-${{ github.run_id }}
-          restore-keys: ${{ matrix.key }}-
-      # A server that stops answering mustn't hold the run: after its time limit the state is built from what it has.
-      - name: Download
-        timeout-minutes: ${{ matrix.minutes }}
-        continue-on-error: true
-        env:
-          OPENSTATES_API_KEY: ${{ secrets.OPENSTATES_API_KEY }}
-          UTAH_API_TOKEN: ${{ secrets.UTAH_API_TOKEN }}
-          # Scripts that read it stop on their own 5 minutes before the step's limit, with a summary (Michigan, Wisconsin).
-          FETCH_MINUTES: ${{ matrix.minutes }}
-        run: ${{ matrix.run }}
-      - name: Save the copy
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ matrix.path }}
-          key: ${{ matrix.key }}-${{ github.run_id }}
-
   site:
-    needs: download
-    # Build and publish whatever every state has, even when some downloads failed (or were skipped for a quick publish).
-    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -115,121 +38,121 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: "data/nj\ndata/va"
-          key: nj-data-v2-${{ github.run_id }}
+          key: nj-data-v2-latest
           restore-keys: nj-data-v2-
       - name: Restore California
         uses: actions/cache/restore@v4
         with:
           path: "data/ca"
-          key: ca-data-v1-${{ github.run_id }}
+          key: ca-data-v1-latest
           restore-keys: ca-data-v1-
       - name: Restore Texas
         uses: actions/cache/restore@v4
         with:
           path: "data/tx"
-          key: tx-data-v1-${{ github.run_id }}
+          key: tx-data-v1-latest
           restore-keys: tx-data-v1-
       - name: Restore Illinois
         uses: actions/cache/restore@v4
         with:
           path: "data/il"
-          key: il-data-v1-${{ github.run_id }}
+          key: il-data-v1-latest
           restore-keys: il-data-v1-
       - name: Restore Washington
         uses: actions/cache/restore@v4
         with:
           path: "data/wa"
-          key: wa-data-v1-${{ github.run_id }}
+          key: wa-data-v1-latest
           restore-keys: wa-data-v1-
       - name: Restore Connecticut
         uses: actions/cache/restore@v4
         with:
           path: "data/ct"
-          key: ct-data-v1-${{ github.run_id }}
+          key: ct-data-v1-latest
           restore-keys: ct-data-v1-
       - name: Restore Oregon
         uses: actions/cache/restore@v4
         with:
           path: "data/or"
-          key: or-data-v1-${{ github.run_id }}
+          key: or-data-v1-latest
           restore-keys: or-data-v1-
       - name: Restore Ohio
         uses: actions/cache/restore@v4
         with:
           path: "data/oh"
-          key: oh-data-v1-${{ github.run_id }}
+          key: oh-data-v1-latest
           restore-keys: oh-data-v1-
       - name: Restore Massachusetts
         uses: actions/cache/restore@v4
         with:
           path: "data/ma"
-          key: ma-data-v1-${{ github.run_id }}
+          key: ma-data-v1-latest
           restore-keys: ma-data-v1-
       - name: Restore Maryland
         uses: actions/cache/restore@v4
         with:
           path: "data/md"
-          key: md-data-v1-${{ github.run_id }}
+          key: md-data-v1-latest
           restore-keys: md-data-v1-
       - name: Restore Georgia
         uses: actions/cache/restore@v4
         with:
           path: "data/ga"
-          key: ga-data-v1-${{ github.run_id }}
+          key: ga-data-v1-latest
           restore-keys: ga-data-v1-
       - name: Restore Michigan
         uses: actions/cache/restore@v4
         with:
           path: "data/mi"
-          key: mi-data-v1-${{ github.run_id }}
+          key: mi-data-v1-latest
           restore-keys: mi-data-v1-
       - name: Restore Wisconsin
         uses: actions/cache/restore@v4
         with:
           path: "data/wi"
-          key: wi-data-v1-${{ github.run_id }}
+          key: wi-data-v1-latest
           restore-keys: wi-data-v1-
       - name: Restore Arizona
         uses: actions/cache/restore@v4
         with:
           path: "data/az"
-          key: az-data-v1-${{ github.run_id }}
+          key: az-data-v1-latest
           restore-keys: az-data-v1-
       - name: Restore North Carolina
         uses: actions/cache/restore@v4
         with:
           path: "data/nc"
-          key: nc-data-v1-${{ github.run_id }}
+          key: nc-data-v1-latest
           restore-keys: nc-data-v1-
       - name: Restore Colorado
         uses: actions/cache/restore@v4
         with:
           path: "data/co"
-          key: co-data-v1-${{ github.run_id }}
+          key: co-data-v1-latest
           restore-keys: co-data-v1-
       - name: Restore South Dakota
         uses: actions/cache/restore@v4
         with:
           path: "data/sd"
-          key: sd-data-v1-${{ github.run_id }}
+          key: sd-data-v1-latest
           restore-keys: sd-data-v1-
       - name: Restore Wyoming
         uses: actions/cache/restore@v4
         with:
           path: "data/wy"
-          key: wy-data-v1-${{ github.run_id }}
+          key: wy-data-v1-latest
           restore-keys: wy-data-v1-
       - name: Restore Utah
         uses: actions/cache/restore@v4
         with:
           path: "data/ut"
-          key: ut-data-v1-${{ github.run_id }}
+          key: ut-data-v1-latest
           restore-keys: ut-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
           path: "data/pa"
-          key: pa-data-v1-${{ github.run_id }}
+          key: pa-data-v1-latest
           restore-keys: pa-data-v1-
 
       # New York from this shared code (statebilltracker.pages.dev/ny/, not linked; albanybilltracker.org runs
@@ -259,12 +182,12 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx -y wrangler@4.152.0 pages deploy _site --project-name=statebilltracker --branch=main --commit-dirty=true
 
-      # Last, so the site is already published: a problem fails the run, and GitHub emails the owner.
+      # Last, so the site is already published: a problem fails the run, and GitHub emails the owner. Once a day.
       - name: Check the data is sound
-        if: ${{ !inputs.quick }}
+        if: ${{ github.event.schedule == '50 10 * * *' || inputs.checks }}
         run: python3 check_site.py
 
       # Every state against the "Data traps found so far" list in CLAUDE.md.
       - name: Check every state for the known data traps
-        if: ${{ always() && !inputs.quick }}
+        if: ${{ always() && (github.event.schedule == '50 10 * * *' || inputs.checks) }}
         run: python3 test/data_check.py

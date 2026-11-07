@@ -1,0 +1,97 @@
+name: Download state data
+
+# Each state's data, downloaded in its own job and kept in its own cache, which publish.yml builds the site from. The
+# states and their commands are in .github/states.json. A state's runs never overlap (a new one waits for the last to
+# finish), but states never wait for each other, and nothing here waits for the site to be built.
+#
+# Run one or more states by hand, for a test or right after a change, without touching the site:
+#   gh workflow run download.yml -f states=wi        (or states=wi,mi; empty or "all" for every state)
+on:
+  schedule:
+    - cron: "5 */2 * * *"   # every 2 hours (GitHub often starts it late)
+  workflow_dispatch:
+    inputs:
+      states:
+        description: "States to download (codes from .github/states.json, comma-separated; empty or 'all' for every state)"
+        type: string
+        default: "all"
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: pick
+        env:
+          WANT: ${{ inputs.states }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          want = {s.strip() for s in (os.environ.get("WANT") or "all").split(",") if s.strip()}
+          states = json.load(open(".github/states.json"))["states"]
+          pick = [s for s in states if not want or "all" in want or s["code"] in want]
+          if want - {"all"} - {s["code"] for s in states}:
+              raise SystemExit(f"unknown state codes: {sorted(want - {'all'} - {s['code'] for s in states})}")
+          include = [{"name": s["name"], "key": s["key"], "path": "\n".join(s["paths"]), "minutes": s["minutes"], "run": s["run"]}
+                     for s in pick]
+          print("matrix=" + json.dumps({"include": include}))
+          PY
+
+  download:
+    needs: plan
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # One run at a time per state; a newer one waits rather than overlapping the last.
+    concurrency:
+      group: download-${{ matrix.key }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Finished sessions' files never change, so each state keeps its files between runs.
+      - name: Restore the last copy
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ matrix.path }}
+          key: ${{ matrix.key }}-${{ github.run_id }}
+          restore-keys: ${{ matrix.key }}-
+      - name: Mark the time
+        run: touch "$RUNNER_TEMP/started"
+      # A server that stops answering mustn't hold the job: after its time limit the state keeps what it has.
+      - name: Download
+        timeout-minutes: ${{ matrix.minutes }}
+        continue-on-error: true
+        env:
+          OPENSTATES_API_KEY: ${{ secrets.OPENSTATES_API_KEY }}
+          UTAH_API_TOKEN: ${{ secrets.UTAH_API_TOKEN }}
+          INDIANA_API_KEY: ${{ secrets.INDIANA_API_KEY }}
+          # Scripts that read it stop on their own 5 minutes before the step's limit, with a summary.
+          FETCH_MINUTES: ${{ matrix.minutes }}
+        run: ${{ matrix.run }}
+      # Saved only when something changed, so the cache isn't filled with identical copies.
+      - name: See whether anything changed
+        id: changed
+        if: always()
+        env:
+          PATHS: ${{ matrix.path }}
+        run: |
+          n=$(find $PATHS -newer "$RUNNER_TEMP/started" -type f 2>/dev/null | wc -l)
+          echo "$n files changed"
+          echo "any=$([ "$n" -gt 0 ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+      - name: Save the copy
+        if: always() && steps.changed.outputs.any == 'yes'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ matrix.path }}
+          key: ${{ matrix.key }}-${{ github.run_id }}

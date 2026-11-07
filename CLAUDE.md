@@ -385,7 +385,7 @@ from that repo. **Nothing here may change it.**
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
   (`STATE.originDeadline`), and after it the bill can't pass that year. Virginia's floor leaders and members' first
-  years come from the houses' sites (contacts.py). `check_site.py` runs last in site.yml and fails the run (GitHub
+  years come from the houses' sites (contacts.py). `check_site.py` runs last in publish.yml (daily) and fails the run (GitHub
   emails) when legislators are stale or too few, New Jersey's bill texts are missing, or Virginia's date rule stops
   fitting the floor votes. Still by hand: a new governor (`GOVERNORS`) every four years, next January 2030.
 - **Saved settings are per state (2026-10-29):** the states share one web address, and a browser keeps one set of saved
@@ -503,7 +503,14 @@ from that repo. **Nothing here may change it.**
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
   Until launch it writes `robots.txt` and `_headers` telling search engines not to list anything (`LAUNCHED=1`
-  turns that off). `.github/workflows/site.yml` downloads, builds and deploys every 4 hours (GitHub often starts it late) and by hand: each state downloads in its own job, all at once, with its own cache and time limit, then one job builds and publishes from whatever every state has (even when some downloads failed), so a run takes about as long as the slowest state, not the sum. A new state needs a line in the download job's matrix and a restore step in the site job; a design change goes live in about 20 minutes with `gh workflow run site.yml -f quick=true` (rebuilds every state from the saved data, no downloads, no checks); it needs the
+  turns that off). Two workflows (split 2026-11-07, so nothing waits on anything else):
+  `.github/workflows/download.yml` downloads every 2 hours, each state in its own job and cache (a state's runs never
+  overlap; states never wait for each other; a copy is saved only when something changed); its states, commands and time
+  limits are in `.github/states.json`. Test one state without touching the site: `gh workflow run download.yml -f
+  states=wi`. `.github/workflows/publish.yml` builds from every state's latest saved copy and deploys, every 2 hours
+  (about 360 deploys a month; Cloudflare's free plan allows 500) and by hand (`gh workflow run publish.yml`, about 20-30
+  minutes, for a design change); the data checks run in its 10:50 UTC run or with `-f checks=true`. A new state needs an
+  entry in states.json and a restore step in publish.yml (check_site.py fails if one is missing); it needs the
   secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. The domain stays parked at Porkbun until launch.
   Until then the site is at https://statebilltracker.pages.dev/ (first put up 2026-10-29, built with
   `SITE_BASE=https://statebilltracker.pages.dev/` (each state's SITE_URL is SITE_BASE/<state>/); unlisted, and marked noindex). It's a classic Pages project
@@ -511,9 +518,8 @@ from that repo. **Nothing here may change it.**
   lists_worker/ or cron_worker/ (wrangler picks up that folder's wrangler.toml):
   `npx -y wrangler@4.152.0 pages deploy <repo>/_site --project-name=statebilltracker --branch=main --commit-dirty=true`.
 - **Launch checklist for statebilltracker.org** (do these together when the owner says to launch):
-  1. `.github/workflows/site.yml`: run more often (e.g. hourly on weekdays while the Legislature meets, every two
-     hours otherwise, like ny-bill-tracker's update.yml); Actions minutes are free (public repo), but runs take about
-     2 hours while states are slow to download, and mind Cloudflare Pages' monthly deployment limit.
+  1. `.github/workflows/publish.yml` and `download.yml`: run more often while legislatures meet (e.g. hourly on weekdays),
+     minding Cloudflare Pages' monthly deployment limit (500 on the free plan; skip deploys when nothing changed, or pay).
   2. Build with the real address: drop `SITE_URL` from the workflow (states use `PUBLIC_URL`), and set
      `LAUNCHED=1` so `build_site.sh` stops telling search engines to stay away.
   3. Point statebilltracker.org (and .com, forwarding with 302) at the Pages project: add it as a custom domain

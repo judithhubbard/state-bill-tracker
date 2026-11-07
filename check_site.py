@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks that statebilltracker.org's data is sound, after each update (.github/workflows/site.yml runs it last,
+"""Checks that statebilltracker.org's data is sound, after each update (.github/workflows/publish.yml runs it last, once a day,
 so a problem fails the run and GitHub emails the owner; the site is already published by then).
 
 - Each state's legislators were refreshed in the last 3 days, and there are about as many as there should be.
@@ -131,6 +131,14 @@ for year in range(TODAY.year - 2, TODAY.year + 1):
     if last and abs((date.fromisoformat(last) - adjourns).days) > 10:
         problems.append(f"va: {year}'s last floor votes were on {last}, but the rule says it adjourned {adjourns}; "
                         "add the year to `dated` in states/va/profile.js")
+
+# Every state in .github/states.json (what download.yml downloads) must be restored by publish.yml, or its saved
+# copy never reaches the site.
+states_list = json.load(open(os.path.join(HERE, ".github", "states.json")))["states"]
+publish = open(os.path.join(HERE, ".github", "workflows", "publish.yml")).read()
+for st in states_list:
+    if f"restore-keys: {st['key']}-" not in publish:
+        problems.append(f"{st['code']}: in .github/states.json but publish.yml doesn't restore {st['key']}")
 
 if problems:
     print("Problems:\n" + "\n".join(f"- {p}" for p in problems))
