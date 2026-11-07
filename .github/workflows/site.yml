@@ -80,6 +80,8 @@ jobs:
         env:
           OPENSTATES_API_KEY: ${{ secrets.OPENSTATES_API_KEY }}
           UTAH_API_TOKEN: ${{ secrets.UTAH_API_TOKEN }}
+          # Scripts that read it stop on their own 5 minutes before the step's limit, with a summary (Michigan, Wisconsin).
+          FETCH_MINUTES: ${{ matrix.minutes }}
         run: ${{ matrix.run }}
       - name: Save the copy
         if: always()

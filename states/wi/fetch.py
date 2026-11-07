@@ -30,6 +30,7 @@ data/wi/incomplete lists what failed; it is removed when a run completes cleanly
 Usage: python3 states/wi/fetch.py [first_year]   (default: the session before this one, and this one)
 """
 import html, json, math, os, re, sys, time, urllib.error, urllib.request
+from collections import Counter
 from datetime import date, datetime
 
 SITE = "https://docs.legis.wisconsin.gov"
@@ -59,6 +60,21 @@ def page_path(year, num):
 REFRESH_DAYS = 7  # every current-session bill is read again at least this often
 INCOMPLETE = set()
 MISSING = object()  # a page that answers 404
+# The run's own time limit (FETCH_MINUTES, set by the workflow): stop a few minutes early, with everything read so far
+# saved and a summary printed, rather than be cut off silently mid-request.
+START = time.time()
+BUDGET = max(0.0, float(os.environ.get("FETCH_MINUTES") or 0) - 5) * 60
+FAILS = Counter()  # why requests failed, for the summary
+
+
+def out_of_time():
+    return BUDGET and time.time() - START > BUDGET
+
+
+def progress(label, i, total, got):
+    if i and i % 100 == 0:
+        print(f"{label}: {i} of {total} tried, {got} read, {round((time.time() - START) / 60)} min"
+              + (f"; failures {dict(FAILS)}" if FAILS else ""), flush=True)
 
 
 def get(path):
@@ -72,13 +88,15 @@ def get(path):
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return MISSING
+            FAILS[f"HTTP {e.code}"] += 1
             if e.code in (401, 403, 429):
                 print(f"{path}: refused ({e.code}); stopping")
                 INCOMPLETE.add(f"refused:{e.code}")
                 finish()
                 sys.exit(1)
             time.sleep(10 * (attempt + 1))
-        except Exception:
+        except Exception as e:
+            FAILS[type(e).__name__] += 1
             time.sleep(10 * (attempt + 1))
     return None
 
@@ -455,7 +473,11 @@ def session(year):
     print(f"{year}: {len(listing)} bills listed, {len(todo)} to read", flush=True)
 
     got = failed = 0
-    for num in todo:
+    for i, num in enumerate(todo):
+        progress(f"{year} bills", i, len(todo), got)
+        if out_of_time():
+            INCOMPLETE.add(f"{year}:bills")
+            break
         page = get(page_path(year, num))
         if not isinstance(page, str):
             failed += 1
@@ -488,7 +510,7 @@ def session(year):
     if failed:
         INCOMPLETE.add(f"{year}:bills")
     print(f"{year}: {got} of {len(todo)} bills read ({failed} failed)", flush=True)
-    if live and not failed:
+    if live and not failed and not out_of_time():  # the journals' changes are only "seen" once their bills are read
         save(os.path.join(folder, "journals.json"), sorted(journals_seen | set(journals_read)))
 
     votes, rocps = set(), set()
@@ -499,7 +521,10 @@ def session(year):
             rocps.update(b.get("rocps", []))
     vtodo = sorted(v for v in votes if not os.path.exists(os.path.join(folder, "votes", f"{v}.json")))
     vgot = 0
-    for vid in vtodo:
+    for i, vid in enumerate(vtodo):
+        progress(f"{year} roll calls", i, len(vtodo), vgot)
+        if out_of_time():
+            break
         kind = "assembly" if vid.startswith("av") else "senate"
         page = get(f"/{year}/related/votes/{kind}/{vid}")
         if isinstance(page, str):
@@ -513,7 +538,10 @@ def session(year):
 
     rtodo = sorted(r for r in rocps if not os.path.exists(os.path.join(folder, "rocp", r.rsplit("/", 1)[-1] + ".json")))
     rgot = 0
-    for path in rtodo:
+    for i, path in enumerate(rtodo):
+        progress(f"{year} committee records", i, len(rtodo), rgot)
+        if out_of_time():
+            break
         page = get(path)
         if isinstance(page, str) and 'id="document"' in page:
             save(os.path.join(folder, "rocp", path.rsplit("/", 1)[-1] + ".json"), parse_rocp(page, path))
@@ -561,6 +589,9 @@ def members_and_committees(year, folder, live):
 
 
 def finish():
+    print(f"run: {round((time.time() - START) / 60)} min" + (f"; stopped at the time limit" if out_of_time() else "")
+          + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures")
+          + (f"; still to do: {' '.join(sorted(INCOMPLETE))}" if INCOMPLETE else ""), flush=True)
     marker = os.path.join(DATA, "incomplete")
     if INCOMPLETE:
         with open(marker, "w") as f:
