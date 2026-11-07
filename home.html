@@ -69,7 +69,7 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
   <p class="lede">Follow bills in your state legislature: where each one is, who decides next, and what to ask them. No account needed.</p>
   <p class="mine" id="mine"></p>
   <div class="tiles" id="tiles" aria-hidden="true"></div>
-  <p class="legend" id="legend" hidden><span><i style="background:var(--navy)"></i>Ready</span><span><i style="background:var(--tile-off)"></i>Coming soon</span></p>
+  <p class="legend" id="legend" hidden><span><i style="background:var(--navy)"></i>Ready</span><span><i style="background:var(--tile-off)"></i>Coming soon</span><span id="legendMine" hidden><i style="background:var(--navy);box-shadow:inset 0 0 0 2px var(--mine)"></i>Your last visit</span></p>
   <h2>States</h2>
   <input class="find" id="find" type="search" placeholder="Find a state" aria-label="Find a state" hidden>
   <ul id="states">
@@ -103,7 +103,7 @@ try { mine = localStorage.getItem("sbt:state"); } catch (e) {}
 const remember = (code) => { try { localStorage.setItem("sbt:state", code); } catch (e) {} };
 if (mine && built[mine]) {
   const p = document.getElementById("mine");
-  p.innerHTML = `<a href="${built[mine]}">${NAMES[mine]} →</a>`;
+  p.innerHTML = `<a href="${built[mine]}">Back to ${NAMES[mine]} →</a>`;
   p.style.display = "block";
 }
 const tiles = document.getElementById("tiles");
@@ -115,6 +115,7 @@ tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
 }).join("");
 tiles.removeAttribute("aria-hidden");
 document.getElementById("legend").hidden = false;
+if (mine && built[mine]) document.getElementById("legendMine").hidden = false;
 document.addEventListener("click", (e) => {
   const a = e.target.closest("a[href]");
   const code = a && (a.dataset.code || a.getAttribute("href").replace(/\/.*$/, "").toUpperCase());
