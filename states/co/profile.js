@@ -16,7 +16,7 @@ const STATE = {
   years: 1,
   sessionLabel: (s) => String(s),
   // Concurrent resolutions proposing constitutional amendments aren't in the download (it reads bills only).
-  govReach: `<a href="https://governor.colorado.gov/contact-us" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Denver <a class="phone" href="tel:+13038662471" data-contact="call|governor">(303) 866-2471</a>`,
+  govReach: `<a href="https://governor.colorado.gov/contact-us" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Constituent services <a class="phone" href="tel:+13038662885" data-contact="call|governor">(303) 866-2885</a>`,
 
   // The General Assembly's bill page: "HB25-1001".
   billUrl: (p, session = DATA.session) => `https://leg.colorado.gov/bills/${p.slice(0, 2)}${String(session).slice(2)}-${p.slice(2)}`,
