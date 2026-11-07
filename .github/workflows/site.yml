@@ -67,8 +67,8 @@ jobs:
           - { name: "South Dakota", key: sd-data-v1, path: "data/sd", minutes: 50, run: "python3 states/sd/fetch.py && python3 states/sd/contacts.py" }
           - { name: "Wyoming", key: wy-data-v1, path: "data/wy", minutes: 40, run: "python3 states/wy/fetch.py && python3 states/wy/contacts.py" }
           # Utah: the Legislature's developer API (UTAH_API_TOKEN secret), then member votes from le.utah.gov at its 10-second
-          # crawl delay, 40 minutes a run (about 12,000 votes, read once each); not built into the site until its converter exists.
-          - { name: "Utah", key: ut-data-v1, path: "data/ut", minutes: 85, run: "python3 states/ut/fetch.py --votes-minutes 40" }
+          # crawl delay, 40 minutes a run (about 12,000 votes, read once each).
+          - { name: "Utah", key: ut-data-v1, path: "data/ut", minutes: 85, run: "python3 states/ut/fetch.py --votes-minutes 40 && python3 states/ut/contacts.py" }
           # Pennsylvania: roll calls at one request a second.
           - { name: "Pennsylvania", key: pa-data-v1, path: "data/pa", minutes: 50, run: "python3 states/pa/fetch.py" }
     steps:

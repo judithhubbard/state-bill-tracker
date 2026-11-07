@@ -89,6 +89,10 @@ if not os.path.exists(os.path.join(HERE, "data", "nc", "incomplete")):
 if not os.path.exists(os.path.join(HERE, "data", "sd", "incomplete")):
     contacts("sd", TODAY.year, 100)
 
+# Utah: a session a year.
+if not os.path.exists(os.path.join(HERE, "data", "ut", "incomplete")):
+    contacts("ut", TODAY.year, 95)
+
 # Wyoming: a session a year.
 if not os.path.exists(os.path.join(HERE, "data", "wy", "incomplete")):
     contacts("wy", TODAY.year, 85)

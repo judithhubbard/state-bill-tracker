@@ -77,3 +77,4 @@ data/wy/*
 !data/wy/district_towns.json
 # Utah downloads (states/ut/fetch.py, from the Legislature's developer API).
 data/ut/*
+!data/ut/district_towns.json
