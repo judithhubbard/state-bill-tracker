@@ -153,5 +153,26 @@ def short_html(state):
     return f'<span class="bp-part">{leg}</span><span class="bp-part">{dot(gov)}{ADJ.get(gov, gov)} governor</span>'
 
 
+def map_data(state, lower_name="House"):
+    """The front page map's dots for a state: [[party, supermajority], ...] for the Senate, the lower house and the
+    governor, and the words for the square's tooltip."""
+    b = current(state)
+    if not b:
+        return None
+    lower = re.sub(r" of Delegates$", "", lower_name)
+    order = sorted(b["chambers"].items(), key=lambda x: x[0] != "S")
+    dots, words = [], []
+    for c, ch in order:
+        name = "Senate" if c == "S" else lower
+        dots.append([ch["majority"] or "S", ch["canOverride"]])
+        counts = "–".join(str(v) for _, v in list(ch["parties"].items())[:2])
+        words.append(f"{name}: {ADJ.get(ch['majority'], 'split') if ch['majority'] else 'split'} {counts}"
+                     + (" (supermajority)" if ch["canOverride"] else ""))
+    gov = b["governor"][1]
+    dots.append([gov, False])
+    words.append(f"Governor: {ADJ.get(gov, gov)}")
+    return {"dots": dots, "title": "; ".join(words)}
+
+
 if __name__ == "__main__":
     print(json.dumps(current(sys.argv[1]), indent=1))
