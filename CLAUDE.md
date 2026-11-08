@@ -560,6 +560,11 @@ from that repo. **Nothing here may change it.**
   - Failed motions worded like the step: IN's "Referred to Committee on Ways and Means pursuant to House Rule 84; Failed,
     Roll Call 185: yeas 28, nays 59" is a motion that lost, not a referral. The check fails on committee names carrying a
     motion's wording ("Failed", "Roll Call", "pursuant to").
+  - Steps that undo "passed both houses" (2026-11-08, one bill each, found by the "passed both houses but not sent" LOOK
+    line): a house asking for a passed bill back (MI SB 6 of 2023: "House requests return", "ENROLLMENT VACATED"); a
+    concurrence "as amended by the House" (PA HB 27 of 2023: the other house must agree again); a concurrence reconsidered
+    and refused (TX SB 155 of 2021, codes S706 then S605/S711); a conference report one house rejects (GA SB 13 of 2023-24:
+    a later report needs both houses again). And a pocket veto is a veto (MI HB 5190 of 2023-24: "pocket veto 1/22/2025").
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the

@@ -315,6 +315,10 @@ def agreed(steps):
             pending = bool(re.search(r"As Amended", a))
         elif re.search(r"Disagreed|Insisted|Conference Committee Appointed", a):
             pending = True
+        elif re.search(r"Conference (?:Committee )?Report Lost", a):
+            # A report one house rejects is dead: a later report needs both houses again (SB 13 of 2023-24: the House
+            # adopted the first in 2023, the Senate rejected it, then adopted another that the House never took up).
+            pending, conference = True, set()
         elif re.search(r"Recede", a):
             pending = False  # it withdrew its own changes, so it agrees to the other house's version (HR 1022 of 2023-24)
         elif re.search(r"Conference (?:Committee )?Report Adopted", a):

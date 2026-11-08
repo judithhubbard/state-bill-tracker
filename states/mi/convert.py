@@ -130,11 +130,19 @@ def decode(item):
         return h, "CONFERENCE ADOPTED"
     if re.search(r"ordered enrolled", low):
         return h, "ENROLLED"
+    # A house asking for a passed bill back (SB 6 of 2023: "House requests return", "ENROLLMENT VACATED"): its passage
+    # and the enrollment are undone until it passes again.
+    if re.search(r"(house|senate) requests return", low):
+        return ("H" if low.startswith("house") else "S"), "RETURN REQUESTED"
+    if re.search(r"enrollment vacated", low):
+        return h, "ENROLLMENT VACATED"
     if re.match(r"presented to the governor", low):
         return "G", "DELIVERED TO GOVERNOR"
     if re.match(r"approved by (the )?governor", low):
         return "G", "SIGNED"
-    if re.match(r"vetoed by (the )?governor|veto", low):
+    # A bill the governor didn't sign after the Legislature adjourned for good is vetoed ("pocket veto 1/22/2025", HB 5190
+    # of 2023-24).
+    if re.match(r"vetoed by (the )?governor|veto|pocket veto", low):
         return "G", "VETOED"
     return h or "G", a
 
@@ -179,12 +187,17 @@ def load_session(session):
         origin = p[0]
         items = sorted(kids(r, "HistoryItem", "historyitems"), key=lambda h: ((h.findtext("historydate") or "")[:10], int(h.findtext("sequence") or 0)))
         steps = [((h.findtext("historydate") or "")[:10],) + decode(h) + (text(h.findtext("historyaction")),) for h in items]
-        passed = set()
-        for d, h, t, a in steps:
+        passed, asked = set(), None
+        for i, (d, h, t, a) in enumerate(steps):
             if t.startswith("PASSED"):
                 passed.add(h)
             elif t == "RECONSIDERED":
                 passed.discard(h)
+            elif t == "RETURN REQUESTED":
+                asked = h
+            elif t == "ENROLLMENT VACATED" and asked:
+                passed.discard(asked)
+                steps[:i] = [s if s[2] != "ENROLLED" else (s[0], s[1], "Ordered enrolled (later vacated)", s[3]) for s in steps[:i]]
         texts_ = [s[2] for s in steps]
         pa = "" if amend else text(r.findtext("publicact/panumber"))
         if amend:

@@ -142,7 +142,12 @@ def stage_of(p, acts):
     origin = p[0]
     # A conference report passes only when both houses adopt it (House 750 + Senate's 751/761, or the reverse).
     conference = (("H", 750) in codes and codes & {("H", 751), ("S", 761)}) or (("S", 761) in codes and codes & {("S", 762), ("H", 750)})
-    if codes & {("H", 840), ("S", 840), ("H", 701), ("S", 706)} or conference or (origin, 805) in codes:
+    # A concurrence later reconsidered and refused doesn't count (SB 155 of 2021: the Senate concurred, reconsidered,
+    # refused, and went to a conference the House never adopted).
+    seq = [(h, n) for _, h, n, _, _ in acts]
+    concur = {c for c, refuse in ((("H", 701), ("H", 706)), (("S", 706), ("S", 711)))
+              if c in seq and refuse not in seq[len(seq) - seq[::-1].index(c):]}
+    if codes & {("H", 840), ("S", 840)} or concur or conference or (origin, 805) in codes:
         return 3
     if any(decode(h, n, d).startswith("PASSED") for _, h, n, d, _ in acts) or (origin, 806) in codes:
         return 2

@@ -110,6 +110,9 @@ def decode(a, origin):
         return h, f"PASSED {HOUSE.get(h, 'HOUSE').upper()}"
     if re.search(r"Vote on final passage reconsidered", verb, re.I):
         return h, "RECONSIDERED"
+    # Concurring "as amended by the House" (HB 27 of 2023) is a new change: the other house has to agree to it.
+    if re.search(r"concurred in (?:House|Senate) amendments.*as amended by", verb, re.I):
+        return h, "CONCURRED AS AMENDED"
     if re.search(r"concurred in (?:House|Senate) amendments", verb, re.I):
         return h, "CONCURRED"
     if re.match(r"Presented to the Governor", verb, re.I):
@@ -311,7 +314,7 @@ def load_session(session):
                     texts[p] = {"statement": r["description"], "label": "From the committee's description of the bill."}
         for d, h, t, a in steps:
             m = re.search(r"\((\d+)-(\d+)\)", a)
-            if m and h in HOUSE and (t.startswith("PASSED") or t in ("CONCURRED", "FAILED")) and (h, d) not in floor_days:
+            if m and h in HOUSE and (t.startswith("PASSED") or t in ("CONCURRED", "CONCURRED AS AMENDED", "FAILED")) and (h, d) not in floor_days:
                 votes.append([h, "F", None, d, int(m.group(1)), int(m.group(2)), []])
         votes.sort(key=lambda v: v[3])
         act = next((re.search(r"Act No\. (\d+)", s[3]).group(1) for s in steps if re.search(r"Act No\. \d+", s[3])), None)
@@ -357,7 +360,16 @@ def agreed(steps, last_pass):
     first, second = sorted(last_pass, key=lambda h: last_pass[h])
     start = next((i for i, s in enumerate(steps) if s[1] == second), 0)
     amended = any(re.search(r"amend", s[3], re.I) and s[1] == second for s in steps[start:last_pass[second] + 1])
-    return not amended or any(s[2] == "CONCURRED" and s[1] == first for s in steps[last_pass[second]:])
+    if not amended:
+        return True
+    # Whose agreement is owed: the first house's, then, after each concurrence "as amended", the other house's.
+    owed = first
+    for s in steps[last_pass[second]:]:
+        if s[2] == "CONCURRED" and s[1] == owed:
+            owed = None
+        elif s[2] == "CONCURRED AS AMENDED" and s[1] in (first, second):
+            owed = second if s[1] == first else first
+    return owed is None
 
 
 def agendas(session):
