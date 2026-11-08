@@ -300,6 +300,17 @@
    ],
    "minutes": 20,
    "run": "python3 states/nd/fetch.py && python3 states/nd/contacts.py"
+  },
+  {
+   "name": "Idaho",
+   "code": "id",
+   "key": "id-data-v1",
+   "paths": [
+    "data/id"
+   ],
+   "minutes": 60,
+   "run": "python3 states/id/fetch.py",
+   "note": "legislature.idaho.gov's bill pages (floor roll calls by member), committees and members. Not built into the site until its converter exists."
   }
  ]
 }

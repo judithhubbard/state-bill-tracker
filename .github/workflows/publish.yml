@@ -206,6 +206,12 @@ jobs:
           path: "data/nd"
           key: nd-data-v1-latest
           restore-keys: nd-data-v1-
+      - name: Restore Idaho
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/id"
+          key: id-data-v1-latest
+          restore-keys: id-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:

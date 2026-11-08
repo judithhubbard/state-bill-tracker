@@ -114,5 +114,7 @@ data/ar/*
 # North Dakota downloads (states/nd/fetch.py).
 data/nd/*
 !data/nd/district_towns.json
+# Idaho downloads (states/id/fetch.py).
+data/id/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/
