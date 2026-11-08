@@ -164,6 +164,24 @@ jobs:
           path: "data/ar"
           key: ar-data-v1-latest
           restore-keys: ar-data-v1-
+      - name: Restore Alaska
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/ak"
+          key: ak-data-v1-latest
+          restore-keys: ak-data-v1-
+      - name: Restore the LegiScan states
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/legiscan
+            data/tn
+            data/ok
+            data/me
+            data/ri
+            data/vt
+          key: legiscan-data-v1-latest
+          restore-keys: legiscan-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:

@@ -233,6 +233,33 @@
    "minutes": 20,
    "run": "python3 states/ar/fetch.py",
    "note": "The Bureau of Legislative Research's file server; not built into the site until its converter exists."
+  },
+  {
+   "name": "Alaska",
+   "code": "ak",
+   "key": "ak-data-v1",
+   "paths": [
+    "data/ak"
+   ],
+   "minutes": 110,
+   "run": "python3 states/ak/fetch.py",
+   "note": "The Legislature's BASIS public service; not built into the site until its converter exists."
+  },
+  {
+   "name": "LegiScan states",
+   "code": "legiscan",
+   "key": "legiscan-data-v1",
+   "paths": [
+    "data/legiscan",
+    "data/tn",
+    "data/ok",
+    "data/me",
+    "data/ri",
+    "data/vt"
+   ],
+   "minutes": 60,
+   "run": "python3 legiscan.py tn ok me ri vt",
+   "note": "Tennessee, Oklahoma, Maine, Rhode Island and Vermont from LegiScan (LEGISCAN_API_KEY), in one job so they share one count of the month's queries (data/legiscan/usage.json; stops at 9,000 of the free 10,000). Not built into the site until their converters exist."
   }
  ]
 }
