@@ -134,5 +134,24 @@ def meaning(state, lower_name="House"):
             f"({' and '.join(short)}).")
 
 
+def short_html(state):
+    """The front page's quiet lines: "● Republican legislature" (or "supermajority", when the majority can override a veto in
+    both houses, or "Split legislature") and "● Democratic governor", a small colored dot before each party word. The
+    seat counts are on the state's own page."""
+    b = current(state)
+    if not b:
+        return ""
+    dot = lambda p: f'<i class="bp-dot bp-{p}" aria-hidden="true"></i>'
+    majorities = {ch["majority"] for ch in b["chambers"].values()}
+    if len(majorities) == 1 and None not in majorities:
+        party = next(iter(majorities))
+        veto = all(ch["canOverride"] for ch in b["chambers"].values())
+        leg = f"{dot(party)}{ADJ.get(party, party)} " + ("supermajority" if veto else "legislature")
+    else:
+        leg = "Split legislature"
+    gov = b["governor"][1]
+    return f'<span class="bp-part">{leg}</span><span class="bp-part">{dot(gov)}{ADJ.get(gov, gov)} governor</span>'
+
+
 if __name__ == "__main__":
     print(json.dumps(current(sys.argv[1]), indent=1))

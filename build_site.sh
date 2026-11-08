@@ -49,8 +49,9 @@ items = []
 for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
         P = importlib.import_module(f"states.{s}.profile")
-        # Party control, a line each: "Senate R 29–2", "House R 56–6", "Governor R" (balance.py), from the latest member list.
-        power = balance.summary_html(s, getattr(P, "LOWER_NAME", "Assembly"), sep="")
+        # Party control in a few words: "Republican legislature · Democratic governor" (balance.py), from the latest member
+        # list; the seat counts are on the state's own page.
+        power = balance.short_html(s)
         power = f'<span class="power">{power}</span>' if power else ""
         items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b>{power}</a></li>\n'))
 block = "".join(i for _, i in sorted(items))
