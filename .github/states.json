@@ -332,6 +332,17 @@
    "minutes": 110,
    "run": "python3 states/de/fetch.py",
    "note": "legis.delaware.gov's own JSON (bills with synopses, roll calls by member, members, committees); the first copy (about 3 hours) builds up over a few runs. Not built into the site until its converter exists."
+  },
+  {
+   "name": "Alabama",
+   "code": "al",
+   "key": "al-data-v1",
+   "paths": [
+    "data/al"
+   ],
+   "minutes": 60,
+   "run": "python3 states/al/fetch.py",
+   "note": "ALISON's GraphQL endpoint (the one its pages use): bills, histories, texts, roll calls by member, members, committees. Not built into the site until its converter exists."
   }
  ]
 }
