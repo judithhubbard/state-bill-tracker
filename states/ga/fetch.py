@@ -116,7 +116,9 @@ def session(year, sid):
     index = call("Legislation", "GetLegislationForSession", many=True, timeout=600, SessionId=sid)
     if not index:
         print(f"{year}: no legislation list; kept the last copy")
-        INCOMPLETE.add(f"{year}:list")
+        # Only a list never read holds Georgia off the site; a failed refresh keeps the last copy.
+        if not os.path.exists(os.path.join(folder, "legislation.json")):
+            INCOMPLETE.add(f"{year}:list")
         try:
             index = json.load(open(os.path.join(folder, "legislation.json")))
         except (OSError, ValueError):
@@ -138,7 +140,9 @@ def session(year, sid):
         return True
 
     got = sum(pool_map(one, sorted(bills.items())))
-    if got < len(bills):
+    # A bill whose refresh failed keeps its last copy (2 of 2,288 failed on 2026-11-08 and took Georgia off the site):
+    # only bills never read make the copy incomplete.
+    if any(not os.path.exists(os.path.join(folder, "bills", f"{num}.json")) for num in bills):
         INCOMPLETE.add(f"{year}:bills")
     print(f"{year}: {got} of {len(bills)} bills read", flush=True)
 
@@ -158,9 +162,7 @@ def session(year, sid):
         save(os.path.join(folder, "votes", f"{vid}.json"), d)
         return True
 
-    vgot = sum(pool_map(vote, todo))
-    if vgot < len(todo):
-        INCOMPLETE.add(f"{year}:votes")
+    vgot = sum(pool_map(vote, todo))  # votes not read now are read on a later run; they don't hold the site
     print(f"{year}: {len(votes)} votes ({vgot} of {len(todo)} read now)", flush=True)
 
     people(year, sid, folder, live)
@@ -177,12 +179,18 @@ def people(year, sid, folder, live):
         listing = call(service, lister, many=True, SessionId=sid)
         if not listing:
             print(f"{year}: no {name} list; kept the last copy")
-            INCOMPLETE.add(f"{year}:{name}")
+            if not os.path.exists(path):
+                INCOMPLETE.add(f"{year}:{name}")
             continue
         extra = {"SessionId": sid} if name == "committees" else {}
         details = pool_map(lambda x: call(service, op, **{key: x["Id"]}, **extra), listing)
         out = []
+        try:
+            last = {e["listing"]["Id"]: e["detail"] for e in json.load(open(path)) if e.get("detail")}
+        except (OSError, ValueError, KeyError, TypeError):
+            last = {}
         for x, d in zip(listing, details):
+            d = d or last.get(x["Id"])  # a failed detail keeps the last copy's
             if not d:
                 INCOMPLETE.add(f"{year}:{name}")
             out.append({"listing": x, "detail": d or None})

@@ -878,6 +878,9 @@ from that repo. **Nothing here may change it.**
     committee reports' "DP: ..." lists). Join them before reading; the check LOOKs at history lines ending in a comma.
   - Land shares that drop small districts: a municipality as big as Anchorage holds whole urban districts under 0.5% of its
     land. Keep a district the place holds most of; the check that every legislator's district is in some place's list caught it.
+  - A failed refresh marking a state "incomplete" takes it off the site (Utah on 2026-11-08, its API answering 504;
+    Georgia the same day, 2 of 2,288 bills failing). Only data never downloaded may mark a state incomplete; a failed
+    refresh keeps the last copy, and votes still to read fill in on later runs.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
