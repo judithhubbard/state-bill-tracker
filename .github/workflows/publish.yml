@@ -182,6 +182,12 @@ jobs:
             data/vt
           key: legiscan-data-v1-latest
           restore-keys: legiscan-data-v1-
+      - name: Restore New Hampshire
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/nh"
+          key: nh-data-v1-latest
+          restore-keys: nh-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
