@@ -42,7 +42,7 @@ echo "rebuilt:${REBUILT:- none}"
 python3 - "$OUT" <<'PY'
 import importlib, json, os, re, sys
 sys.path.insert(0, ".")
-import balance
+import balance, front_page
 out = sys.argv[1]
 page = open("home.html").read()
 items, power = [], {}
@@ -50,7 +50,7 @@ for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
         P = importlib.import_module(f"states.{s}.profile")
         # Party control for the map's dots (balance.py), from the latest member list.
-        data = balance.map_data(s, getattr(P, "LOWER_NAME", "Assembly"))
+        data = front_page.map_data(s, getattr(P, "LOWER_NAME", "Assembly"))
         if data:
             power[s] = data
         items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b></a></li>\n'))
