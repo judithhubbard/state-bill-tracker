@@ -94,3 +94,5 @@ data/vt/*
 
 # Alaska downloads
 data/ak/*
+# Screenshots shown to the owner before a change is published (not part of the site).
+previews/
