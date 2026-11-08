@@ -3027,14 +3027,16 @@ function monthChart(I, t) {
   if (!past) return "";
   const n = (I.pastSessions || []).length || 1;
   const live = DATA.current && now;
+  // With one past session (Michigan's 2023-24) the numbers are that session's, not an average.
+  const per = n === 1 ? ` in ${pastSpan()}` : " a session", about = n === 1 ? "" : "about ";
   // Months of the session so far: a zero there is a real zero, drawn at the bottom; later months stay blank.
   const today = new Date(), sofar = (today.getFullYear() - DATA.session) * 12 + today.getMonth();
   const rows = MONTH_ROWS.map(([k, label]) => {
     const avg = past[k].map((x) => x / n), cur = live ? now[k] : null;
     const max = Math.max(1, ...avg, ...(cur || []));
     const cols = avg.map((x, m) => ({ segs: [[(x / max) * 100, "a"]], tick: cur && m <= sofar ? (cur[m] / max) * 100 : null,
-      title: `${MONTH_NAMES[m % 12]}${YEARS > 1 ? `, ${m < 12 ? "first" : "second"} year` : ""}: about ${num(Math.round(x))} a session${cur ? `; this session ${num(cur[m])}` : ""}` }));
-    return colRow(label, "", cols, `<b class="big">${num(Math.round(avg.reduce((a, b) => a + b, 0)))}</b> a session`, 12);
+      title: `${MONTH_NAMES[m % 12]}${YEARS > 1 ? `, ${m < 12 ? "first" : "second"} year` : ""}: ${about}${num(Math.round(x))}${per}${cur ? `; this session ${num(cur[m])}` : ""}` }));
+    return colRow(label, "", cols, `<b class="big">${num(Math.round(avg.reduce((a, b) => a + b, 0)))}</b>${per}`, 12);
   }).join("");
   // The governor's decisions on the same timeline: one row for signed, one for vetoed, each
   // with this session's count as a gold line.
@@ -3046,14 +3048,14 @@ function monthChart(I, t) {
       const avg = sv[k], cur = live ? now[k] : null;
       const max = Math.max(1, ...avg, ...(cur || []));
       const cols = avg.map((x, m) => ({ segs: [[(x / max) * 100, cls]], tick: cur && m <= sofar ? (cur[m] / max) * 100 : null,
-        title: `${MONTH_NAMES[m % 12]}${YEARS > 1 ? `, ${m < 12 ? "first" : "second"} year` : ""}: about ${num(Math.round(x))} ${k} a session${cur ? `; this session ${num(cur[m])}` : ""}` }));
+        title: `${MONTH_NAMES[m % 12]}${YEARS > 1 ? `, ${m < 12 ? "first" : "second"} year` : ""}: ${about}${num(Math.round(x))} ${k}${per}${cur ? `; this session ${num(cur[m])}` : ""}` }));
       const sum = avg.reduce((a, b) => a + b, 0);
-      return colRow(label, "", cols, `<b class="big">${num(Math.round(sum))}</b> a session${k === "vetoed" ? `<small>${pctOf(sum, total)}% of decisions</small>` : ""}`, 12);
+      return colRow(label, "", cols, `<b class="big">${num(Math.round(sum))}</b>${per}${k === "vetoed" ? `<small>${pctOf(sum, total)}% of decisions</small>` : ""}`, 12);
     }).join("");
   }
 
   return `<h3 class="sub">Through the session, by month</h3>
-    <p class="key"><span><i class="k-appr"></i>Average, ${pastSpan()}</span><span><i class="k-law"></i>Signed</span><span><i class="k-veto"></i>Vetoed</span>${live ? `<span><i class="k-tick now"></i>This session</span>` : ""}</p>
+    <p class="key"><span><i class="k-appr"></i>${n === 1 ? pastSpan() : `Average, ${pastSpan()}`}</span><span><i class="k-law"></i>Signed</span><span><i class="k-veto"></i>Vetoed</span>${live ? `<span><i class="k-tick now"></i>This session</span>` : ""}</p>
     <div class="vlist">${rows}${gov}${monthAxis(12 * YEARS, 12)}
     <div class="vrow wide"><div class="lab"></div><div class="myears">${YEARS > 1 ? "<span>First year</span><span>Second year</span>" : `<span>${DATA.session}</span>`}</div><div></div></div></div>`;
 }
@@ -3206,14 +3208,14 @@ function renderStats() {
     const hr = rows.filter((r) => r.k.startsWith(h + " "));
     if (!hr.length) return "";
     return `<div class="house"><h3 class="sub">${title}</h3><div class="vlist">${hr.slice(0, commAll ? hr.length : 8).map((r) =>
-      vrow(esc(commLabel(r.k).replace(/^[A-Z] · /, "")), counts ? "" : `about ${num(r.perSession)} bills a session`, ...(counts ? countRow(r) : shareRow(r)))).join("")}</div>
+      vrow(esc(commLabel(r.k).replace(/^[A-Z] · /, "")), counts ? "" : (DATA.insights?.pastSessions || []).length === 1 ? `${num(r.perSession)} bills` : `about ${num(r.perSession)} bills a session`, ...(counts ? countRow(r) : shareRow(r)))).join("")}</div>
       ${hr.length > 8 && !commAll ? `<p class="muted">${hr.length - 8} more</p>` : ""}</div>`;
   };
   $("statComm").innerHTML = `<h2>Committees</h2>
     <div class="commctl"><label class="commsort">Show <select data-commmode>${Object.entries(COMM_MODES).map(([k, l]) => `<option value="${k}"${k === commMode ? " selected" : ""}>${l}</option>`).join("")}</select></label>
     <label class="commsort">Sort by <select data-commsort>${Object.entries(COMM_SORTS).map(([k, l]) => `<option value="${k}"${k === commSort ? " selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <p class="key">${counts ? `<span><i class="k-n"></i>Referred</span>` : ""}<span><i class="k-appr"></i>Approved by committee</span><span><i class="k-law"></i>Became law</span></p>
-    <p class="note">${counts ? `Average bills a session for ${topicName}` : `Share of ${topicName} referred to each committee`}, ${pastSpan()}. Committees with few bills left out.${shellsOut()}</p>
+    <p class="note">${counts ? ((DATA.insights?.pastSessions || []).length === 1 ? `Bills for ${topicName}` : `Average bills a session for ${topicName}`) : `Share of ${topicName} referred to each committee`}, ${pastSpan()}. Committees with few bills left out.${shellsOut()}</p>
     <div class="houses">${houseList(LOW, `${HOUSE[LOW]} committees`)}${houseList("S", "Senate committees")}</div>
     ${rows.length > 16 ? `<button class="act-btn" type="button" data-commall>${commAll ? "Show fewer" : `Show all ${rows.length} committees`}</button>` : ""}`;
 
