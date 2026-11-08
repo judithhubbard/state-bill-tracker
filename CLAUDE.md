@@ -524,10 +524,10 @@ from that repo. **Nothing here may change it.**
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
   Until launch it writes `robots.txt` and `_headers` telling search engines not to list anything (`LAUNCHED=1`
   turns that off). Two workflows (split 2026-11-07, so nothing waits on anything else):
-  `.github/workflows/download.yml` downloads every 2 hours, each state in its own job and cache (a state's runs never
+  `.github/workflows/download.yml` downloads every 2 hours (each full run starts the next, two hours after it began, since GitHub's scheduler skips runs; the schedule is only a backup), each state in its own job and cache (a state's runs never
   overlap; states never wait for each other; a copy is saved only when something changed); its states, commands and time
   limits are in `.github/states.json`. Test one state without touching the site: `gh workflow run download.yml -f
-  states=wi`. `.github/workflows/publish.yml` builds from every state's latest saved copy and deploys, every 2 hours
+  states=wi`. `.github/workflows/publish.yml` builds from every state's latest saved copy and deploys after each download run (a `workflow_run` trigger, not a schedule)
   (about 360 deploys a month; Cloudflare's free plan allows 500) and by hand (`gh workflow run publish.yml`, for a design change); it rebuilds only the states whose data, code or
   settings changed (`state_hash.py`, which includes the date, so each state is rebuilt at least daily) and copies the rest
   from the last build (the `built/` folder, kept in its cache; `ONLY="wy sd" ./build_site.sh` builds a few states locally); the data checks run in its 10:50 UTC run or with `-f checks=true`. A new state needs an

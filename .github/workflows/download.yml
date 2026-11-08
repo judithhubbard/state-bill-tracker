@@ -6,9 +6,12 @@ name: Download state data
 #
 # Run one or more states by hand, for a test or right after a change, without touching the site:
 #   gh workflow run download.yml -f states=wi        (or states=wi,mi; empty or "all" for every state)
+# Every 2 hours: each full run starts the next one two hours after it began (the "next" job below), since GitHub's
+# scheduler skips runs when it's busy (none started from 23:33 to 02:35 UTC on 2026-11-08). The schedule is a backup
+# for a broken chain; the "next" job doesn't start a run when one is already waiting or running.
 on:
   schedule:
-    - cron: "5 */2 * * *"   # every 2 hours (GitHub often starts it late)
+    - cron: "5 */2 * * *"
   workflow_dispatch:
     inputs:
       states:
@@ -111,3 +114,27 @@ jobs:
         with:
           path: ${{ matrix.path }}
           key: ${{ matrix.key }}-${{ github.run_id }}
+
+  next:
+    needs: download
+    # Only after a full run (scheduled, or by hand for every state), and not when a run was cancelled.
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.states == 'all' || inputs.states == '') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      actions: write
+    steps:
+      - name: Start the next run two hours after this one began
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ github.run_id }}
+        run: |
+          began=$(gh run view "$RUN" -R "$REPO" --json createdAt -q .createdAt)
+          wait=$(( $(date -d "$began" +%s) + 7200 - $(date +%s) ))
+          if [ "$wait" -gt 0 ]; then echo "waiting $((wait / 60)) minutes"; sleep "$wait"; fi
+          others=$(gh run list -R "$REPO" --workflow download.yml --limit 20 --json databaseId,status \
+            -q "[.[] | select(.databaseId != $RUN and (.status == \"queued\" or .status == \"in_progress\" or .status == \"waiting\" or .status == \"pending\"))] | length")
+          if [ "$others" -gt 0 ]; then echo "another download run is already waiting or running; not starting one"; exit 0; fi
+          gh workflow run download.yml -R "$REPO" -f states=all
+          echo "started the next download run"

@@ -4,13 +4,16 @@ name: Publish statebilltracker.org
 # Cloudflare Pages (project "statebilltracker"). Needs the secrets CLOUDFLARE_API_TOKEN (Cloudflare Pages: Edit) and
 # CLOUDFLARE_ACCOUNT_ID. It downloads nothing but New York's current bills and rebuilds only the states whose data or
 # code changed (state_hash.py; the rest are copied from the last build), so it takes a few minutes whatever the states
-# are doing; a design change goes live with `gh workflow run publish.yml`. Every 2 hours (about 360 publishes a month,
-# under Cloudflare's 500); the data checks run once a day (the 10:50 UTC run) or when asked
+# are doing; a design change goes live with `gh workflow run publish.yml`. After each download run, every 2 hours (about
+# 360 publishes a month, under Cloudflare's 500); the data checks run once a day (the 10:50 UTC run) or when asked
 # (`gh workflow run publish.yml -f checks=true`). At launch, see "Launch checklist" in CLAUDE.md.
 on:
+  # After each download run (every 2 hours), so publishing never waits on GitHub's scheduler, which skips runs.
+  workflow_run:
+    workflows: ["Download state data"]
+    types: [completed]
   schedule:
-    - cron: "50 10 * * *"                           # with the daily checks
-    - cron: "50 0,2,4,6,8,12,14,16,18,20,22 * * *"
+    - cron: "50 10 * * *"                           # the daily data checks
   workflow_dispatch:
     inputs:
       checks:
