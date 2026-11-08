@@ -94,5 +94,10 @@ data/vt/*
 
 # Alaska downloads
 data/ak/*
+# New Hampshire, Montana, Mississippi and Arkansas downloads (states/<st>/fetch.py).
+data/nh/*
+data/mt/*
+data/ms/*
+data/ar/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

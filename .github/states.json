@@ -222,6 +222,17 @@
    "minutes": 60,
    "run": "python3 states/in/fetch.py",
    "note": "The General Assembly's API (INDIANA_API_KEY); not built into the site until its converter exists."
+  },
+  {
+   "name": "Arkansas",
+   "code": "ar",
+   "key": "ar-data-v1",
+   "paths": [
+    "data/ar"
+   ],
+   "minutes": 20,
+   "run": "python3 states/ar/fetch.py",
+   "note": "The Bureau of Legislative Research's file server; not built into the site until its converter exists."
   }
  ]
 }
