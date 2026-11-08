@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("az", "ca", "co", "ct", "ga", "il", "in", "ma", "md", "mi", "nc", "nj", "oh", "or", "pa", "sd", "tx", "ut", "va", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ar", "az", "ca", "co", "ct", "ga", "il", "in", "ma", "md", "mi", "nc", "nj", "oh", "or", "pa", "sd", "tx", "ut", "va", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -93,6 +93,20 @@ def check(state):
         if few:
             say(state, "FAIL" if len(few) > 0.01 * sum(len(r["votes"]) for r in recs) else "LOOK",
                 f"{s}: {len(few)} votes list fewer noes than their tally, e.g. {few[:4]}")
+    # Sponsors tied to a party, session by session: a session far below the others has a member list that failed to
+    # match (AR's 2023-24 members file has one column fewer than 2025-26's, and every member was dropped at first).
+    if hasattr(C, "parties"):
+        share = {}
+        for s, recs in loaded.items():
+            named = [r for r in recs if r["vers"][0]["sponsor"] not in ("", "—") and  # members, not committees
+                     not re.search(r"Committee|Management|Council|Commission|Caucus|Efficiency|Rules", r["vers"][0]["sponsor"])]
+            party = C.parties(s, recs)
+            if len(named) >= 20:
+                share[s] = sum(1 for r in named if (r["vers"][0]["p"][0], r["vers"][0]["sponsor"]) in party) / len(named)
+        low = {s: f"{100 * v:.0f}%" for s, v in share.items() if share and v < 0.5 * max(share.values())}
+        if low:
+            say(state, "LOOK", f"sessions whose sponsors mostly have no party (a member list that didn't match?): {low}, "
+                               f"best {100 * max(share.values()):.0f}%")
 
     # The current session's votes should name seats, not leftover names.
     cur = max(loaded)

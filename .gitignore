@@ -100,5 +100,6 @@ data/nh/*
 data/mt/*
 data/ms/*
 data/ar/*
+!data/ar/district_towns.json
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

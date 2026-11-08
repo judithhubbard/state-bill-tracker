@@ -368,7 +368,8 @@ def without_shells(loaded, hist):
 def insights(loaded, hist, current):
     shells = sum(1 for s in loaded for r in loaded[s][0] if r.get("shell"))
     loaded, hist = without_shells(loaded, hist)
-    past = [s for s in sorted(loaded) if s != current]
+    # The session still running never counts as past, also on a page for an earlier session of another kind.
+    past = [s for s in sorted(loaded) if s != current and s != CURRENT]
     # States whose sessions alternate between long and short (Oregon, Connecticut): compare a session only with past
     # sessions of the same kind, when there is one. A 35-day session with 300 bills isn't a slow 160-day one.
     past_kind = P.session_kind(current) if hasattr(P, "session_kind") else ""
@@ -1191,6 +1192,17 @@ def main():
     insight = insights(done, hist, current)
     insight["trends"] = trends(done)
     insight["topicRing"] = topic_ring(done)
+    # Where sessions alternate in kind (Arkansas's regular and fiscal sessions, Oregon's long and short ones), a page
+    # for a session of another kind than the current one compares it with past sessions of its own kind: the newest
+    # finished session of each kind gets its own statistics.
+    insight_of = {}
+    if hasattr(P, "session_kind"):
+        newest = {}
+        for s_ in sorted(done):
+            newest[P.session_kind(s_)] = s_
+        for kind, ref in newest.items():
+            if kind != P.session_kind(current):
+                insight_of[kind] = {**insights(done, hist, ref), "trends": insight["trends"], "topicRing": insight["topicRing"]}
 
     # Current legislators for past sessions' pages (profile card and the sessions they served in).
     legs_now = legislators(current)
@@ -1299,7 +1311,7 @@ def main():
             "delegation": names,
             "sessions": [{"session": s, "url": urls.get(str(s)), **({"upcoming": True} if s > current else {})} for s in SESSIONS],
             "outcomes": {str(s): summary[s] for s in summary},
-            "insights": insight,
+            "insights": insight_of.get(P.session_kind(session), insight) if insight_of and session < current else insight,
             # Past pages don't carry co-sponsor names, so their network is worked out here.
             "network": session_network(session, [r for r in recs if not r.get("shell")]) if session < current else None,
             # Date of the last floor vote in either house this session.
