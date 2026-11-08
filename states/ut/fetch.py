@@ -117,7 +117,8 @@ def session_bills(year):
             print(f"{sid}: no bill list yet", flush=True)
             return []
         print(f"{sid}: bill list unreadable; kept the last copies", flush=True)
-        return [f"{year}:billlist"]
+        # Only a list never read holds the state off the site (the API answered 504 all morning on 2026-11-08).
+        return [] if os.path.exists(os.path.join(folder, "billlist.json")) else [f"{year}:billlist"]
     save(listing, os.path.join(folder, "billlist.json"))
     state_path = os.path.join(folder, "state.json")
     state = load(state_path, {})
@@ -143,7 +144,11 @@ def session_bills(year):
         if d is not None:
             save(d, os.path.join(folder, f"{name}.json"))
     print(f"{sid}: {got} of {len(todo)} read ({len(listing)} listed)", flush=True)
-    problems = [] if got == len(todo) else [f"{year}:bills"]
+    # A bill whose new version failed keeps its last copy; only bills never read make the copy incomplete.
+    missing = [b["number"] for b in listing if b.get("number") and not os.path.exists(os.path.join(folder, "bills", f"{b['number']}.json"))]
+    if got < len(todo):
+        print(f"{sid}: {len(todo) - got} unreadable, {len(missing)} of them never read", flush=True)
+    problems = [f"{year}:bills"] if missing else []
     return problems + status_pages(year, listing)
 
 
@@ -205,7 +210,7 @@ def roster():
         d = api(route)
         if d is None or (key and not (d.get(key) if isinstance(d, dict) else None)):
             print(f"{route}: unreadable; kept the last copy", flush=True)
-            if key:
+            if key and not os.path.exists(os.path.join(folder, f"{route}.json")):
                 problems.append(route)
             continue
         save(d, os.path.join(folder, f"{route}.json"))
