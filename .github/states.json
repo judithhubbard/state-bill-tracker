@@ -290,6 +290,17 @@
    "minutes": 110,
    "run": "python3 states/mt/fetch.py",
    "note": "The Legislature's JSON API (api.legmt.gov), 10 seconds apart as its robots.txt asks; the first copy (about 9 hours) builds up over several runs. Not built into the site until its converter exists."
+  },
+  {
+   "name": "North Dakota",
+   "code": "nd",
+   "key": "nd-data-v1",
+   "paths": [
+    "data/nd"
+   ],
+   "minutes": 20,
+   "run": "python3 states/nd/fetch.py",
+   "note": "The Legislative Branch's static JSON API (ndlegis.gov/api). Not built into the site until its converter exists."
   }
  ]
 }

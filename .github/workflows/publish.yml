@@ -200,6 +200,12 @@ jobs:
           path: "data/mt"
           key: mt-data-v1-latest
           restore-keys: mt-data-v1-
+      - name: Restore North Dakota
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/nd"
+          key: nd-data-v1-latest
+          restore-keys: nd-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
