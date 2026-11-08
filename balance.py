@@ -48,12 +48,12 @@ def current(state):
     people = json.load(open(path)).get("people", {})
     out = {"chambers": {}, "governor": facts["governor"], "note": facts.get("note", ""),
            "asOf": int(re.search(r"(\d{4})", os.path.basename(path)).group(1))}
-    frac = Fraction(facts["override"])
+    frac = None if facts["override"] == "majority" else Fraction(facts["override"])  # Indiana: a majority of the members
     for chamber, seats in facts["seats"].items():
         parties = Counter(party_letter(p.get("party")) for sid, p in people.items() if sid[0] == chamber)
         filled = sum(parties.values())
         top, n = max(parties.items(), key=lambda x: x[1]) if parties else (None, 0)
-        need = math.ceil(frac * seats)
+        need = seats // 2 + 1 if frac is None else math.ceil(frac * seats)
         out["chambers"][chamber] = {
             "seats": seats, "parties": dict(sorted(parties.items(), key=lambda x: -x[1])), "vacant": seats - filled,
             "majority": top if n > seats / 2 else None,  # a plurality isn't a majority
@@ -81,8 +81,9 @@ def chamber_html(name, ch):
     lead, n = parties[0]
     rest = parties[1][1] if len(parties) > 1 else 0
     tip = ", ".join(f"{v} {PARTY_NAME.get(k, k)}" for k, v in parties) + (f", {ch['vacant']} vacant" if ch["vacant"] else "")
+    # Where a majority overrides (Indiana), every majority is "veto-proof": the sentence below says so instead.
     tag = (' <span class="bp-vp" title="Enough seats to override a veto (' + ch["override"].replace("2/3", "two-thirds").replace("3/5", "three-fifths")
-           + ')">veto-proof</span>') if ch["canOverride"] else ""
+           + ')">veto-proof</span>') if ch["canOverride"] and ch["override"] != "majority" else ""
     return f'<span class="bp-ch" title="{name}: {tip}">{name} {badge(lead)} {n}–{rest}{tag}</span>'
 
 
@@ -120,9 +121,13 @@ def meaning(state, lower_name="House"):
     party = next(iter(majorities.values()))
     noun = NOUN.get(party, party)
     over = {c: ch["canOverride"] for c, ch in chambers.items()}
+    simple = all(ch["override"] == "majority" for ch in chambers.values())
     if gov == party:
         return f"{noun} hold both houses and the governor's office" + (
+            ". A majority of each house can override a veto." if simple else
             ", with enough seats to override a veto." if all(over.values()) else ".")
+    if simple:
+        return f"Divided government: a {ADJ.get(gov, gov)} governor, but a majority of each house can override a veto, and {noun} hold both."
     if all(over.values()):
         return f"Divided government: a {ADJ.get(gov, gov)} governor, but {noun} hold enough seats in both houses to override a veto."
     short = []

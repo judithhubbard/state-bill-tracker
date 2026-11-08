@@ -1,5 +1,5 @@
 {
- "_about": "Each legislature's fixed facts for the balance of power (balance.py): seats in each chamber (S = Senate, the state's lower-house letter otherwise), the share of each house it takes to override a veto, and the governor serving now with their party. Party seat counts aren't here: they come from each session's member list. Update `governor` when a new one takes office (also GOVERNORS in the state's profile.py); `note` says what seat counts alone don't (a bipartisan coalition running a chamber, an officially nonpartisan legislature). Checked 2026-11-07.",
+ "_about": "Each legislature's fixed facts for the balance of power (balance.py): seats in each chamber (S = Senate, the state's lower-house letter otherwise), the share of each house's seats it takes to override a veto (\"majority\": more than half, as in Indiana), and the governor serving now with their party. Party seat counts aren't here: they come from each session's member list. Update `governor` when a new one takes office (also GOVERNORS in the state's profile.py); `note` says what seat counts alone don't (a bipartisan coalition running a chamber, an officially nonpartisan legislature). Checked 2026-11-07.",
  "states": {
   "az": {"seats": {"S": 30, "H": 60}, "override": "2/3", "governor": ["Katie Hobbs", "D"]},
   "ca": {"seats": {"S": 40, "A": 80}, "override": "2/3", "governor": ["Gavin Newsom", "D"]},
@@ -7,6 +7,7 @@
   "ct": {"seats": {"S": 36, "H": 151}, "override": "2/3", "governor": ["Ned Lamont", "D"]},
   "ga": {"seats": {"S": 56, "H": 180}, "override": "2/3", "governor": ["Brian Kemp", "R"]},
   "il": {"seats": {"S": 59, "H": 118}, "override": "3/5", "governor": ["JB Pritzker", "D"]},
+  "in": {"seats": {"S": 50, "H": 100}, "override": "majority", "governor": ["Mike Braun", "R"]},
   "ma": {"seats": {"S": 40, "H": 160}, "override": "2/3", "governor": ["Maura Healey", "D"]},
   "md": {"seats": {"S": 47, "H": 141}, "override": "3/5", "governor": ["Wes Moore", "D"]},
   "mi": {"seats": {"S": 38, "H": 110}, "override": "2/3", "governor": ["Gretchen Whitmer", "D"]},

@@ -82,8 +82,9 @@ data/wy/*
 data/ut/*
 !data/ut/district_towns.json
 
-# Indiana downloads
+# Indiana downloads (states/in/fetch.py); its place table is made once by states/in/towns.py.
 data/in/*
+!data/in/district_towns.json
 # LegiScan downloads (legiscan.py): Tennessee, Oklahoma, Maine, Rhode Island and Vermont, plus the shared query count.
 data/legiscan/
 data/tn/*

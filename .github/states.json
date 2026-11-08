@@ -220,8 +220,7 @@
     "data/in"
    ],
    "minutes": 60,
-   "run": "python3 states/in/fetch.py",
-   "note": "The General Assembly's API (INDIANA_API_KEY); not built into the site until its converter exists."
+   "run": "python3 states/in/fetch.py && python3 states/in/contacts.py 2024 && python3 states/in/contacts.py 2025 && python3 states/in/contacts.py"
   },
   {
    "name": "Arkansas",

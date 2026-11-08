@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("az", "ca", "co", "ct", "ga", "il", "ma", "md", "mi", "nc", "nj", "oh", "or", "pa", "sd", "tx", "ut", "va", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("az", "ca", "co", "ct", "ga", "il", "in", "ma", "md", "mi", "nc", "nj", "oh", "or", "pa", "sd", "tx", "ut", "va", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -53,6 +53,11 @@ def check(state):
         # The 4th key date is New York's alone (return to committee in a new year).
         if state != "ny" and any(r["keyDates"][3] for r in recs):
             say(state, "FAIL", f"{s}: the 4th key date (New York's return to committee) is filled in")
+        # Committee names carrying a motion's tail: a failed motion to refer read as a referral (IN's "Referred to
+        # Committee on Ways and Means pursuant to House Rule 84; Failed, Roll Call 185: yeas 28, nays 59").
+        tails = sorted({c for r in recs for c in r["comms"] if re.search(r"\b(?:failed|roll call|yeas|nays|pursuant to)\b|;", c, re.I)})
+        if tails:
+            say(state, "FAIL", f"{s}: {len(tails)} committee names carry a motion's wording, e.g. {tails[:3]}")
         # Committee pass rates that look wrong (sponsors' amendments read as committee votes).
         fate = collections.Counter(r["commFate"] for r in recs)
         say(state, "LOOK", f"{s}: first committee: {fate['passed']} approved, {fate['held']} held, {fate['defeated']} voted down, "

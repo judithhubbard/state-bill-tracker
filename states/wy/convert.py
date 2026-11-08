@@ -101,7 +101,7 @@ def is_amendment(b):
 
 
 def committee(a):
-    m = re.search(r"\b[HSJ]\d{2} - ([^:]+?)(?::|\s+\d+-\d+|$)", a)
+    m = re.search(r"\b[HSJ]\d{2} - ([^:]+?)(?::|\s+(?:Passed|Failed) by Roll Call|\s+\d+-\d+|$)", a)  # "... Agriculture Passed by Roll Call 47-12-3-0-0"
     return m.group(1).strip() if m else None
 
 
