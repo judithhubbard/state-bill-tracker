@@ -464,6 +464,36 @@ from that repo. **Nothing here may change it.**
   2023 890 Acts and 3 vetoes (HB1189, HB1622, SB509; HB1176 line-item); 2024 176 Acts; 2025 1,026 Acts and 3 vetoes
   (HB1889, HB1961, SB451; HB1265 line-item: "four vetoes" in the news); 2026 174 Acts. Separate Senate (35) and House (100)
   districts by city, town or county (`states/ar/towns.py`).
+- **New Hampshire (built 2026-11-08):** `python3 states/nh/fetch.py`
+  downloads the General Court's daily data files (the current year), and past years (2023-25) from its public SQL Server in
+  the same shapes (see its docstring), into data/nh/<first year of the General Court>/; `states/nh/contacts.py` runs after
+  it. A page is one session year (`YEARS = 1`; decided 2026-11-08): each year has its own deadlines, laws ("Chapter 74,
+  Laws of 2025") and governor's actions, and the files are split by session year. A bill dies with its year unless a
+  committee keeps it over to the second year of the General Court ("Retained in Committee" in the House, "Rereferred to
+  Committee, MA" in the Senate): such bills are only in the second year's files, so `bill_rows()` gives the first year's
+  page those with its LSR prefix ("25-"), their history cut at the line that kept them, and both pages show them under the
+  same number (`STATE.continuedTo`, "Carried over to 2026 in the Finance Committee"). CACRs (constitutional amendments)
+  are numbered "CACR 1" in both houses; the site reads a bill's house from its number, so they're "HCACR1"/"SCACR1"
+  (`official()` drops the letter for links). `states/nh/convert.py` reads the Docket's lines as written ("Ought to Pass
+  with Amendment 2025-0695h: MA RC 212-161 03/20/2025 HJ 9 P. 28"; MA/MF motion adopted/failed): a house passes a bill
+  with the last "Ought to Pass" it adopts that isn't followed by a second referral ("Referred to Finance", the Senate's
+  "...; Refer to Finance Rule 4-5"), unless that committee waives it ("Referral Waived by Committee Chair per House Rule
+  47(f)"); the Senate's passage needs "OT3rdg" ("Ought to Pass: MA" alone leaves the motion pending, and the bill can be
+  tabled on it: HB 246 of 2026). Adopting "Inexpedient to Legislate", interim study or indefinite postponement kills it:
+  stage 0, shown as "Killed" (`STATE.heldAction` is a pattern here); its first committee's report decides `commFate`
+  (no "held"). Passed both houses: both passed, and enrolled, or the first concurred, or both adopted a conference
+  report, or the second passed it with no amendment. Line dates are the event's; entry times are the clerks' and out of
+  order across houses, so lines sort by day, then house of origin / other house / between the houses / enrollment /
+  governor, then step. Members' votes are the roll calls on the bill's own question (OTP, OTPA, Concur, conference
+  report, veto override; not ITL, whose "yea" is against the bill); most votes are voice votes. Seats: "S:12", and a
+  House district's members "H:612a", "H:612b" ... (Hillsborough 12 = county code times 100 plus the number; up to 10 a
+  district), named by data/nh/district_names.json. "Where you live" (`states/nh/towns.py`, run once) reads the districts
+  from the law, RSA 662:3 and 662:5, by town and city ward; a place votes in all its House districts (its own and a
+  "floterial" one over it and its neighbors: `STATE.townInAllDistricts`, read by `myReps()`/`setTown()`). No summaries
+  in the data ("What it does" isn't shown; the bill texts' analyses would need a request per bill at the 11-second crawl
+  delay). 142 representatives list no phone; none is invented. The governor's phone and contact page haven't been
+  checked by the owner. Laws and vetoes match the LSRs file's chapters and status codes exactly (2023: 243 and 9; 2024:
+  381 and 13; 2025: 305 and 12; 2026: 344 and 25). Add each year's first and last floor days to `opened`/`dated`.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
@@ -603,6 +633,14 @@ from that repo. **Nothing here may change it.**
     concurrence "as amended by the House" (PA HB 27 of 2023: the other house must agree again); a concurrence reconsidered
     and refused (TX SB 155 of 2021, codes S706 then S605/S711); a conference report one house rejects (GA SB 13 of 2023-24:
     a later report needs both houses again). And a pocket veto is a veto (MI HB 5190 of 2023-24: "pocket veto 1/22/2025").
+  - An official file that's out of date: NH's HouseDistricts.txt still has the 2012 map (Belknap has 9 districts there, 8
+    in the law and the member list); the districts come from the law (RSA 662:5). The check fails when a legislator's
+    district isn't in any place's list in "Where you live". And NH Members.txt's electedStatus "Former" is on 18 members
+    still sitting and voting.
+  - Typos in a line's year: NH's HB 425 of 2025 "03/06/2035", HB 49 of 2023 "04/13/2022" (the entry time is used when
+    they're more than 180 days apart). The check fails on history dates years from the session.
+  - The same number written twice, differently: NH's history lines give SB 62 and HB 511 of 2025 both "Chapter 39" (the
+    LSRs file's column says 38 and 39). Prefer the structured column; the check LOOKs at law numbers given to two bills.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the

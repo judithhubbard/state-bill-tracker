@@ -1695,9 +1695,11 @@ function statusText(b) {
       t = live ? `Sent back to ${b.comm}` : `Died in the ${b.comm} Committee`;
       small = `Approved by committee ${fmtDate(ok[0])}; missed a deadline ${fmtDate(acts[back][0])}`;
     }
-    // Massachusetts: a study order ends a bill in its committee.
-    if (STATE.heldAction && b.vers.some((v) => v.actions.some(([, x]) => x === STATE.heldAction)))
+    // Massachusetts: a study order ends a bill in its committee (New Hampshire's heldAction is a pattern: the house's vote).
+    if (STATE.heldAction && b.vers.some((v) => v.actions.some(([, x]) => (STATE.heldAction instanceof RegExp ? STATE.heldAction.test(x) : x === STATE.heldAction))))
       t = `${STATE.heldLabel}${b.comm ? ` by the ${commPlain(b.comm)} Committee` : ""}`;
+    // A bill kept over to the next session (Virginia's continued bills, New Hampshire's retained ones) didn't die.
+    if (!live && continuedTo(b)) t = `Carried over to ${continuedTo(b)}${b.comm ? ` in the ${commPlain(b.comm)} Committee` : ""}`;
   } else if (b.stage === 2 && b.passedIn) {
     t = `Passed one house${live ? "" : " only"} (${b.passedIn})`;
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
@@ -1822,8 +1824,11 @@ const andList = (xs) => (xs.length < 3 ? xs.join(" and ") : `${xs.slice(0, -1).j
 function myReps() {
   const c = chosenReps() || countyReps(HOME);
   if (!c || !LEGS.length) return DATA.contacts?.reps || [];
-  // A district can have more than one Assembly member (New Jersey's have two).
-  return BOTH.flatMap((h) => LEGS.filter((L) => L.house === h && L.district === +c[h]))
+  // A district can have more than one Assembly member (New Jersey's have two). New Hampshire's towns vote in all their
+  // House districts (STATE.townInAllDistricts: their own and a "floterial" one over them and their neighbors).
+  const town = STATE.townInAllDistricts && c.town ? DATA.towns?.find((t) => townKey(t) === c.town) : null;
+  const also = (h) => (town && h === LOW ? town[3].map(([d]) => d) : []);
+  return BOTH.flatMap((h) => LEGS.filter((L) => L.house === h && (L.district === +c[h] || also(h).includes(L.district))))
     .map((L) => ({ title: L.title, name: L.name, house: L.house, last: lastName(L.name) }));
 }
 function renderMyReps() {
@@ -1877,7 +1882,7 @@ function setTown(key) {
   const t = DATA.towns.find((x) => townKey(x) === key);
   if (!t) return;
   // Separate districts: set each house's when the place is in only one; a split place asks which.
-  if (townsSplitByHouse()) setReps(t[2].length === 1 ? t[2][0][0] : 0, t[3].length === 1 ? t[3][0][0] : 0, { town: townKey(t) });
+  if (townsSplitByHouse()) setReps(t[2].length === 1 ? t[2][0][0] : 0, t[3].length === 1 || STATE.townInAllDistricts ? t[3][0][0] : 0, { town: townKey(t) });
   else setReps(t[2][0][0], t[2][0][0], { town: townKey(t) });
 }
 function renderTownRepsByHouse(box) {
@@ -1889,8 +1894,11 @@ function renderTownRepsByHouse(box) {
     const who = (d) => shortName(LEGS.find((L) => L.house === h && L.district === d)?.name) || "vacant";
     return `<option value="">Choose your district</option>` + mine.map((d) => `<option value="${d}"${d === c?.[h] ? " selected" : ""}>${esc(distLabel(h, d))}: ${esc(who(d))}</option>`).join("");
   };
-  const split = town && (town[2].length > 1 || town[3].length > 1);
-  const where = !town ? "" : split
+  const all = STATE.townInAllDistricts;
+  const split = town && (town[2].length > 1 || (town[3].length > 1 && !all));
+  const where = !town ? "" : all && !split
+    ? `${esc(townName(town))} is in ${esc(distPhrase("S", town[2][0][0]))} and votes in ${town[3].length > 1 ? `the ${andList(town[3].map(([d]) => esc(DNAME(LOW, d) || d)))} ${HOUSE[LOW]} districts` : esc(distPhrase(LOW, town[3][0][0]))}.`
+    : split
     ? `${esc(townName(town))} ${town[2].length > 1 && town[3].length > 1 ? `is split among ${town[2].length} Senate and ${town[3].length} ${HOUSE[LOW]} districts`
         : [["S", town[2]], [LOW, town[3]]].map(([h, ds], i) => ds.length === 1 ? `${i ? "" : "is "}in ${esc(distPhrase(h, ds[0][0]))}`
         : `${i ? "" : "is "}split among ${ds.length} ${HOUSE[h]} districts`).join(" and ")}. ${STATE.addressLookup && ROOT ? "Look up your address, or pick yours below." : `Pick yours below${STATE.findReps ? `, or <a href="${esc(STATE.findReps)}" target="_blank" rel="noopener">look up your address</a>` : ""}.`}`

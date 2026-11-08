@@ -13,6 +13,7 @@
   "md": {"seats": {"S": 47, "H": 141}, "override": "3/5", "governor": ["Wes Moore", "D"]},
   "mi": {"seats": {"S": 38, "H": 110}, "override": "2/3", "governor": ["Gretchen Whitmer", "D"]},
   "nc": {"seats": {"S": 50, "H": 120}, "override": "3/5", "governor": ["Josh Stein", "D"]},
+  "nh": {"seats": {"S": 24, "H": 400}, "override": "2/3", "governor": ["Kelly Ayotte", "R"]},
   "nj": {"seats": {"S": 40, "A": 80}, "override": "2/3", "governor": ["Mikie Sherrill", "D"]},
   "ny": {"seats": {"S": 63, "A": 150}, "override": "2/3", "governor": ["Kathy Hochul", "D"]},
   "oh": {"seats": {"S": 33, "H": 99}, "override": "3/5", "governor": ["Mike DeWine", "R"]},

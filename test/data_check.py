@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ar", "az", "ca", "co", "ct", "ga", "il", "in", "ma", "md", "mi", "nc", "nj", "oh", "or", "pa", "sd", "tx", "ut", "va", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ar", "az", "ca", "co", "ct", "ga", "il", "in", "ma", "md", "mi", "nc", "nh", "nj", "oh", "or", "pa", "sd", "tx", "ut", "va", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -80,6 +80,20 @@ def check(state):
         if unsorted:
             say(state, "FAIL" if len(unsorted) > 0.01 * len(recs) else "LOOK",
                 f"{s}: {len(unsorted)} bills with history lines out of date order, e.g. {unsorted[:4]}")
+        # Law numbers given twice (NH's history lines: SB 62 and HB 511 of 2025 both "Chapter 39"; the LSRs file's column is
+        # right). In one-year sessions a chapter, act or public law number belongs to one bill.
+        if getattr(P, "YEARS", 2) == 1:
+            twice = [k for k, n in collections.Counter(r["chapter"] for r in recs if r.get("chapter")).items() if n > 1]
+            if twice:
+                say(state, "LOOK", f"{s}: {len(twice)} law numbers given to two bills, e.g. {twice[:4]}")
+        # Dates with a typo in the year (NH's HB 425 of 2025: "03/06/2035"; HB 49 of 2023: "04/13/2022"): far outside the
+        # session. (Carried-over bills reach back a year or two; laws are signed and vetoes taken up a year after.)
+        years = getattr(P, "YEARS", 2)
+        stray = [r["nums"][0] for r in recs for v in r["vers"] for d, _ in v["actions"]
+                 if d and re.match(r"\d{4}", str(d)) and not s - 3 <= int(str(d)[:4]) <= s + years + 1]
+        if stray:
+            say(state, "FAIL" if len(set(stray)) > 0.005 * len(recs) else "LOOK",
+                f"{s}: {len(stray)} history lines dated years from the session, e.g. {sorted(set(stray))[:4]}")
         after = [r["nums"][0] for r in recs for v in r["vers"] for i, (d, t) in enumerate(v["actions"])
                  if t == "DELIVERED TO GOVERNOR" and any(d2 == d and re.match(r"PASSED|PLACED ON FLOOR|REFERRED", t2) for d2, t2 in v["actions"][i + 1:])]
         if after:
@@ -93,6 +107,7 @@ def check(state):
         if few:
             say(state, "FAIL" if len(few) > 0.01 * sum(len(r["votes"]) for r in recs) else "LOOK",
                 f"{s}: {len(few)} votes list fewer noes than their tally, e.g. {few[:4]}")
+
     # Sponsors tied to a party, session by session: a session far below the others has a member list that failed to
     # match (AR's 2023-24 members file has one column fewer than 2025-26's, and every member was dropped at first).
     if hasattr(C, "parties"):
@@ -174,6 +189,18 @@ def check(state):
                 say(state, "FAIL", f"{os.path.basename(path)}: {label}: {xs[:4]}")
         if noparty or nophone:
             say(state, "LOOK", f"{os.path.basename(path)}: no party {noparty[:3]}, no phone {nophone[:3]}")
+        # A district map that doesn't match the member list (New Hampshire's HouseDistricts.txt still has the 2012 map):
+        # every legislator's district is one some place in "Where you live" gives.
+        towns = json.load(open(P.TOWNS_PATH)) if os.path.exists(getattr(P, "TOWNS_PATH", "")) else []
+        if towns and isinstance(towns[0], list) and len(towns[0]) >= 3:
+            have = {"S": set(), "L": set()}
+            for t in towns:
+                for key, i in (("S", 2), ("L", 3 if len(t) > 3 else 2)):
+                    have[key] |= {int(d[0]) for d in t[i] if isinstance(d, list) and str(d[0]).isdigit()}
+            off = [sid for sid in people if re.match(r"\d+", sid[2:]) and
+                   int(re.match(r"\d+", sid[2:]).group()) not in have["S" if sid[0] == "S" else "L"]]
+            if off:
+                say(state, "FAIL", f"{os.path.basename(P.TOWNS_PATH)}: {len(off)} legislators' districts aren't in any place's list, e.g. {off[:4]}")
 
     # A label that means a different procedure in different states. "Constitutional amendments" in New York are
     # resolutions that never go to the governor (STATE.amendments in profile.js); in Virginia they're bills that set up

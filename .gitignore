@@ -97,6 +97,8 @@ data/vt/*
 data/ak/*
 # New Hampshire, Montana, Mississippi and Arkansas downloads (states/<st>/fetch.py).
 data/nh/*
+!data/nh/district_towns.json
+!data/nh/district_names.json
 data/mt/*
 data/ms/*
 data/ar/*
