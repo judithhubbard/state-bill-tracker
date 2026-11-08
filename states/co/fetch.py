@@ -38,6 +38,15 @@ TODAY = date.today()
 YEARS = [int(sys.argv[1])] if len(sys.argv) > 1 else [TODAY.year - 2, TODAY.year - 1, TODAY.year]
 REFRESH_DAYS = 7
 INCOMPLETE = set()
+PENDING_VOTES = []  # (year, folder, votes to read, vote -> bill), read after every year's bills
+# The run's own time limit (FETCH_MINUTES, set by the workflow): stop a few minutes early with everything saved, rather
+# than be cut off before writing the incomplete marker.
+START = time.time()
+BUDGET = max(0.0, float(os.environ.get("FETCH_MINUTES") or 0) - 5) * 60
+
+
+def out_of_time():
+    return BUDGET and time.time() - START > BUDGET
 MISSING = object()  # a page that answers 404
 DELAY = 3.0  # seconds between requests: at 1.5 the site answered 429 (too many requests) after about 230
 THROTTLED = 0  # 429 answers in a row
@@ -96,10 +105,12 @@ def get(path):
         print(f"{path}: disallowed by robots.txt; skipped")
         return None
     for attempt in range(4):
+        if out_of_time():
+            return None
         time.sleep(DELAY)
         try:
             req = urllib.request.Request(SITE + path, headers={"User-Agent": AGENT, "Accept": "text/html"})
-            with urllib.request.urlopen(req, timeout=120) as r:
+            with urllib.request.urlopen(req, timeout=30) as r:
                 body = r.read().decode("utf-8", "replace")
             THROTTLED = 0
             if "cf-challenge" in body or "Just a moment..." in body[:2000]:
@@ -554,6 +565,9 @@ def session(year):
 
     got = failed = 0
     for num in todo:
+        if out_of_time():
+            INCOMPLETE.add(f"{year}:bills")
+            break
         page = get(f"/bills/{num}")
         if not isinstance(page, str):
             failed += 1
@@ -587,29 +601,37 @@ def session(year):
             for v in b.get("votes", []):
                 linked.setdefault(v, num)
     vtodo = sorted(v for v in votes if not os.path.exists(os.path.join(folder, "votes", f"{v}.json")))
-    print(f"{year}: {len(votes)} votes, {len(vtodo)} to read", flush=True)
-    vgot = 0
-    for vid in vtodo:
-        if vid.startswith("f"):
-            page = get(f"/bill_votes/{vid[1:]}")
-            parse = parse_floor_vote
-        else:
-            item, vote = vid[1:].split("-")
-            page = get(f"/committee_meeting_hearing_items/{item}/votes/{vote}")
-            parse = parse_committee_vote
-        if isinstance(page, str):
-            v = parse(page, vid)
-            v["bill"] = v["bill"] or linked.get(vid)
-            if v["members"] or v["counts"]:
-                save(os.path.join(folder, "votes", f"{vid}.json"), v)
-                vgot += 1
-        if vgot and vgot % 500 == 0:
-            print(f"{year}: {vgot} of {len(vtodo)} votes read", flush=True)
-    # Votes still to read don't hold the state off the site: its bills are whole, and members' votes fill in run by run
-    # (each vote is read once), as Utah's do.
-    print(f"{year}: {vgot} of {len(vtodo)} votes read now" + (f"; {len(vtodo) - vgot} left for later runs" if vgot < len(vtodo) else ""), flush=True)
+    print(f"{year}: {len(votes)} votes, {len(vtodo)} to read (after every year's bills)", flush=True)
+    PENDING_VOTES.append((year, folder, vtodo, linked))
 
     members_and_committees(year, folder)
+
+
+def read_votes():
+    """Members' votes, after every year's bills (so a run spent on votes never skips a year's bill updates), until the
+    time limit. Votes still to read don't hold the state off the site: its bills are whole, and members' votes fill in
+    run by run (each vote is read once)."""
+    for year, folder, vtodo, linked in PENDING_VOTES:
+        vgot = 0
+        for vid in vtodo:
+            if out_of_time():
+                break
+            if vid.startswith("f"):
+                page = get(f"/bill_votes/{vid[1:]}")
+                parse = parse_floor_vote
+            else:
+                item, vote = vid[1:].split("-")
+                page = get(f"/committee_meeting_hearing_items/{item}/votes/{vote}")
+                parse = parse_committee_vote
+            if isinstance(page, str):
+                v = parse(page, vid)
+                v["bill"] = v["bill"] or linked.get(vid)
+                if v["members"] or v["counts"]:
+                    save(os.path.join(folder, "votes", f"{vid}.json"), v)
+                    vgot += 1
+            if vgot and vgot % 500 == 0:
+                print(f"{year}: {vgot} of {len(vtodo)} votes read", flush=True)
+        print(f"{year}: {vgot} of {len(vtodo)} votes read now" + (f"; {len(vtodo) - vgot} left for later runs" if vgot < len(vtodo) else ""), flush=True)
 
 
 def finish():
@@ -631,6 +653,7 @@ def main():
     started = time.time()
     for y in YEARS:
         session(y)
+    read_votes()
     print(f"done in {(time.time() - started) / 60:.0f} minutes", flush=True)
     finish()
 
