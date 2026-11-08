@@ -322,6 +322,17 @@
    "minutes": 110,
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/mn/fetch.py",
    "note": "The Revisor's Bill Status API, House floor votes, Senate journals and House Research/Senate summaries (PDFs, as text); the first copy (about 9 hours) builds up over several runs. Not built into the site until its converter exists."
+  },
+  {
+   "name": "Delaware",
+   "code": "de",
+   "key": "de-data-v1",
+   "paths": [
+    "data/de"
+   ],
+   "minutes": 110,
+   "run": "python3 states/de/fetch.py",
+   "note": "legis.delaware.gov's own JSON (bills with synopses, roll calls by member, members, committees); the first copy (about 3 hours) builds up over a few runs. Not built into the site until its converter exists."
   }
  ]
 }

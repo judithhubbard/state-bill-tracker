@@ -218,6 +218,12 @@ jobs:
           path: "data/mn"
           key: mn-data-v1-latest
           restore-keys: mn-data-v1-
+      - name: Restore Delaware
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/de"
+          key: de-data-v1-latest
+          restore-keys: de-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
