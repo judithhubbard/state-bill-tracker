@@ -42,7 +42,13 @@ def rows(session, name):
         body = raw.decode("utf-8-sig")
     except UnicodeDecodeError:
         body = raw.decode("cp1252", "replace")
-    return [{k.strip(): (v or "").strip() for k, v in r.items() if k} for r in csv.DictReader(io.StringIO(body))]
+    # 2023 and before (the archive's flat files) write dates "1/23/2023"; later years "2024-02-29 00:00:00".
+    return [{k.strip(): _iso((v or "").strip()) for k, v in r.items() if k} for r in csv.DictReader(io.StringIO(body))]
+
+
+def _iso(v):
+    m = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{4})((?: .*)?)", v)
+    return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}{m.group(4)}" if m else v
 
 
 def titled(t):
@@ -85,8 +91,16 @@ ADOPTED = re.compile(r"^(?:(?:RE-)?ADOPTED,?\s+(HOUSE|HO\.|SENATE|SEN\.)|RULES S
 
 
 def committees(session):
+    """Committee code -> name. 2023 and before have no committee file: the nearest later year's list (the codes are
+    the same; every referral in 2022 and 2023 names one of them)."""
+    have = [y for y in sessions_any("committee") if y >= session] or sessions_any("committee")[-1:]
+    src = min(have, key=lambda y: abs(y - session)) if have else session
     return {r["comm_code"]: re.sub(r"\s+Committee$", "", re.sub(r"^(?:Joint )?Committee on\s+", "", r["comm_name"]))
-            for r in rows(session, "committee")}
+            for r in rows(src, "committee")}
+
+
+def sessions_any(name):
+    return sorted(int(os.path.basename(os.path.dirname(f))) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4, f"{name}.csv")))
 
 
 def legislators(session):
@@ -100,6 +114,15 @@ def legislators(session):
         name = " ".join(x for x in (r.get("commonly used name") or r.get("first name"), r.get("last name"), r.get("suffix")) if x and x.strip())
         code = d if h == "H" else f"S{int(d):02d}"
         out[code] = (h, name, int(d), (r.get("party") or "")[:1])
+    # 2023 and before: the archive's spreadsheet (fetch.py saves it as LegislatorData.csv), keyed by the introducer
+    # file's own codes ("1", "115A" for a member who replaced another mid-session, "S01").
+    for r in rows(session, "LegislatorData"):
+        h = {"House": "H", "Senate": "S"}.get(r.get("chamber"))
+        d = r.get("dist_num", "")
+        if not h or not d.isdigit() or not r.get("dist_code"):
+            continue
+        name = " ".join(x for x in (r.get("common_name") or r.get("fname"), r.get("lname"), r.get("suffix")) if x and x.strip())
+        out[r["dist_code"]] = (h, name, int(d), (r.get("party") or "")[:1])
     return out
 
 

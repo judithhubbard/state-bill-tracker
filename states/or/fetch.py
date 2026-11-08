@@ -13,7 +13,8 @@ AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/
 TABLES = ["Measures", "MeasureHistoryActions", "MeasureSponsors", "MeasureVotes", "CommitteeVotes", "MeasureDocuments",
           "MeasureAnalysisDocuments", "Committees", "CommitteeMembers", "CommitteeMeetings", "CommitteeAgendaItems",
           "Legislators", "LegislativeSessions"]
-FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else date.today().year - 2
+# Two sessions of each kind (long in odd years, short in even ones), so each is compared with past ones like it.
+FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else date.today().year - 4
 
 
 def get(url):
@@ -46,6 +47,9 @@ def main():
         session = f"{year}R1"
         folder = os.path.join(DATA, session)
         os.makedirs(folder, exist_ok=True)
+        # A session two or more years back is finished: read once.
+        if year < date.today().year - 1 and all(os.path.exists(os.path.join(folder, f"{t}.json")) for t in TABLES):
+            continue
         for name in TABLES:
             rows = table(name, session)
             if rows is None:
