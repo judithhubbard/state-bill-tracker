@@ -271,6 +271,17 @@
    "minutes": 20,
    "run": "pip install -q pymssql pypdf && python3 states/nh/fetch.py",
    "note": "The General Court's daily data files (current year), plus its public read-only SQL Server for past years (login read each time from the Legislature's own document, never stored). Not built into the site until its converter exists."
+  },
+  {
+   "name": "Mississippi",
+   "code": "ms",
+   "key": "ms-data-v1",
+   "paths": [
+    "data/ms"
+   ],
+   "minutes": 110,
+   "run": "python3 states/ms/fetch.py",
+   "note": "The Legislature's bill-status XML (billstatus.ls.state.ms.us). Not built into the site until its converter exists."
   }
  ]
 }

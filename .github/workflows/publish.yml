@@ -188,6 +188,12 @@ jobs:
           path: "data/nh"
           key: nh-data-v1-latest
           restore-keys: nh-data-v1-
+      - name: Restore Mississippi
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/ms"
+          key: ms-data-v1-latest
+          restore-keys: ms-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
