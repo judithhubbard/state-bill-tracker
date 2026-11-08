@@ -309,8 +309,7 @@
     "data/id"
    ],
    "minutes": 60,
-   "run": "python3 states/id/fetch.py",
-   "note": "legislature.idaho.gov's bill pages (floor roll calls by member), committees and members. Not built into the site until its converter exists."
+   "run": "python3 states/id/fetch.py && python3 states/id/contacts.py"
   },
   {
    "name": "Minnesota",

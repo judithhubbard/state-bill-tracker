@@ -10,10 +10,12 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "ar", "az", "ca", "co", "ct", "ga", "il", "in", "ma", "md", "me", "mi", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "ar", "az", "ca", "co", "ct", "ga", "id", "il", "in", "ma", "md", "me", "mi", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
+# Each legislature's seats (states/legislatures.json), to check votes against the size of their house.
+LEGISLATURES = json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"]
 # The topics every state uses, with the same names, so states can be compared ("Shared conventions" in CLAUDE.md).
 TOPICS = {"ag": "Agriculture & natural resources", "biz": "Business & consumers", "const": "Constitutional amendments",
           "edu": "Education", "env": "Environment & energy", "gov": "Elections & state government",
@@ -117,6 +119,18 @@ def check(state):
         if few:
             say(state, "FAIL" if len(few) > 0.01 * sum(len(r["votes"]) for r in recs) else "LOOK",
                 f"{s}: {len(few)} votes list fewer noes than their tally, e.g. {few[:4]}")
+        # Votes put in the wrong house: more ayes and noes than the house has seats (ID's history lines don't name the
+        # house, so the converter follows the bill from house to house; WY's roll calls sometimes name the wrong one).
+        seats = LEGISLATURES.get(state, {}).get("seats", {})
+        big = [r["nums"][0] for r in recs for v in r["votes"] if v[1] == "F" and seats.get(v[0]) and v[4] + v[5] > seats[v[0]]]
+        if big:
+            say(state, "FAIL", f"{s}: {len(big)} floor votes have more ayes and noes than their house has seats, e.g. {big[:4]}")
+        # A substitute's vote written with both names ("Hill(Brown)" in ID's House: Brown sits for Hill; "Coho(Lenney)" in
+        # its Senate: Coho sits for Lenney) left as a name: the vote belongs to the member's seat. (TX's "Speaker(C)", the
+        # chair's mark, isn't a name.)
+        subs = collections.Counter(m for r in recs for v in r["votes"] for m, _ in v[6] if isinstance(m, str) and "?" in m and re.search(r"\([A-Za-z][A-Za-z'’ -]+\)", m))
+        if subs:
+            say(state, "FAIL", f"{s}: {sum(subs.values())} votes by names with parentheses not tied to a seat, e.g. {subs.most_common(3)}")
 
     # Sponsors tied to a party, session by session: a session far below the others has a member list that failed to
     # match (AR's 2023-24 members file has one column fewer than 2025-26's, and every member was dropped at first).

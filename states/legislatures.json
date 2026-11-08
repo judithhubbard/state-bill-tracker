@@ -9,6 +9,7 @@
   "ct": {"seats": {"S": 36, "H": 151}, "override": "2/3", "governor": ["Ned Lamont", "D"]},
   "ga": {"seats": {"S": 56, "H": 180}, "override": "2/3", "governor": ["Brian Kemp", "R"]},
   "il": {"seats": {"S": 59, "H": 118}, "override": "3/5", "governor": ["JB Pritzker", "D"]},
+  "id": {"seats": {"S": 35, "H": 70}, "override": "2/3", "governor": ["Brad Little", "R"], "note": "Overriding a veto takes two-thirds of the members present in each house."},
   "in": {"seats": {"S": 50, "H": 100}, "override": "majority", "governor": ["Mike Braun", "R"]},
   "ma": {"seats": {"S": 40, "H": 160}, "override": "2/3", "governor": ["Maura Healey", "D"]},
   "md": {"seats": {"S": 47, "H": 141}, "override": "3/5", "governor": ["Wes Moore", "D"]},

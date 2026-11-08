@@ -454,7 +454,9 @@ from that repo. **Nothing here may change it.**
   full names from the members files (this General Assembly's, then the one before or after for members who left; the
   2023-24 file has one column fewer than 2025-26's). Members' votes: each roll call's Yeas, Nays, Non Voting (A), Present
   (B), Excused (E) by Sponsor Name, matched within the vote's house to that General Assembly's members ("H:12"); members
-  who left are "H?McCollum". Roll calls not yet read aren't shown (the files have no tallies). No summaries: the title is
+  who left are "H?McCollum". The 2023-24 roll-call pages never list Sen. Alan Clark, though their counts include him
+  (HB1024's Senate vote: "Nays: 2", one name); `fill_missing()` puts back the house's members missing from every group
+  when exactly one group is short by that many. Roll calls not yet read aren't shown (the files have no tallies). No summaries: the title is
   the subtitle, sentence-cased (`titled()`), and there's no "What it does". Appropriation bills (most of a fiscal session)
   are `budget` ("Budget bill"). Joint resolutions proposing amendments (not Article V applications) are tagged "const":
   one passage by a majority of each house's members, then the voters at the next general election (`amendmentOnce`; up
@@ -582,6 +584,48 @@ from that repo. **Nothing here may change it.**
   item vetoes on SB 2015 and HB 1544; 2025-26 608 laws (597 with chapters, 11 special-session), 4 vetoes (HB 1540, SB 2160,
   SB 2261, SB 2307; all sustained), item vetoes on 6 budgets. Places (`towns.py`, run once): cities, Census-designated
   places and counties, one district list for both houses.
+- **Idaho (built 2026-11-08):** `python3 states/id/fetch.py` reads
+  legislature.idaho.gov's pages (no API; see its docstring) into data/id/<year>/; `python3 states/id/contacts.py` (every
+  year) builds the contacts. A page a year (`YEARS = 1`): the two-year Legislature (the 68th is 2025-26) meets once a year,
+  from the second Monday of January to late March or April, and bills die at each adjournment (the second year's numbers
+  carry on: 2026's House bills from H0501); laws, deadlines and the governor's actions are yearly. Bills are "H3", "S1023",
+  "HJR4" (`official()` pads them back: "H0003"). `states/id/convert.py` reads each bill page's history, whose lines don't
+  name the house: the bill is followed ("Received from the House ...", "Returned from the Senate ..." move it before the
+  line; "Title apvd - to Senate", "Signed by President; returned to House", "Transmitted to Senate" after it), and a roll
+  call's size (70 or 35) settles it. "Introduced, read first time, referred to JRA for Printing" is the print hearing's
+  formality (a committee voted to introduce it); "Reported Printed and Referred to X" is the referral; budget bills from
+  JFAC go straight to the floor ("Reported Printed; Filed for Second Reading"); members' personal bills are "Filed in the
+  Office of the Chief Clerk" and go nowhere. "Reported out of Committee with Do Pass Recommendation", "... to 14th Order for
+  amendment" (Senate) and "... Recommend place on General Orders" (House) are approvals; "Reported out without
+  recommendation, as amended" is the Committee of the Whole, not a committee. "PASSED - 56-11-3" (ayes, nays, absent) with
+  AYES/NAYS/Absent lists by surname; "FAILED" ends a bill unless "Motion to reconsider - PASSED" (`endedNote()`, as North
+  Dakota's). Passed both houses: enrolled ("to JRA for Enrolling", "referred to enrolling"), or the second house passed it
+  unamended, or the first concurred and passed it again (Idaho re-passes the engrossed bill after concurring). Governor's
+  lines carry their own date ("Reported Signed by Governor on April 4, 2025", "Delivered to Governor at 3:04 p.m. on ...").
+  Laws and vetoes also come from the list page's Enacted Legislation table and vetoed list, which agree with the histories
+  bill for bill: 2024 330 laws (chapters 1-330), 2 vetoes; 2025 340 laws (one with line-item vetoes, H 482), 1 veto (S 1023,
+  override failed in the Senate); 2026 344 laws, 4 vetoes; no veto was overridden. Joint resolutions (HJR/SJR) propose
+  constitutional amendments: two-thirds of each house's members, then the voters (`amendmentOnce`); they go to the
+  Secretary of State, never the governor (2024 HJR 5; 2025 HJR 4 and HJR 6). Sponsors: nearly every bill is a committee's
+  ("House State Affairs Committee"); the member who asked is named only in the Statement of Purpose (a PDF, not
+  downloaded), and the floor sponsors are history lines ("Floor sponsor: Bruce"), so legislators' sponsorship numbers
+  count only the ~20 personal bills a year ("by RUBEL"); How's "About this data" says so. Titles are the list's short
+  titles with abbreviations spelled out (`ABBREV`: "Approp, ITS, add'l" -> "Appropriation, ITS, additional"); the summary
+  is the one-line description; no "What it does" (the Statement of Purpose is the only plain account, a PDF). Roll-call
+  names: "Crane(12)" (district), "Mr. Speaker" (Moyle), and substitutes written with both names, in a different order in
+  each house: the House puts the member first ("Hill(Brown)": Brown sits for Hill), the Senate the substitute first
+  ("Coho(Lenney)"); a name on that year's lists decides (`resolver()`). Members come from each year's committee pages
+  (party by column; no House seat letter: past years take the current member's seat A/B where they still hold it, else
+  the one left) and, for the latest year, the current member list; members not on a year's committee pages (the Speaker
+  serves on none) take a current member's seat when it's free; members who left are "H?Achilles" (2024: Chew, Lee, Dixon,
+  Nash; 2025: Achilles, Andrus). Each district elects a senator and two representatives: seats "S:12", "H:12a" (seat A),
+  "H:12b"; one district list for both houses (`towns.py`: cities, communities and counties, "Boise City city" as "Boise
+  city"). Topics from committees (`COMMITTEE_TOPICS`) and words in the subject heading and title. Earlier years linked by
+  identical short title, one bill in each year, never appropriations or laws. Governor 5 days (Sundays excepted) in
+  session, 10 days (Sundays excepted) after adjournment; no pocket veto; override two-thirds of the members present (each
+  year's last floor day is in `STATE.dated`: add each year's). The governor's phone and contact page are from
+  gov.idaho.gov/contact/ (checked by program 2026-11-08, not by the owner). Leaders from the member list (Speaker Mike
+  Moyle, President Pro Tempore Kelly Anthon); the 69th Legislature organizes in December 2026.
 - **LegiScan states (2026-11-08): Tennessee, then Oklahoma, Maine, Rhode Island, Vermont.** Their legislatures' sites bar
   automated readers in robots.txt, so `legiscan.py` downloads LegiScan's data (CC BY 4.0; monthly query budget shared and
   counted on GitHub) into data/<st>/legiscan/<session_id>/. Converters read only those files, never the API.
@@ -883,6 +927,9 @@ from that repo. **Nothing here may change it.**
     button's box. Check `document.documentElement.scrollWidth` with a bill open.
   - A field that names the wrong house: a few of WY's roll calls say "H" for a Senate vote ("S Introduced and Referred to
     S04 ..."); senators then looked like House voters who didn't match a seat. Take the house from the action's text.
+  - A member a roll-call page counts but never names: AR's 2023-24 pages leave out Sen. Alan Clark in every group (29
+    votes listed fewer noes than their tally). When the unnamed are exactly the house's members missing from all groups
+    and one group is short, they belong there; the "fewer noes than their tally" check catches it.
   - Lists split on commas when names contain commas: WY's "Brown, G, Larson, JT, Burkhart, Jr" (initials, suffixes and
     first names belong to the name before). Count each vote list against its tally.
   - Folder listings whose dates are on the server's local clock (TX, IL, MI): when daylight saving time ends or starts
@@ -926,6 +973,10 @@ from that repo. **Nothing here may change it.**
     refresh keeps the last copy, and votes still to read fill in on later runs.
   - Law numbers on bills that aren't laws: ND's Session Laws give vetoed measures chapter numbers ("Measure Vetoed": HB 1273
     of 2023, chapter 586). Decide laws from the history; the check fails on a law number on a bill that isn't stage 5.
+  - History lines that don't say which house acted (ID): the converter follows the bill from house to house, and a slip
+    puts a vote in the wrong house. The check fails on floor votes with more ayes and noes than the house has seats.
+  - Substitutes written with both names in a different order in each house (ID: House "Hill(Brown)", member first; Senate
+    "Coho(Lenney)", substitute first). The check fails on unresolved vote names with parentheses.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
