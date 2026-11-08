@@ -317,10 +317,28 @@ def statements_run(legislature, earlier_problems):
     return []
 
 
+def never_read(legislature):
+    """What of a Legislature was never downloaded (its bill list, members, committees, a listed bill): what keeps the
+    marker once the first copy is whole. A failed re-read keeps the last copy and doesn't count."""
+    folder = os.path.join(DATA, str(first_year(legislature)))
+    listed = load(os.path.join(folder, "list.json"), None)
+    if listed is None:
+        return [f"{legislature}:list"]
+    out = [f"{legislature}:{n}" for n in ("members", "committees") if not os.path.exists(os.path.join(folder, f"{n}.json"))]
+    resolutions = load(os.path.join(folder, "state.json"), {}).get("resolutions") or {}
+    for b in listed:
+        k = key(b.get("BillNumber"))
+        if kind(k) in KINDS and resolutions.get(k) is not False and not os.path.exists(os.path.join(folder, "bills", f"{k}.json")):
+            out.append(f"{legislature}:bills")
+            break
+    return out
+
+
 def main():
     only = int(sys.argv[1]) if len(sys.argv) > 1 else None
     os.makedirs(DATA, exist_ok=True)
     marker = os.path.join(DATA, "incomplete")
+    whole = not os.path.exists(marker)  # the last run left nothing missing
     # A run cut off by its time limit leaves this, so a partial copy isn't published (cleared after a clean run).
     if not only:
         open(marker, "w").write("running\n")
@@ -344,8 +362,15 @@ def main():
           + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures"), flush=True)
     if only:
         return
+    # Only data never downloaded keeps Alaska off the site; sponsor statements still to read hold it only while the
+    # first copy is being built (a failed refresh keeps the last copy).
+    gaps = [g for legislature in (CURRENT, CURRENT - 1) for g in never_read(legislature)]
+    if not whole:
+        gaps += [p for p in problems if p.endswith(":statements") or p in ("refused", "time")]
     if problems:
-        open(marker, "w").write(" ".join(problems) + "\n")
+        print(f"problems this run: {' '.join(problems)}", flush=True)
+    if gaps:
+        open(marker, "w").write(" ".join(gaps) + "\n")
     elif os.path.exists(marker):
         os.remove(marker)
 

@@ -26,7 +26,8 @@ For each two-year session (2023 = 2023-2024, 2025 = 2025-2026; regular session o
   office, phones, email, website, member id) into members.json, every run; the committees (/<year>/committees/assembly,
   /senate, /joint, then each committee's page: members with "(Chair)" and the like, by member id) into
   committees.json, once a week for the current session.
-data/wi/incomplete lists what failed; it is removed when a run completes cleanly.
+data/wi/incomplete lists what was never downloaded (a failed refresh keeps the last copy; roll calls, committee records
+and journals still to read count only until a run leaves nothing missing); it is removed when nothing is missing.
 Usage: python3 states/wi/fetch.py [first_year]   (default: the session before this one, and this one)
 """
 import html, json, math, os, re, sys, time, urllib.error, urllib.request
@@ -59,6 +60,14 @@ def page_path(year, num):
     return f"/{year}/proposals/reg/{house}/{kind}/{num.lower()}"
 REFRESH_DAYS = 7  # every current-session bill is read again at least this often
 INCOMPLETE = set()
+WHOLE = [True]  # the last run left nothing missing (set in main): the first copy is whole
+
+
+def extra(item):
+    """Roll calls, committee records and journals still to read (and a refusal) hold only a first copy; once it is
+    whole, they fill in on later runs."""
+    if not WHOLE[0]:
+        INCOMPLETE.add(item)
 MISSING = object()  # a page that answers 404
 # The run's own time limit (FETCH_MINUTES, set by the workflow): stop a few minutes early, with everything read so far
 # saved and a summary printed, rather than be cut off silently mid-request.
@@ -95,7 +104,7 @@ def get(path, timeout=30):
             FAILS[f"HTTP {e.code}"] += 1
             if e.code in (401, 403, 429):
                 print(f"{path}: refused ({e.code}); stopping")
-                INCOMPLETE.add(f"refused:{e.code}")
+                extra(f"refused:{e.code}")
                 finish()
                 sys.exit(1)
             time.sleep(10 * (attempt + 1))
@@ -158,7 +167,7 @@ def journal_bills(year, folder):
     for house in ("assembly", "senate"):
         index = get(f"/{year}/related/journals/{house}", timeout=180)
         if not isinstance(index, str):
-            INCOMPLETE.add(f"{year}:journals")
+            extra(f"{year}:journals")
             continue
         days = sorted(set(re.findall(rf'href="(/{year}/related/journals/{house}/\d{{8}})"', index)))
         if first:
@@ -168,7 +177,7 @@ def journal_bills(year, folder):
         for d in dict.fromkeys(todo):
             page = get(d)
             if not isinstance(page, str):
-                INCOMPLETE.add(f"{year}:journals")
+                extra(f"{year}:journals")
                 continue
             body = text(main_part(page))
             for kind, jr, num in re.findall(r"\b(Assembly|Senate) (Joint Resolutions?|Bills?) (\d+)", body):
@@ -414,7 +423,8 @@ def committee_links(year):
     for kind in ("assembly", "senate", "joint"):
         page = get(f"/{year}/committees/{kind}", timeout=180)
         if not isinstance(page, str):
-            INCOMPLETE.add(f"{year}:committees")
+            if not os.path.exists(os.path.join(DATA, str(year), "committees.json")):  # else the last copy stays
+                INCOMPLETE.add(f"{year}:committees")
             continue
         for cid, name in re.findall(r'<a href="/document/committee/\d+/(\d+)">([^<]+)</a>', main_part(page)):
             out.append({"id": cid, "kind": kind, "name": html.unescape(name).strip()})
@@ -447,8 +457,8 @@ def session(year):
         got = bill_list(year, house, kind)
         if got is None:
             print(f"{year} {house} {kind}: no list; kept the last copy")
-            if kind == "bill":  # a missing amendment list shouldn't hold back the bills
-                INCOMPLETE.add(f"{year}:list")
+            if kind == "bill" and not os.path.exists(os.path.join(folder, "list.json")):
+                INCOMPLETE.add(f"{year}:list")  # a missing amendment list, or a failed refresh, doesn't hold back the bills
             got = {k: v for k, v in (load(os.path.join(folder, "list.json"), {}) or {}).items()
                    if split_num(k)[0] == prefix}
         listing.update(got)
@@ -480,7 +490,6 @@ def session(year):
     for i, num in enumerate(todo):
         progress(f"{year} bills", i, len(todo), got)
         if out_of_time():
-            INCOMPLETE.add(f"{year}:bills")
             break
         page = get(page_path(year, num))
         if not isinstance(page, str):
@@ -511,7 +520,8 @@ def session(year):
         got += 1
         if got % 250 == 0:
             print(f"{year}: {got} of {len(todo)} bills read", flush=True)
-    if failed:
+    # A bill whose refresh failed keeps its last copy; only bills never read make the copy incomplete.
+    if any(not os.path.exists(path_of(n)) for n in listing):
         INCOMPLETE.add(f"{year}:bills")
     print(f"{year}: {got} of {len(todo)} bills read ({failed} failed)", flush=True)
     if live and not failed and not out_of_time():  # the journals' changes are only "seen" once their bills are read
@@ -537,7 +547,7 @@ def session(year):
                 save(os.path.join(folder, "votes", f"{vid}.json"), v)
                 vgot += 1
     if vgot < len(vtodo):
-        INCOMPLETE.add(f"{year}:votes")
+        extra(f"{year}:votes")
     print(f"{year}: {len(votes)} roll calls ({vgot} of {len(vtodo)} read now)", flush=True)
 
     rtodo = sorted(r for r in rocps if not os.path.exists(os.path.join(folder, "rocp", r.rsplit("/", 1)[-1] + ".json")))
@@ -551,7 +561,7 @@ def session(year):
             save(os.path.join(folder, "rocp", path.rsplit("/", 1)[-1] + ".json"), parse_rocp(page, path))
             rgot += 1
     if rgot < len(rtodo):
-        INCOMPLETE.add(f"{year}:rocp")
+        extra(f"{year}:rocp")
     print(f"{year}: {len(rocps)} committee records ({rgot} of {len(rtodo)} read now)", flush=True)
 
     members_and_committees(year, folder, live)
@@ -565,7 +575,8 @@ def members_and_committees(year, folder, live):
             page = get(f"/{year}/legislators/{house}", timeout=180)
             got = parse_members(main_part(page), house) if isinstance(page, str) else []
             if not got:
-                INCOMPLETE.add(f"{year}:members")
+                if not os.path.exists(mpath):  # a failed refresh keeps the last copy
+                    INCOMPLETE.add(f"{year}:members")
                 members = None
                 break
             members += got
@@ -588,7 +599,7 @@ def members_and_committees(year, folder, live):
         if out and not bad:
             save(cpath, out)
             print(f"{year}: {len(out)} committees", flush=True)
-        else:
+        elif not os.path.exists(cpath):  # a failed refresh keeps the last copy
             INCOMPLETE.add(f"{year}:committees")
 
 
@@ -607,6 +618,7 @@ def finish():
 def main():
     os.makedirs(DATA, exist_ok=True)
     marker = os.path.join(DATA, "incomplete")
+    WHOLE[0] = not os.path.exists(marker)
     if not os.path.exists(marker):  # until this run finishes, the copy may be partial
         with open(marker, "w") as f:
             f.write("running\n")

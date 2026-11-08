@@ -22,6 +22,7 @@ YEAR = date.today().year
 CURRENT = YEAR if YEAR % 2 else YEAR - 1
 FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else CURRENT - 2
 INCOMPLETE = set()
+WHOLE = [True]  # the last run left nothing missing (set in main): roll calls still to read then don't hold the site
 # Steps that come with a roll call: committee reports and floor votes.
 VOTED = re.compile(r"Reported|Re-reported|final passage|concurred|Amended in .* Committee|defeated", re.I)
 
@@ -58,7 +59,8 @@ def history(session):
             os.replace(path + ".tmp", path)
         else:
             print(f"{session}: no bill history file; kept the last copy")
-            INCOMPLETE.add(session)
+            if not os.path.exists(path):  # only a file never downloaded holds the state off the site
+                INCOMPLETE.add(session)
     if not os.path.exists(path):
         return None
     z = zipfile.ZipFile(path)
@@ -114,8 +116,9 @@ def votes(session, bills):
     done = 0
     for num, stamp, path in todo:
         page = get(f"{SITE}/legislation/bills/{session}/{num.lower()}")
-        if page is False:
-            INCOMPLETE.add(session)
+        if page is False:  # asked again next run
+            if not WHOLE[0]:  # roll calls still to read hold only a first copy; later they fill in run by run
+                INCOMPLETE.add(session)
             continue
         links = sorted(set(html.unescape(l) for l in ROLL.findall(page or "")))
         for link in links:
@@ -127,7 +130,9 @@ def votes(session, bills):
             if rpage:
                 save(rpath, dict(rollcall(rpage, link), link=link))
             elif rpage is False:
-                INCOMPLETE.add(session)
+                stamp = None  # the bill page is read again next run, for this roll call
+                if not WHOLE[0]:
+                    INCOMPLETE.add(session)
         save(path, {"lastUpdate": stamp, "rollcalls": links})
         done += 1
         if done % 100 == 0:
@@ -136,6 +141,7 @@ def votes(session, bills):
 
 def main():
     os.makedirs(DATA, exist_ok=True)
+    WHOLE[0] = not os.path.exists(os.path.join(DATA, "incomplete"))
     sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
     from states.pa import contacts
     try:

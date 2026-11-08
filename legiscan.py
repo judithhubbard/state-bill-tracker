@@ -20,8 +20,9 @@ What's kept, per state: the regular sessions (special sessions left out) that en
 before and start no later than this year, in data/<st>/legiscan/<session_id>/ with the dataset's own layout:
 bill/<bill_number>.json, vote/<roll_call_id>.json, people/<people_id>.json (each as LegiScan gives it: {"bill": ...},
 {"roll_call": ...}, {"person": ...}), plus meta.json (the session, dataset_hash and date, the last master list's time,
-each bill's number, change_hash and when it was last read). data/<st>/incomplete says "running" during a run and is
-removed after a clean full run. FETCH_MINUTES (set by the workflow) stops the run five minutes before it.
+each bill's number, change_hash and when it was last read). data/<st>/incomplete says "running" during a run, then lists
+what was never downloaded (a session's dataset, a new bill); a failed refresh keeps the last copy and doesn't count.
+FETCH_MINUTES (set by the workflow) stops the run five minutes before it.
 
 Usage: python3 legiscan.py tn [ok me ri vt]
 """
@@ -215,7 +216,8 @@ def take_dataset(folder, meta, ds):
 
 def catch_up(folder, meta, session_id):
     """Between Sundays: the master list, then the bills whose change_hash changed, their new roll calls, and new
-    people. Returns False if anything was left undone."""
+    people. Returns False if a bill never saved was left unread: a failed re-read keeps the last copy, and roll calls
+    and people not read now come with Sunday's dataset, so neither holds the state off the site."""
     done = True
     now = time.time()
     if now - meta.get("masterlist_time", 0) < MASTERLIST_EVERY:
@@ -223,22 +225,24 @@ def catch_up(folder, meta, session_id):
         return True
     answer = query("getMasterListRaw", id=session_id)
     if answer is None:
-        return False
+        return True  # the dataset's copies stay
     meta["masterlist_time"] = time.time()
     entries = [v for k, v in answer["masterlist"].items() if k != "session"]
     todo = [e for e in entries if (meta["bills"].get(str(e["bill_id"])) or {}).get("change_hash") != e["change_hash"]]
     print(f"  master list: {len(entries)} bills, {len(todo)} changed since the saved copies", flush=True)
     got = 0
     new_people = set()
-    for e in todo:
+    never = lambda rest: any(str(x["bill_id"]) not in meta["bills"] for x in rest)  # bills never saved
+    for i, e in enumerate(todo):
         if out_of_time():
-            return False
+            return not never(todo[i:])
         old = meta["bills"].get(str(e["bill_id"])) or {}
         if time.time() - old.get("fetched", 0) < BILL_EVERY:
             continue  # read within three hours: next run
         answer = query("getBill", id=e["bill_id"])
         if answer is None:
-            done = False
+            if not old:
+                done = False
             continue
         bill = answer["bill"]
         write_json(os.path.join(folder, "bill", safe_name(bill["bill_number"]) + ".json"), {"bill": bill})
@@ -249,10 +253,9 @@ def catch_up(folder, meta, session_id):
             if os.path.exists(path):
                 continue
             if out_of_time():
-                return False
+                return not never(todo[i + 1:])
             rc = query("getRollCall", id=v["roll_call_id"])
             if rc is None:
-                done = False
                 continue
             write_json(path, {"roll_call": rc["roll_call"]})
             for m in rc["roll_call"].get("votes") or []:
@@ -269,9 +272,7 @@ def catch_up(folder, meta, session_id):
             print(f"  {len(missing)} people not saved yet; the session's people are read once a week")
         elif not out_of_time():
             answer = query("getSessionPeople", id=session_id)
-            if answer is None:
-                done = False
-            else:
+            if answer is not None:
                 meta["people_time"] = time.time()
                 for p in answer["sessionpeople"]["people"]:
                     write_json(os.path.join(folder, "people", f"{p['people_id']}.json"), {"person": p})
@@ -287,20 +288,24 @@ def run_state(st):
     if datasets is None:
         return ["datasetlist"]
     for ds in wanted(datasets):
-        if out_of_time():
-            undone.append(f"{ds['session_id']}:time")
-            continue
         sid = ds["session_id"]
         folder = os.path.join(base, str(sid))
         meta_path = os.path.join(folder, "meta.json")
         meta = read_json(meta_path) or {"bills": {}}
+        # Only a session never downloaded holds the state off the site; a failed refresh keeps the last dataset.
+        read_once = bool(meta.get("dataset_hash"))
+        if out_of_time():
+            if not read_once:
+                undone.append(f"{sid}:time")
+            continue
         meta["session"] = {k: ds.get(k) for k in ("session_id", "state_id", "year_start", "year_end", "session_name",
                                                   "session_title", "special", "sine_die", "prior")}
         print(f"{st.upper()} {ds['session_name']} (session {sid}, {ds['year_start']}-{ds['year_end']})", flush=True)
         try:
             if meta.get("dataset_hash") != ds["dataset_hash"]:
                 if not take_dataset(folder, meta, ds):
-                    undone.append(f"{sid}:dataset")
+                    if not read_once:
+                        undone.append(f"{sid}:dataset")
                     continue
                 write_json(meta_path, meta, indent=1)
             else:
@@ -312,6 +317,16 @@ def run_state(st):
         finally:
             write_json(meta_path, meta, indent=1)
     return undone
+
+
+def never_read(st):
+    """The sessions (from the last saved dataset list) whose dataset was never downloaded: what keeps the marker when a
+    run stops early."""
+    saved = read_json(os.path.join(SHARED, f"datasetlist_{st}.json"))
+    if not saved:
+        return ["datasetlist"]
+    return [f"{d['session_id']}:dataset" for d in wanted(saved["datasetlist"])
+            if not (read_json(os.path.join(DATA, st, "legiscan", str(d["session_id"]), "meta.json")) or {}).get("dataset_hash")]
 
 
 def main():
@@ -328,18 +343,20 @@ def main():
             with open(marker, "w") as f:
                 f.write("running\n")
         undone = []
+        # A run stopped early (the month's limit, an error) leaves the saved copies as they were: only sessions never
+        # downloaded keep the state off the site.
         if stopped:
-            undone = ["stopped"]
+            undone = never_read(st)
         else:
             try:
                 undone = run_state(st)
             except Stop as e:
                 stopped = str(e)
                 print(stopped, flush=True)
-                undone = ["stopped"]
+                undone = never_read(st)
             except Exception as e:  # never let a message carry the key
                 print(scrub(f"{st.upper()}: {e.__class__.__name__} {e}"), flush=True)
-                undone = ["error"]
+                undone = never_read(st)
         if undone:
             with open(marker, "w") as f:
                 f.write(" ".join(undone) + "\n")

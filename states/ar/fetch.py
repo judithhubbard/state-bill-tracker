@@ -556,6 +556,7 @@ def votes_run(biennium, budget):
 
 def main():
     os.makedirs(DATA, exist_ok=True)
+    whole = not os.path.exists(MARKER)  # the last run left nothing missing
     # A run cut off by its time limit leaves this, so a partial copy isn't published (cleared after a clean run).
     if not ONLY and not os.path.exists(MARKER):
         with open(MARKER, "w") as f:
@@ -596,7 +597,8 @@ def main():
                     budget -= got
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
-        MISSING.add("refused")
+        if not whole:  # a refusal stops a first copy; once whole, the last copies stay
+            MISSING.add("refused")
     if out_of_time():
         print("stopped at the time limit", flush=True)
     print(f"run: {STATS['requests']} requests, {STATS['bytes'] / 1e6:.1f} MB, {round((time.time() - START) / 60)} min"

@@ -69,7 +69,8 @@ def session(session):
     items = get(f"{base}/legislation/")
     if not items:
         print(f"{session}: no legislation list (the API didn't answer); kept the last copy")
-        INCOMPLETE.add(session)
+        if not os.path.exists(os.path.join(folder, "legislation.json")):  # only a list never read holds the state off
+            INCOMPLETE.add(session)
         return
     bills = {i["number"].upper(): i for i in items if wanted(i)}
     save(os.path.join(folder, "legislation.json"), list(bills.values()))
@@ -110,7 +111,8 @@ def session(session):
             if k % 300 == 299:
                 save(path, revs)
     save(path, revs)
-    if got < len(bills):
+    # A bill whose refresh failed keeps its last copy (and is asked again next run); only bills never read count.
+    if any(not os.path.exists(os.path.join(folder, "bills", f"{b}.json")) for b in bills):
         INCOMPLETE.add(session)
     print(f"{session}: {got} of {len(bills)} bills read")
 

@@ -35,6 +35,7 @@ FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else YEAR - 2
 KINDS = ("HB", "SB", "HJR", "SJR")
 LOGS = ("SignedByGovernor", "VetoedByGovernor", "Hoghouse")
 INCOMPLETE = set()
+WHOLE = [True]  # the last run left nothing missing (set in main): votes still to read then don't hold the site
 STATS = {"requests": 0}
 
 
@@ -128,7 +129,8 @@ def session(year, sid):
         status = get(f"Bills/BillStatus/{sid}", timeout=600) if index else None
         if not index or status is None:
             print(f"{year}: no bill list or action logs; kept the last copy")
-            INCOMPLETE.add(f"{year}:list")
+            if not (os.path.exists(paths["bills"]) and os.path.exists(paths["status"])):  # only lists never read count
+                INCOMPLETE.add(f"{year}:list")
             index = status = None
     for sub in ("bills", "votes"):
         os.makedirs(os.path.join(folder, sub), exist_ok=True)
@@ -168,7 +170,8 @@ def session(year, sid):
             save(paths["seen"], seen)
             print(f"{year}: {got} of {len(todo)} bills read", flush=True)
     save(paths["seen"], seen)
-    if got < len(todo):
+    # A bill whose refresh failed keeps its last copy; only bills never read make the copy incomplete.
+    if any(not os.path.exists(os.path.join(folder, "bills", f"{k}.json")) for k in bills):
         INCOMPLETE.add(f"{year}:bills")
     print(f"{year}: {len(bills)} bills ({got} of {len(todo)} read now; {len(index)} items listed)", flush=True)
 
@@ -183,7 +186,7 @@ def session(year, sid):
             vgot += 1
             if vgot % 200 == 0:
                 print(f"{year}: {vgot} of {len(vtodo)} votes read", flush=True)
-    if vgot < len(vtodo):
+    if vgot < len(vtodo) and not WHOLE[0]:  # votes still to read hold only a first copy; later they fill in
         INCOMPLETE.add(f"{year}:votes")
     print(f"{year}: {len(votes)} votes ({vgot} of {len(vtodo)} read now)", flush=True)
 
@@ -192,25 +195,30 @@ def session(year, sid):
         if members:
             save(paths["members"], members)
             print(f"{year}: {len(members)} members", flush=True)
-        else:
+        elif not os.path.exists(paths["members"]):  # a failed refresh keeps the last copy
             INCOMPLETE.add(f"{year}:members")
     if live or not os.path.exists(paths["committees"]):
         listing = get(f"SessionCommittees/Session/{sid}")
         if listing:
             out = []
+            last = {e["listing"]["SessionCommitteeId"]: e["detail"] for e in load(paths["committees"]) or []
+                    if isinstance(e, dict) and e.get("detail") and isinstance(e.get("listing"), dict)}
             for c in listing:
-                d = get(f"SessionCommittees/Detail/{c['SessionCommitteeId']}")
-                if not d:
+                d = get(f"SessionCommittees/Detail/{c['SessionCommitteeId']}") or last.get(c["SessionCommitteeId"])
+                if not d:  # never read (a failed detail keeps the last copy's)
                     INCOMPLETE.add(f"{year}:committees")
                 out.append({"listing": c, "detail": d or None})
             save(paths["committees"], out)
             print(f"{year}: {len(out)} committees", flush=True)
-        else:
+        elif not os.path.exists(paths["committees"]):
             INCOMPLETE.add(f"{year}:committees")
     if live or not os.path.exists(paths["logs"]):
         out = {}
+        last = load(paths["logs"]) or {}
         for name in LOGS:
             d = get(f"BillLogs/{name}/{sid}")
+            if d is None:
+                d = last.get(name)  # a failed refresh keeps the last copy
             if d is None:
                 INCOMPLETE.add(f"{year}:logs")
             out[name] = d
@@ -220,13 +228,17 @@ def session(year, sid):
 def main():
     os.makedirs(DATA, exist_ok=True)
     marker = os.path.join(DATA, "incomplete")
+    WHOLE[0] = not os.path.exists(marker)
     if not os.path.exists(marker):  # until this run finishes, the copy may be partial
         with open(marker, "w") as f:
             f.write("running\n")
     began = time.time()
+    refused = False
     try:
         ids = session_ids()
         if not ids:
+            if WHOLE[0]:
+                os.remove(marker)  # nothing read: the last copies stand as they were
             sys.exit("No session list from the API; kept the last copies")
         save(os.path.join(DATA, "sessions.json"), ids)
         for y in range(YEAR, FIRST - 1, -1):  # this year's session first
@@ -239,15 +251,17 @@ def main():
             session(YEAR + 1, ids[YEAR + 1])
     except Refused as e:
         print(f"Stopped: {e}")
-        INCOMPLETE.add("refused")
+        refused = True
+        if not WHOLE[0]:  # a refusal stops a first copy; once whole, the last copies stay
+            INCOMPLETE.add("refused")
     print(f"{STATS['requests']} requests in {(time.time() - began) / 60:.0f} minutes")
     if INCOMPLETE:
         with open(marker, "w") as f:
             f.write(" ".join(sorted(INCOMPLETE)) + "\n")
-        if "refused" in INCOMPLETE:
-            sys.exit(1)
     elif os.path.exists(marker):
         os.remove(marker)
+    if refused:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

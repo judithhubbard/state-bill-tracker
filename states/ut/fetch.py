@@ -334,6 +334,7 @@ def main():
         raise SystemExit("No Utah developer token (UTAH_API_TOKEN or ~/.utah_api_token)")
     os.makedirs(DATA, exist_ok=True)
     marker = os.path.join(DATA, "incomplete")
+    whole = not os.path.exists(marker)  # the last run left nothing missing
     # A run cut off by its time limit leaves this, so a partial copy isn't published (cleared after a clean run).
     open(marker, "w").write("running\n")
     problems = []
@@ -347,9 +348,13 @@ def main():
                 print(f"votes: {left} still to read; the next run continues", flush=True)
     except Refused as e:
         print(f"Stopped: the server refused a request ({scrub(e)})", flush=True)
-        problems.append("refused")
+        if not whole:  # a refusal stops a first copy; once whole, the last copies stay
+            problems.append("refused")
     except Exception as e:
-        open(marker, "w").write("failed\n")
+        if whole and not problems:
+            os.remove(marker)  # the last copies stand as they were
+        else:
+            open(marker, "w").write(" ".join(problems + ["failed"]) + "\n")
         raise SystemExit(f"Failed: {type(e).__name__}: {scrub(e)}")
     if problems:
         open(marker, "w").write(" ".join(problems) + "\n")

@@ -165,17 +165,22 @@ def bills(year):
     listing = get(f"/{year}/bills")
     actions = get(f"/{year}/bill-actions")
     rolls = get(f"/{year}/rollcalls")
+    # Only data never read holds Indiana off the site: once a year's first copy is whole ("complete"), a failed
+    # refresh keeps the last copies.
     if not (isinstance(listing, dict) and isinstance(listing.get("items"), list) and listing["items"]):
         print(f"{year}: bill list unreadable; kept the last copies", flush=True)
-        INCOMPLETE.add(f"{year}:list")
+        if not state.get("complete"):
+            INCOMPLETE.add(f"{year}:list")
         return False
     if not (isinstance(actions, dict) and isinstance(actions.get("items"), list)):
         print(f"{year}: actions unreadable; kept the last copies", flush=True)
-        INCOMPLETE.add(f"{year}:actions")
+        if not state.get("complete"):
+            INCOMPLETE.add(f"{year}:actions")
         return False
     if not (isinstance(rolls, dict) and isinstance(rolls.get("items"), list)):
         print(f"{year}: roll calls unreadable; kept the last copies", flush=True)
-        INCOMPLETE.add(f"{year}:rollcalls")
+        if not os.path.exists(os.path.join(folder, "rollcalls.json")):
+            INCOMPLETE.add(f"{year}:rollcalls")
         rolls = load(os.path.join(folder, "rollcalls.json"), {"items": []})
     else:
         save(os.path.join(folder, "rollcalls.json"), rolls)
@@ -232,8 +237,8 @@ def bills(year):
         state["complete"] = True
         state["lastRun"] = run_start
         save(state_path, state)
-    else:
-        INCOMPLETE.add(f"{year}:bills")
+    elif any(not os.path.exists(os.path.join(folder, "bills", f"{i['billName'].upper()}.json")) for i in wanted):
+        INCOMPLETE.add(f"{year}:bills")  # a bill never read (one whose refresh failed keeps its last copy)
     return done
 
 
@@ -290,11 +295,11 @@ def people(year):
     else:
         ok = False
         print(f"{year}: committees unreadable; kept the last copy", flush=True)
+    state = load(state_path, {})
     if ok:
-        state = load(state_path, {})
         state["people"] = True
         save(state_path, state)
-    else:
+    elif not state.get("people"):  # read whole once: a failed refresh keeps the last copy
         INCOMPLETE.add(f"{year}:people")
 
 
@@ -315,24 +320,29 @@ def main():
     if not key():
         raise SystemExit("No Indiana API key (INDIANA_API_KEY or ~/.indiana_api_key)")
     os.makedirs(DATA, exist_ok=True)
+    whole = not os.path.exists(os.path.join(DATA, "incomplete"))  # the last run left nothing missing
     with open(os.path.join(DATA, "incomplete"), "w") as f:  # until this run finishes, the copy may be partial
         f.write("running\n")
     try:
         listed = sessions()
-        if not listed:
-            INCOMPLETE.add("sessions")
-        years = [y for y in listed if y >= FIRST]
         if listed:
             save(os.path.join(DATA, "sessions.json"), listed)
+        else:
+            listed = load(os.path.join(DATA, "sessions.json"), []) or []  # a failed refresh: the last list
+            if not listed:
+                INCOMPLETE.add("sessions")
+        years = [y for y in listed if y >= FIRST]
         for y in sorted(years, reverse=True):  # the newest session first
             bills(y)
         for y in sorted(years, reverse=True):
             people(y)
     except OutOfTime:
-        INCOMPLETE.add("time")
+        if not whole:  # once whole, a run cut short leaves the last copies
+            INCOMPLETE.add("time")
     except Refused as e:
         print(f"Stopped: {e}", flush=True)
-        INCOMPLETE.add("refused")
+        if not whole:
+            INCOMPLETE.add("refused")
     finish()
 
 

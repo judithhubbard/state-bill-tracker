@@ -129,8 +129,12 @@ def main():
     except Exception as e:
         print(f"people: {e}; kept the last copy")
     marker = os.path.join(DATA, "incomplete")
-    if INCOMPLETE or any(not os.path.exists(os.path.join(DATA, str(y), "state.json")) or
-                         not json.load(open(os.path.join(DATA, str(y), "state.json"))).get("complete") for y in range(YEAR - 2, YEAR + 1)):
+    # Only a session whose first copy isn't whole keeps Arizona off the site: a failed page or the daily limit during a
+    # later run's update keeps the saved bills (the next run asks again from the same time).
+    if INCOMPLETE:
+        print(f"not read this run: {' '.join(INCOMPLETE)}")
+    if any(not os.path.exists(os.path.join(DATA, str(y), "state.json")) or
+           not json.load(open(os.path.join(DATA, str(y), "state.json"))).get("complete") for y in range(YEAR - 2, YEAR + 1)):
         INCOMPLETE.append("first copy")
         open(marker, "w").write(" ".join(INCOMPLETE) + "\n")
     elif os.path.exists(marker):

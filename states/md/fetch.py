@@ -64,7 +64,8 @@ def members():
                 out.append(m)
     if len(out) < 180:
         print(f"members: only {len(out)}; kept the last copy")
-        INCOMPLETE.append("members")
+        if not os.path.exists(os.path.join(DATA, "members.json")):  # only a list never read holds the state off
+            INCOMPLETE.append("members")
         return
     json.dump(out, open(os.path.join(DATA, "members.json"), "w"), indent=1, ensure_ascii=False)
     print(f"members: {len(out)}")

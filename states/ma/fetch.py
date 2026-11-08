@@ -55,7 +55,8 @@ def session(session):
     docs = get(f"{API}/GeneralCourts/{gc}/Documents")
     if not docs:
         print(f"{session}: no document list; kept the last copy")
-        INCOMPLETE.add(session)
+        if not os.path.exists(os.path.join(folder, "documents.json")):  # only a list never read holds the state off
+            INCOMPLETE.add(session)
         return
     bills = {d["BillNumber"]: d for d in docs if (d.get("BillNumber") or "")[:1] in ("H", "S") and d["BillNumber"][1:].isdigit()}
     save(os.path.join(folder, "documents.json"), list(bills.values()))
@@ -82,8 +83,9 @@ def session(session):
         for ok in pool.map(one, sorted(bills)):
             got += ok
     # A few bills whose history the API fails on every time mustn't hold back the whole state (Ohio's HB 178 trap):
-    # incomplete only when more than 1% are missing.
-    if got < 0.99 * len(bills):
+    # incomplete only when more than 1% were never read (a bill whose refresh failed keeps its last copy).
+    have = sum(os.path.exists(os.path.join(folder, "bills", f"{b}.json")) for b in bills)
+    if have < 0.99 * len(bills):
         INCOMPLETE.add(session)
     print(f"{session}: {got} of {len(bills)} bills read", flush=True)
     for name, url in (("members", f"{API}/GeneralCourts/{gc}/LegislativeMembers"),

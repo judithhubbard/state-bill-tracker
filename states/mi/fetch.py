@@ -74,7 +74,8 @@ def main():
                        re.finditer(r"(\d+/\d+/\d{4}\s+\d+:\d+ [AP]M)\s+(\d+) <A HREF=\"[^\"]*/((?:\d{4})-(?:[HS]B-\d+|[HS]JR-[A-Z]+)\.xml)\"", listing)}
             if not entries:
                 print(f"{session} {house}: no listing; kept the last copies")
-                incomplete.append(f"{session}:{house}")
+                if not os.path.exists(os.path.join(folder, "listing.json")):  # only a folder never read holds the state off
+                    incomplete.append(f"{session}:{house}")
                 continue
             seen_path = os.path.join(folder, "listing.json")
             try:
@@ -96,7 +97,8 @@ def main():
                     seen[n] = entries[n]
                     got += 1
             json.dump(seen, open(seen_path, "w"))
-            if got < len(todo):
+            # A file whose refresh failed keeps its last copy; only files never downloaded make the copy incomplete.
+            if any(not os.path.exists(os.path.join(folder, n)) for n in entries):
                 incomplete.append(f"{session}:{house}")
             print(f"{session} {house}: {got} of {len(todo)} read ({len(entries)} listed)", flush=True)
     print(f"run: {round((time.time() - START) / 60)} min" + ("; stopped at the time limit" if out_of_time() else "")

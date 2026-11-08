@@ -28,7 +28,8 @@ For each two-year session (2023 = 2023-2024, 2025 = 2025-2026; regular session o
   member id) into committees.json, once a week. Past sessions' committee pages aren't on the site.
 The Legislative Analysis Division's bill summaries are PDFs listed on /Legislation/Bills/Summaries/<year>/<H4> (links
 to https://dashboard.ncleg.gov/api/Services/BillSummary/<year>/<summary id>, about 50 KB each); not downloaded yet.
-data/nc/incomplete lists what failed; it is removed when a run completes cleanly.
+data/nc/incomplete lists what was never downloaded (a failed refresh keeps the last copy; roll calls still to read count
+only before the first clean run); it is removed when nothing is missing.
 Usage: python3 states/nc/fetch.py [first_year]   (default: the session before this one, and this one)
 """
 import html, json, math, os, re, sys, time, urllib.error, urllib.request
@@ -45,6 +46,8 @@ FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else CURRENT - 2
 DELAY = 2.0  # robots.txt's Crawl-delay
 REFRESH_DAYS = 7  # every current-session bill (and the members' and committees' pages) is read again this often
 INCOMPLETE = set()
+WHOLE = [True]  # the last run left nothing missing (set in main): roll calls still to read then don't hold the site
+VOTES_LEFT = set()  # sessions with roll calls still to read
 MISSING = object()  # a page that answers 404
 _last = [0.0]
 
@@ -80,7 +83,8 @@ def get(url):
 
 def refused(url, why):
     print(f"{url}: refused ({why}); stopping", flush=True)
-    INCOMPLETE.add(f"refused:{why}".replace(" ", "_"))
+    if not WHOLE[0]:  # a refusal stops a first copy; once whole, the last copies stay
+        INCOMPLETE.add(f"refused:{why}".replace(" ", "_"))
     finish()
     sys.exit(1)
 
@@ -384,12 +388,13 @@ def members(year, folder, live, seen):
         for chamber in ("H", "S"):
             got = member_list(chamber)
             if not got:
-                INCOMPLETE.add(f"{year}:members")
+                if not os.path.exists(mpath):  # only a list never read holds the state off the site
+                    INCOMPLETE.add(f"{year}:members")
                 print(f"{year}: no {chamber} member list; kept the last copy")
                 return
             people += got
     else:
-        if f"{year}:votes" not in INCOMPLETE:
+        if year not in VOTES_LEFT:
             save(mpath, [{"chamber": c, "name": n, "party": pa, "fromVotes": True} for (c, n), pa in sorted(seen.items())])
             print(f"{year}: {len(seen)} member names from the roll calls", flush=True)
         return
@@ -427,13 +432,15 @@ def committees(year, folder, live):
     except ValueError:
         listed = None
     if listed is None:
-        INCOMPLETE.add(f"{year}:committees")
+        if not os.path.exists(cpath):  # a failed refresh keeps the last copy
+            INCOMPLETE.add(f"{year}:committees")
         return
     out = {"listed": listed, "pages": []}
     if live:
         page = get("/Committees")
         if not isinstance(page, str):
-            INCOMPLETE.add(f"{year}:committees")
+            if not os.path.exists(cpath):
+                INCOMPLETE.add(f"{year}:committees")
             return
         links = sorted(set(re.findall(r'href="/Committees/CommitteeInfo/((?:House|Senate)(?:Standing|Select))/(\d+)"', page)),
                        key=lambda x: (x[0], int(x[1])))
@@ -459,7 +466,8 @@ def committees(year, folder, live):
             c["members"] = roles
             out["pages"].append(c)
         if bad:
-            INCOMPLETE.add(f"{year}:committees")
+            if not os.path.exists(cpath):
+                INCOMPLETE.add(f"{year}:committees")
             if os.path.exists(cpath):
                 print(f"{year}: {bad} committee pages failed; kept the last copy")
                 return
@@ -478,8 +486,9 @@ def session(year):
     listing = bill_list(year)
     if not listing:
         print(f"{year}: no bill list; kept the last copy")
-        INCOMPLETE.add(f"{year}:list")
         listing = load(os.path.join(folder, "list.json"), {}) or {}
+        if not listing:  # only a list never read holds the state off the site
+            INCOMPLETE.add(f"{year}:list")
     else:
         save(os.path.join(folder, "list.json"), listing)
 
@@ -530,7 +539,8 @@ def session(year):
         got += 1
         if got % 250 == 0:
             print(f"{year}: {got} of {len(todo)} bills read", flush=True)
-    if failed:
+    # A bill whose refresh failed keeps its last copy; only bills never read make the copy incomplete.
+    if any(not os.path.exists(path_of(n)) for n in listing):
         INCOMPLETE.add(f"{year}:bills")
     print(f"{year}: {got} of {len(todo)} bills read ({failed} failed)", flush=True)
 
@@ -557,7 +567,9 @@ def session(year):
             if vgot and vgot % 250 == 0:
                 print(f"{year}: {vgot} of {len(vtodo)} roll calls read", flush=True)
     if vgot < len(vtodo):
-        INCOMPLETE.add(f"{year}:votes")
+        VOTES_LEFT.add(year)
+        if not WHOLE[0]:  # roll calls still to read hold only a first copy; later they fill in run by run
+            INCOMPLETE.add(f"{year}:votes")
     print(f"{year}: {vgot} of {len(vtodo)} roll calls read", flush=True)
 
     seen = {}
@@ -582,6 +594,7 @@ def finish():
 def main():
     os.makedirs(DATA, exist_ok=True)
     marker = os.path.join(DATA, "incomplete")
+    WHOLE[0] = not os.path.exists(marker)
     if not os.path.exists(marker):  # until this run finishes, the copy may be partial
         with open(marker, "w") as f:
             f.write("running\n")

@@ -61,7 +61,8 @@ At ten seconds a request, a first copy of a session takes about 12 hours (1,641 
 runs, each resuming where the last stopped. Each run reads every session's members, committees and list first, then
 the per-bill requests, newest session first. data/mt/incomplete lists what was never downloaded (a session's list,
 votes, committee votes, co-sponsors, members); it is removed once nothing is missing. A failed request where a last
-copy exists keeps that copy and doesn't mark the download incomplete.
+copy exists keeps that copy and doesn't mark the download incomplete, and once a session's first copy is whole
+("whole" in its state.json), votes, committee votes and co-sponsors still to read don't either.
 Usage: python3 states/mt/fetch.py [year]   (default: every session from FIRST_YEAR; a single year leaves the marker alone)
 """
 import gzip, json, os, sys, time, urllib.error, urllib.request
@@ -397,7 +398,9 @@ def missing(s, folder):
         out.append(f"{s['year']}:members")
     if not state.get("listed") and not (s["live"] and os.path.isdir(os.path.join(folder, "bills"))):
         out.append(f"{s['year']}:list")
-    if not s["archive"]:
+    # Votes, committee votes and co-sponsors hold the session back only until its first copy is whole: after that, ones
+    # still to read (a new vote, a failed request) fill in on later runs.
+    if not s["archive"] and not state.get("whole"):
         for k, b in bills_on_disk(folder).items():
             v, a = stamps(b)
             if v and not os.path.exists(os.path.join(folder, "votes", f"{k}.json")):
@@ -446,6 +449,9 @@ def session_details(s):
     if not s["archive"]:
         per_bill(s, folder, state)
         cosponsors(s, folder, state)
+    if state.get("listed") and not state.get("whole") and not missing(s, folder):
+        state["whole"] = True
+        save(state, state_path)
     if state.get("listed") and not s["live"] and not missing(s, folder) and not any(todo(folder, state).values()) \
             and not out_of_time():
         state["finished"] = True

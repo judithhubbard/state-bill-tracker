@@ -25,7 +25,8 @@ For each regular session (2024, 2025, 2026; one a year, January to May):
   assignments) into members.json; the House and Senate committees of reference and the year-round committees
   (/committees?sess=2025a, then each committee's page: members with "Chair"/"Vice Chair", meeting days) into
   committees.json. A finished session's once; the current one's once a week.
-data/co/incomplete lists what failed (votes not yet read don't count); it is removed when a run completes cleanly.
+data/co/incomplete lists what was never downloaded (votes not yet read don't count; a failed refresh keeps the last
+copy); it is removed when nothing is missing.
 Usage: python3 states/co/fetch.py [year]   (default: 2024, 2025 and 2026, i.e. this year and the two before)
 """
 import html, json, math, os, re, sys, time, urllib.error, urllib.parse, urllib.request
@@ -38,6 +39,7 @@ TODAY = date.today()
 YEARS = [int(sys.argv[1])] if len(sys.argv) > 1 else [TODAY.year - 2, TODAY.year - 1, TODAY.year]
 REFRESH_DAYS = 7
 INCOMPLETE = set()
+WHOLE = [True]  # the last run left nothing missing (set in main)
 PENDING_VOTES = []  # (year, folder, votes to read, vote -> bill), read after every year's bills
 # The run's own time limit (FETCH_MINUTES, set by the workflow): stop a few minutes early with everything saved, rather
 # than be cut off before writing the incomplete marker.
@@ -141,7 +143,8 @@ def get(path):
 
 def refused(path, why):
     print(f"{path}: refused ({why}); stopping")
-    INCOMPLETE.add(f"refused:{why}")
+    if not WHOLE[0]:  # a refusal stops a first copy; once whole, the last copies stay
+        INCOMPLETE.add(f"refused:{why}")
     finish()
     sys.exit(1)
 
@@ -489,7 +492,8 @@ def members_and_committees(year, folder):
             save(mpath, {"asOf": TODAY.isoformat(), "session": sess, "members": members})
             print(f"{year}: {len(members)} members", flush=True)
         else:
-            INCOMPLETE.add(f"{year}:members")
+            if not os.path.exists(mpath):  # only a list never read holds the state off the site
+                INCOMPLETE.add(f"{year}:members")
             print(f"{year}: member list incomplete; kept the last copy", flush=True)
     cpath = os.path.join(folder, "committees.json")
     age = (time.time() - os.path.getmtime(cpath)) / 86400 if os.path.exists(cpath) else None
@@ -513,7 +517,7 @@ def members_and_committees(year, folder):
         if out and not bad:
             save(cpath, {"asOf": TODAY.isoformat(), "session": sess, "committees": out})
             print(f"{year}: {len(out)} committees", flush=True)
-        else:
+        elif not os.path.exists(cpath):  # a failed refresh keeps the last copy
             INCOMPLETE.add(f"{year}:committees")
 
 
@@ -533,7 +537,8 @@ def session(year):
         listing = bill_list(year)
         if listing is None:
             print(f"{year}: no bill list; kept the last copy", flush=True)
-            INCOMPLETE.add(f"{year}:list")
+            if not old_list:
+                INCOMPLETE.add(f"{year}:list")
             listing = (old_list or {}).get("bills", {})
         elif listing:
             save(lpath, {"asOf": TODAY.isoformat(), "bills": listing})
@@ -566,7 +571,6 @@ def session(year):
     got = failed = 0
     for num in todo:
         if out_of_time():
-            INCOMPLETE.add(f"{year}:bills")
             break
         page = get(f"/bills/{num}")
         if not isinstance(page, str):
@@ -589,7 +593,8 @@ def session(year):
         got += 1
         if got % 100 == 0:
             print(f"{year}: {got} of {len(todo)} bills read", flush=True)
-    if failed:
+    # A bill whose refresh failed keeps its last copy; only bills never read make the copy incomplete.
+    if any(not os.path.exists(path_of(n)) for n in listing):
         INCOMPLETE.add(f"{year}:bills")
     print(f"{year}: {got} of {len(todo)} bills read ({failed} failed)", flush=True)
 
@@ -646,6 +651,7 @@ def finish():
 def main():
     os.makedirs(DATA, exist_ok=True)
     marker = os.path.join(DATA, "incomplete")
+    WHOLE[0] = not os.path.exists(marker)
     if not os.path.exists(marker):  # until this run finishes, the copy may be partial
         with open(marker, "w") as f:
             f.write("running\n")
