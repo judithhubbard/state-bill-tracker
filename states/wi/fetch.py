@@ -77,15 +77,17 @@ def progress(label, i, total, got):
               + (f"; failures {dict(FAILS)}" if FAILS else ""), flush=True)
 
 
-def get(path):
-    """The page's text; MISSING for a 404, None when it can't be read. Stops the run if the site refuses us."""
+def get(path, timeout=30):
+    """The page's text; MISSING for a 404, None when it can't be read. Stops the run if the site refuses us. The large
+    pages (bill lists, journal indexes, member and committee lists: hundreds of KB, slow from GitHub's machines) are
+    given up to three minutes; the thousands of small ones 30 seconds."""
     for attempt in range(3):
         if out_of_time():
             return None
         time.sleep(1)
         try:
             req = urllib.request.Request(SITE + path, headers={"User-Agent": AGENT})
-            with urllib.request.urlopen(req, timeout=30) as r:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
                 return r.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
             if e.code == 404:
@@ -133,7 +135,7 @@ def main_part(page):
 def bill_list(year, house, kind="bill"):
     """{"AB1": {"status": "A - Veto Sustained", "relating": "Relating to: ..."}} from a house's bill (or joint
     resolution) list, or None."""
-    page = get(f"/{year}/proposals/reg/{house}/{kind}")
+    page = get(f"/{year}/proposals/reg/{house}/{kind}", timeout=180)
     if not isinstance(page, str):
         return None
     out = {}
@@ -154,7 +156,7 @@ def journal_bills(year, folder):
     seen = set(load(os.path.join(folder, "journals.json"), []))
     named, read = set(), []
     for house in ("assembly", "senate"):
-        index = get(f"/{year}/related/journals/{house}")
+        index = get(f"/{year}/related/journals/{house}", timeout=180)
         if not isinstance(index, str):
             INCOMPLETE.add(f"{year}:journals")
             continue
@@ -410,7 +412,7 @@ def parse_members(page, house):
 def committee_links(year):
     out = []
     for kind in ("assembly", "senate", "joint"):
-        page = get(f"/{year}/committees/{kind}")
+        page = get(f"/{year}/committees/{kind}", timeout=180)
         if not isinstance(page, str):
             INCOMPLETE.add(f"{year}:committees")
             continue
@@ -560,7 +562,7 @@ def members_and_committees(year, folder, live):
     if live or not os.path.exists(mpath):
         members = []
         for house in ("assembly", "senate"):
-            page = get(f"/{year}/legislators/{house}")
+            page = get(f"/{year}/legislators/{house}", timeout=180)
             got = parse_members(main_part(page), house) if isinstance(page, str) else []
             if not got:
                 INCOMPLETE.add(f"{year}:members")
