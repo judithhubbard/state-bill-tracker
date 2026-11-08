@@ -259,6 +259,21 @@ def vote_file(session, house, rcs, measure):
 VOTE_CODE = {"Nays": "N", "Non Voting": "A", "Present": "B", "Excused": "E"}
 
 
+def fill_missing(groups, counts, house):
+    """Put back a member the roll-call page counts but doesn't list. The 2023-24 pages never list Sen. Alan Clark ("A.
+    Clark"): each Senate roll call's groups add up to 35 but name 34 (HB1024's Senate vote: "Nays: 2", one name). When the
+    names a page leaves out are exactly the house's members missing from every group, and only one group is short, they
+    belong to that group; otherwise the page's names are kept as they are."""
+    short = {g: int(counts.get(g) or 0) - len(groups[g]) for g in groups}
+    if not any(n > 0 for n in short.values()) or any(n < 0 for n in short.values()):
+        return
+    listed = {n for ns in groups.values() for n in ns}
+    missing = sorted(house - listed)
+    lacking = [g for g, n in short.items() if n > 0]
+    if len(lacking) == 1 and short[lacking[0]] == len(missing):
+        groups[lacking[0]] += missing
+
+
 def load_session(session):
     """Read one year's bills and return (records, bill number -> record index, fetched time, delegation)."""
     b = biennium(session)
@@ -387,8 +402,10 @@ def load_session(session):
             if not v:
                 continue
             seat = lambda n: (lambda m: f"{h}:{m['district']}" if m else f"{h}?{n}")(who.get((h, n)))
-            names_ = [[seat(n), VOTE_CODE[g]] for g in VOTE_CODE for n in (v.get("names") or {}).get(g) or []]
             counts = v.get("counts") or {}
+            groups = {g: list((v.get("names") or {}).get(g) or []) for g in ("Yeas",) + tuple(VOTE_CODE)}
+            fill_missing(groups, counts, {n for (hh, n) in who if hh == h})
+            names_ = [[seat(n), VOTE_CODE[g]] for g in VOTE_CODE for n in groups[g]]
             votes.append([h, "F", None, d, int(counts.get("Yeas") or 0), int(counts.get("Nays") or 0), names_])
         action_dates = [s[0] for s in steps if s[0]]
         act_date = text(x.get("Act Date"))[:10]
