@@ -58,6 +58,8 @@ def current(state):
             "seats": seats, "parties": dict(sorted(parties.items(), key=lambda x: -x[1])), "vacant": seats - filled,
             "majority": top if n > seats / 2 else None,  # a plurality isn't a majority
             "overrideSeats": need, "override": facts["override"], "canOverride": bool(top) and n >= need,
+            # A chamber run by a bipartisan coalition (Alaska's): no party controls it, whatever the seat counts say.
+            **({"majority": "C", "canOverride": False} if chamber in facts.get("coalition", []) else {}),
         }
     majorities = {c["majority"] for c in out["chambers"].values()}
     out["unified"] = out["governor"][1] if majorities == {out["governor"][1]} else None
@@ -69,7 +71,7 @@ PARTY_NAME = {"D": "Democrats", "R": "Republicans", "I": "independents", "O": "o
 
 def badge(party):
     """A party's letter in a small colored badge (the letter carries the meaning; the color helps)."""
-    name = {"D": "Democratic", "R": "Republican", "I": "Independent"}.get(party, "Other")
+    name = {"D": "Democratic", "R": "Republican", "I": "Independent", "C": "Bipartisan coalition"}.get(party, "Other")
     return f'<abbr class="bp-pty bp-{party}" title="{name}">{party}</abbr>'
 
 
@@ -80,6 +82,8 @@ def chamber_html(name, ch):
         return ""
     lead, n = parties[0]
     rest = parties[1][1] if len(parties) > 1 else 0
+    if ch["majority"] == "C":
+        return f'<span class="bp-ch" title="{name}: {", ".join(f"{v} {PARTY_NAME.get(k, k)}" for k, v in parties)}; run by a bipartisan coalition">{name} {badge("C")} coalition</span>'
     tip = ", ".join(f"{v} {PARTY_NAME.get(k, k)}" for k, v in parties) + (f", {ch['vacant']} vacant" if ch["vacant"] else "")
     # Where a majority overrides (Indiana), every majority is "veto-proof": the sentence below says so instead.
     tag = (' <span class="bp-vp" title="Enough seats to override a veto (' + ch["override"].replace("2/3", "two-thirds").replace("3/5", "three-fifths")

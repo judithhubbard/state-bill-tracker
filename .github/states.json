@@ -240,8 +240,7 @@
     "data/ak"
    ],
    "minutes": 110,
-   "run": "python3 states/ak/fetch.py",
-   "note": "The Legislature's BASIS public service; not built into the site until its converter exists."
+   "run": "python3 states/ak/fetch.py && python3 states/ak/contacts.py 2023 && python3 states/ak/contacts.py"
   },
   {
    "name": "LegiScan states",
@@ -256,8 +255,8 @@
     "data/vt"
    ],
    "minutes": 60,
-   "run": "python3 legiscan.py tn ok me ri vt",
-   "note": "Tennessee, Oklahoma, Maine, Rhode Island and Vermont from LegiScan (LEGISCAN_API_KEY), in one job so they share one count of the month's queries (data/legiscan/usage.json; stops at 9,000 of the free 10,000). Not built into the site until their converters exist."
+   "run": "python3 legiscan.py tn ok me ri vt && python3 states/tn/contacts.py 2023 && python3 states/tn/contacts.py",
+   "note": "Tennessee, Oklahoma, Maine, Rhode Island and Vermont from LegiScan (LEGISCAN_API_KEY), in one job so they share one count of the month's queries (data/legiscan/usage.json; stops at 9,000 of the free 10,000). Tennessee is on the site; the other four aren't built yet."
   },
   {
    "name": "New Hampshire",

@@ -88,6 +88,7 @@ data/in/*
 # LegiScan downloads (legiscan.py): Tennessee, Oklahoma, Maine, Rhode Island and Vermont, plus the shared query count.
 data/legiscan/
 data/tn/*
+!data/tn/district_towns.json
 data/ok/*
 data/me/*
 data/ri/*
@@ -95,6 +96,8 @@ data/vt/*
 
 # Alaska downloads
 data/ak/*
+!data/ak/district_towns.json
+!data/ak/district_names.json
 # New Hampshire, Montana, Mississippi and Arkansas downloads (states/<st>/fetch.py).
 data/nh/*
 !data/nh/district_towns.json

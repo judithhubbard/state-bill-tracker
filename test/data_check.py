@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ar", "az", "ca", "co", "ct", "ga", "il", "in", "ma", "md", "mi", "nc", "nh", "nj", "oh", "or", "pa", "sd", "tx", "ut", "va", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "ar", "az", "ca", "co", "ct", "ga", "il", "in", "ma", "md", "mi", "nc", "nh", "nj", "oh", "or", "pa", "sd", "tn", "tx", "ut", "va", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -98,6 +98,11 @@ def check(state):
                  if t == "DELIVERED TO GOVERNOR" and any(d2 == d and re.match(r"PASSED|PLACED ON FLOOR|REFERRED", t2) for d2, t2 in v["actions"][i + 1:])]
         if after:
             say(state, "LOOK", f"{s}: {len(after)} bills with a passage or referral after going to the governor the same day, e.g. {after[:4]}")
+        # A list carried onto the next history line (AK's "CROSS SPONSOR(S): TOBIN, ..., GRAY-JACKSON," then "KIEHL, ...";
+        # its committee reports' "DP: ..." lists too): a line ending in a comma is half of one.
+        cont = [r["nums"][0] for r in recs for v in r["vers"] for _, t in v["actions"] if re.search(r",\s*$", t)]
+        if cont:
+            say(state, "LOOK", f"{s}: {len(cont)} history lines end in a comma (a list carried onto the next line?), e.g. {sorted(set(cont))[:4]}")
         # Vote lists that don't match their tallies.
         bad = sum(1 for r in recs for v in r["votes"] if sum(1 for _, c in v[6] if c == "N") > v[5])
         if bad:

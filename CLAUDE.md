@@ -198,7 +198,13 @@ from that repo. **Nothing here may change it.**
 - **Connecticut (started 2026-10-31):** `python3 states/ct/fetch.py` reads the General Assembly's CSV files from its FTP
   server (ftp://ftp.cga.ct.gov/pub/data/; see the ct-data-sources memory): bill_info (titles, statements of purpose, act
   numbers), bill_history, introducer, comm_ref, committee, subject and the legislator database, for the current year (top
-  folder) and archive/<year>; small, so read in full each run. One session a year (`years: 1`; long in odd years, short
+  folder) and archive/<year>; small, so read in full each run. 2023 and before are only flat files at the archive's top
+  level ("2023bill_info.csv", bill_history, introducer, subject, "2023LegislatorData.xlsx": no comm_ref, committee or
+  actions); fetch.py reads those years once, under the usual names, the spreadsheet as LegislatorData.csv (read without
+  dependencies), and keeps four years back (2022-26: two finished sessions of each kind for the statistics). There, dates
+  are "1/23/2023" (`rows()` makes them ISO), introducer codes are unpadded ("1", "115A" for a mid-session replacement:
+  the spreadsheet's dist_code), and committees come from the nearest later year's list (referral lines carry the code).
+  2022: 169 laws, 2 vetoed (PA 22-1..146, SA 22-1..24); 2023: 235 and 5 (PA 23-1..208, SA 23-1..31). One session a year (`years: 1`; long in odd years, short
   in even: `opens()`/`sessionEnds()` in profile.js are the Wednesday after the first Monday of January or February, June
   or May). Committees are joint (both houses' members); `commIntro` says so. Sponsors are codes: "006" a House
   district, "S06" a Senate district, letters a committee (committee bills). A Public Act number comes when both houses
@@ -494,6 +500,86 @@ from that repo. **Nothing here may change it.**
   delay). 142 representatives list no phone; none is invented. The governor's phone and contact page haven't been
   checked by the owner. Laws and vetoes match the LSRs file's chapters and status codes exactly (2023: 243 and 9; 2024:
   381 and 13; 2025: 305 and 12; 2026: 344 and 25). Add each year's first and last floor days to `opened`/`dated`.
+- **Alaska (built 2026-11-08):** `python3 states/ak/fetch.py` reads the
+  Legislature's BASIS public service (see its docstring) into data/ak/<first year>/, a two-year Legislature a page (the 34th
+  is 2025-26; `YEARS = 2`); `states/ak/contacts.py` builds the contacts from its members and committees files (no web pages).
+  Special sessions belong to the Legislature: their bills (HB 1001 on) are shown with the rest, and regular bills can pass
+  in them ("Chapter 1, FSSLA 2025"). `states/ak/convert.py` reads the action codes: 001 first reading with 091 the
+  committees in order; 002 "L&C RPT ..." a committee's report (approved), followed by 063 each member's recommendation (DP
+  do pass, NR, AM amend, DNP), shown as one line; a report moves the bill to the next committee in its list (usually with no
+  "REFERRED TO" line; the record's Referrals keep the final list) and after the last to the Rules Committee (stage 0, "Rules",
+  until 080 "RULES TO CALENDAR"); 020/024 the passage; 128, and 125 when it names a passage or concurrence, undoes the house's
+  last vote; 083 sent back with the other house's changes, then 026 concur (027 refused: not passed both houses, HB 120 of
+  2023-24), or a conference report both houses adopt (032/058; 074 failed); 090 "RETURN TO (S), TRANSMIT TO GOVERNOR NEXT" the
+  second house passed it unchanged; 033 transmitted; 034/036/129 a chapter; 038 vetoed; 040/039 override in joint session.
+  The governor's lines are entered in the journal weeks later: their own wording dates them (`text_date()`). Some histories
+  stop before the governor (12 laws of 2024): the status text ("CHAPTER 38 SLA 24") decides laws and vetoes too, and the
+  record's Vetoed flag stays set after an override. Floor roll calls member by member, on the bill's own questions
+  (`floor_question()`: passage, concurrence, conference report, override; not amendments or effective-date clauses);
+  committees have no roll calls. Seats: Senate districts are letters A-T, numbered 1-20 in seat ids ("S:1" is District A,
+  `P.senate_number()`) and named by data/ak/district_names.json; tracker.html's `DNUM()` shows a one-letter name as
+  "District A". House "H:1".."H:40"; each Senate district is two House districts. Members' code ("FIE") ties votes to seats;
+  members who left are "H?Tilton"; a member who changed name has two active records (Robyn Niayuq Burke, now Frier: the
+  "Name Changed" record is left out of contacts, its code kept for votes). Party "N" (nonpartisan or undeclared) is shown
+  as "Independent". Bipartisan coalitions run both houses (legislatures.json `note`; seat counts show Republican majorities,
+  so balance.py's "unified" and the front page's dots would mislead: fix before adding Alaska there). Titles are the short
+  titles, sentence-cased with abbreviations spelled out (`titled()`); the summary is the official title. No "What it does"
+  (decided 2026-11-08): the only plain account is the sponsor statement (PDF), an advocate's case for the bill as introduced
+  (HB 57 of 2025's is about phones in classrooms; the law became the education funding bill), with letterheads and staff
+  contacts, and on about half the bills. Constitutional amendments (HJR/SJR "Proposing amendments to the Constitution"):
+  two-thirds of each house's members, then the voters (`amendmentOnce`); none passed both houses in 2023-26. Governor 15
+  days, Sundays excepted, in session, 20 after adjournment, counted from transmittal (often months after passage, so
+  `passedBothBy` is the year's end, as New York's); overrides take two-thirds of the 60 legislators in joint session, or
+  three-fourths for appropriations (legislatures.json "2/3", per house; the note says it). Sessions: the third Tuesday of
+  January, 121 days (`STATE.dated` holds each year's last day: add each year's). Totals, matching the chapter numbering
+  (1-N, none missing) and the news: 2023 26 chapters SLA 23 and 2 FSSLA 23, 3 vetoes; 2024 61 chapters, 9 vetoes; 2025 25
+  chapters and 1 FSSLA 25, 9 vetoes (HB 57 and SB 183 overridden); 2026 61 chapters, 23 vetoes (HB 195 and HB 314
+  overridden): 32 in the 34th Legislature, a record (31 reported by August 27, then HB 10 on August 31). Places (`towns.py`,
+  run once): cities, Census-designated places, boroughs and census areas; a district counts for a place when it's 0.5% of
+  the place's land or the place holds most of the district (Anchorage's urban districts). Leaders from the members file's
+  comments; the 35th Legislature (January 2027) chooses new ones, and a new governor takes office December 7, 2026 (add to
+  `GOVERNORS` and legislatures.json). The governor's phone and contact page haven't been checked by the owner.
+- **LegiScan states (2026-11-08): Tennessee, then Oklahoma, Maine, Rhode Island, Vermont.** Their legislatures' sites bar
+  automated readers in robots.txt, so `legiscan.py` downloads LegiScan's data (CC BY 4.0; monthly query budget shared and
+  counted on GitHub) into data/<st>/legiscan/<session_id>/. Converters read only those files, never the API.
+  `states/legiscan_convert.py` holds everything shared: `folders()` (regular sessions, keyed by first year), `people()`,
+  `person_house()` (from the district "SD-028": LegiScan's `role` is sometimes stale), `load_session(Rules, session)` and
+  `link_earlier()`. A state subclasses `Rules` and sets `data_dir`, `include()` (bill / amendment / None), `decode()` (each
+  history line -> steps in the shared vocabulary in the module's `KINDS`: refer, report, subreport, held, commfail, floor,
+  pass, fail, reconsider, concur, ccr, enrolled, sent, unsent, signed, nosign, veto, override, chapter, replaced ...),
+  `committee_vote()`/`floor_vote()` (which roll calls are committee votes and which floor ones can be the bill's own),
+  `group()` (companion bills as one record), `title()`/`summary()`/`what()`, `topics()`, `narrow()`, `seat()`,
+  `earlier_key()`, `gates` (committees that schedule floor votes). Stages come from the steps, each house's location kept
+  apart; "passed both houses" needs one version passed by both (unamended by the second, or agreed to), a conference
+  report adopted by both, or enrollment; a reconsidered passage doesn't count. Floor roll calls are tied to a passage or
+  concurrence step of the same day and house with a tally within 5 votes (the history's tally is the journal's; the roll
+  call's own totals are kept), committee roll calls to a committee step that day: LegiScan attaches some roll calls to the
+  wrong bill (TN SB 5 of 2025 carries another bill's House votes). LegiScan's `status` is only checked against
+  (`python3 states/<st>/convert.py` prints `Rules.checks`): Tennessee's two vetoes of 2025-26 are "Enrolled" there. Each
+  state's how.html credits LegiScan with links (the license requires it), and `textLinks` links each bill's LegiScan page.
+  Contacts: Open States' current list says who holds each seat (party, email), LegiScan's person records give ids (the roll
+  calls'), phones and offices. LegiScan has no committee members or chairs.
+- **Tennessee (built 2026-11-08 from LegiScan):** `states/tn/convert.py`
+  (the `Tennessee` rules), `contacts.py` (run after legiscan.py), `towns.py` (run once). Two-year General Assemblies (2025 is
+  the 114th, 2025-26), sessions each year from the second Tuesday of January to late April (`STATE.dated`: add each year's
+  last day). Only HB/SB under 6000 (extraordinary sessions' bills are 6001+, 7001+ in the same files) and the joint
+  resolutions proposing amendments to the Tennessee Constitution (majority in one General Assembly, two-thirds in the next,
+  then the voters at the next governor's election: `ballotYear()`); other resolutions left out. Every bill is filed in both
+  houses with the same text; LegiScan's sasts "Crossfiled" (and, for joint resolutions, the same title) put the two numbers in
+  one record, as NJ's and NY's identical bills are; when one passes, the other house substitutes it for its own ("Comp. SB
+  subst." marks the number that gave way: `replaced`). House bills go through subcommittees ("Assigned to s/c ..."): the
+  bill stays in the parent committee; subcommittee votes keep their names. Calendar and Rules (House) and Calendar (Senate)
+  schedule floor votes (`gates`). Set aside (`heldAction`): "Taken off notice", "Assigned to General Subcommittee", "Deferred
+  to Summer Study", "Lay on the Table" ("Placed behind the budget" is a wait, not counted). Laws: "Signed by Governor.",
+  "Returned by Governor without signature." (law), "Pub. Ch. 78" and "Pr. Ch." (private acts, narrow "place"); a governor
+  recalled by the Senate ("Governor returned.", SB 1758 of 2026) is `unsent`. Public chapters are numbered through the
+  General Assembly with no gaps, so laws here match them exactly: 2023-24 1,069 public + 68 private = 1,137; 2025-26 1,142 +
+  74 = 1,216; vetoes 0 and 2 (SB 455 of 2025, HB 1882 of 2026). "What it does" is the General Assembly's bill summary
+  ("As introduced, ..." / "As enacted, ...", LegiScan's description); the title is its first clause. Governor 10 days,
+  Sundays excepted, no pocket veto; override a majority of the members. Leaders: Speaker Cameron Sexton; Lt. Gov. and Senate
+  Speaker Randy McNally, who didn't run in 2026 (change `LEADERS` when the 115th General Assembly elects a new one in January
+  2027). Governor Bill Lee is term-limited: add the new governor (January 2027) to `GOVERNORS` and states/legislatures.json.
+  The governor's contact page and phone haven't been checked by the owner. sos.tn.gov turns automated requests away.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
@@ -641,6 +727,10 @@ from that repo. **Nothing here may change it.**
     they're more than 180 days apart). The check fails on history dates years from the session.
   - The same number written twice, differently: NH's history lines give SB 62 and HB 511 of 2025 both "Chapter 39" (the
     LSRs file's column says 38 and 39). Prefer the structured column; the check LOOKs at law numbers given to two bills.
+  - Lists carried onto the next history line: AK's "CROSS SPONSOR(S): TOBIN, ..., GRAY-JACKSON," then "KIEHL, ..." (and its
+    committee reports' "DP: ..." lists). Join them before reading; the check LOOKs at history lines ending in a comma.
+  - Land shares that drop small districts: a municipality as big as Anchorage holds whole urban districts under 0.5% of its
+    land. Keep a district the place holds most of; the check that every legislator's district is in some place's list caught it.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the

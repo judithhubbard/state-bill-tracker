@@ -261,7 +261,7 @@ table.oc th { vertical-align: bottom; }
 .power .bp-why { display: block; }
 .bp-pty { display: inline-block; min-width: 1.3em; padding: 0 3px; border-radius: 3px; text-align: center; font-weight: 700;
   font-size: 11px; line-height: 1.5; color: var(--badge-ink); text-decoration: none; vertical-align: 1px; }
-.bp-D { background: var(--dem); } .bp-R { background: var(--rep); } .bp-I, .bp-O { background: var(--ind); }
+.bp-D { background: var(--dem); } .bp-R { background: var(--rep); } .bp-I, .bp-O, .bp-C { background: var(--ind); }
 .bp-vp { font-size: 11px; font-style: italic; }
 .mast-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 10px 24px; }
 .mast .sessions { margin-top: 0; }
@@ -1872,9 +1872,11 @@ const townName = (t) => DATA.towns.some((u) => u !== t && u[0] === t[0]) ? `${t[
 const TOWN_WORD = STATE.townWord || "Town";
 // Towns that carry their own Senate and lower-house districts (Virginia's localities), not one district for both.
 // Districts with names (Massachusetts's "8th Middlesex"): DATA.districtNames, from the state's file; else numbers.
-const DNAME = (h, d) => DATA.districtNames?.[h]?.[d];
-const distLabel = (h, d) => DNAME(h, d) || `District ${d}`;
-const distPhrase = (h, d) => (DNAME(h, d) ? `the ${DNAME(h, d)} ${HOUSE[h]} district` : `${HOUSE[h]} District ${d}`);
+// A one-letter name is the district's letter (Alaska's Senate districts, A to T, numbered 1 to 20): "District A".
+const DNAME = (h, d) => { const n = DATA.districtNames?.[h]?.[d]; return n && n.length > 1 ? n : undefined; };
+const DNUM = (h, d) => DATA.districtNames?.[h]?.[d] || d;
+const distLabel = (h, d) => DNAME(h, d) || `District ${DNUM(h, d)}`;
+const distPhrase = (h, d) => (DNAME(h, d) ? `the ${DNAME(h, d)} ${HOUSE[h]} district` : `${HOUSE[h]} District ${DNUM(h, d)}`);
 const townsSplitByHouse = () => (DATA.towns?.[0] || []).length > 3;
 const townOptions = (town) => `<option value="">Choose your ${TOWN_WORD.toLowerCase()}</option>` + DATA.towns.map((t) => `<option value="${esc(townKey(t))}"${t === town ? " selected" : ""}>${esc(townName(t))}</option>`).join("");
 // Choosing a town (here or in the Bills sidebar): its district, the one with most of its people if split.
@@ -2438,7 +2440,7 @@ function votesBlock(b) {
   if (!b.votes.length) return "";
   const people = votePeople();
   const rows = b.votes.map((v) => {
-    const what = v.kind === "F" ? `${HOUSE[v.house]} floor` : `${HOUSE[v.house]} ${esc(v.committee || "")} Committee`;
+    const what = v.kind === "F" ? `${HOUSE[v.house]} floor` : `${HOUSE[v.house]} ${esc(v.committee || "")}${/ommittee$/.test(v.committee || "") ? "" : " Committee"}`;  // (Tennessee's subcommittees)
     const other = [...v.notYes.values()].filter((c) => c !== "N").length;
     const theirs = people.map((L) => { const x = voteOf(v, L); return x ? `${L.title} ${esc(shortName(L.name))}: <b class="v${x === "Yes" ? "y" : x === "No" ? "n" : "o"}">${x}</b>` : ""; }).filter(Boolean).join(" · ");
     return `<li><time>${fmtDate(v.date)}</time><span>${what}: <b>${v.yes}–${v.no}</b>${other ? ` <span class="muted">(${other} not voting)</span>` : ""}${theirs ? `<br><span class="theirs">${theirs}</span>` : ""}</span></li>`;
@@ -4750,14 +4752,14 @@ const COMM_PAIRS = STATE.commPairs;
 const COMM_NOTES = STATE.commNotes;
 // How many committees each house has, and how many committees its bills go through.
 function commCounts(keys) {
-  const NOT_SUBJECT = / · (Rules|Calendar)$/;
+  const NOT_SUBJECT = / · (Rules|Calendar|Calendar and Rules)$/;  // (Tennessee's House: Calendar and Rules)
   const col = (h) => {
     const mine = BILLS.filter((b) => b.vers.some((v) => v.p[0] === h));
     const n = (b) => new Set(b.comms.filter((k) => k[0] === h && !NOT_SUBJECT.test(k))).size;
     const sent = mine.filter((b) => n(b) > 0), passed = mine.filter((b) => (h === "S" ? b.passedS : b.passedA));
     return {
       // Current committees only, when the contacts list them (a few bills carry old committee names).
-      comms: keys.filter((k) => k[0] === h && !NOT_SUBJECT.test(k) && (!DATA.contacts?.committees || Object.keys(DATA.contacts.committees).some((c) => c.startsWith(`${h}:${commKey(k.slice(4))}`)))).length,
+      comms: keys.filter((k) => k[0] === h && !NOT_SUBJECT.test(k) && (!Object.keys(DATA.contacts?.committees || {}).length || Object.keys(DATA.contacts.committees).some((c) => c.startsWith(`${h}:${commKey(k.slice(4))}`)))).length,
       one: pctOf(sent.filter((b) => n(b) === 1).length, sent.length),
       more: pctOf(sent.filter((b) => n(b) > 1).length, sent.length),
       passed: passed.length,
@@ -4991,7 +4993,7 @@ function renderPerson(L, past) {
     <div class="photo"><span>${esc(L.name.split(" ").filter((w) => /^[A-Z]/.test(w) && !/^(Jr|Sr|II|III)\.?$/.test(w)).map((w) => w[0]).filter((c, i, a) => i === 0 || i === a.length - 1).join(""))}</span>${L.image ? `<img src="${esc(L.image)}" alt="" onerror="this.remove()">` : ""}</div>
     <div class="who-body">
       <h2>${esc(L.label)}</h2>
-      <p>${[L.party, DNAME(L.house, L.district) ? `${house}, ${DNAME(L.house, L.district)} district` : `${house} District ${L.district}`, since].filter(Boolean).map(esc).join(" · ")}</p>
+      <p>${[L.party, DNAME(L.house, L.district) ? `${house}, ${DNAME(L.house, L.district)} district` : `${house} District ${DNUM(L.house, L.district)}`, since].filter(Boolean).map(esc).join(" · ")}</p>
       ${!past && chairs.length ? `<p><b>Chairs:</b> ${chairs.map(esc).join(", ")}</p>` : ""}
       ${!past && member.length ? `<p><b>Committees:</b> ${member.map(esc).join(", ")}</p>` : ""}
       <p>Sponsored ${num(mine.length)} bill${mine.length === 1 ? "" : "s"} ${past ? `in ${span(DATA.session)}` : "this session"}; ${num(signed)} signed into law.</p>

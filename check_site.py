@@ -101,6 +101,10 @@ if not os.path.exists(os.path.join(HERE, "data", "ut", "incomplete")):
 if not os.path.exists(os.path.join(HERE, "data", "in", "incomplete")):
     contacts("in", TODAY.year, 140)
 
+# Alaska: two-year Legislatures starting in odd years.
+if not os.path.exists(os.path.join(HERE, "data", "ak", "incomplete")):
+    contacts("ak", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 55)
+
 # Arkansas: a session a year.
 if not os.path.exists(os.path.join(HERE, "data", "ar", "incomplete")):
     contacts("ar", TODAY.year, 120)
@@ -108,6 +112,10 @@ if not os.path.exists(os.path.join(HERE, "data", "ar", "incomplete")):
 # New Hampshire: a session a year (two-year General Courts).
 if not os.path.exists(os.path.join(HERE, "data", "nh", "incomplete")):
     contacts("nh", TODAY.year, 350)
+
+# Tennessee: two-year General Assemblies starting in odd years (from LegiScan).
+if not os.path.exists(os.path.join(HERE, "data", "tn", "incomplete")):
+    contacts("tn", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 125)
 
 # Wyoming: a session a year.
 if not os.path.exists(os.path.join(HERE, "data", "wy", "incomplete")):
