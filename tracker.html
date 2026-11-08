@@ -1556,7 +1556,7 @@ function renderPipeline() {
   for (const b of BILLS) {
     if (!matches(b, "stage")) continue;
     counts[b.stage]++;
-    if (b.stage === 3 && isAmendment(b) && secondPassage(b)) voters++;
+    if (b.stage === 3 && ((isAmendment(b) && secondPassage(b)) || toVoters(b))) voters++;
     if (b.stage === 2 && b.passedIn) oneHouse[b.passedIn]++;
     if (b.stage === 4 && b.due && b.due >= today && (!nextDue || b.due < nextDue)) nextDue = b.due;
   }
@@ -1703,7 +1703,7 @@ function statusText(b) {
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
   } else if (b.stage === 3) {
     t = "Passed both houses";
-    small = `${isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters") : `First passage: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
+    small = `${toVoters(b) ? "Sent to the voters, not the governor" : isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters") : `First passage: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
       : STATE.passedBothNote(live, b)} · passed ${fmtDate([D.passS, D.passA].sort().pop())}`;
   } else if (b.stage === 4) {
     t = live ? "On the governor's desk" : "Sent to the governor";
@@ -2144,6 +2144,9 @@ const agendaAsk = (committee) => STATE.chairAsks?.[committee] || ["put it on the
 // passes two separately elected Legislatures, then the voters. Elsewhere "Constitutional amendments" is just a topic
 // (Virginia's are bills setting up the ballot question, which the governor signs).
 const isAmendment = (b) => !!STATE.amendments && b.topics.includes("const");
+// A bill the Legislature refers to the voters (Colorado's TABOR questions, SB26-135): it passes both houses and goes on
+// the ballot, not to the governor. The converter marks it `ballot`.
+const toVoters = (b) => !!b.ballot && !isAmendment(b);
 // Its second passage: the version in the session two years earlier (the Legislature before this one) passed both houses.
 // In Maryland (STATE.amendmentOnce) one passage, by three-fifths, sends it to the voters.
 // A state can decide it per bill (STATE.amendmentFinal: Connecticut and New Jersey send one to the voters after a single
@@ -2228,6 +2231,8 @@ function planFor(b, stance = "support") {
     else floorLeader(other);
     book.reps([other], L(A("vote yes", "vote no")));
     if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
+  } else if (b.stage === 3 && toVoters(b)) {
+    what = `<p class="when">It doesn't go to the governor. ${ballotLine(b)}</p>`;
   } else if (b.stage === 3 && isAmendment(b)) {
     what = secondPassage(b)
       ? `<p class="when">${STATE.amendmentOnce ? "" : "Second passage. "}${ballotLine(b)}</p>`
@@ -2322,7 +2327,7 @@ function renderOpenNow() {
   // Their own bills first, then ones they co-sponsor.
   const own = (b) => (L && sponsoredBy(b, L, false) ? 0 : 1);
   const desk = BILLS.filter((b) => b.stage === 4 && mine(b)).sort((a, b) => own(a) - own(b) || (a.due || "").localeCompare(b.due || "") || a.sortKey - b.sortKey);
-  const waiting = BILLS.filter((b) => b.stage === 3 && !isAmendment(b) && mine(b)).sort((a, b) => own(a) - own(b) || (b.last || "").localeCompare(a.last || ""));
+  const waiting = BILLS.filter((b) => b.stage === 3 && !isAmendment(b) && !toVoters(b) && mine(b)).sort((a, b) => own(a) - own(b) || (b.last || "").localeCompare(a.last || ""));
   const all = [...desk, ...waiting], nOwn = all.filter((b) => !own(b)).length;
   const more = waiting.length - openShown;
   $("openNow").innerHTML = `<h2>${L ? `${esc(L.label)}'s bills open for comment` : "Open for comment"}</h2>
@@ -2460,6 +2465,7 @@ const isNarrow = (b) => !!(b.narrow || b.places.length);
 function oddsLine(b) {
   // Constitutional amendments don't go to the governor.
   if (isAmendment(b)) return `A constitutional amendment doesn't go to the governor: it has to pass ${STATE.amendmentVote || (STATE.amendmentOnce ? "both houses" : "two separately elected Legislatures")}, then the voters.`;
+  if (toVoters(b)) return "A measure the Legislature refers to the voters doesn't go to the governor: the voters decide.";
   // A shell's chances depend on whether the leaders pick it up, not on how past bills fared.
   if (b.stage > 4 || !DATA.insights || b.shell) return "";
   // Compared with past bills of the same kind (about one place, person or group, or not) and, where there
@@ -3798,7 +3804,7 @@ function deadlineOf(b) {
   if (b.stage === 4 && b.due) return { g: "soon", d: b.due };
   const meet = nextMeeting(b);
   if (meet && soon(meet.when)) return { g: "soon", d: meet.when.slice(0, 10) };
-  if (b.stage === 3 && isAmendment(b)) return { g: "later" };
+  if (b.stage === 3 && (isAmendment(b) || toVoters(b))) return { g: "later" };
   if (b.stage === 3) {
     const end = STATE.passedBothBy(DATA.session);
     return isoToday().startsWith(String(lastYear(DATA.session))) ? { g: soon(end) ? "soon" : "year", d: end } : { g: "later" };
@@ -4886,7 +4892,7 @@ function decode(raw) {
       earlier: hist.filter((e) => e[0] < raw.session), later: hist.filter((e) => e[0] > raw.session),
       laws: laws.map(str), comms: comms.map(str), law: str(law), program: str(program), comm: str(comm),
       passedIn: passedIn || null, last: day(last),
-      sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: flags & 512 ? "place" : ["", "person", "org", "naming"][(flags >> 6) & 3], shell: !!(flags & 256),
+      sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: flags & 512 ? "place" : ["", "person", "org", "naming"][(flags >> 6) & 3], shell: !!(flags & 256), ballot: !!(flags & 1024),
       memo: memo || "",
       // The governor's veto message: this bill's own, or an earlier version's.
       vetoNote: vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: str(vetoNote[2]), nums: vetoNote[3], own: !!vetoNote[4], kind: vetoNote[5] || "absolute" } : null,
@@ -4919,7 +4925,7 @@ function sessionNotice(raw) {
   const today = isoToday(), y1 = raw.session, y2 = raw.session + 1;
   const lv = raw.lastVote || "";
   const quiet = lv ? (new Date(today) - new Date(lv)) / 864e5 > 21 : false;
-  const waiting = BILLS.filter((b) => b.stage === 3 && !isAmendment(b)).length, desk = BILLS.filter((b) => b.stage === 4).length;
+  const waiting = BILLS.filter((b) => b.stage === 3 && !isAmendment(b) && !toVoters(b)).length, desk = BILLS.filter((b) => b.stage === 4).length;
   const governor = waiting + desk
     ? `The governor has ${num(waiting + desk)} bill${waiting + desk === 1 ? "" : "s"} left: ${num(desk)} on her desk, ${num(waiting)} not yet requested.`
     : "The governor has acted on every bill that passed both houses.";

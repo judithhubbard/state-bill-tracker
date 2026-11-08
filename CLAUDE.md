@@ -518,6 +518,10 @@ from that repo. **Nothing here may change it.**
     house and leave the rest as names.
   - Stray records from links cut short: CO's site answers "HB25-104" with a jumbled page instead of an error. Check
     numbers against the state's numbering (House bills from 1001).
+  - Bills the Legislature sends to the voters instead of the governor (CO's SB26-135, a TABOR question: status "Adopted",
+    no governor's action) looked like bills waiting on the governor. The converter marks them `ballot`; the page says
+    "Sent to the voters, not the governor" and leaves them out of the governor's count. The "passed both houses but not
+    sent" LOOK line finds them.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the

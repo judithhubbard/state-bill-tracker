@@ -167,6 +167,11 @@ def load_session(session):
             stage = 2
         else:
             stage = None
+        # A bill referred to the voters (SB26-135, a TABOR question) passes both houses and goes on the ballot, not to
+        # the governor: its status is "Adopted". Some referred bills are signed too (HB24-1436): those are laws here.
+        ballot = stage == 3 and status == "Adopted"
+        if ballot:
+            steps.append((max(s[0] for s in steps if s[0]), "G", "Referred to the voters", "Referred to the voters"))
         if stage is not None and stage >= 3:
             passed = {"S", "H"}
         where_h, place, comm = origin, "desk", None
@@ -273,7 +278,7 @@ def load_session(session):
             "commFate": fate, "mainTopic": topics[0] if topics else "", "local": "local" in topics,
             "senDeleg": False, "asmDeleg": False, "budget": bool(re.search(r"general appropriation act|long bill", f"{title} {long_title}", re.I)),
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
-            "stage": stage, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
+            "stage": stage, "ballot": ballot, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
             "chapter": chapter if stage == 5 else None, "veto": None, "memo": "", "vetoMemo": None,
             "simText": f"{title} {long_title} {' '.join(subjects)}",
             "comm": comm if stage == 0 and place == "committee" else None,
