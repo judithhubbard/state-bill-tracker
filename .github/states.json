@@ -311,6 +311,17 @@
    "minutes": 60,
    "run": "python3 states/id/fetch.py",
    "note": "legislature.idaho.gov's bill pages (floor roll calls by member), committees and members. Not built into the site until its converter exists."
+  },
+  {
+   "name": "Minnesota",
+   "code": "mn",
+   "key": "mn-data-v1",
+   "paths": [
+    "data/mn"
+   ],
+   "minutes": 110,
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/mn/fetch.py",
+   "note": "The Revisor's Bill Status API, House floor votes, Senate journals and House Research/Senate summaries (PDFs, as text); the first copy (about 9 hours) builds up over several runs. Not built into the site until its converter exists."
   }
  ]
 }

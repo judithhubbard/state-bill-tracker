@@ -116,5 +116,7 @@ data/nd/*
 !data/nd/district_towns.json
 # Idaho downloads (states/id/fetch.py).
 data/id/*
+# Minnesota downloads (states/mn/fetch.py).
+data/mn/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

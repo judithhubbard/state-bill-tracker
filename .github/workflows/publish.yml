@@ -212,6 +212,12 @@ jobs:
           path: "data/id"
           key: id-data-v1-latest
           restore-keys: id-data-v1-
+      - name: Restore Minnesota
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/mn"
+          key: mn-data-v1-latest
+          restore-keys: mn-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
