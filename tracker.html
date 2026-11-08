@@ -2523,8 +2523,10 @@ function govTiming(I) {
   const maxY = Math.max(1, ...years.map(([, , s, v]) => s + v));
   // "(so far)" only while this year's bills can still reach the governor.
   const govDone = STATE.sessionEnds && STATE.govDeadline && isoToday() > (STATE.govDeadline(STATE.sessionEnds(DATA.session)) || "9999");
-  const yearRows = years.map(([y, who, s, v]) => vrow(`${y}${+y === new Date().getFullYear() && !govDone ? " (so far)" : ""} · ${who}`, "",
-    [[((s + v) / maxY) * 100, "v"], [(s / maxY) * 100, "l"]], `<b class="big">${num(s + v)}</b> decisions · ${pctOf(v, s + v)}% vetoed`)).join("");
+  // A vetoed bill counts as a veto even when the legislature overrode it (o of the v).
+  const yearRows = years.map(([y, who, s, v, o]) => vrow(`${y}${+y === new Date().getFullYear() && !govDone ? " (so far)" : ""} · ${who}`, "",
+    [[((s + v) / maxY) * 100, "v"], [(s / maxY) * 100, "l"]], `<b class="big">${num(s + v)}</b> decisions · ${pctOf(v, s + v)}% vetoed`
+      + (o ? ` · ${o === v ? (v === 1 ? "overridden" : "all overridden") : `${num(o)} overridden`}` : ""))).join("");
   return `<h3 class="sub">The governor's decisions by year</h3>
     <p class="key"><span><i class="k-law"></i>Signed</span><span><i class="k-veto"></i>Vetoed</span></p>
     <div class="vlist">${yearRows}</div>
@@ -3105,13 +3107,17 @@ function sankey(odds, fate, cfate) {
     }
   }
   // Passed both houses: signed or vetoed.
-  const x4 = xs[4], vy = top + h(law) + 22;
+  // The vetoed node sits below the law bar and below its label (two lines, or three when some vetoes were overridden).
+  const over = n("overridden");
+  const x4 = xs[4], vy = top + Math.max(h(law) + 22, over ? 62 : 46);
   g += band(xs[3] + nodeW, top, top + h(law), x4, top, top + h(law), "sk-law");
   g += band(xs[3] + nodeW, top + h(law), top + h(law) + h(vetoed), x4, vy, vy + h(vetoed), "sk-veto");
   labels += `<text class="sk-p" x="${xs[3] + nodeW + 6}" y="${top + Math.max(h(law) / 2 + 4, 12)}">${pct(law, N[3])}</text>`
     + `<text class="sk-p" x="${xs[3] + nodeW + 6}" y="${top + h(law) + 16}">${pct(vetoed, N[3])}</text>`;
   g += `<rect class="sk-lawn" x="${x4}" y="${top}" width="${nodeW}" height="${h(law)}"/><rect class="sk-veton" x="${x4}" y="${vy}" width="${nodeW}" height="${h(vetoed)}"/>`;
-  labels += label(x4 + nodeW + 8, top + 11, ["Became law", `${num(law)} · ${pct(law)} of bills`]);
+  // A veto the legislature overrode ends as a law, but the governor said no: say how many, so a state whose vetoes are
+  // all overridden (North Carolina 2023-24) doesn't seem to have had none.
+  labels += label(x4 + nodeW + 8, top + 11, ["Became law", `${num(law)} · ${pct(law)} of bills`, over ? `${num(over)} of them over the governor's veto` : ""]);
   labels += label(x4 + nodeW + 8, vy + 8, ["Vetoed", `${num(vetoed)} · ${pct(vetoed)} of bills`, back("vetoed")]);
   const height = Math.max(bottom, top + H0) + 12;
   return `<div class="sankey"><svg viewBox="0 0 ${W + 150} ${height}" role="img" aria-label="How bills move from introduction to law">${g}${labels}</svg></div>`;

@@ -411,7 +411,9 @@ def insights(loaded, hist, current):
         for r in loaded[s][0]:
             got = reached(r)
             points = {"intro": True, "floor": got["floor"], "passS": got["passS"], "passA": got["passA"], "both": got["both"],
-                      "house": got["passS"] or got["passA"], "vetoed": r["stage"] == 6}
+                      "house": got["passS"] or got["passA"], "vetoed": r["stage"] == 6,
+                      # Vetoed, then the veto overridden: a law, but the governor said no.
+                      "overridden": r["stage"] == 5 and bool(r["keyDates"][6])}
             for t in topics:
                 if has(r, t):
                     for p, ok in points.items():
@@ -442,13 +444,17 @@ def insights(loaded, hist, current):
     signed = [r["keyDates"][5] for s in past for r in loaded[s][0] if r["keyDates"][5]]
     # The governor's decisions: by month (past sessions) and by calendar year (all sessions).
     gov_months = defaultdict(lambda: [0, 0])
-    gov_years = defaultdict(lambda: [0, 0])
+    gov_years = defaultdict(lambda: [0, 0, 0])  # signed, vetoed (overridden or not), of those overridden
     for s in sorted(loaded):
         for r in loaded[s][0]:
             for i, kind in ((5, 0), (6, 1)):
                 d = r["keyDates"][i]
-                if not d:
+                # A veto is the governor's decision even when it was overridden: the override (a "signed" date in
+                # some states' records) isn't also counted as signing it.
+                if not d or (kind == 0 and r["keyDates"][6]):
                     continue
+                if kind == 1 and r["stage"] == 5:
+                    gov_years[f"{d[:4]}|{P.governor_on(d)}"][2] += 1
                 who = P.governor_on(d)
                 if s != current:
                     gov_months[f"{who}|{d[5:7]}"][kind] += 1
@@ -578,7 +584,8 @@ def insights(loaded, hist, current):
             for r in loaded[s][0]:
                 k = r["keyDates"]
                 when = {"intro": r["first"] or "", "comm": k[0], "passS": k[1].split(";")[0], "passA": k[2].split(";")[0],
-                        "signed": k[5] if r["stage"] == 5 else "", "vetoed": k[6] if r["stage"] == 6 else ""}
+                        # A veto counts as one even when overridden; the override isn't the governor signing it.
+                        "signed": k[5] if r["stage"] == 5 and not k[6] else "", "vetoed": k[6] or ""}
                 for key, d in when.items():
                     if len(d) < 7 or d[:4] > str(s + YEARS - 1):
                         continue
@@ -671,7 +678,7 @@ def insights(loaded, hist, current):
         "timing": timing,
         "lateSigning": [late_sign, len(signed)],
         "govMonths": dict(sorted(gov_months.items())),
-        "govYears": [[k.split("|")[0], k.split("|")[1], v[0], v[1]] for k, v in sorted(gov_years.items())],
+        "govYears": [[k.split("|")[0], k.split("|")[1], v[0], v[1], v[2]] for k, v in sorted(gov_years.items())],
         "persistence": persist,
         "comeback": comeback,
         "stuck": stuck,
