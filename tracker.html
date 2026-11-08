@@ -3066,7 +3066,10 @@ function sankey(odds, fate, cfate) {
   const N = [n("intro"), n("floor"), n("house"), n("both")], law = (odds.intro || [0, 0])[1], vetoed = n("vetoed");
   if (!N[0] || !N[2]) return "";
   const W = 960, top = 30, H0 = 170, k = H0 / N[0], nodeW = 10, gap = 34;
+  // When there were vetoes, the veto is a step of its own: two narrower columns after "Passed both houses".
+  const over = n("overridden"), allVetoes = vetoed + over, signed = law - over;
   const xs = [0, 1, 2, 3, 4].map((i) => 6 + i * 196);
+  if (allVetoes) xs.splice(4, 1, xs[3] + 150, xs[3] + 300);
   const h = (v) => Math.max(1.5, v * k);
   const band = (x0, a0, b0, x1, a1, b1, cls) => { const m = (x0 + x1) / 2;
     return `<path class="${cls}" d="M${x0},${a0} C${m},${a0} ${m},${a1} ${x1},${a1} L${x1},${b1} C${m},${b1} ${m},${b0} ${x0},${b0} Z"/>`; };
@@ -3106,19 +3109,35 @@ function sankey(odds, fate, cfate) {
       labels += label(ex + nodeW + 8, exitTop + 11, [name, `${num(out)} · ${pct(out)} of bills`, back(key)]);
     }
   }
-  // Passed both houses: signed or vetoed.
-  // The vetoed node sits below the law bar and below its label (two lines, or three when some vetoes were overridden).
-  const over = n("overridden");
-  const x4 = xs[4], vy = top + Math.max(h(law) + 22, over ? 62 : 46);
-  g += band(xs[3] + nodeW, top, top + h(law), x4, top, top + h(law), "sk-law");
-  g += band(xs[3] + nodeW, top + h(law), top + h(law) + h(vetoed), x4, vy, vy + h(vetoed), "sk-veto");
-  labels += `<text class="sk-p" x="${xs[3] + nodeW + 6}" y="${top + Math.max(h(law) / 2 + 4, 12)}">${pct(law, N[3])}</text>`
-    + `<text class="sk-p" x="${xs[3] + nodeW + 6}" y="${top + h(law) + 16}">${pct(vetoed, N[3])}</text>`;
-  g += `<rect class="sk-lawn" x="${x4}" y="${top}" width="${nodeW}" height="${h(law)}"/><rect class="sk-veton" x="${x4}" y="${vy}" width="${nodeW}" height="${h(vetoed)}"/>`;
-  // A veto the legislature overrode ends as a law, but the governor said no: say how many, so a state whose vetoes are
-  // all overridden (North Carolina 2023-24) doesn't seem to have had none.
-  labels += label(x4 + nodeW + 8, top + 11, ["Became law", `${num(law)} · ${pct(law)} of bills`, over ? `${num(over)} of them over the governor's veto` : ""]);
-  labels += label(x4 + nodeW + 8, vy + 8, ["Vetoed", `${num(vetoed)} · ${pct(vetoed)} of bills`, back("vetoed")]);
+  // Passed both houses: signed, or vetoed. A veto is a step of its own (the governor said no); from it, the legislature
+  // overrides it (back into "Became law") or the veto stands. Without vetoes the chart keeps five columns.
+  if (!allVetoes) {
+    const x4 = xs[4];
+    g += band(xs[3] + nodeW, top, top + h(law), x4, top, top + h(law), "sk-law");
+    labels += `<text class="sk-p" x="${xs[3] + nodeW + 6}" y="${top + Math.max(h(law) / 2 + 4, 12)}">${pct(law, N[3])}</text>`;
+    g += `<rect class="sk-lawn" x="${x4}" y="${top}" width="${nodeW}" height="${h(law)}"/>`;
+    labels += label(x4 + nodeW + 8, top + 11, ["Became law", `${num(law)} · ${pct(law)} of bills`]);
+  } else {
+    // Six columns: the vetoed node in the fifth, "Became law" and "Veto stood" in the sixth.
+    const x4 = xs[4], x5 = xs[5];
+    const vy = top + h(signed) + 26;                                   // the vetoed node, under the signed band
+    const sy = Math.max(top + h(law) + 46, vy + h(over) + 30);         // "Veto stood", under the law label
+    g += band(xs[3] + nodeW, top, top + h(signed), x5, top, top + h(signed), "sk-law");
+    g += band(xs[3] + nodeW, top + h(signed), top + h(signed) + h(allVetoes), x4, vy, vy + h(allVetoes), "sk-veto");
+    g += band(x4 + nodeW, vy, vy + h(over), x5, top + h(signed), top + h(law), "sk-law");
+    if (vetoed) g += band(x4 + nodeW, vy + h(over), vy + h(allVetoes), x5, sy, sy + h(vetoed), "sk-veto");
+    labels += `<text class="sk-p" x="${xs[3] + nodeW + 6}" y="${top + Math.max(h(signed) / 2 + 4, 12)}">${pct(signed, N[3])} signed</text>`
+      + `<text class="sk-p" x="${xs[3] + nodeW + 6}" y="${top + h(signed) + 16}">${pct(allVetoes, N[3])} vetoed (${num(allVetoes)})</text>`;
+    g += `<rect class="sk-veton" x="${x4}" y="${vy}" width="${nodeW}" height="${h(allVetoes)}"/>`;
+    // On the veto's two branches: how many the legislature overrode, and how many stood.
+    if (over) labels += `<text class="sk-p" x="${x4 + nodeW + 6}" y="${vy - 6}">${num(over)} overridden</text>`;
+    g += `<rect class="sk-lawn" x="${x5}" y="${top}" width="${nodeW}" height="${h(law)}"/>`;
+    labels += label(x5 + nodeW + 8, top + 11, ["Became law", `${num(law)} · ${pct(law)} of bills`,
+      over ? `${num(over)} over the governor's veto` : ""]);
+    g += `<rect class="sk-veton" x="${x5}" y="${sy}" width="${nodeW}" height="${h(vetoed)}"/>`;
+    labels += label(x5 + nodeW + 8, sy + 8, ["Veto stood", `${num(vetoed)} · ${pct(vetoed)} of bills`, back("vetoed")]);
+    bottom = Math.max(bottom, sy + 45, vy + h(allVetoes) + 50);
+  }
   const height = Math.max(bottom, top + H0) + 12;
   return `<div class="sankey"><svg viewBox="0 0 ${W + 150} ${height}" role="img" aria-label="How bills move from introduction to law">${g}${labels}</svg></div>`;
 }
