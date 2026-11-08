@@ -10,11 +10,34 @@ asked for (Last-Modified is always "now", so there's nothing to check before dow
 SESSION YEAR only (in 2026: session year 2026, whose bills include the 225 bills of 2025 retained in committee and
 carried over), except the Docket, which holds both years of the biennium. There is no archive: a year that leaves the
 files is gone from this source. So each file is split by session year and kept as data/nh/<first year>/<Name>_<year>.txt
-(2025 and 2026 both go in data/nh/2025/); a year no longer in the files keeps its last copy for good. What 2025 lost
-before the first run (2026-11-08): the titles, sponsors and roll calls of the bills finished in 2025 (their Docket
-history is kept), and everything of 2023-24. The Legislature's public SQL Server (described in
-https://gc.nh.gov/downloads/ODBC%20and%20Data%20Table%20Structure.pdf, with published read-only credentials) or the
-bill status pages could fill those in; neither is read here (the owner's decision).
+(2025 and 2026 both go in data/nh/2025/); a year no longer in the files keeps its last copy for good.
+
+The years the files had already dropped (2023, 2024, and 2025's bills finished in 2025) come from the Legislature's
+public read-only SQL Server, chosen by the owner 2026-11-08. Its address, database and published login are in the
+Legislature's own document, https://gc.nh.gov/downloads/ODBC%20and%20Data%20Table%20Structure.pdf, which is downloaded
+(robots.txt allowing, at the crawl delay) and read with pypdf only on runs that need the server, so the login is never
+written into this repository, saved or printed. Needs `pip install pymssql pypdf` (pymssql has no wheel for Python 3.14
+on an Intel Mac: 3.12 with pymssql 2.3.10 works); without them the daily files are still read. The server's tables are
+views (dbo.*): Legislation and Docket (the current biennium, 2025-26), PastLegislation and PastDocket (2024 and before),
+Sponsors (with PersonID) and PastSponsors (employee numbers only), RollCallSummary and RollCallHistory (every year; the
+vote as a code: 1 Yea, 2 Nay, 3 Not Voting/Excused, 4 Not Voting/Not Excused, 6 Presiding), Legislators (every member
+since about 2015, Active or not, with both PersonID and employee number) and CommitteeMembers (current committees: each
+member's employee number and "Chairman", "V Chairman" or "Clerk"). For each session year from two years before this
+biennium through last year whose files are missing, it writes LSRs, Docket, LsrSponsors, RollCallSummary and
+RollCallHistory in the daily files' shapes (each file once: a finished year is never read again), with small queries a
+second apart (one per table and year; members' votes a hundred roll calls a query): about 75 queries, a few minutes.
+Built from the server for 2026, the five files matched the daily ones row for row except: LSRs column 24 (the Senate
+status code: the server says 05 where the daily file says 12 or 13 for 29 bills), the Docket's last column (its edit
+time isn't on the server; PastDocket's OrderDate is used, and for the current Docket view it's empty), and LSRs
+columns 20 and 28 (the server's House and Senate "amended" flags; the daily file always writes 0, so 0 is written).
+LsrSponsors keeps only signed-off sponsors who didn't withdraw, as the daily file does. There is no LsrsOnly file for
+those years (LsrSponsors and legislators.txt hold the same). The server's LSRs include requests that never became
+bills (no bill number, no Docket: 116 in 2023, 84 in 2024; the daily file lists only numbered ones), and kinds the
+2026 file doesn't have (7, 14, 16). Three employee numbers (376628, 377080, 409060) vote in every 2023-24 House roll call
+and have no Legislators row, so those votes have no PersonID (about 0.7%). Also from the server: legislators.txt for a past biennium
+(everyone in its sponsor and roll-call files, from Legislators: their latest details, not necessarily those of then),
+and, weekly, the current biennium's former_legislators.txt (members in its files who are no longer sitting) and
+CommitteeMembers.txt (committee code, order, employee number, PersonID, active 1/0, role: the only source of chairs).
 
 Files kept (columns by position; the PDF above names most of them):
 - LSRs_<year>.txt (39 columns): every LSR (legislative service request: a bill or resolution, with or without a number
@@ -62,13 +85,14 @@ from December 1 these go to the next biennium's folder and the last one keeps it
   HouseDistricts.txt (county code, district, ward, town; the House's districts by town; there is no Senate file).
 Codes written two ways: bill numbers "HB  0054" and "HB54"; LSRs "25-0010" and year 2026 + "0010"; chapters padded.
 A download that fails, is refused, isn't text, or has fewer than half the rows of the last copy keeps the last copy.
-data/nh/incomplete says "running" during a run, and after it lists files never downloaded; it is removed when every
-file has a copy. A run is about 15 requests at the crawl delay: about 3 minutes, the same every day.
+data/nh/incomplete says "running" during a run, and after it lists files never downloaded (the daily files' and the
+SQL Server's); it is removed when every file has a copy. A run is about 15 requests at the crawl delay: about 3
+minutes, the same every day, plus the SQL Server once a week (and on a run that has a past year to fill in).
 Usage: python3 states/nh/fetch.py
 """
-import gzip, json, os, time, urllib.error, urllib.request, urllib.robotparser
+import gzip, json, os, re, time, urllib.error, urllib.request, urllib.robotparser
 from collections import Counter
-from datetime import date
+from datetime import date, datetime, timedelta
 
 SITE = "https://gc.nh.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "nh"))
@@ -299,6 +323,267 @@ def members(rp, folder):
         print(f"Members.txt: {len(rows) - 1} members", flush=True)
 
 
+# The Legislature's public SQL Server: the years the daily files no longer hold. Its address and its published
+# read-only login are read from the Legislature's own document at run time (never stored or printed).
+SQL_DOC = f"{SITE}/downloads/ODBC%20and%20Data%20Table%20Structure.pdf"
+SQL_NAMES = ("LSRs", "Docket", "LsrSponsors", "RollCallSummary", "RollCallHistory")  # not LsrsOnly
+VOTES = {1: "Yea", 2: "Nay", 3: "Not Voting/Excused", 4: "Not Voting/Not Excused", 6: "Presiding", 0: ""}
+WEEKLY_DAYS = 7
+
+
+def history_years():
+    """The session years the SQL Server fills in: the previous biennium's and this biennium's past years."""
+    return list(range(first_year(TODAY.year) - 2, TODAY.year))
+
+
+def sql_login(rp):
+    """{server, user, password, database} from the Legislature's document, or None."""
+    if not rp.can_fetch(AGENT, SQL_DOC):
+        print("SQL Server document: robots.txt disallows it; not read", flush=True)
+        return None
+    body, _ = request(SQL_DOC, "SQL Server document")
+    if not body or not body.startswith(b"%PDF"):
+        print("SQL Server document: not read", flush=True)
+        return None
+    import io, pypdf
+    text = " ".join(page.extract_text() or "" for page in pypdf.PdfReader(io.BytesIO(body)).pages)
+    found = {k: re.search(pattern, text) for k, pattern in (
+        ("server", r"SQL Server:\s*([\w.-]+)"), ("user", r"Username:\s*(\S+)"), ("password", r"Password:\s*(\S+)"),
+        ("database", r"default database is\s*(\w+)"))}
+    if not all(found.values()):
+        print("SQL Server document: no " + ", ".join(k for k, m in found.items() if not m) + " in it", flush=True)
+        return None
+    return {k: m.group(1) for k, m in found.items()}
+
+
+class Sql:
+    """One connection; small queries a second apart, rows as dicts with lower-case keys."""
+
+    def __init__(self, login):
+        import pymssql
+        self.secret = login["password"]
+        self.conn = pymssql.connect(server=login["server"], user=login["user"], password=login["password"],
+                                    database=login["database"], login_timeout=30, timeout=600)
+        self.queries = 0
+
+    def rows(self, query, params=()):
+        time.sleep(1)
+        self.queries += 1
+        cur = self.conn.cursor(as_dict=True)
+        cur.execute(query, params)
+        return [{k.strip().lower(): v for k, v in r.items()} for r in cur.fetchall()]
+
+    def scrub(self, e):
+        return str(e).replace(self.secret, "***")
+
+
+def fmt(v):
+    """A value as the daily files write it: "1/7/2026 10:15:33 AM", 1/0 for flags, "" for none; line breaks inside
+    text dropped, as the daily LSRs file drops them ("municipal" CRLF "board" -> "municipalboard"), and "|" (the files'
+    delimiter) made "/"."""
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return "1" if v else "0"
+    if isinstance(v, datetime):
+        return f"{v.month}/{v.day}/{v.year} {v.hour % 12 or 12}:{v.minute:02d}:{v.second:02d} {'AM' if v.hour < 12 else 'PM'}"
+    return str(v).replace("\r", "").replace("\n", "").replace("|", "/")
+
+
+def pad4(v):
+    v = fmt(v).strip()
+    return v.zfill(4) if v.isdigit() else v
+
+
+def unpad(v):
+    v = fmt(v).strip()
+    return (v.lstrip("0") or "0") if v.isdigit() else v
+
+
+def legislator_row(r):
+    """A Legislators row as legislators.txt has it."""
+    return "|".join([fmt(r["personid"]), fmt(r["lastname"]), fmt(r["firstname"]), fmt(r["middlename"]),
+                     fmt(r["legislativebody"]), fmt(r["seatno"]), unpad(r["countycode"]), unpad(r["district"]),
+                     fmt(r["party"]), fmt(r["address"]), fmt(r["address2"]), fmt(r["city"]), fmt(r["expr2"]),
+                     fmt(r["zipcode"]), fmt(r["emailaddress"])])
+
+
+def lsr_row(r):
+    """A Legislation or PastLegislation row as LSRs.txt has it (the columns the daily file leaves empty or 0 too)."""
+    senate_date = r["senatestatusdate"]
+    if isinstance(senate_date, datetime):  # text in Legislation ("04/09/2026"), a date in PastLegislation
+        senate_date = senate_date.strftime("%m/%d/%Y")
+    return "|".join([fmt(r["sessionyear"]), pad4(r["lsr"]), fmt(r["lsrtitle"]), fmt(r["legislativebody"]),
+                     fmt(r["billtype"]), fmt(r["appropriationcode"]), fmt(r["fiscalimpactcode"]), fmt(r["localcode"]),
+                     fmt(r["fulllsr"]), fmt(r["expandedbillno"]), fmt(r["condensedbillno"]), pad4(r["chapterno"]),
+                     fmt(r["subjectcode"]), fmt(r["housecommitteereferralcode"]), fmt(r["housecurrentcommitteecode"]),
+                     fmt(r["housedateintroduced"]), fmt(r["housestatuscode"]), "", fmt(r["houseduedate"]),
+                     fmt(r["housefloordate"]), "0",fmt(r["senatecommitteereferralcode"]),
+                     fmt(r["senatecurrentcommitteecode"]), fmt(r["senatedateintroduced"]), fmt(r["senatestatuscode"]),
+                     fmt(senate_date), "", fmt(r["senatefloordate"]), "0",
+                     fmt(r["generalstatuscode"]), fmt(r["latestcommitteehearingcode"]),
+                     fmt(r["latestcommitteehearingdate"]), fmt(r["latestcommitteehearingplace"]), "", "", "", "0", "0", ""])
+
+
+def sql_year(db, year, people):
+    """One session year's five files from the SQL Server, each written only if missing (a finished year is read
+    once). people: {employee number: Legislators row}. Returns the files written."""
+    folder = os.path.join(DATA, str(first_year(year)))
+    os.makedirs(folder, exist_ok=True)
+    path = lambda name: os.path.join(folder, f"{name}_{year}.txt")
+    current = db.rows("SELECT COUNT(*) AS n FROM dbo.Legislation WHERE sessionyear = %s", (year,))[0]["n"] > 0
+    written = []
+    if not os.path.exists(path("LSRs")):
+        view = "dbo.Legislation WHERE sessionyear = %s" if current else "dbo.PastLegislation WHERE SessionYear = %s"
+        rows = db.rows(f"SELECT * FROM {view} ORDER BY CondensedBillNo", (year,))
+        if rows:
+            write(path("LSRs"), [lsr_row(r) for r in rows])
+            written.append(f"LSRs {len(rows)}")
+    if not os.path.exists(path("Docket")):
+        view = "dbo.Docket" if current else "dbo.PastDocket"
+        rows = db.rows(f"SELECT SessionYear, LSR, StatusDate, CondensedBillNo, LegislativeBody, Description, OrderDate "
+                       f"FROM {view} WHERE SessionYear = %s ORDER BY LSR, StatusDate, statusorder", (year,))
+        if rows:  # OrderDate stands in for the daily file's last column (its Docket's is 1900 or 2200: left empty)
+            write(path("Docket"), ["|".join([fmt(r["sessionyear"]), pad4(r["lsr"]), fmt(r["statusdate"]),
+                                             fmt(r["condensedbillno"]), fmt(r["legislativebody"]), fmt(r["description"]),
+                                             fmt(r["orderdate"]) if 1950 < (r["orderdate"] or datetime.min).year < 2100
+                                             else ""]) for r in rows])
+            written.append(f"Docket {len(rows)}")
+    if not os.path.exists(path("LsrSponsors")):
+        view = "dbo.Sponsors" if current else "dbo.PastSponsors"
+        rows = db.rows(f"SELECT * FROM {view} WHERE SessionYear = %s AND SignedOff = 1 "
+                       f"AND (SponsorWithdrawn = 0 OR SponsorWithdrawn IS NULL) ORDER BY lsr, LSRSequenceNo", (year,))
+        if rows:
+            out = []
+            for r in rows:
+                person = r.get("personid") or (people.get(fmt(r["employeeno"]).strip()) or {}).get("personid")
+                out.append("|".join([fmt(r["sessionyear"]), fmt(r["lsr"]), fmt(r["lsrsequenceno"]), fmt(person),
+                                     fmt(r["primesponsor"])]))
+            write(path("LsrSponsors"), out)
+            written.append(f"LsrSponsors {len(rows)}")
+    summary = db.rows("SELECT * FROM dbo.RollCallSummary WHERE SessionYear = %s "
+                      "ORDER BY LegislativeBody, VoteSequenceNumber", (year,))
+    if summary and not os.path.exists(path("RollCallHistory")):
+        out, unknown = [], Counter()
+        for house in ("H", "S"):
+            last = max((r["votesequencenumber"] for r in summary if r["legislativebody"] == house), default=0)
+            for low in range(1, last + 1, 100):  # a hundred roll calls a query
+                for r in db.rows("SELECT EmployeeNumber, SessionYear, LegislativeBody, VoteSequenceNumber, "
+                                 "CondensedBillNo, Vote, DateModified FROM dbo.RollCallHistory WHERE SessionYear = %s "
+                                 "AND LegislativeBody = %s AND VoteSequenceNumber BETWEEN %s AND %s "
+                                 "ORDER BY VoteSequenceNumber, EmployeeNumber", (year, house, low, low + 99)):
+                    emp = fmt(r["employeenumber"]).strip()
+                    if r["vote"] not in VOTES:
+                        unknown[r["vote"]] += 1
+                    out.append("|".join([fmt(r["sessionyear"]), fmt(r["legislativebody"]), fmt(r["votesequencenumber"]),
+                                         emp, fmt((people.get(emp) or {}).get("personid")), fmt(r["condensedbillno"]),
+                                         VOTES.get(r["vote"], fmt(r["vote"])), fmt(r["datemodified"])]))
+        if unknown:
+            print(f"{year}: vote codes not known: {dict(unknown)}", flush=True)
+        write(path("RollCallHistory"), out)
+        written.append(f"RollCallHistory {len(out)}")
+    if summary and not os.path.exists(path("RollCallSummary")):  # after the members' votes, so it marks them done
+        write(path("RollCallSummary"), ["|".join([fmt(r["sessionyear"]), fmt(r["legislativebody"]),
+                                                  fmt(r["votesequencenumber"]), fmt(r["votedate"]),
+                                                  fmt(r["condensedbillno"]), fmt(r["yeas"]), fmt(r["nays"]),
+                                                  fmt(r["present"]), fmt(r["absent"]), fmt(r["abbreviatedtitle1"]),
+                                                  fmt(r["abbreviatedtitle2"]), fmt(r["question_motion"]),
+                                                  fmt(r["title1"]), fmt(r["title2"]), fmt(r["datemodified"])])
+                                        for r in summary])
+        written.append(f"RollCallSummary {len(summary)}")
+    return written
+
+
+def who_appears(first):
+    """PersonIDs and employee numbers in a biennium's sponsor and roll-call files."""
+    ids, emps = set(), set()
+    for year in (first, first + 1):
+        for name, col, into in (("LsrSponsors", 3, ids), ("RollCallHistory", 4, ids), ("RollCallHistory", 3, emps)):
+            try:
+                with open(os.path.join(DATA, str(first), f"{name}_{year}.txt"), encoding="utf-8") as f:
+                    into.update(x for x in (line.split("|")[col] for line in f) if x)
+            except (OSError, IndexError):
+                pass
+    return ids, emps
+
+
+def members_of(first, people, skip=()):
+    """Legislators rows for everyone in a biennium's sponsor and roll-call files (but skip's PersonIDs)."""
+    ids, emps = who_appears(first)
+    rows = [r for r in people.values()
+            if (fmt(r["personid"]) in ids or fmt(r["employeeno"]).strip() in emps) and fmt(r["personid"]) not in skip]
+    return [legislator_row(r) for r in sorted(rows, key=lambda r: (fmt(r["lastname"]), fmt(r["firstname"])))]
+
+
+def sql_run(rp, term):
+    """Fill in from the SQL Server: each missing past year's files, a past biennium's legislators.txt; weekly, this
+    biennium's former_legislators.txt and CommitteeMembers.txt. Returns problems."""
+    todo = [y for y in history_years() if not all(os.path.exists(os.path.join(DATA, str(first_year(y)), f"{n}_{y}.txt"))
+                                                   for n in SQL_NAMES)]
+    past = sorted({first_year(y) for y in history_years()} - {term})
+    todo_members = [f for f in past if not os.path.exists(os.path.join(DATA, str(f), "legislators.txt"))]
+    state_path = os.path.join(DATA, "sql.json")
+    try:
+        state = json.load(open(state_path))
+    except (OSError, ValueError):
+        state = {}
+    weekly = (state.get("weekly") or "") <= (TODAY - timedelta(days=WEEKLY_DAYS)).isoformat()
+    if not (todo or todo_members or weekly) or out_of_time():
+        return []
+    try:
+        import pymssql, pypdf  # noqa: F401 (pip install pymssql pypdf)
+    except ImportError:
+        print("SQL Server: pymssql or pypdf isn't installed; past years not read", flush=True)
+        return ["sql:not installed"]
+    login = sql_login(rp)
+    if not login:
+        return ["sql:login"]
+    db = None
+    try:
+        db = Sql(login)
+        people = {fmt(r["employeeno"]).strip(): r for r in db.rows(
+            "SELECT PersonID, Employeeno, LastName, FirstName, MiddleName, LegislativeBody, seatno, countycode, "
+            "District, party, Address, address2, city, Expr2, Zipcode, EMailAddress FROM dbo.Legislators")}
+        for year in todo:
+            if out_of_time():
+                return ["time"]
+            written = sql_year(db, year, people)
+            print(f"SQL Server {year}: " + (", ".join(written) or "nothing new"), flush=True)
+        for first in todo_members:
+            rows = members_of(first, people)
+            if rows:
+                write(os.path.join(DATA, str(first), "legislators.txt"), rows)
+            print(f"SQL Server {first}-{first + 1}: {len(rows)} legislators", flush=True)
+        if weekly:
+            folder = os.path.join(DATA, str(term))
+            try:
+                with open(os.path.join(folder, "legislators.txt"), encoding="utf-8") as f:
+                    sitting = {line.split("|")[0] for line in f}
+            except OSError:
+                sitting = set()
+            former = members_of(term, people, sitting)
+            write(os.path.join(folder, "former_legislators.txt"), former)
+            committee = db.rows("SELECT CommitteeCode, SequenceNumber, EmployeeNumber, ActiveMember, comments "
+                                "FROM dbo.CommitteeMembers ORDER BY CommitteeCode, SequenceNumber")
+            write(os.path.join(folder, "CommitteeMembers.txt"), ["|".join([
+                fmt(r["committeecode"]), fmt(r["sequencenumber"]), fmt(r["employeenumber"]).strip(),
+                fmt((people.get(fmt(r["employeenumber"]).strip()) or {}).get("personid")), fmt(r["activemember"]),
+                fmt(r["comments"])]) for r in committee])
+            print(f"SQL Server: {len(former)} former legislators, {len(committee)} committee members", flush=True)
+            state["weekly"] = TODAY.isoformat()
+            with open(state_path, "w") as f:
+                json.dump(state, f)
+        return []
+    except Exception as e:  # a connection or query that fails: the files written so far stay
+        print(f"SQL Server: {type(e).__name__}: {db.scrub(e) if db else str(e).replace(login['password'], '***')}",
+              flush=True)
+        return ["sql:failed"]
+    finally:
+        if db:
+            print(f"SQL Server: {db.queries} queries", flush=True)
+            db.conn.close()
+
+
 def missing(term):
     """Files never downloaded: the current biennium's per-term files, and this session year's (or, before a new
     session's files appear in January, the last year's)."""
@@ -308,6 +593,12 @@ def missing(term):
         if not any(os.path.exists(os.path.join(DATA, str(first_year(y)), f"{name}_{y}.txt"))
                    for y in (TODAY.year, TODAY.year - 1)):
             out.append(f"{name}_{TODAY.year}")
+    for year in history_years():  # from the SQL Server
+        out += [f"{n}_{year}" for n in SQL_NAMES
+                if not os.path.exists(os.path.join(DATA, str(first_year(year)), f"{n}_{year}.txt"))]
+    for first in sorted({first_year(y) for y in history_years()} - {term}):
+        if not os.path.exists(os.path.join(DATA, str(first), "legislators.txt")):
+            out.append(f"legislators_{first}")
     return out
 
 
@@ -334,6 +625,7 @@ def main():
                 per_term(rp, name, columns, folder)
             if not out_of_time():
                 members(rp, folder)
+            sql_run(rp, term)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
     print(f"run: {STATS['requests']} requests, {round((time.time() - START) / 60, 1)} min"
