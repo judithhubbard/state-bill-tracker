@@ -3229,7 +3229,7 @@ function renderStats() {
     <div class="commctl"><label class="commsort">Show <select data-commmode>${Object.entries(COMM_MODES).map(([k, l]) => `<option value="${k}"${k === commMode ? " selected" : ""}>${l}</option>`).join("")}</select></label>
     <label class="commsort">Sort by <select data-commsort>${Object.entries(COMM_SORTS).map(([k, l]) => `<option value="${k}"${k === commSort ? " selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <p class="key">${counts ? `<span><i class="k-n"></i>Referred</span>` : ""}<span><i class="k-appr"></i>Approved by committee</span><span><i class="k-law"></i>Became law</span></p>
-    <p class="note">${counts ? ((DATA.insights?.pastSessions || []).length === 1 ? `Bills for ${topicName}` : `Average bills a session for ${topicName}`) : `Share of ${topicName} referred to each committee`}, ${pastSpan()}. Committees with few bills left out.${shellsOut()}</p>
+    <p class="note">${counts ? ((DATA.insights?.pastSessions || []).length === 1 ? `Bills for ${topicName}` : `Average bills a session for ${topicName}`) : `Share of ${topicName} referred to each committee`}, ${pastSpan()}.${shellsOut()}</p>
     <div class="houses">${houseList(LOW, `${HOUSE[LOW]} committees`)}${houseList("S", "Senate committees")}</div>
     ${rows.length > 16 ? `<button class="act-btn" type="button" data-commall>${commAll ? "Show fewer" : `Show all ${rows.length} committees`}</button>` : ""}`;
 

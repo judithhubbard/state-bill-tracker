@@ -403,7 +403,8 @@ def insights(loaded, hist, current):
                             c[0] += 1
                             c[1] += left
                             c[2] += r["stage"] == 5
-        # Only committees that exist this session; defunct ones would only confuse.
+        # Only committees that exist this session; defunct ones would only confuse. Every one of those is shown (each row
+        # gives its number of bills, so a share from a handful reads as what it is).
         return {t: {k: v for k, v in d.items() if k in current_comms and (not minimum or v[0] >= (40 if t == "all" else 15))} for t, d in out.items()}
 
     # What usually happens next: of bills that reached each point, how many became law.
@@ -674,7 +675,7 @@ def insights(loaded, hist, current):
         "persistent": persistent,
         "pastSessions": past,
         "pastKind": past_kind if past_kind and all(P.session_kind(s) == past_kind for s in past) else "",
-        "committees": {"current": committee_table([current], minimum=False), "past": committee_table(past)},
+        "committees": {"current": committee_table([current], minimum=False), "past": committee_table(past, minimum=False)},
         "odds": {t: dict(v) for t, v in odds.items()},
         "timing": timing,
         "lateSigning": [late_sign, len(signed)],
