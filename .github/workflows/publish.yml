@@ -158,6 +158,12 @@ jobs:
           path: "data/in"
           key: in-data-v1-latest
           restore-keys: in-data-v1-
+      - name: Restore Arkansas
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/ar"
+          key: ar-data-v1-latest
+          restore-keys: ar-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
