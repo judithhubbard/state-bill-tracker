@@ -230,9 +230,9 @@
    "paths": [
     "data/ar"
    ],
-   "minutes": 20,
-   "run": "python3 states/ar/fetch.py",
-   "note": "The Bureau of Legislative Research's file server; not built into the site until its converter exists."
+   "minutes": 50,
+   "run": "python3 states/ar/fetch.py --votes",
+   "note": "The Bureau of Legislative Research's file server, plus arkleg.state.ar.us's bill pages for sessions missing from it (2024) and its roll-call pages (members' votes, built up over a few runs). Not built into the site until its converter exists."
   },
   {
    "name": "Alaska",

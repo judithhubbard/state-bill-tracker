@@ -37,7 +37,7 @@ meetings stay filled. When a session is over a copy is kept under Assembly/<bien
 and each copy holds the whole biennium up to then (the Session ID column tells the sessions apart): the 2026 fiscal
 session's (Assembly/2025/2026F, 2026-05-14) has 2025R, 2026F and 2026S1; the 2023 regular session's (Assembly/2023/
 2023R, 2024-01-05) has 2023R and 2023S1. Not every session has a copy: 2025R, 2024F and 2024S2 don't, so the 2024
-fiscal session (and 2024S2) isn't in these files at all. It's on arkleg.state.ar.us's bill pages only (not read).
+fiscal session (and 2024S2) isn't in these files at all: those are read from arkleg.state.ar.us's bill pages (below).
 
 What's saved, in data/ar/<biennium>/ (the odd first year: 2025 is the 95th General Assembly, 2025-2026), converted to
 UTF-8 with plain line ends, under the server's file names: each file from the newest place that has it filled in: the
@@ -46,16 +46,47 @@ else the newest kept copy. seen.json records where each came from and its listin
 downloaded again only when that changes. The bienniums read are the current one and the one before, and the next once
 the live folder holds its bills (prefiling starts in November of even years).
 
-Not in the files: members' votes (only roll-call numbers), committee votes (Arkansas's committees mostly vote by voice;
-nothing is published), and any summary beyond the subtitle. Members' votes are on arkleg.state.ar.us, whose robots.txt
-allows everything to all agents but ChatGPT's: a page per roll call, /Bills/Votes?id=HB1001&rcs=29&chamber=House&
-ddBienniumSession=2025%2F2025R (the RCS number and house from ChamberActions), listing Yeas, Nays, Non Voting, Present
-and Excused by Sponsor Name ("L. Johnson"); about 2,900 in 2025-26. Not read yet.
+Sessions with no kept copy, from arkleg.state.ar.us (the Legislature's site; its robots.txt allows everything to all
+agents but ChatGPT's, with no crawl delay; read one request at a time, a second apart, with the same User-Agent). For a
+finished biennium (before the current one), each session in the site's session list (the "ddBienniumSession" options:
+"2023/2024F") that has no rows in the saved LegislativeMeasures.txt: for 2023-24, the 2024 fiscal session and the
+second extraordinary session (2024S2). /Bills/SearchByRange?ddBienniumSession=2023%2F2024F lists the session's
+measure types; for bills (HB, SB) and joint resolutions (HJR, SJR), /Bills/ViewBills?type=HB&... says the range ("begins
+with HB1001 and goes through HB1097"), and each number's /Bills/Detail?id=HB1001&ddBienniumSession=2023%2F2024F is read
+(a number that was never filed answers a page whose heading has no title: recorded as absent). Each bill goes into
+data/ar/<biennium>/<session>/bills/<HB1001>.json, named like the files' columns so one converter reads both:
+  Session ID, Measure Number, Originating Chamber (H/S), Bill Type (B, JR), Bill Number, Bill Subtitle (the page's
+  heading; the same text as the file's subtitle), Bill Sponsor (the lead sponsor), Act Number, Introduction Date and Act
+  Date (as "2024-04-03 08:49:17", the files' form without fractions of a second), Status (the page's status line), Bill
+  ID (empty: the page doesn't show the database's key);
+  sponsors: [{Sponsor, Sponsor Type}], Sponsor in the members' Sponsor Name form ("L. Johnson") or a committee's name
+  ("Joint Budget Committee"); Sponsor Type is the page's label ("Lead Sponsor", "Other Primary Sponsor", "CoSponsors"),
+  not the file's number;
+  actions: ChamberActions-like rows, oldest first: {ID (empty), Chamber (the originating chamber, as in the file), Bill
+  Type, Bill Number, Action Stamp (empty: the page has no codes), Action Datetime, Action, Action Chamber (H/S, the
+  house that acted: the page's Chamber column, which matches the file's undocumented column), RCS Number (from the
+  row's vote link), Measure Number, Session ID};
+  amendments: [{Chamber, Amendment Number, Amendment Sponsor, Introduction Date}].
+The page's history matches ChamberActions row for row (checked on HB1001 of 2025R), less the stamp codes and ids. A
+finished session is read once: saved bills and absent numbers are skipped (state.json in the session folder), and the
+session is marked finished when every number is read.
+
+Members' votes (only with --votes): the files and pages carry only roll-call numbers. Each roll call is a page,
+/Bills/Votes?id=HB1001&rcs=29&chamber=House&ddBienniumSession=2025%2F2025R (the RCS number and acting house from
+ChamberActions, or from the bill JSON above), listing Yeas, Nays, Non Voting, Present and Excused by Sponsor Name
+("F. Allen"), each with its count. One JSON per roll call in data/ar/<biennium>/votes/<2025R>-<H29>-<HB1001>.json
+({session, chamber, rcs, bill, when (the page's heading: "Wednesday, January 22, 2025 1:48:07 PM"), counts: {Yeas: 99,
+...}, names: {Yeas: [...], ...}}); a roll call number can appear on two bills, so the bill is part of the name. Each is
+read once. About 2,900 roll calls in 2025-26 and 2,450 in 2023-24 (370 of them 2024F's and 2024S2's), at about 1.5
+seconds each: about 2¼ hours for all. Missing votes don't mark the download incomplete.
+Not anywhere: committee votes (Arkansas's committees mostly vote by voice; nothing is published) and any summary beyond
+the subtitle.
 
 data/ar/incomplete says "running" during a run and, after it, lists the files that were never downloaded and still
-couldn't be; a file whose download fails when a last copy exists keeps that copy and doesn't count. It is removed when
-nothing is missing.
-Usage: python3 states/ar/fetch.py [biennium]   (default: the bienniums above; a single one leaves the marker alone)
+couldn't be (or the arkleg sessions' bills never read); a file whose download fails when a last copy exists keeps that
+copy and doesn't count. It is removed when nothing is missing.
+Usage: python3 states/ar/fetch.py [biennium] [--votes]   (default: the bienniums above; a single one leaves the marker
+alone; --votes also reads members' votes, at most --votes=N roll calls when a number is given)
 """
 import html, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import Counter
@@ -70,7 +101,12 @@ DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 TODAY = date.today()
 CURRENT = TODAY.year - (TODAY.year + 1) % 2  # the biennium's odd first year
-ONLY = int(sys.argv[1]) if len(sys.argv) > 1 else None
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+ONLY = int(ARGS[0]) if ARGS else None
+VOTES = next((a for a in sys.argv[1:] if a.startswith("--votes")), None)
+VOTES_MAX = int(VOTES.split("=", 1)[1]) if VOTES and "=" in VOTES else None  # for trying it out on a few
+SITE = "https://arkleg.state.ar.us"
+TYPES = ("HB", "SB", "HJR", "SJR")  # bills, and joint resolutions (constitutional amendments, in regular sessions)
 MARKER = os.path.join(DATA, "incomplete")
 EMPTY = 8  # bytes: an empty file is the byte-order mark alone (2), perhaps with a line end
 # The files of the sessions' bills and meetings. Between sessions the live folder's bill files are empty and its
@@ -308,6 +344,216 @@ def biennium_run(biennium, live, live_biennium):
         print(f"{label}: no bills yet", flush=True)
 
 
+def page(path, label):
+    """An arkleg.state.ar.us page's text, or None."""
+    body = request(SITE + path, label)
+    return None if body is None else body.decode("utf-8", "replace")
+
+
+def text_of(fragment):
+    return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", fragment)).split())
+
+
+def stamp(text):
+    """"4/3/2024 8:49:17 AM" or "5/3/2024" -> "2024-04-03 08:49:17" or "2024-05-03" (the files' form)."""
+    text = " ".join(text.replace("\xa0", " ").split())
+    for f, out in (("%m/%d/%Y %I:%M:%S %p", "%Y-%m-%d %H:%M:%S"), ("%m/%d/%Y %I:%M %p", "%Y-%m-%d %H:%M:00"),
+                   ("%m/%d/%Y", "%Y-%m-%d")):
+        try:
+            return datetime.strptime(text, f).strftime(out)
+        except ValueError:
+            pass
+    return text
+
+
+HOUSE = {"House": "H", "Senate": "S"}
+FIELD = re.compile(r'aria-colindex="1" role="gridcell">([^<]*):</div>\s*<div class="col-md-8"[^>]*>(.*?)</div>\s*</div>',
+                   re.S)
+
+
+def bill_page(t, session, measure):
+    """A bill's detail page as a record in the files' terms; None when the number was never filed."""
+    m = re.search(r"<h1[^>]*>\s*([^<]*?)\s*</h1>", t)
+    if not m or " - " not in m.group(1):
+        return None
+    kind, number = re.match(r"([A-Z]+)(\d+)", measure).groups()
+    fields = {k.strip(): v for k, v in FIELD.findall(t)}
+    origin = HOUSE.get(text_of(fields.get("Originating Chamber", "")), kind[0])
+    rec = {"Session ID": session, "Measure Number": measure, "Originating Chamber": origin, "Bill Type": kind[1:],
+           "Bill Number": number, "Bill Subtitle": html.unescape(m.group(1).split(" - ", 1)[1]).strip(), "Bill ID": "",
+           "Bill Sponsor": text_of(fields.get("Lead Sponsor", "")),
+           "Act Number": (re.findall(r"(\d+)\s*$", text_of(fields.get("Act Number", ""))) or [""])[0],
+           "Introduction Date": stamp(text_of(fields.get("Introduction Date", ""))),
+           "Act Date": stamp(text_of(fields.get("Act Date", ""))), "Status": text_of(fields.get("Status", ""))}
+    rec["sponsors"] = [{"Sponsor": text_of(a), "Sponsor Type": label}
+                       for label in ("Lead Sponsor", "Other Primary Sponsor", "CoSponsors")
+                       for a in re.findall(r"<a [^>]*>(.*?)</a>", fields.get(label, ""), re.S)]
+    # The history and amendments: each a grid of rows after its heading.
+    sections = re.split(r"<h3>([^<]*)</h3>", t)
+    part = {sections[i].strip(): sections[i + 1] for i in range(1, len(sections) - 1, 2)}
+    rows = lambda chunk: re.split(r'<div class="row tableRow(?:Alt)?"[^>]*role="row">', chunk)[1:]
+    actions = []
+    for r in rows(part.get("Bill Status History", "")):
+        cells = [text_of(c) for c in re.findall(r'role="gridcell">(.*?)</div>', r, re.S)]
+        if len(cells) < 3:
+            continue
+        vote = re.search(r"rcs=(\d+)", r)
+        actions.append({"ID": "", "Chamber": origin, "Bill Type": kind[1:], "Bill Number": number, "Action Stamp": "",
+                        "Action Datetime": stamp(cells[1]), "Action": cells[2], "Action Chamber": HOUSE.get(cells[0], cells[0]),
+                        "RCS Number": vote.group(1) if vote else "", "Measure Number": measure, "Session ID": session})
+    rec["actions"] = actions[::-1]  # the page lists the newest first
+    amendments = []
+    for r in rows(part.get("Amendments", "")):
+        cells = [text_of(c) for c in re.findall(r'role="gridcell">(.*?)</div>', r, re.S)]
+        if len(cells) >= 4 and cells[0].startswith("Chamber:"):
+            amendments.append({"Chamber": HOUSE.get(cells[0].split(":", 1)[1].strip(), cells[0]),
+                               "Amendment Number": cells[1].split(":", 1)[-1].strip(), "Amendment Sponsor": cells[2],
+                               "Introduction Date": stamp(cells[3])})
+    rec["amendments"] = amendments
+    return rec
+
+
+def site_sessions(biennium):
+    """The site's sessions of a biennium ("2024F"), from its session list; None if it can't be read."""
+    t = page(f"/Bills/SearchByRange?ddBienniumSession={biennium}%2F{biennium}R", f"{biennium} sessions")
+    if t is None:
+        return None
+    return sorted(set(re.findall(rf'<option value="{biennium}/(\d{{4}}[A-Z]\d*)"', t)))
+
+
+def site_session(biennium, session):
+    """Every bill of a session with no kept copy, from its bill pages; a finished session is read once."""
+    folder = os.path.join(DATA, str(biennium), session)
+    os.makedirs(os.path.join(folder, "bills"), exist_ok=True)
+    state_path = os.path.join(folder, "state.json")
+    state = load(state_path, {})
+    if state.get("finished"):
+        print(f"{session}: finished and fully read; nothing to do", flush=True)
+        return
+    ranges = state.setdefault("ranges", {})
+    absent = set(state.get("absent") or [])
+    q = f"ddBienniumSession={biennium}%2F{session}"
+    t = page(f"/Bills/SearchByRange?{q}", f"{session} types")
+    if t is None:
+        MISSING.add(f"{session}:list")
+        return
+    types = [k for k in TYPES if f"type={k}&" in t]
+    for kind in types:
+        if kind in ranges:
+            continue
+        v = page(f"/Bills/ViewBills?type={kind}&{q}", f"{session} {kind} range")
+        m = v and re.search(rf"begins with <b>{kind}(\d+)</b> and goes through <b>{kind}(\d+)</b>", v)
+        if not m:
+            MISSING.add(f"{session}:list")
+            continue
+        ranges[kind] = [int(m.group(1)), int(m.group(2))]
+    save(state, state_path)
+    todo = [f"{k}{n}" for k in types if k in ranges for n in range(ranges[k][0], ranges[k][1] + 1)]
+    todo = [b for b in todo if b not in absent and not os.path.exists(os.path.join(folder, "bills", f"{b}.json"))]
+    got = 0
+    for measure in todo:
+        if out_of_time():
+            break
+        t = page(f"/Bills/Detail?id={measure}&{q}", f"{session} {measure}")
+        if t is None:
+            continue
+        rec = bill_page(t, session, measure)
+        if rec is None:
+            absent.add(measure)
+        else:
+            rec["read"] = datetime.now().isoformat(timespec="seconds")
+            save(rec, os.path.join(folder, "bills", f"{measure}.json"))
+        got += 1
+        if got % 25 == 0:
+            state["absent"] = sorted(absent)
+            save(state, state_path)
+    state["absent"] = sorted(absent)
+    saved = len(os.listdir(os.path.join(folder, "bills")))
+    if got == len(todo) and not MISSING & {f"{session}:list"}:
+        state["finished"] = True
+    else:
+        MISSING.add(f"{session}:bills")
+    save(state, state_path)
+    print(f"{session}: {got} of {len(todo)} bill pages read; {saved} bills saved, {len(absent)} numbers never filed "
+          f"(ranges {ranges})", flush=True)
+
+
+def site_run(biennium):
+    """A finished biennium's sessions that have no kept copy (no rows in the saved LegislativeMeasures.txt)."""
+    if biennium >= CURRENT:
+        return
+    path = os.path.join(DATA, str(biennium), "LegislativeMeasures.txt")
+    try:
+        with open(path, encoding="utf-8") as f:
+            have = set(sessions_in(f.read()))
+    except OSError:
+        return  # the files come first
+    listed = site_sessions(biennium)
+    if listed is None:
+        if not any(os.path.isdir(os.path.join(DATA, str(biennium), s)) for s in os.listdir(os.path.join(DATA, str(biennium)))
+                   if re.fullmatch(r"\d{4}[A-Z]\d*", s)):
+            MISSING.add(f"{biennium}:sessions")
+        return
+    for session in listed:
+        if session not in have:
+            site_session(biennium, session)
+
+
+def roll_calls(biennium):
+    """(session, house, rcs, bill) of every roll call in a biennium's files and arkleg bill records."""
+    out = set()
+    path = os.path.join(DATA, str(biennium), "ChamberActions.txt")
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                r = [x.strip() for x in line.split("|")]
+                if len(r) >= 11 and r[8].isdigit():
+                    out.add((r[10], r[7], r[8], r[9]))
+    for session in os.listdir(os.path.join(DATA, str(biennium))):
+        bills = os.path.join(DATA, str(biennium), session, "bills")
+        if os.path.isdir(bills):
+            for name in os.listdir(bills):
+                for a in load(os.path.join(bills, name), {}).get("actions") or []:
+                    if a.get("RCS Number"):
+                        out.add((a["Session ID"], a["Action Chamber"], a["RCS Number"], a["Measure Number"]))
+    return sorted(out)
+
+
+def votes_run(biennium, budget):
+    """Members' votes, one page per roll call, each read once. Returns how many were read."""
+    folder = os.path.join(DATA, str(biennium), "votes")
+    os.makedirs(folder, exist_ok=True)
+    calls = roll_calls(biennium)
+    todo = [c for c in calls if not os.path.exists(os.path.join(folder, f"{c[0]}-{c[1]}{c[2]}-{c[3]}.json"))]
+    if budget is not None:
+        todo = todo[:budget]
+    got = 0
+    for session, house, rcs, bill in todo:
+        if out_of_time():
+            break
+        chamber = {"H": "House", "S": "Senate"}.get(house, house)
+        t = page(f"/Bills/Votes?id={bill}&rcs={rcs}&chamber={chamber}&ddBienniumSession={biennium}%2F{session}",
+                 f"{session} {bill} {house}{rcs}")
+        heading = t and re.search(r"<h1>\s*(?:House|Senate) Vote - ([^<]*?)\s*</h1>", t)
+        if not heading:
+            FAILS["vote page without a vote"] += 1
+            continue
+        counts, names = {}, {}
+        parts = re.split(r'<b style="font-size:23px;">\s*([A-Za-z ]+):\s*(\d+)\s*</b>', t)
+        for i in range(1, len(parts) - 2, 3):
+            group = parts[i].strip()
+            counts[group] = int(parts[i + 1])
+            chunk = re.split(r"<div class=\"row\">|<b style=", parts[i + 2])[0] if counts[group] else ""
+            names[group] = [text_of(c) for c in re.findall(r'role="gridcell">(.*?)</div>', chunk, re.S)]
+        save({"session": session, "chamber": house, "rcs": rcs, "bill": bill, "when": heading.group(1),
+              "counts": counts, "names": names}, os.path.join(folder, f"{session}-{house}{rcs}-{bill}.json"))
+        got += 1
+        if got % 100 == 0:
+            print(f"{biennium} votes: {got} of {len(todo)}, {round((time.time() - START) / 60)} min", flush=True)
+    print(f"{biennium} votes: {got} of {len(todo)} read ({len(calls)} roll calls)", flush=True)
+    return got
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     # A run cut off by its time limit leaves this, so a partial copy isn't published (cleared after a clean run).
@@ -339,6 +585,15 @@ def main():
             if ONLY and biennium != ONLY:
                 continue
             biennium_run(biennium, live, live_biennium)
+            site_run(biennium)
+        if VOTES:
+            budget = VOTES_MAX
+            for biennium in bienniums:
+                if ONLY and biennium != ONLY:
+                    continue
+                got = votes_run(biennium, budget)
+                if budget is not None:
+                    budget -= got
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         MISSING.add("refused")
