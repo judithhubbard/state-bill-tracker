@@ -117,8 +117,9 @@ jobs:
 
   next:
     needs: download
-    # Only after a full run (scheduled, or by hand for every state), and not when a run was cancelled.
-    if: ${{ !cancelled() && (github.event_name == 'schedule' || inputs.states == 'all' || inputs.states == '') }}
+    # After every full run (scheduled, or by hand for every state), whatever happened to single states: a state's job
+    # bumped by a newer run of that state counts as cancelled, and mustn't break the chain.
+    if: ${{ always() && (github.event_name == 'schedule' || inputs.states == 'all' || inputs.states == '') }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     permissions:
