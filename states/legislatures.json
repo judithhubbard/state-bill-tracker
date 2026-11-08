@@ -15,6 +15,7 @@
   "me": {"seats": {"S": 35, "H": 151}, "override": "2/3", "governor": ["Janet Mills", "D"], "note": "The House also seats two tribal representatives (the Passamaquoddy Tribe's and the Houlton Band of Maliseet Indians'), who don't vote on the floor. Overriding a veto takes two-thirds of the members present in each house."},
   "mi": {"seats": {"S": 38, "H": 110}, "override": "2/3", "governor": ["Gretchen Whitmer", "D"]},
   "nc": {"seats": {"S": 50, "H": 120}, "override": "3/5", "governor": ["Josh Stein", "D"]},
+  "nd": {"seats": {"S": 47, "H": 94}, "override": "2/3", "governor": ["Kelly Armstrong", "R"]},
   "nh": {"seats": {"S": 24, "H": 400}, "override": "2/3", "governor": ["Kelly Ayotte", "R"]},
   "nj": {"seats": {"S": 40, "A": 80}, "override": "2/3", "governor": ["Mikie Sherrill", "D"]},
   "ny": {"seats": {"S": 63, "A": 150}, "override": "2/3", "governor": ["Kathy Hochul", "D"]},

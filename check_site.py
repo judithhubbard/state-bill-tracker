@@ -101,6 +101,10 @@ if not os.path.exists(os.path.join(HERE, "data", "ut", "incomplete")):
 if not os.path.exists(os.path.join(HERE, "data", "in", "incomplete")):
     contacts("in", TODAY.year, 140)
 
+# North Dakota: two-year Legislative Assemblies starting in odd years.
+if not os.path.exists(os.path.join(HERE, "data", "nd", "incomplete")):
+    contacts("nd", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 120)
+
 # Alaska: two-year Legislatures starting in odd years.
 if not os.path.exists(os.path.join(HERE, "data", "ak", "incomplete")):
     contacts("ak", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 55)

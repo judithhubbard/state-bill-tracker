@@ -1722,6 +1722,9 @@ function statusText(b) {
     t = b.veto ? `Vetoed · Memo ${b.veto}` : "Vetoed";
     small = fmtDate(D.vetoed);
   }
+  // A bill that ended before the session did (North Dakota's floor defeats and withdrawals: STATE.endedNote).
+  const ended = b.stage <= 2 && STATE.endedNote?.(b);
+  if (ended) t = ended.status;
   return `<div class="st s${b.stage}">${esc(t)}<small>${esc(small)}</small></div>`;
 }
 
@@ -2190,7 +2193,9 @@ function planFor(b, stance = "support") {
   // A state's deadline for passing a bill's own house (Virginia's crossover), once it has gone by.
   const origin = !adjourned && b.stage <= 1 && DATA.current && STATE.originDeadline?.(b);
   const missed = origin && today > origin ? origin : null;
-  const stalled = missed ? `It missed ${STATE.originWord || "the deadline"} on ${fmtDate(missed)}, the last day to pass its own house, so it can't pass this ${YEARS > 1 ? "session" : "year"}.`
+  // A bill that ended before the session did, where a floor defeat or a withdrawal ends it (North Dakota: STATE.endedNote).
+  const ended = b.stage <= 2 && STATE.endedNote?.(b);
+  const stalled = ended && !adjourned ? ended.tail : missed ? `It missed ${STATE.originWord || "the deadline"} on ${fmtDate(missed)}, the last day to pass its own house, so it can't pass this ${YEARS > 1 ? "session" : "year"}.`
     : adjourned
     ? `Floor votes are over for this session. ${DIES(y2, b)}`
     : recess ? `The Legislature is out until January ${y2}.` : "";
@@ -2221,14 +2226,14 @@ function planFor(b, stance = "support") {
   if (b.stage === 0) {
     // A state can word the next step for committees that schedule floor votes (Texas's House Calendars Committee).
     const nextText = inComm.map((v) => STATE.committeeNext?.[v.committee]).find(Boolean) || "a committee vote.";
-    what = `<p class="when">Next: ${nextText}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
+    what = `<p class="when">${ended ? ended.when : `Next: ${nextText}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     inComm.forEach((v) => book.chair(v.p[0], v.committee, L(A(...agendaAsk(v.committee))), live));
     inComm.forEach(stuck);
     if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
     book.reps(BOTH, L(A("", "oppose it")));
   } else if (b.stage === 1) {
     const houses = b.vers.filter((v) => /floor/i.test(v.statusDesc || "")).map((v) => v.p[0]);
-    what = `<p class="when">Next: a vote of the full ${houses.map((h) => HOUSE[h]).join(" and ") || "house"}.</p>${stalled ? `<p>${stalled}</p>` : ""}`;
+    what = `<p class="when">${ended ? ended.when : `Next: a vote of the full ${houses.map((h) => HOUSE[h]).join(" and ") || "house"}.`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     houses.forEach((h) => floorLeader(h));
     // Its version in the other house still has to get out of committee there.
     if (live) inComm.filter((v) => !houses.includes(v.p[0])).forEach((v) => book.chair(v.p[0], v.committee, A(...agendaAsk(v.committee)), true));
@@ -2241,7 +2246,7 @@ function planFor(b, stance = "support") {
     const twin = STATE.oneNumber ? { ...b.vers[0], p: other + b.vers[0].p.slice(1) } : b.vers.find((v) => v.p[0] === other);
     // Back in the first house to agree to the second house's amendments (New Jersey's "2RSC").
     const agree = twin && /to agree to the/.test(twin.statusDesc || "");
-    what = `<p class="when">Next: ${agree ? `the ${HOUSE[other]} votes on the ${b.passedIn}'s changes.` : `the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
+    what = `<p class="when">${ended ? ended.when : `Next: ${agree ? `the ${HOUSE[other]} votes on the ${b.passedIn}'s changes.` : `the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}`}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     if (twin && twin.committee) book.chair(other, twin.committee, L(A(...agendaAsk(twin.committee))), live);
     if (twin && twin.committee) stuck(twin);
     else floorLeader(other);
@@ -3100,7 +3105,8 @@ function sankey(odds, fate, cfate) {
   const pct = (v, d = N[0]) => `${Math.round((v / d) * 100)}%`;
   const back = (key) => { const f = fate?.[key]; return f && f[0] && linkedSessions() ? `${pct(f[1], f[0])} reintroduced next session` : ""; };
   const STEPS = ["Introduced", "Approved by a committee", "Passed one house", "Passed both houses"];
-  const EXITS = [["Died in committee", "committee"], ["Died awaiting a floor vote", "floor"], ["Passed one house only", "oneHouse"]];
+  // A state where every bill gets a floor vote (North Dakota) names the first two exits itself, and has no committee breakdown.
+  const EXITS = [[STATE.oddsExits?.[0] || "Died in committee", "committee"], [STATE.oddsExits?.[1] || "Died awaiting a floor vote", "floor"], ["Passed one house only", "oneHouse"]];
   // Each exit sits just under the step it leaves to, so the exits step down instead of sharing one line.
   let exitTop = 0, bottom = 0;
   const label = (x, y, lines) => lines.filter(Boolean).map((l, i) => `<text class="sk-l${i ? "" : " sk-b"}" x="${x}" y="${y + i * 15}">${l}</text>`).join("");
@@ -3118,7 +3124,7 @@ function sankey(odds, fate, cfate) {
     bottom = Math.max(bottom, exitTop + Math.max(h(out), i === 0 && cfate ? 137 : 50));
     g += band(xs[i] + nodeW, top + h(N[i + 1]), top + h(N[i]), ex, exitTop, exitTop + h(out), "sk-out");
     const [name, key] = EXITS[i];
-    if (i === 0 && cfate) {
+    if (i === 0 && cfate && !STATE.oddsExits) {
       // Died in committee, in four parts.
       const PARTS = [["none", "Never acted on", "sk-c0"], ["amended", "Revised by the sponsor, never voted on", "sk-c1"], ["held", STATE.heldLabel || "Held without a vote", "sk-c2"], ["defeated", "Voted down", "sk-c4"], ["passed", "Passed one committee, died in the next", "sk-c3"]]
         .filter(([pk]) => (cfate[pk] || [0])[0] > 0);
@@ -3261,7 +3267,7 @@ function renderStats() {
   const lawSpan = yearsSpan(I.pastSessions[1], I.pastSessions[I.pastSessions.length - 1]);
   const COMM_FATE = [["none", "Never acted on"], ["amended", "Revised by the sponsor, never voted on"], ["held", `${STATE.heldLabel || "Held without a vote"}${TIP(HELD_TIP)}`], ["defeated", "Voted down"], ["passed", "Passed one committee, died in the next"]]
     .filter(([k]) => (I.commFate?.[t]?.[k] || [0])[0] > 0);  // only what this state's records show
-  const FATE = [["committee", "Died in committee"], ["floor", "Died awaiting a floor vote"], ["oneHouse", "Passed one house only"], ["vetoed", "Vetoed"]];
+  const FATE = [["committee", STATE.fateLabels?.committee || "Died in committee"], ["floor", STATE.fateLabels?.floor || "Died awaiting a floor vote"], ["oneHouse", "Passed one house only"], ["vetoed", "Vetoed"]];
   const pers = I.persistent?.[t] || [];
   const TRIES = [[p0, "First try", "t0"], [p1, "Second try", "t1"], [p2, "Third try", "t2"], [p3, "Fourth or later", "t3"]];
   // Counting tries needs a past session with one before it: with a single past session, that part is left out.

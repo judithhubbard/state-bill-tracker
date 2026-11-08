@@ -113,5 +113,6 @@ data/ar/*
 !data/ar/district_towns.json
 # North Dakota downloads (states/nd/fetch.py).
 data/nd/*
+!data/nd/district_towns.json
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

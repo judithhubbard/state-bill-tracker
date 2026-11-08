@@ -299,8 +299,7 @@
     "data/nd"
    ],
    "minutes": 20,
-   "run": "python3 states/nd/fetch.py",
-   "note": "The Legislative Branch's static JSON API (ndlegis.gov/api). Not built into the site until its converter exists."
+   "run": "python3 states/nd/fetch.py && python3 states/nd/contacts.py"
   }
  ]
 }

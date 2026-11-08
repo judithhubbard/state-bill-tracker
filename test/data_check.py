@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "ar", "az", "ca", "co", "ct", "ga", "il", "in", "ma", "md", "me", "mi", "nc", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "ar", "az", "ca", "co", "ct", "ga", "il", "in", "ma", "md", "me", "mi", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -80,6 +80,11 @@ def check(state):
         if unsorted:
             say(state, "FAIL" if len(unsorted) > 0.01 * len(recs) else "LOOK",
                 f"{s}: {len(unsorted)} bills with history lines out of date order, e.g. {unsorted[:4]}")
+        # Law numbers on bills that aren't laws: ND's Session Laws give vetoed measures chapter numbers too (HB 1273 of 2023,
+        # "Measure Vetoed", chapter 586); a chapter number alone doesn't make a law.
+        numbered = [r["nums"][0] for r in recs if r.get("chapter") and r["stage"] != 5]
+        if numbered:
+            say(state, "FAIL", f"{s}: {len(numbered)} bills that aren't laws carry a law number, e.g. {numbered[:4]}")
         # Law numbers given twice (NH's history lines: SB 62 and HB 511 of 2025 both "Chapter 39"; the LSRs file's column is
         # right). In one-year sessions a chapter, act or public law number belongs to one bill.
         if getattr(P, "YEARS", 2) == 1:
