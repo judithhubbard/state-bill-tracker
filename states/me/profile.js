@@ -4,6 +4,8 @@ const STATE = {
   code: "me",
   name: "Maine",
   abbr: "ME",
+  // The records never show the governor's signature (a law is a bill both houses enacted that has chaptered text): "Became law".
+  noSignatures: true,
   // Steps that aren't news on a watchlist card.
   routine: /^(Work Session Held|Voted: |Carry Over (?:Requested|Approved)|Sent (?:for|down for) concurrence|Ordered sent (?:down )?forthwith|ORDERED SENT FORTHWITH|In concurrence\. ORDERED SENT|Reports? (?:was )?READ|Unfinished Business|Speaker laid before|Later today assigned|Taken from the table|READ ONCE|(?:The |Bill )?(?:Bill|Resolve|RESOLUTION) was READ ONCE|Bill READ ONCE|Under suspension of the rules,? (?:CONSENT CALENDAR|the (?:Bill|Resolve) was given)|ASSIGNED FOR SECOND READING|COMMITTEE ON BILLS IN THE SECOND READING|Committee Amendment|House Amendment|Senate Amendment|Received by the (?:Clerk|Secretary)|Committee on .* suggested and ordered printed|This being an emergency measure|Placed in (?:the )?Legislative Files|Pursuant to Joint Rule|Died (?:in|on)|CARRIED OVER|Carried over|Roll Call Ordered|ROLL CALL NO)/i,
   publicSite: "https://statebilltracker.org/me/",

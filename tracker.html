@@ -1675,6 +1675,10 @@ function plainAction(t) {
 // What a law's number is called: "Chapter 28" (most states), "Act 28" (Pennsylvania).
 const LAW_WORD = STATE.lawWord || "Chapter";
 // A governor who can veto parts of a bill (Washington's sections, appropriation items elsewhere) and did.
+// How a law got there: over the governor's veto (vetoed, then overridden), or signed; a state whose records don't show
+// the signature (Maine's) says only that it became law (STATE.noSignatures).
+const overriddenLaw = (b) => b.stage === 5 && !!b.dates.vetoed;
+const lawLine = (b) => (overriddenLaw(b) ? "Became law over the governor's veto" : STATE.noSignatures ? "Became law" : "Signed into law");
 const partlyVetoed = (b) => b.stage === 5 && b.vers.some((v) => v.actions.some(([, t]) => /partially vetoed|line-item veto|item veto/i.test(t)));
 function statusText(b) {
   const D = b.dates, live = DATA.current;
@@ -1711,7 +1715,8 @@ function statusText(b) {
     t = live ? "On the governor's desk" : "Sent to the governor";
     small = live && b.due ? `Sent ${fmtDate(D.deliv)} · decision due ${fmtDate(b.due)} (est.)` : `Sent ${fmtDate(D.deliv)}`;
   } else if (b.stage === 5) {
-    t = (b.chapter ? `Signed · ${LAW_WORD} ${b.chapter}` : "Signed into law") + (partlyVetoed(b) ? " · part vetoed" : "");
+    const how = overriddenLaw(b) ? "Veto overridden" : STATE.noSignatures ? "Became law" : "Signed";
+    t = (b.chapter ? `${how} · ${LAW_WORD} ${b.chapter}` : lawLine(b)) + (partlyVetoed(b) ? " · part vetoed" : "");
     small = fmtDate(D.signed);
   } else if (b.stage === 6) {
     t = b.veto ? `Vetoed · Memo ${b.veto}` : "Vetoed";
@@ -2262,7 +2267,7 @@ function planFor(b, stance = "support") {
     gov = A("sign it", "veto it") + (b.due ? ` by ${fmtDate(b.due)}` : "");
     book.reps(BOTH, A("urge the governor to sign it", "urge the governor to veto it"));
   } else if (b.stage === 5) {
-    what = `<p class="when">Signed into law${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}.${partlyVetoed(b) ? " The governor vetoed part of it." : ""}</p>`;
+    what = `<p class="when">${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}.${partlyVetoed(b) ? " The governor vetoed part of it." : ""}</p>`;
     b.vers.forEach((v) => book.sponsor(v));
   } else if (b.stage === 6) {
     // A two-year session can still take a new bill after a first-year veto.
@@ -2275,7 +2280,7 @@ function planFor(b, stance = "support") {
   const actionable = b.stage <= 4 && (live || b.stage >= 3);
   // Why nothing can be done now, in plain words.
   let reason = "";
-  if (b.stage === 5) reason = `Signed into law${b.chapter ? ` as ${LAW_WORD} ${b.chapter}` : ""}. Changing it would take a new bill.`;
+  if (b.stage === 5) reason = `${lawLine(b)}${b.chapter ? ` as ${LAW_WORD} ${b.chapter}` : ""}. Changing it would take a new bill.`;
   else if (b.stage === 6) reason = `Vetoed${b.veto ? ` (veto memo ${b.veto})` : ""}. To revive it, the sponsors would ${live ? "file it again as a new bill" : "reintroduce it next session"}.`;
   else if (!actionable && adjourned) {
     const other = b.passedIn === HOUSE.S ? HOUSE[LOW] : HOUSE.S;
@@ -3259,11 +3264,12 @@ function renderStats() {
   const FATE = [["committee", "Died in committee"], ["floor", "Died awaiting a floor vote"], ["oneHouse", "Passed one house only"], ["vetoed", "Vetoed"]];
   const pers = I.persistent?.[t] || [];
   const TRIES = [[p0, "First try", "t0"], [p1, "Second try", "t1"], [p2, "Third try", "t2"], [p3, "Fourth or later", "t3"]];
+  // Counting tries needs a past session with one before it: with a single past session, that part is left out.
   $("statPersist").innerHTML = `<h2>Repeat tries</h2>
-    <h3 class="sub">Sessions it took laws to pass</h3>
+    ${I.pastSessions.length < 2 ? "" : `<h3 class="sub">Sessions it took laws to pass</h3>
     <div class="stack">${TRIES.map(([n, , cls]) => `<i class="${cls}" style="width:${pctOf(n, total)}%"></i>`).join("")}</div>
     <p class="key">${TRIES.map(([n, l, cls]) => `<span><i class="${cls}"></i>${l}: <b>${pctOf(n, total)}%</b></span>`).join("")}</p>
-    <p class="note">${num(total)} laws passed in ${lawSpan}${t === "all" ? "" : ` (${TOPICS[t]})`}.${shellsOut()}</p>
+    <p class="note">${num(total)} laws passed in ${lawSpan}${t === "all" ? "" : ` (${TOPICS[t]})`}.${shellsOut()}</p>`}
     <h3 class="sub">Bills that died</h3>
     <p class="key"><span><i class="k-appr"></i>Came back the next session</span><span><i class="k-law"></i>Later became law</span></p>
     <div class="vlist">${FATE.map(([k, l]) => { const [n, back, law] = fate[k] || [0, 0, 0];
@@ -3439,7 +3445,7 @@ function keyDates(b) {
     ...D.passAAll.map((d, i) => [d, i ? `Passed the ${HOUSE[LOW]} again` : `Passed the ${HOUSE[LOW]}`]),
     [D.died, "Sent back to committee for the new year (had to pass again)"],
     [D.deliv, "Sent to the governor"],
-    [D.signed, `Signed into law${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}`],
+    [D.signed, `${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}`],
     [D.vetoed, `Vetoed${b.veto ? `, Memo ${b.veto}` : ""}`],
   ].filter(([d]) => d).sort((x, y) => x[0].localeCompare(y[0]));
   if (DATA.current && b.stage === 4 && b.due) items.push([b.due, STATE.dueLabel(b.due), true]);
@@ -5157,8 +5163,8 @@ function hydrate(raw) {
   // Claude artifact pages can't hand visitors a file; the download works on GitHub Pages.
   $("csv").hidden = !ROOT;
   try { const s = localStorage.getItem(STORE + "statsec"); if (s && $(s) && !(s === "statNet" && $("statNetBtn").hidden) && !(s === "statWho" && $("statWhoBtn").hidden)) statSec = s; } catch (e) {}
-  // "Repeat tries" needs bills linked across sessions.
-  if (!linkedSessions()) { document.querySelector('[data-sec="statPersist"]').hidden = true; if (statSec === "statPersist") statSec = "statOdds"; }
+  // "Repeat tries" needs bills linked across sessions, and two past sessions (a bill and the session before it).
+  if (!linkedSessions() || (DATA.insights?.pastSessions || []).length < 2) { document.querySelector('[data-sec="statPersist"]').hidden = true; if (statSec === "statPersist") statSec = "statOdds"; }
   // "What's changing" needs subjects picked by hand (TRENDS in the state's profile.py).
   if (!DATA.insights?.trends?.subjects?.length) { document.querySelector('[data-sec="statTrend"]').hidden = true; if (statSec === "statTrend") statSec = "statOdds"; }
   showStatSec(statSec);
