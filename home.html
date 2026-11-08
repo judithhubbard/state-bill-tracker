@@ -55,10 +55,10 @@ p.lede { color: var(--ink-2); margin: 0 0 24px; font-size: 17px; }
 .dot.D { background: color-mix(in srgb, var(--dem) 45%, transparent); color: var(--dem); }
 .dot.R { background: color-mix(in srgb, var(--rep) 45%, transparent); color: var(--rep); }
 .dot.S, .dot.I, .dot.O { background: color-mix(in srgb, var(--ind) 45%, transparent); color: var(--ind); }
-.dot.sm { box-shadow: 0 0 0 1.5px currentColor; }
+.dot.sm { box-shadow: inset 0 0 0 1.5px currentColor; }  /* the ring inside the dot's edge: no bigger than the others */
 @media (max-width: 560px) {
   .dots { gap: 3px; }
-  .tiles .dot.sm { box-shadow: 0 0 0 1px currentColor; }
+  .tiles .dot.sm { box-shadow: inset 0 0 0 1px currentColor; }
 }
 .legend { color: var(--ink-2); font-size: 14px; margin: 0; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
