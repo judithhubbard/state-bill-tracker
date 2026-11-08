@@ -133,7 +133,7 @@
    "paths": [
     "data/wi"
    ],
-   "minutes": 50,
+   "minutes": 110,
    "run": "python3 states/wi/fetch.py",
    "note": "One request a second; the first copy takes several runs."
   },
