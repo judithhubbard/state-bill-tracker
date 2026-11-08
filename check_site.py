@@ -113,9 +113,25 @@ if not os.path.exists(os.path.join(HERE, "data", "ar", "incomplete")):
 if not os.path.exists(os.path.join(HERE, "data", "nh", "incomplete")):
     contacts("nh", TODAY.year, 350)
 
+# Rhode Island: a session a year (from LegiScan).
+if not os.path.exists(os.path.join(HERE, "data", "ri", "incomplete")):
+    contacts("ri", TODAY.year, 100)
+
+# Vermont: two-year bienniums starting in odd years (from LegiScan).
+if not os.path.exists(os.path.join(HERE, "data", "vt", "incomplete")):
+    contacts("vt", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 170)
+
 # Tennessee: two-year General Assemblies starting in odd years (from LegiScan).
 if not os.path.exists(os.path.join(HERE, "data", "tn", "incomplete")):
     contacts("tn", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 125)
+
+# Maine: two-year Legislatures starting in odd years (from LegiScan).
+if not os.path.exists(os.path.join(HERE, "data", "me", "incomplete")):
+    contacts("me", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 180)
+
+# Oklahoma: two-year Legislatures starting in odd years (from LegiScan).
+if not os.path.exists(os.path.join(HERE, "data", "ok", "incomplete")):
+    contacts("ok", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 140)
 
 # Wyoming: a session a year.
 if not os.path.exists(os.path.join(HERE, "data", "wy", "incomplete")):

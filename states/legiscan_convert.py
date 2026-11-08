@@ -39,7 +39,8 @@ from collections import defaultdict
 #   recall, unsent (the governor gave it back before acting: Tennessee's SB 1758 of 2026), replaced (this number gave way to
 #   its companion, which carries on), None (kept as written; changes nothing).
 KINDS = {"refer", "report", "subreport", "held", "commfail", "floor", "pass", "fail", "reconsider", "concur", "ccr",
-         "enrolled", "sent", "signed", "nosign", "veto", "override", "chapter", "withdrawn", "recall", "unsent", "replaced", None}
+         "enrolled", "sent", "signed", "nosign", "veto", "override", "chapter", "withdrawn", "recall", "unsent", "replaced", None,
+         "second"}  # (ordered to a third reading: Vermont's second-reading vote; changes nothing, but can carry a roll call)
 HOUSE = {"S": "Senate", "H": "House"}
 CREDIT = "LegiScan"
 CREDIT_URL = "https://legiscan.com/"
@@ -120,6 +121,13 @@ class Rules:
     data_dir = ""          # data/<st>
     lower = "H"
     gates = set()          # committees that schedule floor votes (a report sending a bill there sends it to the floor)
+    # True: a floor roll call the tally can't place goes to the next untied floor step of that day and house in the
+    # history of the bill it's filed under (Rhode Island's history lines carry no tallies, and companions in one record
+    # often pass the same house the same day).
+    votes_by_version = False
+    # Days after a committee roll call that the history's committee step can be dated (Oklahoma's committee report is
+    # entered the next day, or after a weekend: "CR filed"). 0: the same day only.
+    comm_vote_days = 0
 
     def __init__(self):
         self.parties_ = {}   # session -> {(house, name): "D"/"R"}
@@ -130,8 +138,19 @@ class Rules:
         return "bill" if b.get("bill_type") == "B" else None
 
     def decode(self, action, chamber, b, kind):
-        """One history line -> [(house, kind, text, extra)]; house "" where the line names none."""
+        """One history line -> [(house, kind, text, extra)]; house "" where the line names none. extra may carry
+        "tally": (yes, no) when the line's tally isn't written "Ayes N, Nays N" (tally_of), and "date" when the line's
+        own wording dates the event better than the journal day it's filed under (Vermont's "Signed by Governor on June 13,
+        2024", filed under May 10)."""
         return [(chamber, None, action, {})]
+
+    # Step kinds besides pass, fail, concur, ccr and override that a floor roll call can be tied to (Vermont: "second").
+    vote_kinds = ()
+
+    def decode_line(self, i, action, chamber, b, kind):
+        """decode() with the line's index in b["history"], for states whose lines need their neighbors (Vermont's House
+        writes a roll call's result on its own line next to the question). Default: decode()."""
+        return self.decode(action, chamber, b, kind)
 
     def committee_vote(self, desc):
         """A roll call's description -> the committee's name if it's a committee vote, else None (a floor vote)."""
@@ -174,6 +193,26 @@ class Rules:
     def earlier_key(self, b, kind):
         """The text that finds the same bill in an earlier session (None: never linked)."""
         return None
+
+    def number(self, b):
+        """The record's number for a bill: its first letter must be the house where it started (the page reads the house
+        from it). Default: LegiScan's number, "HB0005" -> "HB5". Maine's LDs carry no house: "LD1328" -> "HLD1328"."""
+        return number(b["bill_number"])
+
+    def session_folders(self):
+        """{session: folder} this state's sessions are read from. Default: each regular session's folder by its first
+        year (`folders()`). Oklahoma's LegiScan sessions are one year each, but the even year's folder holds the whole
+        two-year Legislature (bills carry over), so it keys that folder by the odd year."""
+        return folders(self.data_dir)
+
+
+def later_days(iso, n):
+    """iso and the n days after it, as "YYYY-MM-DD" (just iso when n is 0)."""
+    if not n or len(iso) != 10:
+        return [iso]
+    from datetime import date, timedelta
+    d = date.fromisoformat(iso)
+    return [(d + timedelta(days=k)).isoformat() for k in range(n + 1)]
 
 
 def sort_steps(steps):
@@ -274,7 +313,7 @@ class Session:
 
     def __init__(self, rules, session):
         self.R, self.session = rules, session
-        self.folder = folders(rules.data_dir)[session]
+        self.folder = rules.session_folders()[session]
         self.people = people(self.folder)
         self._votes = {}
 
@@ -291,10 +330,10 @@ class Session:
     def votes(self, bs, steps):
         """Roll calls tied to the record's steps, as [house, "F"/"C", committee, date, yes, no, [[seat, code]]]."""
         R = self.R
-        floor_steps = [s for s in steps if s["house"] in HOUSE and s["kind"] in ("pass", "fail", "concur", "ccr", "override")]
+        floor_steps = [s for s in steps if s["house"] in HOUSE and s["kind"] in ("pass", "fail", "concur", "ccr", "override") + tuple(R.vote_kinds)]
         comm_days = {(s["house"], s["date"]) for s in steps if s["house"] in HOUSE and s["kind"] in
                      ("report", "subreport", "commfail", "refer", "held", None)}
-        calls, seen = [], set()
+        calls, seen, src = [], set(), {}
         for b in bs:
             for v in b.get("votes") or []:
                 rid = v.get("roll_call_id")
@@ -303,6 +342,7 @@ class Session:
                 seen.add(rid)
                 r = self.roll_call(rid) or v
                 calls.append(r)
+                src[rid] = R.number(b) if b.get("bill_number") else ""
         out, used = [], set()
         for r in sorted(calls, key=lambda r: (r.get("date") or "", r.get("roll_call_id") or 0)):
             h, d, desc = r.get("chamber"), r.get("date") or "", text(r.get("desc"))
@@ -310,7 +350,7 @@ class Session:
                 continue
             comm = R.committee_vote(desc)
             if comm:
-                if (h, d) not in comm_days:
+                if not any((h, day) in comm_days for day in later_days(d, R.comm_vote_days)):
                     continue  # no committee step that day: not this bill's vote
                 kind = "C"
             else:
@@ -325,6 +365,15 @@ class Session:
                 hit = same[near[0][1]] if near and near[0][0] <= 5 else \
                     next((s for s in same if not s["tally"] and not any(c is not r and c.get("chamber") == h and c.get("date") == d
                                                                     and R.floor_vote(text(c.get("desc"))) for c in calls)), None)
+                if not hit and R.votes_by_version:
+                    # When the bill has more such roll calls that day than passages left, the earlier ones were on
+                    # floor amendments (Rhode Island labels some of those "Passage" too): the last goes to the passage.
+                    ver = src.get(r.get("roll_call_id"))
+                    mine = [s for s in same if s["ver"] == ver and not s["tally"]]
+                    later = sum(1 for c in calls if c is not r and src.get(c.get("roll_call_id")) == ver and c.get("chamber") == h
+                                and c.get("date") == d and (c.get("roll_call_id") or 0) > (r.get("roll_call_id") or 0)
+                                and not R.committee_vote(text(c.get("desc"))) and R.floor_vote(text(c.get("desc"))))
+                    hit = mine[0] if mine and later < len(mine) else None
                 if not hit:
                     continue  # a vote on an amendment or a motion, or another bill's
                 used.add(id(hit))
@@ -348,7 +397,7 @@ def load_session(R, session):
     for b in bills(S.folder):
         k = R.include(b)
         if k:
-            n = number(b["bill_number"])
+            n = R.number(b)
             by_num[n], kinds[n] = b, k
     parties = {}
     for p in S.people.values():
@@ -362,17 +411,17 @@ def load_session(R, session):
         kind = "amendment" if any(kinds[n] == "amendment" for n in group) else "bill"
         vers_steps = {}
         for b in bs:
-            n = number(b["bill_number"])
+            n = R.number(b)
             st = []
             for i, a in enumerate(b.get("history") or []):
                 written = text(a.get("action"))
                 ch = a.get("chamber") if a.get("chamber") in HOUSE else ""
-                for h, k, t, extra in R.decode(written, ch, b, kind):
+                for h, k, t, extra in R.decode_line(i, written, ch, b, kind):
                     if h not in HOUSE:
                         h = "G" if k in ("signed", "nosign", "veto", "chapter", "sent") else (ch or "G")
-                    st.append({"date": (a.get("date") or "")[:10], "house": h, "kind": k, "text": t, "written": written,
+                    st.append({"date": extra.get("date") or (a.get("date") or "")[:10], "house": h, "kind": k, "text": t, "written": written,
                                "comm": R.comm_name(extra.get("comm")) if extra.get("comm") else None, "extra": extra,
-                               "tally": tally_of(written), "ver": n})
+                               "tally": extra.get("tally") or tally_of(written), "ver": n})
             vers_steps[n] = sort_steps(st)
         # Each version alone (to pick the lead), then all together.
         alone = {n: work_out(vers_steps[n], n[0], kind) for n in vers_steps}

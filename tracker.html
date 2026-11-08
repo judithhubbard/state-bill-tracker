@@ -1753,8 +1753,8 @@ addEventListener("scroll", hideTip, true);
 const TIP = (text) => `<button type="button" class="tip" aria-label="What this means" data-tip="${esc(text)}">i</button>`;
 // Inside a button or a summary a nested button isn't allowed, so this one is a focusable span.
 // Illinois's shell bills: left out of the statistics, tagged in the list.
-const SHELL_TIP = "A placeholder that only makes a technical change. Leaders file these so they can later rewrite one into a real bill, often late in the session. Most are never used.";
-const shellsOut = () => (DATA.insights?.shells ? " Shell bills (placeholders that only make a technical change) are left out unless they were rewritten into real bills." : "");
+const SHELL_TIP = STATE.shellTip || "A placeholder that only makes a technical change. Leaders file these so they can later rewrite one into a real bill, often late in the session. Most are never used.";
+const shellsOut = () => (DATA.insights?.shells ? " " + (STATE.shellNote || "Shell bills (placeholders that only make a technical change) are left out unless they were rewritten into real bills.") : "");
 const TIPI = (text) => (text ? `<span class="tip" role="button" tabindex="0" aria-label="What this means" data-tip="${esc(text)}">i</span>` : "");
 const STAGE_TIPS = STATE.stageTips;
 const HELD_TIP = STATE.heldTip || "Put on a committee's agenda, then set aside without a vote: “held for consideration” in the Assembly, “tabled” in the Senate. Committees rarely vote bills down; they hold them instead.";
@@ -1893,7 +1893,8 @@ function renderTownRepsByHouse(box) {
   const lists = { S: town?.[2], [LOW]: town?.[3] };
   const opts = (h) => {
     const mine = lists[h]?.length ? lists[h].map(([d]) => d) : [...new Set(LEGS.filter((L) => L.house === h).map((L) => L.district))].sort((a, b) => a - b);
-    const who = (d) => shortName(LEGS.find((L) => L.house === h && L.district === d)?.name) || "vacant";
+    // (every member of a district that elects several: Vermont's, New Hampshire's)
+    const who = (d) => LEGS.filter((L) => L.house === h && L.district === d).map((L) => shortName(L.name)).join(", ") || "vacant";
     return `<option value="">Choose your district</option>` + mine.map((d) => `<option value="${d}"${d === c?.[h] ? " selected" : ""}>${esc(distLabel(h, d))}: ${esc(who(d))}</option>`).join("");
   };
   const all = STATE.townInAllDistricts;

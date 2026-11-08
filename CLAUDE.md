@@ -580,6 +580,153 @@ from that repo. **Nothing here may change it.**
   Speaker Randy McNally, who didn't run in 2026 (change `LEADERS` when the 115th General Assembly elects a new one in January
   2027). Governor Bill Lee is term-limited: add the new governor (January 2027) to `GOVERNORS` and states/legislatures.json.
   The governor's contact page and phone haven't been checked by the owner. sos.tn.gov turns automated requests away.
+- **Oklahoma (built 2026-11-08 from LegiScan):** `states/ok/convert.py` (the `Oklahoma` rules), `contacts.py` (run after
+  legiscan.py), `towns.py` (run once: 672 places and counties). Two-year Legislatures (2025 is the 60th, 2025-26; `YEARS = 2`),
+  sessions each year from the first Monday in February to the last Friday in May at the latest (`STATE.dated` holds each
+  year's last day, 2026's was May 14: add each year's). Bills carry over to the second year with the same numbers, and
+  LegiScan's even-year session holds the whole Legislature's bills, so `Rules.session_folders()` (a shared hook) reads the
+  2026 folder as session 2025 and the 2024 folder as 2023 (the odd year's folder is a subset, used only until the even one
+  exists). Only HB/SB, and HJR/SJR proposing amendments to the Oklahoma Constitution (titles opening "Constitutional
+  amendment;", "Oklahoma Constitution;", "Constitution;"; a majority of each house's members, then the voters at the next
+  general election or a special election: `amendmentOnce`, `ballotLine()`); the joint resolutions approving agencies' rules
+  (which do go to the governor, about 10 a year) and applications to Congress are left out. History lines: since 2025 a
+  House bill goes to an oversight committee and, within it, a policy committee ("Second Reading referred to Judiciary and
+  Public Safety Oversight", "Referred to Civil Judiciary"); a referral followed directly by another, or one the bill was
+  withdrawn from (most House bills of 2025-26 were parked in Rules first: "Withdrawn from Rules Committee"), is kept as
+  written, so the first committee is the one that heard it. "Policy recommendation to the X committee; Do Pass Y" and
+  "Recommendation to the full committee; Do Pass ... Subcommittee" are the policy committee's or subcommittee's report and
+  send it to X / Appropriations and Budget; "CR; Do Pass X Committee" and the Senate's "Reported Do Pass ... X committee;
+  CR filed" report it; "Failed in Committee - X" kills it. A house's second passing vote ("Fourth Reading, Measure passed",
+  or the Senate's "Measure passed" after "HAs adopted"/"CCR adopted") is `concur`/`ccr`, so a second-house passage alone
+  (marked amended) never makes "passed both houses": enrollment ("Referred for enrollment", "Enrolled, ...") or that
+  agreement does. Undone: "Motion to reconsider adopted" and "Third Reading, advancement rescinded" only when the vote just
+  before was the passage (not "Special Election failed" or the emergency clause); "Fourth Reading and signing rescinded"
+  and "Recalled from enrollment" (HB 4248 of 2026). The decoder looks along each bill's history (`_at()`). Governor:
+  "Approved by Governor", "Becomes law without Governor's signature", "Vetoed", "Pocket veto" (a veto: 15 days after sine
+  die without a signature), "Veto overridden" in each house (two-thirds; three-fourths for bills with an emergency clause:
+  legislatures.json `note`), "Line item vetoed" (the rest is law). No chapter numbers, summaries or committee members in
+  the data; "What it does" isn't shown. Committee roll calls are dated the day before (or a weekend before) the history's
+  report line, so `comm_vote_days = 4` (a shared option, default 0). 2023-24's Senate committee votes don't say
+  "Committee" ("Senate: Judiciary: DO PASS"). Shell bills ("Schools; Education Reform Act of 2026; effective date."; about
+  1,250-1,450 a Legislature) that never got past a committee are `shell` (`STATE.shellTip`/`shellNote` word them), and
+  build_data.py's `similar_bills()` now leaves all states' shells out. Titles drop the stock "effective date; emergency;
+  codification" items; topics from the title's first item (its subject: `SUBJECT_TOPICS`), committees and words. Earlier
+  Legislatures linked by title without its subject. LegiScan's own status is wrong for pocket vetoes (shown as passed) and
+  line-item vetoes (shown as vetoed). Totals by year of the governor's action (bills only): 2023 378 laws and 35 vetoes
+  standing (55 vetoes, 5 of them pocket, 20 overridden); 2024 452 and 28 (33 vetoes, 5 overridden); 2025 494 and 27 (69 vetoes
+  plus 5 pocket, 47 overridden; 148 signed, 299 without signature: matches KGOU's 147 + 1 line-item, 69, 47, 5 and 305
+  counting the rules resolutions); 2026 447 and 36 (37 vetoes plus 3 pocket, 4 overridden; the Municipal League's 40 and 4
+  match, KGOU's "vetoed 59" doesn't, and the data's sent bills add up without it). Leaders: Speaker Kyle Hilbert,
+  President Pro Tempore Lonnie Paxton (the 61st Legislature elects new ones in January 2027: change `LEADERS`). Governor
+  Kevin Stitt is term-limited: the new governor takes office January 11, 2027 (add to `GOVERNORS` and
+  states/legislatures.json). The governor's contact page and phone haven't been checked by the owner.
+- **Rhode Island (built 2026-11-08 from LegiScan):** `states/ri/convert.py` (the `RhodeIsland` rules), `contacts.py` (run
+  after legiscan.py), `towns.py` (run once: the 39 cities and towns, Census county subdivisions). One session a year from the
+  first Tuesday of January to June (`STATE.dated`: add each year's last floor day); bills don't carry over. Bills (H/S) and
+  the joint resolutions proposing constitutional amendments (a majority of each house's members, then the voters at the
+  next general election: `amendmentOnce`, `ballotEvenYears`); other resolutions left out, including joint resolutions with
+  the force of law (grants, study commissions: 6-14 a year sent to the governor). Companions: most bills are filed in both
+  houses with the same text and, unlike Tennessee's, both versions pass and both become separate public laws. LegiScan has
+  no link between them (no sasts): a House and a Senate bill with exactly the same description, when no other bill shares
+  it, are one record (`group()`), so laws here are records, about 60% of the official count of bills signed. History:
+  "in concurrence" means agreeing to the version the other house passed (the second house passing it unchanged is a
+  passage; the first house accepting the second's substitute is `concur`, shown "Agreed to the Senate's version"); a
+  second house's passage without it changed the bill (an added line says so). "Committee recommended measure be held for
+  further study" is `held` (`heldAction`, "Held for further study"): the usual end, though a held bill can come back;
+  "indefinite postponement" is voted down. The text's house beats the line's chamber field (some are wrong). No Rules or
+  Calendar committee (`gates` empty): the Speaker and the Senate President schedule. History lines have no tallies, so
+  floor roll calls go to that day's passage in the bill they're filed under (`votes_by_version`, a shared-module option;
+  when there are more roll calls than passages that day, the earlier ones were floor amendments, also labeled "Passage");
+  Senate committees' votes to hold or postpone aren't shown (the page reads committee votes as approvals). Laws have no
+  numbers in the data ("Public Law 2025-123" isn't in LegiScan). Totals by bill number, matching LegiScan's statuses and the
+  news (Rhode Island Current: 513 bills sent in 2025, two pairs vetoed; five pairs in 2024; one pair in 2026): sent to the
+  governor 509 / 507 / 480 bills (2024/25/26), laws 499 / 503 / 478 (signed 398/382/349, without signature
+  101/121/129), vetoed 10 / 4 / 2; as records 307 / 318 / 280 laws and 5 / 2 / 1 vetoes. Governor 6 days, Sundays excepted
+  (the data's "Effective without Governor's signature" lines come 7 non-Sunday days after transmittal); 10 days after an
+  adjournment, but the General Assembly recesses in June. Override three-fifths of the members present in each house.
+  Local acts (bonds, charters, fire districts) are narrow "place" (`place_act()`), marriage-solemnization bills "person".
+  Leaders: Speaker Chris Blazejewski (since May 7, 2026, after Joe Shekarchi stepped down) and Senate President Val Lawson
+  (check both when the General Assembly elected in November 2026 meets in January 2027). Governor Dan McKee; add a new
+  governor (January 2027) to `GOVERNORS` and states/legislatures.json. The governor's contact page and phone (401-222-2080)
+  haven't been checked by the owner. rilegislature.gov bars automated readers: never fetch it.
+- **Vermont (built 2026-11-08 from LegiScan):** `states/vt/convert.py` (the `Vermont` rules), `contacts.py` (run after
+  legiscan.py), `towns.py` (run once). A page is a biennium (`YEARS = 2`; 2025-26 is one): bills are numbered once for it,
+  live through both years' sessions (January to May or June) and die at its end, and Acts are numbered through it. Only H.
+  and S. bills; resolutions left out. Constitutional amendments are Senate "Proposals", which LegiScan doesn't carry: none
+  shown. The history is the two journals' wording, each line with its house; the other house's echoes ("Senate Message:
+  ...", "House message: ...") change nothing. "Notice Calendar: Favorable ..." (House) and "Favorable report ... by
+  Committee on X" (Senate) are a committee's report; "Pending entry on Notice Calendar, referred to Committee on X" a report
+  and a second referral (House Rule 35(a), Senate Rule 31: Appropriations, Ways and Means, Finance). Committees never vote
+  bills down. "Third Reading ordered" is the second-reading vote (step "second", added to the shared vocabulary: it changes
+  nothing, but a roll call can be tied to it, `vote_kinds`); "Read third time and passed" the passage; the second house
+  "passed in concurrence" (unchanged) or "... with proposal of amendment" (changed), then the first house "concurred in"
+  it (not "with further amendment", which sends it back), or both adopt a Committee of Conference report. Roll calls: the
+  Senate writes the tally on the question's line; the House on its own line, "Roll Call Results ..." before the line that
+  says what passed or "Which was agreed to on a Roll Call ..." after it, so `classify()` reads a bill's lines together
+  (the shared module's `decode_line()` hook, with the line's index) and puts each tally on its question; LegiScan's roll
+  call's description is sometimes the other of the two lines (H.141 of 2025-26), so votes are matched by result and tally
+  (`vote_key()`). Most votes are voice votes: about 60 roll calls a biennium are the bill's own. The governor's lines are
+  filed under the journal day the house heard of them, often weeks off: their own wording dates them ("Signed by
+  Governor on June 13, 2024"; the shared module's `extra["date"]`), with year slips fixed ("Vetoed ... May 23, 2023" filed
+  in 2024, H.289). The Act number isn't in the history: it's the "As Enacted" text's name ("ACT044", municipal acts
+  "ACTM003", shown "Act M-3", narrow "place"), added as the last step, and decides: H.890 of 2023-24 (Act 185) has a
+  history ending with the Senate sustaining a veto, while the Legislature's status page says the governor approved it June
+  28, 2024. Acts 1-N with no gaps; laws match them exactly: 2023-24 185 + 28 municipal = 213 (97 signed in 2023, 116 in
+  2024); 2025-26 179 + 12 = 191 (78 and 113). Vetoes, matching the news: 2023 8 (6 overridden: S.5, H.217, H.494, H.509,
+  H.386, H.305), 2024 10 (6 overridden June 17, plus H.890), 2025 5 (H.91, H.141, H.219, H.489, S.125), 2026 8 (H.674,
+  H.710, H.727, H.817, S.183, S.190, S.218, S.230); none overridden since Democrats lost their supermajority in 2024. No
+  summaries ("What it does" isn't shown): LegiScan's description is the official title. Seats: districts have names,
+  numbered alphabetically in data/vt/district_names.json (towns.py, from the Census relationship files): Senate 1-16
+  ("Chittenden Central" is 4), House 1-109; members "S:4a", "S:4b", "S:4c", "H:37a", "H:37b" in the order of their last names
+  (New Jersey's scheme, both houses). "Where you live" lists the 255 towns and cities (Census county subdivisions; Essex
+  Junction, a city since 2022, is still inside Essex there), split towns by land share. The address lookup is off (the
+  Census geocoder gives district names, not numbers). Open States gives Progressives' party as "Democratic/Progressive"
+  (counted with the Democrats) and three independents. Most members' phone is the State House's message line (shown as
+  such). Governor 5 days, Sundays excepted; a pocket veto only if the General Assembly adjourns within three days of
+  delivery; override two-thirds of members present. Each year's opening and last day are in `STATE.opened`/`dated` (add
+  each year's). Leaders: Speaker Jill Krowinski, President pro tempore Philip Baruth (the new General Assembly chooses in
+  January 2027). If the governor elected in November 2026 isn't Phil Scott, add them to `GOVERNORS` and legislatures.json.
+  The governor's phone and contact page haven't been checked by the owner.
+- **Maine (built 2026-11-08 from LegiScan):** `states/me/convert.py` (the `Maine` rules), `contacts.py` (run after
+  legiscan.py), `towns.py` (run once). A page is a two-year Legislature (the 132nd is 2025-26; `YEARS = 2`): LD numbers
+  and carried-over bills run through both sessions (long first, short second, so every page has one of each and needs no
+  `session_kind()`). Only LDs are shown (bills, resolves, and "RESOLUTION, Proposing an Amendment to the Constitution of
+  Maine", tagged "const": two-thirds of each house once, then the voters, `amendmentOnce`); LegiScan's HP/SP records
+  (joint orders) are left out. The page reads a bill's house from its number, so records are the LD with the paper's house
+  in front: "HLD1328" is LD 1328, a House paper (`Rules.number()`, a hook added to legiscan_convert.py for this; the summary
+  says "LD 1328 (House Paper 870)", and searching "LD 1328" finds it). History lines are read together
+  (`decode_line()` over `decode_bill()`): committees are joint (the referral is the origin house's; "...in concurrence" isn't
+  a second one); the committee's own "J" lines ("Reported Out: OTP-AM", "ONTP", "LTW", "OTP-AM/ONTP" divided, majority
+  first) go to the house that referred it; LTW is `heldAction` ("Withdrawn"). A house passes a bill when it first passes it
+  "to be engrossed" (later "RECEDED and CONCURRED"/"INSISTED" lines only settle the text), and again when it enacts it
+  ("PASSED TO BE ENACTED", "FINALLY PASSED", "RECEDED and CONCURRED to PASSAGE TO BE ENACTED"); every pass is marked amended,
+  so "passed both houses" comes only from both houses' enactments standing ("enrolled"; undone by a reconsideration, a failed
+  enactment or "RECALLED From Governor's Desk"). Bills that cost money mostly die on the Senate's Special Appropriations
+  Table after the House enacts them (stage 2; `passedIn` is the house that passed it last). The history never records the
+  governor's signature, the presentment or the chapter number: a bill enacted by both houses is a law when LegiScan holds
+  its "Chaptered" text or its status is "Passed" (36 bills enacted on 2024's veto day have no chaptered text in LegiScan's
+  2023-24 copy), dated the day of final enactment (`STATE.lawWord` "Chapter", no number). Vetoes: "having been returned by
+  the Governor, together with objections" (the reconsideration day), "...become a law notwithstanding" an override; "HELD BY
+  THE GOVERNOR" is `sent` (bills enacted at a session's end that the governor holds until the Legislature returns; still
+  held, unchaptered, when the Legislature ends: a pocket veto). Votes: each roll call has its own history line ("ROLL CALL
+  NO. 424 (Yeas 75 - Nays 65 ...)", "Roll Call Ordered Roll Call Number 457 Yeas 19 - Nays 14", "ROLL CALL NO. 828V 72
+  having voted in the affirmative ..."), a step of kind "rollcall" (`vote_kinds`) with that tally; members' votes count only
+  on the bill's own questions (`floor_vote()`: accepting an Ought to Pass report, engrossment, enactment, final passage,
+  "Reconsideration-veto"), never accepting an Ought Not to Pass report, indefinite postponement, amendments or "Recede And
+  Concur" (either house's position). Committee names come from the uppercase referrals, completed from `KNOWN` when cut at a
+  comma. No summaries ("What it does" isn't shown); no committee votes, members or chairs. Totals (LegiScan's statuses
+  agree; official totals weren't read: legislature.maine.gov's robots.txt bars automated readers): 2023-24, 927 laws (635 in
+  2023, 292 in 2024) and 12 vetoes (4 and 8); 2025-26, 971 laws (680 and 291) and 8 vetoes (5 and 3: news reports count 5 in
+  June 2025, LD 1228 among the 61 held bills in January 2026, and LD 307 and LD 1911 sustained on April 29, 2026); HLD949 of
+  2023-24 is "Passed" in LegiScan but was carried over to a special session that never met (not a law here). Seats "S:12",
+  "H:75" (separate Senate 35 and House 151 districts); the two tribal representatives (Passamaquoddy, Houlton Band of
+  Maliseet; the Penobscot seat is empty) have no district and no floor vote, so they aren't seats (their bills show their
+  names). Senators' phones are often their caucus office's line (labelled so). "Where you live" lists cities, towns,
+  plantations, unorganized territories and counties (Census county-subdivision files). Leaders: President Mattie Daughtry,
+  Speaker Ryan Fecteau (the 133rd Legislature convenes December 2, 2026 and elects new ones: change `LEADERS`). Governor
+  Janet Mills is term-limited: add the new governor (January 2027) to `GOVERNORS` and states/legislatures.json. Each session's
+  last day is `STATE.dated`, the veto day `STATE.vetoDays` (add each year's). The governor's contact page and phone haven't
+  been checked by the owner.
 - **Fewer yearly chores (2026-10-29):** Virginia's session dates are computed (`opens()`, `sessionEnds()`, `crossover()` in
   states/va/profile.js: 60 or 46 days from the second Wednesday of January; crossover the 35th or 28th day), with
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house

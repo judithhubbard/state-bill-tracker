@@ -1001,7 +1001,7 @@ def similar_bills(recs, k=8, floor=0.35):
         top = dict(sorted(v.items(), key=lambda x: -x[1])[:30])
         norm = math.sqrt(sum(x * x for x in top.values())) or 1
         vecs.append({t: x / norm for t, x in top.items()})
-    skip = [narrow_bill(r) for r in recs]
+    skip = [narrow_bill(r) or bool(r.get("shell")) for r in recs]  # (placeholder bills say nothing: Illinois's, Oklahoma's)
     index = defaultdict(list)
     for i, v in enumerate(vecs):
         if not skip[i]:

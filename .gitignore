@@ -90,9 +90,14 @@ data/legiscan/
 data/tn/*
 !data/tn/district_towns.json
 data/ok/*
+!data/ok/district_towns.json
 data/me/*
+!data/me/district_towns.json
 data/ri/*
+!data/ri/district_towns.json
 data/vt/*
+!data/vt/district_towns.json
+!data/vt/district_names.json
 
 # Alaska downloads
 data/ak/*
