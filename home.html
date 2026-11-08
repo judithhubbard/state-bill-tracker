@@ -51,12 +51,14 @@ p.lede { color: var(--ink-2); margin: 0 0 24px; font-size: 17px; }
 .tiles span.off { background: var(--tile-off); color: var(--tile-off-ink); }
 .dots { display: flex; gap: clamp(2px, .6vw, 4px); }
 .dot { width: clamp(4px, 1.1vw, 7px); height: clamp(4px, 1.1vw, 7px); border-radius: 50%; }
-.dot.D { background: var(--dem); } .dot.R { background: var(--rep); } .dot.S, .dot.I, .dot.O { background: var(--ind); }
-.dot.sm { box-shadow: 0 0 0 1.5px var(--sheet), 0 0 0 3px currentColor; }
-.dot.sm.D { color: var(--dem); } .dot.sm.R { color: var(--rep); }
+/* Soft (half-transparent) dots; a supermajority's dot also has a solid ring in the party's color. */
+.dot.D { background: color-mix(in srgb, var(--dem) 45%, transparent); color: var(--dem); }
+.dot.R { background: color-mix(in srgb, var(--rep) 45%, transparent); color: var(--rep); }
+.dot.S, .dot.I, .dot.O { background: color-mix(in srgb, var(--ind) 45%, transparent); color: var(--ind); }
+.dot.sm { box-shadow: 0 0 0 1.5px currentColor; }
 @media (max-width: 560px) {
   .dots { gap: 3px; }
-  .tiles .dot.sm { box-shadow: 0 0 0 1px var(--sheet), 0 0 0 2px currentColor; }
+  .tiles .dot.sm { box-shadow: 0 0 0 1px currentColor; }
 }
 .legend { color: var(--ink-2); font-size: 14px; margin: 0; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
