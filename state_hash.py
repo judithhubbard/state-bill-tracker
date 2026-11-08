@@ -22,8 +22,12 @@ def files():
         for d, dirs, names in os.walk(os.path.join(data, state)):
             dirs.sort()
             for n in sorted(names):
-                yield os.path.join(d, n)
-    for f in ("tracker.html", "build_data.py", "stages.py", "fetch_contacts.py", "listing_dates.py"):
+                # The "last checked" mark changes every download; the date below covers it (the page's "updated" may
+                # lag a quiet day's last check by a few hours, but never by a day).
+                if n != "last_checked":
+                    yield os.path.join(d, n)
+    for f in ("tracker.html", "build_data.py", "stages.py", "fetch_contacts.py", "listing_dates.py", "balance.py",
+              os.path.join("states", "legislatures.json")):
         yield os.path.join(HERE, f)
     for s in sorted({state, "ny"}):
         for d, dirs, names in os.walk(os.path.join(HERE, "states", s)):
