@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ky", "ma", "md", "me", "mi", "ms", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ky", "ma", "md", "me", "mi", "mn", "ms", "mt", "nc", "nd", "nh", "nj", "nv", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -148,6 +148,27 @@ def check(state):
         big = [r["nums"][0] for r in recs for v in r["votes"] if v[1] == "F" and seats.get(v[0]) and v[4] + v[5] > seats[v[0]]]
         if big:
             say(state, "FAIL", f"{s}: {len(big)} floor votes have more ayes and noes than their house has seats, e.g. {big[:4]}")
+        # A lost vote read as a passage: NV's roll-call records say "Passed" for every final passage vote, lost ones too
+        # (AB 500 of 2025: 25-17 short of two-thirds, then 20-22). A house shown as passing a bill whose every floor vote
+        # there had more noes than ayes.
+        low = getattr(P, "LOWER", "A")
+        lost = [r["nums"][0] for r in recs for h, flag in (("S", "passedS"), (low, "passedA"))
+                if r[flag] and any(v[0] == h and v[1] == "F" for v in r["votes"])
+                and all(v[4] < v[5] for v in r["votes"] if v[0] == h and v[1] == "F")]
+        # (Only a LOOK: where the bill's own question is a motion against it, NH's "Inexpedient to Legislate" and ME's "Ought
+        # Not to Pass" reports, more noes than ayes means the bill survived.)
+        if lost:
+            say(state, "LOOK", f"{s}: {len(lost)} bills shown as passing a house where every floor vote had more noes than ayes, e.g. {lost[:4]}")
+        # The same on the passage's own day: MT's current system marks some failed third readings "BILL_CONCURRED" (HB 93 of
+        # 2025: 24-26; ties too) after a second reading that passed, so not every vote in the house lost. A "PASSED HOUSE"
+        # line whose floor votes that day in that house all had no more ayes than noes.
+        lostday = [r["nums"][0] for r in recs for v0 in r["vers"][:1] for d, t in v0["actions"]
+                   if re.match(r"PASSED (SENATE|HOUSE|ASSEMBLY)$", t)
+                   and (fl := [v for v in r["votes"] if v[1] == "F" and v[3] == d and v[0] == ("S" if t.endswith("SENATE") else low)])
+                   and all(v[4] <= v[5] for v in fl)]
+        if lostday:
+            say(state, "FAIL" if len(lostday) > 0.005 * len(recs) else "LOOK",
+                f"{s}: {len(lostday)} passages on a day whose floor votes in that house all had no more ayes than noes, e.g. {lostday[:4]}")
         # Procedural votes read as the bill's own: AL's "Third Reading in House of Origin" line carries the roll call on the
         # bill's Budget Isolation Resolution, taken just before the passage. Bills with two floor votes in one house on one
         # day: up to about a third in CO and VA (passage and a re-passage, a concurrence or an emergency clause the same

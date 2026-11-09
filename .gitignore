@@ -141,5 +141,7 @@ data/nv/*
 data/wv/*
 # South Carolina downloads (states/sc/fetch.py).
 data/sc/*
+# Nebraska downloads (states/ne/fetch.py).
+data/ne/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

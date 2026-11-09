@@ -287,8 +287,7 @@
     "data/mt"
    ],
    "minutes": 110,
-   "run": "python3 states/mt/fetch.py",
-   "note": "The Legislature's JSON API (api.legmt.gov), 10 seconds apart as its robots.txt asks; the first copy (about 9 hours) builds up over several runs. Not built into the site until its converter exists."
+   "run": "python3 states/mt/fetch.py && python3 states/mt/contacts.py"
   },
   {
    "name": "North Dakota",
@@ -318,8 +317,7 @@
     "data/mn"
    ],
    "minutes": 110,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/mn/fetch.py",
-   "note": "The Revisor's Bill Status API, House floor votes, Senate journals and House Research/Senate summaries (PDFs, as text); the first copy (about 9 hours) builds up over several runs. Not built into the site until its converter exists."
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/mn/fetch.py && python3 states/mn/contacts.py"
   },
   {
    "name": "Delaware",
@@ -370,8 +368,7 @@
     "data/nv"
    ],
    "minutes": 110,
-   "run": "python3 states/nv/fetch.py",
-   "note": "NELIS's bill pages (with the Legislative Counsel's Digest) and votes by member, members and committees; the first copy builds up over a few runs. Not built into the site until its converter exists."
+   "run": "python3 states/nv/fetch.py && python3 states/nv/contacts.py"
   },
   {
    "name": "West Virginia",
@@ -394,6 +391,17 @@
    "minutes": 60,
    "run": "python3 states/sc/fetch.py",
    "note": "scstatehouse.gov's bill search, histories, vote lists and roll-call PDFs (read without a PDF library), members and committees. Not built into the site until its converter exists."
+  },
+  {
+   "name": "Nebraska",
+   "code": "ne",
+   "key": "ne-data-v1",
+   "paths": [
+    "data/ne"
+   ],
+   "minutes": 110,
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/ne/fetch.py",
+   "note": "nebraskalegislature.gov at its 3-second crawl delay: bill pages, the Clerk's worksheets and votes by member; the first copy (about 8 hours) builds up over several runs. Not built into the site until its converter exists."
   }
  ]
 }

@@ -142,6 +142,9 @@ if not os.path.exists(os.path.join(HERE, "data", "al", "incomplete")): contacts(
 if not os.path.exists(os.path.join(HERE, "data", "ky", "incomplete")): contacts("ky", TODAY.year, 130)  # Kentucky: a session a year
 if not os.path.exists(os.path.join(HERE, "data", "ms", "incomplete")): contacts("ms", TODAY.year, 160)  # Mississippi: a session a year
 if not os.path.exists(os.path.join(HERE, "data", "de", "incomplete")): contacts("de", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 55)  # Delaware: two-year General Assemblies
+if not os.path.exists(os.path.join(HERE, "data", "mn", "incomplete")): contacts("mn", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 190)  # Minnesota: two-year Legislatures
+if not os.path.exists(os.path.join(HERE, "data", "mt", "incomplete")): contacts("mt", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 140)  # Montana: two-year Legislatures, sessions in odd years
+if not os.path.exists(os.path.join(HERE, "data", "nv", "incomplete")): contacts("nv", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 55)  # Nevada: regular sessions in odd years
 
 # Wyoming: a session a year.
 if not os.path.exists(os.path.join(HERE, "data", "wy", "incomplete")):
