@@ -230,6 +230,12 @@ jobs:
           path: "data/al"
           key: al-data-v1-latest
           restore-keys: al-data-v1-
+      - name: Restore Kentucky
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/ky"
+          key: ky-data-v1-latest
+          restore-keys: ky-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:

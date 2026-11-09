@@ -343,6 +343,17 @@
    "minutes": 60,
    "run": "python3 states/al/fetch.py",
    "note": "ALISON's GraphQL endpoint (the one its pages use): bills, histories, texts, roll calls by member, members, committees. Not built into the site until its converter exists."
+  },
+  {
+   "name": "Kentucky",
+   "code": "ky",
+   "key": "ky-data-v1",
+   "paths": [
+    "data/ky"
+   ],
+   "minutes": 80,
+   "run": "python3 states/ky/fetch.py",
+   "note": "The Legislative Research Commission's bill record (apps.legislature.ky.gov) and member and committee pages. Not built into the site until its converter exists."
   }
  ]
 }

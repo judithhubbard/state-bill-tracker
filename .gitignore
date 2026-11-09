@@ -123,5 +123,7 @@ data/mn/*
 data/de/*
 # Alabama downloads (states/al/fetch.py).
 data/al/*
+# Kentucky downloads (states/ky/fetch.py).
+data/ky/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/
