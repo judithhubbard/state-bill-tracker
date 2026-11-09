@@ -139,5 +139,7 @@ data/nv/*
 !data/nv/district_towns.json
 # West Virginia downloads (states/wv/fetch.py).
 data/wv/*
+# South Carolina downloads (states/sc/fetch.py).
+data/sc/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

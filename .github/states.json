@@ -383,6 +383,17 @@
    "minutes": 110,
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/wv/fetch.py",
    "note": "wvlegislature.gov's lists and bill pages, roll-call PDFs and drafters' notes (as text), members and committees; the first copy (about 6½ hours) builds up over several runs. Not built into the site until its converter exists."
+  },
+  {
+   "name": "South Carolina",
+   "code": "sc",
+   "key": "sc-data-v1",
+   "paths": [
+    "data/sc"
+   ],
+   "minutes": 60,
+   "run": "python3 states/sc/fetch.py",
+   "note": "scstatehouse.gov's bill search, histories, vote lists and roll-call PDFs (read without a PDF library), members and committees. Not built into the site until its converter exists."
   }
  ]
 }

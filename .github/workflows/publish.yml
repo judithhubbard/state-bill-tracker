@@ -254,6 +254,12 @@ jobs:
           path: "data/wv"
           key: wv-data-v1-latest
           restore-keys: wv-data-v1-
+      - name: Restore South Carolina
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/sc"
+          key: sc-data-v1-latest
+          restore-keys: sc-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
