@@ -4109,7 +4109,7 @@ function reintroAsk(b, stance) {
   const rep = missing && votePeople().find((L) => L.house === missing && !sponsors.some((p) => p.house === missing));
   const carry = rep ? `<p class="who">It has no ${HOUSE[missing]} version. Ask ${esc(titleOf({ house: rep.house, name: rep.name }))} to sponsor one.</p>
     <p class="reach">${reachOf({ house: rep.house, name: rep.name, info: infoFor(rep.apiName || rep.name), role: "your-legislator" })}</p>` : "";
-  return `<div class="do reintro"><p class="who"><b>Next session</b> Ask the sponsor${sponsors.length > 1 ? "s" : ""} to reintroduce it in January ${DATA.session + YEARS}.</p>
+  return `<div class="do reintro"><p class="who"><b>Next session</b> Ask the sponsor${sponsors.length > 1 ? "s" : ""} to reintroduce it in ${STATE.opens ? new Date(`${STATE.opens(DATA.session + YEARS)}T12:00`).toLocaleString("en-US", { month: "long" }) : "January"} ${DATA.session + YEARS}.</p>
     ${sponsors.map((p) => `<p class="reach"><b>${esc(titleOf(p))}</b> ${reachOf(p)}</p>`).join("")}${carry}</div>`;
 }
 function reachOf(p) {

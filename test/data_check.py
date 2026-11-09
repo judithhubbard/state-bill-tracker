@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "ar", "az", "ca", "co", "ct", "ga", "id", "il", "in", "ma", "md", "me", "mi", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "ga", "id", "il", "in", "ma", "md", "me", "mi", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -125,6 +125,14 @@ def check(state):
         big = [r["nums"][0] for r in recs for v in r["votes"] if v[1] == "F" and seats.get(v[0]) and v[4] + v[5] > seats[v[0]]]
         if big:
             say(state, "FAIL", f"{s}: {len(big)} floor votes have more ayes and noes than their house has seats, e.g. {big[:4]}")
+        # Procedural votes read as the bill's own: AL's "Third Reading in House of Origin" line carries the roll call on the
+        # bill's Budget Isolation Resolution, taken just before the passage. Bills with two floor votes in one house on one
+        # day: up to about a third in CO and VA (passage and a re-passage, a concurrence or an emergency clause the same
+        # day); a BIR read as a passage would put nearly every AL bill there.
+        twice = [r["nums"][0] for r in recs if r["votes"] and max(collections.Counter((v[0], v[3]) for v in r["votes"] if v[1] == "F").values() or [0]) > 1]
+        voted = sum(1 for r in recs if r["votes"])
+        if voted and len(twice) > 0.5 * voted:
+            say(state, "LOOK", f"{s}: {len(twice)} of {voted} bills with floor votes have two in one house on one day (a procedural vote read as the bill's?), e.g. {twice[:4]}")
         # A substitute's vote written with both names ("Hill(Brown)" in ID's House: Brown sits for Hill; "Coho(Lenney)" in
         # its Senate: Coho sits for Lenney) left as a name: the vote belongs to the member's seat. (TX's "Speaker(C)", the
         # chair's mark, isn't a name.)

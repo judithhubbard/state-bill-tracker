@@ -341,8 +341,7 @@
     "data/al"
    ],
    "minutes": 60,
-   "run": "python3 states/al/fetch.py",
-   "note": "ALISON's GraphQL endpoint (the one its pages use): bills, histories, texts, roll calls by member, members, committees. Not built into the site until its converter exists."
+   "run": "python3 states/al/fetch.py && python3 states/al/contacts.py"
   },
   {
    "name": "Kentucky",
