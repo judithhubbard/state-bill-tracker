@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "ga", "id", "il", "in", "ma", "md", "me", "mi", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "ga", "id", "il", "in", "ky", "ma", "md", "me", "mi", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -125,6 +125,12 @@ def check(state):
         big = [r["nums"][0] for r in recs for v in r["votes"] if v[1] == "F" and seats.get(v[0]) and v[4] + v[5] > seats[v[0]]]
         if big:
             say(state, "FAIL", f"{s}: {len(big)} floor votes have more ayes and noes than their house has seats, e.g. {big[:4]}")
+        # A veto read as overridden: KY's SB 70 of 2026 was vetoed after the session and "delivered to Secretary of State"
+        # with no chapter, a line laws over a veto also carry. A law with a veto date should show the override.
+        ovr = re.compile(r"overrid|over (?:the )?(?:governor'?s? )?veto|notwithstanding|not sustained", re.I)
+        unover = [r["nums"][0] for r in recs if r["stage"] == 5 and r["keyDates"][6] and not any(ovr.search(t) for v in r["vers"] for _, t in v["actions"])]
+        if unover:
+            say(state, "LOOK", f"{s}: {len(unover)} laws vetoed with no override in their history (a veto read as overridden?), e.g. {unover[:4]}")
         # Procedural votes read as the bill's own: AL's "Third Reading in House of Origin" line carries the roll call on the
         # bill's Budget Isolation Resolution, taken just before the passage. Bills with two floor votes in one house on one
         # day: up to about a third in CO and VA (passage and a re-passage, a concurrence or an emergency clause the same

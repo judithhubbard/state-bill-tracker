@@ -12,6 +12,7 @@
   "il": {"seats": {"S": 59, "H": 118}, "override": "3/5", "governor": ["JB Pritzker", "D"]},
   "id": {"seats": {"S": 35, "H": 70}, "override": "2/3", "governor": ["Brad Little", "R"], "note": "Overriding a veto takes two-thirds of the members present in each house."},
   "in": {"seats": {"S": 50, "H": 100}, "override": "majority", "governor": ["Mike Braun", "R"]},
+  "ky": {"seats": {"S": 38, "H": 100}, "override": "majority", "governor": ["Andy Beshear", "D"], "note": "Overriding a veto takes a majority of each house's members (20 senators, 51 representatives). Andy Beshear is term-limited; a new governor takes office in December 2027."},
   "ma": {"seats": {"S": 40, "H": 160}, "override": "2/3", "governor": ["Maura Healey", "D"]},
   "md": {"seats": {"S": 47, "H": 141}, "override": "3/5", "governor": ["Wes Moore", "D"]},
   "me": {"seats": {"S": 35, "H": 151}, "override": "2/3", "governor": ["Janet Mills", "D"], "note": "The House also seats two tribal representatives (the Passamaquoddy Tribe's and the Houlton Band of Maliseet Indians'), who don't vote on the floor. Overriding a veto takes two-thirds of the members present in each house."},

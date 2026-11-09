@@ -126,6 +126,7 @@ data/al/*
 !data/al/district_towns.json
 # Kentucky downloads (states/ky/fetch.py).
 data/ky/*
+!data/ky/district_towns.json
 # Missouri downloads (states/mo/fetch.py).
 data/mo/*
 # Nevada downloads (states/nv/fetch.py).

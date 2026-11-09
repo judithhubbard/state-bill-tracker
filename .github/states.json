@@ -351,8 +351,7 @@
     "data/ky"
    ],
    "minutes": 80,
-   "run": "python3 states/ky/fetch.py",
-   "note": "The Legislative Research Commission's bill record (apps.legislature.ky.gov) and member and committee pages. Not built into the site until its converter exists."
+   "run": "python3 states/ky/fetch.py && python3 states/ky/contacts.py"
   },
   {
    "name": "Missouri",
