@@ -236,6 +236,12 @@ jobs:
           path: "data/ky"
           key: ky-data-v1-latest
           restore-keys: ky-data-v1-
+      - name: Restore Missouri
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/mo"
+          key: mo-data-v1-latest
+          restore-keys: mo-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:

@@ -126,5 +126,7 @@ data/al/*
 !data/al/district_towns.json
 # Kentucky downloads (states/ky/fetch.py).
 data/ky/*
+# Missouri downloads (states/mo/fetch.py).
+data/mo/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/
