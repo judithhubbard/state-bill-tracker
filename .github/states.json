@@ -402,6 +402,17 @@
    "minutes": 110,
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/ne/fetch.py",
    "note": "nebraskalegislature.gov at its 3-second crawl delay: bill pages, the Clerk's worksheets and votes by member; the first copy (about 8 hours) builds up over several runs. Not built into the site until its converter exists."
+  },
+  {
+   "name": "New Mexico",
+   "code": "nm",
+   "key": "nm-data-v1",
+   "paths": [
+    "data/nm"
+   ],
+   "minutes": 110,
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/nm/fetch.py",
+   "note": "nmlegis.gov: the Legislature's database files, bill pages, floor-vote PDFs (as text), committee reports, fiscal impact summaries, members and committees. Not built into the site until its converter exists."
   }
  ]
 }

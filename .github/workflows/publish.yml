@@ -266,6 +266,12 @@ jobs:
           path: "data/ne"
           key: ne-data-v1-latest
           restore-keys: ne-data-v1-
+      - name: Restore New Mexico
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/nm"
+          key: nm-data-v1-latest
+          restore-keys: nm-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:

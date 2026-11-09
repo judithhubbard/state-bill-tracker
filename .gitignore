@@ -143,5 +143,7 @@ data/wv/*
 data/sc/*
 # Nebraska downloads (states/ne/fetch.py).
 data/ne/*
+# New Mexico downloads (states/nm/fetch.py).
+data/nm/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/
