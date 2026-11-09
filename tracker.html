@@ -1254,7 +1254,8 @@ const blank = () => ({ agenda: "", stage: null, topics: new Set(), q: "", law: "
 
 // "Places": leave out bills only about other counties, or keep only bills about yours.
 // A bill's places are the counties it's only about ([] for bills not about specific places).
-let HOME = "Tompkins";
+// New York's default county (Tompkins: Sen. Webb, Asm. Kelles); other states start with none chosen.
+let HOME = STATE.code === "ny" ? "Tompkins" : "";
 try { HOME = localStorage.getItem(STORE + "county") || HOME; } catch (e) {}
 // The two "hide" checkboxes. A bill's places are the counties it's only about ([] if it isn't about specific places).
 // "Only bills that could affect your county": statewide bills plus bills about your county; hides bills only
@@ -3692,7 +3693,7 @@ function activeFilters() {
   if (state.hist) out.push(["hist", null, "History", opt("hist", state.hist)]);
   if (state.intro) out.push(["intro", null, "Introduced", state.intro]);
   if (state.voted) out.push(["voted", null, "Vote", opt("voted", state.voted)]);
-  if (state.nearby) out.push(["nearby", null, "Only", `bills that could affect ${HOME} County`]);
+  if (state.nearby) out.push(["nearby", null, "Only", `bills that could affect ${HOME ? `${HOME} County` : "your county"}`]);
   if (state.changed) out.push(["changed", null, "New activity", CHANGED[state.changed].label()]);
   if (state.agenda) out.push(["agenda", null, "On", "an upcoming committee agenda"]);
   return out;
@@ -4289,7 +4290,7 @@ function fillSelects() {
   if ($("homeTown")) $("homeTown").value = chosenReps()?.town || "";
   for (const id of ["who", "law", "voted", "changed", ...MORE_KEYS]) $(id)?.classList.toggle("on", !!state[id]);
   // How many more bills each "hide" box takes out, given the other filters.
-  $("nearbyCounty").textContent = `${HOME} County`;
+  $("nearbyCounty").textContent = HOME ? `${HOME} County` : "your county";
   $("nearbyN").textContent = `(hides ${num(BILLS.filter((b) => matches(b, "nearby") && farAway(b)).length)})`;
   const more = MORE_KEYS.filter((k) => state[k]).length;
   $("moreCount").textContent = more ? `${more} active` : "";
