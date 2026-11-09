@@ -372,6 +372,17 @@
    "minutes": 110,
    "run": "python3 states/nv/fetch.py",
    "note": "NELIS's bill pages (with the Legislative Counsel's Digest) and votes by member, members and committees; the first copy builds up over a few runs. Not built into the site until its converter exists."
+  },
+  {
+   "name": "West Virginia",
+   "code": "wv",
+   "key": "wv-data-v1",
+   "paths": [
+    "data/wv"
+   ],
+   "minutes": 110,
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/wv/fetch.py",
+   "note": "wvlegislature.gov's lists and bill pages, roll-call PDFs and drafters' notes (as text), members and committees; the first copy (about 6½ hours) builds up over several runs. Not built into the site until its converter exists."
   }
  ]
 }

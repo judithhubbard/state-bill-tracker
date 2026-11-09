@@ -108,6 +108,7 @@ data/nh/*
 !data/nh/district_towns.json
 !data/nh/district_names.json
 data/mt/*
+!data/mt/district_towns.json
 data/ms/*
 !data/ms/district_towns.json
 data/ar/*
@@ -120,6 +121,8 @@ data/id/*
 !data/id/district_towns.json
 # Minnesota downloads (states/mn/fetch.py).
 data/mn/*
+!data/mn/district_towns.json
+!data/mn/district_names.json
 # Delaware downloads (states/de/fetch.py).
 data/de/*
 !data/de/district_towns.json
@@ -133,5 +136,8 @@ data/ky/*
 data/mo/*
 # Nevada downloads (states/nv/fetch.py).
 data/nv/*
+!data/nv/district_towns.json
+# West Virginia downloads (states/wv/fetch.py).
+data/wv/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/
