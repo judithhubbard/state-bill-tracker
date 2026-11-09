@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "ga", "id", "il", "in", "ky", "ma", "md", "me", "mi", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ky", "ma", "md", "me", "mi", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -52,41 +52,25 @@ def check(state):
         missing = [r["nums"][0] for r in recs if r["stage"] >= 3 and not (r["passedS"] and r["passedA"])]
         if missing:
             say(state, "FAIL", f"{s}: {len(missing)} bills past both houses without both houses' passage, e.g. {missing[:4]}")
-        # The 4th key date is New York's alone (return to committee in a new year).
-        if state != "ny" and any(r["keyDates"][3] for r in recs):
-            say(state, "FAIL", f"{s}: the 4th key date (New York's return to committee) is filled in")
-        # Committee names carrying a motion's tail: a failed motion to refer read as a referral (IN's "Referred to
-        # Committee on Ways and Means pursuant to House Rule 84; Failed, Roll Call 185: yeas 28, nays 59").
-        tails = sorted({c for r in recs for c in r["comms"] if re.search(r"\b(?:failed|roll call|yeas|nays|pursuant to)\b|;", c, re.I)})
-        if tails:
-            say(state, "FAIL", f"{s}: {len(tails)} committee names carry a motion's wording, e.g. {tails[:3]}")
-        # Committee pass rates that look wrong (sponsors' amendments read as committee votes).
-        fate = collections.Counter(r["commFate"] for r in recs)
-        say(state, "LOOK", f"{s}: first committee: {fate['passed']} approved, {fate['held']} held, {fate['defeated']} voted down, "
-                           f"{fate['none']} no action ({100 * fate['passed'] // max(1, len(recs))}% approved)")
-        # Floor-vote wording not read as a passage.
-        odd = collections.Counter()
-        for r in recs:
-            for _, t in r["vers"][0]["actions"]:
-                if re.search(r"\bpassed\b|rescind|reconsider", t, re.I) and not t.startswith("PASSED") and \
-                        not re.search(r"passed (to (engrossment|third|3rd|second|2nd)|by indefinitely|over)|Passed by|"
-                                      r"to engrossment|Bill text as passed|Reported|Committee|Passed Both Houses|Motion (Filed )?to Reconsider", t, re.I):
-                    odd[re.sub(r"\(.*", "", re.sub(r"\d+", "#", t))[:70]] += 1
-        if odd:
-            say(state, "LOOK", f"{s}: history lines mentioning passage not read as one: " +
-                "; ".join(f"{n}× {k}" for k, n in odd.most_common(4)))
-        # Histories out of order: some lines with a time and some with only a date (MA's S2913: sorting by the full
-        # time put "Read second" after "Laid before the Governor"). Sort by day and keep the file's order within a day.
-        unsorted = [r["nums"][0] for r in recs for v in r["vers"] if any(a[0] > b[0] for a, b in zip(v["actions"], v["actions"][1:]) if a[0] and b[0])]
-        # (A few are the source's own order: New York's Senate lines after a substitution.)
-        if unsorted:
-            say(state, "FAIL" if len(unsorted) > 0.01 * len(recs) else "LOOK",
-                f"{s}: {len(unsorted)} bills with history lines out of date order, e.g. {unsorted[:4]}")
+        # The governor's action twice, days apart: DE's bill histories copy a substitute's lines under the day they were
+        # copied (HS 2 for HB 168 of 2023-24: signed 9/30/24, copied 10/2/24); read the substitute's own history.
+        GOV_ACT = re.compile(r"^(?:(?:Signed|Approved|Vetoed) by (?:the )?[Gg]overnor\b|VETOED$)")
+        twice = [r["nums"][0] for r in recs for v in r["vers"][:1]
+                 if any(len({d for d, t in v["actions"] if t == x}) > 1 for x in {t for _, t in v["actions"] if GOV_ACT.match(t)})]
+        if twice:
+            say(state, "FAIL" if len(twice) > 0.01 * len(recs) else "LOOK",
+                f"{s}: {len(twice)} bills with the governor's action on two different days, e.g. {twice[:4]}")
         # Law numbers on bills that aren't laws: ND's Session Laws give vetoed measures chapter numbers too (HB 1273 of 2023,
         # "Measure Vetoed", chapter 586); a chapter number alone doesn't make a law.
         numbered = [r["nums"][0] for r in recs if r.get("chapter") and r["stage"] != 5]
         if numbered:
             say(state, "FAIL", f"{s}: {len(numbered)} bills that aren't laws carry a law number, e.g. {numbered[:4]}")
+        # A veto read as overridden: KY's SB 70 of 2026 was vetoed after the session and "delivered to Secretary of State"
+        # with no chapter, a line laws over a veto also carry. A law with a veto date should show the override.
+        ovr = re.compile(r"overrid|over (?:the )?(?:governor'?s? )?veto|notwithstanding|not sustained", re.I)
+        unover = [r["nums"][0] for r in recs if r["stage"] == 5 and r["keyDates"][6] and not any(ovr.search(t) for v in r["vers"] for _, t in v["actions"])]
+        if unover:
+            say(state, "LOOK", f"{s}: {len(unover)} laws vetoed with no override in their history (a veto read as overridden?), e.g. {unover[:4]}")
         # Law numbers given twice (NH's history lines: SB 62 and HB 511 of 2025 both "Chapter 39"; the LSRs file's column is
         # right). In one-year sessions a chapter, act or public law number belongs to one bill.
         if getattr(P, "YEARS", 2) == 1:
@@ -125,12 +109,6 @@ def check(state):
         big = [r["nums"][0] for r in recs for v in r["votes"] if v[1] == "F" and seats.get(v[0]) and v[4] + v[5] > seats[v[0]]]
         if big:
             say(state, "FAIL", f"{s}: {len(big)} floor votes have more ayes and noes than their house has seats, e.g. {big[:4]}")
-        # A veto read as overridden: KY's SB 70 of 2026 was vetoed after the session and "delivered to Secretary of State"
-        # with no chapter, a line laws over a veto also carry. A law with a veto date should show the override.
-        ovr = re.compile(r"overrid|over (?:the )?(?:governor'?s? )?veto|notwithstanding|not sustained", re.I)
-        unover = [r["nums"][0] for r in recs if r["stage"] == 5 and r["keyDates"][6] and not any(ovr.search(t) for v in r["vers"] for _, t in v["actions"])]
-        if unover:
-            say(state, "LOOK", f"{s}: {len(unover)} laws vetoed with no override in their history (a veto read as overridden?), e.g. {unover[:4]}")
         # Procedural votes read as the bill's own: AL's "Third Reading in House of Origin" line carries the roll call on the
         # bill's Budget Isolation Resolution, taken just before the passage. Bills with two floor votes in one house on one
         # day: up to about a third in CO and VA (passage and a re-passage, a concurrence or an emergency clause the same

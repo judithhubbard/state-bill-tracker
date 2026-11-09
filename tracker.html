@@ -1563,8 +1563,8 @@ function renderPipeline() {
   const subs = {
     1: "Approved by committee",
     2: `${HOUSE.S} ${num(oneHouse[HOUSE.S] || 0)} · ${HOUSE[LOW]} ${num(oneHouse[HOUSE[LOW]] || 0)}`,
-    3: !voters ? STATE.passedBothNote(DATA.current) : voters === counts[3] ? "Going to the voters"
-      : `${num(counts[3] - voters)} to the governor · ${num(voters)} to the voters`,
+    3: !voters ? STATE.passedBothNote(DATA.current) : voters === counts[3] ? (STATE.amendmentDone ? "Constitutional amendments" : "Going to the voters")
+      : `${num(counts[3] - voters)} to the governor · ${num(voters)} ${STATE.amendmentDone ? "constitutional amendments" : "to the voters"}`,
     4: DATA.current ? (nextDue ? `Next decision due ${fmtDate(nextDue)}` : counts[4] ? "Deadlines have passed" : "Nothing waiting") : "No decision in the records",
   };
   // Bills on a committee agenda that hasn't met yet: a line under "In committee".
@@ -1709,7 +1709,7 @@ function statusText(b) {
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
   } else if (b.stage === 3) {
     t = "Passed both houses";
-    small = `${toVoters(b) ? "Sent to the voters, not the governor" : isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters") : `First passage: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
+    small = `${toVoters(b) ? "Sent to the voters, not the governor" : isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentDone || (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters")) : `First passage: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
       : STATE.passedBothNote(live, b)} · passed ${fmtDate([D.passS, D.passA].sort().pop())}`;
   } else if (b.stage === 4) {
     t = live ? "On the governor's desk" : "Sent to the governor";
@@ -2485,7 +2485,7 @@ const ODDS_POINTS = [
 const isNarrow = (b) => !!(b.narrow || b.places.length);
 function oddsLine(b) {
   // Constitutional amendments don't go to the governor.
-  if (isAmendment(b)) return `A constitutional amendment doesn't go to the governor: it has to pass ${STATE.amendmentVote || (STATE.amendmentOnce ? "both houses" : "two separately elected Legislatures")}, then the voters.`;
+  if (isAmendment(b)) return `A constitutional amendment doesn't go to the governor: it has to pass ${STATE.amendmentVote || (STATE.amendmentOnce ? "both houses" : "two separately elected Legislatures")}${STATE.amendmentDone ? "" : ", then the voters"}.`;
   if (toVoters(b)) return "A measure the Legislature refers to the voters doesn't go to the governor: the voters decide.";
   // A shell's chances depend on whether the leaders pick it up, not on how past bills fared.
   if (b.stage > 4 || !DATA.insights || b.shell) return "";

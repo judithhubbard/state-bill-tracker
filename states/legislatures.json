@@ -8,6 +8,7 @@
   "ca": {"seats": {"S": 40, "A": 80}, "override": "2/3", "governor": ["Gavin Newsom", "D"]},
   "co": {"seats": {"S": 35, "H": 65}, "override": "2/3", "governor": ["Jared Polis", "D"]},
   "ct": {"seats": {"S": 36, "H": 151}, "override": "2/3", "governor": ["Ned Lamont", "D"]},
+  "de": {"seats": {"S": 21, "H": 41}, "override": "3/5", "governor": ["Matt Meyer", "D"]},
   "ga": {"seats": {"S": 56, "H": 180}, "override": "2/3", "governor": ["Brian Kemp", "R"]},
   "il": {"seats": {"S": 59, "H": 118}, "override": "3/5", "governor": ["JB Pritzker", "D"]},
   "id": {"seats": {"S": 35, "H": 70}, "override": "2/3", "governor": ["Brad Little", "R"], "note": "Overriding a veto takes two-thirds of the members present in each house."},

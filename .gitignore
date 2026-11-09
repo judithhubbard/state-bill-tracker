@@ -121,6 +121,7 @@ data/id/*
 data/mn/*
 # Delaware downloads (states/de/fetch.py).
 data/de/*
+!data/de/district_towns.json
 # Alabama downloads (states/al/fetch.py).
 data/al/*
 !data/al/district_towns.json
