@@ -242,6 +242,12 @@ jobs:
           path: "data/mo"
           key: mo-data-v1-latest
           restore-keys: mo-data-v1-
+      - name: Restore Nevada
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/nv"
+          key: nv-data-v1-latest
+          restore-keys: nv-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:

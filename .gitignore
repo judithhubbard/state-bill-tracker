@@ -128,5 +128,7 @@ data/al/*
 data/ky/*
 # Missouri downloads (states/mo/fetch.py).
 data/mo/*
+# Nevada downloads (states/nv/fetch.py).
+data/nv/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

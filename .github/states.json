@@ -364,6 +364,17 @@
    "minutes": 110,
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/mo/fetch.py",
    "note": "The House's XML exports (20 seconds apart, as its robots.txt asks) and the Senate's bill pages, plus both houses' journals for members' votes; the first copy (about 12 hours) builds up over several runs. Not built into the site until its converter exists."
+  },
+  {
+   "name": "Nevada",
+   "code": "nv",
+   "key": "nv-data-v1",
+   "paths": [
+    "data/nv"
+   ],
+   "minutes": 110,
+   "run": "python3 states/nv/fetch.py",
+   "note": "NELIS's bill pages (with the Legislative Counsel's Digest) and votes by member, members and committees; the first copy builds up over a few runs. Not built into the site until its converter exists."
   }
  ]
 }
