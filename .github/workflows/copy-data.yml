@@ -1,0 +1,47 @@
+name: Copy a state's data
+
+# Hands a state's latest downloaded copy (its cache, as download.yml saved it) to a computer building that state's pages,
+# so a converter can be written against the complete data without downloading it all again:
+#   gh workflow run copy-data.yml -f state=mn
+#   gh run download <run id> -n data-mn -D /tmp/data-mn   (then copy into data/mn/)
+# The copy is kept for one day. The data is what the legislatures publish; no keys are in it.
+on:
+  workflow_dispatch:
+    inputs:
+      state:
+        description: "State code from .github/states.json"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - id: pick
+        env:
+          WANT: ${{ inputs.state }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          s = next((s for s in json.load(open(".github/states.json"))["states"] if s["code"] == os.environ["WANT"]), None)
+          if not s:
+              raise SystemExit(f"unknown state code: {os.environ['WANT']}")
+          print(f"key={s['key']}")
+          print("path<<EOF\n" + "\n".join(s["paths"]) + "\nEOF")
+          PY
+      - uses: actions/cache/restore@v4
+        with:
+          path: ${{ steps.pick.outputs.path }}
+          key: ${{ steps.pick.outputs.key }}-latest
+          restore-keys: ${{ steps.pick.outputs.key }}-
+          fail-on-cache-miss: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: data-${{ inputs.state }}
+          path: ${{ steps.pick.outputs.path }}
+          retention-days: 1
