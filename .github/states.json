@@ -277,8 +277,7 @@
     "data/ms"
    ],
    "minutes": 110,
-   "run": "python3 states/ms/fetch.py",
-   "note": "The Legislature's bill-status XML (billstatus.ls.state.ms.us). Not built into the site until its converter exists."
+   "run": "python3 states/ms/fetch.py && python3 states/ms/contacts.py"
   },
   {
    "name": "Montana",

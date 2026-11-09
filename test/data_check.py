@@ -10,7 +10,7 @@ import collections, glob, importlib, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ky", "ma", "md", "me", "mi", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ky", "ma", "md", "me", "mi", "ms", "nc", "nd", "nh", "nj", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -52,6 +52,45 @@ def check(state):
         missing = [r["nums"][0] for r in recs if r["stage"] >= 3 and not (r["passedS"] and r["passedA"])]
         if missing:
             say(state, "FAIL", f"{s}: {len(missing)} bills past both houses without both houses' passage, e.g. {missing[:4]}")
+        # A passage that never took effect: a bill shown as passed by one house that then died in that same house (MS's
+        # HB 1602 of 2026: passed, held there by a motion to reconsider entered and never decided, "Died On Calendar").
+        lower = getattr(P, "LOWER_NAME", "Assembly")
+        undone = [r["nums"][0] for r in recs if r["stage"] == 2 and r["passedS"] != r["passedA"] and r["vers"][0]["actions"]
+                  and re.search(rf"\bdied (?:in|on) (?:the )?{'Senate' if r['passedS'] else lower} (?:committee|calendar)", r["vers"][0]["actions"][-1][1], re.I)]
+        # (Not "Died in House at Sine Die adjournment", AR's line for a bill back in its own house when the session ends.)
+        if undone:
+            say(state, "FAIL" if len(undone) > 0.005 * len(recs) else "LOOK",
+                f"{s}: {len(undone)} bills passed by one house that then died in that house (a passage undone?), e.g. {undone[:4]}")
+        # The 4th key date is New York's alone (return to committee in a new year).
+        if state != "ny" and any(r["keyDates"][3] for r in recs):
+            say(state, "FAIL", f"{s}: the 4th key date (New York's return to committee) is filled in")
+        # Committee names carrying a motion's tail: a failed motion to refer read as a referral (IN's "Referred to
+        # Committee on Ways and Means pursuant to House Rule 84; Failed, Roll Call 185: yeas 28, nays 59").
+        tails = sorted({c for r in recs for c in r["comms"] if re.search(r"\b(?:failed|roll call|yeas|nays|pursuant to)\b|;", c, re.I)})
+        if tails:
+            say(state, "FAIL", f"{s}: {len(tails)} committee names carry a motion's wording, e.g. {tails[:3]}")
+        # Committee pass rates that look wrong (sponsors' amendments read as committee votes).
+        fate = collections.Counter(r["commFate"] for r in recs)
+        say(state, "LOOK", f"{s}: first committee: {fate['passed']} approved, {fate['held']} held, {fate['defeated']} voted down, "
+                           f"{fate['none']} no action ({100 * fate['passed'] // max(1, len(recs))}% approved)")
+        # Floor-vote wording not read as a passage.
+        odd = collections.Counter()
+        for r in recs:
+            for _, t in r["vers"][0]["actions"]:
+                if re.search(r"\bpassed\b|rescind|reconsider", t, re.I) and not t.startswith("PASSED") and \
+                        not re.search(r"passed (to (engrossment|third|3rd|second|2nd)|by indefinitely|over)|Passed by|"
+                                      r"to engrossment|Bill text as passed|Reported|Committee|Passed Both Houses|Motion (Filed )?to Reconsider", t, re.I):
+                    odd[re.sub(r"\(.*", "", re.sub(r"\d+", "#", t))[:70]] += 1
+        if odd:
+            say(state, "LOOK", f"{s}: history lines mentioning passage not read as one: " +
+                "; ".join(f"{n}× {k}" for k, n in odd.most_common(4)))
+        # Histories out of order: some lines with a time and some with only a date (MA's S2913: sorting by the full
+        # time put "Read second" after "Laid before the Governor"). Sort by day and keep the file's order within a day.
+        unsorted = [r["nums"][0] for r in recs for v in r["vers"] if any(a[0] > b[0] for a, b in zip(v["actions"], v["actions"][1:]) if a[0] and b[0])]
+        # (A few are the source's own order: New York's Senate lines after a substitution.)
+        if unsorted:
+            say(state, "FAIL" if len(unsorted) > 0.01 * len(recs) else "LOOK",
+                f"{s}: {len(unsorted)} bills with history lines out of date order, e.g. {unsorted[:4]}")
         # The governor's action twice, days apart: DE's bill histories copy a substitute's lines under the day they were
         # copied (HS 2 for HB 168 of 2023-24: signed 9/30/24, copied 10/2/24); read the substitute's own history.
         GOV_ACT = re.compile(r"^(?:(?:Signed|Approved|Vetoed) by (?:the )?[Gg]overnor\b|VETOED$)")

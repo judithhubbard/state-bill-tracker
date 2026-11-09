@@ -728,6 +728,49 @@ from that repo. **Nothing here may change it.**
   David W. Osborne; Senate President Robert Stivers, a senator); the General Assembly elected in November 2026 organizes in
   January 2027. Separate Senate (38) and House (100) districts by city or county (`states/ky/towns.py`, from the Census
   Bureau's 2024 district files).
+- **Mississippi (built 2026-11-08):** `python3 states/ms/fetch.py`
+  reads the Legislature's bill status system (billstatus.ls.state.ms.us: static XML, ISO-8859-1; no robots.txt; a CA bundle
+  for the missing GlobalSign intermediate; see its docstring) into data/ms/<year>/; `python3 states/ms/contacts.py` (current
+  year; add it to states.json's run) builds the contacts from data/ms/members/. A page a year (`YEARS = 1`): one session
+  a year from the Tuesday after the first Monday of January, 90 days, 125 in a four-year term's first year (2024, 2028);
+  each year's last floor day is in `STATE.dated` (add each year's). Extraordinary sessions are left out (2025's June budget
+  session, where the three line-item vetoes of 2025 were). `states/ms/convert.py` reads each history file: actions are
+  "MM/DD (H) ..." with no year (`dated()`: the session's, the next year's for a line months before the one above it).
+  "Referred To X;Y" (a double referral: X first), "DR - TSDP: JA To AP" (X approved it, on to Y, by code: h_cmte.xml /
+  s_cmte.xml; "TSDPAA", "TSDPCS", "TSDBA" variants), "Title Suff Do Pass ..." / "... Do Be Adopted" approved; deadlines
+  kill most bills ("Died In Committee", "Died On Calendar", "Died In Conference": `STATE.endedNote()` words them);
+  "Passed"/"Adopted" the passage; "Reconsidered" undoes the house's last decisive vote (passage, concurrence, conference
+  report), and a "Motion to Reconsider Entered" never decided holds it: when the bill then dies, the vote never took effect
+  (HB 1602 of 2026, shown as died on the House calendar). Passed both houses: "Concurred in Amend From ...", "Returned For
+  Enrolling", a conference report adopted by both houses (since the last "Recommitted For Further Conf"), or a presiding
+  officer's "Enrolled Bill Signed"; sent to the governor once both have signed (the history never shows the delivery).
+  "Approved by Governor", "Law W/out Governor's Signature", "Partially Vetoed By Governor" (a law), "Vetoed", "Veto
+  Overridden" in both houses; the chapter number (CHAPNUM) is the law's number, and a vetoed bill whose override passed
+  only the House (HB 1648 of 2026: DISPOSITION says "Law", no chapter) stays vetoed. Concurrent resolutions whose short
+  title starts "Constitution;" are tagged "const" (two-thirds of each house, then the voters: `amendmentOnce`,
+  `ballotLine()`); other resolutions are left out. Titles are the short titles; the summary is the long title in sentence
+  case (`sentence()`: names restored from the short title's capitalized phrases), plus "Passing it takes three-fifths of
+  each house" when VOTETYPE says so; no "What it does" (there are no summaries). No votes: roll calls are PDFs, and the
+  history lines carry no tallies. Local and private bills (the Local and Private Legislation committees) are narrow kind
+  "place" and topic "local"; "Suffrage; restore to <a person>" bills (20-70 a year) are narrow kind "person". Authors by their author-page slug ("creekmore_iv"), named from the current member files, else
+  that year's h_auth.xml / s_auth.xml. Contacts: the member files (district, party, Capitol/business/home/cell phones,
+  room, committees with "C" chair and "V" vice chair); emails are user names, completed with "@house.ms.gov" /
+  "@senate.ms.gov", the domains the Legislature's own stylesheets add (members/dtds_xslts/house.xslt and senate.xslt,
+  checked 2026-11-08). Sen. Chris Johnson's file says District 44 (Polk's); his counties put him in 45
+  (`C.DISTRICT_FIX`); contacts.py reports any seat claimed twice. Senate Districts 24 and 26 are vacant (November 2026). Leaders: Speaker
+  Jason White; the Lieutenant Governor, Delbert Hosemann, presides over the Senate and refers its bills (not a senator: his
+  phone and email from ltgovhosemann.ms.gov, checked by program 2026-11-08). The governor's phone and email are from
+  governorreeves.ms.gov/contact/ (checked by program 2026-11-08, not by the owner). Governor 5 days (Sundays excepted) in
+  session, 15 after adjournment; partial vetoes of appropriations; override two-thirds of each house. Earlier years linked
+  by identical short title and principal author (or a title one bill had in each year), never laws or appropriations.
+  Places (`towns.py`, run once): cities, towns, villages and counties, separate Senate (52) and House (122) districts, from
+  the Census Bureau's 2024 files, which predate the districts redrawn for the November 2025 special elections (How's
+  "About this data" says so). Totals (laws: each bill with a chapter number; chapters run 1-N, 301-N, 901-N (local and
+  private) and 2001-N (resolutions) with none missing on the measures read, except 2025's 450, 455 and 2040; vetoes
+  matching the news): 2024 409 laws, 6 vetoes (HB 922, SB 2180, four suffrage bills), part vetoes on HB 1707 and HB 1830;
+  2025 259 laws, 8 vetoes (no part vetoes in the regular session); 2026 376 laws, 6 vetoes (HB 895, HB 1152, HB 1648,
+  SB 2477, SB 2632, SB 3402; none overridden), part vetoes on HB 1653, HB 1924, SB 2189, SB 3071. No constitutional
+  amendment passed both houses in 2024-26. A first copy of three years takes about 4 hours (230 minutes on 2026-11-08).
 - **Delaware (built 2026-11-08):** `python3 states/de/fetch.py` reads
   legis.delaware.gov's own JSON and pages (no robots.txt; see its docstring) into data/de/<first year>/; `python3
   states/de/contacts.py` (every General Assembly; add it to states.json's run after fetch.py) builds the contacts. A page per
@@ -1124,6 +1167,9 @@ from that repo. **Nothing here may change it.**
     roll call on the bill's Budget Isolation Resolution, taken just before the passage (and 2024's passage lines sometimes
     carry the BIR's number in their roll-call field; the line's text has the right one). The check LOOKs when more than half
     the bills with floor votes have two in one house on one day (CO and VA reach about a third legitimately).
+  - A passage held by a motion to reconsider and never released (MS: "Motion to Reconsider Entered" after "Passed", then
+    "Died On Calendar" in the same house: HB 1602 of 2026). The vote never took effect; the check fails on bills shown as
+    passed by one house that then died in that house's committee or calendar.
   - A history that copies another record's lines under the day they were copied: DE's bills carry their substitutes' lines
     ("HS 2 for HB 168 - Signed by Governor" 10/2/24; the substitute's own page says 9/30/24). The check fails (LOOK under
     1%) on bills with the governor's action on two different days.
