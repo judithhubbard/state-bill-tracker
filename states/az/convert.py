@@ -149,6 +149,12 @@ def load_session(session):
                 reports.setdefault(h, t.split("|")[1])
         steps = [(d, h, f"REFERRED TO {reports[h].upper()}" if t == "REFERRED" and h in reports else "Referred to committee" if t == "REFERRED" else
                   "REPORTED" if t.startswith("REPORTED|") else t, a) for d, h, t, a in steps]
+        # A third-reading vote that failed outranks a "PASSED" the same day in the same house: Open States also lists the
+        # Committee of the Whole's earlier voice vote as a passage (HB 2044 of 2024: "FAILED" 18-40, then "PASSED" with no
+        # tally); about a hundred failed bills a year showed as passed that house.
+        failed_days = {(d, h) for d, h, t, a in steps if t == "FAILED"}
+        steps = [(d, h, "Committee of the Whole: passed" if t.startswith("PASSED") and (d, h) in failed_days else t, a)
+                 for d, h, t, a in steps]
         passed, last, result = set(), {}, {}
         for i, (d, h, t, a) in enumerate(steps):
             if t.startswith("PASSED"):

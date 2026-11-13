@@ -1345,6 +1345,10 @@ from that repo. **Nothing here may change it.**
   - A history that copies another record's lines under the day they were copied: DE's bills carry their substitutes' lines
     ("HS 2 for HB 168 - Signed by Governor" 10/2/24; the substitute's own page says 9/30/24). The check fails (LOOK under
     1%) on bills with the governor's action on two different days.
+  - Records that look like votes but aren't (found by the "passages whose floor votes all failed" check, 2026-11-13): AZ's
+    Open States records list the Committee of the Whole's voice vote as "PASSED" on the day the third-reading vote
+    failed (HB 2044 of 2024, failed 18-40; about a hundred bills a year showed as passing the House); AR served an empty
+    roll-call page (SB 16 of 2026's House vote: no counts, no names) that read as a 0-0 vote.
   - When editing code with a script, check the file's size afterwards. A bad Python edit once emptied convert.py.
   - A result field that says passed on a lost vote: MT's current system marks some failed third readings "BILL_CONCURRED"
     (HB 93 of 2025: 24-26; ties too), after a second reading that passed, so not every vote in that house lost. Decide from

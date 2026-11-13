@@ -399,7 +399,9 @@ def load_session(session):
             if not rcs or not (t.startswith("PASSED") or t in ("FAILED", "CONCURRED") or re.search(r"concurred in\.?$", a, re.I)):
                 continue
             v = vote_file(session, h, rcs, measure)
-            if not v:
+            # A roll-call page served empty (SB 16 of 2026's House vote: no counts, no names, a placeholder date) isn't a
+            # 0-0 vote: leave it out.
+            if not v or not any(int(x or 0) for x in (v.get("counts") or {}).values()):
                 continue
             seat = lambda n: (lambda m: f"{h}:{m['district']}" if m else f"{h}?{n}")(who.get((h, n)))
             counts = v.get("counts") or {}
