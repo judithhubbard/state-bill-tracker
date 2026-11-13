@@ -299,7 +299,8 @@ def people(year):
     if ok:
         state["people"] = True
         save(state_path, state)
-    elif not state.get("people"):  # read whole once: a failed refresh keeps the last copy
+    elif not state.get("people") and year <= YEAR:  # read whole once: a failed refresh keeps the last copy
+        # (A session not yet begun, listed in November with no members yet, mustn't hold Indiana off the site.)
         INCOMPLETE.add(f"{year}:people")
 
 
