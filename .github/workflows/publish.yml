@@ -296,6 +296,12 @@ jobs:
           path: "data/fl"
           key: fl-data-v1-latest
           restore-keys: fl-data-v1-
+      - name: Restore Louisiana
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/la"
+          key: la-data-v1-latest
+          restore-keys: la-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
