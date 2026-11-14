@@ -1838,7 +1838,7 @@ function interimNote(b) {
   const opening = (y) => { const d = STATE.opens?.(y); return d && d > today ? fmtDate(d) : `January ${y}`; };
   const carry = (y) => (STATE.interimCarry ? STATE.interimCarry(opening(y)) : `${BODY_CAP} isn't meeting until ${opening(y)}; it can be taken up again then.`);
   const step = !after ? "" : STATE.interimStep ? STATE.interimStep(fmtDate(b.last))
-    : `Its latest step, on ${fmtDate(b.last)}, came while ${BODY} wasn't meeting. Lawmakers can amend and file bills at any time, but that doesn't move a bill toward a vote.`;
+    : `Its ${fmtDate(b.last)} step came between sessions; it doesn't move the bill toward a vote.`;
   if (cont) return { row: carry(cont), step };
   if (!after) return null;
   // A break within a multi-year session, until the next year's first day.
