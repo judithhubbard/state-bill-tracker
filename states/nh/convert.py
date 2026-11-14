@@ -356,7 +356,8 @@ def load_session(session):
         refs, first_report = [], None
         pass_days = {"H": [], "S": []}  # the passages that stood (not a vote the house then sent to Finance or undid)
         sent_on = {}  # a house's passage set aside by a second referral, back if that committee waives it
-        for day, h, t, a, kind, _ in steps:
+        last_pass, set_aside = {}, set()  # step indexes: a house's latest passage; passages a second referral set aside
+        for i, (day, h, t, a, kind, _) in enumerate(steps):
             if h == other and re.search(r"(?:Amendment\b.*[:,]\s*AA\b|with Amendment.*\bMA\b)", a):
                 amended_second = True
             if kind in ("intro", "refer"):
@@ -365,6 +366,7 @@ def load_session(session):
                 where_h, place, comm = h, "committee", c
                 if kind == "refer" and h in passed:
                     sent_on[h] = pass_days[h]
+                    set_aside.add(last_pass.get(h))
                 passed.discard(h)  # a house that adopted a report and sent the bill on hasn't passed it yet
                 pass_days[h] = []
                 retained = False
@@ -373,6 +375,7 @@ def load_session(session):
                 if first_report is None:
                     first_report = kind
             elif kind == "waive" and sent_on.get(h):
+                set_aside.discard(last_pass.get(h))
                 passed.add(h)
                 pass_days[h] = sent_on.pop(h)
                 place, comm = "desk", None
@@ -380,6 +383,7 @@ def load_session(session):
             elif kind == "retain":
                 retained = True
             elif kind == "pass":
+                last_pass[h] = i
                 passed.add(h)
                 pass_days[h].append(day)
                 killed = None
@@ -405,6 +409,9 @@ def load_session(session):
                 ccr.add(h)
             elif kind == "enroll":
                 enrolled.add(h)
+        # A vote the house then sent to Finance (or Ways and Means) isn't its passage yet: shown as written ("Ought to Pass
+        # with Amendment 2023-0304h: MA RC 184-179 ..."), not "PASSED HOUSE" (HB 565 of 2023).
+        steps = [(d_, h_, a_ if j in set_aside else t_, a_, k_, e_) for j, (d_, h_, t_, a_, k_, e_) in enumerate(steps)]
         kinds = {s[4] for s in steps}
         # The LSRs file's chapter number; the history line's has slips (SB 62 of 2025 says "Chapter 0039", HB 511's).
         chapter = (int(r[11]) if r[11].strip().isdigit() else None) or next((int(m.group(1)) for s in steps for m in [re.search(r"Chapter\s+(\d+)", s[3])] if m and s[4] in ("sign", "nosign")), None)

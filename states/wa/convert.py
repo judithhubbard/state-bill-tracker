@@ -107,6 +107,12 @@ def steps_of(bill, d, comms):
             if m:
                 if cs.get("PartialVeto") == "true":
                     hist.append({"ActionDate": cs["ActionDate"], "HistoryLine": "Governor partially vetoed."})
+                # A veto after the session goes to the next session, which can override it: SB 5017 and SB 5810 of
+                # 2021-22, vetoed March 31, 2022, are chapters 4 and 3 of 2023 Laws, and their history (this biennium's)
+                # never says so. A chapter on a vetoed bill means the veto was overridden.
+                elif cs.get("Veto") == "true" and any(re.match(r"Governor vetoed", text(h.get("HistoryLine"))) for h in hist):
+                    hist.append({"ActionDate": cs["ActionDate"],
+                                 "HistoryLine": f"Veto overridden in the 20{m.group(2)} session."})
                 hist.append({"ActionDate": cs["ActionDate"], "HistoryLine": f"Chapter {m.group(1)}, 20{m.group(2)} Laws."})
             elif cs.get("HistoryLine"):
                 hist.append({"ActionDate": cs["ActionDate"], "HistoryLine": cs["HistoryLine"]})

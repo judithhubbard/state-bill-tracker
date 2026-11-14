@@ -1810,7 +1810,9 @@ from that repo. **Nothing here may change it.**
     with the member's home county and the districts the list leaves empty (`DISTRICT_FIX`); the check LOOKs at names voting
     in the last four months of the newest session's roll calls that aren't tied to a seat.
   - A roll call filed under the wrong bill: KS's vote records carry their own bill number, and two 2026 Senate line-item
-    override votes on the budget (HB 2513) say HB 2315, a bill that never left committee (another has none). Tie votes to
+    override votes on the budget (HB 2513) say HB 2315, a bill that never left committee (another has none). NY's Senate API does it too (S2347 of 2025, in committee, with a June 2026
+    floor vote; S810 of 2025, signed in March, with one in June): a Senate floor vote with no action of the bill's within
+    three days is dropped (`DROPPED` in states/ny/convert.py lists them: about one to three a session). Tie votes to
     the history line they belong to (action, house, time); the check LOOKs at bills that never left committee but have
     floor votes (on 2026-11-13: WY's budget-session votes to introduce a bill, expected; MI HB 4195 and "HJRU" of 2025, NH
     HB 565 and HB 620 of 2023, NY S2347 of 2025, not looked into).

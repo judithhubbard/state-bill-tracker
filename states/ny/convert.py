@@ -5,9 +5,13 @@ Every state's convert.py has the same two functions: sessions() and load_session
 """
 import gzip, glob, json, os, re
 from collections import defaultdict
+from datetime import date
 
 from stages import rank
 from . import profile as P
+
+
+DROPPED = []  # floor votes left out (wrong bill), for the checks
 
 
 def sessions():
@@ -179,6 +183,13 @@ def collect_votes(live, avotes):
         for v in b.get("votes", []):
             key = ("S", v["type"], v["date"], v.get("committee"))
             if key in seen:
+                continue
+            # A floor vote with no action of the bill's within three days is filed under the wrong bill (S2347 of 2025, in
+            # committee all session, carries a 52-8 floor vote of June 4, 2026). Votes are often dated a day after the
+            # "PASSED SENATE" line (S23 of 2021).
+            if v["type"] == "FLOOR" and not any(abs((date.fromisoformat(a["date"]) - date.fromisoformat(v["date"])).days) <= 3
+                                                for a in b.get("actions", [])):
+                DROPPED.append((b["printNo"], v["date"]))
                 continue
             seen.add(key)
             c = v["counts"]

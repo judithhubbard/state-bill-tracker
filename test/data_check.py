@@ -176,10 +176,12 @@ def check(state):
         # Roll calls filed under the wrong bill: KS's roll-call records name their bill, and two 2026 Senate line-item override
         # votes on the budget (HB 2513) say HB 2315, a bill that never left committee. Floor votes on a bill that never
         # left committee. (Only a LOOK: WY's budget sessions vote on introducing a bill, two-thirds needed, and the bills that
-        # fail never reach a committee; on 2026-11-13 it also lists MI HB 4195 and "HJRU" of 2025, NH HB 565 and HB 620 of
-        # 2023 and NY S2347 of 2025, not looked into.)
+        # fail never reach a committee.)
+        # A bill that reached the floor and was then sent back (MI HB 4195 of 2025: failed 39-64, then referred to a
+        # committee; NH HB 565 of 2023: "Ought to Pass with Amendment ... RC 184-179", then sent to Finance) isn't one.
+        floor = re.compile(r"^(?:PLACED ON FLOOR|FAILED|ADVANCED TO (?:SECOND|THIRD) READING|Ought to Pass)", re.I)
         stray = [r["nums"][0] for r in recs if r["stage"] == 0 and r["commFate"] == "none" and not r["passedS"] and not r["passedA"]
-                 and any(v[1] == "F" for v in r["votes"])]
+                 and any(v[1] == "F" for v in r["votes"]) and not any(floor.match(t) for v in r["vers"] for _, t in v["actions"])]
         if stray:
             say(state, "LOOK",
                 f"{s}: {len(stray)} bills that never left committee have floor votes (filed under the wrong bill?), e.g. {stray[:4]}")

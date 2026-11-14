@@ -535,8 +535,10 @@ def load_session(session):
                 "",
                 dates(lambda h, w: w == "PBH"),
                 dates(lambda h, w: w == "APP"),
-                # A conditional veto isn't the end of a bill, so it shows only in the list of actions.
-                dates(lambda h, w: w in ("AV", "PV")),
+                # A conditional veto isn't the end of a bill, so it shows only in the list of actions. A veto followed by
+                # the governor's approval belongs to another bill in the record (A4006 of 2020-21, vetoed, and A4975, its
+                # new version, signed): it isn't this law's, so the law doesn't read as passed over a veto.
+                "" if dates(lambda h, w: w == "APP") > dates(lambda h, w: w in ("AV", "PV")) else dates(lambda h, w: w in ("AV", "PV")),
             ],
             "votes": all_votes,
             "firstComms": first_comms,

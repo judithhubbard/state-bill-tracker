@@ -74,8 +74,14 @@ def decode(h, amendment):
         return house or "G", a  # constitutional amendments never go to the governor
     if re.match(r"pres\. to gov", low):
         return "G", "DELIVERED TO GOVERNOR"
-    if re.match(r"signed by gov|became law w/o signature|veto overridden", low):
+    if re.match(r"signed by gov", low):
         return "G", "SIGNED"
+    # Kept as written, so the page says how it became law: "Became Law W/o Signature", and "Veto Overridden" in each
+    # house (a law once both have, with its Session Law number).
+    if re.match(r"became law w/o signature", low):
+        return "G", a
+    if re.match(r"veto overridden", low):
+        return house or "G", a
     if re.match(r"vetoed", low):
         return "G", "VETOED"
     return house or "G", a
@@ -227,7 +233,8 @@ def load_session(session):
                 dates(lambda h, t: t == "PASSED HOUSE", "all"),
                 "",
                 dates(lambda h, t: t == "DELIVERED TO GOVERNOR"),
-                dates(lambda h, t: t == "SIGNED") or (dates(lambda h, t: t == "ENROLLED") if stage == 5 else ""),
+                dates(lambda h, t: t == "SIGNED" or bool(re.match(r"Became Law W/o Signature|Veto Overridden", t, re.I)))
+                or (dates(lambda h, t: t == "ENROLLED") if stage == 5 else ""),
                 dates(lambda h, t: t == "VETOED"),
             ],
             "votes": votes, "firstComms": [(first[0], first[1], left)] if first else [],
