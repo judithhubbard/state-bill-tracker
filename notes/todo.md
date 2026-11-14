@@ -7,8 +7,14 @@ in CLAUDE.md's launch checklist.
 - **New York:** done 2026-11-14 for Senate bills and Assembly bills with a Senate twin (the purpose and summary of
   provisions from the Senate sponsor's memo, data/texts_<session>.json, written by fetch_bills.py). Assembly bills:
   states/ny/memos.py (download.yml, started 2026-11-14; about 11,000 pages, three runs for the first copy).
-- **New Hampshire, North Dakota, Nebraska:** being added (2026-11-14): bill text analyses, staff summaries, committee
-  statements.
+- **Added 2026-11-14, filling in over the next runs:** New Hampshire, North Dakota (bills passed only), Nebraska, Idaho,
+  North Carolina (bills a committee heard), Michigan (bills an agency analyzed).
+- **Arizona:** House bill summaries and Senate fact sheets on azleg.gov/legtext (allowed, 120-second delay; file names from
+  Open States' "documents"): about a week of runs. Waiting for the owner's go-ahead.
+- **Michigan joint resolutions** (HJRA, SJRB ...) get no summary: the page and build_data.py key texts by `baseNum()`,
+  which strips a final capital letter. Fix the key for letter-numbered resolutions.
+- South Dakota has no summaries; Rhode Island shows the General Assembly's one-line description (the Legislative Council's
+  explanation would cost LegiScan queries: left out).
 - **Missouri** House bills' summaries, **Kansas** 2023-24 supplemental notes, **Louisiana** digests: their downloads
   read these as extras, a little each run (checked 2026-11-14); they fill in over days. Check coverage in a week.
 - No summary exists in the sources: Alaska (decided 2026-11-08: the sponsor statement is an advocate's case),
