@@ -71,11 +71,46 @@ def folders(data_dir):
     return dict(sorted(out.items()))
 
 
+def shape(action):
+    """A history line's wording without its numbers ("Passed H., Ayes 90, Nays 2" -> "passed h., ayes #, nays #")."""
+    return re.sub(r"\d+", "#", text(action).lower())
+
+
 def bills(folder):
+    """The folder's bills, each brought up to date from the last master list where the full copy is older (legiscan.py
+    reads the master list every run, but each bill's full record only within a daily allowance or with Sunday's
+    dataset): meta.json's "ml" for the bill holds the master list's status, status date, last action and its date. When
+    its change_hash differs from the saved copy's and its last action is newer than (or on the day of, and not among)
+    the saved history's lines, that action is added as a history line, so stages don't wait for the full record. The
+    master list doesn't say which house acted: the house that most often writes the same wording (numbers aside) in this
+    session's histories, else the bill's current house. A bill whose saved copy is current is read as it is."""
+    out = []
     for f in sorted(glob.glob(os.path.join(folder, "bill", "*.json"))):
         b = (read_json(f) or {}).get("bill")
         if b:
-            yield b
+            out.append(b)
+    ml = {k: v["ml"] for k, v in ((read_json(os.path.join(folder, "meta.json"), {}) or {}).get("bills") or {}).items()
+          if isinstance(v, dict) and v.get("ml")}
+    stale = [b for b in out if (ml.get(str(b.get("bill_id"))) or {}).get("change_hash") not in (None, b.get("change_hash"))]
+    if stale:
+        houses = defaultdict(lambda: defaultdict(int))
+        for b in out:
+            for a in b.get("history") or []:
+                houses[shape(a.get("action"))][a.get("chamber") or ""] += 1
+        for b in stale:
+            m = ml[str(b["bill_id"])]
+            day, act = (m.get("last_action_date") or "")[:10], text(m.get("last_action"))
+            hist = list(b.get("history") or [])
+            latest = max(((a.get("date") or "")[:10] for a in hist), default="")
+            if day and act and day >= latest and not any((a.get("date") or "")[:10] == day and text(a.get("action")) == act
+                                                         for a in hist):
+                seen = houses.get(shape(act))
+                ch = max(seen, key=seen.get) if seen else (b.get("current_body") or "")
+                hist.append({"date": day, "action": act, "chamber": ch, "chamber_id": 0, "importance": 0, "masterlist": True})
+                b["history"] = hist
+            if m.get("status") is not None:
+                b["status"], b["status_date"] = m["status"], m.get("status_date") or b.get("status_date")
+    return out
 
 
 def people(folder):
@@ -110,7 +145,8 @@ def fetched(folder):
     """When the newest bill in the folder was read (meta.json), as "YYYY-MM-DD HH:MM" UTC."""
     from datetime import datetime, timezone
     meta = read_json(os.path.join(folder, "meta.json"), {}) or {}
-    t = max((b.get("fetched") or 0 for b in (meta.get("bills") or {}).values()), default=0)
+    # (the master list, read every run, keeps every bill's stage current: legiscan.py and bills())
+    t = max([b.get("fetched") or 0 for b in (meta.get("bills") or {}).values()] + [meta.get("masterlist_time") or 0])
     if not t:
         return (meta.get("dataset_date") or "") + " 00:00"
     return datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d %H:%M")
