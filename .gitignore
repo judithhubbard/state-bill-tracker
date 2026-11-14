@@ -161,5 +161,6 @@ data/ks/*
 data/fl/*
 # Louisiana downloads (states/la/fetch.py).
 data/la/*
+!data/la/district_towns.json
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

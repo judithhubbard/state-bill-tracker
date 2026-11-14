@@ -460,8 +460,7 @@
     "data/la"
    ],
    "minutes": 60,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/la/fetch.py",
-   "note": "legis.la.gov's plain-link lists and bill pages, floor-vote and digest PDFs as text, committee votes, members and committees; documents fill in over several runs. Not built into the site until its converter exists."
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/la/fetch.py && python3 states/la/contacts.py"
   }
  ]
 }

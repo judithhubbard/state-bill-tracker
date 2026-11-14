@@ -144,6 +144,7 @@ if not os.path.exists(os.path.join(HERE, "data", "ok", "incomplete")):
 if not os.path.exists(os.path.join(HERE, "data", "id", "incomplete")): contacts("id", TODAY.year, 95)  # Idaho: a session a year
 if not os.path.exists(os.path.join(HERE, "data", "al", "incomplete")): contacts("al", TODAY.year, 130)  # Alabama: a session a year
 if not os.path.exists(os.path.join(HERE, "data", "ky", "incomplete")): contacts("ky", TODAY.year, 130)  # Kentucky: a session a year
+if not os.path.exists(os.path.join(HERE, "data", "la", "incomplete")): contacts("la", TODAY.year, 130)  # Louisiana: a session a year
 if not os.path.exists(os.path.join(HERE, "data", "ms", "incomplete")): contacts("ms", TODAY.year, 160)  # Mississippi: a session a year
 if not os.path.exists(os.path.join(HERE, "data", "de", "incomplete")): contacts("de", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 55)  # Delaware: two-year General Assemblies
 if not os.path.exists(os.path.join(HERE, "data", "sc", "incomplete")): contacts("sc", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 150)  # South Carolina: two-year General Assemblies

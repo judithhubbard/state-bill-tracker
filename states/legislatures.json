@@ -15,6 +15,7 @@
   "in": {"seats": {"S": 50, "H": 100}, "override": "majority", "governor": ["Mike Braun", "R"]},
   "ks": {"seats": {"S": 40, "H": 125}, "override": "2/3", "governor": ["Laura Kelly", "D"], "note": "Overriding a veto takes two-thirds of each house's members (27 senators, 84 representatives); Republicans hold more than that in both houses. Laura Kelly is term-limited; a new governor takes office in January 2027."},
   "ky": {"seats": {"S": 38, "H": 100}, "override": "majority", "governor": ["Andy Beshear", "D"], "note": "Overriding a veto takes a majority of each house's members (20 senators, 51 representatives). Andy Beshear is term-limited; a new governor takes office in December 2027."},
+  "la": {"seats": {"S": 39, "H": 105}, "override": "2/3", "governor": ["Jeff Landry", "R"], "note": "Overriding a veto takes two-thirds of each house's members (26 senators, 70 representatives), during the session or at a veto session 40 days after it."},
   "ma": {"seats": {"S": 40, "H": 160}, "override": "2/3", "governor": ["Maura Healey", "D"]},
   "md": {"seats": {"S": 47, "H": 141}, "override": "3/5", "governor": ["Wes Moore", "D"]},
   "me": {"seats": {"S": 35, "H": 151}, "override": "2/3", "governor": ["Janet Mills", "D"], "note": "The House also seats two tribal representatives (the Passamaquoddy Tribe's and the Houlton Band of Maliseet Indians'), who don't vote on the floor. Overriding a veto takes two-thirds of the members present in each house."},
