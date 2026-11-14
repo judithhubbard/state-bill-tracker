@@ -156,7 +156,7 @@
     "data/nc"
    ],
    "minutes": 50,
-   "run": "python3 states/nc/fetch.py",
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/nc/fetch.py",
    "note": "Two seconds apart (its robots.txt crawl delay)."
   },
   {

@@ -333,7 +333,15 @@ from that repo. **Nothing here may change it.**
   called "Rules". Local bills become law when ratified, without the governor (narrow kind "place"); constitutional
   amendments are bills too ("Constitutional Amendment ..."), three-fifths, then the voters. Roll-call pages print "None"
   for an empty vote group. Emails from Open States (the pages hide them behind Cloudflare's script); members who resigned
-  stay on the member list with a note. No summaries (PDFs). Counties and places by district (`towns.py`).
+  stay on the member list with a note. "What it does" is the Legislative Analysis Division's bill summary (neutral staff summaries,
+  PDFs): fetch.py's `summaries()` runs last, in the time left, and never marks the state incomplete; it reads each heard
+  bill's list (/Legislation/Bills/Summaries/<year>/<H4>; unheard bills have none) and each chosen PDF once
+  (dashboard.ncleg.gov/api/Services/BillSummary/<year>/<id>; "(e3)", "(CS...)", "(CCS...)", "(sl)" in the id name the
+  version), saved as text in summaries/. `states/nc/texts.py` takes the session law's summary (the conference version's
+  when a law is summarized part by part, else up to 8 parts), else the newest bill summary, never an amendment's alone,
+  and none when its title shares no words with the bill's current one (rewritten bills); it keeps the overview, the
+  analysis when the overview is short and the effective date, without current law, tables or staff credits; the label
+  names the version. Counties and places by district (`towns.py`).
 - **Wyoming (started 2026-11-01):** `python3 states/wy/fetch.py` reads the Legislative Service Office's JSON API, the one
   wyoleg.gov's pages use (lsoservice.wyoleg.gov/api and api.wyoleg.gov; no robots.txt), a request a second: each year's
   bill list, each HB, SF, HJ and SJ in full (actions, sponsors, roll calls member by member in committee and on the floor,

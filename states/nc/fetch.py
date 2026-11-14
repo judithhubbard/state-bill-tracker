@@ -26,13 +26,19 @@ For each two-year session (2023 = 2023-2024, 2025 = 2025-2026; regular session o
   names, chamber) for both sessions; for the current session, each House and Senate standing and select committee's
   page (/Committees/CommitteeInfo/HouseStanding/225: meeting schedule, Senior Chair/Chairs/Vice Chairs/Members by
   member id) into committees.json, once a week. Past sessions' committee pages aren't on the site.
-The Legislative Analysis Division's bill summaries are PDFs listed on /Legislation/Bills/Summaries/<year>/<H4> (links
-to https://dashboard.ncleg.gov/api/Services/BillSummary/<year>/<summary id>, about 50 KB each); not downloaded yet.
+- Bill summaries ("What it does"), last, in the time the run has left (FETCH_MINUTES, set by the workflow, less 5
+  minutes): the Legislative Analysis Division's summaries listed on /Legislation/Bills/Summaries/<year>/<H4> (read for
+  bills a committee has taken up: others have none; again when the bill's history changes, every two days for a week
+  after, and every two weeks for a new law until its session law's summary appears), and the PDFs it links,
+  https://dashboard.ncleg.gov/api/Services/BillSummary/<year>/<summary id> (no robots.txt; about 50 KB each), each
+  once (a revised summary has a new id), saved as text (pdftotext -layout) in summaries/<id>.txt, with summaries.json
+  saying what each bill's list held and when. states/nc/texts.py turns them into data/nc/texts_<year>.json. They fill
+  in run by run and never mark the copy incomplete. `--summaries` reads only them (`--limit=N`: at most N requests).
 data/nc/incomplete lists what was never downloaded (a failed refresh keeps the last copy; roll calls still to read count
 only before the first clean run); it is removed when nothing is missing.
 Usage: python3 states/nc/fetch.py [first_year]   (default: the session before this one, and this one)
 """
-import html, json, math, os, re, sys, time, urllib.error, urllib.request
+import html, json, math, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta
 
@@ -42,7 +48,10 @@ DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 YEAR = date.today().year
 CURRENT = YEAR if YEAR % 2 else YEAR - 1
-FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else CURRENT - 2
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+FIRST = int(ARGS[0]) if ARGS else CURRENT - 2
+SUMMARIES_ONLY = "--summaries" in sys.argv
+LIMIT = next((int(a[8:]) for a in sys.argv if a.startswith("--limit=")), None)
 DELAY = 2.0  # robots.txt's Crawl-delay
 REFRESH_DAYS = 7  # every current-session bill (and the members' and committees' pages) is read again this often
 INCOMPLETE = set()
@@ -50,6 +59,13 @@ WHOLE = [True]  # the last run left nothing missing (set in main): roll calls st
 VOTES_LEFT = set()  # sessions with roll calls still to read
 MISSING = object()  # a page that answers 404
 _last = [0.0]
+# The run's own time limit (FETCH_MINUTES, set by the workflow): the summaries stop 5 minutes before it.
+START = time.time()
+BUDGET = max(0.0, float(os.environ.get("FETCH_MINUTES") or 0) - 5) * 60
+
+
+def out_of_time():
+    return bool(BUDGET) and time.time() - START > BUDGET
 
 
 def get(url):
@@ -585,6 +601,197 @@ def session(year):
     committees(year, folder, live)
 
 
+# ---------------------------------------------------------------- bill summaries
+
+class Refused(Exception):
+    """The summaries' server turned us away (401/403/429 or a Cloudflare challenge): no more summaries this run."""
+
+
+def get_summary(url, binary=False):
+    """A summary list page (text) or PDF (bytes); MISSING for a 404, None when it can't be read. Never stops the run:
+    a refusal raises Refused, which ends only the summaries."""
+    if url.startswith("/"):
+        url = SITE + url
+    for attempt in range(3):
+        wait = _last[0] + DELAY - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        _last[0] = time.time()
+        SUMMARY_STATS["requests"] += 1
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": AGENT})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                body = r.read()
+            if body[:5] != b"%PDF-":
+                t = body.decode("utf-8", "replace")
+                if "cf-chl" in t[:20000] or "<title>Just a moment" in t[:2000]:
+                    raise Refused(f"{url}: Cloudflare challenge")
+                return body if binary else t
+            return body
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return MISSING
+            if e.code in (401, 403, 429):
+                raise Refused(f"{url}: {e.code}")
+            if e.code == 500 and attempt >= 1:
+                return MISSING
+        except Refused:
+            raise
+        except Exception:
+            pass
+        if out_of_time():
+            return None
+        time.sleep(10 * (attempt + 1))
+    return None
+
+
+SUMMARY_STATS = {"requests": 0}
+# History lines that don't mean a committee took the bill up (bills with only these have no summaries).
+UNHEARD = re.compile(r"(Filed|Passed 1st Reading|Ref(?:'d)? [Tt]o|Ref to|Re-ref|Withdrawn From Com|Sequential Referral|"
+                     r"Serial Referral)", re.I)
+
+
+def summaries_due(bill, entry, today):
+    """Whether a bill's list of summaries should be read now."""
+    hist = bill.get("history") or []
+    if not any(not UNHEARD.match(h.get("action", "")) for h in hist):
+        return False  # never taken up in committee: no summaries (none of 12 such bills checked had any)
+    if not entry:
+        return True
+    if entry.get("sig") != signature(bill):
+        return True
+    listed = entry.get("listed", "")
+    last = max((h.get("date", "") for h in hist), default="")
+    try:
+        after = (date.fromisoformat(last) + timedelta(days=7)).isoformat()
+    except ValueError:
+        after = ""
+    if listed < after and listed <= (today - timedelta(days=2)).isoformat():
+        return True  # summaries are often posted days after the step
+    law = next((h.get("date", "") for h in hist if h.get("action", "").startswith("Ch. ")), "")
+    if bill.get("law", "").startswith("SL") and not any("(sl)" in r["id"] for r in entry.get("rows", [])):
+        # A new law: its session law's summary comes weeks or months later.
+        if law >= (today - timedelta(days=365)).isoformat() and listed <= (today - timedelta(days=14)).isoformat():
+            return True
+    return False
+
+
+def signature(bill):
+    return f"{len(bill.get('history') or [])}|{len(bill.get('editions') or [])}|{bill.get('law', '')}"
+
+
+def pdf_to_text(body):
+    """pdftotext -layout of a PDF's bytes, or None."""
+    try:
+        r = subprocess.run(["pdftotext", "-layout", "-enc", "UTF-8", "-", "-"], input=body, capture_output=True,
+                           timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return r.stdout.decode("utf-8", "replace") if r.returncode == 0 and r.stdout.strip() else None
+
+
+def texts_module():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("nc_texts", os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                                            "texts.py"))
+    T = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(T)
+    return T
+
+
+def summaries(years):
+    """Bill summaries, as the run's time allows (see the module's docstring); then texts_<year>.json. Never marks the
+    copy incomplete: what isn't read now is read on a later run."""
+    T = texts_module()
+    today = date.today()
+    week_ago = (today - timedelta(days=7)).isoformat()
+    can_read = bool(shutil.which("pdftotext"))
+    if not can_read:
+        print("summaries: pdftotext isn't installed; no new summaries read", flush=True)
+    indexes, todo = {}, []
+    for year in years:
+        folder = os.path.join(DATA, str(year))
+        bills_dir = os.path.join(folder, "bills")
+        index = load(os.path.join(folder, "summaries.json"), {})
+        indexes[year] = index
+        if not os.path.isdir(bills_dir):
+            continue
+        for name in os.listdir(bills_dir):
+            if not name.endswith(".json"):
+                continue
+            bill = load(os.path.join(bills_dir, name)) or {}
+            key = name[:-5]
+            entry = index.get(key)
+            if entry:  # chosen again each run, so a change in texts.choose() takes effect without reading the list
+                entry["chosen"] = T.choose(entry.get("rows", []))
+            listing = summaries_due(bill, entry, today)
+            missing = [i for i in (entry or {}).get("chosen", [])
+                       if not os.path.exists(os.path.join(folder, "summaries", T.file_of(i)))
+                       and (entry.get("bad", {}).get(i, "") <= week_ago)]
+            if listing or missing:
+                last = max((h.get("date", "") for h in bill.get("history") or []), default="")
+                # The current session first, then laws, then the bills that moved most recently.
+                todo.append(((year != CURRENT, not bill.get("law"), "".join(chr(0x10FFFF - ord(c)) for c in last)),
+                             year, key, bill, listing))
+    todo.sort(key=lambda t: t[0])
+    print(f"summaries: {len(todo)} bills to look at", flush=True)
+    read = {"lists": 0, "docs": 0, "bills": 0}
+    stopped = ""
+    try:
+        for n, (_, year, key, bill, listing) in enumerate(todo):
+            if not can_read:
+                stopped = "pdftotext isn't installed"
+                break
+            if out_of_time() or (LIMIT is not None and SUMMARY_STATS["requests"] >= LIMIT):
+                stopped = "out of time" if out_of_time() else "request limit"
+                break
+            folder = os.path.join(DATA, str(year))
+            index = indexes[year]
+            entry = index.setdefault(key, {})
+            if listing:
+                page = get_summary(f"/Legislation/Bills/Summaries/{year}/{key}")
+                if page is None:
+                    continue
+                rows = [] if page is MISSING else T.parse_list(page)
+                entry.update({"listed": today.isoformat(), "sig": signature(bill), "rows": rows,
+                              "chosen": T.choose(rows)})
+                read["lists"] += 1
+            for sid in entry.get("chosen", []):
+                path = os.path.join(folder, "summaries", T.file_of(sid))
+                if os.path.exists(path) or entry.get("bad", {}).get(sid, "") > week_ago:
+                    continue
+                if out_of_time() or (LIMIT is not None and SUMMARY_STATS["requests"] >= LIMIT):
+                    break
+                body = get_summary(f"https://dashboard.ncleg.gov/api/Services/BillSummary/{year}/{sid}", binary=True)
+                t = pdf_to_text(body) if isinstance(body, bytes) and body[:5] == b"%PDF-" else None
+                if t is None:
+                    if body is not None:  # not a PDF, or one pdftotext can't read: tried again in a week
+                        entry.setdefault("bad", {})[sid] = today.isoformat()
+                    continue
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path + ".tmp", "w", encoding="utf-8") as f:
+                    f.write(t)
+                os.replace(path + ".tmp", path)
+                entry.get("bad", {}).pop(sid, None)
+                read["docs"] += 1
+            read["bills"] += 1
+            if n % 25 == 24:
+                save(os.path.join(folder, "summaries.json"), index)
+    except Refused as e:
+        stopped = f"refused ({e})"
+    finally:
+        for year, index in indexes.items():
+            if index:
+                save(os.path.join(DATA, str(year), "summaries.json"), index)
+    print(f"summaries: {read['lists']} lists and {read['docs']} summaries read for {read['bills']} of {len(todo)} bills"
+          + (f"; stopped: {stopped}" if stopped else ""), flush=True)
+    for year in years:
+        try:
+            T.write(year)
+        except Exception as e:  # a summary that fails to read mustn't stop the run
+            print(f"{year} texts: failed ({type(e).__name__}: {e})", flush=True)
+
+
 def begun(year):
     """Whether a session has convened (the second Wednesday of January of its first year)."""
     return date.today() >= date(year, 1, 1 + (2 - date(year, 1, 1).weekday()) % 7 + 7)
@@ -603,6 +810,9 @@ def finish():
 
 def main():
     os.makedirs(DATA, exist_ok=True)
+    if SUMMARIES_ONLY:
+        summaries(list(range(FIRST, CURRENT + 1, 2)))
+        return
     marker = os.path.join(DATA, "incomplete")
     WHOLE[0] = not os.path.exists(marker)
     if not os.path.exists(marker):  # until this run finishes, the copy may be partial
@@ -617,6 +827,10 @@ def main():
     except (SystemExit, OSError) as e:
         print(e)
     finish()
+    try:  # last, in the time left; whatever happens here, the copy's completeness is already settled
+        summaries(list(range(FIRST, CURRENT + 1, 2)))
+    except Exception as e:
+        print(f"summaries: failed ({type(e).__name__}: {e})", flush=True)
 
 
 if __name__ == "__main__":
