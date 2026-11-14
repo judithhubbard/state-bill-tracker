@@ -12,6 +12,13 @@ isn't asked again in that run, and the summary says "stopped at the site's bot c
 carries on from there. It isn't worked around (same User-Agent, no browser emulation). Whether the Legislature will
 allow this download hasn't been asked (webmaster@legis.iowa.gov).
 
+On GitHub the challenge comes after about 45 requests a run (checked 2026-11-14; from the owner's computer the same pages
+load), so the first copy of each bill comes from Open States instead (states/ia/openstates.py, run first; decided
+2026-11-14), and this script reads, in order: the lists; every bill whose list entry shows an action after its Open
+States record's latest, or that has none; the members and committees; then the rest, the most recently active first, so
+the official record replaces Open States' over time (`histories()`'s backfill pass). A bill with an Open States record
+counts as downloaded for the marker, and Open States' people file stands in for the members until they're read.
+
 Iowa's General Assembly sits for two years (the 91st is 2025-26, the 90th 2023-24), a session each year from the second
 Monday of January to April or May; bills carry over from the first session to the second. Special sessions' bills are
 numbered with the regular ones. For the General Assembly before this one, this one, and (from November of an even year)
@@ -295,8 +302,22 @@ def history_part(page):
     return strip(page[a:b + 10]) if a >= 0 and b > 0 else None
 
 
-def histories(ga, folder, state, kinds, sub):
-    """Each listed bill's history (kinds: BILLS or STUDY, into bills/ or study/): new and moved ones first."""
+def open_states(folder, k):
+    """The date of the latest action in the bill's Open States record (states/ia/openstates.py), or "" without one."""
+    rec = load(os.path.join(folder, "openstates", f"{k}.json")) or {}
+    return (rec.get("latest_action_date") or "")[:10]
+
+
+def covered(folder, k, listed):
+    """Whether a bill not read here yet is up to date in its Open States record: no action listed since its latest."""
+    d = open_states(folder, k)
+    return bool(d) and d >= listed["date"]
+
+
+def histories(ga, folder, state, kinds, sub, backfill=False):
+    """Each listed bill's history (kinds: BILLS or STUDY, into bills/ or study/): new and moved ones first. A bill never
+    read here whose Open States record is up to date waits for the backfill pass (backfill=True), which reads those in
+    the requests left, the most recently active first, so the official record replaces Open States' over time."""
     listing = load(os.path.join(folder, "list.json")) or {}
     bills = {k: v for k, v in (listing.get("bills") or {}).items() if re.match(r"[A-Z]+", k).group(0) in kinds}
     if not bills:
@@ -305,16 +326,21 @@ def histories(ga, folder, state, kinds, sub):
     sigs, read, absent = state.setdefault("sig", {}), state.setdefault("read", {}), state.setdefault("absent", {})
     sig = {k: f"{v['date']} {v['last']}" for k, v in bills.items()}
     have = lambda k: os.path.exists(os.path.join(folder, sub, f"{k}.html"))
-    urgent = [k for k in bills if (not have(k) and absent.get(k) != sig[k]) or (have(k) and sigs.get(k) != sig[k])]
+    waiting = [k for k in bills if not have(k) and absent.get(k) != sig[k] and covered(folder, k, bills[k])]
+    urgent = [k for k in bills if (not have(k) and absent.get(k) != sig[k] and k not in waiting)
+              or (have(k) and sigs.get(k) != sig[k])]
     rest = []
-    if ga == ga_of(YEAR) and TODAY.month <= 6 and kinds == BILLS:
+    if backfill:
+        urgent, rest = [], sorted(waiting, key=lambda k: bills[k]["date"], reverse=True)
+    elif ga == ga_of(YEAR) and TODAY.month <= 6 and kinds == BILLS:
         rest = [k for k in bills if k not in urgent and have(k) and stale(read.get(k))]
         rest.sort(key=lambda k: bills[k]["date"], reverse=True)  # most recently active first
-    todo = urgent + rest[:REFRESH_MAX]
+    todo = urgent + (rest if backfill else rest[:REFRESH_MAX])
     if not todo:
         return
-    print(f"{ga} {sub}: {len(bills)} listed; {len(urgent)} new or moved, {len(rest)} a week old; {len(todo)} to read",
-          flush=True)
+    print(f"{ga} {sub}: {len(bills)} listed; " + (f"{len(rest)} still from Open States only" if backfill else
+          f"{len(urgent)} new or moved, {len(rest)} a week old, {len(waiting)} up to date from Open States")
+          + f"; {len(todo)} to read", flush=True)
     got = 0
     for k in todo:
         if out_of_time():
@@ -696,11 +722,11 @@ def never_downloaded(gas, begun):
         state = load(os.path.join(folder, "state.json")) or {}
         absent = state.get("absent", {})
         if any(re.match(r"[A-Z]+", k).group(0) in BILLS and not os.path.exists(os.path.join(folder, "bills", f"{k}.html"))
-               and k not in absent for k in listing["bills"]):
+               and not open_states(folder, k) and k not in absent for k in listing["bills"]):
             out.append(f"{first_year(ga)}:bills")
     if cur in gas and convened(cur):
         m = load(os.path.join(DATA, "members", str(first_year(cur)), "members.json"))
-        if not m or m.get("missing"):
+        if (not m or m.get("missing")) and not os.path.exists(os.path.join(DATA, "openstates_people.csv")):
             out.append("members")
         c = load(os.path.join(DATA, "committees.json"))
         if not c or c.get("missing"):
@@ -730,12 +756,17 @@ def main():
                 save(state, os.path.join(folder, "state.json"))
             elif not exists and not os.listdir(folder):
                 os.rmdir(folder)  # a General Assembly not listed yet leaves nothing behind
+        # The firewall stops a run after about 45 requests (see openstates.py), so what changed comes first: the
+        # bills that moved, then members and committees, then the bills read only from Open States so far.
+        for ga in listed:
+            if not out_of_time():
+                histories(ga, os.path.join(DATA, str(first_year(ga))), states[ga], BILLS, "bills")
         if ga_of(YEAR) in gas and not out_of_time():
             members(ga_of(YEAR))
             committees(ga_of(YEAR))
         for ga in listed:
             if not out_of_time():
-                histories(ga, os.path.join(DATA, str(first_year(ga))), states[ga], BILLS, "bills")
+                histories(ga, os.path.join(DATA, str(first_year(ga))), states[ga], BILLS, "bills", backfill=True)
         for ga in gas:
             if ga < ga_of(YEAR) and not out_of_time():
                 members(ga)

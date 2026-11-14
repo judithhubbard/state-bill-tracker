@@ -22,8 +22,12 @@ in CLAUDE.md's launch checklist.
 
 ## States not yet on the site
 - Louisiana: built; waiting for its first download on GitHub and contacts.
-- Iowa, Florida, Hawaii: downloads running; converters not started (Florida's emails from Open States unless the
-  owner objects).
+- Iowa (2026-11-14): legis.iowa.gov's firewall stops each GitHub run after about 45 requests. The first copy now comes
+  from Open States (states/ia/openstates.py, 100 requests a day, about 3 days), and fetch.py reads every changed bill
+  from the official site first, then the rest over the following weeks. Converter to write once the first copy is in:
+  official history when there, else the Open States record.
+- Florida, Hawaii: downloads running (Florida about 2/3 through 2026's bills; Hawaii capped at 110 Open States requests a
+  day); converters not started (Florida's emails from Open States unless the owner objects).
 
 ## National issues and search
 - Owner to review notes/issues-draft.md (10 starter issues). Then tag at build time, check each issue's matches,

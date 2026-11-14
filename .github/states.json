@@ -428,8 +428,8 @@
     "data/ia"
    ],
    "minutes": 110,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/ia/fetch.py",
-   "note": "legis.iowa.gov, a request every 6 seconds; a run ends at once if the site's bot check appears (the owner's choice, 2026-11-13). The first copy (about 28 hours of requests) builds up over many runs. Not built into the site until its converter exists."
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/ia/openstates.py && python3 states/ia/fetch.py",
+   "note": "The first copy from Open States (OPENSTATES_API_KEY, at most 100 requests a day; about 300 in all), then legis.iowa.gov, a request every 6 seconds, for every bill that changed and, in the requests left, the official record of the rest; a run ends at once if the site's bot check appears (the owner's choice, 2026-11-13; on GitHub it appears after about 45 requests). Not built into the site until its converter exists."
   },
   {
    "name": "Kansas",
