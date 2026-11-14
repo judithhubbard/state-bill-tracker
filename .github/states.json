@@ -440,6 +440,17 @@
    ],
    "minutes": 60,
    "run": "python3 states/ks/fetch.py && python3 states/ks/contacts.py"
+  },
+  {
+   "name": "Florida",
+   "code": "fl",
+   "key": "fl-data-v1",
+   "paths": [
+    "data/fl"
+   ],
+   "minutes": 110,
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/fl/fetch.py",
+   "note": "flsenate.gov at its 10-second crawl delay (both houses' bills; /api/ is barred and not used), the House's member and committee pages; the first copy (about 17 hours) builds up over many runs. Not built into the site until its converter exists."
   }
  ]
 }

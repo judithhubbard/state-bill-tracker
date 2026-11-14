@@ -157,5 +157,7 @@ data/ia/*
 # Kansas downloads (states/ks/fetch.py).
 data/ks/*
 !data/ks/district_towns.json
+# Florida downloads (states/fl/fetch.py).
+data/fl/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

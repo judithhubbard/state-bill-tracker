@@ -290,6 +290,12 @@ jobs:
           path: "data/ks"
           key: ks-data-v1-latest
           restore-keys: ks-data-v1-
+      - name: Restore Florida
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/fl"
+          key: fl-data-v1-latest
+          restore-keys: fl-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
