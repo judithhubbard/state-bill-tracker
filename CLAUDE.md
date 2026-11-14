@@ -624,7 +624,13 @@ from that repo. **Nothing here may change it.**
   downloaded), and the floor sponsors are history lines ("Floor sponsor: Bruce"), so legislators' sponsorship numbers
   count only the ~20 personal bills a year ("by RUBEL"); How's "About this data" says so. Titles are the list's short
   titles with abbreviations spelled out (`ABBREV`: "Approp, ITS, add'l" -> "Appropriation, ITS, additional"); the summary
-  is the one-line description; no "What it does" (the Statement of Purpose is the only plain account, a PDF). Roll-call
+  is the one-line description; "What it does" is the bill's Statement of Purpose, written for its sponsor
+  ("From the sponsor's statement of purpose."; sponsors' statements kept, the owner's decision 2026-11-14), from
+  /wp-content/uploads/sessioninfo/<year>/legislation/H0003SOP.pdf: only the purpose, without the fiscal note, contact or
+  disclaimer, cut at 2,500 characters (`states/id/texts.py`). fetch.py's `statements()` reads each once (pdftotext; sop/
+  and sop.json) and, while a year is live, asks again with If-Modified-Since when the bill's status changes (sponsors
+  revise them in place); a missing one is an HTML page with status 200 (checked for "%PDF"). The first copy (about
+  2,100) takes about 50 minutes; statements never mark Idaho incomplete. Roll-call
   names: "Crane(12)" (district), "Mr. Speaker" (Moyle), and substitutes written with both names, in a different order in
   each house: the House puts the member first ("Hill(Brown)": Brown sits for Hill), the Senate the substitute first
   ("Coho(Lenney)"); a name on that year's lists decides (`resolver()`). Members come from each year's committee pages

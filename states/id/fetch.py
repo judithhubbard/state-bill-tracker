@@ -38,16 +38,20 @@ read again (at most REFRESH_MAX a run, oldest first), for steps that don't chang
 Last-Modified. A first copy of three years (about 2,200 bills) takes about 40 minutes; after that a run reads one list
 per unfinished year and the bills whose status changed: a minute or two out of session.
 
-Not downloaded: the Statements of Purpose and co-sponsor lists (PDFs, allowed by robots.txt): the Statement of Purpose
-is the sponsor's own plain account of what the bill does, with a fiscal note and the sponsoring member's name, and is
-the only "What it does" there is besides the one-line description; bill texts, committee minutes and agendas (PDFs).
+- sop/<H0003>.txt (/wp-content/uploads/sessioninfo/<year>/legislation/H0003SOP.pdf, as text by pdftotext -layout; robots.txt
+  allows /wp-content/uploads/): each bill's Statement of Purpose / Fiscal Note, written for the bill's sponsor, the only
+  plain account of what a bill does (`statements()`; states/id/texts.py turns them into texts_<year>.json). After the
+  bills, every run; at the same one request a second. About 2,100 for three years, each about 640 KB (fonts embedded):
+  the first copy takes about 40 minutes, over one or two runs.
+
+Not downloaded: the co-sponsor lists, bill texts, committee minutes and agendas (PDFs).
 
 data/id/incomplete says "running" during the first copy, then lists what was never downloaded (a year's list, a listed
 bill's page, the members); it is removed when nothing is missing. A request that fails where a last copy exists keeps
-that copy and doesn't count.
+that copy and doesn't count. The statements of purpose never count.
 Usage: python3 states/id/fetch.py [year]   (default: every year above; a single year leaves the marker alone)
 """
-import gzip, html, json, os, re, sys, time, urllib.error, urllib.request
+import gzip, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, timedelta
 
@@ -70,7 +74,8 @@ MARKER = os.path.join(DATA, "incomplete")
 START = time.time()
 BUDGET = max(0.0, float(os.environ.get("FETCH_MINUTES") or 0) - 5) * 60
 FAILS = Counter()  # why requests failed, for the summary
-STATS = {"requests": 0, "bills": 0}
+STATS = {"requests": 0, "bills": 0, "statements": 0}
+PDFTOTEXT = shutil.which("pdftotext")
 LAST = [0.0]  # when the last request started
 
 
@@ -82,9 +87,15 @@ def out_of_time():
     return BUDGET and time.time() - START > BUDGET
 
 
-def request(path, label, must=None):
-    """The page at SITE + path as text, or None after three tries; None at once for a 404. must is a piece of text the
-    page has to contain (else it's counted as a failure: an error page served as 200)."""
+NOT_MODIFIED = object()  # request()'s answer to a conditional request when the document hasn't changed
+HEADERS = {}  # the last answer's Last-Modified
+
+
+def request(path, label, must=None, binary=False, since=None):
+    """The page at SITE + path as text (bytes when binary), or None after three tries; None at once for a 404. must is a
+    piece of text the page has to contain (else it's counted as a failure: an error page served as 200). since: a
+    Last-Modified value to send as If-Modified-Since; NOT_MODIFIED when the server answers 304."""
+    HEADERS.clear()
     for attempt in range(3):
         if out_of_time():
             return None
@@ -97,17 +108,25 @@ def request(path, label, must=None):
             print(f"  {STATS['requests']} requests, {round((time.time() - START) / 60)} min"
                   + (f"; failures {dict(FAILS)}" if FAILS else ""), flush=True)
         try:
-            req = urllib.request.Request(SITE + path, headers={"User-Agent": AGENT, "Accept-Encoding": "gzip"})
-            with urllib.request.urlopen(req, timeout=60) as r:
+            headers = {"User-Agent": AGENT, "Accept-Encoding": "gzip"}
+            if since:
+                headers["If-Modified-Since"] = since
+            req = urllib.request.Request(SITE + path, headers=headers)
+            with urllib.request.urlopen(req, timeout=120) as r:
                 body = r.read()
                 if r.headers.get("Content-Encoding") == "gzip":
                     body = gzip.decompress(body)
+                HEADERS["modified"] = r.headers.get("Last-Modified") or ""
+            if binary:
+                return body
             text = body.decode("utf-8", "replace")
             if must and must not in text:
                 FAILS["unexpected page"] += 1
             else:
                 return text
         except urllib.error.HTTPError as e:
+            if e.code == 304 and since:
+                return NOT_MODIFIED
             FAILS[f"HTTP {e.code}"] += 1
             if e.code in (401, 403, 429):
                 raise Refused(f"{label}: HTTP {e.code}")
@@ -270,6 +289,110 @@ def session(year):
     save(state, state_path)
 
 
+def pdf_text(body):
+    """A PDF's text by pdftotext -layout (which keeps a blank line between paragraphs), or None."""
+    if not PDFTOTEXT:
+        return None
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
+        f.write(body)
+        f.flush()
+        try:
+            out = subprocess.run([PDFTOTEXT, "-layout", "-enc", "UTF-8", f.name, "-"], capture_output=True, timeout=120)
+        except (OSError, subprocess.SubprocessError):
+            return None
+    return out.stdout.decode("utf-8", "replace") if out.returncode == 0 else None
+
+
+def texts_module():
+    """states/id/texts.py, loaded by its path (this file runs as a script)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("id_texts", os.path.join(os.path.dirname(os.path.abspath(__file__)), "texts.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def statements(year, only=None):
+    """Each bill's Statement of Purpose / Fiscal Note (/wp-content/uploads/sessioninfo/<year>/legislation/H0003SOP.pdf),
+    saved as text in sop/H0003.txt. There is one per bill, replaced in place when the sponsor revises it (its footer then
+    says "Bill SOP/FN REVISED: 02/04/2026", usually around the committee hearing), so: read once; while the year is live,
+    asked again (If-Modified-Since, so an unchanged one costs a 304) whenever the bill's list status has changed since;
+    a document the server doesn't have (an HTML page instead of a PDF) is tried again weekly while the year is live.
+    sop.json: {"H0003": {"read", "stamp" (the list status then), "modified" (Last-Modified), "sha"} or {"read",
+    "stamp", "missing": true}}. Never holds the state back: what isn't read now is read on a later run. only: keys to
+    read (for testing)."""
+    if not PDFTOTEXT:
+        print(f"{year} statements of purpose: pdftotext isn't installed; not read", flush=True)
+        return
+    folder = os.path.join(DATA, str(year))
+    state = load(os.path.join(folder, "state.json"), {})
+    stamps = state.get("stamps", {})
+    live = TODAY.isoformat() < finished_by(year)
+    index_path = os.path.join(folder, "sop.json")
+    index = load(index_path, {})
+    out = os.path.join(folder, "sop")
+    bills_dir = os.path.join(folder, "bills")
+    todo = []
+    for name in sorted(os.listdir(bills_dir) if os.path.isdir(bills_dir) else []):
+        key = name[:-5]
+        if not name.endswith(".html") or (only and key not in only):
+            continue
+        try:
+            page = open(os.path.join(bills_dir, name), encoding="utf-8").read()
+        except OSError:
+            continue
+        if f"/sessioninfo/{year}/legislation/{key}SOP.pdf" not in page:
+            continue
+        have = index.get(key)
+        if not have:
+            todo.append(key)
+        elif have.get("missing"):
+            if live and have["read"] < (TODAY - timedelta(days=REFRESH_DAYS)).isoformat():
+                todo.append(key)
+        elif live and have.get("stamp") != stamps.get(key):
+            todo.append(key)
+    got, same, missing = 0, 0, 0
+    for key in todo:
+        if out_of_time():
+            break
+        have = index.get(key) or {}
+        since = have.get("modified") if have.get("sha") and os.path.exists(os.path.join(out, f"{key}.txt")) else None
+        body = request(f"/wp-content/uploads/sessioninfo/{year}/legislation/{key}SOP.pdf", f"{year} {key} SOP",
+                       binary=True, since=since)
+        if body is NOT_MODIFIED:
+            have.update(read=TODAY.isoformat(), stamp=stamps.get(key))
+            same += 1
+            continue
+        if body is None and out_of_time():
+            break
+        if body is None or not body.startswith(b"%PDF"):
+            if body is not None:
+                FAILS["not a PDF"] += 1
+            if not have.get("sha"):  # a copy read before stays
+                index[key] = {"read": TODAY.isoformat(), "stamp": stamps.get(key), "missing": True}
+            missing += 1
+            continue
+        t = pdf_text(body)
+        if t is None:
+            FAILS["unreadable PDF"] += 1
+            continue
+        os.makedirs(out, exist_ok=True)
+        save_text(t, os.path.join(out, f"{key}.txt"))
+        index[key] = {"read": TODAY.isoformat(), "stamp": stamps.get(key), "modified": HEADERS.get("modified", ""),
+                      "sha": hashlib.sha1(body).hexdigest()[:16]}
+        got += 1
+        STATS["statements"] += 1
+        if got % 25 == 0:
+            save(index, index_path)
+    save(index, index_path)
+    print(f"{year} statements of purpose: {got} read, {same} unchanged, {missing} not on the server "
+          f"({len(todo)} were due)", flush=True)
+    try:
+        texts_module().write(year)
+    except Exception as e:  # a text that fails to read mustn't stop the run
+        print(f"{year} texts: failed ({type(e).__name__}: {e})", flush=True)
+
+
 def member(block, house):
     """One member's entry on a membership page."""
     m = re.match(r"<p><strong>(.*?)</strong>\s*\(([A-Z])\)(.*)</p>", block, re.S)
@@ -359,11 +482,16 @@ def main():
             if out_of_time():
                 break
             session(year)
+        # Statements of purpose ("What it does") after every year's bills, so they never hold the bills back.
+        for year in years:
+            if out_of_time():
+                break
+            statements(year)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
     missing = never_downloaded(years)
-    print(f"run: {STATS['requests']} requests ({STATS['bills']} bills), {round((time.time() - START) / 60)} min"
+    print(f"run: {STATS['requests']} requests ({STATS['bills']} bills, {STATS['statements']} statements of purpose), {round((time.time() - START) / 60)} min"
           + ("; stopped at the time limit" if out_of_time() else "")
           + ("; refused" if refused else "")
           + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures")

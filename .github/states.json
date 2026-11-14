@@ -307,7 +307,7 @@
     "data/id"
    ],
    "minutes": 60,
-   "run": "python3 states/id/fetch.py && python3 states/id/contacts.py"
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/id/fetch.py && python3 states/id/contacts.py"
   },
   {
    "name": "Minnesota",
