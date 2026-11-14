@@ -152,5 +152,7 @@ data/nm/*
 !data/nm/district_towns.json
 # Hawaii downloads (states/hi/fetch.py, from Open States).
 data/hi/*
+# Iowa downloads (states/ia/fetch.py).
+data/ia/*
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

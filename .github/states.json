@@ -419,6 +419,17 @@
    "minutes": 30,
    "run": "python3 states/hi/fetch.py",
    "note": "Open States (OPENSTATES_API_KEY), at most 110 requests a day so Arizona keeps the rest of the free tier's 250; the Legislature's own site blocks automated requests. Not built into the site until its converter exists."
+  },
+  {
+   "name": "Iowa",
+   "code": "ia",
+   "key": "ia-data-v1",
+   "paths": [
+    "data/ia"
+   ],
+   "minutes": 110,
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/ia/fetch.py",
+   "note": "legis.iowa.gov, a request every 6 seconds; a run ends at once if the site's bot check appears (the owner's choice, 2026-11-13). The first copy (about 28 hours of requests) builds up over many runs. Not built into the site until its converter exists."
   }
  ]
 }

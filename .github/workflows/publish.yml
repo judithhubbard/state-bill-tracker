@@ -278,6 +278,12 @@ jobs:
           path: "data/hi"
           key: hi-data-v1-latest
           restore-keys: hi-data-v1-
+      - name: Restore Iowa
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/ia"
+          key: ia-data-v1-latest
+          restore-keys: ia-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:
