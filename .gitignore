@@ -156,5 +156,6 @@ data/hi/*
 data/ia/*
 # Kansas downloads (states/ks/fetch.py).
 data/ks/*
+!data/ks/district_towns.json
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

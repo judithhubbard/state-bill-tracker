@@ -439,8 +439,7 @@
     "data/ks"
    ],
    "minutes": 60,
-   "run": "python3 states/ks/fetch.py",
-   "note": "The Legislature's API (kslegislature.gov/api/v1) without a key, 30 requests a minute; roll calls and supplemental notes fill in over several runs. Not built into the site until its converter exists."
+   "run": "python3 states/ks/fetch.py && python3 states/ks/contacts.py"
   }
  ]
 }

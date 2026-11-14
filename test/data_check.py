@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ky", "ma", "md", "me", "mi", "mn", "mo", "ms", "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ks", "ky", "ma", "md", "me", "mi", "mn", "mo", "ms", "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -172,6 +172,16 @@ def check(state):
         big = [r["nums"][0] for r in recs for v in r["votes"] if v[1] == "F" and seats.get(v[0]) and v[4] + v[5] > seats[v[0]]]
         if big:
             say(state, "FAIL", f"{s}: {len(big)} floor votes have more ayes and noes than their house has seats, e.g. {big[:4]}")
+        # Roll calls filed under the wrong bill: KS's roll-call records name their bill, and two 2026 Senate line-item override
+        # votes on the budget (HB 2513) say HB 2315, a bill that never left committee. Floor votes on a bill that never
+        # left committee. (Only a LOOK: WY's budget sessions vote on introducing a bill, two-thirds needed, and the bills that
+        # fail never reach a committee; on 2026-11-13 it also lists MI HB 4195 and "HJRU" of 2025, NH HB 565 and HB 620 of
+        # 2023 and NY S2347 of 2025, not looked into.)
+        stray = [r["nums"][0] for r in recs if r["stage"] == 0 and r["commFate"] == "none" and not r["passedS"] and not r["passedA"]
+                 and any(v[1] == "F" for v in r["votes"])]
+        if stray:
+            say(state, "LOOK",
+                f"{s}: {len(stray)} bills that never left committee have floor votes (filed under the wrong bill?), e.g. {stray[:4]}")
         # A lost vote read as a passage: NV's roll-call records say "Passed" for every final passage vote, lost ones too
         # (AB 500 of 2025: 25-17 short of two-thirds, then 20-22). A house shown as passing a bill whose every floor vote
         # there had more noes than ayes.
@@ -289,6 +299,16 @@ def check(state):
             say(state, "FAIL", f"{s}: {len(shell)} of {len(found)} laws are summarized as placeholders, e.g. {shell[:3]}")
         elif laws and len(found) < 0.5 * len(laws):
             say(state, "LOOK", f"{s}: only {len(found)} of {len(laws)} laws have a summary in {os.path.basename(path)}")
+        # A summary of an earlier version that another bill's contents replaced: KS conference reports often put other
+        # bills into a bill (HB 2043 of 2025-26: an insurance bill as passed, a property tax law after conference), and the
+        # supplemental note describes it before. Laws whose summary shares almost no words with their own title.
+        words = lambda t: {w for w in re.findall(r"[a-z]{5,}", (t or "").lower())} - {"would", "provide", "providing", "concerning", "relating", "certain", "requiring", "amend", "amending", "state", "statute", "statutes"}
+        byn = {r["nums"][0]: r for r in recs}
+        apart = [n for n in found if (tw := words(byn[n]["title"])) and len(tw) >= 4
+                 and len(tw & words((T[n].get("statement") or "")[:3000])) < 0.15 * len(tw)]
+        if apart:
+            say(state, "LOOK", f"{s}: {len(apart)} of {len(found)} laws' summaries share almost no words with their title "
+                               f"(a summary of a version another bill's contents replaced?), e.g. {apart[:4]}")
 
     # Legislators: degrees in names, odd spacing, duplicate phones, missing parties or phones.
     for path in sorted(glob.glob(os.path.join(P.DATA, "contacts_*.json")))[-1:]:

@@ -153,6 +153,7 @@ if not os.path.exists(os.path.join(HERE, "data", "nm", "incomplete")): contacts(
 if not os.path.exists(os.path.join(HERE, "data", "nv", "incomplete")): contacts("nv", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 55)  # Nevada: regular sessions in odd years
 if not os.path.exists(os.path.join(HERE, "data", "mo", "incomplete")): contacts("mo", TODAY.year, 180)  # Missouri: a session a year
 if not os.path.exists(os.path.join(HERE, "data", "wv", "incomplete")): contacts("wv", TODAY.year, 125)  # West Virginia: a session a year
+if not os.path.exists(os.path.join(HERE, "data", "ks", "incomplete")): contacts("ks", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 150)  # Kansas: two-year bienniums
 
 # Wyoming: a session a year.
 if not os.path.exists(os.path.join(HERE, "data", "wy", "incomplete")):
