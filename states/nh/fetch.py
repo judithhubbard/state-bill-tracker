@@ -88,9 +88,11 @@ A download that fails, is refused, isn't text, or has fewer than half the rows o
 data/nh/incomplete says "running" during a run, and after it lists files never downloaded (the daily files' and the
 SQL Server's); it is removed when every file has a copy. A run is about 15 requests at the crawl delay: about 3
 minutes, the same every day, plus the SQL Server once a week (and on a run that has a past year to fill in).
-Usage: python3 states/nh/fetch.py
+Also each bill's "What it does" (the Office of Legislative Services' analysis in its text: see analyses() below), into
+data/nh/texts_<year>.json; never part of "incomplete".
+Usage: python3 states/nh/fetch.py [--texts-only] [--max-requests=N]  (the options are for testing)
 """
-import gzip, json, os, re, time, urllib.error, urllib.request, urllib.robotparser
+import functools, gzip, json, os, re, sys, time, urllib.error, urllib.request, urllib.robotparser
 from collections import Counter
 from datetime import date, datetime, timedelta
 
@@ -584,6 +586,278 @@ def sql_run(rp, term):
             db.conn.close()
 
 
+# ---- "What it does": the Office of Legislative Services' analysis at the top of each bill's text ("ANALYSIS" or, once
+# amended, "AMENDED ANALYSIS": "This bill ..."). The bill status page's "Bill Text" link is the latest version:
+# billText.aspx?id=<legislation id>&sy=<session year>&txtFormat=html, whose <title> names it ("HB10 — CHAPTERED FINAL
+# VERSION", "SB416 — As Amended by the House", "HB54 — Introduced"). The id: the current year's own bills' from LsrsOnly
+# (column 2); before this biennium it's the LSR number and the year run together (HB 119 of 2023, LSR 111: 1112023),
+# checked against the page's title; otherwise (2025's bills, bills kept over) read once from the bill's status page.
+# Kept in data/nh/<first year>/analyses_<session year>.json, one entry per bill, read again only when the Docket shows a
+# new adopted amendment ("Amendment # 2025-0695h: AA", "Ought to Pass with Amendment 2025-0695h: MA", a conference
+# report "Adopted") or a chapter number. The text lists the amendments it includes near the top ("20Mar2025... 0695h",
+# "29Jun2023... 2224CofC"); when the site hasn't caught up with the Docket yet, it's read again after two days, up to
+# four times. These are extras: they never mark the state incomplete, and a first copy (about 5,000 requests at the
+# crawl delay, 16 hours; about a week of 20-minute runs every two hours) fills in run by run, the current year's new and
+# changed bills first, then laws.
+TEXT_PAGE = f"{SITE}/bill_status/legacy/bs2016/billText.aspx?id={{id}}&sy={{sy}}&txtFormat=html"
+STATUS_PAGE = f"{SITE}/bill_status/legacy/bs2016/bill_status.aspx?lsr={{lsr}}&sy={{sy}}&txtsessionyear={{sy}}&txtbillnumber={{bill}}"
+TEXT_KINDS = {"1", "2", "3", "13"}  # HB, SB, CACR (as convert.py's KINDS)
+RETRY_DAYS, RETRIES = 2, 4
+ADOPTED = re.compile(r"\b(?:AA|MA|Adopted)\b")
+NOT_ADOPTED = re.compile(r"\b(?:AF|MF)\b|Filed")
+
+
+def text_rows(year):
+    """(LSR number, bill number "HB10", chapter, LSR as "25-0010", house) for each bill and CACR of a session year's
+    LSRs file."""
+    return [(r[1].strip(), r[10].replace(" ", "").upper(), r[11].strip(), r[8].strip(), r[3].strip() or "H")
+            for r in _lsr_rows(year)
+            if len(r) > 11 and r[4] in TEXT_KINDS and r[10].strip() and r[1].strip().isdigit()]
+
+
+@functools.lru_cache(maxsize=None)
+def _lsr_rows(year):
+    try:
+        with open(os.path.join(DATA, str(first_year(year)), f"LSRs_{year}.txt"), encoding="utf-8-sig") as f:
+            return tuple(tuple(l.rstrip("\n").split("|")) for l in f if l.strip())
+    except OSError:
+        return ()
+
+
+def wanted(year):
+    """Bill number -> the amendments adopted so far, from the Docket ("0695h", "2224c")."""
+    out = {}
+    try:
+        with open(os.path.join(DATA, str(first_year(year)), f"Docket_{year}.txt"), encoding="utf-8-sig") as f:
+            for line in f:
+                r = line.rstrip("\n").split("|")
+                if len(r) < 6 or not ADOPTED.search(r[5]) or NOT_ADOPTED.search(r[5]):
+                    continue
+                codes = {a + b.lower() for a, b in re.findall(r"\b20\d\d-(\d{4})([hsc])\b", r[5], re.I)}
+                if codes:
+                    out.setdefault(r[3].replace(" ", "").upper(), set()).update(codes)
+    except OSError:
+        pass
+    return out
+
+
+def legislation_ids(year):
+    """LSR number (int) -> legislation id, from LsrsOnly (the session year's own LSRs only)."""
+    out = {}
+    try:
+        with open(os.path.join(DATA, str(first_year(year)), f"LsrsOnly_{year}.txt"), encoding="utf-8-sig") as f:
+            for line in f:
+                r = line.split("|")
+                m = re.match(rf"{year % 100:02d}-(\d+)$", r[0].strip()) if len(r) > 3 else None
+                if m and r[2].strip().isdigit():
+                    out[int(m.group(1))] = r[2].strip()
+    except OSError:
+        pass
+    return out
+
+
+def page_lines(body):
+    """A bill text page's text, a line per paragraph."""
+    try:
+        t = body.decode("utf-8")
+    except UnicodeDecodeError:
+        t = body.decode("cp1252", "replace")
+    t = re.sub(r"(?is)<(script|style)\b.*?</\1>", "", t)
+    title = re.search(r"(?is)<title>(.*?)</title>", t)
+    t = re.sub(r"(?i)</(?:p|div|tr|h\d|li|pre)>|<br\s*/?>", "\n", t)
+    import html
+    t = html.unescape(re.sub(r"<[^>]+>", "", t))
+    lines = [re.sub(r"\s+", " ", l.replace(" ", " ")).strip() for l in t.split("\n")]
+    return html.unescape(title.group(1)).strip() if title else "", lines
+
+
+def analysis_of(body, bill):
+    """(version, amendments the text includes, amended analysis?, analysis paragraphs) of a bill text page, or None when
+    it isn't that bill's text."""
+    title, lines = page_lines(body)
+    m = re.match(r"(\S+)\s+[—–-]+\s+(.*)$", title)
+    if not m or m.group(1).upper() != bill:
+        return None
+    version = re.sub(r"\s+-\s+NH General Court$", "", m.group(2).strip())
+    head = next((i for i, l in enumerate(lines) if re.fullmatch(r"(?:AMENDED )?ANALYSIS", l)), None)
+    top = lines[:head] if head is not None else lines[:40]
+    got = sorted({a + ("c" if b.lower() == "cofc" else b.lower())
+                  for a, b in re.findall(r"\b(\d{4})(h|s|CofC)\b", " ".join(top), re.I)})
+    paras = []
+    if head is not None:
+        for l in lines[head + 1:]:
+            if re.match(r"(?:- ){3}|─{3}|Explanation:|STATE OF NEW HAMPSHIRE", l):
+                break
+            if not l:
+                continue
+            # A line cut inside a sentence (the next starts in lower case) belongs to the paragraph before.
+            if paras and not re.search(r"[.:;?!)\"”]$", paras[-1]) and re.match(r"[a-z(]", l):
+                paras[-1] += " " + l
+            else:
+                paras.append(l)
+    if paras and re.fullmatch(r"No analysis (?:needed|required)\.?", paras[0], re.I):
+        paras = []
+    return version, got, head is not None and lines[head].startswith("AMENDED"), paras
+
+
+def fetch_text(rp, sy, lsr, bill, entry, ids):
+    """Read the bill's latest text into entry (a request, two when the id has to come from the status page). False when
+    nothing could be read."""
+    def text_at(i, y):
+        url = TEXT_PAGE.format(id=i, sy=y)
+        if not rp.can_fetch(AGENT, url):
+            FAILS["robots.txt"] += 1
+            return None
+        body, _ = request(url, f"{bill} of {sy} text")
+        return analysis_of(body, bill) if body else None
+
+    got = None
+    if entry.get("id"):
+        got = text_at(entry["id"], entry["sy"])
+    elif int(lsr) in ids:
+        entry.update(id=ids[int(lsr)], sy=sy)
+        got = text_at(entry["id"], sy)
+    elif first_year(sy) < term_now():
+        got = text_at(f"{int(lsr)}{sy}", sy)
+        if got:
+            entry.update(id=f"{int(lsr)}{sy}", sy=sy)
+    if not got and not out_of_time():
+        url = STATUS_PAGE.format(lsr=int(lsr), sy=sy, bill=bill)
+        if rp.can_fetch(AGENT, url):
+            body, _ = request(url, f"{bill} of {sy} status")
+            m = re.search(r"billText\.aspx\?id=(\d+)&(?:amp;)?sy=(\d{4})", (body or b"").decode("utf-8", "replace"))
+            if m and m.group(1) != str(entry.get("id")):
+                entry.update(id=m.group(1), sy=int(m.group(2)))
+                got = text_at(entry["id"], entry["sy"])
+            elif body is not None and not m:
+                entry["id"] = ""  # no text yet
+    if not got:
+        return False
+    entry["version"], entry["got"], entry["amended"], entry["text"] = got
+    return True
+
+
+def text_years():
+    """The session years with a bills file (as convert.py's sessions())."""
+    out = []
+    for name in os.listdir(DATA):
+        if re.fullmatch(r"\d{4}", name):
+            for f in os.listdir(os.path.join(DATA, name)):
+                m = re.fullmatch(r"LSRs_(\d{4})\.txt", f)
+                if m and len(_lsr_rows(int(m.group(1)))) > 100:
+                    out.append(int(m.group(1)))
+    return sorted(out)
+
+
+def analyses(rp, years, limit=None):
+    """Read new and changed bills' analyses, as time allows; the cache files written as it goes."""
+    caches, todo = {}, []
+    today = TODAY.isoformat()
+    soon = (TODAY - timedelta(days=RETRY_DAYS)).isoformat()
+    week = (TODAY - timedelta(days=7)).isoformat()
+    for year in years:
+        path = os.path.join(DATA, str(first_year(year)), f"analyses_{year}.json")
+        try:
+            cache = json.load(open(path))
+        except (OSError, ValueError):
+            cache = {}
+        caches[year] = (path, cache)
+        want, ids = wanted(year), legislation_ids(year)
+        for lsr, bill, chapter, _, _ in text_rows(year):
+            w = sorted(want.get(bill, ())) + (["chapter"] if chapter else [])
+            e = cache.get(bill)
+            if e and e.get("fails", 0) >= 3 and e.get("failed", "") > week:
+                continue  # failed three runs in a row: tried again a week later
+            if e is None or e.get("want") != w:
+                why = 0 if e is None else 1  # never read; a new version
+            elif not set(w) <= set(e.get("got", [])) | ({"chapter"} if "CHAPTERED" in e.get("version", "").upper() else set()) \
+                    and e.get("tries", 0) < RETRIES and e.get("read", "") <= soon:
+                why = 2  # the site behind the Docket
+            elif e.get("id") == "" and e.get("read", "") <= soon and e.get("tries", 0) < RETRIES:
+                why = 2  # no text yet
+            else:
+                continue
+            # The current year first; then laws; then the newest years.
+            rank = (0 if year == max(years) else 1, why == 2, not chapter, -year)
+            todo.append((rank, year, lsr, bill, w, ids))
+    todo.sort(key=lambda x: x[0])
+    done = failed = 0
+    try:
+        for _, year, lsr, bill, w, ids in todo:
+            if out_of_time() or (limit is not None and STATS["requests"] >= limit):
+                break
+            path, cache = caches[year]
+            old = cache.get(bill) or {}
+            e = {k: old[k] for k in ("id", "sy") if k in old and old[k]}
+            if fetch_text(rp, year, lsr, bill, e, ids):
+                tries = old.get("tries", 0) + 1 if old.get("want") == w else 1
+                cache[bill] = {**e, "want": w, "read": today, "tries": tries}
+                done += 1
+            elif out_of_time():
+                break
+            else:
+                failed += 1
+                if e.get("id") == "":  # the status page links no text yet
+                    cache[bill] = {**old, **e, "want": w, "read": today,
+                                   "tries": old.get("tries", 0) + 1 if old.get("want") == w else 1}
+                else:  # kept as it was (the last text, if any), with the failure counted
+                    cache[bill] = {**old, **{k: v for k, v in e.items() if v}, "want": old.get("want"),
+                                   "failed": today, "fails": old.get("fails", 0) + 1}
+            if (done + failed) % 20 == 0:
+                save_json(path, cache)
+    finally:
+        for path, cache in caches.values():
+            save_json(path, cache)
+    left = len(todo) - done - failed
+    print(f"analyses: {done} read, {failed} not read, {left} still to read", flush=True)
+
+
+def save_json(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=0, sort_keys=True)
+    os.replace(tmp, path)
+
+
+def write_texts(years):
+    """data/nh/texts_<page year>.json from the cached analyses: a page's bills are its year's, and for a first year the
+    bills kept over to the second (in the second year's files, "25-0010")."""
+    for page in years:
+        rows = [(page, r) for r in text_rows(page)]
+        if page % 2:
+            rows += [(page + 1, r) for r in text_rows(page + 1) if r[3].startswith(f"{page % 100:02d}-")]
+        caches, out = {}, {}
+        for sy, (lsr, bill, _, _, house) in rows:
+            if sy not in caches:
+                try:
+                    caches[sy] = json.load(open(os.path.join(DATA, str(first_year(sy)), f"analyses_{sy}.json")))
+                except (OSError, ValueError):
+                    caches[sy] = {}
+            e = caches[sy].get(bill)
+            if e and e.get("text"):
+                # The page's number: a CACR with its house in front ("HCACR1"), as convert.py has it.
+                out[house + bill if bill.startswith("CACR") else bill] = {"statement": "\n".join(e["text"]),
+                                                                          "label": text_label(e, bill)}
+        save_json(os.path.join(DATA, f"texts_{page}.json"), out)
+        print(f"texts_{page}.json: {len(out)} of {len(rows)} bills", flush=True)
+
+
+def text_label(e, bill=""):
+    """"From the Office of Legislative Services' analysis of the bill as amended by the House." and the like. An analysis
+    not marked "AMENDED" is the one written for the bill as introduced, though the text may since have been amended."""
+    v = e.get("version", "").lower()
+    what = "resolution" if "CACR" in bill else "bill"
+    if not e.get("amended"):
+        which = f"the {what} as introduced" if e.get("got") or "introduced" in v else f"the {what}"
+    elif "chaptered" in v or "final" in v or "enrolled" in v:
+        which = "the final version"
+    elif "amended by" in v:
+        which = f"the {what} " + re.sub(r"^.*?(as amended by.*)$", r"\1", v).replace("house", "House").replace("senate", "Senate")
+    else:
+        which = f"the {what} as amended"
+    return f"From the Office of Legislative Services' analysis of {which}."
+
+
 def missing(term):
     """Files never downloaded: the current biennium's per-term files, and this session year's (or, before a new
     session's files appear in January, the last year's)."""
@@ -610,24 +884,30 @@ def main():
     term = term_now()
     folder = os.path.join(DATA, str(term))
     os.makedirs(folder, exist_ok=True)
+    texts_only = "--texts-only" in sys.argv  # for testing: only the analyses
+    limit = next((int(a.split("=", 1)[1]) for a in sys.argv if a.startswith("--max-requests=")), None)
     try:
         rp = robots()
         if rp is None:
             print("robots.txt couldn't be read; nothing downloaded", flush=True)
         else:
-            for name, (columns, col) in BY_YEAR.items():
+            for name, (columns, col) in ({} if texts_only else BY_YEAR).items():
                 if out_of_time():
                     break
                 by_year(rp, name, columns, col)
-            for name, columns in PER_TERM.items():
+            for name, columns in ({} if texts_only else PER_TERM).items():
                 if out_of_time():
                     break
                 per_term(rp, name, columns, folder)
+            if not texts_only:
+                if not out_of_time():
+                    members(rp, folder)
+                sql_run(rp, term)
             if not out_of_time():
-                members(rp, folder)
-            sql_run(rp, term)
+                analyses(rp, text_years(), limit)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
+    write_texts(text_years())
     print(f"run: {STATS['requests']} requests, {round((time.time() - START) / 60, 1)} min"
           + ("; stopped at the time limit" if out_of_time() else "")
           + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures"), flush=True)

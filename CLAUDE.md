@@ -499,9 +499,14 @@ from that repo. **Nothing here may change it.**
   House district's members "H:612a", "H:612b" ... (Hillsborough 12 = county code times 100 plus the number; up to 10 a
   district), named by data/nh/district_names.json. "Where you live" (`states/nh/towns.py`, run once) reads the districts
   from the law, RSA 662:3 and 662:5, by town and city ward; a place votes in all its House districts (its own and a
-  "floterial" one over it and its neighbors: `STATE.townInAllDistricts`, read by `myReps()`/`setTown()`). No summaries
-  in the data ("What it does" isn't shown; the bill texts' analyses would need a request per bill at the 11-second crawl
-  delay). 142 representatives list no phone; none is invented. The governor's phone and contact page haven't been
+  "floterial" one over it and its neighbors: `STATE.townInAllDistricts`, read by `myReps()`/`setTown()`). "What it
+  does" is the analysis at the top of each bill's latest text (by the Office of Legislative Services; `analyses()` in
+  fetch.py: billText.aspx?id=...&sy=...; the id from LsrsOnly, from the LSR number and year for 2023-24, else from the
+  bill's status page), labelled by version ("... of the final version", "... as amended by the House", "... as introduced"
+  when the analysis wasn't rewritten). A bill is read again only when the Docket shows a new adopted amendment or a
+  chapter (data/nh/<first year>/analyses_<year>.json); summaries never mark the state incomplete, and the first copy (about
+  5,100 requests at the 11-second delay, about 12 minutes a run) fills in over about a week. The budget bills say "No
+  analysis needed." and have none. 142 representatives list no phone; none is invented. The governor's phone and contact page haven't been
   checked by the owner. Laws and vetoes match the LSRs file's chapters and status codes exactly (2023: 243 and 9; 2024:
   381 and 13; 2025: 305 and 12; 2026: 344 and 25). Add each year's first and last floor days to `opened`/`dated`.
 - **Alaska (built 2026-11-08):** `python3 states/ak/fetch.py` reads the
