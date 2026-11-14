@@ -21,6 +21,8 @@ for s in $STATES; do
   # A state whose first full download is still building up over several runs (data/<state>/incomplete, written by
   # its fetch.py) waits: a partial copy would make a misleading site, or fail the build for every state.
   if [ -f "data/$s/incomplete" ]; then echo "$s: download not complete yet; not built"; continue; fi
+  # No data yet (a new state whose first download on GitHub hasn't run, so its cache is empty): nothing to build.
+  if [ "$s" != "ny" ] && [ -z "$(ls -A "data/$s" 2>/dev/null | grep -v '^last_checked$')" ]; then echo "$s: no data yet; not built"; continue; fi
   # SITE_BASE (the preview's address) gives each state its own: SITE_BASE/nj/, SITE_BASE/va/.
   if [ -n "$SITE_BASE" ]; then export SITE_URL="${SITE_BASE}$s/"; fi
   # A state whose data, code and settings haven't changed since the last build (state_hash.py; publish.yml keeps
@@ -29,14 +31,23 @@ for s in $STATES; do
   if [ -f "$BUILT/$s.hash" ] && [ "$(cat "$BUILT/$s.hash")" = "$hash" ] && [ -f "$BUILT/$s/index.html" ]; then
     echo "$s: unchanged; pages from the last build"
   else
-    rm -rf "$BUILT/$s" "$BUILT/$s.hash"
-    python3 build_data.py --state "$s" --github "$BUILT/$s"
-    echo "$hash" > "$BUILT/$s.hash"
-    REBUILT="$REBUILT $s"
+    # One state's failure mustn't stop the site: it's built into a new folder, and if the build fails the state keeps
+    # the last build's pages (or is left out if it has none); the failures are listed at the end.
+    rm -rf "$BUILT/$s.new"
+    if python3 build_data.py --state "$s" --github "$BUILT/$s.new"; then
+      rm -rf "$BUILT/$s" && mv "$BUILT/$s.new" "$BUILT/$s"
+      echo "$hash" > "$BUILT/$s.hash"
+      REBUILT="$REBUILT $s"
+    else
+      rm -rf "$BUILT/$s.new"
+      FAILED="$FAILED $s"
+      if [ -f "$BUILT/$s/index.html" ]; then echo "$s: BUILD FAILED; keeping the last build's pages"; else echo "$s: BUILD FAILED; left out"; continue; fi
+    fi
   fi
   cp -R "$BUILT/$s" "$OUT/$s"
 done
 echo "rebuilt:${REBUILT:- none}"
+if [ -n "$FAILED" ]; then echo "build failed for:$FAILED"; fi
 # The front page lists exactly the states built in this run (home.html's own list is replaced), so a state appears there
 # as soon as its pages are published (New York's too, at /ny/).
 python3 - "$OUT" <<'PY'

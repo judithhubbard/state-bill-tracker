@@ -344,6 +344,7 @@ jobs:
           set -o pipefail
           ./build_site.sh _site | tee "$RUNNER_TEMP/build.log"
           grep -q '^rebuilt: none$' "$RUNNER_TEMP/build.log" || echo "rebuilt=yes" >> "$GITHUB_OUTPUT"
+          echo "failed=$(sed -n 's/^build failed for://p' "$RUNNER_TEMP/build.log")" >> "$GITHUB_OUTPUT"
 
       # Kept only when some state was rebuilt.
       - name: Keep the pages for the next build
@@ -365,6 +366,15 @@ jobs:
             npx -y wrangler@4.152.0 pages deploy _site --project-name=statebilltracker --branch=main --commit-dirty=true && exit 0
             echo "upload failed (try $try); waiting a minute"; sleep 60
           done
+          exit 1
+
+      # After publishing: a state whose build failed kept its last pages (or was left out); fail the run so GitHub emails.
+      - name: Report states whose build failed
+        if: steps.build.outputs.failed != ''
+        env:
+          FAILED: ${{ steps.build.outputs.failed }}
+        run: |
+          echo "::error::The build failed for:$FAILED (they kept their last pages, or were left out). See the Build the site step."
           exit 1
 
       # Last, so the site is already published: a problem fails the run, and GitHub emails the owner. Once a day.
