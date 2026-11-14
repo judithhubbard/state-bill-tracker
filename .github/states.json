@@ -461,6 +461,17 @@
    ],
    "minutes": 60,
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/la/fetch.py && python3 states/la/contacts.py"
+  },
+  {
+   "name": "New York (Assembly memos)",
+   "code": "ny",
+   "key": "ny-memos-v1",
+   "paths": [
+    "data/ny"
+   ],
+   "minutes": 110,
+   "run": "python3 states/ny/memos.py",
+   "note": "The Assembly sponsors' memos from nyassembly.gov (robots.txt bars only GPTBot), a page a second; New York's bills come from the Senate's API when the site is published (publish.yml)."
   }
  ]
 }

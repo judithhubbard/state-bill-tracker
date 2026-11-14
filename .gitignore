@@ -164,3 +164,7 @@ data/la/*
 !data/la/district_towns.json
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/
+# test/site_check.js keeps the last day's bill counts here (an Actions cache on GitHub).
+.site-check/
+# New York's Assembly memos (states/ny/memos.py; an Actions cache on GitHub).
+data/ny/

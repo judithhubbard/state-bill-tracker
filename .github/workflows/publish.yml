@@ -317,6 +317,14 @@ jobs:
       # contacts, Assembly votes) is copied from it, so nothing is downloaded from nyassembly.gov twice; the current
       # session's bills come from the Senate's API, which needs the NYSENATE_API_KEY secret (without it, New York
       # is left out).
+      # The Assembly sponsors' memos (states/ny/memos.py, run by download.yml), which fetch_bills.py adds to "What it does".
+      - name: Restore New York's Assembly memos
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/ny"
+          key: ny-memos-v1-latest
+          restore-keys: ny-memos-v1-
+
       - name: Download New York
         env:
           NYSENATE_API_KEY: ${{ secrets.NYSENATE_API_KEY }}

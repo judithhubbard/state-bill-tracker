@@ -35,6 +35,7 @@ def items(x):
 
 
 TEXTS = os.path.join(os.path.dirname(OUT), f"texts_{SESSION}.json")
+ASM_MEMOS = os.path.join(os.path.dirname(OUT), "ny", f"assembly_memos_{SESSION}.json")
 MEMO_HEAD = re.compile(r"^\s*([A-Z][A-Z ,/&()'.-]{3,}):(?!//)\s*(.*)$")
 
 
@@ -162,11 +163,27 @@ def main():
         json.dump({"session": SESSION, "fetched": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M ET"), "bills": out}, f)
     os.replace(tmp, OUT)
     print(f"wrote {len(out)} bills to {OUT}", file=sys.stderr)
+    # The Assembly sponsors' memos, downloaded from nyassembly.gov by states/ny/memos.py (on GitHub, into its own saved
+    # copy): each Assembly bill's memo for its current version, else for the newest earlier one until that's read.
+    asm = {}
+    if os.path.exists(ASM_MEMOS):
+        by_bill = {}
+        for k, m in json.load(open(ASM_MEMOS)).items():
+            if m:
+                by_bill.setdefault(re.sub(r"[A-Z]$", "", k), []).append((k, m))
+        for b in out:
+            if b["chamber"] == "ASSEMBLY":
+                n = b["printNo"] + (b["activeVersion"] or "")
+                older = sorted((k, m) for k, m in by_bill.get(b["printNo"], []) if k <= n)
+                if older:
+                    asm[n] = older[-1][1]
     # Words as the memos write them, and each hyphenated pair within longer ones ("of-living" from "cost-of-living").
-    vocab = {w.lower() for m in memos.values() for w in re.findall(r"[A-Za-z]+(?:-[A-Za-z]+)*", m)}
+    vocab = {w.lower() for m in list(memos.values()) + list(asm.values()) for w in re.findall(r"[A-Za-z]+(?:-[A-Za-z]+)*", m)}
     vocab |= {f"{a}-{b}" for w in vocab if w.count("-") > 1 for a, b in zip(w.split("-"), w.split("-")[1:])}
     texts = {n: {"statement": t, "label": "From the Senate sponsor's memo."}
              for n, t in ((n, memo_text(m, vocab)) for n, m in memos.items() if m) if t}
+    texts.update({n: {"statement": t, "label": "From the Assembly sponsor's memo."}
+                  for n, t in ((n, memo_text(m, vocab)) for n, m in asm.items()) if t})
     with open(TEXTS + ".tmp", "w") as f:
         json.dump(texts, f, ensure_ascii=False)
     os.replace(TEXTS + ".tmp", TEXTS)
