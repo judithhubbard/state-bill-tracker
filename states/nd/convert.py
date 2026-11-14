@@ -248,8 +248,8 @@ def load_session(session):
         rec = record(session, b, p, amendment, chapters, rolls, by_bill, seat, members)
         index[p] = len(recs)
         recs.append(rec)
-    # No "What it does": the data has no plain-language summary. The Legislative Council staff's statements of purpose of
-    # amendment and the fiscal notes are PDFs; the official title (the summary) says what each bill touches.
+    # "What it does" is texts_<year>.json (build_data.py's bill_texts()), which fetch.py writes from the Legislative
+    # Council's Title Summaries of the bills passed; other bills have only the official title (the summary).
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 

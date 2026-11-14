@@ -568,7 +568,13 @@ from that repo. **Nothing here may change it.**
   "S:12", "H:12a"/"H:12b" by name within the district (`seats()`, shared with contacts.py; subdistricts 4A/4B are "H:4a"/
   "H:4b"); members who left are "H?O'Brien". Titles: there are no short titles, so `titled()` takes the official title's
   first "relating to" subject, "Budget: <agency>" for an agency's appropriation, "Appropriation to ..." or "Study: ..."; the
-  summary is the official title. No "What it does" (the staff's amendment summaries and fiscal notes are PDFs). Topics from
+  summary is the official title. "What it does" is the Legislative Council's Title Summaries (a PDF per session, "Summary
+  of Bills Enacted by the 2023 Legislative Assembly", listed on /research-and-archives/title-summaries months after the
+  session; fetch.py reads it with pdftotext, weekly, and never marks the state incomplete): a paragraph on each bill
+  passed (laws and vetoed bills, "would have ..."), labelled "From the Legislative Council's summary of the bill as
+  passed."; 2023: 515 bills (510 of 599 laws; budget bills only for the parts that change other laws); 2025's edition
+  wasn't listed yet in November 2026 and is picked up when it is. Nothing else per bill exists (statements of purpose of
+  amendment are budget tables), so bills that didn't pass have none. Topics from
   committees (`COMMITTEE_TOPICS`) and words in the title and subjects. Concurrent resolutions amending the Constitution of
   North Dakota are tagged "const" (one passage by a majority of each house's members, then the voters at the election the
   resolution names: `amendmentOnce`, `ballotLine()`); other resolutions are left out. Earlier assembly linked by title,

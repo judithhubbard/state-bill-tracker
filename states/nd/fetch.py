@@ -45,9 +45,18 @@ and not asked again. Members who have left keep their page without contact field
 ids differ between assemblies, and so can slugs and names for the same person ("Hoverson, Jeff A." jeff-a-hoverson in
 2023, "Hoverson, Jeff" jeff-hoverson in 2025: both pages are served, with the same phones).
 
-What it does: nothing plain-language in the data. The Legislative Council staff's statements of purpose of amendment
-("SPA", one per amendment) and the fiscal notes are PDFs (/assembly/69-2025/regular/documents/25-0156-01018s.pdf),
-not read; "What it does" can be the title's clauses.
+What it does: the data has no plain-language summary, and the bills have none either (the Legislative Council staff's
+statements of purpose of amendment, /assembly/69-2025/regular/documents/25-0156-01018s.pdf, exist only for budget
+amendments and are tables of dollars). The one plain account is the Legislative Council's Title Summaries, "Summary of
+Bills Enacted by the 2023 Legislative Assembly", a PDF per session listed on /research-and-archives/title-summaries
+(/sites/default/files/resource/title-summaries/2023-title-summaries.pdf; a separate one for a special session, as
+2021's): a paragraph on each bill passed, laws and vetoed bills ("would have ..."), under each Century Code title it
+changes, so a bill can have several. Budget bills that change no section of the Century Code aren't in it. It comes out
+some months after the session (2023's in August 2023; 2025's not yet listed in November 2026). The listing is read
+weekly and each PDF when new, then weekly with If-Modified-Since; its text (pdftotext -layout; poppler-utils) goes in
+data/nd/<year>/title_summaries/<name>.txt, and texts_<year>.json ({"HB1012": {"statement", "label"}}) is written from
+those files every run. Never part of what's missing: without pdftotext, or with the PDF not yet published, there are
+just no summaries.
 
 A first copy of two assemblies is about 10 requests for the files (about 36 MB) and about 190 for the members' pages:
 about 5 minutes. After that a run is about 14 requests (mostly 304s), plus the weekly members' pages: under a minute,
@@ -58,7 +67,7 @@ leaders or chapters while the server has them, a member's page); it is removed w
 fails where a last copy exists keeps that copy and doesn't count; a 404 for a page not yet published doesn't count.
 Usage: python3 states/nd/fetch.py [first year]   (default: every assembly from FIRST_YEAR; one leaves the marker alone)
 """
-import html, json, os, re, sys, time, urllib.error, urllib.request
+import glob, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, timedelta
 
@@ -74,6 +83,9 @@ WEEKLY = 7
 MEMBERS = os.path.join(DATA, "members")
 BIOS = os.path.join(DATA, "bios.json")
 MARKER = os.path.join(DATA, "incomplete")
+SUMMARIES = os.path.join(DATA, "summaries.json")  # the Title Summaries listing and files: {"listed": day, "files": {name: {...}}}
+PDFTOTEXT = shutil.which("pdftotext")
+TEXT_MAX = 3500  # characters of "What it does" at most (a budget bill's paragraphs run to 5,000)
 
 # The run's own time limit (FETCH_MINUTES, set by the workflow): stop a few minutes early, with everything read so far
 # saved and a summary printed, rather than be cut off silently mid-request.
@@ -363,6 +375,152 @@ def bios(found):
     print(f"members' pages: {got} of {len(todo)} read ({len(want)} members)", flush=True)
 
 
+def pdf_text(body):
+    """A PDF's text (pdftotext -layout), or None."""
+    if not PDFTOTEXT or not body or not body.startswith(b"%PDF"):
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        src = os.path.join(tmp, "in.pdf")
+        with open(src, "wb") as f:
+            f.write(body)
+        try:
+            out = subprocess.run([PDFTOTEXT, "-layout", "-enc", "UTF-8", src, "-"], capture_output=True, timeout=120)
+        except Exception:
+            return None
+        return out.stdout.decode("utf-8", "replace") if out.returncode == 0 else None
+
+
+def title_summaries(found):
+    """The Legislative Council's Title Summaries: the listing weekly, each session's PDF when new (then weekly, If-Modified-
+    Since), its text into <year>/title_summaries/. Extras: nothing here counts as missing."""
+    if not PDFTOTEXT:
+        print("title summaries: no pdftotext (poppler-utils); skipped", flush=True)
+        return
+    seen = load(SUMMARIES, {})
+    files = seen.setdefault("files", {})
+    by_year = {}
+    for a in found:
+        by_year[a["year"]] = by_year[a["year"] + 1] = a
+    if stale(seen.get("listed")) or not files:
+        body, _ = request(f"{SITE}/research-and-archives/title-summaries", "title summaries list")
+        if isinstance(body, bytes):
+            for href in re.findall(r'href="([^"]*/title-summaries/[^"/]+\.pdf)"', body.decode("utf-8", "replace")):
+                name = href.rsplit("/", 1)[1]
+                year = re.match(r"(?:ts)?(\d{4})", name)
+                if year and name not in files:
+                    files[name] = {"url": href if href.startswith("http") else SITE + href, "year": int(year.group(1))}
+                elif year and href.startswith("/sites/"):
+                    files[name]["url"] = SITE + href  # the listing's own address over the menu's short one
+            seen["listed"] = TODAY.isoformat()
+    for name, f in sorted(files.items()):
+        a = by_year.get(f["year"])
+        if not a or out_of_time():
+            continue
+        path = os.path.join(DATA, str(a["year"]), "title_summaries", name[:-4] + ".txt")
+        have = os.path.exists(path)
+        if have and not stale(f.get("read")):
+            continue
+        body, stamp = request(f["url"], f"title summaries {name}", since=f.get("modified") if have else None)
+        if body is NOT_MODIFIED:
+            f["read"] = TODAY.isoformat()
+            continue
+        txt = pdf_text(body) if isinstance(body, bytes) else None
+        if not txt or not BILL_PARA.search(txt):
+            print(f"title summaries {name}: " + ("not found" if body is GONE else "unreadable")
+                  + ("; kept the last copy" if have else ""), flush=True)
+            continue
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path + ".tmp", "w") as out:
+            out.write(txt)
+        os.replace(path + ".tmp", path)
+        f.update(read=TODAY.isoformat(), modified=stamp)
+        print(f"title summaries {name}: {len(summary_paragraphs(txt))} bills", flush=True)
+    save(seen, SUMMARIES)
+
+
+BILL_PARA = re.compile(r"^(House|Senate) Bill No\. (\d+)\b", re.M)
+
+
+def summary_paragraphs(txt):
+    """{"HB1012": [paragraph, ...]} from a Title Summaries text (pdftotext -layout), in the document's order. Each bill's
+    paragraph opens with its name ("House Bill No. 1361 clarifies ...") after a line that ended a sentence or a heading;
+    headings are centered (indented), in capitals or "TITLE 15.1"; page footers ("North Dakota Legislative Council  1-1
+    August 2023", or the page number "15-3" alone) are skipped within a paragraph."""
+    out = {}
+    cur, buf, prev = None, [], ""
+
+    def flush():
+        if cur and buf:
+            p = " ".join(buf)
+            p = re.sub(r"(?<=\w)- (?=\w)", "-", p)  # a hyphen at a line's end is the word's own ("ranked-choice")
+            p = re.sub(r"\b(\d+) (st|nd|rd|th)\b", r"\1\2", p)  # superscripts: "21 st century"
+            p = re.sub(r"\s+", " ", p.replace("--", "\u2014").replace("\ufffd", "")).strip()
+            if p not in out.setdefault(cur, []):
+                out[cur].append(p)
+
+    for raw in txt.replace("\f", "\n").split("\n"):
+        raw = raw.rstrip()
+        line = raw.strip()
+        if not line or re.fullmatch(r"\d+(\.\d+)?-\d+", line) or re.fullmatch(
+                r"North Dakota Legislative Council\s+\S+\s+\w+ \d{4}", line):
+            continue
+        m = BILL_PARA.match(line)
+        if m and (not prev or re.search(r"[.:;)\"\u201d]$", prev)):
+            flush()
+            cur, buf = ("HB" if m.group(1) == "House" else "SB") + m.group(2), [line]
+        elif (re.match(r" {5,}", raw) or re.fullmatch(r"TITLE [\d.]+", line)
+              or (line.upper() == line and re.search(r"[A-Z]{3}", line))
+              or line.startswith(("Summary of Bills Enacted", "This memorandum summarizes", "There was no "))):
+            flush()
+            cur, buf, line = None, [], ""
+        elif cur:
+            buf.append(line)
+        prev = line
+    flush()
+    return out
+
+
+def texts(a):
+    """texts_<year>.json from the assembly's Title Summaries texts: each bill's paragraphs, joined."""
+    paras = {}
+    for path in sorted(glob.glob(os.path.join(DATA, str(a["year"]), "title_summaries", "*.txt"))):
+        with open(path) as f:
+            for bill, ps in summary_paragraphs(f.read()).items():
+                for p in ps:
+                    if p not in paras.setdefault(bill, []):
+                        paras[bill].append(p)
+    if not paras:
+        return
+    out = {}
+    for bill, ps in paras.items():
+        kept, said = [], set()
+        for p in ps:
+            # "House Bill No. 1361 clarifies ..." -> "The bill clarifies ..." (the page is the bill's own).
+            p = re.sub(r"^(House|Senate) Bill No\. \d+(?= [a-z]|, (?:as|which|in) )", "The bill", p)
+            # Each title's paragraph repeats the veto or the emergency clause ("This bill was vetoed by the Governor on
+            # April 6, 2023, ..."): once is enough.
+            parts = []
+            for sentence in re.split(r"(?<=\.) (?=[A-Z])", p):
+                key = re.sub(r"^This bill", "The bill", sentence)
+                if key.startswith("The bill was ") and key in said:
+                    continue
+                said.add(key)
+                parts.append(sentence)
+            p = " ".join(parts)
+            if not p:
+                continue
+            if kept and len("\n".join(kept + [p])) > TEXT_MAX:
+                break
+            kept.append(p)
+        statement = "\n".join(kept)
+        if len(statement) > TEXT_MAX:  # one long paragraph: cut at a sentence
+            cut = statement.rfind(". ", 0, TEXT_MAX)
+            statement = statement[:cut + 1] if cut > 0 else statement
+        out[bill] = {"statement": statement, "label": "From the Legislative Council's summary of the bill as passed."}
+    save(out, os.path.join(DATA, f"texts_{a['year']}.json"))
+    print(f"{a['year']} texts: {len(out)} bills", flush=True)
+
+
 def begun(a):
     """Whether an assembly has convened (the first Tuesday after January 3 of its first year). One listed earlier, with
     prefiled bills, is read when it's there but never holds North Dakota off the site."""
@@ -414,9 +572,12 @@ def main():
             if os.path.isdir(folder):
                 save(state, os.path.join(folder, "state.json"))
         bios(read)
+        title_summaries(read)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
+    for a in found:
+        texts(a)
     gaps = [g for a in found if begun(a) for g in missing(a, load(BIOS, {}))]
     if not found:
         gaps.append("assemblies")
