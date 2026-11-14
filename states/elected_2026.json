@@ -1,0 +1,1448 @@
+{
+ "_about": "Party makeup of each legislative chamber for the session starting in 2027, after the November 3, 2026 elections (holdover senators included; D includes Minnesota's DFL and North Dakota's Democratic-NPL; I independents, P Vermont Progressives, G Greens; 'uncalled' seats not yet decided; 'vacant' empty seats), the governor serving in 2027 [name, party, how], any bipartisan coalition running a chamber, and a confidence flag: 'called' (control clear), 'close' (control or a supermajority depends on uncalled races), 'unknown'. Unofficial results as reported by news outlets, AP calls and Wikipedia's election pages; nothing was certified yet. States with no 2026 legislative election (LA, MS, NJ, VA; and KS, NM and SC Senates) show their current makeup. Nebraska's one house is nonpartisan. For a one-off 'after the election' view; not kept up to date.",
+ "as_of": "2026-11-14",
+ "states": {
+  "ak": {
+   "chambers": {
+    "S": {
+     "D": 8,
+     "R": 9,
+     "uncalled": 3,
+     "note": "Holdovers (10 seats not up): 5 D, 5 R (pre-election 9 D, 11 R; seats up were 6 R, 4 D). Called: A Stedman R, E Giessel R, Q R; G, I, K D. C is R either way (all three candidates Republican; Stutes leads). Uncalled until ranked-choice tabulation Nov 18 (certification Nov 25): M (Tilton R 32.9, Berry R 32.6, Chesbro D 28.7), O (Rauscher R 42.9, Sheldon R 30.6, Bauer D 26.1), S (Edgmon I 37.6, Deacon R 26.3, Guy D 24.3; formerly Hoffman D). By leaders: D 8, R 11, I 1."
+    },
+    "H": {
+     "D": 14,
+     "R": 7,
+     "I": 5,
+     "uncalled": 14,
+     "note": "Called seats per MultiState's race table (I = nonpartisan/undeclared). Uncalled (ADN Nov 10 leaders): 6 Vance R, 11 Coulombe R, 23 Allard R, 24 McCarty R vs Wall R, 25 D. Johnson R, 27 (not reported), 28 Wright R vs Moore R, 29 Nelson R, 30 McCabe R vs Massie R, 33 Prax R, 34 Cottle I, 37 Trefon D, 38 Jimmie D vs McCormick D, 39 (not reported). Rough lean: about 16 D, 16-17 R, 6 I. Ranked-choice tabulation Nov 18."
+    }
+   },
+   "governor": [
+    "Jonathan Kreiss-Tomkins",
+    "D",
+    "leading, uncalled: ranked-choice count on November 18 (Mike Dunleavy, R, term-limited)"
+   ],
+   "coalition": [
+    "S",
+    "H"
+   ],
+   "confidence": "close",
+   "sources": [
+    "https://adn.com/politics/alaska-legislature/2026/11/05/bipartisan-coalitions-in-alaska-senate-house-name-leadership-for-incoming-legislature/",
+    "https://www.adn.com/politics/alaska-legislature/2026/11/10/several-races-for-alaska-legislature-are-too-close-to-call-in-early-results/",
+    "https://alaskapublic.org/news/politics/2026-11-05/what-to-expect-when-youre-expecting-a-new-alaska-legislature-a-reporter-explains"
+   ],
+   "note": "Coalitions keep control of both chambers; House coalition grows; Democrats flipped at least two Republican House seats. Party counts not final until Nov 18 ranked-choice tabulation. Bipartisan coalitions announced Nov 5 for the 35th Legislature. Senate: Cathy Giessel (R) to be President; coalition at 11 (bare majority) per Alaska Public Media, after three Republicans (Bjorkman, Stedman, Merrick) were in talks to leave the 14-member group for the all-Republican minority; could grow to 16-17 with a deal. House: Calvin Schrage (I) to be Speaker; majority of Democrats and independents at 22-23 depending on pending races, possibly 24-25 with moderate Republicans (outgoing coalition was 21)."
+  },
+  "al": {
+   "chambers": {
+    "S": {
+     "D": 10,
+     "R": 24,
+     "uncalled": 1,
+     "note": "All 35 up. Was 27 R, 8 D. Democrats gained SD-2 and SD-7. SD-10 uncalled: Jesse Battles (I) leads Sen. Andrew Jones (R) by fewer than 100 votes, likely automatic recount (Wikipedia's table counts it as I: 24-10-1)."
+    },
+    "H": {
+     "D": 31,
+     "R": 74,
+     "uncalled": 0,
+     "note": "All 105 up. Was 76 R, 29 D; Democrats gained HD-15 and HD-25."
+    }
+   },
+   "governor": [
+    "Tommy Tuberville",
+    "R",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/alabama-2026",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "Republicans keep two-thirds in both chambers (Senate 24 of 35 exactly, 25 if Jones wins SD-10). Alabama overrides vetoes by simple majority."
+  },
+  "ar": {
+   "chambers": {
+    "S": {
+     "D": 7,
+     "R": 28,
+     "uncalled": 0,
+     "note": "18 seats on the ballot (MultiState lists 18 races; Wikipedia says 17 of 35 up), the rest holdovers. Was 29-6; Democrats flipped SD-13 (Allison Sweatman beat Brandon Achor)."
+    },
+    "H": {
+     "D": 30,
+     "R": 70,
+     "uncalled": 0,
+     "note": "All 100 up. Was 80-20 (counting a vacant seat last held by Republicans); 10 R-to-D flips."
+    }
+   },
+   "governor": [
+    "Sarah Huckabee Sanders",
+    "R",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/arkansas-2026",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "House Republicans lose three-fourths (75 needed for most appropriations); still over two-thirds. Senate Republicans keep three-fourths. Veto override is a simple majority."
+  },
+  "az": {
+   "chambers": {
+    "S": {
+     "D": 20,
+     "R": 10,
+     "uncalled": 0,
+     "note": "Was 17 R, 13 D. AP had called 17 D by Nov 6 with Democrats leading the other three; MultiState gives the split as 20-10 for Democrats."
+    },
+    "H": {
+     "D": 37,
+     "R": 23,
+     "uncalled": 0,
+     "note": "Was 33 R, 27 D. Called seats 37-22; the last seat (second LD-27 seat) is between two Republicans (Lisa Fink leads Tony Rivero by under 400 votes, inside the automatic-recount margin), so it is R either way."
+    }
+   },
+   "governor": [
+    "Katie Hobbs",
+    "D",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/arizona-2026",
+    "https://www.kjzz.org/elections/2026-11-06/democrats-win-control-of-arizona-house-senate-and-governors-office-for-the-first-time-in-60-years"
+   ],
+   "note": "Democrats flip both chambers (first Democratic control and trifecta since 1966). Senate D 20 of 30 is two-thirds (veto overrides need two-thirds)."
+  },
+  "ca": {
+   "chambers": {
+    "S": {
+     "D": 32,
+     "R": 6,
+     "uncalled": 2,
+     "note": "20 even-numbered seats up: 16 D, 2 R (SD-4, SD-12) called; Democrats flipped SD-36 and SD-40. Uncalled (both Republican-held): SD-6 (Niello R 51%, Frame D 49% per CSBA Nov 11) and SD-32 (Seyarto R vs Tate D). Holdovers derived as 16 D, 4 R from a pre-election 30-10 (Wikipedia). CSBA (Nov 11) said Democrats held 29 before the election, which would make this D 31, R 7: treat holdover counts as approximate."
+    },
+    "A": {
+     "D": 67,
+     "R": 12,
+     "uncalled": 1,
+     "note": "All 80 up. Was 60 D, 19 R, 1 vacant. AD-72 uncalled (Van Der Mark R 50.3%, Kluwe D 49.7%). Wikipedia infobox and MultiState both give 67-12. CSBA (Nov 11) also listed AD-33 (R lead), AD-70 and AD-74 (D leads) as too close to call."
+    }
+   },
+   "governor": [
+    "Xavier Becerra",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_California_State_Assembly_election",
+    "https://www.multistate.us/elections/results/california-2026",
+    "https://blog.csba.org/current-ca-2026-general-election-results/"
+   ],
+   "note": "Democrats keep and grow two-thirds supermajorities (54 Assembly, 27 Senate); largest Democratic Assembly caucus in modern history."
+  },
+  "co": {
+   "chambers": {
+    "S": {
+     "D": 24,
+     "R": 11,
+     "uncalled": 0,
+     "note": "18 seats up (MultiState lists 21 races, incl. vacancy elections), rest holdovers. Was 23-12; Democrats flipped SD-30, the only Senate flip."
+    },
+    "H": {
+     "D": 49,
+     "R": 16,
+     "uncalled": 0,
+     "note": "All 65 up. Was 43-22; Democrats flipped HD-15, 16, 19, 21, 50, 51 (HD-21 and HD-51 about 51-49 in late counts)."
+    }
+   },
+   "governor": [
+    "Phil Weiser",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/colorado-2026",
+    "https://www.coloradopolitics.com/2026/11/04/7-colorado-legislative-seats-flipped-as-democrats-gain-supermajority/"
+   ],
+   "note": "Democrats gain two-thirds in both chambers (Senate exactly 24 of 35; House 49, 44 needed)."
+  },
+  "ct": {
+   "chambers": {
+    "S": {
+     "D": 33,
+     "R": 3,
+     "uncalled": 0,
+     "note": "All 36 up. Was 25-11. Senate GOP leader Stephen Harding lost. SD-34 (Wallingford): Democrat Brandi Mandato led Sen. Paul Cicarella (R) by about 24 votes, recount; counted D here as in Wikipedia's infobox (32-4 if Cicarella wins)."
+    },
+    "H": {
+     "D": 116,
+     "R": 35,
+     "uncalled": 0,
+     "note": "All 151 up. Was 102-49. Two mandatory recounts: HD-62 (Kim Becker D led Rep. Mark Anderson R by 34) and HD-71 (William Pizzuto R led by 4); counted as led."
+    }
+   },
+   "governor": [
+    "Ned Lamont",
+    "D",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_Connecticut_Senate_election",
+    "https://www.ctpublic.org/news/2026-11-05/connecticut-gop-faces-near-extinction-event-after-election-losses",
+    "https://en.wikipedia.org/wiki/2026_Connecticut_House_of_Representatives_election"
+   ],
+   "note": "Democrats expand two-thirds supermajorities (24 Senate, 101 House needed for overrides); 33-3 is unofficial but stated by CT Public and Wikipedia."
+  },
+  "de": {
+   "chambers": {
+    "S": {
+     "D": 15,
+     "R": 6,
+     "uncalled": 0,
+     "note": "11 of 21 up; no seat changed party."
+    },
+    "H": {
+     "D": 30,
+     "R": 11,
+     "uncalled": 0,
+     "note": "All 41 up. Was 27-14; Democrats flipped HD-4, HD-9, HD-34."
+    }
+   },
+   "governor": [
+    "Matt Meyer",
+    "D",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/delaware-2026",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "Democrats gain two-thirds of the House (28 needed) to go with the Senate's (14), enough for constitutional amendments without Republicans; already above three-fifths for veto overrides."
+  },
+  "fl": {
+   "chambers": {
+    "S": {
+     "D": 13,
+     "R": 25,
+     "I": 1,
+     "vacant": 1,
+     "uncalled": 0,
+     "note": "20 of 40 up. I = Jason Pizzo (no party). Vacant: SD-39 (Bryan Avila, R, resigned Aug 2026 to run for lieutenant governor; heavily Republican, special election not yet held as of Sept). Wikipedia and MultiState give R 26 (counting that seat); another report gives 25 R, 13 D, 1 NPA plus the vacancy."
+    },
+    "H": {
+     "D": 50,
+     "R": 70,
+     "uncalled": 0,
+     "note": "All 120 up. Was 86-34. HD-33: Daniel McDow (D) beat Rep. Monique Miller (R) by under 300 votes, headed to recount; counted D."
+    }
+   },
+   "governor": [
+    "Byron Donalds",
+    "R",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/florida-2026",
+    "https://en.wikipedia.org/wiki/2026_Florida_Senate_election"
+   ],
+   "note": "Republicans lose two-thirds in both chambers (80 House, 27 Senate needed for veto overrides); House Republicans also below three-fifths (72) needed to put constitutional amendments on the ballot.",
+   "seats": {
+    "S": 40,
+    "H": 120
+   }
+  },
+  "ga": {
+   "chambers": {
+    "S": {
+     "D": 27,
+     "R": 29,
+     "uncalled": 0,
+     "note": "All 56 up. Was 33-23; Democrats flipped SD-37, 42, 45, 48."
+    },
+    "H": {
+     "D": 91,
+     "R": 86,
+     "uncalled": 3,
+     "note": "All 180 up. Was 99 R, 81 D. Democrats have 91 called seats, exactly the majority. Uncalled: HD-103 (Chris Luchey D leads Rep. Soo Hong R by about 27-35 votes, recount possible), HD-154 (Gerald Greene R leads Harry James D by about 261 after 388 uncounted Seminole County votes were found on a memory card; probe under way), HD-151 (Dec 1 runoff, Mike Cheokas R vs Wolfe D). By leaders and the runoff seat counted R, 92-88 (Wikipedia); Georgia Recorder (Nov 9) reported 91-89."
+    }
+   },
+   "governor": [
+    "Keisha Lance Bottoms",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/georgia-2026",
+    "https://cobbcountycourier.com/?p=114865",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "Democrats flip the House (first time since 2004), on a one- or two-seat margin; Republicans keep the Senate 29-27."
+  },
+  "hi": {
+   "chambers": {
+    "S": {
+     "D": 22,
+     "R": 2,
+     "I": 1,
+     "uncalled": 0,
+     "note": "13 of 25 up; election left it 22-3, then Sen. Brenton Awa (former minority leader) left the Republican Party Nov 6 to become an independent; Samantha DeCorte is the new minority leader."
+    },
+    "H": {
+     "D": 44,
+     "R": 6,
+     "G": 1,
+     "uncalled": 0,
+     "note": "All 51 up. Was 41-10. Democrats gained HD-18, 32, 39; Green Pa'ele Kiakona appears to have won HD-14 (uncured Maui ballots remain)."
+    }
+   },
+   "governor": [
+    "Josh Green",
+    "D",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/hawaii-2026",
+    "https://www.hawaiipublicradio.org/government-politics/2026-11-09/decorte-leads-state-senate-minority-after-awa-leaves-republican-party"
+   ],
+   "note": "Democrats keep two-thirds in both chambers; first Green Party legislator in the House.",
+   "seats": {
+    "S": 25,
+    "H": 51
+   }
+  },
+  "ia": {
+   "chambers": {
+    "S": {
+     "D": 18,
+     "R": 32,
+     "uncalled": 0,
+     "note": "25 of 50 up (odd districts), 25 holdovers. Was 33-17; Democrats flipped SD-21 and SD-47, Republicans SD-35. Wikipedia's text elsewhere says 31-18 (likely a vacancy or typo); MultiState and Wikipedia's table give 32-18."
+    },
+    "H": {
+     "D": 44,
+     "R": 55,
+     "uncalled": 1,
+     "note": "All 100 up. Was 67-33. HD-19 uncalled: Rep. Brent Siegrist (R) leads by a few dozen votes (56-44 if he holds)."
+    }
+   },
+   "governor": [
+    "Rob Sand",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/iowa-2026",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "Republicans lose the two-thirds House supermajority (67) they won in 2024; the Senate was already below 34 before the election and stays there.",
+   "seats": {
+    "S": 50,
+    "H": 100
+   }
+  },
+  "id": {
+   "chambers": {
+    "S": {
+     "D": 7,
+     "R": 28,
+     "uncalled": 0,
+     "note": "All 35 up. Was 29-6."
+    },
+    "H": {
+     "D": 14,
+     "R": 56,
+     "uncalled": 0,
+     "note": "All 70 up. Was 61-9."
+    }
+   },
+   "governor": [
+    "Brad Little",
+    "R",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/idaho-2026",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "Republicans keep two-thirds in both chambers (24 Senate, 47 House)."
+  },
+  "il": {
+   "chambers": {
+    "S": {
+     "D": 45,
+     "R": 14,
+     "uncalled": 0,
+     "note": "Wikipedia's 2026 Illinois Senate election page: 45-14 (was 40-19); the page is flagged as not yet updated district by district. Capitol News Illinois (Nov 4): D 44 with 3 races uncalled, could reach 46-13; by Nov 6 Republican Dave Syverson (SD 35) had pulled slightly ahead. Totals include the 20 holdover senators. Unofficial."
+    },
+    "H": {
+     "D": 80,
+     "R": 31,
+     "uncalled": 7,
+     "note": "No final count found. Capitol News Illinois, Nov 4: D 80 (up from 78) with 7 House races uncalled, could reach 85-33. By Nov 6 Republican Jeff Keicher (HD 70) had pulled ahead. Speaker Welch's caucus claimed at least 4 pickups. R 31 = 118 - 80 - 7."
+    }
+   },
+   "governor": [
+    "JB Pritzker",
+    "D",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_Illinois_Senate_election",
+    "https://capitolnewsillinois.com/news/democrats-sweep-statewide-races-expand-already-historic-supermajorities"
+   ],
+   "note": "Democrats keep and expand their three-fifths supermajorities in both houses (36 Senate, 71 House needed)."
+  },
+  "in": {
+   "chambers": {
+    "S": {
+     "D": 15,
+     "R": 35,
+     "uncalled": 0,
+     "note": "Totals include the 25 holdovers (40-10 before). States Newsroom/Indiana Capital Chronicle reporting: Democrats gained 5, Republicans keep a 35-15 supermajority; election-night report said 'at least four'. Wikipedia's page lists 34 R + 15 D (one seat missing). Unofficial."
+    },
+    "H": {
+     "D": 46,
+     "R": 54,
+     "uncalled": 0,
+     "note": "Was 70-30 at the last election (69 R, 30 D, 1 independent before this one). Democrats gained 16. Indiana Capital Chronicle and Wikipedia agree on 54-46. Unofficial."
+    }
+   },
+   "governor": [
+    "Mike Braun",
+    "R",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_Indiana_House_of_Representatives_election",
+    "https://en.wikipedia.org/wiki/2026_Indiana_Senate_election",
+    "https://indianacapitalchronicle.com/?p=27758"
+   ],
+   "note": "House Republicans lose their two-thirds supermajority (first time since 2010): with 54 of 100 they can no longer make the two-thirds quorum (67) alone. Senate Republicans keep two-thirds (35 of 50; quorum 34)."
+  },
+  "ks": {
+   "chambers": {
+    "S": {
+     "D": 9,
+     "R": 31,
+     "uncalled": 0,
+     "note": "Not up in 2026 (four-year terms, elected 2024; next election 2028). Current makeup per Wikipedia (Kansas Senate, as of Dec 2025)."
+    },
+    "H": {
+     "D": 57,
+     "R": 68,
+     "uncalled": 0,
+     "note": "Was 88-37. Democrats net +20 (unofficial; Secretary of State auditing three close House districts). Two-thirds is 84 to override a veto."
+    }
+   },
+   "governor": [
+    "Cindy Holscher",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.kshb.com/news/state/kansas/kansas-voters-reshape-state-house-break-republican-supermajority",
+    "https://www.kctv5.com/2026/11/05/kansas-house-democrats-have-ended-gops-supermajority-heres-what-that-means/",
+    "https://en.wikipedia.org/wiki/Kansas_Senate"
+   ],
+   "note": "House Republicans lose their veto-proof two-thirds supermajority (held 16 years). The Senate keeps one (31 of 40)."
+  },
+  "ky": {
+   "chambers": {
+    "S": {
+     "D": 8,
+     "R": 30,
+     "uncalled": 0,
+     "note": "19 of 38 up: R won 16, D 3; holdovers R 14, D 5. Was 32-6 before the election (Wikipedia; the multi-state page said 31-7). Spectrum News: Democrats flipped 2 Senate seats. Unofficial."
+    },
+    "H": {
+     "D": 26,
+     "R": 74,
+     "uncalled": 0,
+     "note": "Was 80-20. Democrats flipped 7 seats and lost 1 open seat in eastern Kentucky (Spectrum News), net +6. Unofficial."
+    }
+   },
+   "governor": [
+    "Andy Beshear",
+    "D",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_Kentucky_House_of_Representatives_election",
+    "https://en.wikipedia.org/wiki/2026_Kentucky_Senate_election",
+    "https://spectrumnews1.com/ky/louisville/news/2026/11/05/democrats-flip-state-legislative-seats"
+   ],
+   "note": "Republicans keep two-thirds in both houses (a Kentucky veto override needs only a majority of members)."
+  },
+  "la": {
+   "chambers": {
+    "S": {
+     "D": 10,
+     "R": 28,
+     "vacant": 1,
+     "uncalled": 0,
+     "note": "no 2026 election (next regular election 2027). Current makeup per Wikipedia: District 14 vacant since Sen. Larry Selders (D) died in July 2026; Wikipedia's infobox says 27 R, its roster 28."
+    },
+    "H": {
+     "D": 32,
+     "R": 70,
+     "vacant": 3,
+     "uncalled": 0,
+     "note": "no 2026 election (next regular election 2027). Current makeup per Wikipedia (Nov 12, 2026): vacancies HD 92 (Stagni, R, resigned June 2026), HD 77 (Wright, R, resigned Sept 2026), HD 103 (Bayham, R, died Nov 2026)."
+    }
+   },
+   "governor": [
+    "Jeff Landry",
+    "R",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Louisiana_State_Senate",
+    "https://en.wikipedia.org/wiki/Louisiana_House_of_Representatives"
+   ]
+  },
+  "ma": {
+   "chambers": {
+    "S": {
+     "D": 35,
+     "R": 5,
+     "uncalled": 0,
+     "note": "Wikipedia's 2026 page shows no change from 35-5, but may not be updated; no second source found (WBUR and the Boston Globe bar automated readers)."
+    },
+    "H": {
+     "D": 137,
+     "R": 21,
+     "I": 1,
+     "uncalled": 1,
+     "note": "Wikipedia: D 137 (+3), R 21 (-4), 1 independent (unchanged), 159 of 160 accounted for; the missing seat is counted as uncalled. Was 134-25-1 at the last election. The Boston Globe described a 'punishing' night for House Republicans. Unofficial."
+    }
+   },
+   "governor": [
+    "Maura Healey",
+    "D",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_Massachusetts_House_of_Representatives_election",
+    "https://en.wikipedia.org/wiki/2026_Massachusetts_Senate_election"
+   ],
+   "note": "Democrats keep veto-proof two-thirds in both houses."
+  },
+  "md": {
+   "chambers": {
+    "S": {
+     "D": 35,
+     "R": 12,
+     "uncalled": 0,
+     "note": "All 47 seats up (four-year terms). Was 34-13; Democrat Lara Westdorp beat Sen. William Folden (R) in District 4. Wikipedia. The Maryland Manual's 2026 results page has no winners marked yet (its asterisks mark incumbents)."
+    },
+    "H": {
+     "D": 106,
+     "R": 35,
+     "uncalled": 0,
+     "note": "All 141 seats up. Was 102-39 (Wikipedia: D +4). Maryland Matters reported two Democratic pickups on election night (e.g. 33B) and more as mail ballots were counted. Unofficial."
+    }
+   },
+   "governor": [
+    "Wes Moore",
+    "D",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_Maryland_Senate_election",
+    "https://en.wikipedia.org/wiki/2026_Maryland_House_of_Delegates_election"
+   ],
+   "note": "Democrats keep their three-fifths veto-override majorities (29 Senate, 85 House)."
+  },
+  "me": {
+   "chambers": {
+    "S": {
+     "D": 23,
+     "R": 11,
+     "uncalled": 1,
+     "note": "Was 20 D, 14 R, 1 independent. Wikipedia's infobox says D 24 ('a supermajority, their first since 1985'), but its district table shows 23 D, 11 R and District 18 (held by independent Rick Bennett) uncalled. Two-thirds is 24 of 35."
+    },
+    "H": {
+     "D": 87,
+     "R": 61,
+     "I": 3,
+     "uncalled": 0,
+     "note": "No complete breakdown found. Democrats claimed at least 87 of 151 early Nov 4 (Bangor Daily News); a later States Newsroom report (AP calls) said at least 85; States Newsroom also reported House Republicans will hold 61 after losing about a dozen. Independents (3 before) inferred as the remainder. Excludes the non-voting tribal representatives. Unofficial."
+    }
+   },
+   "governor": [
+    "Hannah Pingree",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "close",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_Maine_Senate_election",
+    "https://www.bangordailynews.com/2026/11/04/politics/maine-democrats-add-seats-in-legislature/"
+   ],
+   "note": "Democrats expand both majorities. Senate two-thirds (24) depends on the uncalled District 18 race; House stays well short of two-thirds (101)."
+  },
+  "mi": {
+   "chambers": {
+    "S": {
+     "D": 23,
+     "R": 15,
+     "uncalled": 0,
+     "note": "All 38 seats up. Was 20-18. Michigan Public: unofficial results show Democrats +3."
+    },
+    "H": {
+     "D": 63,
+     "R": 47,
+     "uncalled": 0,
+     "note": "Was 58-52 Republican. Wikipedia and Ballotpedia (via search): 63-47. Michigan Public had 62 called for Democrats on Nov 5. Unofficial."
+    }
+   },
+   "governor": [
+    "Jocelyn Benson",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_Michigan_House_of_Representatives_election",
+    "https://en.wikipedia.org/wiki/2026_Michigan_Senate_election",
+    "https://www.michiganpublic.org/politics-government/2026-11-05/michigan-dems-choose-leaders-for-new-legislative-majority-gop-ousts-hall-as-caucus-head"
+   ],
+   "note": "House flips from Republican to Democratic control; Democrats win a trifecta (Speaker-elect Ranjeev Puri). No two-thirds majority."
+  },
+  "mn": {
+   "chambers": {
+    "S": {
+     "D": 39,
+     "R": 28,
+     "uncalled": 0,
+     "note": "D = DFL (Democratic-Farmer-Labor). All 67 seats up. Was 34-33. Unofficial; canvass Nov 19."
+    },
+    "H": {
+     "D": 77,
+     "R": 57,
+     "uncalled": 0,
+     "note": "D = DFL. Was tied 67-67 (power-sharing). House Public Information (Nov 4): DFL 'on track' for 77-57; District 32A (Rep. Nolan West, R, ahead by 22 votes) is eligible for a recount. Unofficial; canvass Nov 19."
+    }
+   },
+   "governor": [
+    "Amy Klobuchar",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.house.mn.gov/SessionDaily/Story/19211",
+    "https://en.wikipedia.org/wiki/2026_Minnesota_House_of_Representatives_election"
+   ],
+   "note": "House goes from a 67-67 tie (power-sharing) to a DFL majority; DFL trifecta. No two-thirds majority."
+  },
+  "mo": {
+   "chambers": {
+    "S": {
+     "D": 12,
+     "R": 22,
+     "uncalled": 0,
+     "note": "17 of 34 up; totals include holdovers. Was 24-10. Democrats won the two seats needed to end the two-thirds majority (e.g. Keri Ingle beat Speaker Jon Patterson in SD 8)."
+    },
+    "H": {
+     "D": 68,
+     "R": 95,
+     "uncalled": 0,
+     "note": "Was 111-52. Democrats flipped 16 seats, their biggest House gain since 1974. Unofficial."
+    }
+   },
+   "governor": [
+    "Mike Kehoe",
+    "R",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.kcur.org/politics-elections-and-government/2026-11-04/missouri-democrats-break-republicans-state-house-supermajority-with-16-flipped-seats",
+    "https://www.ky3.com/2026/11/04/missouri-democrats-break-republican-supermajority-with-largest-house-gain-since-1974/"
+   ],
+   "note": "Republicans lose their two-thirds veto-override supermajorities in both houses (Senate 23, House 109 needed); they keep control."
+  },
+  "ms": {
+   "chambers": {
+    "S": {
+     "D": 17,
+     "R": 34,
+     "vacant": 1,
+     "uncalled": 0,
+     "note": "no 2026 election (next regular election 2027). Court-ordered special elections in November 2025 gave Democrats 2 seats (36-16 to 34-18), ending the Republican two-thirds. Now SD 34 is vacant after Juan Barnett (D) resigned (Wikipedia, Aug 2026)."
+    },
+    "H": {
+     "D": 41,
+     "R": 77,
+     "I": 2,
+     "vacant": 2,
+     "uncalled": 0,
+     "note": "no 2026 election (next regular election 2027). Nov 2025 court-ordered specials: a Democrat beat Rep. Jon Ray Lancaster (R, HD 22). Vacancies: HD 77 (R, died June 2026) and HD 70 (D, died June 2026). Nonpartisan special elections for both were held Nov 3, 2026; no results found."
+    }
+   },
+   "governor": [
+    "Tate Reeves",
+    "R",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Mississippi_State_Senate",
+    "https://en.wikipedia.org/wiki/Mississippi_House_of_Representatives",
+    "https://mississippitoday.org/2025/11/05/democrats-end-gop-two-thirds-supermajority-in-mississippi-senate-what-does-that-mean"
+   ],
+   "note": "No 2026 change. The Senate Republican two-thirds ended in the November 2025 special elections; the House stays under Republican control."
+  },
+  "mt": {
+   "chambers": {
+    "S": {
+     "D": 20,
+     "R": 30,
+     "uncalled": 0,
+     "note": "25 of 50 up; includes holdovers. Democrats flipped SD-10 and SD-29 (open seats). Was R 32-18."
+    },
+    "H": {
+     "D": 43,
+     "R": 55,
+     "uncalled": 2,
+     "note": "MultiState: 55 R, 43 D, HD-20 (Keller, D, ahead by ~46) and HD-48 (Schomer, R, ahead by ~15) uncalled; Wikipedia's 56-44 assumes the leaders win. Democrats flipped HD-4. Was R 58-42."
+    }
+   },
+   "governor": [
+    "Greg Gianforte",
+    "R",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/montana-2026",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "In 2025 nine Republican senators (censured by the state GOP) joined the 18 Democrats in a working majority. Of the nine, only Shelley Vance was up in 2026 and she lost her primary; the other eight hold over. With 20 Democrats, a similar bloc would still hold a majority, but no reporting yet says it will re-form. The Republican caucus re-elected Matt Regier Senate President on Nov. 11. Republicans are well short of the two-thirds of the whole Legislature (100 of 150) needed to refer constitutional amendments."
+  },
+  "nc": {
+   "chambers": {
+    "S": {
+     "D": 24,
+     "R": 25,
+     "uncalled": 1,
+     "note": "Uncalled: Sen. Danny Britt's (R, Robeson/Hoke/Scotland; reported as SD-24) seat, where he led Catina Hamm (D) by 228 votes on Nov. 11, inside the recount margin. If Britt holds, R 26-24 (most outlets and Wikipedia count it so); if Hamm wins, 25-25, and Democratic Lt. Gov. Rachel Hunt breaks ties. Was R 30-20, so the 3/5 veto-override supermajority (30) is gone either way."
+    },
+    "H": {
+     "D": 71,
+     "R": 48,
+     "I": 1,
+     "uncalled": 0,
+     "note": "Unofficial (WSOC, Wikipedia); Nelson Mullins estimated 70-49-1. About five races were within 1 point and could be recounted after the Nov. 13 canvass. Democrats take the majority (61) for the first time since 2010, one short of 3/5 (72). Was R 71-49."
+    }
+   },
+   "governor": [
+    "Josh Stein",
+    "D",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "close",
+   "sources": [
+    "https://www.wsoctv.com/news/local/democrats-take-nc-house-majority-after-16-years-gop-control/2WVEHTHPLRDPJCCHESSJ3XVLOI/",
+    "https://en.wikipedia.org/wiki/2026_North_Carolina_House_of_Representatives_election",
+    "https://en.wikipedia.org/wiki/2026_North_Carolina_Senate_election"
+   ],
+   "note": "House flips to Democrats; Republican 3/5 veto-override supermajority lost in both chambers; Senate control hinges on the Britt race (a tie would give Democrats control via the Lt. Governor)."
+  },
+  "nd": {
+   "chambers": {
+    "S": {
+     "D": 6,
+     "R": 41,
+     "uncalled": 0,
+     "note": "24 of 47 up; includes holdovers. Democrat Mary Adams beat Sen. Jeff Barta (R) in SD-43. Was R 42-5."
+    },
+    "H": {
+     "D": 12,
+     "R": 80,
+     "uncalled": 2,
+     "note": "MultiState: 80-12 with HD-41 (Fargo, two seats) still counting; Democrats Tiongson and Heidenreich led for both, Heidenreich by about 33 votes (possible recount). If both hold, 80-14. Democrats won HD-43's two seats, HD-25 (Mitskog over Skroch) and the HD-42 special; Republicans took one HD-11 seat. Before: 83 R, 10-11 D (one vacancy)."
+    }
+   },
+   "governor": [
+    "Kelly Armstrong",
+    "R",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/north-dakota-2026",
+    "https://en.wikipedia.org/wiki/2026_North_Dakota_Senate_election"
+   ],
+   "note": "Republicans keep two-thirds supermajorities in both chambers."
+  },
+  "ne": {
+   "chambers": {
+    "L": {
+     "nonpartisan": true,
+     "total": 49,
+     "note": "Officially nonpartisan; 24 seats up. By party registration, unofficial: 30 Republicans, 18 Democrats, 1 independent (Cindy Maxwell-Ostdiek, LD-4), down from 33 R / 15 D / 1 I. Republicans lost LD-4 (Sen. Brad von Gillern), LD-12 (Sen. Merv Riepe, to Christy Knorr) and LD-18 (to Jess Goldoni); LD-8 went from an independent to Democrat Erin Feichtinger. The Republican 33-vote filibuster-proof bloc is gone. An undated Nebraska Public Media report of 32 R / 17 D appears to be from an earlier cycle."
+    }
+   },
+   "governor": [
+    "Jim Pillen",
+    "R",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/nebraska-2026",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "Republicans lose the 33-seat filibuster-proof majority."
+  },
+  "nh": {
+   "chambers": {
+    "S": {
+     "D": 15,
+     "R": 9,
+     "uncalled": 0,
+     "note": "Democrats gained 7; no recounts requested. Was R 16-8. Short of 2/3 (16). Rebecca Perkins Kwoka (D) chosen President."
+    },
+    "H": {
+     "D": 292,
+     "R": 107,
+     "I": 1,
+     "uncalled": 0,
+     "note": "House Clerk Paul Smith's estimate (an earlier one was 291 D); 16 recounts requested as of Nov. 10, which could shift a few seats. Above 2/3 (267), a veto-proof majority for the first time. Was R 220-179 (before vacancies)."
+    }
+   },
+   "governor": [
+    "Kelly Ayotte",
+    "R",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_New_Hampshire_House_of_Representatives_election",
+    "https://en.wikipedia.org/wiki/2026_New_Hampshire_Senate_election",
+    "https://www.nhpr.org/nh-news/2026-11-04/democrats-sweep-nh-newhampshire-state-house-executive-council-majorities-legislature-election"
+   ],
+   "note": "Both chambers flip from Republican to Democratic; House Democrats gain a 2/3 supermajority."
+  },
+  "nj": {
+   "chambers": {
+    "S": {
+     "D": 25,
+     "R": 15,
+     "uncalled": 0,
+     "note": "no 2026 election; current makeup (222nd Legislature). Next election November 2027."
+    },
+    "A": {
+     "D": 57,
+     "R": 23,
+     "uncalled": 0,
+     "note": "no 2026 election; current makeup after the November 2025 election (Democrats gained 5). Next election November 2027."
+    }
+   },
+   "governor": [
+    "Mikie Sherrill",
+    "D",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/222nd_New_Jersey_Legislature"
+   ]
+  },
+  "nm": {
+   "chambers": {
+    "S": {
+     "D": 26,
+     "R": 16,
+     "uncalled": 0,
+     "note": "no 2026 election (four-year terms; next 2028), except a special election in SD-33 won by Rex Wilson (R), which didn't change the count. Current makeup."
+    },
+    "H": {
+     "D": 47,
+     "R": 23,
+     "uncalled": 0,
+     "note": "Democrats flipped HD-7, HD-38, HD-39 and HD-57; Republicans flipped HD-4. Was D 44-26 (43-25 with two vacancies). 47 is exactly two-thirds."
+    }
+   },
+   "governor": [
+    "Deb Haaland",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/new-mexico-2026",
+    "https://www.abqjournal.com/news/democrats-expand-majority-in-new-mexico-state-house-win-supermajority-in-chamber/3154704"
+   ],
+   "note": "House Democrats reach a two-thirds supermajority (47 of 70)."
+  },
+  "nv": {
+   "chambers": {
+    "S": {
+     "D": 13,
+     "R": 8,
+     "uncalled": 0,
+     "note": "11 of 21 up; includes holdovers. Unchanged; one short of 2/3 (14)."
+    },
+    "A": {
+     "D": 32,
+     "R": 10,
+     "uncalled": 0,
+     "note": "Nevada Independent (about Nov. 10): Democrats 32 of 42, counting AD-22, where Shenea Booth (D) led Assm. Melissa Hardy (R) by about 72 votes (MultiState still lists it uncalled: 31-10-1). Democrats flipped AD-2, AD-4, AD-13, AD-35 (and AD-22). Was D 27-15. Above 2/3 (28) either way."
+    }
+   },
+   "governor": [
+    "Aaron Ford",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/nevada-2026",
+    "https://thenevadaindependent.com/article/a-blue-bloodbath-10-big-takeaways-from-nevadas-2026-midterms/"
+   ],
+   "note": "Assembly Democrats gain a two-thirds supermajority; Senate stays one short."
+  },
+  "ny": {
+   "chambers": {
+    "S": {
+     "D": 47,
+     "R": 15,
+     "uncalled": 1,
+     "note": "Uncalled: SD-43, where Devin Lander (D) narrowly led Sen. Jake Ashby (R) in later counts (Ashby led on election night); Wikipedia counts it D, 48-15. Democrats unseated six Republicans (SD-1, 9, 17, 38, 39, 44). Was D 41-22. Regains 2/3 (42)."
+    },
+    "A": {
+     "D": 109,
+     "R": 39,
+     "uncalled": 2,
+     "note": "Uncalled: AD-49 and AD-126, Democrats leading in both (Wikipedia and Greenberg Traurig count 111-39). Democrats gained seven seats (AD-3, 12, 16, 45, 46, 107, 143); Republicans gained AD-119. Was D 103-47. Above 2/3 (100)."
+    }
+   },
+   "governor": [
+    "Kathy Hochul",
+    "D",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/new-york-2026",
+    "https://www.gtlaw.com/ar/insights/2026/11/new-york-state-2026-election-update",
+    "https://www.cityandstateny.com/politics/2026/11/where-do-all-key-new-york-state-legislative-races-stand/417054/"
+   ],
+   "note": "Senate Democrats regain a two-thirds supermajority; Assembly Democrats keep and widen theirs."
+  },
+  "oh": {
+   "chambers": {
+    "S": {
+     "D": 11,
+     "R": 22,
+     "uncalled": 0,
+     "note": "16-17 of 33 up; includes holdovers. Democrats flipped SD-3 and SD-27 (Sen. Michele Reynolds lost). Was R 24-9. Republicans keep 3/5 (20)."
+    },
+    "H": {
+     "D": 42,
+     "R": 53,
+     "uncalled": 4,
+     "note": "MultiState: HD-29, HD-37, HD-44, HD-75 uncalled (Spectrum News on Nov. 4: 52 R, 42 D, five uncalled). Democrats flipped 8 seats. Was R 65-34. Republicans can reach at most 57, below 3/5 (60)."
+    }
+   },
+   "governor": [
+    "Amy Acton",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/ohio-2026",
+    "https://spectrumnews1.com/oh/columbus/news/2026/11/04/ohio-house-democrats-gain-seats--shift-balance-of-power"
+   ],
+   "note": "House Republicans lose their 3/5 veto-override supermajority (with Democrat Amy Acton elected governor); Senate supermajority kept."
+  },
+  "ok": {
+   "chambers": {
+    "S": {
+     "D": 8,
+     "R": 40,
+     "uncalled": 0,
+     "note": "24 of 48 up; includes holdovers. No seats changed."
+    },
+    "H": {
+     "D": 26,
+     "R": 75,
+     "uncalled": 0,
+     "note": "Democrats gained six (five incumbents beaten: HD-75, 83, 84, 95, 100; open HD-64). Was R 81-20. Republicans keep 2/3 (68) but fall one short of the 3/4 (76) needed to pass revenue bills without a public vote."
+    }
+   },
+   "governor": [
+    "Mike Mazzei",
+    "R",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/oklahoma-2026",
+    "https://www.hppr.org/hppr-news/2026-11-05/oklahoma-stayed-red-but-democrats-still-grabbed-wins-in-a-national-blue-wave"
+   ],
+   "note": "House Republicans lose the three-fourths majority for revenue bills; keep two-thirds."
+  },
+  "or": {
+   "chambers": {
+    "S": {
+     "D": 19,
+     "R": 11,
+     "uncalled": 0,
+     "note": "15 of 30 up; includes holdovers. Virginia Stapleton (D) beat Tracy Cramer (R), SD-11. Was D 18-12. Above 3/5 (18)."
+    },
+    "H": {
+     "D": 39,
+     "R": 21,
+     "uncalled": 0,
+     "note": "Democrats flipped HD-21 (Michael Welsh over Kevin Mannix) and HD-52 (Hank Sanders over Scott Hege). Was D 37-23 (36-24 at the 2024 election). Above 3/5 (36)."
+    }
+   },
+   "governor": [
+    "Tina Kotek",
+    "D",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.wweek.com/news/health/2026/11/09/democrats-bolster-supermajorities-in-oregon-statehouse/",
+    "https://www.multistate.us/elections/results/oregon-2026"
+   ],
+   "note": "Democrats keep and widen their 3/5 revenue supermajorities in both chambers."
+  },
+  "pa": {
+   "chambers": {
+    "S": {
+     "D": 26,
+     "R": 24,
+     "uncalled": 0,
+     "note": "25 of 50 up; Democrats won 16, Republicans 9; holdovers D 10, R 15. All races called by AP (Spotlight PA). No tie, so the Lieutenant Governor's tie vote isn't needed. First Democratic Senate majority since 1994."
+    },
+    "H": {
+     "D": 111,
+     "R": 88,
+     "uncalled": 4,
+     "note": "AP as reported by Spotlight PA/Inquirer/WITF on Nov 4: at least 111-88 with a handful uncalled. Wikipedia's summary page gives 113-90 and its House election page a range of D 111-114, R 89-92. Control isn't in doubt."
+    }
+   },
+   "governor": [
+    "Josh Shapiro",
+    "D",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.spotlightpa.org/news/2026/11/pennsylvania-house-election-results-legislature-control-elections/",
+    "https://en.wikipedia.org/wiki/2026_Pennsylvania_Senate_election",
+    "https://en.wikipedia.org/wiki/2026_Pennsylvania_House_of_Representatives_election"
+   ],
+   "note": "Senate flips R to D (26-24); Democratic trifecta with Gov. Shapiro"
+  },
+  "ri": {
+   "chambers": {
+    "S": {
+     "D": 36,
+     "R": 2,
+     "uncalled": 0,
+     "note": "Republicans lost SD-17 and SD-34 (both deputy minority leaders)."
+    },
+    "H": {
+     "D": 65,
+     "R": 8,
+     "I": 1,
+     "uncalled": 1,
+     "note": "Before 64-10-1. HD-42 R to D; HD-15 R to independent Allan Fung (a former Republican). HD-49 uncalled: Veronicka Vega (D) led independent Rep. Jon Brien by about 110 votes. Wikipedia's House page had no results yet; figures from MultiState."
+    }
+   },
+   "governor": [
+    "Helena Foulkes",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/rhode-island-2026",
+    "https://en.wikipedia.org/wiki/2026_Rhode_Island_Senate_election"
+   ]
+  },
+  "sc": {
+   "chambers": {
+    "S": {
+     "R": 34,
+     "D": 12,
+     "uncalled": 0,
+     "note": "Not up in 2026 (four-year terms; next election 2028). Current makeup."
+    },
+    "H": {
+     "R": 79,
+     "D": 45,
+     "uncalled": 0,
+     "note": "Democrats flipped 10 seats (before 89-35), including Majority Leader Micah Caskey's. Reported as certified after recounts. 79 is below two-thirds (83 of 124)."
+    }
+   },
+   "governor": [
+    "Alan Wilson",
+    "R",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections",
+    "https://www.wtoc.com/2026/11/04/democrats-break-gop-house-supermajority-south-carolina/",
+    "https://en.wikipedia.org/wiki/South_Carolina_Senate"
+   ],
+   "note": "House Republicans lose their two-thirds supermajority"
+  },
+  "sd": {
+   "chambers": {
+    "S": {
+     "R": 32,
+     "D": 2,
+     "uncalled": 1,
+     "note": "SD-11 uncalled: Chris Karr (R) led Aaron Matson (D) by a few dozen votes; SD-12 possible recount (R won by about 130). Republicans keep two-thirds either way."
+    },
+    "H": {
+     "R": 58,
+     "D": 10,
+     "I": 1,
+     "uncalled": 1,
+     "note": "Before 65-5. The uncalled seat (HD-11, second seat) is between two Republicans, so effectively 59-10-1 (Wikipedia's figure). The independent, Evangeline Poor Bear (HD-27), is described as aligned with Republicans. First Democratic legislative gains since 2008."
+    }
+   },
+   "governor": [
+    "Larry Rhoden",
+    "R",
+    "re-elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.multistate.us/elections/results/south-dakota-2026",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ]
+  },
+  "tn": {
+   "chambers": {
+    "S": {
+     "R": 27,
+     "D": 6,
+     "uncalled": 0,
+     "note": "17 of 33 up (with holdovers). No seats changed hands. Sen. Brent Taylor (R, SD-31) won a U.S. House seat; his Senate seat will be filled by special election, so it may be vacant at the start of 2027."
+    },
+    "H": {
+     "R": 69,
+     "D": 29,
+     "uncalled": 0,
+     "note": "Six seats went R to D (before 75-24). Wikipedia's infobox lists 29 D and one write-in winner (a 'write-in gain'); the summary page gives 69-30. The write-in's identity and caucus weren't found. Republicans keep two-thirds (66 of 99); a veto override needs only a majority in Tennessee.",
+     "other": 1
+    }
+   },
+   "governor": [
+    "Marsha Blackburn",
+    "R",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_Tennessee_House_of_Representatives_election",
+    "https://www.legal500.com/intelligence/united-states/government-public-sector/tennessee-2026-midterm-election-results-blackburn-wins-governor%E2%80%99s-race-amid-congressional-and-legislative-upsets"
+   ]
+  },
+  "tx": {
+   "chambers": {
+    "S": {
+     "R": 19,
+     "D": 12,
+     "uncalled": 0,
+     "note": "16 of 31 up (with holdovers); before 20-11. The Texas Tribune (Nov 4): 'the line in the Texas Senate appeared to hold firm at 19 Republicans and 12 Democrats.'"
+    },
+    "H": {
+     "D": 83,
+     "R": 67,
+     "uncalled": 0,
+     "note": "A real Democratic majority, not a tie: first since 2003 (76 needed). 83-67 is the Texas Tribune's count if leads held (Nov 4: 11 AP-called flips, 3 concessions, at least 7 more uncalled Democratic leads); later reports say 83-84 D. Wikipedia's infobox read 79 D, 63 R with 8 seats not entered. Rep. Senfronia Thompson (D) is the presumptive Speaker, with 90 claimed pledges."
+    }
+   },
+   "governor": [
+    "Gina Hinojosa",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.texastribune.org/2026/11/03/texas-house-legislature-outcomes-control-republicans-democrats-2026/",
+    "https://en.wikipedia.org/wiki/2026_Texas_House_of_Representatives_election"
+   ],
+   "note": "House flips R to D (about 83-67); Senate stays R"
+  },
+  "ut": {
+   "chambers": {
+    "S": {
+     "R": 20,
+     "D": 8,
+     "uncalled": 1,
+     "note": "15 of 29 up (with holdovers); before 22 R, 6 D, 1 Forward. SD-5 (Millner's seat) and SD-19 (Majority Leader Cullimore) flipped R to D (MultiState). SD-11 uncalled: Brooks Benson (R) vs. Sen. Emily Buss (Forward). Republicans keep two-thirds (20 of 29) either way. Not certified until the canvass; derived from flips, no source states the total."
+    },
+    "H": {
+     "R": 44,
+     "D": 29,
+     "I": 2,
+     "uncalled": 0,
+     "note": "Wikipedia (Nov 9): 44 R, 29 D, 2 independents (HD-3 and HD-38 went to unaffiliated candidates), but its results table gives ranges R 43-49, D 24-30, so a few seats (MultiState lists HD-20, 48, 59, 61) were still uncalled. Republicans lose two-thirds (50 of 75) even at the top of the range: 'For the first time since 1993, Republicans did not hold a supermajority in the Utah House.'"
+    }
+   },
+   "governor": [
+    "Spencer Cox",
+    "R",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_Utah_House_of_Representatives_election",
+    "https://www.multistate.us/elections/results/utah-2026",
+    "https://en.wikipedia.org/wiki/Utah_State_Senate"
+   ],
+   "note": "House Republicans lose their two-thirds supermajority"
+  },
+  "va": {
+   "chambers": {
+    "S": {
+     "D": 21,
+     "R": 19,
+     "uncalled": 0,
+     "note": "no 2026 election (next 2027). Current makeup."
+    },
+    "H": {
+     "D": 64,
+     "R": 36,
+     "uncalled": 0,
+     "note": "no 2026 election (next 2027). Current makeup; Wikipedia's member list showed District 20 vacant after Michelle Maldonado (D) resigned May 31, 2026, while its infobox gives 64-36 and names Sonia Vásquez Luna (D)."
+    }
+   },
+   "governor": [
+    "Abigail Spanberger",
+    "D",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Virginia_General_Assembly",
+    "https://en.wikipedia.org/wiki/Virginia_House_of_Delegates"
+   ]
+  },
+  "vt": {
+   "chambers": {
+    "S": {
+     "D": 20,
+     "R": 8,
+     "P": 1,
+     "I": 1,
+     "uncalled": 0,
+     "note": "Preliminary. Democrats alone have two-thirds (20 of 30); with the Progressive, 21."
+    },
+    "H": {
+     "D": 102,
+     "R": 38,
+     "P": 7,
+     "I": 3,
+     "uncalled": 0,
+     "note": "Seven Days (preliminary): 102 D, 7 Progressives, 3 independents, 38 R. Wikipedia gives 102-38-6-4. Close races: Hardwick (R led by 8 votes, likely recount) and southern Franklin County (D led by 2). D+P = 109, above two-thirds (100)."
+    }
+   },
+   "governor": [
+    "Phil Scott",
+    "R",
+    "re-elected"
+   ],
+   "coalition": [
+    "D",
+    "P"
+   ],
+   "confidence": "called",
+   "sources": [
+    "https://www.sevendaysvt.com/news/election-2026/democrats-regain-supermajority-in-vermont-legislature/",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "Democrats (with Progressives) regain two-thirds supermajorities in both houses Democrats and Progressives together hold veto-proof majorities in both houses against Gov. Phil Scott (R), re-elected."
+  },
+  "wa": {
+   "chambers": {
+    "S": {
+     "D": 31,
+     "R": 18,
+     "uncalled": 0,
+     "note": "24 of 49 up (with holdovers); Democrats flipped one seat (before 30-19). Two-thirds (33) wasn't within reach."
+    },
+    "H": {
+     "D": 66,
+     "R": 32,
+     "uncalled": 0,
+     "note": "KUOW (Nov 9): Democrats 'on track to hold at least 66' of 98, a two-thirds majority, the first since 1949 (before 59-39)."
+    }
+   },
+   "governor": [
+    "Bob Ferguson",
+    "D",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.kuow.org/elections/2026-11-09/washington-dems-nab-supermajority-in-state-house",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "House Democrats gain a two-thirds supermajority"
+  },
+  "wi": {
+   "chambers": {
+    "S": {
+     "D": 18,
+     "R": 15,
+     "uncalled": 0,
+     "note": "17 of 33 up (with holdovers). Democrats flipped three seats (AP, preliminary). First Democratic Senate majority since 2008-10."
+    },
+    "A": {
+     "D": 53,
+     "R": 46,
+     "uncalled": 0,
+     "note": "Democrats flipped eight seats and held all their own (before 54-45 R)."
+    }
+   },
+   "governor": [
+    "David Crowley",
+    "D",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.wbay.com/2026/11/04/democrats-flip-control-wisconsin-legislature/",
+    "https://www.fox6now.com/election/wisconsin-election-democrats-control-legislature-2026",
+    "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   ],
+   "note": "Senate and Assembly flip R to D; Democratic trifecta with Gov.-elect David Crowley"
+  },
+  "wv": {
+   "chambers": {
+    "S": {
+     "R": 30,
+     "D": 4,
+     "uncalled": 0,
+     "note": "About half up (with holdovers). Democrats doubled their caucus from 2 to 4; Republicans keep two-thirds."
+    },
+    "H": {
+     "R": 79,
+     "D": 21,
+     "uncalled": 0,
+     "note": "Twelve seats flipped R to D (before 91-9 or 90-9-1 vacant). 21 Democrats means Republicans fall short of the four-fifths (80) needed to suspend the three-readings rule; they keep two-thirds. A veto override needs only a majority in West Virginia. Figures from Wikipedia; a States Newsroom report confirms 12 flips."
+    }
+   },
+   "governor": [
+    "Patrick Morrisey",
+    "R",
+    "not up in 2026"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://en.wikipedia.org/wiki/2026_West_Virginia_House_of_Delegates_election",
+    "https://en.wikipedia.org/wiki/2026_West_Virginia_Senate_election"
+   ],
+   "note": "House Republicans lose their four-fifths majority (rule suspension)"
+  },
+  "wy": {
+   "chambers": {
+    "S": {
+     "R": 29,
+     "D": 2,
+     "uncalled": 0,
+     "note": "16 of 31 up (with holdovers). No change."
+    },
+    "H": {
+     "R": 55,
+     "D": 7,
+     "uncalled": 0,
+     "note": "Democrats picked up HD-11 by 54 votes (before 56-6). The August primary cut the Freedom Caucus's House bloc sharply (it lost about 13-14 incumbents; projected down from about 35 members to about 10), ending its House majority; it lost six Senate allies too. Traditional Republicans now lead both houses."
+    }
+   },
+   "governor": [
+    "Eric Barlow",
+    "R",
+    "newly elected"
+   ],
+   "coalition": [],
+   "confidence": "called",
+   "sources": [
+    "https://www.bhfs.com/wp-content/uploads/2026/11/SG-FINAL-2026-General-Election.pdf",
+    "https://wyofile.com/in-stunning-upset-wyoming-freedom-caucus-loses-most-of-its-house-seats-backslides-in-senate/"
+   ],
+   "note": "Freedom Caucus loses control of the House (in the primary) Republican factions: Freedom Caucus vs. traditional Republicans; the Freedom Caucus lost its House majority in the August primary."
+  }
+ }
+}
