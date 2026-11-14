@@ -32,7 +32,7 @@ Usage: python3 states/wi/fetch.py [first_year]   (default: the session before th
 """
 import html, json, math, os, re, sys, time, urllib.error, urllib.request
 from collections import Counter
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 SITE = "https://docs.legis.wisconsin.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "wi"))
@@ -481,8 +481,10 @@ def session(year):
         elif live:
             stale.append((old.get("fetched", ""), num))
     if live:
+        # Each bill read again once it's REFRESH_DAYS old, at most a seventh of the list a run (runs are two hours apart).
+        week = (datetime.now() - timedelta(days=REFRESH_DAYS)).isoformat(timespec="seconds")
         stale.sort()
-        todo += [n for f, n in stale[:math.ceil(len(listing) / REFRESH_DAYS)]]
+        todo += [n for f, n in stale[:math.ceil(len(listing) / REFRESH_DAYS)] if f < week]
     todo = sorted(dict.fromkeys(todo), key=split_num)
     print(f"{year}: {len(listing)} bills listed, {len(todo)} to read", flush=True)
 

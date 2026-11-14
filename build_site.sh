@@ -20,9 +20,16 @@ REBUILT=""
 for s in $STATES; do
   # A state whose first full download is still building up over several runs (data/<state>/incomplete, written by
   # its fetch.py) waits: a partial copy would make a misleading site, or fail the build for every state.
-  if [ -f "data/$s/incomplete" ]; then echo "$s: download not complete yet; not built"; continue; fi
-  # No data yet (a new state whose first download on GitHub hasn't run, so its cache is empty): nothing to build.
-  if [ "$s" != "ny" ] && [ -z "$(ls -A "data/$s" 2>/dev/null | grep -v '^last_checked$')" ]; then echo "$s: no data yet; not built"; continue; fi
+  # A state already on the site whose latest run was cut off mid-refresh (many downloads mark every run until it
+  # finishes) keeps its last build's pages until a run finishes.
+  if [ -f "data/$s/incomplete" ]; then
+    if [ -f "$BUILT/$s/index.html" ]; then echo "$s: download not finished; keeping the last build's pages"; cp -R "$BUILT/$s" "$OUT/$s"
+    else echo "$s: download not complete yet; not built"; fi
+    continue
+  fi
+  # No data yet (a new state whose first download on GitHub hasn't run, so its cache is empty): nothing to build. Files
+  # kept in git (data/la/district_towns.json) and the "last checked" mark don't count.
+  if [ "$s" != "ny" ] && [ -z "$(ls -A "data/$s" 2>/dev/null | grep -v '^last_checked$' | while read -r f; do git ls-files --error-unmatch "data/$s/$f" >/dev/null 2>&1 || echo "$f"; done)" ]; then echo "$s: no data yet; not built"; continue; fi
   # SITE_BASE (the preview's address) gives each state its own: SITE_BASE/nj/, SITE_BASE/va/.
   if [ -n "$SITE_BASE" ]; then export SITE_URL="${SITE_BASE}$s/"; fi
   # A state whose data, code and settings haven't changed since the last build (state_hash.py; publish.yml keeps

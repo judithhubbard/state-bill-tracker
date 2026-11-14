@@ -30,7 +30,7 @@ copy); it is removed when nothing is missing.
 Usage: python3 states/co/fetch.py [year]   (default: 2024, 2025 and 2026, i.e. this year and the two before)
 """
 import html, json, math, os, re, sys, time, urllib.error, urllib.parse, urllib.request
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 SITE = "https://leg.colorado.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "co"))
@@ -562,8 +562,10 @@ def session(year):
         else:
             stale.append((old.get("fetched", ""), num))
     if not final:
+        # Each bill read again once it's REFRESH_DAYS old, at most a seventh of the list a run (runs are two hours apart).
+        week = (datetime.now() - timedelta(days=REFRESH_DAYS)).isoformat(timespec="seconds")
         stale.sort()
-        todo += [n for f, n in stale[:math.ceil(len(listing) / REFRESH_DAYS)]]
+        todo += [n for f, n in stale[:math.ceil(len(listing) / REFRESH_DAYS)] if f < week]
     key = lambda n: (n[:2], int(re.sub(r"\D", "", n.split("-", 1)[1]) or 0))
     todo = sorted(dict.fromkeys(todo), key=key)
     print(f"{year}: {len(listing)} bills listed, {len(todo)} to read", flush=True)

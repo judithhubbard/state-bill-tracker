@@ -119,8 +119,10 @@ def decode(house, n, desc):
         return f"PASSED {HOUSE[house].upper()}"
     if house == "E" and n == 15:
         return "DELIVERED TO GOVERNOR"
-    if house == "E" and n in (20, 25, 30):  # signed, filed without signature, signed with line-item vetoes
+    if house == "E" and n in (20, 30):  # signed, signed with line-item vetoes
         return "SIGNED"
+    if house == "E" and n == 25:
+        return "Filed without the governor's signature"
     if house == "E" and n == 35:
         return "VETOED"
     return desc
@@ -406,7 +408,7 @@ def load_session(session):
                 dates(lambda h, t, n: t == "PASSED HOUSE", "all"),
                 "",
                 dates(lambda h, t, n: t == "DELIVERED TO GOVERNOR"),
-                dates(lambda h, t, n: t == "SIGNED"),
+                dates(lambda h, t, n: t == "SIGNED" or (h, n) == ("E", 25)),
                 dates(lambda h, t, n: t == "VETOED"),
             ],
             "votes": votes, "firstComms": first_comms, "vers": [vers],

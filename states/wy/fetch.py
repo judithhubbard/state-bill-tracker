@@ -27,7 +27,7 @@ was never downloaded after it (a failed refresh keeps the last copy); it is remo
 Usage: python3 states/wy/fetch.py [year]   (default: every year above; a single year leaves the marker alone)
 """
 import json, os, sys, time, urllib.error, urllib.request
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 LSO = "https://lsoservice.wyoleg.gov/api"
 API = "https://api.wyoleg.gov/v1"
@@ -139,9 +139,10 @@ def bills(year, folder, live):
     stamps = {x["bill"]: [x.get(k) for k in STAMP] for x in index}
     have = {n for n in stamps if os.path.exists(os.path.join(folder, "bills", f"{n}.json"))}
     todo = [n for n in sorted(stamps) if n not in have or (live and (seen.get(n) or {}).get("stamp") != stamps[n])]
-    if live:  # and the seventh read longest ago, so every bill is read at least weekly
+    if live:  # and bills read more than a week ago, a seventh at most a run (runs are two hours apart), so every bill is read weekly
+        week = (datetime.now(timezone.utc) - timedelta(days=REFRESH_DAYS)).strftime("%Y-%m-%dT%H:%M:%SZ")
         rest = sorted((n for n in have if n not in todo), key=lambda n: (seen.get(n) or {}).get("read", ""))
-        todo += rest[:-(-len(stamps) // REFRESH_DAYS)]
+        todo += [n for n in rest[:-(-len(stamps) // REFRESH_DAYS)] if (seen.get(n) or {}).get("read", "") < week]
     got = 0
     for n in todo:
         d = get(f"{LSO}/BillInformation/{year}/{n}")

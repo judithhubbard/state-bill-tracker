@@ -4,6 +4,9 @@ const STATE = {
   code: "ar",
   name: "Arkansas",
   abbr: "AR",
+  // The records give a law its Act number without saying whether the governor signed it or let it become law
+  // without a signature (a few say "Approved by the Governor"): laws say "Became law".
+  noSignatures: true,
   // Steps that aren't news on a watchlist card.
   routine: /^(Filed$|REPORTED CORRECTLY ENGROSSED|RULES SUSPENDED|Rules suspended|Received from the (?:House|Senate)|RECEIVED FROM THE SENATE|EMERGENCY CLAUSE ADOPTED|Ordered immediately|Placed on second reading for (?:the )?purpose of amendment|Returned (?:from|to|From|To)\s+(?:the )?(?:House|Senate) as (?:passed|adopted|concurred)|Sine Die adjournment$|Roll call (?:was )?requested|Sounding of the Ballot requested)/i,
   publicSite: "https://statebilltracker.org/ar/",

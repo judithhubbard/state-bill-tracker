@@ -510,8 +510,11 @@ def session(year):
         else:
             stale.append((old.get("fetched", ""), num))
     if live:
+        # Each bill read again once it's REFRESH_DAYS old, at most a seventh of the list a run (runs are two hours apart:
+        # re-reading a seventh every run took 45 minutes and ran past the time limit).
+        cutoff = (datetime.now() - timedelta(days=REFRESH_DAYS)).isoformat(timespec="seconds")
         stale.sort()
-        todo += [n for f, n in stale[:math.ceil(len(listing) / REFRESH_DAYS)]]
+        todo += [n for f, n in stale[:math.ceil(len(listing) / REFRESH_DAYS)] if f < cutoff]
     todo = sorted(dict.fromkeys(todo), key=lambda n: (n[0], int(n[1:])))
     print(f"{year}: {len(listing)} bills listed, {len(todo)} to read", flush=True)
 

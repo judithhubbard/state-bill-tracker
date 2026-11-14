@@ -1693,7 +1693,10 @@ const LAW_WORD = STATE.lawWord || "Chapter";
 // How a law got there: over the governor's veto (vetoed, then overridden), or signed; a state whose records don't show
 // the signature (Maine's) says only that it became law (STATE.noSignatures).
 const overriddenLaw = (b) => b.stage === 5 && !!b.dates.vetoed;
-const lawLine = (b) => (overriddenLaw(b) ? "Became law over the governor's veto" : STATE.noSignatures ? "Became law" : "Signed into law");
+// A law the governor neither signed nor vetoed in time (or, in some states, returned unsigned), as its history says.
+const NO_SIGNATURE = /without (?:the |my )?(?:governor'?s )?signature|w\/o sign|w\/out governor/i;
+const unsignedLaw = (b) => b.stage === 5 && !overriddenLaw(b) && b.vers.some((v) => v.actions.some(([, t]) => NO_SIGNATURE.test(t)));
+const lawLine = (b) => (overriddenLaw(b) ? "Became law over the governor's veto" : unsignedLaw(b) ? "Became law without the governor's signature" : STATE.noSignatures ? "Became law" : "Signed into law");
 const partlyVetoed = (b) => b.stage === 5 && b.vers.some((v) => v.actions.some(([, t]) => /partially vetoed|line-item veto|item veto/i.test(t)));
 function statusText(b) {
   const D = b.dates, live = DATA.current;
@@ -1731,7 +1734,7 @@ function statusText(b) {
     t = live ? "On the governor's desk" : "Sent to the governor";
     small = live && b.due ? `Sent ${fmtDate(D.deliv)} · decision due ${fmtDate(b.due)} (est.)` : `Sent ${fmtDate(D.deliv)}`;
   } else if (b.stage === 5) {
-    const how = overriddenLaw(b) ? "Veto overridden" : STATE.noSignatures ? "Became law" : "Signed";
+    const how = overriddenLaw(b) ? "Veto overridden" : unsignedLaw(b) ? "Law without signature" : STATE.noSignatures ? "Became law" : "Signed";
     t = (b.chapter ? `${how} · ${LAW_WORD} ${b.chapter}` : lawLine(b)) + (partlyVetoed(b) ? " · part vetoed" : "");
     small = fmtDate(D.signed);
   } else if (b.stage === 6) {
@@ -3635,7 +3638,7 @@ function verBlock(v) {
 function whenLine(b) {
   const D = b.dates;
   if (b.stage === 2 && b.passedIn) return esc(`Passed the ${b.passedIn} ${fmtDate(b.passedIn === "Senate" ? D.passS : D.passA)}`);
-  if (b.stage === 5 && D.signed) return esc(`Signed ${fmtDate(D.signed)}`);
+  if (b.stage === 5 && D.signed) return esc(`${overriddenLaw(b) ? "Became law over the veto" : unsignedLaw(b) ? "Became law without signature" : STATE.noSignatures ? "Became law" : "Signed"} ${fmtDate(D.signed)}`);
   if (b.stage === 6 && D.vetoed) return esc(`Vetoed ${fmtDate(D.vetoed)}`);
   return statusText(b).match(/<small>(.*?)<\/small>/)?.[1] || "";
 }
