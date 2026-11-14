@@ -19,7 +19,7 @@
   --navy: #1d3b78;
   --gold: #c8921a;
   --gold-soft: #f6ead0;
-  --signed: #1f7a4d;
+  --signed: #1f7a4d; --signed-ink: #18693f;
   --signed-soft: #dcefe4;
   --law-bar: #43b072;
   --veto: #b3372b;
@@ -35,7 +35,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754;
-    --navy: #8fb0f0; --gold: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
+    --navy: #8fb0f0; --gold: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
     --veto: #ee7d70; --veto-soft: #3d1f1d; --refer: #4f5d7c; --pip-off: #26324b; --chip: #1d2944; --focus: #8fb0f0;
     --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1626;
     color-scheme: dark;
@@ -43,7 +43,7 @@
 }
 :root[data-theme="dark"] {
   --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754;
-  --navy: #8fb0f0; --gold: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
+  --navy: #8fb0f0; --gold: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
   --veto: #ee7d70; --veto-soft: #3d1f1d; --refer: #4f5d7c; --pip-off: #26324b; --chip: #1d2944; --focus: #8fb0f0;
   --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1626;
   color-scheme: dark;
@@ -89,7 +89,7 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .resultbar b { color: var(--ink); font-variant-numeric: tabular-nums; }
 
 /* Bill rows */
-.list { display: grid; }
+.list { display: grid; grid-template-columns: minmax(0, 1fr); }  /* never wider than the column, whatever an open bill holds */
 .bill { border-bottom: 1px solid var(--rule); scroll-margin-top: 120px; }
 .bill > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 116px minmax(0, 1fr) 150px; gap: 14px; padding: 12px 4px; align-items: start; }
 .bill > summary::-webkit-details-marker { display: none; }
@@ -101,7 +101,7 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .meta { font-size: 12.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .tag { font-size: 11px; font-weight: 600; background: var(--chip); color: var(--ink-2); border-radius: 3px; padding: 1px 6px; }
-.tag.env { background: var(--signed-soft); color: var(--signed); }
+.tag.env { background: var(--signed-soft); color: var(--signed-ink); }
 .tag.party::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
 .tag.party.dem::before { background: #3b6fd1; }
 .tag.party.rep::before { background: #c8423a; }
@@ -120,7 +120,7 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .st small { display: block; font-weight: 400; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .st small.gap { margin-top: 3px; font-style: italic; }
 
-.detail { padding: 2px 4px 18px 134px; display: grid; gap: 12px; font-size: 14px; }
+.detail { padding: 2px 4px 18px 134px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; font-size: 14px; }
 .detail p { margin: 0; max-width: 78ch; }
 .act { font: 500 12.5px/1.4 var(--mono); color: var(--ink-2); max-width: 78ch; }
 .versions { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
@@ -846,7 +846,7 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .pg.stale { border-left-color: var(--rule); padding-top: 6px; }
 .pg.stale .pg-h { color: var(--ink-2); }
 .pg.stale .pg-h span { display: block; font-weight: 400; font-size: 11.5px; }
-.pg.stale .srow:not([aria-pressed="true"]) { opacity: .7; }
+.pg.stale .srow:not([aria-pressed="true"]) { color: var(--ink-2); }
 .pg.stale .srow .sl { font-size: 12.5px; }
 .pg.stale .srow .ss { display: none; }
 details.morefilters { margin-top: 4px; }
@@ -911,6 +911,8 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .actview .list { border-top: 1px solid var(--rule); }
 .actview .more { justify-self: start; margin-top: 4px; }
 .next .contact { overflow-wrap: anywhere; }
+/* A title with no spaces (AK's "capital/funds/supplemental/reapprop/amend") breaks anywhere rather than widen the page. */
+.bill .main { min-width: 0; overflow-wrap: anywhere; }
 .next .phone { font-family: var(--mono); font-size: 12.5px; user-select: all; }
 .next .ours { color: var(--signed); font-weight: 600; font-size: 12px; }
 .next li .ask { font-size: 13px; font-weight: 600; }
@@ -968,7 +970,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     <div class="person" id="person" hidden></div>
   </header>
 
-  <nav class="views" role="tablist" aria-label="Page sections">
+  <nav class="views" aria-label="Page sections">
     <button class="view-tab" type="button" data-view="bills">Bills</button>
     <button class="view-tab" type="button" data-view="watch">★ Watchlist<span id="watchTabCount"></span></button>
     <button class="view-tab" type="button" data-view="act">Weigh in</button>
@@ -1579,15 +1581,16 @@ function renderPipeline() {
   };
   // Bills on a committee agenda that hasn't met yet: a line under "In committee".
   const soon = DATA.current ? BILLS.filter((b) => nextMeeting(b) && matches(b, "agenda") && (state.stage == null || stageSet().includes(b.stage))).length : 0;
-  const agendaRow = soon || state.agenda ? `<button class="srow sub" type="button" data-agenda aria-pressed="${!!state.agenda}">
-       <span class="sl">On an upcoming committee agenda${TIPI(AGENDA_TIP)}</span><span class="sn">${num(soon)}</span></button>` : "";
-  const row = (k) => UNI && k === 2 ? "" : `<button class="srow" type="button" data-k="${k}" aria-pressed="${stageSet().includes(k)}">
-       <span class="sl">${TEXT.pipe[k]}${TIPI((!DATA.current && PAST_STAGE_TIPS[k]) || STAGE_TIPS[k])}</span><span class="sn">${num(counts[k])}</span>${subs[k] ? `<span class="ss">${subs[k]}</span>` : ""}</button>`;
+  const agendaRow = soon || state.agenda ? `<button class="srow sub" type="button" data-agenda aria-pressed="${!!state.agenda}"${ROW_DESC(AGENDA_TIP)}>
+       <span class="sl">On an upcoming committee agenda${TIPR(AGENDA_TIP)}</span><span class="sn">${num(soon)}</span></button>` : "";
+  const rowTip = (k) => (!DATA.current && PAST_STAGE_TIPS[k]) || STAGE_TIPS[k];
+  const row = (k) => UNI && k === 2 ? "" : `<button class="srow" type="button" data-k="${k}" aria-pressed="${stageSet().includes(k)}"${ROW_DESC(rowTip(k))}>
+       <span class="sl">${TEXT.pipe[k]}${TIPR(rowTip(k))}</span><span class="sn">${num(counts[k])}</span>${subs[k] ? `<span class="ss">${subs[k]}</span>` : ""}</button>`;
   // A group's heading selects all of its stages at once.
-  const head = (label, ks, extra = "") => {
+  const head = (label, ks, extra = "", tip = "") => {
     const key = ks.join(",");
     PIPE_GROUPS[key] = label;
-    return `<div class="pg-h pick${String(state.stage) === key ? " on" : ""}" data-g="${key}" role="button" tabindex="0" title="Show all ${esc(label.toLowerCase())} bills">${label}${extra}</div>`;
+    return `<div class="pg-h pick${String(state.stage) === key ? " on" : ""}" data-g="${key}" role="button" tabindex="0" title="Show all ${esc(label.toLowerCase())} bills"${ROW_DESC(tip)}>${label}${TIPR(tip)}${extra}</div>`;
   };
   // After the second year's last floor votes, only bills that passed both houses can still move: shown while any
   // are left (once the governor has acted on all of them, there's nothing in play).
@@ -1595,7 +1598,7 @@ function renderPipeline() {
   $("pipeline").innerHTML = floorVotesOver() ? `
     ${inPlay ? `<div class="pg live">${head("Still in play", [3, 4])}${[3, 4].map(row).join("")}</div>` : ""}
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
-    <div class="pg stale">${head("Out of time", [0, 1, 2], ` ${TIP(OUT_OF_TIME)}<span>${esc(STATE.outOfTimeLine || "Die December 31 unless lawmakers return")}</span>`)}${[0, 1, 2].map(row).join("")}</div>` : `
+    <div class="pg stale">${head("Out of time", [0, 1, 2], `<span>${esc(STATE.outOfTimeLine || "Die December 31 unless lawmakers return")}</span>`, OUT_OF_TIME)}${[0, 1, 2].map(row).join("")}</div>` : `
     ${!DATA.current ? `
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
     <div class="pg stale">${head("Died", [0, 1, 2, 3])}${[0, 1, 2, 3].map(row).join("")}</div>
@@ -1787,6 +1790,10 @@ const TIP = (text) => `<button type="button" class="tip" aria-label="What this m
 const SHELL_TIP = STATE.shellTip || "A placeholder that only makes a technical change. Leaders file these so they can later rewrite one into a real bill, often late in the session. Most are never used.";
 const shellsOut = () => (DATA.insights?.shells ? " " + (STATE.shellNote || "Shell bills (placeholders that only make a technical change) are left out unless they were rewritten into real bills.") : "");
 const TIPI = (text) => (text ? `<span class="tip" role="button" tabindex="0" aria-label="What this means" data-tip="${esc(text)}">i</span>` : "");
+// Inside a button that's itself a control (the "Where it is now" rows): the ⓘ works with a mouse or a tap, and the
+// button carries the same words as its description (ROW_DESC) for keyboards and screen readers, so no control is nested.
+const TIPR = (text) => (text ? `<span class="tip" aria-hidden="true" data-tip="${esc(text)}">i</span>` : "");
+const ROW_DESC = (text) => (text ? ` aria-description="${esc(text)}"` : "");
 const STAGE_TIPS = STATE.stageTips;
 const HELD_TIP = STATE.heldTip || "Put on a committee's agenda, then set aside without a vote: “held for consideration” in the Assembly, “tabled” in the Senate. Committees rarely vote bills down; they hold them instead.";
 const PAST_STAGE_TIPS = STATE.pastStageTips;

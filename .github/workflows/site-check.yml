@@ -1,0 +1,69 @@
+name: Check the published site
+
+# Once a day (and by hand: `gh workflow run site-check.yml`, or `-f states=wy,nj` for a few), test/site_check.js looks at
+# the live site the way a visitor's browser does: every state on the front page loads and is fresh (its "updated" time
+# under 8 hours in download.yml's quick lane, under 30 for all), its count of bills hasn't dropped more than 10% since the
+# last day's run, every tab and three bills at different stages work without script errors and without sideways scroll
+# at phone width, axe-core finds no serious or critical accessibility problems (light and dark), and the keyboard
+# reaches and works the map, the state list, the tabs, filters and bill rows. Any problem fails the run, so GitHub emails
+# the owner; the list is in the run's log and summary. It stops starting states after 70 minutes and running axe after 40
+# (a different state comes first each day, so a different set misses axe when time runs short).
+on:
+  schedule:
+    - cron: "30 11 * * *"   # after the 10:50 UTC publish and data checks
+  workflow_dispatch:
+    inputs:
+      states:
+        description: "Only these states (codes, comma-separated; empty for all)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  actions: read   # to read download.yml's job times (which states are in the quick lane)
+
+concurrency:
+  group: site-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+      # Pinned versions, installed outside the repo.
+      - name: Install the browser driver and axe-core
+        run: |
+          mkdir -p "$RUNNER_TEMP/sc"
+          cd "$RUNNER_TEMP/sc"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund puppeteer-core@25.16.0 axe-core@4.14.0
+      # Yesterday's count of bills per state, to notice a state losing bills.
+      - name: Restore the last counts
+        uses: actions/cache/restore@v4
+        with:
+          path: .site-check
+          key: site-check-counts-${{ github.run_id }}
+          restore-keys: site-check-counts-
+      - name: Check the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NODE_PATH: ${{ runner.temp }}/sc/node_modules
+          STATES: ${{ inputs.states }}
+        run: |
+          export CHROME="$(command -v google-chrome || command -v google-chrome-stable)"
+          if [ -n "$STATES" ]; then
+            node test/site_check.js --states "$STATES"
+          else
+            node test/site_check.js
+          fi
+      - name: Keep the counts for tomorrow
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .site-check
+          key: site-check-counts-${{ github.run_id }}

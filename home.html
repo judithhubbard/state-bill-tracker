@@ -16,7 +16,7 @@
 <style>
 :root {
   --paper: #f6f8fb; --sheet: #ffffff; --ink: #14213d; --ink-2: #4a5878; --rule: #d9e0ec; --navy: #1d3b78;
-  --tile-off: #e3e8f1; --tile-off-ink: #8a96ad; --hover: #c8901f;
+  --tile-off: #e3e8f1; --tile-off-ink: #56627c; --hover: #c8901f;
   --dem: #1f5bb5; --rep: #c0322a; --ind: #6b7685;
   --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -24,14 +24,14 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0;
-    --tile-off: #1b2438; --tile-off-ink: #4f5c77; --hover: #e0b04e;
+    --tile-off: #1b2438; --tile-off-ink: #8a96ae; --hover: #e0b04e;
     --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0;
-  --tile-off: #1b2438; --tile-off-ink: #4f5c77; --hover: #e0b04e;
+  --tile-off: #1b2438; --tile-off-ink: #8a96ae; --hover: #e0b04e;
   --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9;
   color-scheme: dark;
 }
@@ -149,11 +149,12 @@ function drawMap(view) {
     const label = !p ? NAMES[code] : view === "after" && next
       ? `${NAMES[code]} from January: ${next.title}${next.close ? " (some races still close)" : ""}${changed && now ? `. Now: ${now.title}` : ""}`
       : `${NAMES[code]}. ${p.title}`;
-    return `<a href="${built[code]}"${changed ? ' class="changed"' : ""} style="${style}" title="${esc(label)}" aria-label="${esc(label)}">${code}${dots}</a>`;
+    return `<a href="${built[code]}"${changed ? ' class="changed"' : ""} style="${style}" title="${esc(label)}" aria-label="${esc(`${code}, ${label}`)}">${code}${dots}</a>`;
   }).join("");
   document.getElementById("changedKey").hidden = view !== "after";
 }
 drawMap("now");
+// (The spoken label starts with the letters shown, "AK, Alaska. ...", so voice control can name the square.)
 // The switch appears only while there is an "after the election" view, and only until the new sessions begin.
 const when = document.getElementById("when");
 if (Object.keys(after).length && new Date() < new Date("2027-01-15")) {
