@@ -2,14 +2,15 @@
 """Download Michigan's bill and joint resolution status files from the Legislature's file server
 (https://www.legislature.mi.gov/documents/<session>/status/<house|senate>/xml/; see the state-survey-2026-10-31
 memory). Its Automated Data Collection Policy allows at most one request per second, so this waits a second between
-requests. Joint resolutions ("2025-HJR-A.xml", lettered) are kept for the constitutional
+requests. Then the House and Senate Fiscal Agencies' bill analyses ("What it does": `analyses()`, states/mi/texts.py),
+which never hold the state off the site. Joint resolutions ("2025-HJR-A.xml", lettered) are kept for the constitutional
 amendments they propose; other resolutions are left out. A finished session's files are read once; the current
 session's when the folder listing shows them newer.
 Usage: python3 states/mi/fetch.py   (2023-2024 and 2025-2026)
 """
-import json, os, re, sys, time, urllib.request
+import glob, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.request
 from collections import Counter
-from datetime import date
+from datetime import date, datetime
 
 SITE = "https://www.legislature.mi.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "mi"))
@@ -106,7 +107,7 @@ def main():
             if any(not os.path.exists(os.path.join(folder, n)) for n in entries):
                 incomplete.append(f"{session}:{house}")
             print(f"{session} {house}: {got} of {len(todo)} read ({len(entries)} listed)", flush=True)
-    print(f"run: {round((time.time() - START) / 60)} min" + ("; stopped at the time limit" if out_of_time() else "")
+    print(f"status files: {round((time.time() - START) / 60)} min" + ("; stopped at the time limit" if out_of_time() else "")
           + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures"), flush=True)
     # A session not yet begun (its folders not up, or only prefiled bills) never holds Michigan off the site.
     incomplete = [g for g in incomplete if begun(int(g[:4]))]
@@ -114,6 +115,128 @@ def main():
         open(marker, "w").write(" ".join(incomplete) + "\n")
     elif os.path.exists(marker) and not only:
         os.remove(marker)
+    # The marker is settled before the analyses: they never hold Michigan off the site, even if the run is cut off.
+    for start in (CURRENT, CURRENT - 2):
+        if not only or start == only:
+            analyses(start)
+    print(f"run: {round((time.time() - START) / 60)} min" + ("; stopped at the time limit" if out_of_time() else "")
+          + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures"), flush=True)
+
+
+PDFTOTEXT = shutil.which("pdftotext")
+ANALYSIS_FOLDERS = (("house", "pdf"), ("senate", "htm"))  # the House's are PDFs only; the Senate's also as Word's HTML
+
+
+def get_doc(url):
+    """One document, or None (not found: no retries; other failures: one more try)."""
+    for attempt in range(2):
+        if out_of_time():
+            return None
+        time.sleep(1)  # the Legislature's limit: one request a second
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": AGENT})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return r.read()
+        except Exception as e:
+            FAILS[f"analysis HTTP {e.code}" if hasattr(e, "code") else f"analysis {type(e).__name__}"] += 1
+            if getattr(e, "code", None) == 404:
+                return None
+            time.sleep(10)
+    return None
+
+
+def pdf_text(body):
+    """A PDF's text by pdftotext -layout (each page's footnotes and footers stay apart from the text's indented column)."""
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
+        f.write(body)
+        f.flush()
+        try:
+            out = subprocess.run([PDFTOTEXT, "-layout", f.name, "-"], capture_output=True, timeout=120)
+        except (OSError, subprocess.SubprocessError):
+            return None
+    return out.stdout.decode("utf-8", "replace") if out.returncode == 0 else None
+
+
+def analyses(start):
+    """The House and Senate Fiscal Agencies' bill analyses for one session (see states/mi/texts.py): the folder
+    listings say which exist (2025-HLA-4001-7Q3WFG05.pdf, 2025-SFA-0006-F.htm), each document is read once (again only
+    when its listing entry changes), its text saved in data/mi/<session>/analyses/<name>.txt without the fiscal impact,
+    positions and arguments, and texts_<session>.json written from them. Only documents numbered like a bill this
+    session has are read (a House number under 4000 can also be a resolution's). The newest document of each bill
+    first, so every bill gets a summary before older versions are read. Never marks Michigan incomplete: what isn't
+    read now is read on a later run."""
+    session = f"{start}-{start + 1}"
+    sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
+    from states.mi import texts as T
+    from listing_dates import same
+    folder = os.path.join(DATA, session, "analyses")
+    if not os.path.isdir(os.path.join(DATA, session)):
+        return
+    os.makedirs(folder, exist_ok=True)
+    seen_path = os.path.join(folder, "listing.json")
+    try:
+        seen = json.load(open(seen_path))
+    except (OSError, ValueError):
+        seen = {}
+    # Bill numbers this session has (HB and SB; joint resolutions' texts aren't used, see texts.py).
+    have = {re.sub(r"^\d{4}-([HS])B-(\d+)\.xml$", r"\1\2", os.path.basename(f))
+            for f in glob.glob(os.path.join(DATA, session, "*", "*-[HS]B-*.xml"))}
+    numbers = {int(k[1:]) for k in have}
+    todo, listed = [], 0
+    for house, ext in ANALYSIS_FOLDERS:
+        if ext == "pdf" and not PDFTOTEXT:
+            print(f"{session} analyses: pdftotext isn't installed; the House's not read", flush=True)
+            continue
+        if out_of_time():
+            break
+        listing = (get_doc(f"{SITE}/documents/{session}/billanalysis/{house}/{ext}/") or b"").decode("utf-8", "replace")
+        for m in re.finditer(r"(\d+/\d+/\d{4}\s+\d+:\d+ [AP]M)\s+(\d+) <A HREF=\"([^\"]*/((\d{4})-(HLA|SFA)-(\w{4})-\w+)\."
+                             + ext + r")\"", listing):
+            listed += 1
+            stamp, path, name, code = f"{m.group(1)} {m.group(2)}", m.group(3), m.group(4), m.group(7)
+            if not code.isdigit() or int(code) not in numbers:
+                continue  # joint resolutions (lettered), and resolutions numbered like no bill here
+            if int(m.group(2)) > 20_000_000:
+                continue  # budget analyses saved with their charts as pictures (27 and 48 MB): tables, no summary
+            if os.path.exists(os.path.join(folder, name + ".txt")) and same((seen.get(name) or {}).get("stamp"), stamp):
+                continue
+            if (seen.get(name) or {}).get("unreadable") and same(seen[name].get("stamp"), stamp):
+                continue
+            todo.append((m.group(1), name, code, path, ext, stamp))
+    # The newest document of each bill first, then the rest, newest first.
+    when = lambda t: datetime.strptime(" ".join(t[0].split()), "%m/%d/%Y %I:%M %p")
+    todo.sort(key=when, reverse=True)
+    first, rest, codes = [], [], set()
+    for t in todo:
+        (rest if t[2] in codes else first).append(t)
+        codes.add(t[2])
+    got = 0
+    for i, (_, name, code, path, ext, stamp) in enumerate(first + rest):
+        if out_of_time():
+            break
+        if i and i % 100 == 0:
+            print(f"{session} analyses: {i} of {len(todo)} tried, {got} read, {round((time.time() - START) / 60)} min", flush=True)
+            json.dump(seen, open(seen_path, "w"))
+        body = get_doc(SITE + path)
+        if body is None:
+            continue
+        text = pdf_text(body) if ext == "pdf" else T.htm_text(body)
+        if not text or not text.strip():
+            FAILS["unreadable analysis"] += 1
+            seen[name] = {"stamp": stamp, "unreadable": True}
+            continue
+        tmp = os.path.join(folder, name + ".tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(T.trim(text))
+        os.replace(tmp, os.path.join(folder, name + ".txt"))
+        seen[name] = {"stamp": stamp}
+        got += 1
+    json.dump(seen, open(seen_path, "w"))
+    print(f"{session} analyses: {got} of {len(todo)} read ({listed} listed)", flush=True)
+    try:
+        T.write(start)
+    except Exception as e:  # a summary that fails to parse never stops the run
+        print(f"{session} analyses: texts not written ({type(e).__name__}: {e})", flush=True)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,8 @@ reports a bill "with recommendation" and it's "referred to second reading"; a Se
 to the Committee of the Whole. A passage is "passed; given immediate effect Roll Call #4 Yeas 63 Nays 41 ...". The
 other house's line noting a passage ("PASSED BY HOUSE WITH IMMEDIATE EFFECT") isn't a vote. "Ordered enrolled" means
 both houses passed the same text; then "presented to the Governor", "approved by the Governor", "assigned PA 12'25".
-There are no summaries; votes are tallies (members' votes are only in the journals).
+Summaries ("What it does") are the Fiscal Agencies' analyses (states/mi/texts.py); votes are tallies (members' votes are
+only in the journals).
 """
 import glob, json, os, re, sys
 import xml.etree.ElementTree as ET

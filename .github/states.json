@@ -123,7 +123,7 @@
     "data/mi"
    ],
    "minutes": 50,
-   "run": "python3 states/mi/fetch.py",
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/mi/fetch.py",
    "note": "One request a second (the Legislature's limit)."
   },
   {
