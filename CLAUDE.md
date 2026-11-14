@@ -1763,7 +1763,7 @@ from that repo. **Nothing here may change it.**
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
   Until launch it writes `robots.txt` and `_headers` telling search engines not to list anything (`LAUNCHED=1`
   turns that off). Two workflows (split 2026-11-07, so nothing waits on anything else):
-  `.github/workflows/download.yml` downloads every 2 hours (each full run starts the next, two hours after it began, since GitHub's scheduler skips runs; the schedule is only a backup), each state in its own job and cache (a state's runs never
+  `.github/workflows/download.yml` downloads every 2 hours in two lanes (2026-11-14): a quick lane (states whose last three downloads each took 30 minutes or less; about half an hour a run, then publish.yml publishes) and a slow lane (first copies and crawl delays; it doesn't publish, its data goes out with the next quick publish), the lane decided at each run's start from the run history, so a state moves to the quick lane by itself; (each full run starts the next, two hours after it began, since GitHub's scheduler skips runs; the schedule is only a backup), each state in its own job and cache (a state's runs never
   overlap; states never wait for each other; a copy is saved only when something changed); its states, commands and time
   limits are in `.github/states.json`. Test one state without touching the site: `gh workflow run download.yml -f
   states=wi`. `.github/workflows/publish.yml` builds from every state's latest saved copy and deploys after each download run (a `workflow_run` trigger, not a schedule)
