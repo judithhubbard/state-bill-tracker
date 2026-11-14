@@ -1216,7 +1216,8 @@ from that repo. **Nothing here may change it.**
   data/ne/<year>/docs/) is the committee statement's "Summary of purpose" when the committee advanced the bill (about 40%
   of bills), with its "Explanation of amendments" as what the committee changed (or as the statement itself when the
   amendment replaced the bill); vote tables, testifier lists and the section-by-section part are dropped. Otherwise it's
-  the introducer's statement of intent, labelled as such (about 98% of bills have one or the other). Committee statements
+  the introducer's statement of intent, labelled as such (kept: the owner's decision 2026-11-14; about 98% of bills have
+  one or the other). Committee statements
   are re-read when the bill is placed on General File again; A bills have none. The first copy is about 2,700 PDFs (about
   3 hours at the crawl delay) and never marks the state incomplete; the summary line is the one-line title. Earlier Legislature linked by the same title (six words or more) and
   introducer, never laws or appropriations. Contacts: 49 senators with Capitol room, phone, email, photo; 14 standing
