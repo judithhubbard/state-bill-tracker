@@ -51,6 +51,9 @@ def current(state):
     frac = None if facts["override"] == "majority" else Fraction(facts["override"])  # Indiana: a majority of the members
     for chamber, seats in facts["seats"].items():
         parties = Counter(party_letter(p.get("party")) for sid, p in people.items() if sid[0] == chamber)
+        if facts.get("nonpartisan"):
+            # Elected without party labels (Nebraska): members count as "N", and no party holds the chamber.
+            parties = Counter({"N": sum(parties.values())}) if parties else Counter()
         filled = sum(parties.values())
         top, n = max(parties.items(), key=lambda x: x[1]) if parties else (None, 0)
         need = seats // 2 + 1 if frac is None else math.ceil(frac * seats)
@@ -60,13 +63,16 @@ def current(state):
             "overrideSeats": need, "override": facts["override"], "canOverride": bool(top) and n >= need,
             # A chamber run by a bipartisan coalition (Alaska's): no party controls it, whatever the seat counts say.
             **({"majority": "C", "canOverride": False} if chamber in facts.get("coalition", []) else {}),
+            **({"majority": None, "canOverride": False, "nonpartisan": True} if facts.get("nonpartisan") else {}),
         }
     majorities = {c["majority"] for c in out["chambers"].values()}
     out["unified"] = out["governor"][1] if majorities == {out["governor"][1]} else None
+    if facts.get("nonpartisan"):
+        out["nonpartisan"] = True
     return out
 
 
-PARTY_NAME = {"D": "Democrats", "R": "Republicans", "I": "independents", "O": "others"}
+PARTY_NAME = {"D": "Democrats", "R": "Republicans", "I": "independents", "O": "others", "N": "senators elected without party labels"}
 
 
 def badge(party):
@@ -80,6 +86,8 @@ def chamber_html(name, ch):
     parties = list(ch["parties"].items())
     if not parties:
         return ""
+    if ch.get("nonpartisan"):
+        return f'<span class="bp-ch" title="{name}: {ch["seats"]} members elected without party labels">{name}: nonpartisan</span>'
     lead, n = parties[0]
     rest = parties[1][1] if len(parties) > 1 else 0
     if ch["majority"] == "C":

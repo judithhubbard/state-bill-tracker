@@ -134,16 +134,21 @@ data/ky/*
 !data/ky/district_towns.json
 # Missouri downloads (states/mo/fetch.py).
 data/mo/*
+!data/mo/district_towns.json
 # Nevada downloads (states/nv/fetch.py).
 data/nv/*
 !data/nv/district_towns.json
 # West Virginia downloads (states/wv/fetch.py).
 data/wv/*
+!data/wv/district_towns.json
 # South Carolina downloads (states/sc/fetch.py).
 data/sc/*
+!data/sc/district_towns.json
 # Nebraska downloads (states/ne/fetch.py).
 data/ne/*
+!data/ne/district_towns.json
 # New Mexico downloads (states/nm/fetch.py).
 data/nm/*
+!data/nm/district_towns.json
 # Screenshots shown to the owner before a change is published (not part of the site).
 previews/

@@ -105,6 +105,10 @@ if not os.path.exists(os.path.join(HERE, "data", "in", "incomplete")):
 if not os.path.exists(os.path.join(HERE, "data", "nd", "incomplete")):
     contacts("nd", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 120)
 
+# Nebraska: two-year Legislatures starting in odd years; one house of 49 senators.
+if not os.path.exists(os.path.join(HERE, "data", "ne", "incomplete")):
+    contacts("ne", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 45)
+
 # Alaska: two-year Legislatures starting in odd years.
 if not os.path.exists(os.path.join(HERE, "data", "ak", "incomplete")):
     contacts("ak", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 55)
@@ -142,9 +146,13 @@ if not os.path.exists(os.path.join(HERE, "data", "al", "incomplete")): contacts(
 if not os.path.exists(os.path.join(HERE, "data", "ky", "incomplete")): contacts("ky", TODAY.year, 130)  # Kentucky: a session a year
 if not os.path.exists(os.path.join(HERE, "data", "ms", "incomplete")): contacts("ms", TODAY.year, 160)  # Mississippi: a session a year
 if not os.path.exists(os.path.join(HERE, "data", "de", "incomplete")): contacts("de", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 55)  # Delaware: two-year General Assemblies
+if not os.path.exists(os.path.join(HERE, "data", "sc", "incomplete")): contacts("sc", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 150)  # South Carolina: two-year General Assemblies
 if not os.path.exists(os.path.join(HERE, "data", "mn", "incomplete")): contacts("mn", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 190)  # Minnesota: two-year Legislatures
 if not os.path.exists(os.path.join(HERE, "data", "mt", "incomplete")): contacts("mt", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 140)  # Montana: two-year Legislatures, sessions in odd years
+if not os.path.exists(os.path.join(HERE, "data", "nm", "incomplete")): contacts("nm", TODAY.year, 100)  # New Mexico: a session a year
 if not os.path.exists(os.path.join(HERE, "data", "nv", "incomplete")): contacts("nv", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 55)  # Nevada: regular sessions in odd years
+if not os.path.exists(os.path.join(HERE, "data", "mo", "incomplete")): contacts("mo", TODAY.year, 180)  # Missouri: a session a year
+if not os.path.exists(os.path.join(HERE, "data", "wv", "incomplete")): contacts("wv", TODAY.year, 125)  # West Virginia: a session a year
 
 # Wyoming: a session a year.
 if not os.path.exists(os.path.join(HERE, "data", "wy", "incomplete")):

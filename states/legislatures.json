@@ -1,5 +1,5 @@
 {
- "_about": "Each legislature's fixed facts for the balance of power (balance.py): seats in each chamber (S = Senate, the state's lower-house letter otherwise), the share of each house's seats it takes to override a veto (\"majority\": more than half, as in Indiana), and the governor serving now with their party. Party seat counts aren't here: they come from each session's member list. Update `governor` when a new one takes office (also GOVERNORS in the state's profile.py); `coalition` lists chambers a bipartisan coalition runs (Alaska's: no party controls them, whatever the seat counts say); `note` says what seat counts alone don't (a bipartisan coalition running a chamber, an officially nonpartisan legislature). Checked 2026-11-07.",
+ "_about": "Each legislature's fixed facts for the balance of power (balance.py): seats in each chamber (S = Senate, the state's lower-house letter otherwise), the share of each house's seats it takes to override a veto (\"majority\": more than half, as in Indiana), and the governor serving now with their party. Party seat counts aren't here: they come from each session's member list. Update `governor` when a new one takes office (also GOVERNORS in the state's profile.py); `coalition` lists chambers a bipartisan coalition runs (Alaska's: no party controls them, whatever the seat counts say); `nonpartisan` marks a legislature elected without party labels (Nebraska's one house, L: no party counts, no dots on the front page's map); `note` says what seat counts alone don't (a bipartisan coalition running a chamber, an officially nonpartisan legislature). Checked 2026-11-07.",
  "states": {
   "ak": {"seats": {"S": 20, "H": 40}, "override": "2/3", "coalition": ["S", "H"], "governor": ["Mike Dunleavy", "R"], "note": "Bipartisan coalitions run both houses in 2025–26: in the House, 14 Democrats, 5 independents and 2 Republicans (Speaker Bryce Edgmon is an independent); in the Senate, 9 Democrats and 5 Republicans (President Gary Stevens is a Republican). Overriding a veto takes the two houses meeting together: 40 of the 60 legislators, or 45 for an appropriation bill."},
   "al": {"seats": {"S": 35, "H": 105}, "override": "majority", "governor": ["Kay Ivey", "R"], "note": "Overriding a veto takes a majority of each house's members (18 senators, 53 representatives). Kay Ivey is term-limited; a new governor takes office in January 2027."},
@@ -19,12 +19,15 @@
   "me": {"seats": {"S": 35, "H": 151}, "override": "2/3", "governor": ["Janet Mills", "D"], "note": "The House also seats two tribal representatives (the Passamaquoddy Tribe's and the Houlton Band of Maliseet Indians'), who don't vote on the floor. Overriding a veto takes two-thirds of the members present in each house."},
   "mi": {"seats": {"S": 38, "H": 110}, "override": "2/3", "governor": ["Gretchen Whitmer", "D"]},
   "mn": {"seats": {"S": 67, "H": 134}, "override": "2/3", "coalition": ["H"], "governor": ["Tim Walz", "D"], "note": "The House is tied 67–67 in 2025–26 and runs under a power-sharing agreement: Speaker Lisa Demuth is a Republican, and each committee has a Republican and a DFL co-chair. The DFL (the Democratic-Farmer-Labor Party, Minnesota's Democrats) holds the Senate 34–33. Overriding a veto takes two-thirds of each house (45 senators, 90 representatives)."},
+  "mo": {"seats": {"S": 34, "H": 163}, "override": "2/3", "governor": ["Mike Kehoe", "R"], "note": "Overriding a veto takes two-thirds of each house's members (23 senators, 109 representatives), usually at the veto session in September."},
   "ms": {"seats": {"S": 52, "H": 122}, "override": "2/3", "governor": ["Tate Reeves", "R"]},
   "mt": {"seats": {"S": 50, "H": 100}, "override": "2/3", "governor": ["Greg Gianforte", "R"], "note": "Overriding a veto takes two-thirds of the members present in each house during the session; after it adjourns, the Secretary of State polls the legislators by mail, and it takes two-thirds of each house's members. Constitutional amendments the Legislature proposes need 100 of the 150 legislators, both houses counted together."},
   "nc": {"seats": {"S": 50, "H": 120}, "override": "3/5", "governor": ["Josh Stein", "D"]},
   "nd": {"seats": {"S": 47, "H": 94}, "override": "2/3", "governor": ["Kelly Armstrong", "R"]},
+  "ne": {"seats": {"L": 49}, "override": "3/5", "nonpartisan": true, "governor": ["Jim Pillen", "R"], "note": "Nebraska's Legislature has one house of 49 senators, elected without party labels: officially nonpartisan, so no party holds it. Overriding a veto takes three-fifths of the senators, 30 of 49."},
   "nh": {"seats": {"S": 24, "H": 400}, "override": "2/3", "governor": ["Kelly Ayotte", "R"]},
   "nj": {"seats": {"S": 40, "A": 80}, "override": "2/3", "governor": ["Mikie Sherrill", "D"]},
+  "nm": {"seats": {"S": 42, "H": 70}, "override": "2/3", "governor": ["Michelle Lujan Grisham", "D"], "note": "Overriding a veto takes two-thirds of each house's members present and voting. Michelle Lujan Grisham is term-limited; a new governor takes office January 1, 2027."},
   "nv": {"seats": {"S": 21, "A": 42}, "override": "2/3", "governor": ["Joe Lombardo", "R"], "note": "Overriding a veto takes two-thirds of each house (14 senators, 28 Assembly members). A bill vetoed after the session goes back to the next regular session (the Legislature meets in odd years), which can override it then."},
   "ny": {"seats": {"S": 63, "A": 150}, "override": "2/3", "governor": ["Kathy Hochul", "D"]},
   "oh": {"seats": {"S": 33, "H": 99}, "override": "3/5", "governor": ["Mike DeWine", "R"]},
@@ -32,6 +35,7 @@
   "or": {"seats": {"S": 30, "H": 60}, "override": "2/3", "governor": ["Tina Kotek", "D"]},
   "pa": {"seats": {"S": 50, "H": 203}, "override": "2/3", "governor": ["Josh Shapiro", "D"]},
   "ri": {"seats": {"S": 38, "H": 75}, "override": "3/5", "governor": ["Dan McKee", "D"], "note": "Overriding a veto takes three-fifths of the members present and voting in each house."},
+  "sc": {"seats": {"S": 46, "H": 124}, "override": "2/3", "governor": ["Henry McMaster", "R"], "note": "Overriding a veto takes two-thirds of the members present and voting in each house. Henry McMaster is term-limited; a new governor takes office in January 2027."},
   "sd": {"seats": {"S": 35, "H": 70}, "override": "2/3", "governor": ["Larry Rhoden", "R"]},
   "tn": {"seats": {"S": 33, "H": 99}, "override": "majority", "governor": ["Bill Lee", "R"]},
   "tx": {"seats": {"S": 31, "H": 150}, "override": "2/3", "governor": ["Greg Abbott", "R"]},
@@ -40,6 +44,7 @@
   "vt": {"seats": {"S": 30, "H": 150}, "override": "2/3", "governor": ["Phil Scott", "R"], "note": "Overriding a veto takes two-thirds of the members present in each house. Progressives who also run as Democrats are counted with the Democrats."},
   "wa": {"seats": {"S": 49, "H": 98}, "override": "2/3", "governor": ["Bob Ferguson", "D"]},
   "wi": {"seats": {"S": 33, "A": 99}, "override": "2/3", "governor": ["Tony Evers", "D"]},
+  "wv": {"seats": {"S": 34, "H": 100}, "override": "majority", "governor": ["Patrick Morrisey", "R"], "note": "Overriding a veto takes a majority of each house's members (18 senators, 51 delegates), two-thirds for the budget and supplementary appropriation bills; a veto after the session ends stands."},
   "wy": {"seats": {"S": 31, "H": 62}, "override": "2/3", "governor": ["Mark Gordon", "R"]}
  }
 }

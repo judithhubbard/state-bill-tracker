@@ -34,8 +34,8 @@ year's once the site lists it, for bills prefiled in December), into data/nm/<ye
   TblActions (the action codes), BillSubs (substitutes), FloorActions (the order of business, with tallies and absent
   and excused names) and LegStats (the session's totals by party: passed, chapters, vetoes, pocket vetoes). It has no
   member-by-member votes. The site's own database: it's posted now and then (LegInfo26.zip on 4/29/2026, the day of
-  the site's last database update); read when its listing changes. Reading it needs mdbtools (mdb-export; on Ubuntu
-  `apt-get install mdbtools`) in the converter, not here.
+  the site's last database update); read when its listing changes. The converter doesn't read it (the pages carry
+  everything shown); it was used once, by hand, to check the session totals.
 - members.txt: the session's legislators (/Sessions/25%20Regular/Legislator%20Information/
   LegislatorsCommaDelimitedforMerging.txt: last name, first name, party, counties, district, mailing address, Capitol
   room, phone, email, "R"/"S"), read when its listing changes.

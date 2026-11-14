@@ -7,10 +7,11 @@ FAIL: a trap is present (exit status 1). LOOK: numbers or examples to read over 
 Usage: python3 test/data_check.py [state ...]   (default: every state with data; New York's own data isn't checked)
 """
 import collections, glob, importlib, json, os, re, sys
+from datetime import date, timedelta
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ky", "ma", "md", "me", "mi", "mn", "ms", "mt", "nc", "nd", "nh", "nj", "nv", "oh", "ok", "or", "pa", "ri", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ky", "ma", "md", "me", "mi", "mn", "mo", "ms", "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -61,6 +62,12 @@ def check(state):
         if undone:
             say(state, "FAIL" if len(undone) > 0.005 * len(recs) else "LOOK",
                 f"{s}: {len(undone)} bills passed by one house that then died in that house (a passage undone?), e.g. {undone[:4]}")
+        # A record whose kind disagrees with its title: SC's bill search lists S 729 of 2025-26 ("A CONCURRENT RESOLUTION TO
+        # REQUEST ...") as a General Bill. Resolutions are left out (other than constitutional amendments): decide by the title.
+        resol = [r["nums"][0] for r in recs if "const" not in r["topics"] and
+                 re.match(r"^\W*(?:an? )?(?:senate |house |assembly )?(?:concurrent )?resolution\b", r["summary"] or "", re.I)]
+        if resol:
+            say(state, "FAIL" if len(resol) > 0.005 * len(recs) else "LOOK", f"{s}: {len(resol)} records whose title says they're resolutions, e.g. {resol[:4]}")
         # The 4th key date is New York's alone (return to committee in a new year).
         if state != "ny" and any(r["keyDates"][3] for r in recs):
             say(state, "FAIL", f"{s}: the 4th key date (New York's return to committee) is filled in")
@@ -124,6 +131,16 @@ def check(state):
         if stray:
             say(state, "FAIL" if len(set(stray)) > 0.005 * len(recs) else "LOOK",
                 f"{s}: {len(stray)} history lines dated years from the session, e.g. {sorted(set(stray))[:4]}")
+        # A record left over from an earlier session: MO's House exports file the previous year's budget bills under each
+        # new year with nothing but the governor's spending restrictions, dated before the session ("Message Received from
+        # the Governor, pursuant to Article IV, Section 27", 12/27/2023 in 2024's folder). In a finished session, a bill
+        # whose whole history comes before the session's first year is a stray (or a prefiled bill never introduced).
+        import datetime as _dt
+        if s + years - 1 < _dt.date.today().year:
+            before = [r["nums"][0] for r in recs if all(str(d)[:4].isdigit() and int(str(d)[:4]) < s for v in r["vers"] for d, _ in v["actions"] if d)
+                      and any(d for v in r["vers"] for d, _ in v["actions"])]
+            if before:
+                say(state, "LOOK", f"{s}: {len(before)} bills whose whole history comes before the session (left over from an earlier one?), e.g. {before[:4]}")
         after = [r["nums"][0] for r in recs for v in r["vers"] for i, (d, t) in enumerate(v["actions"])
                  if t == "DELIVERED TO GOVERNOR" and any(d2 == d and re.match(r"PASSED|PLACED ON FLOOR|REFERRED", t2) for d2, t2 in v["actions"][i + 1:])]
         if after:
@@ -142,6 +159,13 @@ def check(state):
         if few:
             say(state, "FAIL" if len(few) > 0.01 * sum(len(r["votes"]) for r in recs) else "LOOK",
                 f"{s}: {len(few)} votes list fewer noes than their tally, e.g. {few[:4]}")
+        # Two names in one roll call tied to the same seat: a surname that meant different members over the session (NE's
+        # "Meyer": Glen Meyer until January 2026, then "Meyer, F." and "Meyer, G." for two members).
+        dup = [r["nums"][0] for r in recs for v in r["votes"]
+               if (ids := [m for m, _ in v[6] if isinstance(m, str) and "?" not in m]) and len(ids) != len(set(ids))]
+        if dup:
+            say(state, "FAIL" if len(dup) > 0.005 * sum(len(r["votes"]) for r in recs) else "LOOK",
+                f"{s}: {len(dup)} votes name one seat twice (a surname tied to the wrong member?), e.g. {dup[:4]}")
         # Votes put in the wrong house: more ayes and noes than the house has seats (ID's history lines don't name the
         # house, so the converter follows the bill from house to house; WY's roll calls sometimes name the wrong one).
         seats = LEGISLATURES.get(state, {}).get("seats", {})
@@ -207,6 +231,21 @@ def check(state):
         share = 100 * len(loose) / len(who)
         say(state, "FAIL" if share > 10 else "LOOK", f"{cur}: {share:.1f}% of named votes aren't tied to a seat "
             f"(former members are expected), e.g. {collections.Counter(loose).most_common(3)}")
+
+    # A member still voting at the session's end but not tied to a seat: a member list giving someone's district in the office
+    # they hold now (SC's lists put Wes Climer, now in Congress, in Senate District "5", shared with Tom Corbin; his seat, 15,
+    # looked vacant). Names voting (other than yes) in the house's last four months of roll calls that aren't seats.
+    lastday = {}
+    for r in loaded[cur]:
+        for v in r["votes"]:
+            if v[1] == "F":
+                lastday[v[0]] = max(lastday.get(v[0], ""), v[3])
+    late = collections.Counter(m for r in loaded[cur] for v in r["votes"] if v[1] == "F" and lastday.get(v[0]) and
+                               v[3] >= (date.fromisoformat(lastday[v[0]]) - timedelta(days=120)).isoformat()
+                               for m, _ in v[6] if isinstance(m, str) and "?" in m)
+    if late:
+        say(state, "LOOK", f"{cur}: {len(late)} names voting in the last four months of roll calls aren't tied to a seat "
+                           f"(a member list's district wrong?), e.g. {late.most_common(3)}")
 
     # "What it does" says where it's from, as a sentence: "From the Legislative Reference Bureau's synopsis."
     for path in sorted(glob.glob(os.path.join(P.DATA, "texts_*.json")))[-1:]:

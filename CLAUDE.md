@@ -984,6 +984,288 @@ from that repo. **Nothing here may change it.**
   item vetoes on appropriations; override two-thirds. The governor's phone ((651) 201-3400) and address are from general
   knowledge: mn.gov's contact page doesn't answer automated readers; not checked by the owner. If a new governor takes office
   January 4, 2027, add them to `GOVERNORS` and legislatures.json.
+- **Missouri (built 2026-11-13):** `python3 states/mo/fetch.py` reads the
+  House's XML exports (documents.house.mo.gov, Crawl-delay 20; house.mo.gov bars "?" addresses and isn't read) and the
+  Senate's website (see its docstring) into data/mo/<year>/; `python3 states/mo/contacts.py` (add it to states.json's run
+  after fetch.py) builds the contacts; `states/mo/towns.py` was run once. A page a year (`YEARS = 1`): the session opens the
+  first Wednesday after the first Monday of January, no bill passes after 6 p.m. on the first Friday after the second
+  Monday in May (`lastBillDay()`, `sessionEnds()`), it ends May 30; the veto session is the first Wednesday after the second
+  Monday in September (`vetoSession()`). Extraordinary sessions, concurrent and simple resolutions are left out. House bills
+  (HB, HJR) come from the House's export, which carries every action in both houses with committee and floor tallies;
+  Senate bills (SB, SJR) from the Senate's bill page and "All Actions" list (newest first, no tallies; the House's tallies on
+  Senate bills only when the bill is in its SenateActList.xml, about half). Trap: each year's House folder also holds the
+  previous year's appropriation bills under their old numbers (2024's HB 1-20 are 2023's budget bills) with nothing but
+  "Message Received from the Governor, pursuant to Article IV, Section 27" (spending restrictions, not vetoes): `stub()`
+  skips them, and the line is kept as written elsewhere. `states/mo/convert.py` (`walk_house_xml()`, `walk_senate_page()`
+  into one `Walk`): House bills go from a standing committee to one of the House's Rules committees ("Rules -
+  Administrative", "- Legislative", "- Regulatory Oversight"), which votes again; bills that cost money to Fiscal Review
+  (House) / Fiscal Oversight (Senate): all shown as committees, the first standing committee is `firstComms`. "Voted Do
+  Pass" lines are skipped (the "Reported Do Pass" report follows, with the House committee's tally); "Perfected" is the
+  first floor vote (voice), "Third Read and Passed" the passage; "House Adopts" / "S concurs" agree to the other house's
+  changes (the House's tally then is its repassage), conference reports need both houses; "Truly Agreed To and Finally
+  Passed" is passed both houses (it happens only after the last vote; 0 bills passed both and weren't sent). A bill combined
+  into another (a House file's SubstitutedBy, the Senate's "Bill Combined w/SCS SBs 3 & 5": lead is the first number) gets
+  "Combined into HB 594" and stops. Governor: "Approved by Governor" / "Signed by Governor" (law), "Vetoed in Part by
+  Governor" (a law with items vetoed: the 12 budget bills each year), "Governor took no action, sent to Secretary of
+  State/Article III, Sec. 31" (law without signature: SB 751 of 2024), "Letter of approval" (kept as written), "Failed to
+  Pass over Veto" (an item-veto override that failed). No bill was vetoed outright in 2024-2026 ("Vetoed" lines are read
+  but none exist). Laws match the Senate's "Truly Agreed To and Finally Passed" lists (BillStatus/TATFP?year=) bill for bill
+  (checked 2026-11-13): 2024 44 (29 HB, 15 SB), 2025 64 (37, 27; the governor's 2025 action list agrees), 2026 96 (58, 38).
+  Constitutional amendments are joint resolutions: a majority of each house's members, then the voters at the next general
+  election or a special election the governor calls (`amendmentOnce`, `ballotEvenYears`, `ballotLine()`); never the
+  governor ("Delivered to Secretary of State"): 2024 SJR 71, SJR 78; 2025 HJR 23, HJR 73; 2026 HJR 173, SJR 87, SJR 95.
+  Votes: senators member by member from the Senate Journal's text (`senate_rolls()`: "was read the 3rd time and passed by
+  the following vote", the bill from the last abbreviated reference before it, "HBs 737 and 486"; conference reports and
+  concurrences found too), matched to the passage by day and bill: 313 of 317 Senate passages (2024 61 of 64, 2025 106 of
+  107, 2026 all 146; the rest are on journal days not downloaded, 2024-04-17 and 2025-04-22); every list adds up to the
+  journal's printed totals. Names are "Brown (16)" (district) or a surname matched to the year's roster (Senate bill list
+  sponsors with districts, the House's conferee entries with district 200+n, today's senators); 2024's journals write "Brown
+  (16th Dist.)" and sometimes run two names together with one space ("Bernskoetter Brattin", `senate_seats()`). House
+  journals and House roll-call PDFs aren't downloaded: House floor votes are tallies (none for most Senate bills). Committee
+  tallies are the House's. "What it does" is the Senate's bill summary of a Senate bill's current version ("From the Missouri
+  Senate's summary of the bill's current version (SS SCS SB 3)."): cross-references ("These provisions are identical to
+  ...") and the analyst's name dropped, capitals headings in sentence case, "Current law ..." openings led by the "This act"
+  sentence; House bills have none (the House's summaries, house/summaries/, weren't downloaded yet: about a third of laws
+  have a summary). Titles: the official one-line description ("Modifies provisions relating to county officials"); the short
+  title ("COUNTY OFFICIALS", House bills) as the summary line. Topics from committees (`COMMITTEE_TOPICS`), the House's subject
+  index (`SUBJECT_TOPICS`) and title words. Earlier years linked by the same description and sponsor (one bill each),
+  never laws or appropriations. Contacts: representatives from each year's member files (emails, Capitol phones, leadership;
+  past years' files have no phones or emails), senators from members/senate.json (today's: the "Email the Senator" contact
+  form, no emails; past senators who left are names only, without party); House committees from CommitteeList.xml, Senate's
+  from committees.json. Leaders: Speaker Jonathan Patterson, President Pro Tem Cindy O'Laughlin (the General Assembly
+  elected in November 2026 organizes in January 2027). Governor Mike Kehoe (R, since January 13, 2025; before him Mike
+  Parson): 15 days, or 45 days from May 30 for bills delivered at the end (`govDeadline()`), else law without signature;
+  item vetoes on appropriations; override two-thirds of each house's members (23, 109). The governor's phone and contact
+  page are from governor.mo.gov/contact-us (checked by program 2026-11-13, not by the owner). Places (`towns.py`): cities,
+  towns, villages, Census-designated places and counties, separate Senate (34) and House (163) lists; St. Louis city once.
+- **New Mexico (built 2026-11-13):** `python3 states/nm/fetch.py`
+  reads www.nmlegis.gov (see its docstring) into data/nm/<year>/; `python3 states/nm/contacts.py` (every run; add it to
+  states.json's run after fetch.py: check_site.py wants contacts_<year>.json fresh) builds the contacts; `states/nm/towns.py`
+  was run once. A page a year (`YEARS = 1`): a session from the third Tuesday of January, 60 days in odd years and 30 in even
+  years (only the budget, the governor's call and vetoed bills), `session_kind()` "long"/"short"; `opens()`/`sessionEnds()`
+  in profile.js compute both (no `dated`). Special sessions, memorials and joint resolutions other than constitutional
+  amendments are left out. The converter reads no database: the Access file (LegInfo<yy>.zip) isn't needed (it was read
+  once, by hand, with the pure-Python `access-parser` in a scratch environment, to check totals; it fails on LegInfo25), so
+  nothing beyond Python's standard library is needed on GitHub. `states/nm/convert.py` reads each bill page's spelled-out
+  actions (with calendar days) and, where they're short, the coded ActionText ("[5] HHHC/HJC-HHHC [8] DP-HJC ... SGND BY GOV
+  (Mar. 21) Ch. 13."; key in data/nm/abbreviations.html): "Sent to HHHC - Referrals: HHHC/HJC" lists the committees in order,
+  and there's no line when the bill moves on, so the referral list is followed (a report sends it to the next committee, the
+  last one's to the floor; "Referred to:", "re-ref", "HAFC ref w/drn", "SCC referral removed" change it); "Withdrawn from
+  committee ... for subsequent action" goes to the floor or the committee the ActionText's "w/drn-HTRC" names. Committee
+  reports: "Do Pass", "Do Not Pass but ... Do Pass ... on Committee Substitution", "without a recommendation", "Do Not Pass,
+  Bill Has Died", "Tabled Indefinitely". In 30-day sessions the Senate Committees' Committee (SCC = SXCC) rules each Senate
+  bill germane first ("Reported by committee to fall within the purview of a 30 day session"); "Not Printed" ("not prntd-HRC")
+  bills go to House Rules (HRC = HXRC): both are `STATE.gates`. "Passed in the House of Representatives - Y:64 N:0" is the
+  passage; "Failed to Pass in the Senate, Bill Has Died" takes its tally from the ActionText. Second-house amendments (its
+  committee's amendments or substitute, "Senate Floor Amendment", "fl/aaaa", "Floor substitute adopted") need "House has
+  concurred", the other house receding, or both houses' "Report Adopted" (conference). The governor's lines have no calendar
+  day: "Signed by Governor - Chapter 13 - Mar. 21", "LAW WITHOUT SIGNATURE." (day and chapter from the ActionText),
+  "Vetoed by Governor" (dated from the governor's message), "Pocket Veto" (dated the governor's last day, 20 days after the
+  session), "(partial veto)" in the ActionText (line items), "Veto Override Passed in House" (HB 65 of 2025: the Senate never
+  voted, the veto stands). Chapters come from the ActionText: the spelled-out line is wrong twice (below). "Succeeding
+  entries: H 2": folded into HB 2 (HB 3 each year). "Action Postponed Indefinitely": the session ended. Totals match the
+  pages' "Current Location" bill for bill and the Legislature's own counts: 2024 69 laws, 1 veto, 2 pocket vetoes (LegStats:
+  69 chapters, 1 veto, 72 to the governor), line items on HB 2, HB 252, HB 308, SB 246, SB 275; 2025 160 laws, 18 vetoes, 17
+  pocket vetoes (the Legislature's and the press's count; LegStats unreadable), line items on HB 2, HB 450, SB 5, SB 31, SB
+  425; 2026 71 laws, 2 vetoes, 1 pocket veto (LegStats the same), line items on HB 2, HB 332, SB 240, SB 273. Chapters run
+  1-N with none missing or repeated. No law without signature but SB 104 of 2026. Constitutional amendments are joint
+  resolutions whose short title ends ", CA": a majority of each house's members, then the voters (`amendmentOnce`,
+  `ballotEvenYears`); "Signed by one or both houses ... SGND (C.A. 3)" is passed (2024 SJR 1, SJR 16; 2025 HJR 2; 2026 HJR 1,
+  HJR 5, SJR 1), tagged "const", stage 3, never the governor. Votes: floor votes member by member from the vote PDFs' text
+  (`read_roll()`: two columns of names, each X placed under its nearest column heading; YEA/NAY/PNV/EXC/ABSENT, Senate
+  YES/NO/ABS/EXC/REC; file names vary, "HJR01HSVOTE", "SJR0016SVOTE", so the house comes from the text), matched to the
+  passage lines by house and tally: 173 of 174 (2024), 509 of 511, 200 of 203 (the rest have a later or earlier roll call
+  than the one PDF). Committee votes from the committee reports ("The roll call vote was 9 For 1 Against"; House reports name
+  the no, excused and absent members, Senate reports the yes votes too) and the tabling reports ("Motion to TABLE PASSED":
+  shown as the committee's vote against the bill, with a "Tabled by" line): 476, 1,413, 494. Names are matched to that year's
+  members.txt within the vote's house, whose third column is the roll calls' tag ("Martinez, A.", "Romero, GA"); members who
+  served that year but aren't on it (2024 lacks four senators; Herrera, Ferrary, Reeb left in 2026) come from their own pages
+  (members/<code>.html, "Years of Service"); a member whose seat someone else now holds, or (this year's page) who no longer
+  serves, is named ("H?Herrera"), not given the seat; all other names match. "What it does" is the Legislative Finance
+  Committee's fiscal impact report synopsis ("From the Legislative Finance Committee's fiscal impact report."): the bill's
+  (or its newest committee substitute's), then later amendments' (the report lists them newest first), page footers dropped
+  and paragraphs split by page breaks rejoined; 62%, 89% and 67% of bills have one (2024-26). Titles are the short titles in title case
+  (each word as the reports' "SHORT TITLE" writes it). Topics from committees (`COMMITTEE_TOPICS`), else title and synopsis
+  words. Earlier years linked by the same short title and prime sponsor code, one bill each year, never laws or
+  appropriations. Contacts: each year's members.txt (Capitol room and (505) 986 phone, several shared; email), names and
+  pages from the members' pages, committees with chairs from committees.json; this year's page lists only members serving
+  now (House 37 and 64 vacant). Leaders: Speaker Javier Martínez, President Pro Tempore Mimi Stewart (the Lieutenant
+  Governor presides over the Senate); the Legislature elected in November 2026 organizes in January 2027: update `LEADERS`.
+  Governor Michelle Lujan Grisham (D), term-limited: a new governor takes office January 1, 2027: add them to `GOVERNORS` and
+  legislatures.json. Governor 3 days (Sundays excepted) in session, else law without signature; 20 days after adjournment
+  for bills passed in its last 3 days, then a pocket veto (`govDeadline()`); override two-thirds. The governor's phone,
+  address and contact page are from governor.state.nm.us/contact-the-governor/ (checked by program 2026-11-13, not by the
+  owner). Places (`towns.py`): cities, towns, villages, Census-designated places and counties, separate Senate (42) and
+  House (70) lists.
+- **West Virginia (built 2026-11-13):** `python3 states/wv/fetch.py` reads the Legislature's bill status pages on
+  www.wvlegislature.gov (no API; see its docstring) into data/wv/<year>/; `python3 states/wv/contacts.py` (every year; add
+  it to states.json's run after fetch.py) builds the contacts; `states/wv/towns.py` was run once. A page a year
+  (`YEARS = 1`): one 60-day regular session from the second Wednesday of January, or of February in a year a governor is
+  inaugurated (2025, 2029; `opens()`, `sessionEnds()` = day 60 in profile.js, `STATE.dated` for each year's last day).
+  Special sessions are left out. The lower house is the House of Delegates (`LOWER = "H"`, "Del."). Bills (HB, SB) and
+  the joint resolutions (HJR, SJR), which are the constitutional amendments: tagged "const", two-thirds of each house's
+  members, then the voters (`amendmentOnce`, `ballotEvenYears`), never the governor (2024 HJR 28 and 2026 SJR 9 passed;
+  "Completed legislative action" decides). `states/wv/convert.py` reads each bill's history page (newest first: sorted by
+  day, the page's order kept within a day): "To Health and Human Resources then Judiciary" (the plan) plus "To House Health
+  and Human Resources" (the referral: the same committee twice); since 2025 the House's committees send bills to their
+  subcommittees ("To House Courts", then back "To House Judiciary": `SUBCOMMITTEES`, shown as a step, not a referral);
+  reports "Do pass" / "By substitute, do pass" / "Reported do pass" / "Committee substitute reported", "..., but first to
+  Finance" (a second committee), "2nd reference dispensed"; "Reported in Com. Sub. for S. B. 50" folds the bill into
+  another's substitute (`STATE.endedNote()`, with floor defeats "House rejected" and withdrawals); "Passed House (Roll No.
+  93)", "Adopted by Senate"; "Senate requests House to concur" (it changed the bill, or the effective date), "House
+  concurred in Senate amendment and passed bill", "... with amendment, passed bill" (changed again), conference reports.
+  "Effective from passage (Roll No. 94)" is a separate two-thirds vote on the effective date, not the passage.
+  "Completed legislative action" is passed both houses (the completed list agrees bill for bill). A bill both houses
+  passed whose last step is one house asking the other to concur reads "In the House, to agree to the Senate's changes"
+  (`passedIn` is the house that changed it). The governor's lines appear once per house, the journal copies ("... - House
+  Journal") dated days off: the date written in the line decides and the copies are dropped. Laws and vetoes match the
+  governor's lists (signed, became law without signature, vetoed) and the completed list bill for bill (`python3 -m
+  states.wv.convert`): 2024 271 laws (2 without signature), 8 vetoes, line-item vetoes on SB 200 (the budget); 2025 243
+  laws (10 without signature), 6 vetoes standing, line items on HB 2026; 2026 294 laws (10 without signature), 12 vetoes,
+  line items on SB 250. Chapters run 1-N with none missing or repeated. SB 369 of 2025 was vetoed during the session,
+  amended "to meet the objections of the Governor", passed again by both houses and signed (a law; no veto key date, so
+  statistics don't count it as overridden). No veto was overridden in 2024-26; most vetoes come after the session ends,
+  and stand. Crossover: the 50th day is the last for a bill to pass its own house, except budget, supplementary
+  appropriation and expiring-funds bills (`budget`; `STATE.originDeadline`, checked against 2024-26's votes). Members'
+  votes: every passage and repassage roll call member by member from the PDFs' text (House: names under YEAS/NAYS/NOT
+  VOTING/EXCUSED; Senate: a Y/N/A/E letter before each surname in capitals, "MR PRESIDENT" as `P.PRESIDENTS[year]`),
+  found by house and roll number (votes/house/00093.txt, votes/senate/MM-DD-0019.txt); 2,929 of 2,930 found, every name list
+  adding up to its tally. Names are tied to today's members within the house for the current Legislature (2025-26: 87% and
+  95% of noes, absences and excusals tied; the rest are members who left, Kump, Pritt, Linville and Flanigan among them,
+  who voted through the 2026 session and are off the roster); for 2024 only names that also vote in 2025 (66%), so a
+  new member sharing a departed one's surname isn't credited with the old votes. Two current members sharing a surname
+  that the rolls once wrote bare: `BARE` (Sen. M. Maynard, Del. B. Ward). A name's initial must match the member's (2024-25's
+  "Clark, T" isn't today's only Clark, W.), and a seat two names in one roll call claim is left as names. Seats: "H:62"; "S:5a"/"S:5b" (17 Senate districts
+  of two senators, lettered by surname). Sponsors are surnames ("Smith, D.", "Hanshaw (Mr. Speaker)"), tied to today's
+  members the same way; others stay as surnames. "What it does" is the drafter's note in the bill's text ("The purpose of
+  this bill is ..."), from the newest version that has one ("From the drafter's note in the committee substitute." / "in
+  the bill." / "in the bill as introduced." when a later substitute dropped it), cut at a sentence after 3,000 characters
+  (HB 4273 of 2024's runs to 45,000); 95-99% of bills have one. Titles are the short titles; the summary is the official
+  title's "relating to" clause. Topics from committees (`COMMITTEE_TOPICS`) and the Legislature's subjects
+  (`SUBJECT_TOPICS`). About a third of each year's bills authorize agencies' rules ("DEP rule relating to ...",
+  "Authorizing ... to promulgate legislative rules"), many folded into one bill per department: kept, but never linked
+  across years. Earlier years linked by the same short title and lead sponsor, or the same drafter's note word for word,
+  one bill each year, never laws, budget or rule bills (checked 25 by hand: 23 the same bill, 2 the same proposal by
+  another sponsor). Contacts: the rosters and member pages (party, district, Capitol office and phone, email, post,
+  committees), committees with chairs and vice chairs (the Senate's Confirmations, Enrolled Bills and Interstate
+  Cooperation left out); six delegates share three office phones in pairs. Leaders: Speaker Roger Hanshaw, Senate President
+  Randy Smith (2024: Craig Blair); the House and half the Senate elected in November 2026 organize in January 2027.
+  Governor Patrick Morrisey (R) since January 2025 (Jim Justice before): 5 days (Sundays excepted) in session, 15 days
+  (Sundays excepted) after adjournment (the vetoes' dates fit); line-item vetoes and reductions on appropriations; override
+  by a majority of each house's members (two-thirds for budget and supplementary appropriation bills). The governor's phone
+  ((304) 558-2000, toll-free (888) 438-2731), address and contact form (wv.accessgov.com) are from governor.wv.gov's footer
+  (checked by program 2026-11-13, not by the owner). Places (`towns.py`): cities, towns, villages, Census-designated places
+  and counties, separate Senate (17) and House (100) lists.
+- **Nebraska (built 2026-11-13):** `python3 states/ne/fetch.py` reads
+  nebraskalegislature.gov's pages (see its docstring; Crawl-delay 3) into data/ne/<first year>/; `python3
+  states/ne/contacts.py` (add it to states.json's run after fetch.py) builds the contacts; `states/ne/towns.py` was run once.
+  A page per two-year Legislature (`YEARS = 2`; the 109th is 2025-26): a 90-day session in the odd year (to early June) and a
+  60-day one in the even year (to mid-April), each from the first Wednesday after the first Monday of January; bills carry
+  over, and every bill still pending on the second session's last day is indefinitely postponed (`P.LAST_DAY` and
+  `STATE.dated` hold each session's last day: add each new one). **One house:** the shared code's houses are one letter,
+  "L" (`P.LOWER`, bills "LB 7", seats "L:12", "Sen."), `STATE.houses = { L: "Legislature" }`; tracker.html's `UNI` (one
+  entry in `STATE.houses`) leaves out stage 2 ("passed one house": never used), the pipeline row, the second chamber in
+  progress filters, the odds chart's step (`L3`), the month row, persistence and person-stats rows, the house choices in
+  "Who works on what/with whom", the committees' second column, and words "Passed both houses" as `STATE.passedBothText`
+  ("Passed the Legislature", `PASSED_BOTH`). A passed bill carries `passedS` and `passedA` both (data_check's "both houses"
+  test). **Nonpartisan:** no party anywhere (contacts' party is empty; `C.parties()` is {}); `STATE.nonpartisan` (`NOPARTY`)
+  hides the party filter, the party statistics and keys; states/legislatures.json `"nonpartisan": true` makes balance.py
+  count members as "N" with no majority ("Legislature: nonpartisan" and the note in the header) and front_page.py give a
+  neutral ring (home.html `.dot.N`, legend "Nonpartisan"). The governor is partisan (Jim Pillen, R). `states/ne/convert.py`
+  reads each bill's history (oldest first after reversing the page): referral; "Notice of hearing" (every bill is heard);
+  "Placed on General File [with AM..]" = the committee advanced it; General File, Select File and Final Reading are the
+  three floor rounds (`statusDesc` "On the floor (Select File)"); "Passed on Final Reading 47-0-2" the passage ("with
+  Emergency Clause" needs 33); "Presented to Governor on ...", "Approved by Governor [with line-item veto] on ...", "Returned
+  by Governor without approval" (veto), "Became law without Governor's signature", "Failed to become law notwithstanding the
+  objections ..." (override failed; 30 votes). Governor's lines are listed days late: their own wording dates them. Numbered
+  motions ("Hunt MO506 Bracket until ... filed", then "MO506 prevailed") are read by their filed description: bracket and
+  indefinite postponement kill, recommit sends back, cloture (33 votes) ends a filibuster; amendments' filed/withdrawn lines
+  are dropped, adopted/lost kept. "Indefinitely postponed" on the Legislature's last day is "Died when the Legislature
+  adjourned"; earlier, in committee it's a committee kill, on the floor a floor kill, except that at the end of each first
+  session the bills whose text already went into another are postponed in a batch (148 in 2023, 46 in 2025): their line
+  says so. "Provisions/portions of LB80 amended into LB814 by AM915" is on both bills: the source gets "Its provisions were
+  amended into LB 814 (it became law)" and `STATE.endedNote()` shows "Amended into LB 814"; the host gets one line listing
+  them. Priority designations ("Ballard priority bill", committee, "Speaker priority bill", "Speaker Major Proposal") are
+  history lines; `STATE.rowTags()` (a shared hook) tags the row "Priority bill". "X name added" lines are the co-sponsors.
+  **A bills** ("LB 304A", the appropriation for LB 304) are shown, marked `shell` (left out of the statistics and
+  legislators' numbers, tagged "A bill": `STATE.shellTag`, `shellTip`, `shellNote`). Constitutional amendments are "LR 19CA"
+  resolutions: three-fifths (30) on Final Reading, then the voters ("Presented to Secretary of State"), tagged "const",
+  stage 3 (`amendmentOnce`; 2025's LR 19CA, term limits). Votes: every vote file linked from a bill's own steps, member by
+  member: General File and Select File advances, Final Reading, cloture on the bill, override (labelled by round in the
+  vote's committee slot; `STATE.voteWhat` names it); amendments' votes left out; roll-call names are surnames ("Cavanaugh,
+  J."; a trailing "*" dropped), tied to current senators only (`VOTE_NAME_FIX`: plain "Meyer" is Fred Meyer in 2023-24,
+  Glen Meyer in 2025 until Fred Meyer came back in January 2026). Totals match the Clerk's final worksheets bill for bill
+  (`python3 -m states.ne.convert`, `checks()`): 108th 250 laws (67 A bills; LB 20 and LB 20A without signature; LB 818
+  line-item veto; LB 814, the budget, line-item veto partly overridden), 2 vetoes standing (LB 25, LB 307; the override of
+  LB 307 failed 27-20); 109th 364 laws (44 A bills; LB 1237 and LB 1237A without signature), 7 vetoes (LB 287, 319, 839,
+  878, 929, 1029, 1256; every override failed), LR 19CA to the voters. Topics from the referral committee
+  (`COMMITTEE_TOPICS`) and title words. No "What it does": the statement of intent and committee statement are PDFs (not
+  downloaded); the summary is the one-line title. Earlier Legislature linked by the same title (six words or more) and
+  introducer, never laws or appropriations. Contacts: 49 senators with Capitol room, phone, email, photo; 14 standing
+  committees and the Executive Board with chairs and vice chairs (meeting days shortened by `meets()`); Speaker John Arch
+  (`LEADERS`; the 110th Legislature elects its own in January 2027). A past Legislature's contacts are current senators who
+  introduced bills in it; former senators are names only. Places (`towns.py`): cities, villages, Census-designated places and
+  counties with their districts, one list (New Jersey's shape: a district has one senator). The governor's contact page and
+  phone ((402) 471-2244) are from governor.nebraska.gov (checked by program 2026-11-13, not by the owner); Pillen ran again
+  in November 2026: if a new governor takes office in January 2027, add them to `GOVERNORS` and legislatures.json.
+- **South Carolina (built 2026-11-13):** `python3 states/sc/fetch.py`
+  reads scstatehouse.gov (server-built pages and roll-call PDFs; see its docstring) into data/sc/<first year>/; `python3
+  states/sc/contacts.py` (every General Assembly; add it to states.json's run after fetch.py) builds the contacts;
+  `states/sc/towns.py` was run once. A page per two-year General Assembly (`YEARS = 2`; the 126th is 2025-26): sessions from
+  the second Tuesday of January to sine die, by law the second Thursday of May (`sineDie()`, `sessionEnds()`), with a sine
+  die resolution bringing the houses back for vetoes, conference reports and the budget (June; August 2026). Bills carry
+  over to the second year with the same numbers. General Bills and Joint Resolutions are shown (joint resolutions have the
+  force of law and become Acts: most approve agencies' regulations), so laws match the Acts lists; concurrent resolutions
+  and resolutions are left out, by the title (`kept()`: the bill search's kind called S 729 of 2025-26, "A CONCURRENT
+  RESOLUTION ...", a General Bill). `states/sc/convert.py` reads the history (each line names its house except the
+  governor's): "Referred to Committee on X" (a prefiled bill's referral repeats at introduction), "Committee report:
+  Favorable [with amendment] X" (committees report favorably or not at all; no tallies, no "held"), "Polled out of
+  committee X", "Recalled from Committee on X", "Introduced, read first time, placed on calendar without reference" /
+  "placed on local & uncontested calendar"; local bills go to a county delegation ("Referred to Greenville Delegation",
+  "Referred to delegation from Charleston"; narrow "place", topic "local", as are bills amending a local act that name their
+  place: `P.narrow_kind()`). "Read second time" + "Roll call Yeas-105 Nays-0" is the main vote; "Read third time and sent to
+  Senate" the passage; "Read third time and enrolled" (second house, unchanged) or "Concurred in Senate amendment and
+  enrolled" / both houses' "Conference report (received and) adopted" / "Ordered enrolled for ratification" passed both
+  houses; "Read third time and returned to House with amendments" needs the first house; "Second Reading Failed",
+  "Rejected"; "Reconsidered vote whereby read third time" undoes a passage. "Ratified R 167" (both presiding officers
+  sign) sends it to the governor: "Signed By Governor", "Vetoed by Governor", "Certain items vetoed by Governor" (the
+  budget: a law, `itemVeto`), "Veto overridden [by originating body] Yeas-98 Nays-11" in each house (both needed: S 1166 of
+  2023-24 only in the Senate, a veto that stands), "Veto sustained", "Veto tabled"; "Act No. 212" (`lawWord` "Act", numbered
+  through the General Assembly). Totals (`python3 -m states.sc.convert`; laws match the Acts lists bill for bill, by the
+  year of the law's last step): 2023 102 laws (incl. the ratifying act S 381), 4 vetoes (3 overridden; H 4413 stands),
+  line items H 4300; 2024 147 laws + 1 amendment with an Act number (S 1126) = 148 Acts, 3 vetoes (H 4248 overridden; S 112
+  and S 1166 stand), line items H 5100; 2025 94 laws, 3 vetoes (S 136 and S 623 overridden in 2026; H 3969 tabled, stands),
+  line items H 4025; 2026 180 laws (incl. the ratifying act S 582), 6 vetoes (4 overridden; H 5164 and H 5182 stand), line
+  items H 5126. No law without signature in 2023-26. Constitutional amendments are joint resolutions "PROPOSING AN
+  AMENDMENT TO ... THE CONSTITUTION OF SOUTH CAROLINA" (`is_amendment()`): two-thirds of each house's members, ratified
+  with "No signature required" and an Act number (never the governor; no `chapter`, stage 3), then the voters at the next
+  general election (`amendmentOnce`, `ballotEvenYears`, `ballotLine()`); if they approve, the next General Assembly passes
+  "AN ACT TO RATIFY AN AMENDMENT ..." (also without the governor), shown as a law ("Ratifying a constitutional amendment:
+  ...", not tagged "const"). Only S 1126 of 2024 (voter qualifications) passed in 2023-26; S 582 of 2026 ratified it.
+  Titles are the bill search's subject line ("Status Offenses"); the summary is the official title in sentence case
+  (`sentence()`: counties, agencies and programs put back from `ALWAYS`); "What it does" is the title's "so as to ..."
+  clauses as sentences (`purpose()`, "From the bill's official title."; none for budgets): the only plain summaries,
+  the LSA's, cover Acts and aren't downloaded. Floor votes member by member: each history roll call whose motion (from the
+  session's vote list) is the bill's own (second and third readings, concurrence, conference reports, overrides; not
+  amendments or motions), matched to members by "Last, First" within the house (`roll_code()`); codes N, E (excused), B (not
+  voting, abstain, present). No committee votes. Seats "S:12", "H:71" (separate maps, 46 and 124); a seat goes to the member
+  last named on a roll call in it (`seats()`); members who left are "H?Cox". Two traps in the member lists: a past General
+  Assembly's lists have no parties (taken from another session's list or the member's page; 31 former members of the 125th
+  have neither), and every list gives a member's district in the office they hold now, so `DISTRICT_FIX` corrects six members
+  of the 2023-24 House (Ott 93, Leber 116, Elliott 22, Tedder 109, Jermaine Johnson 70, RJ May 88) and Wes Climer (Senate
+  15, listed "5": his U.S. House district; his page says "U.S. Representative"), each checked against the member's home
+  county and the districts the list leaves empty. Contacts: members' pages (Columbia office and phone, home or business
+  phones, the page's contact form: the Legislature publishes no emails, so `form` and never `email`), committees with chairs
+  (today's only; past sessions have none). Leaders: Speaker G. Murrell Smith, Jr.; President of the Senate Thomas C.
+  Alexander (a senator; since 2019 the Lieutenant Governor doesn't preside); the House elected in November 2026 organizes in
+  December. Governor Henry McMaster (R, term-limited): the governor elected in November 2026 takes office in January 2027
+  (add to `GOVERNORS` and legislatures.json). 5 days (Sundays excepted) after ratification; a bill not returned becomes
+  law, and after an adjournment the governor has until the second day of the next meeting; item vetoes on appropriations;
+  override two-thirds of the members present. The governor's contact form and address are from governor.sc.gov (read by
+  program 2026-11-13); the phone, (803) 734-2100, isn't on that page and hasn't been checked by the owner. Earlier General
+  Assemblies linked by the same subject line and prime sponsor, or the same title without section numbers, or a subject
+  one bill has in each (519 of 2025-26's; 15 read over, all the same bill). Places (`towns.py`): cities, towns,
+  Census-designated places and counties, separate Senate and House lists.
 - **LegiScan states (2026-11-08): Tennessee, then Oklahoma, Maine, Rhode Island, Vermont.** Their legislatures' sites bar
   automated readers in robots.txt, so `legiscan.py` downloads LegiScan's data (CC BY 4.0; monthly query budget shared and
   counted on GitHub) into data/<st>/legiscan/<session_id>/. Converters read only those files, never the API.
@@ -1371,8 +1653,34 @@ from that repo. **Nothing here may change it.**
     separate repassage vote, which can fail to happen (SF 4225 of 2023-24: "due to the constitutional deadline the bill was
     not passed"). And a second house that amends a bill to match its own (MN's Rule 45) and then passes it "plainly" still
     needs the first house's agreement. The "passed both houses but not sent" LOOK line found both.
+  - A roll-call surname that names different members over a session: NE's "Meyer" was Glen Meyer (District 17) until Fred
+    Meyer joined in January 2026, after which the lists write "Meyer, F." and "Meyer, G." Matching plain "Meyer" by surname
+    alone fails or picks one; check who else is on the list (McKeon, the seat's earlier holder) and keep a documented fix
+    (`VOTE_NAME_FIX`). The check fails (LOOK under 0.5%) on roll calls naming one seat twice.
   - Fonts whose ligatures come out as U+FFFD in PDF text (MN's Senate summaries: "Ar\ufffdcle", "par\ufffdcipa\ufffdon"): put
     back the letters that make words the other texts use. The "wrongly decoded characters" check caught it.
+  - The same record written twice, disagreeing: NM's spelled-out action line says "Chapter 6" for SB 5 of 2025 and "Chapter
+    138" for SB 45, while the coded ActionText says 9 and 139 (which run 1-160 with none repeated). Prefer the code; the
+    "law numbers given to two bills" LOOK line caught it.
+  - A record from an earlier session filed under a new one: MO's House exports put the previous year's budget bills (same
+    numbers, HB 1-20 or HB 2002-2020) in each new year's folder with only the governor's spending restrictions ("Message
+    Received from the Governor, pursuant to Article IV, Section 27", dated before the session); read as bills they'd be a
+    dozen stray records, or vetoes. The check LOOKs at bills in a finished session whose whole history comes before the
+    session's first year (MO's few left are bills prefiled and withdrawn before January; on 2026-11-13 it also lists
+    VA 2025's 374 bills continued from 2024 and SC 2023's 510 bills prefiled in December 2022, expected, and GA HB 2 and HB 10
+    of 2023, NH HB 333 of 2024, TN SB 6 of 2023, not looked into).
+  - A law number on the wrong bill: WV's HB 4756 of 2026, never out of committee, carries HB 4755's "Chapter 104, Acts" line,
+    and the completed list's chapter column has its own slips (SB 75 of 2025: 226 there, 220 in its history). A chapter
+    never makes a law by itself: decide laws from the governor's actions and lists, and keep a chapter only on a law. The
+    "law numbers given to two bills" LOOK and the "law number on a bill that isn't a law" FAIL catch both.
+  - A record's kind that disagrees with its title: SC's bill search lists S 729 of 2025-26, "A CONCURRENT RESOLUTION TO
+    REQUEST ...", as a General Bill (it showed as passed both houses and never ratified). Decide what's kept by the title;
+    the check fails on records whose title says they're resolutions (other than constitutional amendments).
+  - A member list that gives each member's district in the office they hold now: SC's 2023-24 House list puts members since
+    elected to the Senate in their Senate districts (Russell Ott "26", shared with Raye Felder), and Wes Climer, now in
+    Congress, in Senate District "5" (his U.S. House district), shared with Tom Corbin, so Senate 15 looked vacant. Correct
+    with the member's home county and the districts the list leaves empty (`DISTRICT_FIX`); the check LOOKs at names voting
+    in the last four months of the newest session's roll calls that aren't tied to a seat.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
