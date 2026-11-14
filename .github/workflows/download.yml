@@ -162,6 +162,22 @@ jobs:
           path: ${{ matrix.path }}
           key: ${{ matrix.key }}-${{ github.run_id }}
 
+  # Publish as soon as the downloads are done, not when the run ends: the "next" job below keeps the run open until two
+  # hours after it began, and a publish triggered by the run's end waited for that. Not after the slow lane (its data goes
+  # out with the next quick publish).
+  publish:
+    needs: [plan, download]
+    if: ${{ always() && inputs.lane != 'slow' && needs.plan.outputs.any == 'yes' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Start publishing the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh workflow run publish.yml -R "$REPO" -f from_download=true && echo "started publish.yml"
+
   next:
     needs: [plan, download]
     # After every full run of a lane (scheduled, or by hand for every state), whatever happened to single states: a
