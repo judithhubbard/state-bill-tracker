@@ -118,6 +118,7 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .st.s5 { color: var(--signed); }
 .st.s6 { color: var(--veto); }
 .st small { display: block; font-weight: 400; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.st small.gap { margin-top: 3px; font-style: italic; }
 
 .detail { padding: 2px 4px 18px 134px; display: grid; gap: 12px; font-size: 14px; }
 .detail p { margin: 0; max-width: 78ch; }
@@ -1633,7 +1634,11 @@ const commPlain = (n) => (n || "").replace(/ And /g, " and ").replace(/ Committe
 // The API's action log is in capitals with abbreviations: "ORDERED TO THIRD READING RULES CAL.897".
 // House names, for matching and capitalizing them in actions ("senate|assembly", "senate|house").
 const HOUSE_WORDS = Object.values(STATE.houses).map((h) => h.toLowerCase()).join("|");
-function plainAction(t) {
+// d is the action's date and acts the other actions of its bill or version, for a state's own wording of a step that
+// depends on when it happened (STATE.actionWords: New York's second-year reset); short asks for a few words (row, news).
+function plainAction(t, d, acts, short) {
+  const own = d && STATE.actionWords?.(t, d, acts || [], short);
+  if (own) return own;
   // Actions already written in plain English (Virginia's) are kept as written unless a rule below fits.
   const written = /[a-z]/.test(t || "");
   let s = (t || "").toLowerCase()
@@ -1693,8 +1698,9 @@ const partlyVetoed = (b) => b.stage === 5 && b.vers.some((v) => v.actions.some((
 function statusText(b) {
   const D = b.dates, live = DATA.current;
   // Say what the latest action was ("Amended by the sponsor"), not just when.
-  const latest = b.vers.flatMap((v) => v.actions).filter(([d]) => d === b.last).map(([, t]) => t).find((t) => !/^PRINT NUMBER/.test(t));
-  const what = latest ? plainAction(latest).replace(/; back to .*$/, "").replace(/ \(calendar \d+\)$/, "") : "Last action";
+  const all = b.vers.flatMap((v) => v.actions);
+  const latest = all.filter(([d]) => d === b.last).map(([, t]) => t).find((t) => !/^PRINT NUMBER/.test(t));
+  const what = latest ? plainAction(latest, b.last, all, true).replace(/; back to .*$/, "").replace(/ \(calendar \d+\)$/, "") : "Last action";
   let t = TEXT.long[b.stage], small = `${what} · ${fmtDate(b.last)}`;
   if (b.stage === 0) {
     t = `${live ? "In" : "Died in"} ${b.comm ? `the ${commPlain(b.comm)} Committee` : "committee"}`;
@@ -1737,7 +1743,9 @@ function statusText(b) {
   // A bill that ended before the session did (North Dakota's floor defeats and withdrawals: STATE.endedNote).
   const ended = b.stage <= 2 && STATE.endedNote?.(b);
   if (ended) t = ended.status;
-  return `<div class="st s${b.stage}">${esc(t)}<small>${esc(small)}</small></div>`;
+  // Between sessions, a line saying the latest step isn't progress (interimNote()).
+  const gap = interimNote(b)?.row;
+  return `<div class="st s${b.stage}">${esc(t)}<small>${esc(small)}</small>${gap ? `<small class="gap">${esc(gap)}</small>` : ""}</div>`;
 }
 
 // ---- What's next and who to contact (current session only) ----
@@ -1808,6 +1816,41 @@ const lastYear = (s) => s + YEARS - 1;
 const linkedSessions = () => BILLS.some((b) => b.earlier?.length);
 const continuedTo = (b) => STATE.continuedTo?.(b) || null;
 const DIES = STATE.diesAfterFloor || ((y2) => `Unless lawmakers return for a special session, it dies December 31, ${y2}.`);
+// What the state calls its legislature, for sentences ("the General Assembly"; default "the Legislature").
+const BODY = STATE.bodyName || "the Legislature", BODY_CAP = BODY[0].toUpperCase() + BODY.slice(1);
+
+// Between sessions, lawmakers can still amend bills and file new ones without meeting, so a bill's latest step (an
+// amendment, a referral, a new filing) can look like progress when nothing can move. For a bill at stage 0-2 whose
+// latest step came after the last floor votes, this gives the row a line saying what that means ({ row }) and the
+// panel a sentence about the step ({ step }); null otherwise. The row's line, by the state's rules:
+//   - bills carry over (a break within a two-year session; a bill continued to the next one, STATE.continuedTo): it
+//     can be taken up again when the Legislature next meets (STATE.opens), or STATE.interimCarry(when);
+//   - bills die at the end of the term, after the last floor votes (New York's December 31): STATE.interimDies, else
+//     the state's diesAfterFloor;
+//   - bills that already died when the session ended (STATE.outOfTimeLine "Died ..."): nothing, since the page
+//     already shows them as out of time.
+// Never for legislatures that meet until a fixed last day or all year (STATE.floorVotesEnd === false).
+function interimNote(b) {
+  if (!DATA.current || DATA.upcoming || STATE.floorVotesEnd === false || b.stage > 2 || STATE.endedNote?.(b)) return null;
+  const lv = DATA.lastVote || "", today = isoToday();
+  if (!lv || (new Date(today) - new Date(lv)) / 864e5 <= 21) return null;
+  const over = floorVotesOver(), cont = over && continuedTo(b), after = (b.last || "") > lv;
+  const opening = (y) => { const d = STATE.opens?.(y); return d && d > today ? fmtDate(d) : `January ${y}`; };
+  const carry = (y) => (STATE.interimCarry ? STATE.interimCarry(opening(y)) : `${BODY_CAP} isn't meeting until ${opening(y)}; it can be taken up again then.`);
+  const step = !after ? "" : STATE.interimStep ? STATE.interimStep(fmtDate(b.last))
+    : `Its latest step, on ${fmtDate(b.last)}, came while ${BODY} wasn't meeting. Lawmakers can amend and file bills at any time, but that doesn't move a bill toward a vote.`;
+  if (cont) return { row: carry(cont), step };
+  if (!after) return null;
+  // A break within a multi-year session, until the next year's first day.
+  if (!over) {
+    const y = +lv.slice(0, 4) + 1;
+    return today < (STATE.opens?.(y) || `${y}-01-01`) ? { row: carry(y), step } : null;
+  }
+  const y2 = lastYear(DATA.session);
+  if (STATE.interimDies) return { row: typeof STATE.interimDies === "function" ? STATE.interimDies(b, y2) : STATE.interimDies, step };
+  if (/^Died\b/.test(STATE.outOfTimeLine || "")) return null;
+  return { row: `${BODY_CAP} isn't meeting. ${DIES(y2, b)}`, step };
+}
 
 // A last name as written, for lists of districts ("Jr." isn't one).
 const shortName = (n) => (n || "").replace(/,?\s+(Jr\.?|Sr\.?|II|III)$/, "").split(" ").pop();
@@ -2212,7 +2255,7 @@ function planFor(b, stance = "support") {
   const stalled = ended && !adjourned ? ended.tail : missed ? `It missed ${STATE.originWord || "the deadline"} on ${fmtDate(missed)}, the last day to pass its own house, so it can't pass this ${YEARS > 1 ? "session" : "year"}.`
     : adjourned
     ? `Floor votes are over for this session. ${DIES(y2, b)}`
-    : recess ? `The Legislature is out until January ${y2}.` : "";
+    : recess ? `${BODY_CAP} is out until ${STATE.opens ? fmtDate(STATE.opens(y2)) : `January ${y2}`}.` : "";
   const live = !stalled || recess; // can anything move before the session ends?
   const book = contactBook(b, live || b.stage >= 3, opp);
   const inComm = b.vers.filter((v) => v.committee && /committee/i.test(v.statusDesc || ""));
@@ -2299,6 +2342,9 @@ function planFor(b, stance = "support") {
     what = `<p class="when">Vetoed. The sponsors can ${again}.</p>`;
     b.vers.forEach((v) => book.sponsor(v, A(again, "")));
   }
+  // A step taken while the Legislature wasn't meeting isn't progress (interimNote()).
+  const gap = interimNote(b);
+  if (gap?.step) what += `<p>${esc(gap.step)}</p>`;
   const v = b.vetoNote;
   if (v && !v.own && b.stage <= 2 && live && !opp && lastName(v.governor) === lastName(DATA.governor)) govAlso = govAlso || "support it this time";
   const actionable = (b.stage <= 4 || !!STATE.vetoReturns?.(b)?.live) && (live || b.stage >= 3);
@@ -3576,7 +3622,7 @@ function cosponsorList(v) {
 
 function verBlock(v) {
   if (!v) return "";
-  const acts = v.actions.slice().reverse().map((a) => `<li><time>${fmtDate(a[0])}</time><span>${esc(plainAction(a[1]))}</span></li>`).join("");
+  const acts = v.actions.slice().reverse().map((a) => `<li><time>${fmtDate(a[0])}</time><span>${esc(plainAction(a[1], a[0], v.actions))}</span></li>`).join("");
   return `<div class="ver">
     <h3><span>${esc(v.p)}</span></h3>
     <div class="who">${esc(v.sponsor || "No sponsor listed")}${v.cosp ? ` · ${cosponsorList(v)}` : ""}</div>
@@ -3591,7 +3637,7 @@ function whenLine(b) {
   if (b.stage === 2 && b.passedIn) return esc(`Passed the ${b.passedIn} ${fmtDate(b.passedIn === "Senate" ? D.passS : D.passA)}`);
   if (b.stage === 5 && D.signed) return esc(`Signed ${fmtDate(D.signed)}`);
   if (b.stage === 6 && D.vetoed) return esc(`Vetoed ${fmtDate(D.vetoed)}`);
-  return statusText(b).match(/<small>(.*)<\/small>/)?.[1] || "";
+  return statusText(b).match(/<small>(.*?)<\/small>/)?.[1] || "";
 }
 // Of two near-identical bills, the one more likely to move, and why. To become law a bill must pass
 // both houses in identical form, so one with a matching bill in each house is the usual vehicle;
@@ -3808,8 +3854,9 @@ function newsTags(b) {
   const acts = newActions(b), meet = nextMeeting(b);
   let out = "";
   if (acts.length) {
-    const what = plainAction(acts[0][1]).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, "");
-    out += ` <span class="news" title="${esc(acts.map(([d, t]) => `${fmtDate(d)}: ${plainAction(t)}`).join("\n"))}">New: ${esc(what)}${acts.length > 1 ? ` (+${acts.length - 1} more)` : ""}</span>`;
+    const all = b.vers.flatMap((v) => v.actions);
+    const what = plainAction(acts[0][1], acts[0][0], all, true).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, "");
+    out += ` <span class="news" title="${esc(acts.map(([d, t]) => `${fmtDate(d)}: ${plainAction(t, d, all, true)}`).join("\n"))}">New: ${esc(what)}${acts.length > 1 ? ` (+${acts.length - 1} more)` : ""}</span>`;
   }
   if (meet) {
     const d = new Date(meet.when);
@@ -3882,7 +3929,7 @@ const W_GROUPS = {
 };
 const W_GROUP_OPEN = new Map();
 // The main thing that happened to a watched bill since it was last opened ("Signed into law").
-const newsWhat = (t) => plainAction(t).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, "");
+const newsWhat = (t, d, b) => plainAction(t, d, b ? b.vers.flatMap((v) => v.actions) : [], true).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, "");
 // Top of the watchlist: every bill with news, the biggest news first.
 function newsBox(list) {
   const items = list.map((b) => ({ b, acts: newActions(b) })).filter((x) => x.acts.length)
@@ -3891,7 +3938,7 @@ function newsBox(list) {
   return `<section class="wnews"><div class="wnews-h"><h2>New since you last looked</h2><button type="button" class="linkish" data-wseenall>Mark all as seen</button></div>
     <ul>${items.map(({ b, acts }) => {
       const [d, t] = acts[0], kind = /^SIGNED/.test(t) ? "ok" : /^VETOED/.test(t) ? "no" : "";
-      return `<li><button type="button" class="wnewsrow" data-wnews="${b.idx}"><span class="nk ${kind}">${esc(newsWhat(t))}</span> <span class="bn">${esc(b.nums.join(" / "))}</span> ${esc(b.title)} <span class="muted">· ${fmtDate(d)}${acts.length > 1 && !kind ? ` · ${acts.length - 1} more change${acts.length > 2 ? "s" : ""}` : ""}</span></button></li>`;
+      return `<li><button type="button" class="wnewsrow" data-wnews="${b.idx}"><span class="nk ${kind}">${esc(newsWhat(t, d, b))}</span> <span class="bn">${esc(b.nums.join(" / "))}</span> ${esc(b.title)} <span class="muted">· ${fmtDate(d)}${acts.length > 1 && !kind ? ` · ${acts.length - 1} more change${acts.length > 2 ? "s" : ""}` : ""}</span></button></li>`;
     }).join("")}</ul></section>`;
 }
 // My watched bills in the order they show, for share links and published lists.
@@ -3901,7 +3948,7 @@ function markSeen(b) { const e = watchEntry(b); if (e && e.seen !== (b.last || "
 // The Watchlist tab: how many bills, and a badge for how many have news.
 function updateWatchTab() {
   const n = WATCH_COUNT(), newsBills = BILLS.filter((b) => isWatched(b) && hasNews(b)), news = newsBills.length;
-  const what = newsBills.map((b) => `${b.nums[0]}: ${newsWhat(newActions(b)[0][1])}`).join("\n");
+  const what = newsBills.map((b) => `${b.nums[0]}: ${newsWhat(newActions(b)[0][1], newActions(b)[0][0], b)}`).join("\n");
   $("watchTabCount").innerHTML = (n ? ` (${num(n)})` : "") + (news ? ` <span class="tabnew" title="New since you last looked:\n${esc(what)}">${num(news)} new</span>` : "");
 }
 function watchButton(b, withStance = true) {
@@ -4365,6 +4412,7 @@ function fillDetail(el) {
     ${whatItDoes(b)}
     ${sponsorsBlock(b)}
     <div class="linkrow"><span>Link to this bill:</span><input type="text" readonly value="${esc(billLink(b))}" aria-label="Link to this bill" onclick="this.select()"><button class="act-btn" type="button" data-copylink>Copy</button></div>
+    ${STATE.resetNote?.(b) ? `<p class="reset">${esc(STATE.resetNote(b))}</p>` : ""}
     ${inCard ? "" : nextSteps(b)}
     ${keyDates(b)}
     ${votesBlock(b)}

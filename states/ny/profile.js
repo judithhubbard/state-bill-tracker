@@ -58,6 +58,48 @@ const STATE = {
   govYearsNote: "2020: short COVID session. 2021: Cuomo resigned in August, before year-end vetoes.",
   partySource: "Party from Open States",
   openUntil: () => "Dec. 31",
+  // Between sessions: the row's line for a bill whose latest step (an amendment, a referral, a new filing) came after
+  // the last floor votes of the second year. Bills that haven't passed both houses die December 31.
+  interimDies: "Not meeting: dies December 31 unless lawmakers return.",
+
+  // The second year's first day: a bill that passed one house and wasn't voted on in the other "dies" there and goes
+  // back to its own house, which has to pass it again: the first year's vote no longer counts. The other house's own
+  // version, set aside when this one took its place, goes back on that house's floor calendar. `short` is for the
+  // bill's row and watchlist news.
+  actionWords(t, d, acts, short) {
+    if (d.slice(5, 7) !== "01" || +d.slice(0, 4) !== DATA.session + 1) return null;
+    const H = { S: "Senate", A: "Assembly", SENATE: "Senate", ASSEMBLY: "Assembly" }, y = DATA.session;
+    const other = (h) => (h === "Senate" ? "Assembly" : "Senate");
+    const sameDay = (re) => acts.some(([x, u]) => x === d && re.test(u));
+    let m = /^DIED IN (SENATE|ASSEMBLY)$/.exec(t);
+    if (m && sameDay(/^RETURNED TO /)) {
+      const here = H[m[1]], home = other(here);
+      return short ? `Back to the ${home} for the new year; has to pass it again`
+        : `The ${here} didn't vote on it in ${y}; under the rules, the ${home}'s ${y} vote was wiped and it had to pass the ${home} again.`;
+    }
+    m = /^RETURNED TO (SENATE|ASSEMBLY)$/.exec(t);
+    if (m && sameDay(/^DIED IN /)) return `Sent back to the ${H[m[1]]} for the new year`;
+    m = /^ORDERED TO THIRD READING CAL\.(\d+)$/.exec(t);
+    const sub = m && acts.find(([x, u]) => x < d && /^SUBSTITUTED BY [SA]\d/.test(u));
+    if (sub) {
+      const theirs = H[sub[1].match(/^SUBSTITUTED BY ([SA])/)[1]], here = other(theirs);
+      return short ? `Back on the ${here} floor calendar` : `Back on the ${here} floor calendar (calendar ${m[1]}) after the ${theirs}'s version was sent back`;
+    }
+    return null;
+  },
+  // The panel's one-line summary for a bill whose first-year passage was reset that way (dates.died).
+  resetNote(b) {
+    const D = b.dates, reset = D.died, H = { S: "Senate", A: "Assembly" };
+    if (!reset) return "";
+    const passes = { S: D.passSAll || [], A: D.passAAll || [] };
+    const before = ["S", "A"].filter((h) => passes[h].some((d) => d < reset));
+    if (!before.length) return "";
+    const since = ["S", "A"].map((h) => [h, passes[h].filter((d) => d > reset)]).filter(([, ds]) => ds.length);
+    const y = +reset.slice(0, 4);
+    const was = `Passed the ${before.map((h) => H[h]).join(" and the ")} in ${y - 1}; ${before.length > 1 ? "those votes were" : "that vote was"} reset in January ${y}`;
+    if (!since.length) return `${was}, and it hasn't passed either house since.`;
+    return `${was}. Since then it has passed ${since.map(([h, ds]) => `the ${H[h]}${before.includes(h) ? " again" : ""} on ${fmtDate(ds[0])}`).join(" and ")}.`;
+  },
   // What happens to a bill that passed both houses: the line under "Next:", and the asks (support, oppose).
   passedBothNext: () => ({
     what: "the governor's office requests it (any day through December), then she has 10 days to act.",

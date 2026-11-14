@@ -2,6 +2,8 @@
 // into every page, just before the main script; tracker.html reads it as STATE.
 const STATE = {
   code: "va",
+  // What the Legislature is called in sentences ("the General Assembly isn't meeting until ...").
+  bodyName: "the General Assembly",
   // Steps that aren't news on a watchlist card.
   routine: /^(INTRODUCED|Prefiled|Placed on .*Agenda|Assigned .*sub|(Fiscal )?Impact [Ss]tatement|Bill text|Printed as|Committee substitute printed|Title replaced|Engrossed|Read (first|second) time|Constitutional reading|Enrolled$|Signed by (Speaker|President)|Governor's Action Deadline|Acts of Assembly Chapter text|Conference report released|Conference substitute printed|Taken up|Passed by for the day|Rules suspended|VOTE:)/,
   publicSite: "https://statebilltracker.org/va/",

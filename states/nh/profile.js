@@ -2,6 +2,8 @@
 // every page, just before the main script; tracker.html reads it as STATE.
 const STATE = {
   code: "nh",
+  // What the Legislature is called in sentences ("the General Court isn't meeting until ...").
+  bodyName: "the General Court",
   name: "New Hampshire",
   abbr: "NH",
   // Steps that aren't news on a watchlist card.
