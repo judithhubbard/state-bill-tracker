@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Download every bill in a NY legislative session from the Senate Open Legislation API
-and save a slimmed copy (no full text or memos) to data/bills_<session>.json.
+and save a slimmed copy (no full text or memos) to data/bills_<session>.json, and what each bill does (the purpose
+and summary of provisions from the sponsor's memo, Senate bills only: the API has no Assembly memos) to
+data/texts_<session>.json, which build_data.py shows as "What it does".
 
 Usage: python3 fetch_bills.py [session_year]   (default 2025, i.e. the 2025-26 session)
 API key comes from the NYSENATE_API_KEY environment variable, or else ~/.nysenate_api_key.
 """
-import json, os, sys, time, urllib.request, urllib.parse
+import json, os, re, sys, time, urllib.request, urllib.parse
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -30,6 +32,56 @@ def get(offset):
 
 def items(x):
     return (x or {}).get("items") or []
+
+
+TEXTS = os.path.join(os.path.dirname(OUT), f"texts_{SESSION}.json")
+MEMO_HEAD = re.compile(r"^\s*([A-Z][A-Z ,/&()'.-]{3,}):(?!//)\s*(.*)$")
+
+
+def memo_of(b):
+    """The sponsor's memo of the bill's active version, or ''."""
+    am = (b.get("amendments") or {}).get("items", {}).get(b.get("activeVersion") or "") or {}
+    return (am.get("memo") or "").replace("\xa0", " ")
+
+
+def memo_text(memo, vocab):
+    """The memo's "PURPOSE ..." and "SUMMARY OF (SPECIFIC) PROVISIONS" sections as paragraphs (not the justification,
+    which argues for the bill, nor its history or fiscal note). The memo is wrapped at 72 characters with words broken
+    by hyphens: "emer-\ngency" is rejoined, "non-\ncompliance" kept, by which the session's memos use elsewhere."""
+    parts, keep = [], False
+    para = []
+
+    def flush():
+        if para:
+            s = para[0]
+            for l in para[1:]:
+                m, n = re.search(r"(\w+)-$", s), re.match(r"[a-z]\w*", l)
+                # Rejoined unless the hyphenated form is the usual one, or the word was already hyphenated ("cost-of-").
+                if m and n and not re.search(r"\w-\w+-$", s) and (
+                        (m.group(1) + n.group(0)).lower() in vocab or (m.group(1) + "-" + n.group(0)).lower() not in vocab):
+                    s = s[:-1] + l
+                else:
+                    s += ("" if m and n else " ") + l
+            parts.append(s)
+            para.clear()
+
+    for line in memo.split("\n") + [""]:
+        h = MEMO_HEAD.match(line)
+        if h:
+            flush()
+            keep = h.group(1).startswith(("PURPOSE", "SUMMARY"))
+            line = h.group(2)
+        if not keep:
+            continue
+        if line.strip():
+            para.append(line.strip())
+        else:
+            flush()
+    text = "\n".join(parts)
+    # A few memos (budget bills) run to pages: cut at a sentence.
+    if len(text) > 5000:
+        text = text[:text.rfind(". ", 0, 5000) + 1] + " …"
+    return text
 
 
 def slim(b):
@@ -96,11 +148,13 @@ def main():
         print(f"No bills yet in the {SESSION} session; nothing written.", file=sys.stderr)
         return
     out = [slim(b) for b in first["result"]["items"]]
+    memos = {b["basePrintNo"] + (b.get("activeVersion") or ""): memo_of(b) for b in first["result"]["items"]}
     print(f"{total} bills in {SESSION} session", file=sys.stderr)
     offset = 1 + PAGE
     while offset <= total:
         d = get(offset)
         out += [slim(b) for b in d["result"]["items"]]
+        memos.update({b["basePrintNo"] + (b.get("activeVersion") or ""): memo_of(b) for b in d["result"]["items"]})
         print(f"  {len(out)}/{total}", file=sys.stderr)
         offset += PAGE
     tmp = OUT + ".tmp"
@@ -108,6 +162,15 @@ def main():
         json.dump({"session": SESSION, "fetched": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M ET"), "bills": out}, f)
     os.replace(tmp, OUT)
     print(f"wrote {len(out)} bills to {OUT}", file=sys.stderr)
+    # Words as the memos write them, and each hyphenated pair within longer ones ("of-living" from "cost-of-living").
+    vocab = {w.lower() for m in memos.values() for w in re.findall(r"[A-Za-z]+(?:-[A-Za-z]+)*", m)}
+    vocab |= {f"{a}-{b}" for w in vocab if w.count("-") > 1 for a, b in zip(w.split("-"), w.split("-")[1:])}
+    texts = {n: {"statement": t, "label": "From the Senate sponsor's memo."}
+             for n, t in ((n, memo_text(m, vocab)) for n, m in memos.items() if m) if t}
+    with open(TEXTS + ".tmp", "w") as f:
+        json.dump(texts, f, ensure_ascii=False)
+    os.replace(TEXTS + ".tmp", TEXTS)
+    print(f"wrote what {len(texts)} bills do to {TEXTS}", file=sys.stderr)
 
 
 if __name__ == "__main__":
