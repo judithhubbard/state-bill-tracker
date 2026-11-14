@@ -68,9 +68,10 @@ def check(state):
                  re.match(r"^\W*(?:an? )?(?:senate |house |assembly )?(?:concurrent )?resolution\b", r["summary"] or "", re.I)]
         if resol:
             say(state, "FAIL" if len(resol) > 0.005 * len(recs) else "LOOK", f"{s}: {len(resol)} records whose title says they're resolutions, e.g. {resol[:4]}")
-        # The 4th key date is New York's alone (return to committee in a new year).
-        if state != "ny" and any(r["keyDates"][3] for r in recs):
-            say(state, "FAIL", f"{s}: the 4th key date (New York's return to committee) is filled in")
+        # The 4th key date is a passage undone between a two-year session's years (New York's January return to committee,
+        # Washington's end-of-first-session return): only states whose page explains it (STATE.resetNote) fill it in.
+        if any(r["keyDates"][3] for r in recs) and "resetNote(" not in open(os.path.join(HERE, "states", state, "profile.js")).read():
+            say(state, "FAIL", f"{s}: the 4th key date (a passage undone between years) is filled in, with no resetNote to explain it")
         # Committee names carrying a motion's tail: a failed motion to refer read as a referral (IN's "Referred to
         # Committee on Ways and Means pursuant to House Rule 84; Failed, Roll Call 185: yeas 28, nays 59").
         tails = sorted({c for r in recs for c in r["comms"] if re.search(r"\b(?:failed|roll call|yeas|nays|pursuant to)\b|;", c, re.I)})

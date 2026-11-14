@@ -65,6 +65,10 @@ def members(session):
 
 PASS = re.compile(r"^(?:Third reading, passed|Passed final passage)(?: as recommended by conference committee)?; yeas, (\d+); nays, (\d+)", re.I)
 FAILED = re.compile(r"^(?:Third reading, failed|Failed to pass)", re.I)
+# At the end of a biennium's first session, a bill that passed its first house but not the second goes back to the first
+# house's Rules Committee for third reading: its passage is undone, and that house has to pass it again (like New York's
+# January reset). HB 1001-type bills still in their first house are "reintroduced and retained in present status".
+RETURNED = re.compile(r"^By resolution, returned to (House|Senate) Rules Committee for third reading", re.I)
 REFER = re.compile(r"^(?:First reading, )?(?:referred|And refer|Referred) to (.+?)\.?$", re.I)
 REPORT = re.compile(r"^(?:([A-Z&]{2,6}) - )?Majority;.*\bdo pass\b", re.I)
 
@@ -133,6 +137,9 @@ def steps_of(bill, d, comms):
             elif hit:
                 house = hit[0]
                 t = f"REFERRED TO {hit[1].upper()}"
+        elif RETURNED.match(line):
+            house = "H" if RETURNED.match(line).group(1).lower() == "house" else "S"
+            t = "REFERRED TO RULES"
         # Not the end-of-session "Returned to House Rules 3.": bookkeeping for every bill left on the floor calendar.
         elif re.match(r"^Passed to Rules Committee for second reading|^(?:By resolution, )?[Rr]eturned to (?:(?:House|Senate) )?Rules Committee|"
                       r'^(?:House|Senate) Rules "X" file', line):
@@ -178,7 +185,18 @@ def both_agreed(origin, rolls):
     return True
 
 
-def stage_of(steps, live, agreed=False):
+def is_reset(day, line, session):
+    """An end-of-session return in the biennium's first year (in the second the bill simply dies)."""
+    return bool(RETURNED.match(line)) and day[:4] == str(session)
+
+
+def since_reset(steps, session):
+    """The steps after the first year's end-of-session return: passages before it no longer count."""
+    i = max((i for i, (dd, _, _, a) in enumerate(steps) if is_reset(dd, a, session)), default=-1)
+    return steps[i + 1:]
+
+
+def stage_of(steps, live, agreed=False, session=0):
     texts = [t for _, _, t, _ in steps]
     if "SIGNED" in texts:
         return 5
@@ -186,7 +204,7 @@ def stage_of(steps, live, agreed=False):
         return 6
     if "DELIVERED TO GOVERNOR" in texts:
         return 4
-    passed = {h for _, h, t, _ in steps if t.startswith("PASSED")}
+    passed = {h for _, h, t, _ in since_reset(steps, session) if t.startswith("PASSED")}
     # Passed both houses: the Speaker and President signed it, or the roll calls show both passed the same text.
     if "ENROLLED" in texts or (len(passed) == 2 and agreed):
         return 3
@@ -283,14 +301,17 @@ def load_session(session):
         steps = steps_of(p, d, comms)
         rolls = [{"house": "S" if r.get("Agency") == "Senate" else "H", "date": (r.get("VoteDate") or "")[:10],
                   "motion": r.get("Motion") or ""} for r in d.get("rollCalls", [])]
-        stage = stage_of(steps, live, both_agreed(origin, rolls))
+        stage = stage_of(steps, live, both_agreed(origin, rolls), session)
         if amendment:
             stage = min(stage, 3)  # goes to the voters, not the governor
         texts = [t for _, _, t, _ in steps]
-        passed = {h for _, h, t, _ in steps if t.startswith("PASSED")}
+        passed = {h for _, h, t, _ in since_reset(steps, session) if t.startswith("PASSED")}
         if stage >= 3:
             passed = {"S", "H"}
-        last_pass = max(((dd, h) for dd, h, t, _ in steps if t.startswith("PASSED")), default=None)
+        last_pass = max(((dd, h) for dd, h, t, _ in since_reset(steps, session) if t.startswith("PASSED")), default=None)
+        # The end-of-session return that undid a passage (the page's "reset"; keyDates[3], as New York's).
+        reset = max((dd for i, (dd, _, _, a) in enumerate(steps) if is_reset(dd, a, session)
+                     and any(t.startswith("PASSED") for _, _, t, _ in steps[:i])), default="")
         passed_in = HOUSE[last_pass[1]] if stage == 2 and last_pass else None
         now_house, place, committee = where(steps)
         now_house = now_house or origin
@@ -373,13 +394,13 @@ def load_session(session):
             "first": min(action_dates, default=f"{session}-01-01"),
             "last": max(action_dates, default=f"{session}-01-01"),
             "cosp": len(cos),
-            # Key dates: on the floor, passed the Senate, passed the House, (New York's return to committee: none here),
-            # sent to the governor, signed, vetoed.
+            # Key dates: on the floor, passed the Senate, passed the House, the end-of-session return that undid a
+            # passage, sent to the governor, signed, vetoed.
             "keyDates": [
                 dates(lambda h, t, a: h == origin and t in ("REPORTED", "PLACED ON FLOOR"), "first"),
                 dates(lambda h, t, a: t == "PASSED SENATE", "all"),
                 dates(lambda h, t, a: t == "PASSED HOUSE", "all"),
-                "",
+                reset,
                 dates(lambda h, t, a: t == "DELIVERED TO GOVERNOR"),
                 dates(lambda h, t, a: t == "SIGNED"),
                 dates(lambda h, t, a: t == "VETOED"),

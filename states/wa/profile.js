@@ -61,6 +61,20 @@ const STATE = {
   passedBothBy: (session) => STATE.sessionEnds(session),
   passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
   passedBothGroup: ["Before the session ends", () => "Bills that pass both houses are signed by the Speaker and the Senate President, then delivered to the governor."],
+  // A bill that passed its first house in the first year but not the second goes back to the first house at the end of
+  // that session (dates.died: "By resolution, returned to Senate Rules Committee for third reading") and has to pass it
+  // again: the panel's one-line summary.
+  resetNote(b) {
+    const D = b.dates, reset = D.died, H = { S: "Senate", A: "House" };
+    if (!reset) return "";
+    const passes = { S: D.passSAll || [], A: D.passAAll || [] };
+    const before = ["S", "A"].filter((h) => passes[h].some((d) => d < reset));
+    if (!before.length) return "";
+    const since = ["S", "A"].map((h) => [h, passes[h].filter((d) => d > reset)]).filter(([, ds]) => ds.length).sort((x, y) => (x[1][0] < y[1][0] ? -1 : 1));
+    const was = `Passed the ${before.map((h) => H[h]).join(" and the ")} in ${reset.slice(0, 4)}; when that year's session ended it went back to the ${H[b.nums[0][0] === "S" ? "S" : "A"]} to pass again`;
+    if (!since.length) return `${was}, and it hasn't passed either house since.`;
+    return `${was}. Since then it has passed ${since.map(([h, ds]) => `the ${H[h]}${before.includes(h) ? " again" : ""} on ${fmtDate(ds[0])}`).join(" and ")}.`;
+  },
   passedBothNext: () => ({
     what: "the Speaker and the Senate President sign it, and it goes to the governor, who can sign it, veto it, or veto parts of it. A bill the governor doesn't act on becomes law.",
     gov: ["sign it", "veto it"],

@@ -94,7 +94,7 @@ const STATE = {
     const passes = { S: D.passSAll || [], A: D.passAAll || [] };
     const before = ["S", "A"].filter((h) => passes[h].some((d) => d < reset));
     if (!before.length) return "";
-    const since = ["S", "A"].map((h) => [h, passes[h].filter((d) => d > reset)]).filter(([, ds]) => ds.length);
+    const since = ["S", "A"].map((h) => [h, passes[h].filter((d) => d > reset)]).filter(([, ds]) => ds.length).sort((x, y) => (x[1][0] < y[1][0] ? -1 : 1));
     const y = +reset.slice(0, 4);
     const was = `Passed the ${before.map((h) => H[h]).join(" and the ")} in ${y - 1}; ${before.length > 1 ? "those votes were" : "that vote was"} reset in January ${y}`;
     if (!since.length) return `${was}, and it hasn't passed either house since.`;

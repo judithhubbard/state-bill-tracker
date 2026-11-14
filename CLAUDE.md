@@ -174,7 +174,9 @@ from that repo. **Nothing here may change it.**
   linked by short description and description words (`earlier()`). The history repeats lines (once per version) and
   isn't in date order: sorted and deduplicated. "Passed both houses" comes from the passage roll calls' motions
   (`both_agreed()`: "as Amended by the House" needs the Senate's agreement; a conference report needs both houses; the
-  first house passing it again on third reading is starting over). A few histories stop early (HB 2134 of 2023-24):
+  first house passing it again on third reading is starting over). At the end of the biennium's first session a bill that passed only its first house
+  is "By resolution, returned to House Rules Committee for third reading": its passage is undone (`is_reset()`, keyDates[3],
+  `STATE.resetNote()`, as New York's January reset); the same line at the end of the second session isn't. A few histories stop early (HB 2134 of 2023-24):
   a version's newer current status is added, "C 310 L 24" meaning chapter 310 of 2024. Laws include ones without the
   governor's signature, overridden vetoes and initiatives to the Legislature, so the governor's "signed" lists are a
   few short. Until the first full copy is complete, fetch.py writes data/wa/incomplete and build_site.sh and the
@@ -1660,7 +1662,9 @@ from that repo. **Nothing here may change it.**
   - Placeholder bills (CA "spot bills": technical, nonsubstantive changes; "intent" bills) and stock sentences
     ("no reimbursement is required by this act") make unrelated bills look alike; keep them out of matching.
   - The other state's settings in shared slots: each `keyDates` entry means the same thing in every state (the 4th
-    is New York's return to committee in a new year; leave it "" elsewhere).
+    is a passage undone between a two-year session's years: New York's January return to committee, Washington's
+    "By resolution, returned to Senate Rules Committee for third reading" at the end of the first year's session (not the
+    second's, when bills just die); only a state with `STATE.resetNote` fills it in).
   - Agreeing to the other house's changes "as amended" is a new change, not the end (GA's "House Agreed Senate Amend or
     Sub As Amended": HB 196 of 2023-24 then died in conference).
   - A conference report passes only when both houses adopt it (TX HB3104 of 2023: the House adopted it, the Senate never

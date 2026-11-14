@@ -2542,8 +2542,10 @@ const pastSpan = () => {
   if (!p.length) return "";
   const run = p.every((s, i) => !i || s - p[i - 1] === YEARS);
   const out = p.length === 1 ? span(p[0]) : run ? `${p[0]}–${String(p[p.length - 1] + YEARS - 1).slice(2)}` : andList(p.map((s) => span(s)));
-  // Where a state compares only sessions of one kind (Oregon, Connecticut): "2024 (short sessions)".
-  return DATA.insights?.pastKind ? `${out} (${DATA.insights.pastKind} session${p.length > 1 ? "s" : ""})` : out;
+  // Where a state compares only sessions of one kind (Oregon, Connecticut): "2024 (short sessions)"; not when the
+  // session's own name says it (Louisiana's "2024 general").
+  const kind = DATA.insights?.pastKind;
+  return kind && !out.includes(kind) ? `${out} (${kind} session${p.length > 1 ? "s" : ""})` : out;
 };
 const ODDS_POINTS = [
   ["intro", "Introduced"],
