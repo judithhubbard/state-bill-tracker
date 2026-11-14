@@ -1,0 +1,584 @@
+{
+ "_about": "Independent check of states/elected_2026.json, 2026-11-14. Each figure checked against pages opened (robots.txt checked first). 'confirmed' = an opened page states the file's figure (or it follows by arithmetic from stated figures); 'corrected' = an opened page gives a different figure; 'unconfirmed' = no opened page states it. Unofficial results; many counts were taken in the days after November 3 and may have moved.",
+ "checked": "2026-11-14",
+ "states": {
+  "ak": {
+   "S": {
+    "file": "8 D, 9 R, 3 uncalled",
+    "found": "party split not stated by any opened source; bipartisan coalition keeps control (11 members so far)",
+    "status": "unconfirmed",
+    "quote": "JB: So right now, the Senate (majority) is at 11. That's the bare minimum they need to create a majority.",
+    "url": "https://alaskapublic.org/news/politics/2026-11-05/what-to-expect-when-youre-expecting-a-new-alaska-legislature-a-reporter-explains"
+   },
+   "H": {
+    "file": "14 D, 7 R, 5 I, 14 uncalled",
+    "found": "party split not stated by any opened source; coalition of Democrats and independents at 22-23",
+    "status": "unconfirmed",
+    "quote": "In the House, it looks like the majority right now stands at 22 or 23, depending on the results of some pending elections, and that's just with Democrats and Independents.",
+    "url": "https://alaskapublic.org/news/politics/2026-11-05/what-to-expect-when-youre-expecting-a-new-alaska-legislature-a-reporter-explains"
+   },
+   "governor": {
+    "file": "Jonathan Kreiss-Tomkins, D, leading, uncalled",
+    "found": "Jonathan Kreiss-Tomkins, D, elected (won a first-choice majority; no ranked-choice rounds needed)",
+    "status": "corrected",
+    "quote": "Earning 50.8% of first-choice votes counted as of Friday, Kreiss-Tomkins defeated three Republicans on the general election ballot.",
+    "url": "https://www.adn.com/politics/2026/11/13/democrat-jonathan-kreiss-tomkins-to-serve-as-alaskas-13th-governor/"
+   }
+  },
+  "az": {
+   "S": {
+    "file": "20 D, 10 R",
+    "found": "20 D, 10 R; Democrats flip; 20 of 30 is two-thirds",
+    "status": "confirmed",
+    "quote": "In the Senate, Republicans held a 17-13 majority going in; the split is now 20-10 for Democrats.",
+    "url": "https://www.multistate.us/elections/results/arizona-2026"
+   },
+   "H": {
+    "file": "37 D, 23 R",
+    "found": "37 D, 22 R called; last seat R vs R (Fink leads Rivero, recount margin), so 37-23",
+    "status": "confirmed",
+    "quote": "In the House, Republicans held a 33-27 majority going in; called seats now stand at 37-22, with one race still being counted. ... Still being counted: the second LD-27 seat, where Rep. Lisa Fink (R) leads Rep. Tony Rivero (R)",
+    "url": "https://www.multistate.us/elections/results/arizona-2026"
+   },
+   "governor": {
+    "file": "Katie Hobbs, D",
+    "found": "Katie Hobbs, D, re-elected",
+    "status": "confirmed",
+    "quote": "Hobbs beat U.S. Rep. Andy Biggs (R) by about 13 points",
+    "url": "https://www.multistate.us/elections/results/arizona-2026"
+   }
+  },
+  "co": {
+   "S": {
+    "file": "24 D, 11 R",
+    "found": "24 D, 11 R; exactly two-thirds",
+    "status": "confirmed",
+    "quote": "In the Senate, the split went from 23-12 to 24-11, giving Democrats 24 of 35 seats, the two-thirds threshold.",
+    "url": "https://www.multistate.us/elections/results/colorado-2026"
+   },
+   "H": {
+    "file": "49 D, 16 R",
+    "found": "49 D, 16 R; two-thirds is 44",
+    "status": "confirmed",
+    "quote": "In the House, the split went from 43-22 to 49-16, above the 44 seats needed for two-thirds.",
+    "url": "https://www.multistate.us/elections/results/colorado-2026"
+   },
+   "governor": {
+    "file": "Phil Weiser, D",
+    "found": "Phil Weiser, D",
+    "status": "confirmed",
+    "quote": "Attorney General Phil Weiser (D) beat Victor Marx (R) by about 27 points to succeed term-limited Democratic Gov. Jared Polis (D).",
+    "url": "https://www.multistate.us/elections/results/colorado-2026"
+   },
+   "note": "Colorado Politics (opened) independently: 'Democrats flipped seven Republican seats ... gaining a supermajority in both the House and Senate'; SD-30 the only Senate flip."
+  },
+  "ga": {
+   "S": {
+    "file": "27 D, 29 R",
+    "found": "29 R, 27 D (AP)",
+    "status": "confirmed",
+    "quote": "The state Senate will still be under GOP control come January ... and will consist of 29 Republicans and 27 Democrats, according to race calls from The Associated Press.",
+    "url": "https://cobbcountycourier.com/?p=114865"
+   },
+   "H": {
+    "file": "91 D, 86 R, 3 uncalled",
+    "found": "91 D (AP), 86 R, 3 uncalled incl. HD-151 Dec 1 runoff; Democrats flip",
+    "status": "confirmed",
+    "quote": "Democrats have clinched at least a one-seat majority in the state House, with 91 seats in the 180-seat chamber as of Sunday evening, according to the Associated Press. Only three seats ... remain up for grabs",
+    "url": "https://cobbcountycourier.com/?p=114865"
+   },
+   "governor": {
+    "file": "Keisha Lance Bottoms, D",
+    "found": "Keisha Lance Bottoms, D",
+    "status": "confirmed",
+    "quote": "Keisha Lance Bottoms (D) beat Rick Jackson (R) by about 9 points to succeed Gov. Brian Kemp (R)",
+    "url": "https://www.multistate.us/elections/results/georgia-2026"
+   }
+  },
+  "ks": {
+   "S": {
+    "file": "9 D, 31 R (not up)",
+    "found": "31 R, 9 D (not up in 2026)",
+    "status": "confirmed",
+    "quote": "Political groups: Majority Republican (31) Minority Democratic (9)",
+    "url": "https://en.wikipedia.org/wiki/Kansas_Senate"
+   },
+   "H": {
+    "file": "57 D, 68 R",
+    "found": "68 R, 57 D per Wikipedia (unofficial; Democrats net +20, about 57-68 in KCTV projection). Two-thirds (84) lost in any case: AP had 64 R called with 13 uncalled",
+    "status": "confirmed",
+    "quote": "Seats before 88 / 37; Seats won 68 / 57 (Wikipedia infobox). KCTV: 'That would put them near 57 seats, six short of a majority, and leave Republicans near 68.'",
+    "url": "https://en.wikipedia.org/wiki/2026_Kansas_House_of_Representatives_election"
+   },
+   "governor": {
+    "file": "Cindy Holscher, D",
+    "found": "Cindy Holscher, D (declared winner Nov 12)",
+    "status": "confirmed",
+    "quote": "Democrat Cindy Holscher was declared the winner on November 12, 2026, over Republican Ty Masterson.",
+    "url": "https://en.wikipedia.org/wiki/2026_Kansas_gubernatorial_election"
+   },
+   "note": "KSHB (opened): 'Woodard said he wasn't planning on Kansas Democrats to win 20 House seats.' Supports +20."
+  },
+  "me": {
+   "S": {
+    "file": "23 D, 11 R, 1 uncalled",
+    "found": "23 D, 11 R, District 18 uncalled (Wikipedia district table); Wikipedia prose claims 24. Two-thirds (24) depends on SD-18",
+    "status": "confirmed",
+    "quote": "BDN: 'Democrats said they won at least 87 seats in the 151-member House and 22 of 35 Senate seats as of early Wednesday' plus 'Democrat Amanda Heath beat Republican Kati McCormick' and 'Elizabeth Bosworth was poised to beat' John Andrews (SD-18); Wikipedia table lists 18th district 'Uncalled'.",
+    "url": "https://www.bangordailynews.com/2026/11/04/politics/maine-democrats-add-seats-in-legislature/"
+   },
+   "H": {
+    "file": "87 D, 61 R, 3 I",
+    "found": "D at least 87 (BDN); R 61 and I 3 not stated in any opened source",
+    "status": "unconfirmed",
+    "quote": "Democrats said they won at least 87 seats in the 151-member House ... as of early Wednesday.",
+    "url": "https://www.bangordailynews.com/2026/11/04/politics/maine-democrats-add-seats-in-legislature/"
+   },
+   "governor": {
+    "file": "Hannah Pingree, D",
+    "found": "Hannah Pingree, D",
+    "status": "confirmed",
+    "quote": "Maine Democrats add seats in the Legislature, giving Hannah Pingree a bigger majority (headline); Wikipedia infobox: Elected Governor Hannah Pingree, Democratic",
+    "url": "https://en.wikipedia.org/wiki/2026_Maine_gubernatorial_election"
+   }
+  },
+  "mi": {
+   "S": {
+    "file": "23 D, 15 R",
+    "found": "23 D, 15 R",
+    "status": "confirmed",
+    "quote": "In the Senate, unofficial results show Democrats picked up three seats to expand their majority from 20-18 to 23-15.",
+    "url": "https://www.michiganpublic.org/politics-government/2026-11-05/michigan-dems-choose-leaders-for-new-legislative-majority-gop-ousts-hall-as-caucus-head"
+   },
+   "H": {
+    "file": "63 D, 47 R",
+    "found": "63 D, 47 R per Wikipedia; AP had called 62 D as of Nov 5. Democrats flip",
+    "status": "confirmed",
+    "quote": "As of Thursday afternoon, the Associated Press had called 62 out of 110 House races for Democrats. (Michigan Public); Wikipedia infobox: Seats won 63 / 47",
+    "url": "https://en.wikipedia.org/wiki/2026_Michigan_House_of_Representatives_election"
+   },
+   "governor": {
+    "file": "Jocelyn Benson, D",
+    "found": "Jocelyn Benson, D",
+    "status": "confirmed",
+    "quote": "Democratic Governor-elect Jocelyn Benson said legislative Democrats should pursue a \"bold new agenda.\"",
+    "url": "https://www.michiganpublic.org/politics-government/2026-11-05/michigan-dems-choose-leaders-for-new-legislative-majority-gop-ousts-hall-as-caucus-head"
+   }
+  },
+  "mn": {
+   "S": {
+    "file": "39 D, 28 R",
+    "found": "39 DFL, 28 R",
+    "status": "confirmed",
+    "quote": "Voters also kept the DFL in control of the Senate, 39-28",
+    "url": "https://www.house.mn.gov/SessionDaily/Story/19211"
+   },
+   "H": {
+    "file": "77 D, 57 R",
+    "found": "77 DFL, 57 R (projected)",
+    "status": "confirmed",
+    "quote": "the DFL came out ahead in Tuesday's general election and is projected to hold a 77-57 advantage for the 2027-28 biennium.",
+    "url": "https://www.house.mn.gov/SessionDaily/Story/19211"
+   },
+   "governor": {
+    "file": "Amy Klobuchar, D",
+    "found": "Amy Klobuchar, DFL",
+    "status": "confirmed",
+    "quote": "The question now is whether Governor-elect Klobuchar will stand up to the tax-and-spend wing of her party",
+    "url": "https://www.house.mn.gov/SessionDaily/Story/19211"
+   }
+  },
+  "mo": {
+   "S": {
+    "file": "12 D, 22 R",
+    "found": "22 R, 12 D (Democrats +2); two-thirds (23) lost",
+    "status": "confirmed",
+    "quote": "Missouri Democrats flipped 16 seats in the state House and two seats in the state Senate ... They will need help from Democrats to override vetoes",
+    "url": "https://www.ky3.com/2026/11/04/missouri-democrats-break-republican-supermajority-with-largest-house-gain-since-1974/"
+   },
+   "H": {
+    "file": "68 D, 95 R",
+    "found": "68 D, 95 R; two-thirds (109) lost",
+    "status": "confirmed",
+    "quote": "The House Democratic Caucus will have 68 members; Republicans will have 95.",
+    "url": "https://www.ky3.com/2026/11/04/missouri-democrats-break-republican-supermajority-with-largest-house-gain-since-1974/"
+   },
+   "governor": {
+    "file": "Mike Kehoe, R (not up)",
+    "found": "Mike Kehoe, R (not up in 2026)",
+    "status": "confirmed",
+    "quote": "Republicans still hold all executive statewide seats in Missouri.",
+    "url": "https://www.ky3.com/2026/11/04/missouri-democrats-break-republican-supermajority-with-largest-house-gain-since-1974/"
+   }
+  },
+  "nc": {
+   "S": {
+    "file": "24 D, 25 R, 1 uncalled",
+    "found": "24 D, 25 R, 1 in recount (Britt R leads by 268: 26-24 R if it holds, 25-25 with Democratic Lt. Gov. breaking ties otherwise); 3/5 (30) lost either way",
+    "status": "confirmed",
+    "quote": "There's one North Carolina Senate race that is going to a recount ... Danny Britt is ahead by 268 votes. If it holds, Republicans would have 26 seats in the state senate. Democrats 24.",
+    "url": "https://www.wsoctv.com/news/local/democrats-take-nc-house-majority-after-16-years-gop-control/2WVEHTHPLRDPJCCHESSJ3XVLOI/"
+   },
+   "H": {
+    "file": "71 D, 48 R, 1 I",
+    "found": "71 D (Democrats flip); 48 R, 1 I per Wikipedia",
+    "status": "confirmed",
+    "quote": "Democrats hold 10 seats above the 61-seat majority threshold. (WSOC); Wikipedia infobox Seats after 71 / 48 / 1",
+    "url": "https://www.wsoctv.com/news/local/democrats-take-nc-house-majority-after-16-years-gop-control/2WVEHTHPLRDPJCCHESSJ3XVLOI/"
+   },
+   "governor": {
+    "file": "Josh Stein, D (not up)",
+    "found": "Josh Stein, D (not up in 2026)",
+    "status": "confirmed",
+    "quote": "Gov. Josh Stein hopes the next two years will be filled with bipartisan action",
+    "url": "https://www.wsoctv.com/news/local/democrats-take-nc-house-majority-after-16-years-gop-control/2WVEHTHPLRDPJCCHESSJ3XVLOI/"
+   }
+  },
+  "nh": {
+   "S": {
+    "file": "15 D, 9 R",
+    "found": "15 D, 9 R (AP forecast; some races uncalled at the time)",
+    "status": "confirmed",
+    "quote": "In the state Senate, the Associated Press is forecasting a 15-9 margin for Democrats, just shy of a veto-proof majority",
+    "url": "https://www.nhpr.org/nh-news/2026-11-04/democrats-sweep-nh-newhampshire-state-house-executive-council-majorities-legislature-election"
+   },
+   "H": {
+    "file": "292 D, 107 R, 1 I",
+    "found": "292 D, 107 R, 1 I (House clerk, provisional; recounts possible)",
+    "status": "confirmed",
+    "quote": "Paul Smith, the House clerk, announced Wednesday that Democrats may hold a 292-107 advantage over Republicans, with one Independent.",
+    "url": "https://www.nhpr.org/nh-news/2026-11-04/democrats-sweep-nh-newhampshire-state-house-executive-council-majorities-legislature-election"
+   },
+   "governor": {
+    "file": "Kelly Ayotte, R",
+    "found": "Kelly Ayotte, R, re-elected",
+    "status": "confirmed",
+    "quote": "Incumbent Republican governor Kelly Ayotte defeated Democrat Cinde Warmington, winning re-election to a second two-year term in office.",
+    "url": "https://en.wikipedia.org/wiki/2026_New_Hampshire_gubernatorial_election"
+   }
+  },
+  "nm": {
+   "S": {
+    "file": "26 D, 16 R (not up)",
+    "found": "26 D, 16 R (only a special election in SD-33, R held)",
+    "status": "confirmed",
+    "quote": "Democrats keep their 26-16 Senate majority. The Senate was not on the ballot except for a special election in SD-33",
+    "url": "https://www.multistate.us/elections/results/new-mexico-2026"
+   },
+   "H": {
+    "file": "47 D, 23 R",
+    "found": "47 D, 23 R; exactly two-thirds",
+    "status": "confirmed",
+    "quote": "Specifically, a 47-23 split would provide Democrats with a two-thirds majority, which is necessary to override a governor's veto.",
+    "url": "https://www.abqjournal.com/news/democrats-expand-majority-in-new-mexico-state-house-win-supermajority-in-chamber/3154704"
+   },
+   "governor": {
+    "file": "Deb Haaland, D",
+    "found": "Deb Haaland, D",
+    "status": "confirmed",
+    "quote": "former U.S. Interior Secretary Deb Haaland (D) won the open governor's race by about 15 points",
+    "url": "https://www.multistate.us/elections/results/new-mexico-2026"
+   }
+  },
+  "nv": {
+   "S": {
+    "file": "13 D, 8 R",
+    "found": "13 D, 8 R; one short of two-thirds (14)",
+    "status": "confirmed",
+    "quote": "The party is one seat shy in the state Senate (Nevada Independent); Wikipedia infobox Seats won 13 / 8",
+    "url": "https://thenevadaindependent.com/article/a-blue-bloodbath-10-big-takeaways-from-nevadas-2026-midterms/"
+   },
+   "A": {
+    "file": "32 D, 10 R",
+    "found": "31 D, 10 R, 1 uncalled (AD-22: Booth D leads Hardy R by under 100 votes); two-thirds (28) secured either way",
+    "status": "corrected",
+    "quote": "In the Assembly, the split went from 27-15 to 31-10, with one race still being counted, giving Democrats a two-thirds supermajority in the 42-member chamber. ... The tightest is AD-22, where Shenea Booth (D) leads Assemblymember Melissa Hardy (R) by fewer than 100 votes.",
+    "url": "https://www.multistate.us/elections/results/nevada-2026"
+   },
+   "governor": {
+    "file": "Aaron Ford, D",
+    "found": "Aaron Ford, D",
+    "status": "confirmed",
+    "quote": "Attorney General Aaron Ford (D) unseated Gov. Joe Lombardo (R) by about 7 points",
+    "url": "https://www.multistate.us/elections/results/nevada-2026"
+   }
+  },
+  "ny": {
+   "S": {
+    "file": "47 D, 15 R, 1 uncalled",
+    "found": "47 D, 15 R, 1 uncalled (SD-43); two-thirds (42) regained",
+    "status": "confirmed",
+    "quote": "In the Senate, Democrats held a 41-22 majority going in; called races now stand at 47-15, with one race still being counted.",
+    "url": "https://www.multistate.us/elections/results/new-york-2026"
+   },
+   "A": {
+    "file": "109 D, 39 R, 2 uncalled",
+    "found": "109 D, 39 R, 2 uncalled (D leads both)",
+    "status": "confirmed",
+    "quote": "In the Assembly, Democrats held a 103-47 majority going in; called races now stand at 109-39, with two races still being counted.",
+    "url": "https://www.multistate.us/elections/results/new-york-2026"
+   },
+   "governor": {
+    "file": "Kathy Hochul, D",
+    "found": "Kathy Hochul, D, re-elected",
+    "status": "confirmed",
+    "quote": "Gov. Kathy Hochul (D) won a second full term by about 20 points over Nassau County Executive Bruce Blakeman (R).",
+    "url": "https://www.multistate.us/elections/results/new-york-2026"
+   },
+   "note": "Greenberg Traurig (opened): Senate 'from 41 to 47 (with one race too close to call)'; Assembly 'expecting the conference to grow to 111'."
+  },
+  "oh": {
+   "S": {
+    "file": "11 D, 22 R",
+    "found": "22 R, 11 D; Republicans keep 3/5 (20)",
+    "status": "confirmed",
+    "quote": "In the Senate, Democrats flipped two Republican seats, and the chamber stands at 22-11.",
+    "url": "https://www.multistate.us/elections/results/ohio-2026"
+   },
+   "H": {
+    "file": "42 D, 53 R, 4 uncalled",
+    "found": "53 R, 42 D, 4 uncalled (all R-held); 3/5 (60) lost either way",
+    "status": "confirmed",
+    "quote": "In the House, Republicans' 65-34 majority fell to 53-42, with four races still being counted. Even if Republicans win every remaining race, they fall short of the 60 seats a supermajority requires.",
+    "url": "https://www.multistate.us/elections/results/ohio-2026"
+   },
+   "governor": {
+    "file": "Amy Acton, D",
+    "found": "Amy Acton, D",
+    "status": "confirmed",
+    "quote": "Amy Acton (D) beat Vivek Ramaswamy (R) for governor",
+    "url": "https://www.multistate.us/elections/results/ohio-2026"
+   }
+  },
+  "pa": {
+   "S": {
+    "file": "26 D, 24 R",
+    "found": "26 D, 24 R; Democrats flip",
+    "status": "confirmed",
+    "quote": "That means Democrats will have a 26-24 majority during the next legislative session.",
+    "url": "https://www.spotlightpa.org/news/2026/11/pennsylvania-house-election-results-legislature-control-elections/"
+   },
+   "H": {
+    "file": "111 D, 88 R, 4 uncalled",
+    "found": "111 D, 4 uncalled (so 88 R)",
+    "status": "confirmed",
+    "quote": "Unofficial results show the party with 111 seats in the 203-member chamber as of Wednesday afternoon, with four races still not called.",
+    "url": "https://www.spotlightpa.org/news/2026/11/pennsylvania-house-election-results-legislature-control-elections/"
+   },
+   "governor": {
+    "file": "Josh Shapiro, D",
+    "found": "Josh Shapiro, D, re-elected",
+    "status": "confirmed",
+    "quote": "With control of both chambers and the governor's mansion, Shapiro and legislative leaders have promised ...",
+    "url": "https://www.spotlightpa.org/news/2026/11/pennsylvania-house-election-results-legislature-control-elections/"
+   }
+  },
+  "sc": {
+   "S": {
+    "file": "34 R, 12 D (not up)",
+    "found": "34 R, 12 D (not up in 2026)",
+    "status": "confirmed",
+    "quote": "Political groups: Majority Republican (34) Minority Democratic (12)",
+    "url": "https://en.wikipedia.org/wiki/South_Carolina_Senate"
+   },
+   "H": {
+    "file": "79 R, 45 D",
+    "found": "Democrats +10 from 89-35 (Wikipedia current seats) = 79-45; two-thirds lost",
+    "status": "confirmed",
+    "quote": "Democrats picked up 10 seats in the state House, ending Republicans' supermajority (WTOC/WIS); Wikipedia: Current seats 89 R / 35 D before the election",
+    "url": "https://www.wtoc.com/2026/11/04/democrats-break-gop-house-supermajority-south-carolina/"
+   },
+   "governor": {
+    "file": "Alan Wilson, R",
+    "found": "Alan Wilson, R",
+    "status": "confirmed",
+    "quote": "Republican state attorney general Alan Wilson defeated Democratic state representative Jermaine Johnson in the general election.",
+    "url": "https://en.wikipedia.org/wiki/2026_South_Carolina_gubernatorial_election"
+   }
+  },
+  "tx": {
+   "S": {
+    "file": "19 R, 12 D",
+    "found": "19 R, 12 D (no Senate seat changed)",
+    "status": "confirmed",
+    "quote": "Republicans held onto the state Senate, denying Democrats a trifecta of their own (Texas Tribune); Wikipedia: Seats won 19 / 12, Democrats 'failing to pick up any new seats in the Texas Senate'",
+    "url": "https://www.texastribune.org/2026/11/03/texas-house-legislature-outcomes-control-republicans-democrats-2026/"
+   },
+   "H": {
+    "file": "83 D, 67 R",
+    "found": "Democrats flip, but 83-67 is the Tribune projection with leads; Wikipedia infobox: 79 D, 63 R, 8 uncalled (another table there: 78-63, 9 uncalled)",
+    "status": "corrected",
+    "quote": "If those results hold, Democrats would enter the next legislative session in January with 83 seats to Republicans' 67. (Tribune, 'positioning them to net 21 seats, barring changes'); Wikipedia: Seats won 79 / 63, Results TBD",
+    "url": "https://en.wikipedia.org/wiki/2026_Texas_House_of_Representatives_election"
+   },
+   "governor": {
+    "file": "Gina Hinojosa, D",
+    "found": "Gina Hinojosa, D",
+    "status": "confirmed",
+    "quote": "With Gina Hinojosa headed to the governor's mansion, Democrats have broken the Republican trifecta that has governed Texas since 2003.",
+    "url": "https://www.texastribune.org/2026/11/03/texas-house-legislature-outcomes-control-republicans-democrats-2026/"
+   }
+  },
+  "ut": {
+   "S": {
+    "file": "20 R, 8 D, 1 uncalled",
+    "found": "20 R, 8 D, 1 uncalled: holdovers 12 R, 2 D (Wikipedia: 22 R, 6 D, 1 Forward with 10 R, 4 D, 1 Fwd up) + called 8 R, 6 D; SD-11 (Benson R vs Buss Forward) uncalled",
+    "status": "confirmed",
+    "quote": "MultiState race table: 8 R and 6 D winners; '| Senate SD-11 | No winner recorded | Brooks Benson (R), Emily Buss (Forward Party)'",
+    "url": "https://www.multistate.us/elections/results/utah-2026"
+   },
+   "H": {
+    "file": "44 R, 29 D, 2 I",
+    "found": "43 R, 26 D, 2 unaffiliated, 4 uncalled (HD-20, 48, 59, 61); Wikipedia infobox 44-29-2 counts leaders, its own results table gives R 43-49. Two-thirds (50) lost either way (R at most 47)",
+    "status": "corrected",
+    "quote": "For the first time since 1993, Republicans did not hold a supermajority in the Utah House. (Wikipedia, citing state results) / MultiState table: 43 R, 26 D, 2 Unaffiliated winners and 4 'No winner recorded'",
+    "url": "https://en.wikipedia.org/wiki/2026_Utah_House_of_Representatives_election"
+   },
+   "governor": {
+    "file": "Spencer Cox, R (not up)",
+    "found": "Spencer Cox, R (not up in 2026)",
+    "status": "confirmed",
+    "quote": "No 2026 Utah gubernatorial election (Wikipedia has no such page); Cox elected 2024.",
+    "url": "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   }
+  },
+  "vt": {
+   "S": {
+    "file": "20 D, 8 R, 1 P, 1 I",
+    "found": "20 D, 8 R, 1 Progressive, 1 independent",
+    "status": "confirmed",
+    "quote": "Democrats currently hold 16 seats in the 30-member Senate. That will rise to 20 ... Republican members dropped from 13 to eight. ... members will also include a Progressive and an independent.",
+    "url": "https://www.sevendaysvt.com/news/election-2026/democrats-regain-supermajority-in-vermont-legislature/"
+   },
+   "H": {
+    "file": "102 D, 38 R, 7 P, 3 I",
+    "found": "102 D, 38 R, 7 P, 3 I (Wikipedia infobox says 6 P, 4 I)",
+    "status": "confirmed",
+    "quote": "In the 150-member House, Democrats expanded their number of seats from 87 to 102 ... There are also seven Progressives and three independents in the House ... the 38 Republicans remaining",
+    "url": "https://www.sevendaysvt.com/news/election-2026/democrats-regain-supermajority-in-vermont-legislature/"
+   },
+   "governor": {
+    "file": "Phil Scott, R",
+    "found": "Phil Scott, R, re-elected",
+    "status": "confirmed",
+    "quote": "overriding vetoes from Gov. Phil Scott, the only Republican who won a statewide race on Tuesday",
+    "url": "https://www.sevendaysvt.com/news/election-2026/democrats-regain-supermajority-in-vermont-legislature/"
+   }
+  },
+  "wa": {
+   "S": {
+    "file": "31 D, 18 R",
+    "found": "31 D, 18 R; two short of two-thirds (33)",
+    "status": "confirmed",
+    "quote": "Wikipedia: Seats before 30 / 19, Seats won 31 / 18. KUOW: 'Democrats would need to flip two Senate seats, something that is not possible this cycle'",
+    "url": "https://en.wikipedia.org/wiki/2026_Washington_Senate_election"
+   },
+   "H": {
+    "file": "66 D, 32 R",
+    "found": "at least 66 D (so at most 32 R); two-thirds gained; 3 R-held seats still close on Nov 9",
+    "status": "confirmed",
+    "quote": "The party is on track to hold at least 66 seats in the Legislature's lower chamber. It's the first time they've had a two-thirds majority in the House since 1949.",
+    "url": "https://www.kuow.org/elections/2026-11-09/washington-dems-nab-supermajority-in-state-house"
+   },
+   "governor": {
+    "file": "Bob Ferguson, D (not up)",
+    "found": "Bob Ferguson, D (not up in 2026)",
+    "status": "confirmed",
+    "quote": "No 2026 Washington gubernatorial election (Wikipedia has no such page); Ferguson elected 2024.",
+    "url": "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   }
+  },
+  "wi": {
+   "S": {
+    "file": "18 D, 15 R",
+    "found": "18 D, 15 R; Democrats flip",
+    "status": "confirmed",
+    "quote": "On Tuesday night, Democrats flipped the majority – taking 18 seats, leaving Republicans with 15.",
+    "url": "https://www.fox6now.com/election/wisconsin-election-democrats-control-legislature-2026"
+   },
+   "A": {
+    "file": "53 D, 46 R",
+    "found": "53 D, 46 R; Democrats flip",
+    "status": "confirmed",
+    "quote": "Republicans entered the session with a 54-45 edge. Democrats won all eight of their targeted districts. The wins give Democrats 53 seats",
+    "url": "https://www.wbay.com/2026/11/04/democrats-flip-control-wisconsin-legislature/"
+   },
+   "governor": {
+    "file": "David Crowley, D",
+    "found": "David Crowley, D",
+    "status": "confirmed",
+    "quote": "With David Crowley winning the governor's race, Democrats will control all three parts of Wisconsin's government for the first time since 2010.",
+    "url": "https://www.wbay.com/2026/11/04/democrats-flip-control-wisconsin-legislature/"
+   }
+  },
+  "fl": {
+   "S": {
+    "file": "13 D, 25 R, 1 I, 1 vacant",
+    "found": "MultiState: 26-13-1 (R-D-I), counting the vacant Republican seat; same as the file's 25 R + 1 vacant. Two-thirds (27) lost either way",
+    "status": "confirmed",
+    "quote": "The Senate entered Tuesday with 26 Republicans and one vacant seat last held by a Republican. On unofficial returns it stands at 26-13-1, Republicans to Democrats plus independent Sen. Jason Pizzo, leaving Republicans short of the 27 seats needed for two-thirds.",
+    "url": "https://www.multistate.us/elections/results/florida-2026"
+   },
+   "H": {
+    "file": "50 D, 70 R",
+    "found": "70 R, 50 D; below two-thirds (80) and three-fifths (72)",
+    "status": "confirmed",
+    "quote": "On unofficial returns the House stands at 70-50 ... Republicans fall short of the 72 seats needed for a three-fifths majority.",
+    "url": "https://www.multistate.us/elections/results/florida-2026"
+   },
+   "governor": {
+    "file": "Byron Donalds, R",
+    "found": "Byron Donalds, R",
+    "status": "confirmed",
+    "quote": "Donalds, a former U.S. representative, beat David Jolly (D) by about 1 point to succeed Gov. Ron DeSantis (R)",
+    "url": "https://www.multistate.us/elections/results/florida-2026"
+   }
+  },
+  "ia": {
+   "S": {
+    "file": "18 D, 32 R",
+    "found": "32 R, 18 D; below 34",
+    "status": "confirmed",
+    "quote": "they now hold 32-18, short of the 34 votes needed to override a veto.",
+    "url": "https://www.multistate.us/elections/results/iowa-2026"
+   },
+   "H": {
+    "file": "44 D, 55 R, 1 uncalled",
+    "found": "55 R, 44 D, 1 uncalled (HD-19); two-thirds (67) lost",
+    "status": "confirmed",
+    "quote": "In the House, Republicans, who won 67-33 in 2024, fell to 55-44, with one race still being counted.",
+    "url": "https://www.multistate.us/elections/results/iowa-2026"
+   },
+   "governor": {
+    "file": "Rob Sand, D",
+    "found": "Rob Sand, D",
+    "status": "confirmed",
+    "quote": "State Auditor Rob Sand (D) won the open governor's office.",
+    "url": "https://www.multistate.us/elections/results/iowa-2026"
+   }
+  },
+  "in": {
+   "S": {
+    "file": "15 D, 35 R",
+    "found": "35 R, 15 D (Democrats net +5 from 40-10); Republicans keep two-thirds (34)",
+    "status": "confirmed",
+    "quote": "Democrats had a net gain of 5 seats, falling just one seat shy of breaking Republicans' two-thirds supermajority. (Wikipedia; its infobox shows 34/15 with one seat TBD.) Indiana Capital Chronicle, election night: 'gaining at least four seats'",
+    "url": "https://en.wikipedia.org/wiki/2026_Indiana_Senate_election"
+   },
+   "H": {
+    "file": "46 D, 54 R",
+    "found": "54 R, 46 D; two-thirds lost",
+    "status": "confirmed",
+    "quote": "Republicans' for the first time since 2010 did not win a two-thirds supermajority, as Democrats had a net gain total of 16 seats. (Wikipedia infobox Seats won 54 / 46); Indiana Capital Chronicle: 'Indiana Democrats on Tuesday shattered the GOP's 14-year supermajority'",
+    "url": "https://en.wikipedia.org/wiki/2026_Indiana_House_of_Representatives_election"
+   },
+   "governor": {
+    "file": "Mike Braun, R (not up)",
+    "found": "Mike Braun, R (not up in 2026)",
+    "status": "confirmed",
+    "quote": "No 2026 Indiana gubernatorial election (Wikipedia has no such page); Braun elected 2024.",
+    "url": "https://en.wikipedia.org/wiki/2026_United_States_state_legislative_elections"
+   }
+  }
+ }
+}

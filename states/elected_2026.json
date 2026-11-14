@@ -1,5 +1,5 @@
 {
- "_about": "Party makeup of each legislative chamber for the session starting in 2027, after the November 3, 2026 elections (holdover senators included; D includes Minnesota's DFL and North Dakota's Democratic-NPL; I independents, P Vermont Progressives, G Greens; 'uncalled' seats not yet decided; 'vacant' empty seats), the governor serving in 2027 [name, party, how], any bipartisan coalition running a chamber, and a confidence flag: 'called' (control clear), 'close' (control or a supermajority depends on uncalled races), 'unknown'. Unofficial results as reported by news outlets, AP calls and Wikipedia's election pages; nothing was certified yet. States with no 2026 legislative election (LA, MS, NJ, VA; and KS, NM and SC Senates) show their current makeup. Nebraska's one house is nonpartisan. For a one-off 'after the election' view; not kept up to date.",
+ "_about": "Party makeup of each legislative chamber for the session starting in 2027, after the November 3, 2026 elections (holdover senators included; D includes Minnesota's DFL and North Dakota's Democratic-NPL; I independents, P Vermont Progressives, G Greens; 'uncalled' seats not yet decided; 'vacant' empty seats), the governor serving in 2027 [name, party, how], any bipartisan coalition running a chamber, and a confidence flag: 'called' (control clear), 'close' (control or a supermajority depends on uncalled races), 'unknown'. Unofficial results as reported by news outlets, AP calls and Wikipedia's election pages; nothing was certified yet. States with no 2026 legislative election (LA, MS, NJ, VA; and KS, NM and SC Senates) show their current makeup. Nebraska's one house is nonpartisan. For a one-off 'after the election' view; not kept up to date. Checked against opened sources the same day (elected_2026_check.json): control, supermajorities and governors confirmed; TX House, UT House, NV Assembly and the AK governor corrected.",
  "as_of": "2026-11-14",
  "states": {
   "ak": {
@@ -21,7 +21,7 @@
    "governor": [
     "Jonathan Kreiss-Tomkins",
     "D",
-    "leading, uncalled: ranked-choice count on November 18 (Mike Dunleavy, R, term-limited)"
+    "newly elected (won 50.8% of first choices; ADN, Nov 13)"
    ],
    "coalition": [
     "S",
@@ -937,10 +937,10 @@
      "note": "11 of 21 up; includes holdovers. Unchanged; one short of 2/3 (14)."
     },
     "A": {
-     "D": 32,
+     "D": 31,
      "R": 10,
-     "uncalled": 0,
-     "note": "Nevada Independent (about Nov. 10): Democrats 32 of 42, counting AD-22, where Shenea Booth (D) led Assm. Melissa Hardy (R) by about 72 votes (MultiState still lists it uncalled: 31-10-1). Democrats flipped AD-2, AD-4, AD-13, AD-35 (and AD-22). Was D 27-15. Above 2/3 (28) either way."
+     "uncalled": 1,
+     "note": "Checked 2026-11-14 against opened sources (states/elected_2026_check.json): 31 D, 10 R, AD-22 uncalled (the Democrat leads by under 100 votes); Democrats have two-thirds either way. Nevada Independent (about Nov. 10): Democrats 32 of 42, counting AD-22, where Shenea Booth (D) led Assm. Melissa Hardy (R) by about 72 votes (MultiState still lists it uncalled: 31-10-1). Democrats flipped AD-2, AD-4, AD-13, AD-35 (and AD-22). Was D 27-15. Above 2/3 (28) either way."
     }
    },
    "governor": [
@@ -1220,10 +1220,10 @@
      "note": "16 of 31 up (with holdovers); before 20-11. The Texas Tribune (Nov 4): 'the line in the Texas Senate appeared to hold firm at 19 Republicans and 12 Democrats.'"
     },
     "H": {
-     "D": 83,
-     "R": 67,
-     "uncalled": 0,
-     "note": "A real Democratic majority, not a tie: first since 2003 (76 needed). 83-67 is the Texas Tribune's count if leads held (Nov 4: 11 AP-called flips, 3 concessions, at least 7 more uncalled Democratic leads); later reports say 83-84 D. Wikipedia's infobox read 79 D, 63 R with 8 seats not entered. Rep. Senfronia Thompson (D) is the presumptive Speaker, with 90 claimed pledges."
+     "D": 79,
+     "R": 63,
+     "uncalled": 8,
+     "note": "Checked 2026-11-14 against opened sources (states/elected_2026_check.json): 79 D, 63 R, 8 uncalled (Wikipedia); Democrats hold the majority either way (76 needed). The Texas Tribune's 83-67 counted leads. A real Democratic majority, not a tie: first since 2003 (76 needed). 83-67 is the Texas Tribune's count if leads held (Nov 4: 11 AP-called flips, 3 concessions, at least 7 more uncalled Democratic leads); later reports say 83-84 D. Wikipedia's infobox read 79 D, 63 R with 8 seats not entered. Rep. Senfronia Thompson (D) is the presumptive Speaker, with 90 claimed pledges."
     }
    },
    "governor": [
@@ -1248,11 +1248,11 @@
      "note": "15 of 29 up (with holdovers); before 22 R, 6 D, 1 Forward. SD-5 (Millner's seat) and SD-19 (Majority Leader Cullimore) flipped R to D (MultiState). SD-11 uncalled: Brooks Benson (R) vs. Sen. Emily Buss (Forward). Republicans keep two-thirds (20 of 29) either way. Not certified until the canvass; derived from flips, no source states the total."
     },
     "H": {
-     "R": 44,
-     "D": 29,
+     "R": 43,
+     "D": 26,
      "I": 2,
-     "uncalled": 0,
-     "note": "Wikipedia (Nov 9): 44 R, 29 D, 2 independents (HD-3 and HD-38 went to unaffiliated candidates), but its results table gives ranges R 43-49, D 24-30, so a few seats (MultiState lists HD-20, 48, 59, 61) were still uncalled. Republicans lose two-thirds (50 of 75) even at the top of the range: 'For the first time since 1993, Republicans did not hold a supermajority in the Utah House.'"
+     "uncalled": 4,
+     "note": "Checked 2026-11-14 against opened sources (states/elected_2026_check.json): 43 R, 26 D, 2 unaffiliated, 4 uncalled (HD-20, 48, 59, 61); Republicans lose two-thirds either way (at most 47 of 50 needed). Wikipedia (Nov 9): 44 R, 29 D, 2 independents (HD-3 and HD-38 went to unaffiliated candidates), but its results table gives ranges R 43-49, D 24-30, so a few seats (MultiState lists HD-20, 48, 59, 61) were still uncalled. Republicans lose two-thirds (50 of 75) even at the top of the range: 'For the first time since 1993, Republicans did not hold a supermajority in the Utah House.'"
     }
    },
    "governor": [
