@@ -284,6 +284,12 @@ jobs:
           path: "data/ia"
           key: ia-data-v1-latest
           restore-keys: ia-data-v1-
+      - name: Restore Kansas
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/ks"
+          key: ks-data-v1-latest
+          restore-keys: ks-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:

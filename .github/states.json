@@ -430,6 +430,17 @@
    "minutes": 110,
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/ia/fetch.py",
    "note": "legis.iowa.gov, a request every 6 seconds; a run ends at once if the site's bot check appears (the owner's choice, 2026-11-13). The first copy (about 28 hours of requests) builds up over many runs. Not built into the site until its converter exists."
+  },
+  {
+   "name": "Kansas",
+   "code": "ks",
+   "key": "ks-data-v1",
+   "paths": [
+    "data/ks"
+   ],
+   "minutes": 60,
+   "run": "python3 states/ks/fetch.py",
+   "note": "The Legislature's API (kslegislature.gov/api/v1) without a key, 30 requests a minute; roll calls and supplemental notes fill in over several runs. Not built into the site until its converter exists."
   }
  ]
 }
