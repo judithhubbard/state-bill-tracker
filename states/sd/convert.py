@@ -106,6 +106,23 @@ def load_session(session):
     members = json.load(open(os.path.join(folder(session), "members.json")))
     seat_of = seats(members)
     member = {m["SessionMemberId"]: m for m in members}
+    # A House district can list three members with no dates (2025's 13 and 16: someone replaced mid-session), and the
+    # third then shared a letter with a member still serving. Members who vote in the same roll call hold different seats.
+    together = {}
+    for f in glob.glob(os.path.join(folder(session), "votes", "*.json")):
+        try:
+            ids = {rc.get("SessionMemberId") for rc in json.load(open(f)).get("RollCalls") or []}
+        except (OSError, ValueError):
+            continue
+        for i in ids:
+            together.setdefault(i, set()).update(ids - {i})
+    for seat in {s for s in seat_of.values() if s.startswith("H:")}:
+        holders = sorted(i for i, s in seat_of.items() if s == seat)
+        for i in holders[1:]:
+            if any(j in together.get(i, ()) for j in holders if j != i and seat_of[j] == seat):
+                other = seat[:-1] + ("b" if seat.endswith("a") else "a")
+                if not any(j in together.get(i, ()) for j, s in seat_of.items() if s == other):
+                    seat_of[i] = other
     parties = _PARTIES.setdefault(session, {})
     files = glob.glob(os.path.join(folder(session), "bills", "*.json"))
     fetched = datetime.fromtimestamp(max(os.path.getmtime(f) for f in files), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")

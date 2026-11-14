@@ -2448,7 +2448,11 @@ function voteOf(v, L) {
   // Only committee members vote in committee.
   if (v.kind === "C" && !(L.committees || []).some((c) => commKey(c.name) === commKey(v.committee))) return null;
   const code = v.notYes.get(L.id);
-  return code ? VOTE_WORDS[code] || code : "Yes";
+  if (code) return VOTE_WORDS[code] || code;
+  // A vote known only by its tally (Kansas's and Missouri's roll calls not read yet, Illinois's House): with no names,
+  // someone not named can't be called a yes unless everyone voted yes.
+  if (!v.notYes.size && (v.no > 0 || v.yes < LEGS.filter((x) => x.house === v.house).length)) return null;
+  return "Yes";
 }
 // The legislators whose votes matter here: the page's legislator, else your senator and Assembly member.
 function votePeople() {
