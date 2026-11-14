@@ -45,7 +45,7 @@ sys.path.insert(0, ".")
 import balance, front_page
 out = sys.argv[1]
 page = open("home.html").read()
-items, power = [], {}
+items, power, after = [], {}, {}
 for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
         P = importlib.import_module(f"states.{s}.profile")
@@ -53,10 +53,16 @@ for s in sorted(os.listdir(out)):
         data = front_page.map_data(s, getattr(P, "LOWER_NAME", "Assembly"))
         if data:
             power[s] = data
+        # After the 2026 election (states/elected_2026.json), for the map's "From January" view.
+        nxt = front_page.next_data(s, getattr(P, "LOWER_NAME", "Assembly"))
+        if nxt:
+            after[s] = nxt
         items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b></a></li>\n'))
 block = "".join(i for _, i in sorted(items))
 page = page.replace('<script type="application/json" id="power">{}</script>',
                     '<script type="application/json" id="power">' + json.dumps(power, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
+page = page.replace('<script type="application/json" id="after">{}</script>',
+                    '<script type="application/json" id="after">' + json.dumps(after, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
 page = re.sub(r'(<ul id="states">\n)(?:    <li><a href="[a-z]{2}/">.*?</li>\n)*', lambda m: m.group(1) + block, page, count=1, flags=re.S)
 open(os.path.join(out, "index.html"), "w").write(page)
 print("front page:", ", ".join(n for n, _ in sorted(items)))

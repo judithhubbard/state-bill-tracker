@@ -62,6 +62,11 @@ p.lede { color: var(--ink-2); margin: 0 0 24px; font-size: 17px; }
   .dots { gap: 3px; }
   .tiles .dot.sm { box-shadow: inset 0 0 0 1px currentColor; }
 }
+.when { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 0 0 10px; font-size: 14px; }
+.when button { font: inherit; border: 0; background: var(--sheet); color: var(--ink-2); padding: 6px 12px; cursor: pointer; }
+.when button[aria-pressed="true"] { background: var(--navy); color: var(--sheet); font-weight: 600; }
+.when button:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
+.tiles a.changed { box-shadow: inset 0 0 0 1.5px var(--navy), 0 0 0 2px var(--hover); }
 .legend { color: var(--ink-2); font-size: 14px; margin: 0; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
 .legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
@@ -81,6 +86,10 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 <main>
   <h1>State Bill Tracker</h1>
   <p class="lede">Follow bills in your state legislature: where each one is, who decides next, and what to ask them. No account needed.</p>
+  <div class="when" id="when" role="group" aria-label="Party control" hidden>
+    <button type="button" data-when="now" aria-pressed="true">Now</button>
+    <button type="button" data-when="after" aria-pressed="false">From January</button>
+  </div>
   <div class="tiles" id="tiles" aria-hidden="true"></div>
   <p class="legend" id="legend" hidden>
     <span class="key"><i class="sq" style="background:var(--sheet);box-shadow:inset 0 0 0 1.5px var(--navy)"></i>Ready</span>
@@ -91,6 +100,7 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="key"><i class="dot sm R"></i>Supermajority</span>
     <span class="key"><i class="dot C"></i>Split or coalition</span>
     <span class="key"><i class="dot N"></i>Nonpartisan</span>
+    <span class="key" id="changedKey" hidden><i class="sq" style="background:var(--sheet);box-shadow:0 0 0 2px var(--hover)"></i>Changes in January</span>
   </p>
   <h2>States</h2>
   <input class="find" id="find" type="search" placeholder="Find a state" aria-label="Find a state" hidden>
@@ -98,9 +108,10 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <li><a href="ca/"><b>California</b></a></li>
   </ul>
   <p class="none" id="none">No state by that name is ready yet.</p>
-  <footer>Party control is from each legislature's current member list; a supermajority holds enough seats to override a governor's veto on its own. Your watchlist stays in your browser.</footer>
+  <footer>Party control is from each legislature's current member list; a supermajority holds enough seats to override a governor's veto on its own. "From January" shows the November 2026 election's reported results, before certification. Your watchlist stays in your browser.</footer>
 </main>
 <script type="application/json" id="power">{}</script>
+<script type="application/json" id="after">{}</script>
 <script>
 // Grid positions (row, column) of a common tile-map layout.
 const GRID = { AK: [0, 0], ME: [0, 10], VT: [1, 9], NH: [1, 10],
@@ -120,18 +131,41 @@ const NAMES = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: 
 // The states built in this run (the list's links, "ca/"), and their party control ({ca: {dots: [[party, supermajority] x3], title}}).
 const built = {};
 for (const a of document.querySelectorAll("#states a")) built[a.getAttribute("href").replace(/\/.*$/, "").toUpperCase()] = a.getAttribute("href");
-let power = {};
+let power = {}, after = {};
 try { power = JSON.parse(document.getElementById("power").textContent); } catch (e) {}
+// After the 2026 election (reported results, states/elected_2026.json): the "From January" view, shown only until the
+// new sessions begin.
+try { after = JSON.parse(document.getElementById("after").textContent); } catch (e) {}
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const tiles = document.getElementById("tiles");
-tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
-  const style = `grid-row:${r + 1};grid-column:${c + 1}`;
-  if (!built[code]) return `<span class="off" style="${style}" title="${NAMES[code]}: coming soon">${code}</span>`;
-  const p = power[code.toLowerCase()];
-  const dots = p ? `<span class="dots" aria-hidden="true">${p.dots.map(([party, sm]) => `<i class="dot ${party}${sm ? " sm" : ""}"></i>`).join("")}</span>` : "";
-  const label = p ? `${NAMES[code]}. ${p.title}` : NAMES[code];
-  return `<a href="${built[code]}" style="${style}" title="${esc(label)}" aria-label="${esc(label)}">${code}${dots}</a>`;
-}).join("");
+const same = (a, b) => JSON.stringify(a?.dots) === JSON.stringify(b?.dots);
+function drawMap(view) {
+  tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
+    const style = `grid-row:${r + 1};grid-column:${c + 1}`;
+    if (!built[code]) return `<span class="off" style="${style}" title="${NAMES[code]}: coming soon">${code}</span>`;
+    const now = power[code.toLowerCase()], next = after[code.toLowerCase()];
+    const p = view === "after" && next ? next : now;
+    const changed = view === "after" && next && now && !same(now, next);
+    const dots = p ? `<span class="dots" aria-hidden="true">${p.dots.map(([party, sm]) => `<i class="dot ${party}${sm ? " sm" : ""}"></i>`).join("")}</span>` : "";
+    const label = !p ? NAMES[code] : view === "after" && next
+      ? `${NAMES[code]} from January: ${next.title}${next.close ? " (some races still close)" : ""}${changed && now ? `. Now: ${now.title}` : ""}`
+      : `${NAMES[code]}. ${p.title}`;
+    return `<a href="${built[code]}"${changed ? ' class="changed"' : ""} style="${style}" title="${esc(label)}" aria-label="${esc(label)}">${code}${dots}</a>`;
+  }).join("");
+  document.getElementById("changedKey").hidden = view !== "after";
+}
+drawMap("now");
+// The switch appears only while there is an "after the election" view, and only until the new sessions begin.
+const when = document.getElementById("when");
+if (Object.keys(after).length && new Date() < new Date("2027-01-15")) {
+  when.hidden = false;
+  when.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-when]");
+    if (!b) return;
+    for (const x of when.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b));
+    drawMap(b.dataset.when);
+  });
+}
 tiles.removeAttribute("aria-hidden");
 document.getElementById("legend").hidden = false;
 // Find a state: filters the list as you type.
