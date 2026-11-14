@@ -31,8 +31,8 @@ Laws and vetoes are checked against the Clerk's worksheets (worksheets/r1.pdf, r
 
 Votes: each recorded vote member by member (votes/<KeyID>.json, linked from its history line). Kept: the bill's own votes
 (advancing from General File and Select File, passing on Final Reading, cloture on it, overriding a veto), as floor votes
-labelled with their round; amendments' and other motions' votes are left out. "What it does" isn't shown: the only plain
-summary is the introducer's statement of intent, a PDF that isn't downloaded.
+labelled with their round; amendments' and other motions' votes are left out. "What it does" is the committee statement's
+summary (and what the committee's amendment changed), else the introducer's statement of intent: states/ne/texts.py.
 """
 import html as H_, json, os, re, shutil, subprocess
 from collections import Counter, defaultdict

@@ -35,7 +35,7 @@ Legislatures, into data/ne/<first year>/ (2025 is the 109th):
   "Related Transcripts" list, which names unrelated hearings, left out): title ("LB7 - Change provisions relating to
   ..."), the primary introducer only ("DeKay"; "Executive Board: Hansen, Chairperson"; cosponsors are only in the
   bill text), date of introduction, links to the texts and to the statement of intent, committee statement and fiscal
-  note (PDFs, not read: the statement of intent is the closest thing to a plain summary), and the history by date with
+  note (PDFs: the first two are read, below), and the history by date with
   journal pages ("Referred to Agriculture Committee", "Placed on General File with AM77", "Advanced to Enrollment and
   Review Initial", "Placed on Select File", "Passed on Final Reading 47-0-2", "Approved by Governor on April 7, 2025",
   "Indefinitely postponed"; amendments filed and adopted with their sponsors), each recorded vote linked by its KeyID.
@@ -66,8 +66,16 @@ seconds each: about 8 hours, built up over several runs (each run saves as it go
 65 requests for members and committees, plus the bills' weekly reread of a live Legislature); during a session, the
 day's changed bills and their new votes.
 
-Not downloaded: bill texts, amendments, the statement of intent, committee statements and fiscal notes (PDFs),
-cosponsors (in the bill texts), transcripts, special sessions, resolutions other than constitutional amendments.
+- docs/CS-LB7.txt, docs/SI-LB7.txt, docs.json: "What it does" (`statements()`, last in each run, finished Legislatures
+  too; never holds the state back). Each bill's committee statement (/FloorDocs/109/PDF/CS/LB7.pdf, written when the
+  committee advances the bill, about 40% of bills), read once and again when the committee advances the bill anew; its
+  statement of intent (/FloorDocs/109/PDF/SI/LB7.pdf, the introducer's, on nearly every bill) only when there's no
+  usable committee statement. Saved as text (pdftotext -raw; without pdftotext they aren't read); states/ne/texts.py
+  turns them into data/ne/texts_<year>.json after each year's pass. A first copy of both Legislatures is about 2,700
+  PDFs (about 1,070 committee statements, 1,600 statements of intent), 2½-3 hours at the crawl delay, over a few runs.
+
+Not downloaded: bill texts, amendments, fiscal notes, cosponsors (in the bill texts), transcripts, special sessions,
+resolutions other than constitutional amendments.
 
 data/ne/incomplete says "running" during the first copy, then lists what was never downloaded (a Legislature's list,
 a listed bill's page, the members); it is removed when nothing is missing. Votes, worksheets and committees fill in
@@ -77,7 +85,7 @@ Usage: python3 states/ne/fetch.py [first year]   (default: the newest two Legisl
 """
 import gzip, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from collections import Counter
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 SITE = "https://nebraskalegislature.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "ne"))
@@ -98,7 +106,7 @@ PDFTOTEXT = shutil.which("pdftotext")
 START = time.time()
 BUDGET = max(0.0, float(os.environ.get("FETCH_MINUTES") or 0) - 5) * 60
 FAILS = Counter()  # why requests failed, for the summary
-STATS = {"requests": 0, "searches": 0, "bills": 0, "votes": 0}
+STATS = {"requests": 0, "searches": 0, "bills": 0, "votes": 0, "documents": 0}
 LAST = [0.0]  # when the last answer ended
 
 
@@ -220,14 +228,16 @@ def sort_key(key):
 
 # ---- worksheets: the Clerk's status list, for the A bills, the CA resolutions and the counts ----
 
-def pdf_text(body):
+def pdf_text(body, mode="-layout"):
+    """A PDF's text by pdftotext: "-layout" for the worksheets' columns, "-raw" for running text (the default mode
+    joins words hyphenated at a line's end, "high-" + "quality" into "highquality")."""
     if not PDFTOTEXT:
         return None
     with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
         f.write(body)
         f.flush()
         try:
-            out = subprocess.run([PDFTOTEXT, "-layout", f.name, "-"], capture_output=True, timeout=120)
+            out = subprocess.run([PDFTOTEXT, mode, f.name, "-"], capture_output=True, timeout=120)
         except (OSError, subprocess.SubprocessError):
             return None
     return out.stdout.decode("utf-8", "replace") if out.returncode == 0 else None
@@ -573,6 +583,107 @@ def votes(year, folder, state):
     return got == len(todo)
 
 
+# ---- "What it does": committee statements and statements of intent (PDFs, saved as text) ----
+
+DOC = re.compile(r"FloorDocs/\d+/PDF/(CS|SI)/(L[BR]\d+(?:CA)?)\.pdf")
+
+
+def placed_on(page):
+    """The day a bill page shows the committee last advancing it ("Placed on General File"), or ""."""
+    days = [iso_day(d) for d in re.findall(r'<td class="py-1">([A-Z][a-z]{2} \d\d, \d{4})</td>\s*<td class="py-1">'
+                                            r'Placed on General File', page)]
+    return max(days, default="")
+
+
+def iso_day(d):
+    return datetime.strptime(d, "%b %d, %Y").date().isoformat()
+
+
+def texts_module():
+    """states/ne/texts.py, loaded by its path (this file runs as a script)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("ne_texts", os.path.join(os.path.dirname(os.path.abspath(__file__)), "texts.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def statements(year, folder):
+    """Each bill's committee statement (CS) once its page links one, read again when the committee advances the bill
+    anew (a later "Placed on General File" than the copy); its statement of intent (SI) only while it has no committee
+    statement (or one that gives no summary), once. Saved as text, docs/CS-LB7.txt; docs.json says when each was read
+    ({"LB7": {"CS": {"read", "sha"}, "SI": {...}}}; a document the server doesn't have is tried again weekly). Never
+    holds the state back: what isn't read now is read on a later run."""
+    if not PDFTOTEXT:
+        print(f"{year} statements: pdftotext isn't installed; not read", flush=True)
+        return
+    T = texts_module()
+    docs = os.path.join(folder, "docs")
+    os.makedirs(docs, exist_ok=True)
+    index_path = os.path.join(folder, "docs.json")
+    index = load(index_path, {})
+    bills_dir = os.path.join(folder, "bills")
+    cs_todo, si_todo = [], []
+    for name in sorted(os.listdir(bills_dir) if os.path.isdir(bills_dir) else [], key=lambda f: sort_key(f[:-5])):
+        key = name[:-5]
+        if not name.endswith(".html") or re.fullmatch(r"LB\d+A", key):
+            continue  # A bills: an appropriation for another bill, with no statements of their own
+        try:
+            page = open(os.path.join(bills_dir, name), encoding="utf-8").read()
+        except OSError:
+            continue
+        links = {kind: m for kind, m in DOC.findall(page) if m == key}
+        have = index.get(key, {})
+        cs, si = have.get("CS", {}), have.get("SI", {})
+        if "CS" in links:
+            due = not cs.get("read") or (cs.get("missing") and stale(cs.get("read"), WEEKLY)) \
+                or (not cs.get("missing") and placed_on(page) > cs["read"])
+            if due:
+                cs_todo.append(key)
+                continue
+            usable = not cs.get("missing") and os.path.exists(os.path.join(docs, f"CS-{key}.txt"))
+            if usable:
+                c = T.committee_statement(open(os.path.join(docs, f"CS-{key}.txt"), encoding="utf-8").read())
+                usable = bool(c and (c["summary"] or c["changes"]))
+            if usable:
+                continue
+        if "SI" in links and (not si.get("read") or (si.get("missing") and stale(si.get("read"), WEEKLY))):
+            si_todo.append(key)
+    got = Counter()
+    leg = number_of(year)
+    for kind, key in [("CS", k) for k in cs_todo] + [("SI", k) for k in si_todo]:
+        if out_of_time():
+            break
+        body = request(f"/FloorDocs/{leg}/PDF/{kind}/{key}.pdf", f"{year} {kind} {key}", binary=True)
+        if body is None and out_of_time():
+            break
+        entry = index.setdefault(key, {})
+        if body is None or not body.startswith(b"%PDF"):
+            if body is not None:
+                FAILS["not a PDF"] += 1
+            entry[kind] = {"read": TODAY.isoformat(), "missing": True}
+            got["missing"] += 1
+            continue
+        t = pdf_text(body, "-raw")
+        if t is None:
+            FAILS["unreadable PDF"] += 1
+            continue
+        save_text(t, os.path.join(docs, f"{kind}-{key}.txt"))
+        entry[kind] = {"read": TODAY.isoformat(), "sha": hashlib.sha1(body).hexdigest()[:16]}
+        got[kind] += 1
+        STATS["documents"] += 1
+        if sum(got.values()) % 25 == 0:
+            save(index, index_path)
+    save(index, index_path)
+    missing = f", {got['missing']} not on the server" if got["missing"] else ""
+    print(f"{year} statements: {got['CS']} committee statements and {got['SI']} statements of intent read{missing} "
+          f"({len(cs_todo)} and {len(si_todo)} were due)", flush=True)
+    try:
+        T.write(year)
+    except Exception as e:  # a text that fails to read mustn't stop the run
+        print(f"{year} texts: failed ({type(e).__name__}: {e})", flush=True)
+
+
 # ---- members and committees ----
 
 def member_page(page, district):
@@ -791,6 +902,13 @@ def main():
                 state["finished"] = True
                 print(f"{year}: finished", flush=True)
             save(state, os.path.join(folder, "state.json"))
+        # "What it does" last: it never holds the state back, and a finished Legislature's statements still fill in.
+        for year in yrs:
+            if out_of_time():
+                break
+            folder = os.path.join(DATA, str(year))
+            if os.path.isdir(os.path.join(folder, "bills")):
+                statements(year, folder)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
@@ -807,7 +925,7 @@ def main():
             nvotes = len(os.listdir(os.path.join(folder, "votes"))) if os.path.isdir(os.path.join(folder, "votes")) else 0
             sizes.append(f"{year} {pages} of {len(listing['bills'])} bill pages, {nvotes} votes")
     print(f"run: {STATS['requests']} requests ({STATS['searches']} searches, {STATS['bills']} bills, "
-          f"{STATS['votes']} votes), {round((time.time() - START) / 60, 1)} min"
+          f"{STATS['votes']} votes, {STATS['documents']} statements), {round((time.time() - START) / 60, 1)} min"
           + (f"; {'; '.join(sizes)}" if sizes else "")
           + ("; stopped at the time limit" if out_of_time() else "")
           + ("; refused" if refused else "")

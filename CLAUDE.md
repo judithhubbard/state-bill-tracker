@@ -1207,8 +1207,13 @@ from that repo. **Nothing here may change it.**
   line-item veto; LB 814, the budget, line-item veto partly overridden), 2 vetoes standing (LB 25, LB 307; the override of
   LB 307 failed 27-20); 109th 364 laws (44 A bills; LB 1237 and LB 1237A without signature), 7 vetoes (LB 287, 319, 839,
   878, 929, 1029, 1256; every override failed), LR 19CA to the voters. Topics from the referral committee
-  (`COMMITTEE_TOPICS`) and title words. No "What it does": the statement of intent and committee statement are PDFs (not
-  downloaded); the summary is the one-line title. Earlier Legislature linked by the same title (six words or more) and
+  (`COMMITTEE_TOPICS`) and title words. "What it does" (`states/ne/texts.py`, from PDFs fetch.py's `statements()` saves as text in
+  data/ne/<year>/docs/) is the committee statement's "Summary of purpose" when the committee advanced the bill (about 40%
+  of bills), with its "Explanation of amendments" as what the committee changed (or as the statement itself when the
+  amendment replaced the bill); vote tables, testifier lists and the section-by-section part are dropped. Otherwise it's
+  the introducer's statement of intent, labelled as such (about 98% of bills have one or the other). Committee statements
+  are re-read when the bill is placed on General File again; A bills have none. The first copy is about 2,700 PDFs (about
+  3 hours at the crawl delay) and never marks the state incomplete; the summary line is the one-line title. Earlier Legislature linked by the same title (six words or more) and
   introducer, never laws or appropriations. Contacts: 49 senators with Capitol room, phone, email, photo; 14 standing
   committees and the Executive Board with chairs and vice chairs (meeting days shortened by `meets()`); Speaker John Arch
   (`LEADERS`; the 110th Legislature elects its own in January 2027). A past Legislature's contacts are current senators who
