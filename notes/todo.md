@@ -5,13 +5,10 @@ in CLAUDE.md's launch checklist.
 
 ## "What it does" (summaries)
 - **New York:** done 2026-11-14 for Senate bills and Assembly bills with a Senate twin (the purpose and summary of
-  provisions from the Senate sponsor's memo, data/texts_<session>.json, written by fetch_bills.py). Still missing:
-  Assembly-only bills (about half): the Senate API has no Assembly memos; nyassembly.gov has them, one page per bill
-  (GitHub only, never from the owner's computer; check its robots.txt first).
-- **New Hampshire:** each bill text's analysis, one request per bill at the 11-second crawl delay (about 12 hours
-  for a year's bills once, then only new bills and versions): a slow-lane job.
-- **North Dakota:** the Legislative Council's staff summaries and fiscal notes are PDFs (pdftotext is on GitHub).
-- **Nebraska:** statements of intent and committee statements are PDFs (crawl delay 3).
+  provisions from the Senate sponsor's memo, data/texts_<session>.json, written by fetch_bills.py). Assembly bills:
+  states/ny/memos.py (download.yml, started 2026-11-14; about 11,000 pages, three runs for the first copy).
+- **New Hampshire, North Dakota, Nebraska:** being added (2026-11-14): bill text analyses, staff summaries, committee
+  statements.
 - **Missouri:** House bills' summaries (house/summaries/), not downloaded yet.
 - **Kansas:** 2023-24 supplemental notes, not downloaded yet.
 - **Louisiana:** Senate digests, and House digests beyond the 267 read so far.
@@ -32,13 +29,10 @@ in CLAUDE.md's launch checklist.
   then commit and schedule.
 
 ## Fixes found, not yet made
-- Washington: the end-of-year return rule.
-- "2024 general (general session)": duplicated wording in Louisiana's session label.
-- "Signed into law" shown for laws that became law without a signature (KY, AR).
-- data_check LOOK lines not yet looked into: NC's 43 laws with a veto date and no override line; WA SB 5017 and
-  SB 5810 of 2021; NJ A4975 of 2020; floor votes on bills that never left committee (MI HB 4195 and "HJRU" of 2025,
-  NH HB 565 and HB 620 of 2023, NY S2347 of 2025); finished sessions' bills whose history predates the session
+- data_check LOOK lines not yet looked into: finished sessions' bills whose history predates the session
   (GA HB 2 and HB 10 of 2023, NH HB 333 of 2024, TN SB 6 of 2023).
+- The stage name "Signed into law" (stage 5's label in counts and filters) covers laws without a signature too; the bill
+  rows now say which (2026-11-14). Consider "Became law" as the stage name in states with many unsigned laws (OK, TX).
 - notes/from-albany-2026-11-12.md: items 1-3 done; the note itself not committed.
 
 ## Watching
