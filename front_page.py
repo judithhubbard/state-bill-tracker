@@ -48,6 +48,11 @@ def next_data(state, lower_name="House"):
     facts = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "states", "legislatures.json")))["states"].get(state)
     if not e or not facts:
         return None
+    # A state with no 2026 legislative election and no governor's race (Mississippi, New Jersey, Virginia, Louisiana)
+    # keeps its current dots: the file's figures for it can differ from the member list, which isn't a January change.
+    chs = (e.get("chambers") or {}).values()
+    if chs and all("no 2026 election" in (ch.get("note") or "") for ch in chs) and "not up" in " ".join(map(str, e.get("governor") or [])):
+        return None
     lower = re.sub(r" of Delegates$", "", lower_name)
     dots, words = [], []
     for c, seats in sorted(facts["seats"].items(), key=lambda x: x[0] != "S"):
