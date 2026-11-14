@@ -9,9 +9,8 @@ in CLAUDE.md's launch checklist.
   states/ny/memos.py (download.yml, started 2026-11-14; about 11,000 pages, three runs for the first copy).
 - **New Hampshire, North Dakota, Nebraska:** being added (2026-11-14): bill text analyses, staff summaries, committee
   statements.
-- **Missouri:** House bills' summaries (house/summaries/), not downloaded yet.
-- **Kansas:** 2023-24 supplemental notes, not downloaded yet.
-- **Louisiana:** Senate digests, and House digests beyond the 267 read so far.
+- **Missouri** House bills' summaries, **Kansas** 2023-24 supplemental notes, **Louisiana** digests: their downloads
+  read these as extras, a little each run (checked 2026-11-14); they fill in over days. Check coverage in a week.
 - No summary exists in the sources: Alaska (decided 2026-11-08: the sponsor statement is an advocate's case),
   Arkansas, Massachusetts, Mississippi, Montana, Oklahoma, Maine, Vermont (LegiScan has bill texts, not summaries).
 
