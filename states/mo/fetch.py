@@ -768,6 +768,11 @@ def years_wanted():
     return ys
 
 
+def begun(year):
+    """Whether a year's session has convened (the Wednesday after the first Monday of January)."""
+    return TODAY >= date(year, 1, 3 + (0 - date(year, 1, 1).weekday()) % 7)
+
+
 def never_downloaded(years):
     """What was never downloaded: a year's House bill list (or zip), a listed House bill, the Senate list, a listed
     Senate bill's page or actions, either house's members. (A failed refresh with a last copy doesn't count; nor does a
@@ -775,6 +780,7 @@ def never_downloaded(years):
     out = []
     if not os.path.exists(os.path.join(DATA, "members", "senate.json")):
         out.append("senators")
+    years = [y for y in years if begun(y)]  # prefiled bills are read, but don't hold Missouri back before the session
     current = max(y for y in years if y <= YEAR) if any(y <= YEAR for y in years) else None
     for year in years:
         if not exists_once(year):

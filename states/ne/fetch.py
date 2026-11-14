@@ -717,8 +717,8 @@ def never_downloaded(yrs):
     members. (A failed refresh with a last copy doesn't count.)"""
     out = []
     for year in yrs:
-        if TODAY < date(year, 1, 5):
-            continue
+        if TODAY < date(year, 1, 3 + (0 - date(year, 1, 1).weekday()) % 7):
+            continue  # it convenes the Wednesday after the first Monday of January
         folder = os.path.join(DATA, str(year))
         listing = load(os.path.join(folder, "list.json"))
         if not listing or not listing.get("bills"):

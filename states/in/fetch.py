@@ -304,15 +304,22 @@ def people(year):
         INCOMPLETE.add(f"{year}:people")
 
 
+def begun(year):
+    """Whether a year's session has convened (by the second Monday of January). The next session, listed from November
+    with its first bills and no members yet, is read when it's there but never holds Indiana off the site."""
+    return date.today() >= date(year, 1, 1 + (0 - date(year, 1, 1).weekday()) % 7 + 7)
+
+
 def finish():
     print(f"run: {round((time.time() - START) / 60)} min, {STATS['requests']} requests"
           + ("; stopped at the time limit" if out_of_time() else "")
           + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures")
           + (f"; still to do: {' '.join(sorted(INCOMPLETE))}" if INCOMPLETE else ""), flush=True)
     marker = os.path.join(DATA, "incomplete")
-    if INCOMPLETE:
+    undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    if undone:
         with open(marker, "w") as f:
-            f.write(" ".join(sorted(INCOMPLETE)) + "\n")
+            f.write(" ".join(sorted(undone)) + "\n")
     elif os.path.exists(marker):
         os.remove(marker)
 

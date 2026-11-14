@@ -440,6 +440,11 @@ def committees():
           + (f"; {len(missing)} never read" if missing else ""), flush=True)
 
 
+def begun(year):
+    """Whether a year's session has convened (the Tuesday after the first Monday of January)."""
+    return TODAY >= date(year, 1, 2 + (0 - date(year, 1, 1).weekday()) % 7)
+
+
 def never_downloaded(years):
     """What was never downloaded: a year's lists, a listed bill's page, the members, the committees. (A failed refresh
     with a last copy doesn't count; nor does a year whose record doesn't exist yet, or a bill page that answers 404.)"""
@@ -451,6 +456,8 @@ def never_downloaded(years):
     if not c or c.get("missing"):
         out.append("committees")
     for year in years:
+        if not begun(year):
+            continue  # prefiled bills are read when listed, but don't hold Kentucky back before the session
         folder = os.path.join(DATA, str(year))
         listing = load(os.path.join(folder, "list.json"))
         if not listing:

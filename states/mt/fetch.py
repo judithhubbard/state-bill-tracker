@@ -388,6 +388,13 @@ def cosponsors(s, folder, state):
     print(f"{s['year']} co-sponsors: {sum(map(len, out.values()))} on {len(out)} bills", flush=True)
 
 
+def begun(s):
+    """Whether a session has convened (the first Monday of January). One listed earlier, with bills numbered before it,
+    is read when it's there but never holds Montana off the site."""
+    y = s["year"]
+    return TODAY >= date(y, 1, 1 + (0 - date(y, 1, 1).weekday()) % 7)
+
+
 def missing(s, folder):
     """What of this session was never downloaded (a failed re-read with a last copy doesn't count)."""
     state = load(os.path.join(folder, "state.json"), {})
@@ -475,7 +482,7 @@ def main():
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
-    gaps = [g for s in sessions_seen for g in missing(s, os.path.join(DATA, str(s["year"])))
+    gaps = [g for s in sessions_seen if begun(s) for g in missing(s, os.path.join(DATA, str(s["year"])))
             if os.path.isdir(os.path.join(DATA, str(s["year"]))) or not s["live"]]  # (a live one may have no bills yet)
     if not sessions_seen:
         gaps.append("sessions")

@@ -388,10 +388,18 @@ def member_details(biennium):
         print(f"members: {len(active)} active; {got} of {len(todo)} details read", flush=True)
 
 
+def begun(b):
+    """Whether a biennium's Legislature has convened (the second Monday of January of its first year). One made active
+    before then, without its members yet, is read when it's there but never holds Kansas off the site."""
+    y = first_year(b)
+    return TODAY >= date(y, 1, 1 + (0 - date(y, 1, 1).weekday()) % 7 + 7)
+
+
 def never_downloaded(bienniums, active):
     """What was never downloaded: a biennium's bill status, the active biennium's legislators or committees, an active
     member's details. (A failed refresh with a last copy doesn't count; nor do roll calls and notes, which fill in.)"""
     out = []
+    bienniums = [b for b in bienniums if begun(b)]
     for b in bienniums:
         if load(os.path.join(DATA, str(first_year(b)), "bill_status.json")) is None:
             out.append(f"{first_year(b)}:bills")

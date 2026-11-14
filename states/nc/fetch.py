@@ -582,11 +582,18 @@ def session(year):
     committees(year, folder, live)
 
 
+def begun(year):
+    """Whether a session has convened (the second Wednesday of January of its first year)."""
+    return date.today() >= date(year, 1, 1 + (2 - date(year, 1, 1).weekday()) % 7 + 7)
+
+
 def finish():
     marker = os.path.join(DATA, "incomplete")
-    if INCOMPLETE:
+    # A session not yet begun (no bills or members listed yet) is read when it's there but never holds the state back.
+    undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    if undone:
         with open(marker, "w") as f:
-            f.write(" ".join(sorted(INCOMPLETE)) + "\n")
+            f.write(" ".join(sorted(undone)) + "\n")
     elif os.path.exists(marker):
         os.remove(marker)
 

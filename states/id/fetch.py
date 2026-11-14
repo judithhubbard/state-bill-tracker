@@ -319,6 +319,11 @@ def members():
     return os.path.exists(path)
 
 
+def begun(year):
+    """Whether a year's session has convened (the second Monday of January)."""
+    return TODAY >= date(year, 1, 1 + (0 - date(year, 1, 1).weekday()) % 7 + 7)
+
+
 def never_downloaded(years):
     """What was never downloaded: a year's list, a listed bill's page, the members. (A failed refresh with a last copy
     doesn't count; nor does a year whose list doesn't exist yet.)"""
@@ -326,6 +331,8 @@ def never_downloaded(years):
     if not os.path.exists(os.path.join(DATA, "members", "members.json")):
         out.append("members")
     for year in years:
+        if not begun(year):
+            continue  # its bills are read when listed, but don't hold Idaho back before the session
         folder = os.path.join(DATA, str(year))
         listing = load(os.path.join(folder, "list.json"))
         if not listing:

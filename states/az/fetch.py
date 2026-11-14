@@ -73,6 +73,12 @@ def sessions():
     return out
 
 
+def begun(year):
+    """Whether a year's session has convened (the second Monday of January): one listed earlier is read when it's there
+    but its first copy never holds Arizona off the site."""
+    return date.today() >= date(year, 1, 1 + (0 - date(year, 1, 1).weekday()) % 7 + 7)
+
+
 def session(year, sid):
     folder = os.path.join(DATA, str(year), "bills")
     os.makedirs(folder, exist_ok=True)
@@ -134,7 +140,8 @@ def main():
     if INCOMPLETE:
         print(f"not read this run: {' '.join(INCOMPLETE)}")
     if any(not os.path.exists(os.path.join(DATA, str(y), "state.json")) or
-           not json.load(open(os.path.join(DATA, str(y), "state.json"))).get("complete") for y in range(YEAR - 2, YEAR + 1)):
+           not json.load(open(os.path.join(DATA, str(y), "state.json"))).get("complete") for y in range(YEAR - 2, YEAR + 1)
+           if begun(y)):
         INCOMPLETE.append("first copy")
         open(marker, "w").write(" ".join(INCOMPLETE) + "\n")
     elif os.path.exists(marker):

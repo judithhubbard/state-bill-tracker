@@ -204,6 +204,11 @@ def agendas(session):
 INCOMPLETE = set()
 
 
+def begun(session):
+    """Whether a biennium's Legislature has convened (the second Monday of January of its first year)."""
+    return TODAY >= date(session, 1, 1 + (0 - date(session, 1, 1).weekday()) % 7 + 7)
+
+
 def main():
     for s in range(FIRST, CURRENT + 1, 2):
         members(s)
@@ -211,9 +216,11 @@ def main():
     agendas(CURRENT)
     # Until every biennium is fully downloaded, data/wa/incomplete tells build_site.sh and the checks to wait.
     marker = os.path.join(P.DATA, "incomplete")
-    if INCOMPLETE:
-        open(marker, "w").write(" ".join(map(str, sorted(INCOMPLETE))) + "\n")
-        print(f"not complete yet: {sorted(INCOMPLETE)}")
+    # A biennium not yet begun (bills prefiled from December) is read when it's there but never holds Washington back.
+    undone = {s for s in INCOMPLETE if begun(s)}
+    if undone:
+        open(marker, "w").write(" ".join(map(str, sorted(undone))) + "\n")
+        print(f"not complete yet: {sorted(undone)}")
     elif os.path.exists(marker):
         os.remove(marker)
 

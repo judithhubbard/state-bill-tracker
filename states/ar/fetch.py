@@ -245,6 +245,12 @@ def biennium_of(session):
     return year - (year + 1) % 2
 
 
+def begun(year):
+    """Whether a year's session has convened (from the second Monday of January): next biennium's prefiled bills, in the
+    live folder from November, are read when they're there but never hold Arkansas off the site."""
+    return TODAY >= date(year, 1, 1 + (0 - date(year, 1, 1).weekday()) % 7 + 7)
+
+
 def sessions_in(text):
     """The Session IDs in a LegislativeMeasures file (its last column)."""
     return Counter(line.rsplit("|", 1)[-1].strip() for line in text.splitlines() if line.strip())
@@ -607,9 +613,10 @@ def main():
           + (f"; never downloaded: {' '.join(sorted(MISSING))}" if MISSING else ""), flush=True)
     if ONLY:
         return
-    if MISSING:
+    missing = {m for m in MISSING if not m[:4].isdigit() or begun(int(m[:4]))}
+    if missing:
         with open(MARKER, "w") as f:
-            f.write(" ".join(sorted(MISSING)) + "\n")
+            f.write(" ".join(sorted(missing)) + "\n")
     elif os.path.exists(MARKER):
         os.remove(MARKER)
 

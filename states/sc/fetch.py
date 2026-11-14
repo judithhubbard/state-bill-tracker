@@ -702,10 +702,19 @@ def read_committees(state):
 # The run
 
 
+def begun(session):
+    """Whether a session has convened (the second Tuesday of January of its first year). The next one appears with its
+    prefiled bills in November and December: read when it's there, it never holds South Carolina off the site."""
+    y = first_year(session)
+    return TODAY >= date(y, 1, 1 + (1 - date(y, 1, 1).weekday()) % 7 + 7)
+
+
 def never_downloaded(found, state):
     gaps = []
     pages = state.get("member_pages") or {}
     for i, session in enumerate(found):
+        if not begun(session):
+            continue
         folder = os.path.join(DATA, str(first_year(session)))
         st = (state.get("bills") or {}).get(str(session)) or {}
         for chamber in ("S", "H"):

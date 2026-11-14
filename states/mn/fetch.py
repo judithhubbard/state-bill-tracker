@@ -260,6 +260,15 @@ def sessions():
     return sorted(out, key=lambda s: (s["ls"], s["year"], s["special"]), reverse=True)
 
 
+def begun(s):
+    """Whether a session has convened: in odd years the Tuesday after the first Monday of January; in even years (a date
+    set by law, February or March) from February 1. One not yet begun is read when it has bills but never holds
+    Minnesota off the site."""
+    y = s["year"]
+    start = date(y, 1, 2 + (0 - date(y, 1, 1).weekday()) % 7) if y % 2 else date(y, 2, 1)
+    return s["special"] or TODAY >= start
+
+
 def session_end(s):
     return date(s["first"] + 1, 12, 31)
 
@@ -1023,7 +1032,7 @@ def main():
         for folder, state, lst in ctx.values():
             save(state, os.path.join(folder, "state.json"))
             save(lst, os.path.join(folder, "list.json"))
-    gaps = [g for s in seen for g in missing(s) if os.path.isdir(folder_of(s))]
+    gaps = [g for s in seen if begun(s) for g in missing(s) if os.path.isdir(folder_of(s))]
     if not seen:
         gaps.append("sessions")
     counts = {k: v for k, v in STATS.items() if k != "requests"}

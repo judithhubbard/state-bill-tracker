@@ -93,6 +93,13 @@ def first_year(ga):
     return 2025 + 2 * (ga - 153)
 
 
+def begun(ga):
+    """Whether an Assembly has convened (the second Tuesday of January of its first year). One current from November,
+    with prefiled bills, is read when it's there but never holds Delaware off the site."""
+    y = first_year(ga)
+    return TODAY >= date(y, 1, 1 + (1 - date(y, 1, 1).weekday()) % 7 + 7)
+
+
 def current_ga():
     """The Assembly the calendar is in; from November of an even year (the election) the next one has begun."""
     ga = 153 + (TODAY.year - 2025) // 2
@@ -517,7 +524,7 @@ def main():
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
-    gaps = [g for ga in gas for g in missing(ga)]
+    gaps = [g for ga in gas if begun(ga) for g in missing(ga)]
     if not os.path.exists(os.path.join(DATA, "people.json")):
         gaps.append("people")
     print(f"run: {STATS['requests']} requests, {round((time.time() - START) / 60)} min"

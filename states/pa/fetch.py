@@ -139,6 +139,11 @@ def votes(session, bills):
             print(f"{session}: {done} of {len(todo)} bill pages", flush=True)
 
 
+def begun(session):
+    """Whether a session has convened (the first Tuesday of January of its first year)."""
+    return date.today() >= date(session, 1, 1 + (1 - date(session, 1, 1).weekday()) % 7)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     WHOLE[0] = not os.path.exists(os.path.join(DATA, "incomplete"))
@@ -158,8 +163,10 @@ def main():
     for s in sorted(got, reverse=True):
         votes(s, got[s])
     marker = os.path.join(DATA, "incomplete")
-    if INCOMPLETE:
-        open(marker, "w").write(" ".join(map(str, sorted(INCOMPLETE))) + "\n")
+    # A session not yet begun (no bill history file yet) is read when it's there but never holds Pennsylvania back.
+    undone = {s for s in INCOMPLETE if begun(s)}
+    if undone:
+        open(marker, "w").write(" ".join(map(str, sorted(undone))) + "\n")
     elif os.path.exists(marker):
         os.remove(marker)
 

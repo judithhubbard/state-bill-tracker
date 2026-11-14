@@ -23,6 +23,11 @@ FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else CURRENT - 2
 INCOMPLETE = set()
 
 
+def begun(session):
+    """Whether a General Court has convened (the first Wednesday of January of its first year)."""
+    return date.today() >= date(session, 1, 1 + (2 - date(session, 1, 1).weekday()) % 7)
+
+
 def court_of(session):
     """2025 -> 194."""
     return (session - 1637) // 2
@@ -135,8 +140,10 @@ def main():
     except SystemExit as e:
         print(e)
     marker = os.path.join(DATA, "incomplete")
-    if INCOMPLETE:
-        open(marker, "w").write(" ".join(map(str, sorted(INCOMPLETE))) + "\n")
+    # A General Court not yet begun (no documents filed yet) is read when it's there but never holds Massachusetts back.
+    undone = {s for s in INCOMPLETE if begun(s)}
+    if undone:
+        open(marker, "w").write(" ".join(map(str, sorted(undone))) + "\n")
     elif os.path.exists(marker):
         os.remove(marker)
 

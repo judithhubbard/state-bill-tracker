@@ -198,6 +198,11 @@ def people(year, sid, folder, live):
         print(f"{year}: {len(out)} {name}", flush=True)
 
 
+def begun(year):
+    """Whether a session has convened (the second Monday of January of its first year)."""
+    return date.today() >= date(year, 1, 1 + (0 - date(year, 1, 1).weekday()) % 7 + 7)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     ids = session_ids()
@@ -217,8 +222,10 @@ def main():
     except (SystemExit, OSError) as e:
         print(e)
     marker = os.path.join(DATA, "incomplete")
-    if INCOMPLETE:
-        open(marker, "w").write(" ".join(sorted(INCOMPLETE)) + "\n")
+    # A session not yet begun (listed early, members not named yet) is read when it's there but never holds Georgia back.
+    undone = {g for g in INCOMPLETE if begun(int(g.split(":")[0]))}
+    if undone:
+        open(marker, "w").write(" ".join(sorted(undone)) + "\n")
     elif os.path.exists(marker):
         os.remove(marker)
 

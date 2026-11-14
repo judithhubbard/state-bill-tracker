@@ -68,6 +68,13 @@ def first_year(legislature):
     return 2025 + 2 * (legislature - 34)
 
 
+def begun(legislature):
+    """Whether a Legislature has convened (the third Tuesday of January of its first year). One listed earlier, with its
+    prefiled bills and no members yet, is read when it's there but never holds Alaska off the site."""
+    y = first_year(legislature)
+    return TODAY >= date(y, 1, 1 + (1 - date(y, 1, 1).weekday()) % 7 + 14)
+
+
 def request(url, headers, label, pause=1):
     """GET url; the body, or None after three tries. Refused on 401/403/429; 404 is None at once."""
     for attempt in range(3):
@@ -364,7 +371,7 @@ def main():
         return
     # Only data never downloaded keeps Alaska off the site; sponsor statements still to read hold it only while the
     # first copy is being built (a failed refresh keeps the last copy).
-    gaps = [g for legislature in (CURRENT, CURRENT - 1) for g in never_read(legislature)]
+    gaps = [g for legislature in (CURRENT, CURRENT - 1) if begun(legislature) for g in never_read(legislature)]
     if not whole:
         gaps += [p for p in problems if p.endswith(":statements") or p in ("refused", "time")]
     if problems:

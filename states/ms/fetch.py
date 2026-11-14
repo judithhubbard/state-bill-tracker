@@ -267,13 +267,18 @@ def member_links(path):
             if e.tag.endswith("_LINK") and re.fullmatch(r"(house|senate)/[^/]+\.xml", (e.text or "").strip())}
 
 
+def begun(year):
+    """Whether a year's session has convened (the Tuesday after the first Monday of January)."""
+    return TODAY >= date(year, 1, 2 + (0 - date(year, 1, 1).weekday()) % 7)
+
+
 def never_downloaded(years):
     """What was never downloaded (a year's list, a listed bill's history, a member list or member): what keeps the
     marker. A failed request where a last copy exists doesn't count."""
     missing = []
     for year in years:
-        if year > YEAR and not os.path.isdir(os.path.join(DATA, str(year))):
-            continue  # next year's session isn't up yet
+        if not begun(year):
+            continue  # next year's session: its prefiled bills are read, but don't hold Mississippi back
         listed = measures(year)
         if listed is None:
             missing.append(f"{year}:list")

@@ -671,6 +671,13 @@ def assemblies():
     return [g for g in gas if not ONLY or first_year(g) == ONLY]
 
 
+def convened(ga):
+    """Whether a General Assembly has convened (the second Monday of January of its first year). One listed earlier, with
+    prefiled bills, is read when it's there but never holds Iowa off the site."""
+    y = first_year(ga)
+    return TODAY >= date(y, 1, 1 + (0 - date(y, 1, 1).weekday()) % 7 + 7)
+
+
 def never_downloaded(gas, begun):
     """What was never downloaded: a begun General Assembly's lists, a listed HF, SF, HJR or SJR's history, the current
     members and committees. (Texts, votes, study bills and the enrolled lists don't count; nor does a failed refresh
@@ -678,6 +685,8 @@ def never_downloaded(gas, begun):
     out = []
     cur = ga_of(YEAR)
     for ga in gas:
+        if not convened(ga):
+            continue
         folder = os.path.join(DATA, str(first_year(ga)))
         listing = load(os.path.join(folder, "list.json"))
         if not listing:
@@ -689,7 +698,7 @@ def never_downloaded(gas, begun):
         if any(re.match(r"[A-Z]+", k).group(0) in BILLS and not os.path.exists(os.path.join(folder, "bills", f"{k}.html"))
                and k not in absent for k in listing["bills"]):
             out.append(f"{first_year(ga)}:bills")
-    if cur in gas:
+    if cur in gas and convened(cur):
         m = load(os.path.join(DATA, "members", str(first_year(cur)), "members.json"))
         if not m or m.get("missing"):
             out.append("members")

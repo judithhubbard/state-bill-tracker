@@ -44,6 +44,11 @@ def get(url):
     return None
 
 
+def begun(year):
+    """Whether a session has convened (the second Wednesday of January of its first year)."""
+    return date.today() >= date(year, 1, 1 + (2 - date(year, 1, 1).weekday()) % 7 + 7)
+
+
 def main():
     """Each session's house and senate folders: files the listing shows as new or changed since the last run (by the
     listing's date and size, kept in data/mi/<session>/<house>/listing.json)."""
@@ -103,6 +108,8 @@ def main():
             print(f"{session} {house}: {got} of {len(todo)} read ({len(entries)} listed)", flush=True)
     print(f"run: {round((time.time() - START) / 60)} min" + ("; stopped at the time limit" if out_of_time() else "")
           + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures"), flush=True)
+    # A session not yet begun (its folders not up, or only prefiled bills) never holds Michigan off the site.
+    incomplete = [g for g in incomplete if begun(int(g[:4]))]
     if incomplete:
         open(marker, "w").write(" ".join(incomplete) + "\n")
     elif os.path.exists(marker) and not only:

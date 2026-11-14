@@ -106,6 +106,12 @@ def load(path, default):
         return default
 
 
+def begun(year):
+    """Whether a year's session has convened (the third Tuesday of January). Its bills, numbered weeks before, are read
+    when they're there but never hold Utah off the site before then."""
+    return date.today() >= date(year, 1, 1 + (1 - date(year, 1, 1).weekday()) % 7 + 14)
+
+
 def session_bills(year):
     """The session's bill list, then each bill that is new or whose updatetime changed. Returns problems."""
     sid = f"{year}GS"
@@ -210,7 +216,7 @@ def roster():
         d = api(route)
         if d is None or (key and not (d.get(key) if isinstance(d, dict) else None)):
             print(f"{route}: unreadable; kept the last copy", flush=True)
-            if key and not os.path.exists(os.path.join(folder, f"{route}.json")):
+            if key and not os.path.exists(os.path.join(folder, f"{route}.json")) and begun(YEAR):
                 problems.append(route)
             continue
         save(d, os.path.join(folder, f"{route}.json"))
@@ -341,7 +347,8 @@ def main():
     try:
         problems += roster()
         for year in YEARS:
-            problems += session_bills(year)
+            found = session_bills(year)
+            problems += found if begun(year) else []
         if "--no-votes" not in args:
             left = votes(minutes)
             if left:

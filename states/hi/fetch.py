@@ -243,9 +243,10 @@ def never_downloaded(ids):
     out = []
     if not os.path.exists(os.path.join(DATA, "openstates_people.csv")):
         out.append("people")
+    starts = load(os.path.join(DATA, "sessions.json"), {}).get("starts", {})
     for year in range(FIRST, YEAR + 1):
-        if year not in ids and year == YEAR:
-            continue  # the session isn't listed yet (before it begins)
+        if year == YEAR and (year not in ids or starts.get(str(year), "") > TODAY.isoformat()):
+            continue  # the session isn't listed yet, or hasn't begun (its bills are read but don't hold Hawaii back)
         if not (load(os.path.join(DATA, str(year), "state.json")) or {}).get("complete"):
             out.append(f"{year}:first copy")
     return out

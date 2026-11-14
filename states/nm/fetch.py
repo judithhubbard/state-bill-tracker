@@ -610,10 +610,17 @@ def committees():
 
 # ---------------------------------------------------------------------------------------------------------- main
 
+def begun(year):
+    """Whether a year's session has convened (the third Tuesday of January)."""
+    return TODAY >= date(year, 1, 1 + (1 - date(year, 1, 1).weekday()) % 7 + 14)
+
+
 def never_downloaded(yrs, found):
     """What was never downloaded (a failed re-read with a last copy, or a 404, doesn't count)."""
     gaps = [] if found else ["sessions"]
     for year in yrs:
+        if not begun(year):
+            continue  # next year's prefiled bills are read when listed, but don't hold New Mexico back
         folder = os.path.join(DATA, str(year))
         listing = load(os.path.join(folder, "list.json"))
         if not listing:

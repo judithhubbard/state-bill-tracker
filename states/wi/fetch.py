@@ -603,14 +603,21 @@ def members_and_committees(year, folder, live):
             INCOMPLETE.add(f"{year}:committees")
 
 
+def begun(year):
+    """Whether a session has convened (the first Monday of January of its first year)."""
+    return date.today() >= date(year, 1, 1 + (0 - date(year, 1, 1).weekday()) % 7)
+
+
 def finish():
     print(f"run: {round((time.time() - START) / 60)} min" + (f"; stopped at the time limit" if out_of_time() else "")
           + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures")
           + (f"; still to do: {' '.join(sorted(INCOMPLETE))}" if INCOMPLETE else ""), flush=True)
     marker = os.path.join(DATA, "incomplete")
-    if INCOMPLETE:
+    # A session not yet begun (no bills or members listed yet) is read when it's there but never holds Wisconsin back.
+    undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    if undone:
         with open(marker, "w") as f:
-            f.write(" ".join(sorted(INCOMPLETE)) + "\n")
+            f.write(" ".join(sorted(undone)) + "\n")
     elif os.path.exists(marker):
         os.remove(marker)
 

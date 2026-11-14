@@ -162,6 +162,12 @@ def people():
         open(os.path.join(P.DATA, "openstates_people.csv"), "wb").write(body)
 
 
+def begun(session):
+    """Whether a General Assembly has convened (the first Monday of January of its first year)."""
+    jan = TODAY.replace(year=session, month=1, day=1)
+    return TODAY >= jan.replace(day=1 + (0 - jan.weekday()) % 7)
+
+
 def main():
     os.makedirs(P.DATA, exist_ok=True)
     for s in range(FIRST, CURRENT + 1, 2):
@@ -169,9 +175,11 @@ def main():
     agendas(CURRENT)
     people()
     marker = os.path.join(P.DATA, "incomplete")
-    if INCOMPLETE:
-        open(marker, "w").write(" ".join(map(str, sorted(INCOMPLETE))) + "\n")
-        print(f"not complete yet: {sorted(INCOMPLETE)}")
+    # A General Assembly not yet begun (no bills listed yet) is read when it's there but never holds Ohio back.
+    undone = {s for s in INCOMPLETE if begun(s)}
+    if undone:
+        open(marker, "w").write(" ".join(map(str, sorted(undone))) + "\n")
+        print(f"not complete yet: {sorted(undone)}")
     elif os.path.exists(marker):
         os.remove(marker)
 

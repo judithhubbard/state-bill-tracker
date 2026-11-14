@@ -556,6 +556,14 @@ def members():
     return os.path.exists(path) and os.path.exists(cpath)
 
 
+def begun(year):
+    """Whether a year's regular session has convened: the second Tuesday of January in election years (2026), the first
+    Tuesday of March in the year after (2027), else the first Tuesday of February. Prefiled bills of one not yet begun
+    are read when they're there but never hold Alabama off the site."""
+    month, nth = {2: (1, 2), 3: (3, 1)}.get(year % 4, (2, 1))
+    return TODAY >= date(year, month, 1 + (1 - date(year, month, 1).weekday()) % 7 + 7 * (nth - 1))
+
+
 def never_downloaded(years):
     """What was never downloaded: a year's bill list or history, the members or committees. (A failed refresh with a
     last copy doesn't count; nor does a year with no bills yet; nor roll calls and texts, which fill in run by run.)"""
@@ -564,6 +572,8 @@ def never_downloaded(years):
         if not os.path.exists(os.path.join(DATA, "members", f"{name}.json")):
             out.append(name)
     for year in years:
+        if not begun(year):
+            continue
         folder = os.path.join(DATA, str(year))
         if not os.path.exists(os.path.join(folder, "bills.json")):
             if year < YEAR:

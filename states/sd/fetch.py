@@ -225,6 +225,11 @@ def session(year, sid):
         save(paths["logs"], out)
 
 
+def begun(year):
+    """Whether a year's session has convened (the second Tuesday of January)."""
+    return date.today() >= date(year, 1, 1 + (1 - date(year, 1, 1).weekday()) % 7 + 7)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     marker = os.path.join(DATA, "incomplete")
@@ -255,9 +260,11 @@ def main():
         if not WHOLE[0]:  # a refusal stops a first copy; once whole, the last copies stay
             INCOMPLETE.add("refused")
     print(f"{STATS['requests']} requests in {(time.time() - began) / 60:.0f} minutes")
-    if INCOMPLETE:
+    # Next year's session (prefiled bills from November, its members not listed yet) never holds South Dakota back.
+    undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    if undone:
         with open(marker, "w") as f:
-            f.write(" ".join(sorted(INCOMPLETE)) + "\n")
+            f.write(" ".join(sorted(undone)) + "\n")
     elif os.path.exists(marker):
         os.remove(marker)
     if refused:

@@ -639,11 +639,18 @@ def read_votes():
         print(f"{year}: {vgot} of {len(vtodo)} votes read now" + (f"; {len(vtodo) - vgot} left for later runs" if vgot < len(vtodo) else ""), flush=True)
 
 
+def begun(year):
+    """Whether a year's session has convened (the second Wednesday of January)."""
+    return TODAY >= date(year, 1, 1 + (2 - date(year, 1, 1).weekday()) % 7 + 7)
+
+
 def finish():
     marker = os.path.join(DATA, "incomplete")
-    if INCOMPLETE:
+    # A session not yet begun (prefiled bills, no members yet) is read when it's there but never holds Colorado back.
+    undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    if undone:
         with open(marker, "w") as f:
-            f.write(" ".join(sorted(INCOMPLETE)) + "\n")
+            f.write(" ".join(sorted(undone)) + "\n")
     elif os.path.exists(marker):
         os.remove(marker)
 

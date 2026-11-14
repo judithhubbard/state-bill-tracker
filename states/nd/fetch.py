@@ -363,6 +363,13 @@ def bios(found):
     print(f"members' pages: {got} of {len(todo)} read ({len(want)} members)", flush=True)
 
 
+def begun(a):
+    """Whether an assembly has convened (the first Tuesday after January 3 of its first year). One listed earlier, with
+    prefiled bills, is read when it's there but never holds North Dakota off the site."""
+    y = a["year"]
+    return TODAY >= date(y, 1, 4 + (1 - date(y, 1, 4).weekday()) % 7)
+
+
 def missing(a, seen):
     """What of this assembly was never downloaded (a failed re-read with a last copy, or a 404 for something not
     published yet, doesn't count)."""
@@ -410,7 +417,7 @@ def main():
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
-    gaps = [g for a in found for g in missing(a, load(BIOS, {}))]
+    gaps = [g for a in found if begun(a) for g in missing(a, load(BIOS, {}))]
     if not found:
         gaps.append("assemblies")
     sizes = []

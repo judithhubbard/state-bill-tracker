@@ -643,11 +643,19 @@ def finished(year, state, listing):
                for k in wanted(listing)) and bool(state.get("committees")) and bool(state.get("members"))
 
 
+def begun(year):
+    """Whether a session has convened (the first Monday of February). Its prefiled bills, listed from November, are read
+    when they're there but never hold Nevada off the site before then."""
+    return TODAY >= date(year, 2, 1 + (0 - date(year, 2, 1).weekday()) % 7)
+
+
 def never_downloaded(yrs):
     """What was never downloaded: a session's bill list (once the session exists), a listed bill's Overview, a
     session's members. (A failed refresh with a last copy doesn't count.)"""
     out = []
     for year in yrs:
+        if not begun(year):
+            continue
         folder = os.path.join(DATA, str(year))
         listing = load(os.path.join(folder, "list.json"))
         if not listing:

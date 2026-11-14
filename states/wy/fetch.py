@@ -44,12 +44,21 @@ MARKER = os.path.join(DATA, "incomplete")
 WHOLE = [True]  # the last run left nothing missing (set in main)
 
 
+def begun(year):
+    """Whether a year's session has convened: the second Tuesday of January (general sessions, odd years) or the second
+    Monday of February (budget sessions). Next year's, read once bills are numbered for it (members not yet listed),
+    never holds Wyoming off the site before then."""
+    month, weekday = (1, 1) if year % 2 else (2, 0)
+    return date.today() >= date(year, month, 1 + (weekday - date(year, month, 1).weekday()) % 7 + 7)
+
+
 def finish():
     if ONLY:
         return
-    if INCOMPLETE:
+    undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    if undone:
         with open(MARKER, "w") as f:
-            f.write(" ".join(sorted(INCOMPLETE)) + "\n")
+            f.write(" ".join(sorted(undone)) + "\n")
     elif os.path.exists(MARKER):
         os.remove(MARKER)
 
