@@ -272,6 +272,12 @@ jobs:
           path: "data/nm"
           key: nm-data-v1-latest
           restore-keys: nm-data-v1-
+      - name: Restore Hawaii
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/hi"
+          key: hi-data-v1-latest
+          restore-keys: hi-data-v1-
       - name: Restore Pennsylvania
         uses: actions/cache/restore@v4
         with:

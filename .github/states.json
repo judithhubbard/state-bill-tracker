@@ -408,6 +408,17 @@
    ],
    "minutes": 110,
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/nm/fetch.py && python3 states/nm/contacts.py"
+  },
+  {
+   "name": "Hawaii",
+   "code": "hi",
+   "key": "hi-data-v1",
+   "paths": [
+    "data/hi"
+   ],
+   "minutes": 30,
+   "run": "python3 states/hi/fetch.py",
+   "note": "Open States (OPENSTATES_API_KEY), at most 110 requests a day so Arizona keeps the rest of the free tier's 250; the Legislature's own site blocks automated requests. Not built into the site until its converter exists."
   }
  ]
 }
