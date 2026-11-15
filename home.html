@@ -20,9 +20,9 @@
   --dem: #1f5bb5; --rep: #c0322a; --ind: #6b7685;
   --heat-1: #c5d5ef; --heat-2: #6f93d0; --heat-3: #1d3b78; --heat-ink-1: #14213d; --heat-ink-2: #0b1530; --heat-ink-3: #ffffff;
   --law-mark: #c8901f; --law-ink: #18693f; --veto-ink: #a3302a;
-  --ctl-r1: #f2b9b3; --ctl-r1-ink: #4a1410; --ctl-r2: #b8322a; --ctl-r2-ink: #ffffff;
-  --ctl-d1: #b6cbf0; --ctl-d1-ink: #0f2350; --ctl-d2: #1f56ad; --ctl-d2-ink: #ffffff;
-  --ctl-x: #cdbbe4; --ctl-x-ink: #2e1a47; --ctl-n: #dde2ea; --ctl-n-ink: #2c3546;
+  --ctl-r1: #ecd3d0; --ctl-r1-ink: #5b2420; --ctl-r2: #d9aaa4; --ctl-r2-ink: #4a1a16;
+  --ctl-d1: #d3dded; --ctl-d1-ink: #1d3560; --ctl-d2: #a9bcdc; --ctl-d2-ink: #15294d;
+  --ctl-x: var(--sheet); --ctl-x-ink: var(--ink); --ctl-n: #e7e9ee; --ctl-n-ink: #3a4253;
   --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
@@ -33,9 +33,9 @@
     --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9;
     --heat-1: #2f4d85; --heat-2: #5a86d6; --heat-3: #9dbcf3; --heat-ink-1: #e6ebf5; --heat-ink-2: #ffffff; --heat-ink-3: #0f1626;
     --law-mark: #e0b04e; --law-ink: #5cc28c; --veto-ink: #f08a80;
-  --ctl-r1: #6e2c27; --ctl-r1-ink: #fde8e6; --ctl-r2: #e46a60; --ctl-r2-ink: #1a0705;
-  --ctl-d1: #2b4677; --ctl-d1-ink: #e6eefc; --ctl-d2: #85abef; --ctl-d2-ink: #0b1630;
-  --ctl-x: #574775; --ctl-x-ink: #f1eafb; --ctl-n: #353f54; --ctl-n-ink: #e6ebf5;
+  --ctl-r1: #573b39; --ctl-r1-ink: #f3dedb; --ctl-r2: #7b4c47; --ctl-r2-ink: #fbe9e7;
+  --ctl-d1: #36486b; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4e6995; --ctl-d2-ink: #f1f5fc;
+  --ctl-x: var(--sheet); --ctl-x-ink: var(--ink); --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
     color-scheme: dark;
   }
 }
@@ -45,9 +45,9 @@
   --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9;
   --heat-1: #2f4d85; --heat-2: #5a86d6; --heat-3: #9dbcf3; --heat-ink-1: #e6ebf5; --heat-ink-2: #ffffff; --heat-ink-3: #0f1626;
   --law-mark: #e0b04e; --law-ink: #5cc28c; --veto-ink: #f08a80;
-  --ctl-r1: #6e2c27; --ctl-r1-ink: #fde8e6; --ctl-r2: #e46a60; --ctl-r2-ink: #1a0705;
-  --ctl-d1: #2b4677; --ctl-d1-ink: #e6eefc; --ctl-d2: #85abef; --ctl-d2-ink: #0b1630;
-  --ctl-x: #574775; --ctl-x-ink: #f1eafb; --ctl-n: #353f54; --ctl-n-ink: #e6ebf5;
+  --ctl-r1: #573b39; --ctl-r1-ink: #f3dedb; --ctl-r2: #7b4c47; --ctl-r2-ink: #fbe9e7;
+  --ctl-d1: #36486b; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4e6995; --ctl-d2-ink: #f1f5fc;
+  --ctl-x: var(--sheet); --ctl-x-ink: var(--ink); --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -64,7 +64,7 @@ p.lede { color: var(--ink-2); margin: 0 0 24px; font-size: 17px; }
   gap: 12%; border-radius: 6px; font: 700 clamp(10px, 2.6vw, 15px)/1 var(--display); text-decoration: none; }
 .tiles a { background: var(--sheet); color: var(--navy); box-shadow: inset 0 0 0 1.5px var(--navy); }
 .tiles a:hover, .tiles a:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
-.tiles span.off { background: transparent; color: var(--tile-off-ink); box-shadow: inset 0 0 0 1px var(--rule); }
+.tiles span.off { background: transparent; color: var(--tile-off-ink); border: 1px dashed var(--rule); opacity: .8; }
 .dots { display: flex; gap: clamp(2px, .6vw, 4px); }
 .dot { width: clamp(4px, 1.1vw, 7px); height: clamp(4px, 1.1vw, 7px); border-radius: 50%; }
 /* Soft (half-transparent) dots; a supermajority's dot also has a solid ring in the party's color. */
@@ -87,7 +87,7 @@ p.lede { color: var(--ink-2); margin: 0 0 24px; font-size: 17px; }
 .tiles a.c-R2, .legend .c-R2 { background: var(--ctl-r2); color: var(--ctl-r2-ink); box-shadow: none; }
 .tiles a.c-D1, .legend .c-D1 { background: var(--ctl-d1); color: var(--ctl-d1-ink); box-shadow: none; }
 .tiles a.c-D2, .legend .c-D2 { background: var(--ctl-d2); color: var(--ctl-d2-ink); box-shadow: none; }
-.tiles a.c-X, .legend .c-X { background: var(--ctl-x); color: var(--ctl-x-ink); box-shadow: none; }
+.tiles a.c-X, .legend .c-X { background: var(--ctl-x); color: var(--ctl-x-ink); box-shadow: inset 0 0 0 1px var(--rule); }
 .tiles a.c-N, .legend .c-N { background: var(--ctl-n); color: var(--ctl-n-ink); box-shadow: none; }
 .tiles a.changed[class*="c-"] { box-shadow: 0 0 0 3px var(--hover); }
 .legend { color: var(--ink-2); font-size: 14px; margin: 0; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
@@ -116,7 +116,8 @@ li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
 .show select:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
 .tiles a.h0 { background: var(--tile-off); color: var(--tile-off-ink); box-shadow: none; }
 /* With an issue shown, states not on the site yet are outlined only, apart from states with no bills. */
-.tiles.issue span.off { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
+.tiles.issue span.off { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); border: 0; opacity: 1; }
+.tiles.issue span.off.wait { border: 1px dashed var(--tile-off-ink); box-shadow: none; }
 .tiles a.h1 { background: var(--heat-1); color: var(--heat-ink-1); box-shadow: none; }
 .tiles a.h2 { background: var(--heat-2); color: var(--heat-ink-2); box-shadow: none; }
 .tiles a.h3 { background: var(--heat-3); color: var(--heat-ink-3); box-shadow: none; }
@@ -180,7 +181,7 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="key"><i class="sq c-D2"></i>with a supermajority</span>
     <span class="key"><i class="sq c-X"></i>Split</span>
     <span class="key"><i class="sq c-N"></i>Nonpartisan legislature</span>
-    <span class="key"><i class="sq" style="box-shadow:inset 0 0 0 1px var(--rule)"></i>Not on the site yet</span>
+    <span class="key"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
     <span class="key" id="changedKey" hidden><i class="sq" style="background:var(--sheet);box-shadow:0 0 0 2px var(--hover)"></i>Changes in January</span>
   </p>
   <p class="legend" id="issueLegend" hidden>
