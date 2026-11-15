@@ -148,3 +148,26 @@ def snippet(issue_id, text):
 
 def filters_of(issue_id, text):
     return [k for k, ps in BY_ID[issue_id]["_filters"].items() if any(p.search(text) for p in ps)]
+
+
+def excerpt(issue_id, head, body="", limit=220):
+    """The sentence (or clause between semicolons) where the issue matched, for showing why a bill with a bare title
+    ("Wages") is on the issue: from the summary if it matched there, else from "What it does". A leading statute
+    reference ("Amend KRS 337.275 to raise ...") is dropped. "" when nothing matched."""
+    issue = BY_ID[issue_id]
+    for text in (head, body):
+        if not text:
+            continue
+        for need, avoid in issue["_rules"]:
+            for m in need[0].finditer(text):
+                win = text[max(0, m.start() - WINDOW):m.end() + WINDOW]
+                if not all(p.search(win) for p in need[1:]) or any(p.search(win) for p in issue["_none"] + avoid):
+                    continue
+                a = max(text.rfind(". ", 0, m.start()), text.rfind("; ", 0, m.start()))
+                b = min([x for x in (text.find(". ", m.end()), text.find("; ", m.end())) if x >= 0] or [len(text)])
+                s = re.sub(r"\s+", " ", text[a + 2 if a >= 0 else 0:b]).strip()
+                s = re.sub(r"^(?:[Aa]mends?|[Cc]reates?|[Rr]epeals?)(?: (?:a )?new sections? of)? [A-Z]{2,5} (?:Chapter )?[\d.,A-Z\s-]+?(?:and [\d.]+ )?to ", "", s)
+                if len(s) > limit:
+                    s = s[:limit].rsplit(" ", 1)[0] + " …"
+                return s[:1].upper() + s[1:]
+    return ""

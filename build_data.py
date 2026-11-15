@@ -1135,7 +1135,8 @@ def write_issues(session, recs, texts, page, current):
     builds the issue pages from every state's files, by calendar year: {"state", "name", "session", "years" (P.YEARS),
     "upcoming", "label", "page", "total" (bills counted, for scale), "bills": [[issue ids, {issue: [filters]}, number,
     title, stage, last action's date, "const" or "", year introduced (the session's first year at the earliest, so a
-    bill prefiled in December counts in its session's year), date it became law or ""], ...]}. Local bills for one
+    bill prefiled in December counts in its session's year), date it became law or "", {issue: the sentence that
+    matched} for titles under eight words], ...]}. Local bills for one
     place and placeholder bills are left out, as in the statistics."""
     import issues
     bills, total = [], 0
@@ -1157,7 +1158,9 @@ def write_issues(session, recs, texts, page, current):
             law = (r["keyDates"][5].split(";")[-1] if len(r["keyDates"]) > 5 else "") or r["last"] or ""
         bills.append([found, {i: issues.filters_of(i, both) for i in found if issues.BY_ID[i].get("filters")},
                       r["nums"][0], r["title"], r["stage"], r["last"] or "", "const" if "const" in (r["topics"] or []) else "",
-                      intro, law])
+                      intro, law,
+                      # Under a bare title ("Wages"), the sentence that matched, so readers see why the bill is there.
+                      {i: issues.excerpt(i, head, body) for i in found} if len(r["title"].split()) < 8 else {}])
     out = {"state": STATE, "name": P.STATE_NAME, "session": session, "years": getattr(P, "YEARS", 2),
            "upcoming": session > current,
            "label": P.session_label(session), "page": page, "total": total, "bills": bills}

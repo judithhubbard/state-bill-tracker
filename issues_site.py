@@ -95,6 +95,7 @@ ul.bills li:last-child { border-bottom: 0; }
 ul.bills a { font-weight: 600; text-decoration: none; }
 ul.bills a:hover { text-decoration: underline; }
 .t { grid-column: 1 / -1; overflow-wrap: anywhere; }
+.why { grid-column: 1 / -1; color: var(--ink-2); font-size: 14px; overflow-wrap: anywhere; }
 .stage { font-size: 13px; background: var(--chip); border-radius: 999px; padding: 1px 9px; white-space: nowrap; align-self: start; }
 .stage.s5 { color: var(--law); font-weight: 600; }
 .stage.s6 { color: var(--veto); font-weight: 600; }
@@ -284,7 +285,9 @@ def issue_page(issue, states, year, years, default, upcoming):
             when = ""
             items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}"><a href="{e(link(f, b[2]))}">{e(shown(b[2]))}</a>'
                          f'<span class="stage s{b[4]}">{e(stage_text(st, b[4], b[6]))}</span>'
-                         f'<span class="t">{e(b[3])}{when}</span></li>')
+                         f'<span class="t">{e(b[3])}{when}</span>'
+                         + (f'<span class="why">{e(why)}</span>' if (why := (b[9].get(iid) if len(b) > 9 else "")) and why.lower() != b[3].lower() else "")
+                         + '</li>')
         blocks.append(f'<section class="st" data-name="{e(names[st].lower())}"><h3 id="{st}">{e(names[st])} '
                       f'<span class="note">({n}{flag})</span></h3><ul class="bills">{"".join(items)}</ul></section>')
     in_states = len([1 for st in by if by[st][0]])
