@@ -34,9 +34,9 @@ in CLAUDE.md's launch checklist.
 ## National issues and search
 - notes/issues-draft.md: the owner answered its four questions 2026-11-15 (all as drafted). The rules are issues.py,
   checked over every state's bills (notes/issues-check.md: 26-30 of 30 random matches right). The owner's two answers
-  are in (2026-11-15). Next: tag bills at build time and build the
-  issue pages and a front-page section; later the free-text search.
-
+  are in (2026-11-15). Built 2026-11-15: each state's build writes data/issues.json (build_data.py's write_issues()),
+  issues_site.py builds /issues/ and /issues/<id>/, and the front page lists the issues. Later: issue tags on the state
+  pages, the next issues (notes/issues-draft.md), the free-text search.
 ## Site checks
 - Daily site health and accessibility check (test/site_check.js, site-check.yml): review findings with the owner,
   then commit and schedule.

@@ -79,6 +79,10 @@ li a { display: block; background: var(--sheet); border: 1px solid var(--rule); 
 li a:hover, li a:focus-visible { border-color: var(--navy); }
 li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
 .none { color: var(--ink-2); display: none; }
+ul.issues { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+ul.issues span { display: block; color: var(--ink-2); font-size: 14px; }
+p.more { margin: 12px 0 0; font-size: 15px; }
+p.more a { color: var(--navy); }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 </style>
 </head>
@@ -107,6 +111,7 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <li><a href="ca/"><b>California</b></a></li>
   </ul>
   <p class="none" id="none">No state by that name is ready yet.</p>
+  <!-- issues -->
   <footer>Party control is from each legislature's current member list; a supermajority holds enough seats to override a governor's veto on its own. "From January" shows the November 2026 election's reported results, before certification. Your watchlist stays in your browser.</footer>
 </main>
 <script type="application/json" id="power">{}</script>

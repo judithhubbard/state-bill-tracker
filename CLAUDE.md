@@ -1856,6 +1856,16 @@ from that repo. **Nothing here may change it.**
   - A summary of a version another bill's contents replaced: KS conference reports often carry other bills' contents, and
     the supplemental note describes the bill before (HB 2043 of 2025-26: insurance as passed, property tax as law). The check
     LOOKs at laws whose summary shares almost no words with their title.
+- **National issues (built 2026-11-15):** the same subjects across states (data centers, PFAS, AI, children online,
+  phones in schools, housing supply, minimum wage, right to repair, sports betting, prescription drug costs; chosen in
+  notes/issues-draft.md with the owner's answers). `issues.py` holds each issue's rules (patterns that must appear within
+  400 characters of each other, exclusions, filters such as AI's "Chatbots"); a match in the title or summary counts, one
+  only in a long "What it does" needs two mentions (budget bills name subjects in passing). Minimum wage is only bills
+  that set or change one (the owner's decision). Each state's build writes data/issues.json for its current session
+  (`write_issues()` in build_data.py; local and placeholder bills left out); `issues_site.py`, run by build_site.sh
+  after the states, builds /issues/ and /issues/<id>/ (a table by state, every bill linked to its state's page, filters)
+  and issues/summary.json for the front page's list. Check a rule change with test/issues/get.py and check.py (30
+  random matches and possible misses per issue; notes/issues-check.md has the first check: 26-30 of 30 right).
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).

@@ -26,7 +26,7 @@ def files():
                 # lag a quiet day's last check by a few hours, but never by a day).
                 if n != "last_checked":
                     yield os.path.join(d, n)
-    for f in ("tracker.html", "build_data.py", "stages.py", "fetch_contacts.py", "listing_dates.py", "balance.py",
+    for f in ("tracker.html", "build_data.py", "stages.py", "issues.py", "fetch_contacts.py", "listing_dates.py", "balance.py",
               os.path.join("states", "legislatures.json")):
         yield os.path.join(HERE, f)
     for s in sorted({state, "ny"}):

@@ -54,11 +54,13 @@ for s in $STATES; do
   cp -R "$BUILT/$s" "$OUT/$s"
 done
 echo "rebuilt:${REBUILT:- none}"
+# The national issue pages (/issues/), from each built state's data/issues.json; issues/summary.json feeds the front page.
+python3 issues_site.py "$OUT" || echo "issue pages: BUILD FAILED"
 if [ -n "$FAILED" ]; then echo "build failed for:$FAILED"; fi
 # The front page lists exactly the states built in this run (home.html's own list is replaced), so a state appears there
 # as soon as its pages are published (New York's too, at /ny/).
 python3 - "$OUT" <<'PY'
-import importlib, json, os, re, sys
+import html, importlib, json, os, re, sys
 sys.path.insert(0, ".")
 import balance, front_page
 out = sys.argv[1]
@@ -77,6 +79,15 @@ for s in sorted(os.listdir(out)):
             after[s] = nxt
         items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b></a></li>\n'))
 block = "".join(i for _, i in sorted(items))
+# The issue list (issues_site.py's summary), under the states.
+try:
+    summ = json.load(open(os.path.join(out, "issues", "summary.json")))
+except (OSError, ValueError):
+    summ = []
+if summ:
+    lis = "".join(f'    <li><a href="issues/{x["id"]}/"><b>{html.escape(x["name"])}</b><span>{x["bills"]:,} bills in {x["states"]} states</span></a></li>\n' for x in summ)
+    page = page.replace("<!-- issues -->", '<h2 id="issues-head">Issues across the states</h2>\n  <ul class="issues" aria-labelledby="issues-head">\n'
+                        + lis + '  </ul>\n  <p class="more"><a href="issues/">All issues, state by state</a></p>', 1)
 page = page.replace('<script type="application/json" id="power">{}</script>',
                     '<script type="application/json" id="power">' + json.dumps(power, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
 page = page.replace('<script type="application/json" id="after">{}</script>',

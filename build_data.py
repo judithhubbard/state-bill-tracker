@@ -1130,6 +1130,32 @@ def bill_texts(session, recs):
     return out
 
 
+def write_issues(session, recs, texts, page):
+    """The current session's bills on each national issue (issues.py), into data/issues.json for issues_site.py, which
+    builds the issue pages from every state's file: {"state", "name", "session", "label", "page", "bills": [[issue ids,
+    {issue: [filters]}, number, title, stage, last action's date, "const" or ""], ...]}. Local bills for one place and
+    placeholder bills are left out, as in the statistics."""
+    import issues
+    bills = []
+    for r in recs:
+        if r.get("narrow") == "place" or r.get("shell"):
+            continue
+        key = re.sub(r"[A-Z]$", "", r["nums"][0])
+        t = texts.get(key) or []
+        head = f"{r['title']}. {r['summary'] or ''}"
+        body = " ".join(x for i, x in enumerate(t[:5]) if i in (0, 3, 4) and isinstance(x, str))
+        found = issues.issues_of(head, body)
+        if not found:
+            continue
+        both = f"{head} {body}"
+        bills.append([found, {i: issues.filters_of(i, both) for i in found if issues.BY_ID[i].get("filters")},
+                      r["nums"][0], r["title"], r["stage"], r["last"] or "", "const" if "const" in (r["topics"] or []) else ""])
+    out = {"state": STATE, "name": P.STATE_NAME, "session": session,
+           "label": P.session_label(session), "page": page, "bills": bills}
+    with open(os.path.join(GITHUB, "data", "issues.json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
+
+
 def last_checked():
     """When the state's download last succeeded (data/<state>/last_checked), in the state's time zone, or None."""
     from datetime import datetime
@@ -1376,6 +1402,8 @@ def main():
                 for name, part in parts.items():
                     with open(os.path.join(GITHUB, "data", f"{session}-text", f"{name}.json"), "w", encoding="utf-8") as f:
                         json.dump(part, f, separators=(",", ":"), ensure_ascii=False)
+            if session == current:
+                write_issues(session, recs, texts, urls.get(str(session)) or "./")
         # The template is written with New York's names (title, header and the script that updates them).
         template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)
         template = template.replace("How a bill becomes law in New York", f"How a bill becomes law in {P.STATE_NAME}")
