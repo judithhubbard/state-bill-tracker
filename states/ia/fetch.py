@@ -569,7 +569,9 @@ def member_page(page, pid):
 
 def members(ga):
     """A General Assembly's members: both houses' lists and each member's page. Weekly for the current one, once for
-    one before. A page that fails keeps its last copy."""
+    one before. A page that fails keeps its last copy. Each page read is noted ("pages": {person: day}) and saved as it
+    goes, so a run the bot check stops resumes with the next page instead of starting over (on GitHub every run was
+    stopped at the same member, about the 45th request, and the members never finished)."""
     folder = os.path.join(DATA, "members", str(first_year(ga)))
     path = os.path.join(folder, "members.json")
     last = load(path) or {}
@@ -604,23 +606,42 @@ def members(ga):
         print(f"{ga} members: none listed" + ("; kept the last copy" if last else ""), flush=True)
         return
     before = {m["person"]: m for m in last.get("members", [])}
+    pages = dict(last.get("pages") or {})
+    fresh = lambda pid: pages.get(str(pid), "") >= (TODAY - timedelta(days=WEEKLY)).isoformat()
     out, missing = [], []
-    for m in rows:
-        if out_of_time():
-            return
-        page = request(f"{SITE}/legislators/legislator?ga={ga}&personID={m['person']}", f"member {m['person']}",
-                       "Other Information")
-        if page:
-            part = content(page)
-            save_text(part, os.path.join(folder, "pages", f"{m['person']}.html"))
-            out.append({**m, **member_page(part, m["person"])})
-        elif m["person"] in before:
-            out.append(before[m["person"]])
-        else:
-            out.append(m)
-            if not m["served"]:  # a member who left needn't have a page
-                missing.append(m["person"])
-    save({"ga": ga, "read": TODAY.isoformat(), "members": out, "missing": missing}, path)
+
+    def keep(finished):
+        done = out + [before.get(m["person"], m) for m in rows[len(out):]]
+        unread = [m["person"] for m in rows if not fresh(m["person"]) and not m["served"]]
+        save({"ga": ga, "read": TODAY.isoformat() if finished else last.get("read", ""), "members": done,
+              "missing": missing if finished else sorted(set(missing) | set(unread)), "pages": pages}, path)
+
+    try:
+        for m in rows:
+            if out_of_time():
+                keep(False)
+                return
+            saved = os.path.join(folder, "pages", f"{m['person']}.html")
+            if fresh(m["person"]) and os.path.exists(saved):
+                out.append({**m, **member_page(open(saved, encoding="utf-8").read(), m["person"])})
+                continue
+            page = request(f"{SITE}/legislators/legislator?ga={ga}&personID={m['person']}", f"member {m['person']}",
+                           "Other Information")
+            if page:
+                part = content(page)
+                save_text(part, saved)
+                pages[str(m["person"])] = TODAY.isoformat()
+                out.append({**m, **member_page(part, m["person"])})
+            elif m["person"] in before:
+                out.append(before[m["person"]])
+            else:
+                out.append(m)
+                if not m["served"]:  # a member who left needn't have a page
+                    missing.append(m["person"])
+    except Refused:
+        keep(False)
+        raise
+    keep(True)
     print(f"{ga} members: {sum(m['chamber'] == 'House' for m in out)} House, {sum(m['chamber'] == 'Senate' for m in out)}"
           f" Senate ({sum(bool(m.get('served')) for m in out)} served part of the term), "
           f"{sum(bool(m.get('info', {}).get('Capitol Phone')) for m in out)} with phones"
@@ -629,7 +650,8 @@ def members(ga):
 
 def committees(ga):
     """The current General Assembly's House and Senate standing committees and the appropriations subcommittees,
-    weekly. A committee whose page fails keeps its last copy."""
+    weekly. A committee whose page fails keeps its last copy. Pages read are noted ("pages") and saved as they go, so a
+    run the bot check stops resumes where it stopped (as members() does)."""
     folder = os.path.join(DATA, "committees")
     path = os.path.join(DATA, "committees.json")
     last = load(path) or {}
@@ -651,38 +673,62 @@ def committees(ga):
         print("committees: none found on the list; kept the last copy", flush=True)
         return
     before = {c["group"]: c for c in last.get("committees", [])} if last.get("ga") == ga else {}
+    pages = dict(last.get("pages") or {}) if last.get("ga") == ga else {}
+    fresh = lambda g: pages.get(str(g), "") >= (TODAY - timedelta(days=WEEKLY)).isoformat()
     out, missing = [], []
-    for group, section in found:
-        if out_of_time():
-            return
-        page = request(f"{SITE}/committees/committee?ga={ga}&groupID={group}", f"committee {group}", "<h1>")
-        if not page:
-            if group in before:
-                out.append(before[group])
-            else:
-                missing.append(group)
-            continue
-        part = content(page)
-        save_text(part, os.path.join(folder, f"{group}.html"))
-        name = re.search(r"<h1>(.*?)</h1>", part, re.S)
-        mems, house = [], None
-        for m in re.finditer(r"<h5>(.*?)</h5>|<li>(.*?)</li>", part, re.S):
-            if m.group(1) is not None:
-                house = text(m.group(1))
+
+    def keep(finished):
+        unread = [g for g, _ in found if not fresh(g) and g not in before]
+        save({"ga": ga, "read": TODAY.isoformat() if finished else last.get("read", ""),
+              "committees": out + [before[g] for g, _ in found[len(out) + len(missing):] if g in before],
+              "missing": missing if finished else sorted(set(missing) | set(unread)), "pages": pages}, path)
+
+    try:
+        for group, section in found:
+            if out_of_time():
+                keep(False)
+                return
+            saved = os.path.join(folder, f"{group}.html")
+            if fresh(group) and os.path.exists(saved):
+                out.append(committee_page(open(saved, encoding="utf-8").read(), group, section))
                 continue
-            item = m.group(2)
-            pid = re.search(r"personID=(\d+)", item)
-            if not pid or not house or not house.endswith("Members"):
+            page = request(f"{SITE}/committees/committee?ga={ga}&groupID={group}", f"committee {group}", "<h1>")
+            if not page:
+                if group in before:
+                    out.append(before[group])
+                else:
+                    missing.append(group)
                 continue
-            who = re.search(r'data-pid="\d+">(.*?)</a>\s*\(([A-Z]), District\s*<a[^>]*>(\d+)</a>\)(.*)', item, re.S)
-            mems.append({"person": int(pid.group(1)), "house": house.split()[0],
-                         "name": text(who.group(1)) if who else text(item),
-                         "party": who.group(2) if who else "", "district": int(who.group(3)) if who else None,
-                         "role": text(who.group(4)).strip(", ") if who else ""})
-        out.append({"group": group, "section": section, "name": text(name.group(1)) if name else "", "members": mems})
-    save({"ga": ga, "read": TODAY.isoformat(), "committees": out, "missing": missing}, path)
+            part = content(page)
+            save_text(part, saved)
+            pages[str(group)] = TODAY.isoformat()
+            out.append(committee_page(part, group, section))
+    except Refused:
+        keep(False)
+        raise
+    keep(True)
     print(f"committees: {len(out)} ({sum(any(m['role'] == 'Chair' for m in c['members']) for c in out)} with a chair)"
           + (f"; {len(missing)} never read" if missing else ""), flush=True)
+
+
+def committee_page(part, group, section):
+    """A committee's name and members (with "Chair", "Vice Chair" or "Ranking Member") from its page."""
+    name = re.search(r"<h1>(.*?)</h1>", part, re.S)
+    mems, house = [], None
+    for m in re.finditer(r"<h5>(.*?)</h5>|<li>(.*?)</li>", part, re.S):
+        if m.group(1) is not None:
+            house = text(m.group(1))
+            continue
+        item = m.group(2)
+        pid = re.search(r"personID=(\d+)", item)
+        if not pid or not house or not house.endswith("Members"):
+            continue
+        who = re.search(r'data-pid="\d+">(.*?)</a>\s*\(([A-Z]), District\s*<a[^>]*>(\d+)</a>\)(.*)', item, re.S)
+        mems.append({"person": int(pid.group(1)), "house": house.split()[0],
+                     "name": text(who.group(1)) if who else text(item),
+                     "party": who.group(2) if who else "", "district": int(who.group(3)) if who else None,
+                     "role": text(who.group(4)).strip(", ") if who else ""})
+    return {"group": group, "section": section, "name": text(name.group(1)) if name else "", "members": mems}
 
 
 # ----------------------------------------------------------------------------------------------- the run
