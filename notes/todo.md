@@ -32,7 +32,8 @@ in CLAUDE.md's launch checklist.
   day); converters not started (Florida's emails from Open States unless the owner objects).
 
 ## National issues and search
-- Owner to review notes/issues-draft.md (10 starter issues). Then tag at build time, check each issue's matches,
+- notes/issues-draft.md: the owner answered its four questions 2026-11-15 (all as drafted). Next: tag bills at build
+  time, check each issue's matches (counts per state, 30 random matches read, misses searched), show the owner, then
   build the issue pages; later the free-text search.
 
 ## Site checks

@@ -12,7 +12,7 @@ Before anything is published, each issue gets a check: counts per state, and 30 
 - Terms: data center(s), datacenter, hyperscale, large load customer, large-load
 - Exclude: "state data center" and agencies' own computer services (IT consolidation bills)
 - Question: include bills about large electricity users in general (crypto mining, "large load" tariffs)?
-  Draft: yes when they say "large load"; crypto mining alone, no.
+  Draft: yes when they say "large load"; crypto mining alone, no. **Decided 2026-11-15 (owner): as drafted.**
 
 ## 2. PFAS ("forever chemicals")
 - Terms: PFAS, perfluoroalkyl, polyfluoroalkyl, perfluorinated, forever chemical(s), PFOA, PFOS,
@@ -25,7 +25,8 @@ Before anything is published, each issue gets a check: counts per state, and 30 
   companion chatbot, automated decision tool/system, algorithmic discrimination
 - Exclude: "AI" inside other abbreviations; "artificial insemination" (livestock bills say "AI" too)
 - Question: one issue, or split later into deepfakes and elections, chatbots and minors, AI in hiring and
-  insurance, government use? Draft: one issue now, with these as filters on its page.
+  insurance, government use? Draft: one issue now, with these as filters on its page. **Decided 2026-11-15 (owner):
+  one issue, with filters.**
 
 ## 4. Children online and social media
 - Terms: social media AND (minor, child, children, teen, under 18, age of 16, parent); age verification
@@ -43,7 +44,7 @@ Before anything is published, each issue gets a check: counts per state, and 30 
   housing production/supply, starter homes, manufactured housing AND zoning
 - Exclude: bills for one city or county (already marked "place")
 - Question: this is the broadest one. Include rent control and tenant protections, or keep those as a
-  separate issue ("Rent and tenants")? Draft: separate.
+  separate issue ("Rent and tenants")? Draft: separate. **Decided 2026-11-15 (owner): separate.**
 
 ## 7. Minimum wage
 - Terms: minimum wage, tipped wage/subminimum wage, tip credit, living wage
@@ -68,7 +69,8 @@ Before anything is published, each issue gets a check: counts per state, and 30 
 - Exclude: bills only about pharmacists' licensing or controlled-substance scheduling
 
 ## Names, for the owner to decide
-Plain and neutral: they describe the subject, not a side ("Phones in schools", not "Phone bans").
+Plain and neutral: they describe the subject, not a side ("Phones in schools", not "Phone bans"). **Decided
+2026-11-15 (owner): plain and neutral.**
 
 ## Next on the list (after these ten work)
 Abortion; IVF and fertility; firearms; school vouchers and education savings accounts; voting and
