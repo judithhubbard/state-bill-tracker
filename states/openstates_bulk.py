@@ -11,14 +11,17 @@ states/hi/fetch.py), so the converters read either: "sponsorships" (the bulk fil
 actions and votes with an "organization" ({"name", "classification"}), "latest_action_date" and
 "latest_action_description" from the last action, "session"; the bill text ("raw_text") is left out. And
 data/<st>/<year>/openstates.json: {"complete": true, "bulk": file name, "done": day}. A file is downloaded (or taken from
-the owner's Bulk_files_OpenStates/ folder, when it's there) only when bulk.json names one not imported yet. Only the bill
+the owner's Bulk_files_OpenStates/ folder, when it's there) only when bulk.json names one not imported yet. Hawaii's
+download (states/hi/fetch.py) keeps its bills in bills/ and its place in state.json, so for "hi" the records go into
+data/hi/<year>/bills/ and state.json is marked complete with "since" the file's build time: its later passes ask the API
+only for bills updated after that. Only the bill
 types the state keeps are saved (KEEP below). Nothing here marks a state incomplete: a failed download is tried again
 next run.
 
 Usage: python3 states/openstates_bulk.py <st>
 """
-import io, json, os, re, sys, urllib.request, zipfile
-from datetime import date
+import io, json, os, re, sys, urllib.parse, urllib.request, zipfile
+from datetime import date, datetime, timedelta
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 LOCAL = os.path.join(ROOT, "Bulk_files_OpenStates")
@@ -48,7 +51,7 @@ def fetch(name):
     local = os.path.join(LOCAL, name)
     if os.path.exists(local):
         return open(local, "rb").read()
-    req = urllib.request.Request(URL + name, headers={"User-Agent": AGENT})
+    req = urllib.request.Request(URL + urllib.parse.quote(name), headers={"User-Agent": AGENT})
     with urllib.request.urlopen(req, timeout=600) as r:
         return r.read()
 
@@ -83,6 +86,7 @@ def main(st):
     keep = re.compile(KEEP[st] + r" ?\d+$")
     for year, name in sorted(files.items()):
         folder = os.path.join(ROOT, "data", st, year)
+        os.makedirs(folder, exist_ok=True)
         mark_path = os.path.join(folder, "openstates.json")
         mark = load(mark_path, {})
         if mark.get("bulk") == name:
@@ -93,7 +97,7 @@ def main(st):
         except Exception as e:
             print(f"{st} {year}: {name} unreadable ({type(e).__name__}: {e}); tried again next run", flush=True)
             continue
-        out = os.path.join(folder, "openstates")
+        out = os.path.join(folder, "bills" if st == "hi" else "openstates")
         os.makedirs(out, exist_ok=True)
         n = 0
         for b in bills:
@@ -101,6 +105,14 @@ def main(st):
                 save(api_shape(b), os.path.join(out, b["identifier"].replace(" ", "") + ".json"))
                 n += 1
         save({"complete": True, "bulk": name, "done": date.today().isoformat()}, mark_path)
+        if st == "hi":
+            built = datetime(*z.getinfo(next(i for i in z.namelist() if i.endswith("_bills.json"))).date_time)
+            state_path = os.path.join(folder, "state.json")
+            state = load(state_path, {})
+            for k in ("page", "began", "pass"):
+                state.pop(k, None)
+            state.update(complete=True, since=(built - timedelta(days=1)).isoformat(timespec="seconds"))
+            save(state, state_path)
         print(f"{st} {year}: {n} bills from {name} (of {len(bills)} records)", flush=True)
 
 

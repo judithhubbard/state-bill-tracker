@@ -27,7 +27,7 @@ in CLAUDE.md's launch checklist.
   from the official site first, then the rest over the following weeks. Converter to write once the first copy is in:
   official history when there, else the Open States record.
 - Open States' bulk files (2026-11-15; states/openstates_bulk.py, each state's bulk.json): Iowa 2023-24 and Florida
-  2024-26 imported as first copies. Hawaii's (2023-2026) not downloaded yet: ask the owner for the links.
+  2024-26 and Hawaii 2023-26 imported as first copies.
 - Florida, Hawaii: downloads running (Florida about 2/3 through 2026's bills; Hawaii capped at 110 Open States requests a
   day); converters not started (Florida's emails from Open States unless the owner objects).
 
