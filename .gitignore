@@ -157,8 +157,9 @@ data/ia/*
 # Kansas downloads (states/ks/fetch.py).
 data/ks/*
 !data/ks/district_towns.json
-# Florida downloads (states/fl/fetch.py).
+# Florida downloads (states/fl/fetch.py); its places table is made once by states/fl/towns.py.
 data/fl/*
+!data/fl/district_towns.json
 # Louisiana downloads (states/la/fetch.py).
 data/la/*
 !data/la/district_towns.json

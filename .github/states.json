@@ -449,8 +449,8 @@
     "data/fl"
    ],
    "minutes": 110,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/openstates_bulk.py fl && python3 states/fl/fetch.py",
-   "note": "The first copy of 2024-26 from Open States' bulk files (states/fl/bulk.json), then flsenate.gov at its 10-second crawl delay for every bill that changed and, in the time left, the official record of the rest; a 429 means wait and try again (both houses' bills; /api/ is barred and not used), the House's member and committee pages; the first copy (about 17 hours) builds up over many runs. Not built into the site until its converter exists."
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/openstates_bulk.py fl && python3 states/fl/fetch.py && python3 states/fl/contacts.py",
+   "note": "The first copy of 2024-26 from Open States' bulk files (states/fl/bulk.json), then flsenate.gov at its 10-second crawl delay for every bill that changed and, in the time left, the official record of the rest; a 429 means wait and try again (both houses' bills; /api/ is barred and not used), the House's member and committee pages; the first copy (about 17 hours) builds up over many runs; contacts.py builds the contacts after it."
   },
   {
    "name": "Louisiana",
