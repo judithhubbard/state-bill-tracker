@@ -32,6 +32,11 @@ in CLAUDE.md's launch checklist.
   states/fl/fetch.py's parse_reps() sometimes puts 'Part of Orange">' in the counties field (contacts.py cleans it).
   Companion bills are separate records (about 1,100 "died awaiting a floor vote" are tabled companions): consider
   grouping them, as Tennessee's are.
+- Hawaii built 2026-11-15 (Open States' records; a page per two-year Legislature; laws and vetoes match the governor's
+  announcements). To check: committee codes for 2023-24 and the Senate's 2025 list were written from memory; members
+  missing from Open States' people file (Ward, Kidani, Holt); the House's floor ayes are counted as 51 less the noes and
+  excused, one too many while a seat is vacant; the shared committee note "few are sent to a second" is wrong for
+  Hawaii (86-92% go to two or more): needs a STATE hook.
 - Florida, Hawaii: downloads running (Florida about 2/3 through 2026's bills; Hawaii capped at 110 Open States requests a
   day); converters not started (Florida's emails from Open States unless the owner objects).
 
