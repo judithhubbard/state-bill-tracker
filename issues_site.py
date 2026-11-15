@@ -105,7 +105,7 @@ ul.bills a:hover { text-decoration: underline; }
 .tiles { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; margin: 16px 0 10px; }
 .tiles a, .tiles span.off { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12%;
   border-radius: 6px; font: 700 clamp(10px, 2.6vw, 15px)/1 var(--display); text-decoration: none; }
-.tiles span.off { background: transparent; color: var(--tile-off-ink); box-shadow: inset 0 0 0 1px var(--rule); }
+.tiles span.off { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); }
 .tiles a:hover, .tiles a:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
 .tiles a.h0 { background: var(--tile-off); color: var(--tile-off-ink); }
 .tiles a.h1 { background: var(--heat-1); color: var(--heat-ink-1); }
