@@ -153,8 +153,9 @@ data/nm/*
 # Hawaii downloads (states/hi/fetch.py, from Open States).
 data/hi/*
 !data/hi/district_towns.json
-# Iowa downloads (states/ia/fetch.py).
+# Iowa downloads (states/ia/fetch.py); its places table is made once by states/ia/towns.py.
 data/ia/*
+!data/ia/district_towns.json
 # Kansas downloads (states/ks/fetch.py).
 data/ks/*
 !data/ks/district_towns.json
