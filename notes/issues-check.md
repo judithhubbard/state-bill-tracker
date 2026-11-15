@@ -42,7 +42,7 @@ The owner's answers (2026-11-15):
   right next to it ("increases the minimum wage", "minimum wage; establish at $10.00", "local minimum wage"), and bills
   paying for its cost, tax credits and tax breaks, and "living wage" rules for state contractors are left out (about 27
   of 30 after the change).
-- Pornography age-verification laws stay under "Children online and social media" (my recommendation, accepted), with
+- Pornography age-verification laws stay under "Children online and social media" (Claude's recommendation when the owner asked; not yet confirmed), with
   a filter on its page, "Age checks for adult websites", beside "Social media", "App stores" and "Design and privacy
   codes".
 
