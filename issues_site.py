@@ -33,19 +33,25 @@ DESC = {
 CSS = """
 :root {
   --paper: #f6f8fb; --sheet: #ffffff; --ink: #14213d; --ink-2: #4a5878; --rule: #d9e0ec; --navy: #1d3b78; --hover: #c8901f;
-  --law: #18693f; --veto: #a3302a; --chip: #e9eef6;
+  --law: #18693f; --veto: #a3302a; --chip: #e9eef6; --tile-off: #e3e8f1; --tile-off-ink: #56627c;
+  --heat-1: #c5d5ef; --heat-2: #6f93d0; --heat-3: #1d3b78; --heat-ink-1: #14213d; --heat-ink-2: #0b1530; --heat-ink-3: #ffffff;
+  --law-mark: #c8901f;
   --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0; --hover: #e0b04e;
-    --law: #5cc28c; --veto: #f08a80; --chip: #1f2b45; color-scheme: dark;
+    --law: #5cc28c; --veto: #f08a80; --chip: #1f2b45; --tile-off: #1b2438; --tile-off-ink: #8a96ae;
+    --heat-1: #2f4d85; --heat-2: #5a86d6; --heat-3: #9dbcf3; --heat-ink-1: #e6ebf5; --heat-ink-2: #ffffff; --heat-ink-3: #0f1626;
+    --law-mark: #e0b04e; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0; --hover: #e0b04e;
-  --law: #5cc28c; --veto: #f08a80; --chip: #1f2b45; color-scheme: dark;
+  --law: #5cc28c; --veto: #f08a80; --chip: #1f2b45; --tile-off: #1b2438; --tile-off-ink: #8a96ae;
+  --heat-1: #2f4d85; --heat-2: #5a86d6; --heat-3: #9dbcf3; --heat-ink-1: #e6ebf5; --heat-ink-2: #ffffff; --heat-ink-3: #0f1626;
+  --law-mark: #e0b04e; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--body); padding: 32px 16px 64px; }
@@ -87,6 +93,27 @@ ul.bills a:hover { text-decoration: underline; }
 .stage.s5 { color: var(--law); font-weight: 600; }
 .stage.s6 { color: var(--veto); font-weight: 600; }
 .hidden { display: none !important; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tools select { font: inherit; font-size: 15px; padding: 6px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink); }
+.tiles { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; margin: 16px 0 10px; }
+.tiles a, .tiles span.off { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12%;
+  border-radius: 6px; font: 700 clamp(10px, 2.6vw, 15px)/1 var(--display); text-decoration: none; }
+.tiles span.off { background: transparent; color: var(--tile-off-ink); box-shadow: inset 0 0 0 1px var(--rule); }
+.tiles a:hover, .tiles a:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
+.tiles a.h0 { background: var(--tile-off); color: var(--tile-off-ink); }
+.tiles a.h1 { background: var(--heat-1); color: var(--heat-ink-1); }
+.tiles a.h2 { background: var(--heat-2); color: var(--heat-ink-2); }
+.tiles a.h3 { background: var(--heat-3); color: var(--heat-ink-3); }
+.dots { display: flex; }
+.law { width: clamp(5px, 1.3vw, 9px); height: clamp(5px, 1.3vw, 9px); border-radius: 50%; background: var(--law-mark);
+  box-shadow: 0 0 0 1.5px var(--sheet); display: inline-block; }
+.legend { color: var(--ink-2); font-size: 14px; margin: 0 0 12px; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
+.legend .key { display: inline-flex; align-items: center; gap: 6px; }
+.legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.legend .sq.h0 { background: var(--tile-off); } .legend .sq.h1 { background: var(--heat-1); }
+.legend .sq.h2 { background: var(--heat-2); } .legend .sq.h3 { background: var(--heat-3); }
+details.table { margin: 0 0 8px; }
+details.table summary { cursor: pointer; color: var(--navy); font-weight: 600; font-size: 15px; margin: 0 0 8px; }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 """
 
@@ -141,49 +168,95 @@ def link(st, num):
     return f"../../{st['state']}/{page}#{re.sub(r'[A-Z]$', '', num)}"
 
 
+# The tile map's grid (row, column), as on the front page (home.html's GRID).
+GRID = {"AK": (0, 0), "ME": (0, 10), "VT": (1, 9), "NH": (1, 10),
+        "WA": (2, 0), "ID": (2, 1), "MT": (2, 2), "ND": (2, 3), "MN": (2, 4), "IL": (2, 5), "WI": (2, 6), "MI": (2, 7), "NY": (2, 8),
+        "RI": (2, 9), "MA": (2, 10), "OR": (3, 0), "NV": (3, 1), "WY": (3, 2), "SD": (3, 3), "IA": (3, 4), "IN": (3, 5), "OH": (3, 6),
+        "PA": (3, 7), "NJ": (3, 8), "CT": (3, 9), "CA": (4, 0), "UT": (4, 1), "CO": (4, 2), "NE": (4, 3), "MO": (4, 4), "KY": (4, 5),
+        "WV": (4, 6), "VA": (4, 7), "MD": (4, 8), "DE": (4, 9), "AZ": (5, 1), "NM": (5, 2), "KS": (5, 3), "AR": (5, 4), "TN": (5, 5),
+        "NC": (5, 6), "SC": (5, 7), "OK": (6, 3), "LA": (6, 4), "MS": (6, 5), "AL": (6, 6), "GA": (6, 7), "HI": (7, 0), "TX": (7, 3),
+        "FL": (7, 7)}
+SHORT = {"datacenters": "data centers", "pfas": "PFAS", "ai": "artificial intelligence", "kidsonline": "children online",
+         "phones": "phones in schools", "housing": "housing supply", "minwage": "minimum wage", "repair": "right to repair",
+         "betting": "sports betting", "drugcosts": "drug costs"}
+
+
+def step(n):
+    return 3 if n >= 15 else 2 if n >= 5 else 1 if n else 0
+
+
+def tile_map(iid, by, names):
+    """The tile map, each state shaded by its number of bills on the issue (a gold mark where one became law), each
+    square a link to the state's bills below."""
+    out = []
+    for code, (r, c) in GRID.items():
+        st = code.lower()
+        style = f"grid-row:{r + 1};grid-column:{c + 1}"
+        if st not in names:
+            out.append(f'<span class="off" style="{style}" title="Coming soon">{code}</span>')
+            continue
+        n, laws = by.get(st, (0, 0))
+        label = (f"{names[st]}: {n} bill{'' if n == 1 else 's'}" if n else f"{names[st]}: none") + (f", {laws} became law" if laws else "")
+        mark = '<span class="dots" aria-hidden="true"><i class="law"></i></span>' if laws else ""
+        href = f"#{st}" if n else "#none"
+        out.append(f'<a href="{href}" class="h{step(n)}" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}{mark}</a>')
+    return '<div class="tiles">' + "".join(out) + "</div>"
+
+
 def issue_page(issue, states):
     iid = issue["id"]
-    rows, blocks, total, laws, moving = [], [], 0, 0, 0
-    filters = list(issue.get("filters", {}))
+    rows, blocks, total, laws, moving, by = [], [], 0, 0, 0, {}
+    names = {st["state"]: st["name"] for st in states}
+    none = []
     for st in sorted(states, key=lambda s: s["name"]):
         mine = [b for b in st["bills"] if iid in b[0]]
         if not mine:
+            none.append(st["name"])
             continue
         n_law = sum(1 for b in mine if b[4] == 5)
         n_moving = sum(1 for b in mine if 1 <= b[4] <= 4)
+        by[st["state"]] = (len(mine), n_law)
         total, laws, moving = total + len(mine), laws + n_law, moving + n_moving
         flag = " *" if st["state"] in TITLES_ONLY else ""
+        all_n = st.get("total")
         rows.append((len(mine), f'<tr><th scope="row"><a href="#{st["state"]}">{e(st["name"])}</a>{flag}</th>'
                                 f'<td class="n">{len(mine)}</td><td class="n">{n_law}</td><td class="n">{n_moving}</td>'
-                                f'<td class="sess">{e(st["label"])}</td></tr>'))
+                                f'<td class="n">{f"{all_n:,}" if all_n else ""}</td><td class="sess">{e(st["label"])}</td></tr>'))
         items = []
         # Laws first, then the furthest along; within a stage, the latest action first.
         for b in sorted(sorted(mine, key=lambda b: b[5], reverse=True), key=lambda b: (b[4] != 5, -b[4])):
-            f = " ".join(re.sub(r"\W+", "-", x.lower()) for x in (b[1].get(iid) or []))
+            f = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
             items.append(f'<li data-stage="{b[4]}" data-f="{e(f)}"><a href="{e(link(st, b[2]))}">{e(shown(b[2]))}</a>'
                          f'<span class="stage s{b[4]}">{e(stage_text(st["state"], b[4], b[6]))}</span>'
                          f'<span class="t">{e(b[3])}</span></li>')
         blocks.append(f'<section class="st" data-name="{e(st["name"].lower())}"><h3 id="{st["state"]}">{e(st["name"])} '
-                      f'<span class="note">({len(mine)}, {e(st["label"])})</span></h3><ul class="bills">{"".join(items)}</ul></section>')
+                      f'<span class="note">({len(mine)}, {e(st["label"])}{flag})</span></h3><ul class="bills">{"".join(items)}</ul></section>')
     in_states = len(rows)
     rows.sort(key=lambda r: -r[0])
-    ftools = "".join(f'<button type="button" data-filter="{e(re.sub(r"[^a-z]+", "-", k.lower()))}" aria-pressed="false">{e(k)}</button>'
-                     for k in filters)
+    opts = "".join(f'<option value="f:{e(re.sub(r"[^a-z]+", "-", k.lower()))}">{e(k)}</option>' for k in issue.get("filters", {}))
     body = HEAD.format(title=f"{issue['name']}: bills in every state", desc=e(DESC.get(iid, "")), css=CSS) + f"""
 <p class="crumbs"><a href="../../">State Bill Tracker</a> / <a href="../">Issues</a></p>
 <h1>{e(issue['name'])}</h1>
 <p class="lede">{e(DESC.get(iid, ""))}</p>
 <p><b>{total:,}</b> bills in <b>{in_states}</b> states this session; <b>{laws:,}</b> became law and <b>{moving:,}</b> are still moving.</p>
-<h2>By state</h2>
+{tile_map(iid, by, names)}
+<p class="legend">
+<span class="key"><i class="sq h0"></i>None</span><span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>
+<span class="key"><i class="sq h2"></i>5&ndash;14</span><span class="key"><i class="sq h3"></i>15 or more</span>
+<span class="key"><i class="law"></i>A bill became law</span>
+<span class="key"><i class="sq" style="box-shadow:inset 0 0 0 1px var(--rule)"></i>Not on the site yet</span>
+</p>
+<details class="table"><summary>Show as a table</summary>
 <div class="tablewrap"><table>
-<thead><tr><th scope="col">State</th><th scope="col" class="n">Bills</th><th scope="col" class="n">Laws</th><th scope="col" class="n">Moving</th><th scope="col">Session</th></tr></thead>
+<thead><tr><th scope="col">State</th><th scope="col" class="n">Bills</th><th scope="col" class="n">Laws</th><th scope="col" class="n">Moving</th><th scope="col" class="n">All bills</th><th scope="col">Session</th></tr></thead>
 <tbody>{"".join(r for _, r in rows)}</tbody></table></div>
-<p class="note">Each state's current session. &ldquo;Moving&rdquo; means out of committee but not yet law or vetoed. * The legislature publishes only bill titles, no summaries, so some of its bills on this issue may be missed.</p>
-<h2>The bills</h2>
-<div class="tools" role="group" aria-label="Show">
-<button type="button" data-only="law" aria-pressed="false">Became law</button>
-<button type="button" data-only="moving" aria-pressed="false">Still moving</button>
-{ftools}
+<p class="note">&ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's session, for scale.</p>
+</details>
+<p class="note">Each state's current session, so the years differ: a two-year legislature's 2025&ndash;26, a yearly one's 2026. * The legislature publishes only bill titles, so some of its bills on this issue may be missed.{f' No bills: {e(", ".join(none))}.' if none else ""}</p>
+<h2 id="none">The bills</h2>
+<div class="tools">
+<label for="filter" class="vh">Show</label>
+<select id="filter"><option value="">All bills</option><option value="law">Became law</option><option value="moving">Still moving</option>{opts}</select>
 <input type="search" id="find" placeholder="Find a state" aria-label="Find a state">
 </div>
 <p class="note" id="count" aria-live="polite"></p>
@@ -191,16 +264,14 @@ def issue_page(issue, states):
 <footer>Bills are found by the words in their titles and summaries, so a few are missed and a few are only partly about the issue. Bills for one city or county are left out. Open a bill for its status, votes and who to contact.</footer>
 </main>
 <script>
-const only = new Set(), fs = new Set();
 function apply() {{
-  const q = document.getElementById("find").value.trim().toLowerCase();
+  const q = document.getElementById("find").value.trim().toLowerCase(), v = document.getElementById("filter").value;
   let shown = 0;
   for (const sec of document.querySelectorAll("section.st")) {{
     let any = 0;
     for (const li of sec.querySelectorAll("li")) {{
       const s = +li.dataset.stage, f = li.dataset.f.split(" ");
-      const ok = (!only.size || (only.has("law") && s === 5) || (only.has("moving") && s >= 1 && s <= 4))
-        && (!fs.size || [...fs].some((x) => f.includes(x)));
+      const ok = !v || (v === "law" && s === 5) || (v === "moving" && s >= 1 && s <= 4) || (v.startsWith("f:") && f.includes(v.slice(2)));
       li.classList.toggle("hidden", !ok);
       if (ok) any++;
     }}
@@ -208,20 +279,16 @@ function apply() {{
     sec.classList.toggle("hidden", !vis);
     if (vis) shown += any;
   }}
-  document.getElementById("count").textContent = (only.size || fs.size || q) ? `Showing ${{shown.toLocaleString()}} bills.` : "";
+  document.getElementById("count").textContent = (v || q) ? `Showing ${{shown.toLocaleString()}} bills.` : "";
 }}
-for (const b of document.querySelectorAll(".tools button")) b.addEventListener("click", () => {{
-  const set = b.dataset.only ? only : fs, key = b.dataset.only || b.dataset.filter;
-  set.has(key) ? set.delete(key) : set.add(key);
-  b.setAttribute("aria-pressed", set.has(key));
-  apply();
-}});
+document.getElementById("filter").addEventListener("change", apply);
 document.getElementById("find").addEventListener("input", apply);
 </script>
 </body>
 </html>
 """
-    return body, {"id": iid, "name": issue["name"], "bills": total, "states": in_states, "laws": laws}
+    return body, {"id": iid, "name": issue["name"], "short": SHORT.get(iid, issue["name"]), "bills": total,
+                  "states": in_states, "laws": laws, "by": {k: list(v) for k, v in by.items()}}
 
 
 def main(site):

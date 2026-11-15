@@ -79,15 +79,14 @@ for s in sorted(os.listdir(out)):
             after[s] = nxt
         items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b></a></li>\n'))
 block = "".join(i for _, i in sorted(items))
-# The issue list (issues_site.py's summary), under the states.
+# The national issues for the map's "Show" menu (issues_site.py's summary: each issue's counts by state).
 try:
     summ = json.load(open(os.path.join(out, "issues", "summary.json")))
 except (OSError, ValueError):
     summ = []
 if summ:
-    lis = "".join(f'    <li><a href="issues/{x["id"]}/"><b>{html.escape(x["name"])}</b><span>{x["bills"]:,} bills in {x["states"]} states</span></a></li>\n' for x in summ)
-    page = page.replace("<!-- issues -->", '<h2 id="issues-head">Issues across the states</h2>\n  <ul class="issues" aria-labelledby="issues-head">\n'
-                        + lis + '  </ul>\n  <p class="more"><a href="issues/">All issues, state by state</a></p>', 1)
+    page = page.replace('<script type="application/json" id="issues">[]</script>',
+                        '<script type="application/json" id="issues">' + json.dumps(summ, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
 page = page.replace('<script type="application/json" id="power">{}</script>',
                     '<script type="application/json" id="power">' + json.dumps(power, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
 page = page.replace('<script type="application/json" id="after">{}</script>',

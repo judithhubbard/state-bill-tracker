@@ -1864,7 +1864,11 @@ from that repo. **Nothing here may change it.**
   that set or change one (the owner's decision). Each state's build writes data/issues.json for its current session
   (`write_issues()` in build_data.py; local and placeholder bills left out); `issues_site.py`, run by build_site.sh
   after the states, builds /issues/ and /issues/<id>/ (a table by state, every bill linked to its state's page, filters)
-  and issues/summary.json for the front page's list. Check a rule change with test/issues/get.py and check.py (30
+  and issues/summary.json (each issue's counts by state). The front page's map has a "Show" menu: party control, or an
+  issue, which shades each state by its bills on it (none, 1-4, 5-14, 15 or more; a gold mark where one became law) and
+  links each square to the state's bills on the issue page (the owner's choice 2026-11-15: no issue cards on the front
+  page); `#issue=ai` in the address picks one. Each issue page leads with the same map, the table under "Show as a
+  table", and one menu (all bills, became law, still moving, the issue's filters). Check a rule change with test/issues/get.py and check.py (30
   random matches and possible misses per issue; notes/issues-check.md has the first check: 26-30 of 30 right).
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the

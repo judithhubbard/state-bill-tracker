@@ -1132,14 +1132,16 @@ def bill_texts(session, recs):
 
 def write_issues(session, recs, texts, page):
     """The current session's bills on each national issue (issues.py), into data/issues.json for issues_site.py, which
-    builds the issue pages from every state's file: {"state", "name", "session", "label", "page", "bills": [[issue ids,
+    builds the issue pages from every state's file: {"state", "name", "session", "label", "page", "total" (bills counted,
+    for scale), "bills": [[issue ids,
     {issue: [filters]}, number, title, stage, last action's date, "const" or ""], ...]}. Local bills for one place and
     placeholder bills are left out, as in the statistics."""
     import issues
-    bills = []
+    bills, total = [], 0
     for r in recs:
         if r.get("narrow") == "place" or r.get("shell"):
             continue
+        total += 1
         key = re.sub(r"[A-Z]$", "", r["nums"][0])
         t = texts.get(key) or []
         head = f"{r['title']}. {r['summary'] or ''}"
@@ -1151,7 +1153,7 @@ def write_issues(session, recs, texts, page):
         bills.append([found, {i: issues.filters_of(i, both) for i in found if issues.BY_ID[i].get("filters")},
                       r["nums"][0], r["title"], r["stage"], r["last"] or "", "const" if "const" in (r["topics"] or []) else ""])
     out = {"state": STATE, "name": P.STATE_NAME, "session": session,
-           "label": P.session_label(session), "page": page, "bills": bills}
+           "label": P.session_label(session), "page": page, "total": total, "bills": bills}
     with open(os.path.join(GITHUB, "data", "issues.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
 
