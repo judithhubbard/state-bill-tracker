@@ -28,6 +28,10 @@ in CLAUDE.md's launch checklist.
   official history when there, else the Open States record.
 - Open States' bulk files (2026-11-15; states/openstates_bulk.py, each state's bulk.json): Iowa 2023-24 and Florida
   2024-26 and Hawaii 2023-26 imported as first copies.
+- Florida built 2026-11-15 (official pages, else Open States' records; laws and vetoes match the Senate's lists). To fix:
+  states/fl/fetch.py's parse_reps() sometimes puts 'Part of Orange">' in the counties field (contacts.py cleans it).
+  Companion bills are separate records (about 1,100 "died awaiting a floor vote" are tabled companions): consider
+  grouping them, as Tennessee's are.
 - Florida, Hawaii: downloads running (Florida about 2/3 through 2026's bills; Hawaii capped at 110 Open States requests a
   day); converters not started (Florida's emails from Open States unless the owner objects).
 
