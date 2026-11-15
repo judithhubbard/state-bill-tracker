@@ -586,6 +586,7 @@ table.st col.c-m { width: 80px; }
 .wcard .nums .watchbtn, .wcard .nums .stance { margin: 0; padding-top: 0; }
 .wcard .wstatus { min-width: 0; }
 .wcard h3 { margin: 4px 0 0; font: 700 17px/1.3 var(--body); }
+.wcard .wspons { margin: 2px 0 0; font-size: 13.5px; color: var(--ink-2); }
 .wcards { gap: 10px; }
 .wcard { padding-bottom: 0; gap: 0; }
 .wcard .whead { cursor: pointer; display: grid; gap: 6px; padding-bottom: 12px; }
@@ -4294,6 +4295,7 @@ function renderWatchView() {
           ? `${watchButton(b, false)}<span class="stance fixed ${x.stance}" title="The position of whoever shared this list">${x.stance === "oppose" ? "Oppose" : "Support"}</span>`
           : watchButton(b)}</div><span class="spill p${b.stage}">${esc(TEXT.pipe[b.stage])}${esc(due)}</span></div>
         <h3>${esc(b.title)}${SHARED ? "" : newsTags(b)}</h3>
+        ${b.sponsors.length ? `<p class="wspons">${b.sponsors.map(esc).join(" / ")}</p>` : ""}
         ${x.key ? `<div class="wask"><span><b>${esc(andList([x.key, ...(x.more || [])].map(titleOf)))}:</b> ${esc(x.key.ask)}</span>${x.more?.length ? "" : `<button class="act-btn small primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button>`}</div>` : ""}
         ${SHARED_META?.notes?.[baseNum(b.nums[0])] ? `<div class="pubnote"><b>Note from ${esc(SHARED_META.group)}:</b> ${esc(SHARED_META.notes[baseNum(b.nums[0])])}</div>` : ""}
         ${logged ? `<p class="wlogged">${num(logged)} action${logged === 1 ? "" : "s"} logged</p>` : ""}
