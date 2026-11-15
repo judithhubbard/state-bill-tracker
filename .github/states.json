@@ -428,8 +428,8 @@
     "data/ia"
    ],
    "minutes": 110,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/ia/openstates.py && python3 states/ia/fetch.py",
-   "note": "The first copy from Open States (OPENSTATES_API_KEY, at most 100 requests a day; about 300 in all), then legis.iowa.gov, a request every 6 seconds, for every bill that changed and, in the requests left, the official record of the rest; a run ends at once if the site's bot check appears (the owner's choice, 2026-11-13; on GitHub it appears after about 45 requests). Not built into the site until its converter exists."
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/openstates_bulk.py ia && python3 states/ia/openstates.py && python3 states/ia/fetch.py",
+   "note": "The first copy from Open States (2023-24 from its bulk file, states/ia/bulk.json; 2025-26 from the API, OPENSTATES_API_KEY, at most 100 requests a day), then legis.iowa.gov, a request every 6 seconds, for every bill that changed and, in the requests left, the official record of the rest; a run ends at once if the site's bot check appears (the owner's choice, 2026-11-13; on GitHub it appears after about 45 requests). Not built into the site until its converter exists."
   },
   {
    "name": "Kansas",
@@ -449,8 +449,8 @@
     "data/fl"
    ],
    "minutes": 110,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/fl/fetch.py",
-   "note": "flsenate.gov at its 10-second crawl delay (both houses' bills; /api/ is barred and not used), the House's member and committee pages; the first copy (about 17 hours) builds up over many runs. Not built into the site until its converter exists."
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/openstates_bulk.py fl && python3 states/fl/fetch.py",
+   "note": "The first copy of 2024-26 from Open States' bulk files (states/fl/bulk.json), then flsenate.gov at its 10-second crawl delay for every bill that changed and, in the time left, the official record of the rest; a 429 means wait and try again (both houses' bills; /api/ is barred and not used), the House's member and committee pages; the first copy (about 17 hours) builds up over many runs. Not built into the site until its converter exists."
   },
   {
    "name": "Louisiana",

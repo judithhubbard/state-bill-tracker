@@ -73,6 +73,14 @@ House's committee list for a term and each committee's page, committeesdetail.as
 after an election the new term's committees aren't named yet (November 2026: the Senate's say "TBA", the House lists
 none), and the Senate's pages don't show a past term's members; the Senate committee vote PDFs name each chair.
 
+The first copy of each bill comes from Open States' bulk files (states/openstates_bulk.py, run first; files named in
+states/fl/bulk.json; decided 2026-11-15, after flsenate.gov began answering GitHub's runs with 429 after a few pages):
+data/fl/<year>/openstates/<HB1205>.json. A bill never read here whose Open States record has no later action than its
+list entry waits for the backfill pass (after the bills that moved, before the members' pages), so the official record
+replaces Open States' over time; such a bill, and a session the bulk file covers before its list is read, count as
+downloaded for the marker. Open States' records have the floor votes member by member, but no committee vote PDFs or
+staff analyses: those still come only from here.
+
 What changes: a bill page is read when it's new or its last action on the list changed; while the session is live
 (until September 1 of its year: the governor's actions, chapter numbers and final analyses come after the session), also
 every bill not read in a week, oldest first, at most REFRESH_MAX a run; after September 1, each bill once more if it
@@ -436,19 +444,45 @@ def bill_extras(page):
     return pdfs, analysis
 
 
-def bills(year, folder, state, listing):
+def open_states(folder, k):
+    """The date of the latest action in the bill's Open States record (states/openstates_bulk.py), or "" without one."""
+    rec = load(os.path.join(folder, "openstates", f"{k}.json")) or {}
+    return (rec.get("latest_action_date") or "")[:10]
+
+
+def list_day(last):
+    """The date a list entry's last action starts with ("5/5/2025 Chapter No. 2025-21"), as ISO, or ""."""
+    m = re.match(r"(\d+)/(\d+)/(\d{4})", last or "")
+    return f"{m.group(3)}-{int(m.group(1)):02}-{int(m.group(2)):02}" if m else ""
+
+
+def bills(year, folder, state, listing, backfill=False):
+    """Each listed bill's page: new and moved ones first. A bill never read here whose Open States record is up to date
+    (no later action on the list) waits for the backfill pass (backfill=True: in the time left, the most recently active
+    first), so the official record replaces Open States' over time."""
     signal, read, absent = state.setdefault("signal", {}), state.setdefault("read", {}), state.setdefault("absent", {})
     have = lambda k: os.path.exists(os.path.join(folder, "bills", f"{k}.html"))
     wanted = listing["bills"]
+    waiting = [k for k, b in wanted.items() if not have(k) and absent.get(k) != b["last"]
+               and open_states(folder, k) and open_states(folder, k) >= list_day(b["last"])]
     urgent = [k for k, b in wanted.items()
-              if (not have(k) and absent.get(k) != b["last"]) or (have(k) and signal.get(k) != b["last"])]
-    if live(year):
+              if (not have(k) and absent.get(k) != b["last"] and k not in waiting)
+              or (have(k) and signal.get(k) != b["last"])]
+    if backfill:
+        todo = sorted(waiting, key=lambda k: list_day(wanted[k]["last"]), reverse=True)
+        if todo:
+            print(f"{year}: {len(todo)} bills still from Open States only; reading them", flush=True)
+        urgent, rest = todo, []
+    elif live(year):
         stale = ago(WEEKLY)
     else:
         stale = date(year, 9, 1).isoformat()  # a last read after the session's business is over
-    rest = sorted((read.get(k, ""), k) for k in wanted if k not in urgent and have(k) and read.get(k, "") < stale)
+    rest = [] if backfill else sorted((read.get(k, ""), k) for k in wanted
+                                      if k not in urgent and have(k) and read.get(k, "") < stale)
     todo = urgent + [k for _, k in rest[:REFRESH_MAX]]
-    print(f"{year}: {len(wanted)} listed; {len(urgent)} new or moved, {len(rest)} stale; {len(todo)} to read", flush=True)
+    if not backfill:
+        print(f"{year}: {len(wanted)} listed; {len(urgent)} new or moved, {len(rest)} stale, {len(waiting)} up to date "
+              f"from Open States; {len(todo)} to read", flush=True)
     got = 0
     for k in todo:
         if out_of_time():
@@ -771,12 +805,14 @@ def never_downloaded(yrs):
             continue
         folder = os.path.join(DATA, str(year))
         listing = load(os.path.join(folder, "list.json"))
+        bulk = (load(os.path.join(folder, "openstates.json"), {}) or {}).get("complete")
         if not listing:
-            out.append(f"{year}:list")
+            if not bulk:  # a session Open States' bulk file covers doesn't wait for its list
+                out.append(f"{year}:list")
             continue
         absent = (load(os.path.join(folder, "state.json"), {}) or {}).get("absent", {})
         if any(not os.path.exists(os.path.join(folder, "bills", f"{k}.html")) and k not in absent
-               for k in listing["bills"]):
+               and not open_states(folder, k) for k in listing["bills"]):
             out.append(f"{year}:bills")
     return out
 
@@ -811,6 +847,10 @@ def main():
             found[year] = (folder, state, listing)
             bills(year, folder, state, listing)
             save(state, state_path)
+        for year, (folder, state, listing) in found.items():  # the bills read only from Open States so far
+            if not out_of_time():
+                bills(year, folder, state, listing, backfill=True)
+                save(state, os.path.join(folder, "state.json"))
         if not ONLY and not out_of_time():
             member_pages()
             os.makedirs(os.path.join(DATA, "committees"), exist_ok=True)

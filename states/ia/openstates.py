@@ -8,6 +8,9 @@ bills are read once from Open States' public-domain records, and fetch.py reads 
 changed since (and, in the requests left, the rest, so the official record replaces these over time). The converter
 uses a bill's official history when fetch.py has it, else this record.
 
+A General Assembly Open States has a bulk file for (states/ia/bulk.json; states/openstates_bulk.py, run first, imports
+it in the same shape and marks it complete) costs no requests: 2023-24 since 2026-11-15.
+
 Into data/ia/<first year>/openstates/<HF100>.json: each bill (classification=bill: HF, SF, HJR, SJR and the study bills
 HSB, SSB), 20 to a request, with sponsorships, actions, votes (member by member), versions, abstracts, sources and related
 bills; and data/ia/<first year>/openstates.json: {"complete", "page", "began", "done"}. Each General Assembly (the one
