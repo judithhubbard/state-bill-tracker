@@ -256,7 +256,7 @@ function drawIssue() {
       + (laws ? `, ${laws} became law` : "");
     const mark = laws ? `<span class="lawn" aria-hidden="true">${laws}</span>` : "";
     const st = code.toLowerCase();
-    return `<button type="button" class="tile h${step(n)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc(label)}" aria-label="${esc(`${code}, ${label}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${code}${mark}</button>`;
+    return `<button type="button" class="tile h${step(n)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc([NAMES[code], n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : [])].join("\n"))}" aria-label="${esc(`${code}, ${label}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${code}${mark}</button>`;
   }).join("");
   showPanel(pinned);
   const line = document.getElementById("issueLine");
@@ -347,7 +347,12 @@ function drawMap(view) {
     const label = !p ? NAMES[code] : view === "after" && next
       ? `${NAMES[code]} from January: ${next.title}${next.close ? " (some races still close)" : ""}${changed && now ? `. Now: ${now.title}` : ""}`
       : `${NAMES[code]}. ${p.title}`;
-    return `<a href="${built[code]}" class="${ctl}${changed ? " changed" : ""}" style="${style}" title="${esc(label)}" aria-label="${esc(`${code}, ${label}`)}">${code}</a>`;
+    // The hover box: the state, then Senate, House and governor each on its own line (the spoken label keeps one line).
+    const lines = !p ? NAMES[code] : view === "after" && next
+      ? [`${NAMES[code]} from January${next.close ? " (some races still close)" : ""}`, ...next.title.split("; "),
+         ...(changed && now ? ["", "Now:", ...now.title.split("; ")] : [])].join("\n")
+      : [NAMES[code], ...p.title.split("; ")].join("\n");
+    return `<a href="${built[code]}" class="${ctl}${changed ? " changed" : ""}" style="${style}" title="${esc(lines)}" aria-label="${esc(`${code}, ${label}`)}">${code}</a>`;
   }).join("");
   document.getElementById("changedKey").hidden = view !== "after";
 }
