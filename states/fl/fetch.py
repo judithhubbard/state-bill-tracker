@@ -9,7 +9,10 @@ robots.txt (checked 2026-11-13):
   forms), the tracker's account pages, /Legislators/index.cfm, /Public/GetFile.cfm, /SenateKids/, /Mail and
   /MobileSite/. It allows /Session/ (bill lists, bill pages and the vote and analysis PDFs under them), /Senators/ and
   /Committees/, which is all this script reads: one request every 10 seconds at most, counted from the end of the
-  last answer. The site is behind Cloudflare: a challenge page, 401, 403 or 429 stops the run.
+  last answer. The site is behind Cloudflare: a challenge page, 401 or 403 stops the run. A 429 ("too many requests",
+  which since 2026-11-15 GitHub's runs get after a few pages while the owner's computer doesn't) means wait and try
+  again: the run pauses as long as the answer's Retry-After says (else PAUSE_429, 10 minutes; at most 30), asks again,
+  and stops only after three 429s in a row (the owner's choice, 2026-11-15).
 - www.flhouse.gov (www.myfloridahouse.gov redirects to it): no crawl delay. Bars /Sections/Bills/bills.aspx (the
   House's bill lists: not read; the Senate's lists cover House bills), /api, /LD, /UC_Page, /check.aspx,
   /CheckStatus/StatusPollerGrid.aspx, /Sections/Documents/loaddoc.aspx, some MyHouse and public-guide forms; bars
@@ -90,7 +93,8 @@ Usage: python3 states/fl/fetch.py [year]   (default: every session above; a sing
 """
 import html, json, os, re, subprocess, sys, tempfile, time, urllib.parse
 from collections import Counter
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 
 SENATE = "https://www.flsenate.gov"
 HOUSE = "https://www.flhouse.gov"
@@ -118,7 +122,26 @@ LAST = {SENATE: 0.0, HOUSE: 0.0}  # when each host's last answer ended
 
 
 class Refused(Exception):
-    """The server turned us away (401/403/429, or a Cloudflare challenge): stop the run."""
+    """The server turned us away (401/403, a Cloudflare challenge, or three 429s in a row): stop the run."""
+
+
+PAUSE_429 = 600  # seconds to wait after a 429 without a Retry-After
+MAX_429 = 3  # 429s in a row that stop the run
+SLOW = [0]  # 429s in a row so far
+
+
+def pause_for(retry_after):
+    """Seconds to wait after a 429: the Retry-After (seconds, or an HTTP date), else PAUSE_429; 30 minutes at most."""
+    v = (retry_after or "").strip()
+    secs = PAUSE_429
+    if v.isdigit():
+        secs = int(v)
+    elif v:
+        try:
+            secs = (parsedate_to_datetime(v) - datetime.now(timezone.utc)).total_seconds()
+        except (TypeError, ValueError):
+            pass
+    return min(max(secs, DELAYS[SENATE]), 1800)
 
 
 GONE = object()  # a 404, or a bill number that "does not exist"
@@ -143,12 +166,25 @@ def request(site, path, label, must=None, binary=False, tries=3):
             print(f"  {STATS['requests']} requests, {round((time.time() - START) / 60)} min"
                   + (f"; failures {dict(FAILS)}" if FAILS else ""), flush=True)
         try:
-            code, body = curl(site + path)
+            code, body, retry_after = curl(site + path)
             LAST[site] = time.time()
             head = body[:4000].decode("utf-8", "replace") if binary else body[:20000]
             if "cf-chl" in head or "<title>Just a moment" in head:
                 raise Refused(f"{label}: a Cloudflare challenge page")
-            if code in (401, 403, 429):
+            if code == 429:
+                FAILS["HTTP 429"] += 1
+                SLOW[0] += 1
+                if SLOW[0] >= MAX_429:
+                    raise Refused(f"{label}: HTTP 429, {MAX_429} times in a row")
+                wait = pause_for(retry_after)
+                if BUDGET and time.time() + wait - START > BUDGET:
+                    raise Refused(f"{label}: HTTP 429, and no time left to wait")
+                print(f"{label}: HTTP 429 (too many requests); waiting {round(wait / 60, 1)} min", flush=True)
+                time.sleep(wait)
+                LAST[site] = time.time()
+                return request(site, path, label, must, binary, tries)
+            SLOW[0] = 0
+            if code in (401, 403):
                 FAILS[f"HTTP {code}"] += 1
                 raise Refused(f"{label}: HTTP {code}")
             if code == 404:
@@ -178,16 +214,17 @@ def curl(url):
         part = tmp.name
     try:
         r = subprocess.run(["curl", "-s", "-S", "-L", "--max-redirs", "3", "--compressed", "-m", str(TIMEOUT),
-                            "-A", AGENT, "-o", part, "-w", "%{http_code} %{content_type}", url],
+                            "-A", AGENT, "-o", part, "-w", "%{http_code} %header{retry-after}|%{content_type}", url],
                            capture_output=True, text=True, timeout=TIMEOUT + 30)
         if r.returncode:
             raise OSError(f"curl exit {r.returncode}")
-        code, _, kind = r.stdout.strip().partition(" ")
+        code, _, rest = r.stdout.strip().partition(" ")
+        retry_after, _, kind = rest.partition("|")
         with open(part, "rb") as f:
             body = f.read()
         if "pdf" not in kind.lower() and not body.startswith(b"%PDF"):
             body = body.decode("utf-8", "replace")
-        return int(code or 0), body
+        return int(code or 0), body, retry_after
     finally:
         os.remove(part)
 
