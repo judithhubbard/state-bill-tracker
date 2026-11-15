@@ -19,6 +19,7 @@
   --navy: #1d3b78;
   --gold: #c8921a;
   --gold-soft: #f6ead0;
+  --gold-ink: #8a5f0c;
   --signed: #1f7a4d; --signed-ink: #18693f;
   --signed-soft: #dcefe4;
   --law-bar: #43b072;
@@ -35,7 +36,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754;
-    --navy: #8fb0f0; --gold: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
+    --navy: #8fb0f0; --gold: #e3b04b; --gold-ink: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
     --veto: #ee7d70; --veto-soft: #3d1f1d; --refer: #4f5d7c; --pip-off: #26324b; --chip: #1d2944; --focus: #8fb0f0;
     --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1626;
     color-scheme: dark;
@@ -43,7 +44,7 @@
 }
 :root[data-theme="dark"] {
   --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754;
-  --navy: #8fb0f0; --gold: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
+  --navy: #8fb0f0; --gold: #e3b04b; --gold-ink: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
   --veto: #ee7d70; --veto-soft: #3d1f1d; --refer: #4f5d7c; --pip-off: #26324b; --chip: #1d2944; --focus: #8fb0f0;
   --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1626;
   color-scheme: dark;
@@ -91,6 +92,15 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 /* Bill rows */
 .list { display: grid; grid-template-columns: minmax(0, 1fr); }  /* never wider than the column, whatever an open bill holds */
 .bill { border-bottom: 1px solid var(--rule); scroll-margin-top: 120px; }
+/* The star and stance drawn over their invisible copies in the number column (see starSpace()): a summary can't contain
+   buttons, and a closed <details> hides everything but its summary, so they sit just after the row, in its wrapper. */
+.billrow { position: relative; }
+.starspace { display: grid; gap: 1px; visibility: hidden; }
+.starspace .watchbtn, .starspace .stance { display: inline-block; }
+.billrow > .rowstar { position: absolute; left: 4px; top: calc(12px + 19.55px); display: grid; justify-items: start; }
+.billrow > .rowstar.two { top: calc(12px + 2 * 19.55px); }
+.billrow:has(> .bill[open]) > .rowstar { left: 15px; top: calc(15px + 12px + 19.55px); }
+.billrow:has(> .bill[open]) > .rowstar.two { top: calc(15px + 12px + 2 * 19.55px); }
 .bill > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 116px minmax(0, 1fr) 150px; gap: 14px; padding: 12px 4px; align-items: start; }
 .bill > summary::-webkit-details-marker { display: none; }
 .bill > summary:hover { background: var(--sheet); }
@@ -114,7 +124,7 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .pip.on.ok { background: var(--signed); }
 .pip.on.no { background: var(--veto); }
 .st { font-size: 12px; font-weight: 600; line-height: 1.25; }
-.st.s3, .st.s4 { color: var(--gold); }
+.st.s3, .st.s4 { color: var(--gold-ink); }
 .st.s5 { color: var(--signed); }
 .st.s6 { color: var(--veto); }
 .st small { display: block; font-weight: 400; color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -177,7 +187,7 @@ footer p { margin: 0; max-width: 90ch; }
 .keydates ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
 .keydates li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; }
 .keydates time { font-family: var(--mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.keydates .est { color: var(--gold); font-weight: 600; }
+.keydates .est { color: var(--gold-ink); font-weight: 600; }
 .votes .theirs { font-size: 12.5px; color: var(--ink-2); }
 .votes .vy { color: var(--signed); } .votes .vn { color: var(--veto); } .votes .vo { color: var(--ink-2); }
 .votes .muted { color: var(--ink-2); font-size: 12px; }
@@ -239,7 +249,7 @@ table.oc th { vertical-align: bottom; }
 .lineage .twin { display: inline-block; font: 600 11px var(--body); background: var(--gold-soft); border-radius: 3px; padding: 0 5px; }
 @media (max-width: 600px) { .lineage.similar li { grid-template-columns: minmax(0, 1fr); gap: 2px; } .lineage.similar li .oc { grid-column: auto; } }
 .lineage .oc6 { color: var(--veto); font-weight: 600; }
-.lineage .oc3, .lineage .oc4 { color: var(--gold); font-weight: 600; }
+.lineage .oc3, .lineage .oc4 { color: var(--gold-ink); font-weight: 600; }
 
 @media (max-width: 860px) {
 }
@@ -315,7 +325,7 @@ table.oc th { vertical-align: bottom; }
 .srow .sn { font: 600 12px/1.5 var(--body); font-variant-numeric: tabular-nums; color: var(--ink-2); background: var(--chip); border-radius: 999px; padding: 0 8px; align-self: center; }
 .srow .ss { grid-column: 1 / -1; font-size: 11.5px; color: var(--ink-2); }
 .srow[aria-pressed="true"] .ss { color: var(--sheet); opacity: .85; }
-.srow[data-k="3"] .sn, .srow[data-k="4"] .sn { color: var(--gold); }
+.srow[data-k="3"] .sn, .srow[data-k="4"] .sn { color: var(--gold-ink); }
 .srow[data-k="5"] .sn { color: var(--signed); }
 .srow[data-k="6"] .sn { color: var(--veto); }
 .srow[aria-pressed="true"] .sn { color: var(--navy); background: var(--sheet); }
@@ -388,7 +398,7 @@ table.oc th { vertical-align: bottom; }
 .tcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; }
 .tcard { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; font-size: 13.5px; }
 .tcard h3 { margin: 0; font: 700 15px var(--body); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.tcard .times { font: 700 18px var(--display); color: var(--gold); }
+.tcard .times { font: 700 18px var(--display); color: var(--gold-ink); }
 .tcard p { margin: 0; }
 .tcard .muted { color: var(--ink-2); font-size: 12.5px; }
 .spark .ln { fill: none; stroke-width: 2; }
@@ -918,7 +928,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .next li .ask { font-size: 13px; font-weight: 600; }
 .next li.key { border-left: 3px solid var(--gold); padding-left: 8px; margin-left: -11px; }
 .next .star { color: var(--gold); }
-.decides { font: 600 10.5px var(--body); letter-spacing: .04em; text-transform: uppercase; color: var(--gold); border: 1px solid var(--gold); border-radius: 3px; padding: 0 4px; margin-left: 4px; vertical-align: 1px; }
+.decides { font: 600 10.5px var(--body); letter-spacing: .04em; text-transform: uppercase; color: var(--gold-ink); border: 1px solid var(--gold); border-radius: 3px; padding: 0 4px; margin-left: 4px; vertical-align: 1px; }
 .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; vertical-align: middle; margin: 0 3px; }
 .seg button { font: inherit; font-size: 12.5px; padding: 3px 10px; min-height: 28px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
@@ -3742,9 +3752,9 @@ function billRow(b) {
       const tags = (b.shell ? `<span class="tag narrow">${STATE.shellTag || "Shell bill"}${TIPI(SHELL_TIP)}</span>` : "") + (STATE.rowTags?.(b) || "") + (narrowTag ? `<span class="tag narrow">${narrowTag}</span>` : "") + chap + noes.map((L) => `<span class="tag vno">${esc(shortName(L.name))} voted no</span>`).join("") + partyTag(b) + b.topics.map((t) => `<span class="tag${t === "env" ? " env" : ""}">${esc(TOPICS[t])}</span>`).join("") + historyTags(b);
       const intro = DATA.current && b.intro ? `<span>Introduced ${b.intro}</span>` : "";
       const meet = isWatched(b) ? null : nextMeeting(b);
-      return `<details class="bill" data-idx="${b.idx}">
+      return `<div class="billrow"><details class="bill" data-idx="${b.idx}">
         <summary>
-          <div class="nums"><span>${esc(first)}</span>${second ? `<span class="other">${esc(second)}</span>` : ""}${watchButton(b)}</div>
+          <div class="nums"><span>${esc(first)}</span>${second ? `<span class="other">${esc(second)}</span>` : ""}<span class="starspace" aria-hidden="true">${starSpace(b)}</span></div>
           <div class="main">
             <div class="title">${esc(b.title)}${newsTags(b)}</div>
             <div class="meta">${pageRole(b)}${b.sponsors.map(esc).join(" / ")}${b.law ? `<span>${esc(b.law)}</span>` : ""}${intro}${b.budget ? "<span>Budget bill</span>" : ""}${b.program ? `<span>${esc(b.program)}</span>` : ""}</div>
@@ -3753,7 +3763,7 @@ function billRow(b) {
           <div class="status">${track(b)}${statusText(b)}</div>
         </summary>
         <div class="detail"></div>
-      </details>`;
+      </details><div class="rowstar${second ? " two" : ""}">${watchButton(b)}</div></div>`.replace(/ role="button" tabindex="0" aria-label="What this means"/g, ' aria-hidden="true"');
 }
 
 
@@ -3962,6 +3972,12 @@ function updateWatchTab() {
   const n = WATCH_COUNT(), newsBills = BILLS.filter((b) => isWatched(b) && hasNews(b)), news = newsBills.length;
   const what = newsBills.map((b) => `${b.nums[0]}: ${newsWhat(newActions(b)[0][1], newActions(b)[0][0], b)}`).join("\n");
   $("watchTabCount").innerHTML = (n ? ` (${num(n)})` : "") + (news ? ` <span class="tabnew" title="New since you last looked:\n${esc(what)}">${num(news)} new</span>` : "");
+}
+// The bill row keeps an invisible copy of the star (and stance) in its number column, holding the place where the real
+// buttons (.rowstar, just after the summary: a summary can't contain buttons) are drawn over it.
+function starSpace(b) {
+  const e = watchEntry(b);
+  return `<span class="watchbtn">${e ? "★" : "☆"}</span>` + (e ? `<span class="stance">${e.stance === "oppose" ? "Oppose" : "Support"}</span>` : "");
 }
 function watchButton(b, withStance = true) {
   const e = watchEntry(b);
@@ -4336,6 +4352,11 @@ function refreshWatchButtons(b) {
     const box = el.parentElement;
     box.querySelectorAll(".watchbtn, .stance").forEach((x) => x.remove());
     box.insertAdjacentHTML("beforeend", watchButton(b));
+  }
+  for (const d of document.querySelectorAll(`.bill[data-idx="${b.idx}"]`)) {
+    const star = d.parentElement.querySelector(":scope > .rowstar"), space = d.querySelector(":scope > summary .starspace");
+    if (star) star.innerHTML = watchButton(b);
+    if (space) space.innerHTML = starSpace(b);
   }
   for (const d of document.querySelectorAll(`.bill[data-idx="${b.idx}"] .detail`)) {
     delete d.dataset.done;
