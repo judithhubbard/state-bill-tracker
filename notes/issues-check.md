@@ -16,7 +16,7 @@ and the check run again (four rounds).
 | Children online and social media | 491 (228) | 29 | NC, ND |
 | Phones in schools | 199 (105) | 29-30 | CO, MA, ME, MT |
 | Housing supply and zoning | 672 (322) | 28 | AK, AL, GA, IN, LA, MS, ND, OH, OK, SD, WY |
-| Minimum wage | 851 (290) | about 25 | AK, WY |
+| Minimum wage | about 640 (230), limited 2026-11-15 | about 27 | AK, WY |
 | Right to repair | 222 (85) | 29 | AK, AZ, ID, LA, ND, NE |
 | Sports betting and online gambling | 634 (295) | about 27 | AZ, ID, NM, OR, SD, UT |
 | Prescription drug costs | 1,113 (420) | about 26 | none |
@@ -37,12 +37,16 @@ What the rounds changed:
   games); "large loads" not near vehicles or highways; age verification not for alcohol, tobacco, gambling or sodium
   nitrite sales; school "electronic devices" not recycling or audits; "AI" not near "insemination".
 
-What's left for the owner:
-- Minimum wage is the loosest (about 25 of 30): bills that pay for the cost of minimum wage increases (community
-  colleges, after-school programs) and bills setting other workers' pay by the minimum wage count. Keep them, or limit
-  the issue to bills that set or change minimum wages?
-- Pornography age-verification laws count under "Children online and social media" (they're written to keep minors off
-  those sites). Keep them there, or a filter on its page?
+The owner's answers (2026-11-15):
+- Minimum wage: only bills that set or change a minimum wage. "Minimum wage" now needs a word for a change or a rate
+  right next to it ("increases the minimum wage", "minimum wage; establish at $10.00", "local minimum wage"), and bills
+  paying for its cost, tax credits and tax breaks, and "living wage" rules for state contractors are left out (about 27
+  of 30 after the change).
+- Pornography age-verification laws stay under "Children online and social media" (my recommendation, accepted), with
+  a filter on its page, "Age checks for adult websites", beside "Social media", "App stores" and "Design and privacy
+  codes".
+
+Still to say on the pages:
 - "States with none" are mostly real (no data center bills in Nevada's 2023 and 2025 sessions), but states whose data
   has titles only (AK, AR, MA, ME, MS, MT, ND, NE, NH, OK, VT: no summaries) are undercounted; the issue pages should
   say so.

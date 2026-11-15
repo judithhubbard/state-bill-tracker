@@ -33,8 +33,8 @@ in CLAUDE.md's launch checklist.
 
 ## National issues and search
 - notes/issues-draft.md: the owner answered its four questions 2026-11-15 (all as drafted). The rules are issues.py,
-  checked over every state's bills (notes/issues-check.md: 26-30 of 30 random matches right). Waiting on the owner's
-  two answers there (minimum wage's scope; pornography age verification). Then tag bills at build time and build the
+  checked over every state's bills (notes/issues-check.md: 26-30 of 30 random matches right). The owner's two answers
+  are in (2026-11-15). Next: tag bills at build time and build the
   issue pages and a front-page section; later the free-text search.
 
 ## Site checks

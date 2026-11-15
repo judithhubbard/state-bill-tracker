@@ -43,6 +43,9 @@ ISSUES = [
                  "Hiring, insurance and decisions": [r"\bautomated decision", r"\balgorithmic discrimination\b", r"\bemploy", r"\bhiring\b", r"\binsur"],
                  "Government use": [r"\bstate agenc", r"\bgovernmental? (?:entit|agenc|bod|unit)", r"\bpublic (?:bod|entit|agenc)"]}},
     {"id": "kidsonline", "name": "Children online and social media",
+     "filters": {"Age checks for adult websites": [r"\bpornograph", r"\bharmful (?:to minors|material)\b", r"\badult[- ](?:only )?(?:websites?|content|material)\b", r"\bsexual material\b"],
+                 "Social media": [r"\bsocial (?:media|networking)\b"], "App stores": [r"\bapp stores?\b"],
+                 "Design and privacy codes": [r"\bage[- ]appropriate design\b", r"\bkids code\b", r"\b(?:data|privacy)\b"]},
      "rules": [[r"\bsocial (?:media|networking)\b", r"\b(?:minors?|child|children|teens?|teenagers?|under (?:the age of )?1[3-8]|age of 1[3-8]|parents?|youth)\b"],
                [r"\bage verification\b", r"\b(?:websites?|online|internet|apps?|applications?|platforms?)\b",
                 r"!\b(?:alcohol|tobacco|vap(?:e|or|ing)|nicotine|firearms?|lottery|cannabis|marijuana|liquor|wager\w*|gaming|gambling|nitrite)\b"],
@@ -62,9 +65,18 @@ ISSUES = [
                [r"\bhousing (?:production|supply)\b"], [r"\bhousing elements?\b"], [r"\bmulti-?family\b", r"\bzon(?:e|ed|ing)\b"],
                [r"\bdensity\b", r"\bhousing\b", r"\bzon(?:e|ed|ing)\b"], [r"\bstarter homes?\b"], [r"\bmanufactured hous", r"\bzon"]]},
     {"id": "minwage", "name": "Minimum wage",
-     "rules": [[r"\bminimum wages?\b"], [r"\bsubminimum wages?\b"], [r"\btipped (?:wages?|employees?|workers?)\b"],
-               [r"\btip credits?\b"], [r"\bliving wages?\b"], [r"\btraining wages?\b"]],
-     "none": [r"\btimes the (?:state |federal |applicable )?minimum (?:hourly )?wage\b", r"\bjur(?:y|ors?)\b"]},
+     # Only bills that set or change a minimum wage (the owner's decision 2026-11-15): not ones paying for its cost or
+     # setting other pay by it.
+     "rules": [[r"\bminimum (?:hourly )?wages?\W+(?:\w+\W+){0,6}?(?:increas\w*|rais\w*|establish\w*|eliminat\w*|repeal\w*|"
+                r"exempt\w*|modif\w*|chang\w*|adjust\w*|index\w*|phas\w*|decreas\w*|reduc\w*|cost[- ]of[- ]living|per hour|"
+                r"preempt\w*|ordinances?|rates?|act|law|amendments?|\$\d)"],
+               [r"\b(?:increas\w*|rais\w*|establish\w*|sets?|eliminat\w*|repeal\w*|exempt\w*|modif\w*|chang\w*|adjust\w*|"
+                r"index\w*|decreas\w*|reduc\w*|local|state|preempt\w*|regulat\w*|tipped)\W+(?:\w+\W+){0,6}?minimum (?:hourly )?wages?\b"],
+               [r"\bsubminimum wages?\b"], [r"\btipped (?:minimum )?(?:wages?|employees?|workers?)\b"],
+               [r"\btip credits?\b"], [r"\btraining wages?\b"]],
+     "none": [r"\btimes the (?:state |federal |applicable )?minimum (?:hourly )?wage\b", r"\bjur(?:y|ors?)\b",
+              r"\b(?:state funds?|operating costs?|costs? associated|reimburse\w*|tax credits?|grants?|grant programs?|"
+              r"income tax|sales and use tax|sales tax|taxable income)\b"]},
     {"id": "repair", "name": "Right to repair",
      "rules": [[r"\bright[- ]to[- ]repair\b"], [r"\bdevices? repair\b"], [r"\bfair repair\b"], [r"\bdigital electronic (?:equipment|products?)\b", r"\brepair"],
                [r"\bindependent repair\b", r"\b(?:parts|tools|documentation|diagnostic)"],
