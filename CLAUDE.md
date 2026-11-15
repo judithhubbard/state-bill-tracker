@@ -1932,7 +1932,13 @@ from that repo. **Nothing here may change it.**
   state lists them; a bill counts in the year it was introduced, its session's first year at the earliest, and if it
   became law in that year too), each square showing the number that became law (the owner's choice: a number, not a
   dot; "became law", not "signed", since many aren't signed); `#issue=ai&year=2027` in the address picks one. Each
-  state's build writes data/issues_<session>.json for every session it shows. Each issue page leads with the same map, the table under "Show as a
+  state's build writes data/issues_<session>.json for every session it shows. The front page's controls (2026-11-15, the owner's
+  choices): year buttons first (for party control, this year is now and next year the reported 2026 election results,
+  replacing the old Now / From January switch; last year has no party view), then the Show menu. Party control colors
+  each state: red or blue when one party holds the governor and both houses (darker with a supermajority in both),
+  purple when split, grey for Nebraska; states not on the site are outlined. With an issue shown, a panel beside the
+  map (below it on a phone) lists the bills of the state pointed at, or clicked to keep it open
+  (issues/<id>/bills.json, from issues_site.py). Each issue page leads with the same map, the table under "Show as a
   table", and one menu (all bills, became law, still moving, the issue's filters). Check a rule change with test/issues/get.py and check.py (30
   random matches and possible misses per issue; notes/issues-check.md has the first check: 26-30 of 30 right).
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project

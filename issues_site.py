@@ -373,13 +373,22 @@ def main(site):
     summary, opened = [], {}
     for issue in issues.ISSUES:
         os.makedirs(os.path.join(site, "issues", issue["id"]), exist_ok=True)
-        per_year = {}
+        per_year, panel = {}, {}
         for y in years:
+            # The front page map's panel (home.html): each state's bills that year, one line each, laws first.
+            by, _, _ = year_view(issue["id"], states, y)
+            panel[str(y)] = {st: [[shown(b[2]), b[3], (b[9].get(issue["id"]) if len(b) > 9 else "") or "", b[4],
+                                   link(f, b[2])[len("../../"):], b[6]]
+                                  for f, b, new, passed in sorted(sorted(rows, key=lambda x: x[1][5], reverse=True),
+                                                                  key=lambda x: (x[1][4] != 5, -x[1][4]))]
+                             for st, (n, laws, rows) in by.items()}
             page, info, open_ = issue_page(issue, states, y, years, default, y > default)
             name = "index.html" if y == default else f"{y}.html"
             open(os.path.join(site, "issues", issue["id"], name), "w", encoding="utf-8").write(page)
             per_year[str(y)] = info
             opened[str(y)] = sorted(open_)
+        json.dump(panel, open(os.path.join(site, "issues", issue["id"], "bills.json"), "w"), ensure_ascii=False,
+                  separators=(",", ":"))
         summary.append({"id": issue["id"], "name": issue["name"], "short": SHORT.get(issue["id"], issue["name"]), "y": per_year})
     cards = "".join(f'<li><a href="{s["id"]}/"><b>{e(s["name"])}</b><span>{s["y"][str(default)]["bills"]:,} bills in '
                     f'{s["y"][str(default)]["states"]} states in {default}; {s["y"][str(default)]["laws"]:,} became law</span></a></li>'
