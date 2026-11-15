@@ -5,9 +5,11 @@ built, so a change here rebuilds no state; it also writes issues/summary.json (e
 the states with a session each year), which the front page's map reads.
 
 Counts are by calendar year (last year, this year, and next year once a state lists prefiled bills): a bill counts in
-the year it was introduced (its session's first year at the earliest, so a bill prefiled in December counts in its
-session's year) and, if it became law, in the year it did. Each issue has a page per year (index.html for this year,
-<year>.html for the others) with a tile map shaded by bills introduced and the number that became law, a table by state
+every year it was alive, from the year it was introduced (its session's first year at the earliest, so a bill prefiled
+in December counts in its session's year) through the year of its last action (the owner found New York's 2026 PFAS
+view showing 4 of 24 bills when only the year introduced counted: two-year legislatures file most bills in year one);
+laws count in the year they became law. Each issue has a page per year (index.html for this year,
+<year>.html for the others) with a tile map shaded by the bills alive that year and the number that became law, a table by state
 (under "Show as a table") and every bill, by state, linked to the bill on its state's page. States whose data has titles
 only are marked as undercounted.
 
@@ -206,9 +208,9 @@ def covers(f, year):
 
 
 def year_view(iid, states, year):
-    """For one issue and calendar year: {state: (introduced, became law, rows)}, the states with a session that year,
-    and each state's session label and bill total. A bill counts in the year it was introduced and, if it became law,
-    in the year it did (a two-year legislature's bill introduced in 2025 and signed in 2026 is in both)."""
+    """For one issue and calendar year: {state: (bills alive that year, became law that year, rows)}, the states with a
+    session that year, and each state's session label and bill total. A bill is alive from the year it was introduced
+    through the year of its last action."""
     by, open_, info = {}, set(), {}
     for st, d in states.items():
         rows, seen = [], set()
@@ -220,7 +222,8 @@ def year_view(iid, states, year):
                 if iid not in b[0]:
                     continue
                 intro, law = (b[7] if len(b) > 7 else f["session"]), (b[8] if len(b) > 8 else "")
-                new, passed = intro == year, law[:4] == str(year)
+                last = int((b[5] or "0")[:4] or 0)
+                new, passed = intro <= year <= max(intro, last), law[:4] == str(year)
                 key = (f["session"], b[2])
                 if (new or passed) and key not in seen:
                     seen.add(key)
@@ -249,7 +252,7 @@ def tile_map(iid, by, names, open_, year, upcoming):
             label = f"{names[st]}: no bills filed yet for {year}"
             out.append(f'<span class="off wait" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}</span>')
             continue
-        label = (f"{names[st]}: {n} bill{'' if n == 1 else 's'} {'prefiled' if upcoming else 'introduced'}" if n else f"{names[st]}: none")
+        label = (f"{names[st]}: {n} bill{'' if n == 1 else 's'}{' prefiled' if upcoming else ''} in {year}" if n else f"{names[st]}: none in {year}")
         label += f", {laws} became law" if laws else ""
         href = f"#{st}" if st in by else "#bills"
         out.append(f'<a href="{href}" class="h{step(n)}" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}{badge(laws)}</a>')
@@ -278,7 +281,7 @@ def issue_page(issue, states, year, years, default, upcoming):
         # Laws first, then the furthest along; within a stage, the latest action first.
         for f, b, new, passed in sorted(sorted(mine, key=lambda x: x[1][5], reverse=True), key=lambda x: (x[1][4] != 5, -x[1][4])):
             fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
-            when = "" if new else f' <span class="note">(introduced {b[7] if len(b) > 7 else f["session"]})</span>'
+            when = ""
             items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}"><a href="{e(link(f, b[2]))}">{e(shown(b[2]))}</a>'
                          f'<span class="stage s{b[4]}">{e(stage_text(st, b[4], b[6]))}</span>'
                          f'<span class="t">{e(b[3])}{when}</span></li>')
@@ -291,7 +294,7 @@ def issue_page(issue, states, year, years, default, upcoming):
     yopts = "".join(f'<option value="{page_name(y, default)}"{" selected" if y == year else ""}>'
                     f'{y}{" (prefiled so far)" if y > default else ""}</option>' for y in years)
     fopts = "".join(f'<option value="f:{e(re.sub(r"[^a-z]+", "-", k.lower()))}">{e(k)}</option>' for k in issue.get("filters", {}))
-    verb = "prefiled" if upcoming else "introduced"
+    verb = "prefiled" if upcoming else "with action"
     up = up_dir = "../../"
     lede_counts = (f"<b>{intro_n:,}</b> bills {verb} in <b>{in_states}</b> states in {year}"
                    + ("" if upcoming else f"; <b>{laws_n:,}</b> became law in {year}") + ".")
@@ -312,9 +315,9 @@ def issue_page(issue, states, year, years, default, upcoming):
 </p>
 <details class="table"><summary>Show as a table</summary>
 <div class="tablewrap"><table>
-<thead><tr><th scope="col">State</th><th scope="col" class="n">{verb.capitalize()}</th><th scope="col" class="n">Became law</th><th scope="col" class="n">Moving</th><th scope="col" class="n">All bills</th><th scope="col">Session</th></tr></thead>
+<thead><tr><th scope="col">State</th><th scope="col" class="n">{"Prefiled" if upcoming else "Bills"}</th><th scope="col" class="n">Became law</th><th scope="col" class="n">Moving</th><th scope="col" class="n">All bills</th><th scope="col">Session</th></tr></thead>
 <tbody>{"".join(r for _, r in rows)}</tbody></table></div>
-<p class="note">Bills {verb} in {year}, and bills that became law in {year} (some were introduced the year before). &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's session, for scale.</p>
+<p class="note">A bill counts in each year from its introduction to its last action (in a two-year legislature, most are filed in the first year and keep moving in the second); &ldquo;Became law&rdquo; counts the year it did. &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's session, for scale.</p>
 </details>
 <p class="note">{"Most legislatures start taking bills in January; these are the bills prefiled so far. " if upcoming else ""}* The legislature publishes only bill titles, so some of its bills on this issue may be missed.{f' None in {year}: {e(", ".join(none))}.' if none else ""}{f' No bills filed yet for {year}: {e(", ".join(waiting))}.' if upcoming and waiting else ""}</p>
 <h2 id="bills">The bills</h2>
@@ -375,7 +378,7 @@ def main(site):
             per_year[str(y)] = info
             opened[str(y)] = sorted(open_)
         summary.append({"id": issue["id"], "name": issue["name"], "short": SHORT.get(issue["id"], issue["name"]), "y": per_year})
-    cards = "".join(f'<li><a href="{s["id"]}/"><b>{e(s["name"])}</b><span>{s["y"][str(default)]["bills"]:,} bills introduced in '
+    cards = "".join(f'<li><a href="{s["id"]}/"><b>{e(s["name"])}</b><span>{s["y"][str(default)]["bills"]:,} bills in '
                     f'{s["y"][str(default)]["states"]} states in {default}; {s["y"][str(default)]["laws"]:,} became law</span></a></li>'
                     for s in summary)
     index = HEAD.format(title="Issues across the states", desc="The same subjects in every state legislature: how many bills, where, and which became law.", css=CSS) + f"""

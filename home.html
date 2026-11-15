@@ -191,7 +191,7 @@ let year = issues.default;  // the calendar year shown for it
 const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n >= 1 ? 1 : 0);
 function drawIssue() {
   const y = issue.y[year] || { by: {}, bills: 0, states: 0, laws: 0 }, open = new Set((issues.open || {})[year] || []);
-  const upcoming = year > issues.default, verb = upcoming ? "prefiled" : "introduced";
+  const upcoming = year > issues.default, verb = upcoming ? "prefiled" : "with action";
   const page = year === issues.default ? "" : `${year}.html`;
   document.getElementById("lawKey").hidden = upcoming;
   document.getElementById("waitKey").hidden = !upcoming;
@@ -204,7 +204,7 @@ function drawIssue() {
       const w = `${NAMES[code]}: no bills filed yet for ${year}`;
       return `<span class="off wait" style="${style}" title="${esc(w)}" aria-label="${esc(`${code}, ${w}`)}">${code}</span>`;
     }
-    const label = `${NAMES[code]}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short} ${verb} in ${year}` : `no bills on ${issue.short} in ${year}`}`
+    const label = `${NAMES[code]}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${upcoming ? " prefiled" : ""} in ${year}` : `no bills on ${issue.short} in ${year}`}`
       + (laws ? `, ${laws} became law` : "");
     const mark = laws ? `<span class="lawn" aria-hidden="true">${laws}</span>` : "";
     return `<a href="issues/${issue.id}/${page}#${code.toLowerCase()}" class="h${step(n)}" style="${style}" title="${esc(label)}" aria-label="${esc(`${code}, ${label}`)}">${code}${mark}</a>`;
