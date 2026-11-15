@@ -37,6 +37,10 @@ in CLAUDE.md's launch checklist.
   missing from Open States' people file (Ward, Kidani, Holt); the House's floor ayes are counted as 51 less the noes and
   excused, one too many while a seat is vacant; the shared committee note "few are sent to a second" is wrong for
   Hawaii (86-92% go to two or more): needs a STATE hook.
+- Iowa built 2026-11-15 (official history pages, else Open States' records; renumbering chains as one record). Goes on
+  the site once GitHub has read the committee pages (data/ia/incomplete). To do: read fetch.py's roll-call PDFs (votes/)
+  and members' committee lists in the converter; 2025-26 chapter numbers fill in only as pages are read (56 of 370 now);
+  the shared "Passed both houses" box counts a first-passage amendment as "to the governor".
 - Florida, Hawaii: downloads running (Florida about 2/3 through 2026's bills; Hawaii capped at 110 Open States requests a
   day); converters not started (Florida's emails from Open States unless the owner objects).
 
