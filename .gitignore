@@ -171,3 +171,4 @@ data/ny/
 
 # Open States bulk downloads (the owner's, local only)
 Bulk_files_OpenStates/
+.issues-cache/

@@ -32,9 +32,10 @@ in CLAUDE.md's launch checklist.
   day); converters not started (Florida's emails from Open States unless the owner objects).
 
 ## National issues and search
-- notes/issues-draft.md: the owner answered its four questions 2026-11-15 (all as drafted). Next: tag bills at build
-  time, check each issue's matches (counts per state, 30 random matches read, misses searched), show the owner, then
-  build the issue pages; later the free-text search.
+- notes/issues-draft.md: the owner answered its four questions 2026-11-15 (all as drafted). The rules are issues.py,
+  checked over every state's bills (notes/issues-check.md: 26-30 of 30 random matches right). Waiting on the owner's
+  two answers there (minimum wage's scope; pornography age verification). Then tag bills at build time and build the
+  issue pages and a front-page section; later the free-text search.
 
 ## Site checks
 - Daily site health and accessibility check (test/site_check.js, site-check.yml): review findings with the owner,
