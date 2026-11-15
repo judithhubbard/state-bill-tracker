@@ -11,6 +11,7 @@
   "de": {"seats": {"S": 21, "H": 41}, "override": "3/5", "governor": ["Matt Meyer", "D"]},
   "fl": {"seats": {"S": 40, "H": 120}, "override": "2/3", "governor": ["Ron DeSantis", "R"], "note": "Overriding a veto takes two-thirds of the members voting in each house, usually at the next regular session. Ron DeSantis is term-limited; the governor elected in November 2026 takes office January 5, 2027."},
   "ga": {"seats": {"S": 56, "H": 180}, "override": "2/3", "governor": ["Brian Kemp", "R"]},
+  "hi": {"seats": {"S": 25, "H": 51}, "override": "2/3", "governor": ["Josh Green", "D"], "note": "Overriding a veto takes two-thirds of each house's members. Josh Green ran for a second term in November 2026; the governor elected then takes office December 7, 2026."},
   "il": {"seats": {"S": 59, "H": 118}, "override": "3/5", "governor": ["JB Pritzker", "D"]},
   "id": {"seats": {"S": 35, "H": 70}, "override": "2/3", "governor": ["Brad Little", "R"], "note": "Overriding a veto takes two-thirds of the members present in each house."},
   "in": {"seats": {"S": 50, "H": 100}, "override": "majority", "governor": ["Mike Braun", "R"]},

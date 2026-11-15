@@ -417,8 +417,8 @@
     "data/hi"
    ],
    "minutes": 30,
-   "run": "python3 states/openstates_bulk.py hi && python3 states/hi/fetch.py",
-   "note": "Open States: the first copy from its bulk files (states/hi/bulk.json), then the API (OPENSTATES_API_KEY) for changes, at most 110 requests a day so Arizona keeps the rest of the free tier's 250; the Legislature's own site blocks automated requests. Not built into the site until its converter exists."
+   "run": "python3 states/openstates_bulk.py hi && python3 states/hi/fetch.py && python3 states/hi/contacts.py",
+   "note": "Open States: the first copy from its bulk files (states/hi/bulk.json), then the API (OPENSTATES_API_KEY) for changes, at most 110 requests a day so Arizona keeps the rest of the free tier's 250; the Legislature's own site blocks automated requests. contacts.py builds the contacts after it."
   },
   {
    "name": "Iowa",
