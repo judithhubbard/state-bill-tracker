@@ -1130,12 +1130,13 @@ def bill_texts(session, recs):
     return out
 
 
-def write_issues(session, recs, texts, page):
-    """The current session's bills on each national issue (issues.py), into data/issues.json for issues_site.py, which
-    builds the issue pages from every state's file: {"state", "name", "session", "label", "page", "total" (bills counted,
-    for scale), "bills": [[issue ids,
-    {issue: [filters]}, number, title, stage, last action's date, "const" or ""], ...]}. Local bills for one place and
-    placeholder bills are left out, as in the statistics."""
+def write_issues(session, recs, texts, page, current):
+    """A session's bills on each national issue (issues.py), into data/issues_<session>.json for issues_site.py, which
+    builds the issue pages from every state's files, by calendar year: {"state", "name", "session", "years" (P.YEARS),
+    "upcoming", "label", "page", "total" (bills counted, for scale), "bills": [[issue ids, {issue: [filters]}, number,
+    title, stage, last action's date, "const" or "", year introduced (the session's first year at the earliest, so a
+    bill prefiled in December counts in its session's year), date it became law or ""], ...]}. Local bills for one
+    place and placeholder bills are left out, as in the statistics."""
     import issues
     bills, total = [], 0
     for r in recs:
@@ -1150,11 +1151,17 @@ def write_issues(session, recs, texts, page):
         if not found:
             continue
         both = f"{head} {body}"
+        intro = max(session, int((r["first"] or str(session))[:4]))
+        law = ""
+        if r["stage"] == 5:
+            law = (r["keyDates"][5].split(";")[-1] if len(r["keyDates"]) > 5 else "") or r["last"] or ""
         bills.append([found, {i: issues.filters_of(i, both) for i in found if issues.BY_ID[i].get("filters")},
-                      r["nums"][0], r["title"], r["stage"], r["last"] or "", "const" if "const" in (r["topics"] or []) else ""])
-    out = {"state": STATE, "name": P.STATE_NAME, "session": session,
+                      r["nums"][0], r["title"], r["stage"], r["last"] or "", "const" if "const" in (r["topics"] or []) else "",
+                      intro, law])
+    out = {"state": STATE, "name": P.STATE_NAME, "session": session, "years": getattr(P, "YEARS", 2),
+           "upcoming": session > current,
            "label": P.session_label(session), "page": page, "total": total, "bills": bills}
-    with open(os.path.join(GITHUB, "data", "issues.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(GITHUB, "data", f"issues_{session}.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
 
 
@@ -1404,8 +1411,7 @@ def main():
                 for name, part in parts.items():
                     with open(os.path.join(GITHUB, "data", f"{session}-text", f"{name}.json"), "w", encoding="utf-8") as f:
                         json.dump(part, f, separators=(",", ":"), ensure_ascii=False)
-            if session == current:
-                write_issues(session, recs, texts, urls.get(str(session)) or "./")
+            write_issues(session, recs, texts, urls.get(str(session)) or "./", current)
         # The template is written with New York's names (title, header and the script that updates them).
         template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)
         template = template.replace("How a bill becomes law in New York", f"How a bill becomes law in {P.STATE_NAME}")

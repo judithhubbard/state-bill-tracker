@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""The national issue pages (/issues/ and /issues/<id>/), from each built state's data/issues.json (build_data.py's
-write_issues(): the current session's bills that issues.py matches). Run by build_site.sh after the states are built,
-so a change here rebuilds no state; it also writes issues/summary.json, which the front page's issue list reads.
+"""The national issue pages (/issues/ and /issues/<id>/), from each built state's data/issues_<session>.json
+(build_data.py's write_issues(): each session's bills that issues.py matches). Run by build_site.sh after the states are
+built, so a change here rebuilds no state; it also writes issues/summary.json (each issue's counts by year and state, and
+the states with a session each year), which the front page's map reads.
 
-Each issue page has a table of states (bills this session, laws, still moving) and every bill, by state, with its
-stage, linked to the bill on its state's page. Only each state's current session counts (2025-26 in a two-year
-legislature, 2026 in a yearly one): the pages say so. States whose data has titles only are marked as undercounted.
+Counts are by calendar year (last year, this year, and next year once a state lists prefiled bills): a bill counts in
+the year it was introduced (its session's first year at the earliest, so a bill prefiled in December counts in its
+session's year) and, if it became law, in the year it did. Each issue has a page per year (index.html for this year,
+<year>.html for the others) with a tile map shaded by bills introduced and the number that became law, a table by state
+(under "Show as a table") and every bill, by state, linked to the bill on its state's page. States whose data has titles
+only are marked as undercounted.
 
 Usage: python3 issues_site.py SITE_DIR
 """
@@ -104,9 +108,14 @@ ul.bills a:hover { text-decoration: underline; }
 .tiles a.h1 { background: var(--heat-1); color: var(--heat-ink-1); }
 .tiles a.h2 { background: var(--heat-2); color: var(--heat-ink-2); }
 .tiles a.h3 { background: var(--heat-3); color: var(--heat-ink-3); }
-.dots { display: flex; }
-.law { width: clamp(5px, 1.3vw, 9px); height: clamp(5px, 1.3vw, 9px); border-radius: 50%; background: var(--law-mark);
-  box-shadow: 0 0 0 1.5px var(--sheet); display: inline-block; }
+/* The number of bills on the issue that became law: a gold badge under the state's letters. */
+.lawn { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6em; height: 1.6em; padding: 0 .3em;
+  border-radius: 999px; background: var(--law-mark); color: #14213d; font: 700 clamp(9px, 2vw, 12px)/1 var(--body); }
+.tiles span.wait, .legend .sq.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
+.tiles span.wait { border: 1px dashed var(--tile-off-ink); box-shadow: none; }
+.legend .sq.wait { border: 1px dashed var(--tile-off-ink); box-shadow: none; }
+.legend .sq.off { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
+.tools label { color: var(--ink-2); }
 .legend { color: var(--ink-2); font-size: 14px; margin: 0 0 12px; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
 .legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
@@ -147,15 +156,22 @@ def stage_text(state, stage, kind):
 
 
 def load(site):
-    states = []
+    """{state: {"name", "files": [each session's issues file]}} for the states built."""
+    out = {}
     for s in sorted(os.listdir(site)):
-        path = os.path.join(site, s, "data", "issues.json")
-        if len(s) == 2 and os.path.exists(path):
-            try:
-                states.append(json.load(open(path, encoding="utf-8")))
-            except ValueError:
-                pass
-    return states
+        folder = os.path.join(site, s, "data")
+        if len(s) != 2 or not os.path.isdir(folder):
+            continue
+        files = []
+        for name in sorted(os.listdir(folder)):
+            if re.fullmatch(r"issues_\d{4}\.json", name):
+                try:
+                    files.append(json.load(open(os.path.join(folder, name), encoding="utf-8")))
+                except ValueError:
+                    pass
+        if files:
+            out[s] = {"name": files[0]["name"], "files": files}
+    return out
 
 
 def shown(num):
@@ -163,9 +179,9 @@ def shown(num):
     return re.sub(r"^([A-Z]+)(\d)", r"\1 \2", num)
 
 
-def link(st, num):
-    page = st["page"] if st["page"] != "./" else ""
-    return f"../../{st['state']}/{page}#{re.sub(r'[A-Z]$', '', num)}"
+def link(f, num):
+    page = f["page"] if f["page"] != "./" else ""
+    return f"../../{f['state']}/{page}#{re.sub(r'[A-Z]$', '', num)}"
 
 
 # The tile map's grid (row, column), as on the front page (home.html's GRID).
@@ -185,9 +201,42 @@ def step(n):
     return 3 if n >= 15 else 2 if n >= 5 else 1 if n else 0
 
 
-def tile_map(iid, by, names):
-    """The tile map, each state shaded by its number of bills on the issue (a gold mark where one became law), each
-    square a link to the state's bills below."""
+def covers(f, year):
+    return f["session"] <= year < f["session"] + (f.get("years") or 1)
+
+
+def year_view(iid, states, year):
+    """For one issue and calendar year: {state: (introduced, became law, rows)}, the states with a session that year,
+    and each state's session label and bill total. A bill counts in the year it was introduced and, if it became law,
+    in the year it did (a two-year legislature's bill introduced in 2025 and signed in 2026 is in both)."""
+    by, open_, info = {}, set(), {}
+    for st, d in states.items():
+        rows, seen = [], set()
+        for f in d["files"]:
+            if covers(f, year):
+                open_.add(st)
+                info[st] = (f["label"], f.get("total") or 0)
+            for b in f["bills"]:
+                if iid not in b[0]:
+                    continue
+                intro, law = (b[7] if len(b) > 7 else f["session"]), (b[8] if len(b) > 8 else "")
+                new, passed = intro == year, law[:4] == str(year)
+                key = (f["session"], b[2])
+                if (new or passed) and key not in seen:
+                    seen.add(key)
+                    rows.append((f, b, new, passed))
+        if rows:
+            by[st] = (sum(1 for r in rows if r[2]), sum(1 for r in rows if r[3]), rows)
+    return by, open_, info
+
+
+def badge(laws):
+    return f'<span class="lawn" aria-hidden="true">{laws}</span>' if laws else ""
+
+
+def tile_map(iid, by, names, open_, year, upcoming):
+    """The tile map, each state shaded by its bills on the issue introduced that year, with the number that became law,
+    each square a link to the state's bills below."""
     out = []
     for code, (r, c) in GRID.items():
         st = code.lower()
@@ -195,68 +244,83 @@ def tile_map(iid, by, names):
         if st not in names:
             out.append(f'<span class="off" style="{style}" title="Coming soon">{code}</span>')
             continue
-        n, laws = by.get(st, (0, 0))
-        label = (f"{names[st]}: {n} bill{'' if n == 1 else 's'}" if n else f"{names[st]}: none") + (f", {laws} became law" if laws else "")
-        mark = '<span class="dots" aria-hidden="true"><i class="law"></i></span>' if laws else ""
-        href = f"#{st}" if n else "#none"
-        out.append(f'<a href="{href}" class="h{step(n)}" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}{mark}</a>')
+        n, laws = by[st][:2] if st in by else (0, 0)
+        if st not in open_ and not n and not laws:
+            label = f"{names[st]}: no bills filed yet for {year}"
+            out.append(f'<span class="off wait" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}</span>')
+            continue
+        label = (f"{names[st]}: {n} bill{'' if n == 1 else 's'} {'prefiled' if upcoming else 'introduced'}" if n else f"{names[st]}: none")
+        label += f", {laws} became law" if laws else ""
+        href = f"#{st}" if st in by else "#bills"
+        out.append(f'<a href="{href}" class="h{step(n)}" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}{badge(laws)}</a>')
     return '<div class="tiles">' + "".join(out) + "</div>"
 
 
-def issue_page(issue, states):
+def page_name(year, default):
+    return "./" if year == default else f"{year}.html"
+
+
+def issue_page(issue, states, year, years, default, upcoming):
     iid = issue["id"]
-    rows, blocks, total, laws, moving, by = [], [], 0, 0, 0, {}
-    names = {st["state"]: st["name"] for st in states}
-    none = []
-    for st in sorted(states, key=lambda s: s["name"]):
-        mine = [b for b in st["bills"] if iid in b[0]]
-        if not mine:
-            none.append(st["name"])
-            continue
-        n_law = sum(1 for b in mine if b[4] == 5)
-        n_moving = sum(1 for b in mine if 1 <= b[4] <= 4)
-        by[st["state"]] = (len(mine), n_law)
-        total, laws, moving = total + len(mine), laws + n_law, moving + n_moving
-        flag = " *" if st["state"] in TITLES_ONLY else ""
-        all_n = st.get("total")
-        rows.append((len(mine), f'<tr><th scope="row"><a href="#{st["state"]}">{e(st["name"])}</a>{flag}</th>'
-                                f'<td class="n">{len(mine)}</td><td class="n">{n_law}</td><td class="n">{n_moving}</td>'
-                                f'<td class="n">{f"{all_n:,}" if all_n else ""}</td><td class="sess">{e(st["label"])}</td></tr>'))
+    names = {st: d["name"] for st, d in states.items()}
+    by, open_, info = year_view(iid, states, year)
+    rows, blocks, intro_n, laws_n, moving = [], [], 0, 0, 0
+    for st in sorted(by, key=lambda s: names[s]):
+        n, laws, mine = by[st]
+        n_moving = sum(1 for f, b, new, _ in mine if new and 1 <= b[4] <= 4)
+        intro_n, laws_n, moving = intro_n + n, laws_n + laws, moving + n_moving
+        flag = " *" if st in TITLES_ONLY else ""
+        label, total = info.get(st, ("", 0))
+        rows.append((n, f'<tr><th scope="row"><a href="#{st}">{e(names[st])}</a>{flag}</th><td class="n">{n}</td>'
+                        f'<td class="n">{laws}</td><td class="n">{n_moving}</td><td class="n">{f"{total:,}" if total else ""}</td>'
+                        f'<td class="sess">{e(label)}</td></tr>'))
         items = []
         # Laws first, then the furthest along; within a stage, the latest action first.
-        for b in sorted(sorted(mine, key=lambda b: b[5], reverse=True), key=lambda b: (b[4] != 5, -b[4])):
-            f = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
-            items.append(f'<li data-stage="{b[4]}" data-f="{e(f)}"><a href="{e(link(st, b[2]))}">{e(shown(b[2]))}</a>'
-                         f'<span class="stage s{b[4]}">{e(stage_text(st["state"], b[4], b[6]))}</span>'
-                         f'<span class="t">{e(b[3])}</span></li>')
-        blocks.append(f'<section class="st" data-name="{e(st["name"].lower())}"><h3 id="{st["state"]}">{e(st["name"])} '
-                      f'<span class="note">({len(mine)}, {e(st["label"])}{flag})</span></h3><ul class="bills">{"".join(items)}</ul></section>')
-    in_states = len(rows)
+        for f, b, new, passed in sorted(sorted(mine, key=lambda x: x[1][5], reverse=True), key=lambda x: (x[1][4] != 5, -x[1][4])):
+            fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
+            when = "" if new else f' <span class="note">(introduced {b[7] if len(b) > 7 else f["session"]})</span>'
+            items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}"><a href="{e(link(f, b[2]))}">{e(shown(b[2]))}</a>'
+                         f'<span class="stage s{b[4]}">{e(stage_text(st, b[4], b[6]))}</span>'
+                         f'<span class="t">{e(b[3])}{when}</span></li>')
+        blocks.append(f'<section class="st" data-name="{e(names[st].lower())}"><h3 id="{st}">{e(names[st])} '
+                      f'<span class="note">({n}{flag})</span></h3><ul class="bills">{"".join(items)}</ul></section>')
+    in_states = len([1 for st in by if by[st][0]])
     rows.sort(key=lambda r: -r[0])
-    opts = "".join(f'<option value="f:{e(re.sub(r"[^a-z]+", "-", k.lower()))}">{e(k)}</option>' for k in issue.get("filters", {}))
-    body = HEAD.format(title=f"{issue['name']}: bills in every state", desc=e(DESC.get(iid, "")), css=CSS) + f"""
-<p class="crumbs"><a href="../../">State Bill Tracker</a> / <a href="../">Issues</a></p>
+    none = sorted(names[st] for st in open_ if st not in by)
+    waiting = sorted(names[st] for st in names if st not in open_ and st not in by)
+    yopts = "".join(f'<option value="{page_name(y, default)}"{" selected" if y == year else ""}>'
+                    f'{y}{" (prefiled so far)" if y > default else ""}</option>' for y in years)
+    fopts = "".join(f'<option value="f:{e(re.sub(r"[^a-z]+", "-", k.lower()))}">{e(k)}</option>' for k in issue.get("filters", {}))
+    verb = "prefiled" if upcoming else "introduced"
+    up = up_dir = "../../"
+    lede_counts = (f"<b>{intro_n:,}</b> bills {verb} in <b>{in_states}</b> states in {year}"
+                   + ("" if upcoming else f"; <b>{laws_n:,}</b> became law in {year}") + ".")
+    body = HEAD.format(title=f"{issue['name']}: bills in every state, {year}", desc=e(DESC.get(iid, "")), css=CSS) + f"""
+<p class="crumbs"><a href="{up}">State Bill Tracker</a> / <a href="../">Issues</a></p>
 <h1>{e(issue['name'])}</h1>
 <p class="lede">{e(DESC.get(iid, ""))}</p>
-<p><b>{total:,}</b> bills in <b>{in_states}</b> states this session; <b>{laws:,}</b> became law and <b>{moving:,}</b> are still moving.</p>
-{tile_map(iid, by, names)}
+<div class="tools"><label for="year">Year</label>
+<select id="year" onchange="location.href=this.value">{yopts}</select></div>
+<p>{lede_counts}</p>
+{tile_map(iid, by, names, open_, year, upcoming)}
 <p class="legend">
 <span class="key"><i class="sq h0"></i>None</span><span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>
 <span class="key"><i class="sq h2"></i>5&ndash;14</span><span class="key"><i class="sq h3"></i>15 or more</span>
-<span class="key"><i class="law"></i>A bill became law</span>
-<span class="key"><i class="sq" style="box-shadow:inset 0 0 0 1px var(--rule)"></i>Not on the site yet</span>
+{"" if upcoming else '<span class="key"><span class="lawn">3</span>Number that became law</span>'}
+{'<span class="key"><i class="sq wait"></i>No bills filed yet</span>' if upcoming else ""}
+<span class="key"><i class="sq off"></i>Not on the site yet</span>
 </p>
 <details class="table"><summary>Show as a table</summary>
 <div class="tablewrap"><table>
-<thead><tr><th scope="col">State</th><th scope="col" class="n">Bills</th><th scope="col" class="n">Laws</th><th scope="col" class="n">Moving</th><th scope="col" class="n">All bills</th><th scope="col">Session</th></tr></thead>
+<thead><tr><th scope="col">State</th><th scope="col" class="n">{verb.capitalize()}</th><th scope="col" class="n">Became law</th><th scope="col" class="n">Moving</th><th scope="col" class="n">All bills</th><th scope="col">Session</th></tr></thead>
 <tbody>{"".join(r for _, r in rows)}</tbody></table></div>
-<p class="note">&ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's session, for scale.</p>
+<p class="note">Bills {verb} in {year}, and bills that became law in {year} (some were introduced the year before). &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's session, for scale.</p>
 </details>
-<p class="note">Each state's current session, so the years differ: a two-year legislature's 2025&ndash;26, a yearly one's 2026. * The legislature publishes only bill titles, so some of its bills on this issue may be missed.{f' No bills: {e(", ".join(none))}.' if none else ""}</p>
-<h2 id="none">The bills</h2>
+<p class="note">{"Most legislatures start taking bills in January; these are the bills prefiled so far. " if upcoming else ""}* The legislature publishes only bill titles, so some of its bills on this issue may be missed.{f' None in {year}: {e(", ".join(none))}.' if none else ""}{f' No bills filed yet for {year}: {e(", ".join(waiting))}.' if upcoming and waiting else ""}</p>
+<h2 id="bills">The bills</h2>
 <div class="tools">
 <label for="filter" class="vh">Show</label>
-<select id="filter"><option value="">All bills</option><option value="law">Became law</option><option value="moving">Still moving</option>{opts}</select>
+<select id="filter"><option value="">All bills</option><option value="law">Became law</option><option value="moving">Still moving</option>{fopts}</select>
 <input type="search" id="find" placeholder="Find a state" aria-label="Find a state">
 </div>
 <p class="note" id="count" aria-live="polite"></p>
@@ -287,37 +351,47 @@ document.getElementById("find").addEventListener("input", apply);
 </body>
 </html>
 """
-    return body, {"id": iid, "name": issue["name"], "short": SHORT.get(iid, issue["name"]), "bills": total,
-                  "states": in_states, "laws": laws, "by": {k: list(v) for k, v in by.items()}}
+    return body, {"bills": intro_n, "states": in_states, "laws": laws_n, "by": {st: list(v[:2]) for st, v in by.items()}}, open_
 
 
 def main(site):
+    from datetime import date
     states = load(site)
     if not states:
-        print("issues: no state has data/issues.json; not built")
+        print("issues: no state has data/issues_<session>.json; not built")
         return
+    default = date.today().year
+    upcoming_years = {f["session"] for d in states.values() for f in d["files"] if f.get("upcoming")}
+    years = [default - 1, default] + ([default + 1] if default + 1 in upcoming_years else [])
     os.makedirs(os.path.join(site, "issues"), exist_ok=True)
-    summary = []
+    summary, opened = [], {}
     for issue in issues.ISSUES:
-        page, info = issue_page(issue, states)
         os.makedirs(os.path.join(site, "issues", issue["id"]), exist_ok=True)
-        open(os.path.join(site, "issues", issue["id"], "index.html"), "w", encoding="utf-8").write(page)
-        summary.append(info)
-    cards = "".join(f'<li><a href="{s["id"]}/"><b>{e(s["name"])}</b><span>{s["bills"]:,} bills in {s["states"]} states; '
-                    f'{s["laws"]:,} became law</span></a></li>' for s in summary)
+        per_year = {}
+        for y in years:
+            page, info, open_ = issue_page(issue, states, y, years, default, y > default)
+            name = "index.html" if y == default else f"{y}.html"
+            open(os.path.join(site, "issues", issue["id"], name), "w", encoding="utf-8").write(page)
+            per_year[str(y)] = info
+            opened[str(y)] = sorted(open_)
+        summary.append({"id": issue["id"], "name": issue["name"], "short": SHORT.get(issue["id"], issue["name"]), "y": per_year})
+    cards = "".join(f'<li><a href="{s["id"]}/"><b>{e(s["name"])}</b><span>{s["y"][str(default)]["bills"]:,} bills introduced in '
+                    f'{s["y"][str(default)]["states"]} states in {default}; {s["y"][str(default)]["laws"]:,} became law</span></a></li>'
+                    for s in summary)
     index = HEAD.format(title="Issues across the states", desc="The same subjects in every state legislature: how many bills, where, and which became law.", css=CSS) + f"""
 <p class="crumbs"><a href="../">State Bill Tracker</a></p>
 <h1>Issues across the states</h1>
-<p class="lede">The same subjects in every state legislature this session: how many bills, where, and which became law.</p>
+<p class="lede">The same subjects in every state legislature: how many bills, where, and which became law.</p>
 <ul class="cards">{cards}</ul>
-<footer>Counts are each state's current session ({len(states)} states). Bills are found by the words in their titles and summaries; see each issue's page for what counts.</footer>
+<footer>Counts are for {default} ({len(states)} states). Bills are found by the words in their titles and summaries; see each issue's page for what counts.</footer>
 </main>
 </body>
 </html>
 """
     open(os.path.join(site, "issues", "index.html"), "w", encoding="utf-8").write(index)
-    json.dump(summary, open(os.path.join(site, "issues", "summary.json"), "w"), ensure_ascii=False)
-    print("issues:", ", ".join(f"{s['name']} {s['bills']}" for s in summary))
+    json.dump({"years": years, "default": default, "open": opened, "issues": summary},
+              open(os.path.join(site, "issues", "summary.json"), "w"), ensure_ascii=False)
+    print("issues:", ", ".join(f"{s['name']} {s['y'][str(default)]['bills']}" for s in summary), "; years", years)
 
 
 if __name__ == "__main__":

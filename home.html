@@ -99,8 +99,11 @@ li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
 .tiles a.h1 { background: var(--heat-1); color: var(--heat-ink-1); box-shadow: none; }
 .tiles a.h2 { background: var(--heat-2); color: var(--heat-ink-2); box-shadow: none; }
 .tiles a.h3 { background: var(--heat-3); color: var(--heat-ink-3); box-shadow: none; }
-.law { width: clamp(5px, 1.3vw, 9px); height: clamp(5px, 1.3vw, 9px); border-radius: 50%; background: var(--law-mark);
-  box-shadow: 0 0 0 1.5px var(--sheet); display: inline-block; }
+/* The number of bills on the issue that became law that year: a gold badge under the state's letters. */
+.lawn { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6em; height: 1.6em; padding: 0 .3em;
+  border-radius: 999px; background: var(--law-mark); color: #14213d; font: 700 clamp(9px, 2vw, 12px)/1 var(--body); }
+.tiles span.wait { background: transparent; border: 1px dashed var(--tile-off-ink); }
+.legend .sq.wait { background: transparent; border: 1px dashed var(--tile-off-ink); }
 .legend .sq.h1 { background: var(--heat-1); } .legend .sq.h2 { background: var(--heat-2); } .legend .sq.h3 { background: var(--heat-3); }
 .legend .sq.h0 { background: var(--tile-off); }
 .issueline { margin: 8px 0 0; font-size: 15px; }
@@ -115,6 +118,8 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
   <div class="show" id="showWrap" hidden>
     <label for="show">Show</label>
     <select id="show"><option value="">Party control</option></select>
+    <label for="year" id="yearLabel" hidden>Year</label>
+    <select id="year" hidden></select>
   </div>
   <div class="when" id="when" role="group" aria-label="Party control" hidden>
     <button type="button" data-when="now" aria-pressed="true">Now</button>
@@ -136,9 +141,9 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>
     <span class="key"><i class="sq h2"></i>5&ndash;14</span>
     <span class="key"><i class="sq h3"></i>15 or more</span>
-    <span class="key"><i class="law"></i>A bill became law</span>
+    <span class="key" id="lawKey"><span class="lawn">3</span>Number that became law</span>
+    <span class="key" id="waitKey" hidden><i class="sq wait"></i>No bills filed yet</span>
     <span class="key"><i class="sq" style="box-shadow:inset 0 0 0 1px var(--rule)"></i>Not on the site yet</span>
-    <span class="key">Each state's current session</span>
   </p>
   <p class="issueline" id="issueLine" hidden></p>
   <h2>States</h2>
@@ -179,24 +184,35 @@ try { after = JSON.parse(document.getElementById("after").textContent); } catch 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const tiles = document.getElementById("tiles");
 const same = (a, b) => JSON.stringify(a?.dots) === JSON.stringify(b?.dots);
-let issues = [];
-try { issues = JSON.parse(document.getElementById("issues").textContent); } catch (e) {}
+let issues = { issues: [] };
+try { const raw = JSON.parse(document.getElementById("issues").textContent); if (raw && raw.issues) issues = raw; } catch (e) {}
 let issue = null;  // the national issue shown on the map, or null for party control
+let year = issues.default;  // the calendar year shown for it
 const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n >= 1 ? 1 : 0);
 function drawIssue() {
-  const lower = issue.name.charAt(0).toLowerCase() + issue.name.slice(1);
+  const y = issue.y[year] || { by: {}, bills: 0, states: 0, laws: 0 }, open = new Set((issues.open || {})[year] || []);
+  const upcoming = year > issues.default, verb = upcoming ? "prefiled" : "introduced";
+  const page = year === issues.default ? "" : `${year}.html`;
+  document.getElementById("lawKey").hidden = upcoming;
+  document.getElementById("waitKey").hidden = !upcoming;
   tiles.classList.add("issue");
   tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
     const style = `grid-row:${r + 1};grid-column:${c + 1}`;
     if (!built[code]) return `<span class="off" style="${style}" title="${NAMES[code]}: coming soon">${code}</span>`;
-    const [n, laws] = issue.by[code.toLowerCase()] || [0, 0];
-    const label = `${NAMES[code]}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short || lower}` : `no bills on ${issue.short || lower}`}`
-      + (laws ? `, ${laws} became law` : "") + " this session";
-    const mark = laws ? '<span class="dots" aria-hidden="true"><i class="law"></i></span>' : "";
-    return `<a href="issues/${issue.id}/#${code.toLowerCase()}" class="h${step(n)}" style="${style}" title="${esc(label)}" aria-label="${esc(`${code}, ${label}`)}">${code}${mark}</a>`;
+    const [n, laws] = y.by[code.toLowerCase()] || [0, 0];
+    if (!n && !laws && !open.has(code.toLowerCase())) {
+      const w = `${NAMES[code]}: no bills filed yet for ${year}`;
+      return `<span class="off wait" style="${style}" title="${esc(w)}" aria-label="${esc(`${code}, ${w}`)}">${code}</span>`;
+    }
+    const label = `${NAMES[code]}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short} ${verb} in ${year}` : `no bills on ${issue.short} in ${year}`}`
+      + (laws ? `, ${laws} became law` : "");
+    const mark = laws ? `<span class="lawn" aria-hidden="true">${laws}</span>` : "";
+    return `<a href="issues/${issue.id}/${page}#${code.toLowerCase()}" class="h${step(n)}" style="${style}" title="${esc(label)}" aria-label="${esc(`${code}, ${label}`)}">${code}${mark}</a>`;
   }).join("");
   const line = document.getElementById("issueLine");
-  line.innerHTML = `${issue.bills.toLocaleString()} bills in ${issue.states} states; ${issue.laws.toLocaleString()} became law. <a href="issues/${issue.id}/">See them all</a>`;
+  line.innerHTML = `${y.bills.toLocaleString()} bills ${verb} in ${y.states} states in ${year}`
+    + (upcoming ? ". Most legislatures start taking bills in January." : `; ${y.laws.toLocaleString()} became law.`)
+    + ` <a href="issues/${issue.id}/${page}">See them all</a>`;
 }
 function drawMap(view) {
   const on = !!issue;
@@ -234,23 +250,31 @@ if (Object.keys(after).length && new Date() < new Date("2027-01-15")) {
     drawMap(view);
   });
 }
-// "Show": party control or a national issue (remembered in the address, #issue=ai, so it can be shared).
-if (issues.length) {
-  const show = document.getElementById("show");
-  show.insertAdjacentHTML("beforeend", issues.map((i) => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join(""));
+// "Show": party control or a national issue, and for an issue the calendar year (remembered in the address,
+// #issue=ai&year=2027, so a view can be shared).
+if (issues.issues.length) {
+  const show = document.getElementById("show"), ysel = document.getElementById("year");
+  show.insertAdjacentHTML("beforeend", issues.issues.map((i) => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join(""));
+  ysel.innerHTML = issues.years.map((y) => `<option value="${y}">${y}${y > issues.default ? " (prefiled so far)" : ""}</option>`).join("");
+  ysel.value = String(year);
   document.getElementById("showWrap").hidden = false;
+  const remember = () => {
+    try { history.replaceState(null, "", issue ? `#issue=${issue.id}${year !== issues.default ? `&year=${year}` : ""}` : location.pathname); } catch (e) {}
+  };
   const pick = (id) => {
-    issue = issues.find((i) => i.id === id) || null;
+    issue = issues.issues.find((i) => i.id === id) || null;
     show.value = issue ? issue.id : "";
+    ysel.hidden = document.getElementById("yearLabel").hidden = !issue;
     when.hidden = !!issue || !(Object.keys(after).length && new Date() < new Date("2027-01-15"));
     drawMap(view);
   };
-  show.addEventListener("change", () => {
-    pick(show.value);
-    try { history.replaceState(null, "", show.value ? `#issue=${show.value}` : location.pathname); } catch (e) {}
-  });
-  const m = location.hash.match(/^#issue=([a-z]+)$/);
-  if (m) pick(m[1]);
+  show.addEventListener("change", () => { pick(show.value); remember(); });
+  ysel.addEventListener("change", () => { year = +ysel.value; drawMap(view); remember(); });
+  const m = location.hash.match(/^#issue=([a-z]+)(?:&year=(\d{4}))?$/);
+  if (m) {
+    if (m[2] && issues.years.includes(+m[2])) { year = +m[2]; ysel.value = m[2]; }
+    pick(m[1]);
+  }
 }
 tiles.removeAttribute("aria-hidden");
 if (!issue) document.getElementById("legend").hidden = false;

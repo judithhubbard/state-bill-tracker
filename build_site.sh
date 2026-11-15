@@ -54,7 +54,7 @@ for s in $STATES; do
   cp -R "$BUILT/$s" "$OUT/$s"
 done
 echo "rebuilt:${REBUILT:- none}"
-# The national issue pages (/issues/), from each built state's data/issues.json; issues/summary.json feeds the front page.
+# The national issue pages (/issues/), from each built state's data/issues_<session>.json; issues/summary.json feeds the front page.
 python3 issues_site.py "$OUT" || echo "issue pages: BUILD FAILED"
 if [ -n "$FAILED" ]; then echo "build failed for:$FAILED"; fi
 # The front page lists exactly the states built in this run (home.html's own list is replaced), so a state appears there
