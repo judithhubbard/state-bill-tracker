@@ -121,7 +121,9 @@ li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
 #show:focus-visible, .menu button:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
 .menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: min(620px, calc(100vw - 32px)); background: var(--sheet);
   border: 1px solid var(--rule); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / .12); padding: 10px 12px 12px; }
-.menu .grp { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 18px 20px; }
+/* Groups stacked in columns, newspaper style, so short groups tuck under each other. */
+.menu .grp { columns: 3 135px; column-gap: 20px; }
+.menu .grp > div { break-inside: avoid; margin: 0 0 16px; }
 .menu h4 { margin: 0 0 4px; padding: 0 0 4px; border-bottom: 1px solid var(--rule); font: 700 11px/1.3 var(--body); letter-spacing: .06em;
   text-transform: uppercase; color: var(--ink-2); opacity: .8; }
 .menu button { display: block; width: 100%; text-align: left; font: inherit; font-size: 14px; color: var(--ink); background: none; border: 0;
