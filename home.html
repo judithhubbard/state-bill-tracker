@@ -404,7 +404,7 @@ const usable = (y) => (issue ? (issues.years || []).includes(y) : y === NOW || (
 function render() {
   if (!usable(year)) year = NOW;
   view = !issue && year === NOW + 1 ? "after" : "now";
-  yearsEl.innerHTML = YEARS.map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === year}"${usable(y) ? "" : " disabled"}>${y}</button>`).join("");
+  yearsEl.innerHTML = YEARS.map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === year}"${usable(y) ? "" : ` disabled title="Party control is shown for ${NOW}${AFTER_OK ? ` and from January ${NOW + 1}` : ""}; pick an issue for other years"`}>${y}</button>`).join("");
   show.textContent = label(issue);
   for (const b of menu.querySelectorAll("button")) b.setAttribute("aria-current", String(b.dataset.id === (issue ? issue.id : "")));
   drawMap(view);

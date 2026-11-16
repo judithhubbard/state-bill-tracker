@@ -393,7 +393,13 @@ def main(site):
         return
     default = date.today().year
     upcoming_years = {f["session"] for d in states.values() for f in d["files"] if f.get("upcoming")}
-    years = [default - 1, default] + ([default + 1] if default + 1 in upcoming_years else [])
+    # Every year from the first that nearly all states have data for (90%: most states' pages begin with 2023, New
+    # York's with 2017), through this year, and next year once any state lists prefiled bills.
+    have = lambda y: sum(1 for d in states.values() if any(covers(f, y) for f in d["files"]))
+    first = default - 1
+    while have(first - 1) >= 0.9 * len(states):
+        first -= 1
+    years = list(range(first, default + 1)) + ([default + 1] if default + 1 in upcoming_years else [])
     os.makedirs(os.path.join(site, "issues"), exist_ok=True)
     summary, opened = [], {}
     for issue in issues.ISSUES:
