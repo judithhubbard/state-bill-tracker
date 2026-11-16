@@ -67,13 +67,21 @@ jobs:
               # How long each state's downloads took: the longest of its last three finished jobs (a run that stopped early,
               # like Iowa's at the site's bot check, mustn't move a long download into the quick lane). A state with no
               # finished job (new, or too old to see) counts as slow.
-              def api(path):
-                  return json.loads(subprocess.run(["gh", "api", path], capture_output=True, text=True, check=True).stdout)
+              # A history GitHub can't answer (one old run's jobs failed every time on 2026-11-16, and stopped three
+              # downloads) is skipped after a second try, never failing the run.
+              def api(path, empty):
+                  for _ in range(2):
+                      out = subprocess.run(["gh", "api", path], capture_output=True, text=True)
+                      if out.returncode == 0:
+                          return json.loads(out.stdout)
+                  import sys
+                  print(f"couldn't read {path}: {out.stderr.strip()[:200]}; skipped", file=sys.stderr)
+                  return empty
               times = {}
               repo = os.environ["REPO"]
-              runs = api(f"repos/{repo}/actions/workflows/download.yml/runs?status=completed&per_page=20")["workflow_runs"]
+              runs = api(f"repos/{repo}/actions/workflows/download.yml/runs?status=completed&per_page=20", {"workflow_runs": []})["workflow_runs"]
               for r in runs:
-                  for j in api(f"repos/{repo}/actions/runs/{r['id']}/jobs?per_page=100")["jobs"]:
+                  for j in api(f"repos/{repo}/actions/runs/{r['id']}/jobs?per_page=100", {"jobs": []})["jobs"]:
                       if j.get("conclusion") not in ("success", "failure") or not j.get("completed_at"):
                           continue
                       t = lambda x: datetime.fromisoformat(x.replace("Z", "+00:00"))
