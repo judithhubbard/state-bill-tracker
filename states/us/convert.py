@@ -806,7 +806,8 @@ def record(congress, p, b):
         "passedS": "S" in passed_h, "passedA": "H" in passed_h, "program": None,
         # (Both houses passed it, but the second changed it: it's "passed" by that house, waiting on the first.)
         "stage": stage, "passedIn": (HOUSE[amended_by] if amended_by and len(passed_h) == 2 else HOUSE[origin] if origin in passed_h else HOUSE[other]) if stage == 2 else None,
-        "chapter": law_no if stage == 5 and law_no and law_kind == "Public" else None,  # (private laws: their status says so) "veto": None, "memo": "", "vetoMemo": None,
+        "chapter": law_no if stage == 5 and law_no and law_kind == "Public" else None,  # (private laws: their status says so)
+        "veto": None, "memo": "", "vetoMemo": None,
         "simText": f"{title} {official} {' '.join(subj[:12])}",
         "comm": comm_now if stage == 0 else None,
         "first": min(action_dates, default=text(b.findtext("introducedDate")) or f"{session}-01-03"),
