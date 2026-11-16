@@ -472,6 +472,17 @@
    "minutes": 110,
    "run": "python3 states/ny/memos.py",
    "note": "The Assembly sponsors' memos from nyassembly.gov (robots.txt bars only GPTBot), a page a second; New York's bills come from the Senate's API when the site is published (publish.yml)."
+  },
+  {
+   "name": "Congress",
+   "code": "us",
+   "key": "us-data-v1",
+   "paths": [
+    "data/us"
+   ],
+   "minutes": 60,
+   "run": "python3 states/us/fetch.py --votes-minutes 30 && python3 states/us/contacts.py",
+   "note": "GovInfo's bill status zips (about 150 MB for three Congresses, read again when the server's copy is a week newer), the files changed since (from the sitemap), roll calls from the House Clerk and the Senate a second apart (the first copy, about 1,600, fills in over a run or two), and the congress-legislators member data; contacts.py builds the contacts after it."
   }
  ]
 }

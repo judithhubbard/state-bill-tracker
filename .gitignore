@@ -175,3 +175,9 @@ data/ny/
 # Open States bulk downloads (the owner's, local only)
 Bulk_files_OpenStates/
 .issues-cache/
+
+# Congress (states/us/fetch.py): the bill status zips, updates, roll calls and member data. The place table and seat
+# names are made once by states/us/towns.py.
+data/us/*
+!data/us/district_towns.json
+!data/us/district_names.json

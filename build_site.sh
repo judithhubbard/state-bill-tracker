@@ -6,7 +6,7 @@
 set -e
 cd "$(dirname "$0")"
 OUT=${1:-_site}
-STATES=${ONLY:-"ak al ar az ca co ct de fl ga hi ia id il in ks ky la ma md me mi mn mo ms mt nc nd ne nh nj nm nv oh ok or pa ri sc sd tn tx ut va vt wa wi wv wy"}  # ONLY="wy sd" for a quick local test
+STATES=${ONLY:-"ak al ar az ca co ct de fl ga hi ia id il in ks ky la ma md me mi mn mo ms mt nc nd ne nh nj nm nv oh ok or pa ri sc sd tn tx ut va vt wa wi wv wy us"}  # ONLY="wy sd" for a quick local test
 # New York from this shared code (/ny/, not linked from the front page until New York moves here; until then
 # albanybilltracker.org runs from its own repo), when the current session's bills are here (the workflow
 # downloads them with the Senate API key).
@@ -69,6 +69,10 @@ items, power, after = [], {}, {}
 for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
         P = importlib.import_module(f"states.{s}.profile")
+        if s == "us":
+            # Congress (/us/) isn't a state: listed first, not on the map, no party dots.
+            items.append((" Congress", f'    <li><a href="us/"><b>Congress</b> (federal bills)</a></li>\n'))
+            continue
         # Party control for the map's dots (balance.py), from the latest member list.
         data = front_page.map_data(s, getattr(P, "LOWER_NAME", "Assembly"))
         if data:
@@ -93,7 +97,7 @@ page = page.replace('<script type="application/json" id="after">{}</script>',
                     '<script type="application/json" id="after">' + json.dumps(after, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
 page = re.sub(r'(<ul id="states">\n)(?:    <li><a href="[a-z]{2}/">.*?</li>\n)*', lambda m: m.group(1) + block, page, count=1, flags=re.S)
 open(os.path.join(out, "index.html"), "w").write(page)
-print("front page:", ", ".join(n for n, _ in sorted(items)))
+print("front page:", ", ".join(n.strip() for n, _ in sorted(items)))
 PY
 # The pages ask for their icons at the top of the site.
 cp "$OUT/nj/favicon.ico" "$OUT/nj/favicon-32.png" "$OUT/nj/apple-touch-icon.png" "$OUT/"

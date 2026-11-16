@@ -311,6 +311,12 @@ jobs:
           path: "data/pa"
           key: pa-data-v1-latest
           restore-keys: pa-data-v1-
+      - name: Restore Congress
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/us"
+          key: us-data-v1-latest
+          restore-keys: us-data-v1-
 
       # New York from this shared code (statebilltracker.pages.dev/ny/, not linked; albanybilltracker.org runs
       # from its own repo until New York moves here). The data albanybilltracker.org's repo commits (past sessions,
