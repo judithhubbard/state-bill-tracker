@@ -145,7 +145,7 @@
     "data/az"
    ],
    "minutes": 100,
-   "run": "python3 states/az/fetch.py; python3 states/az/azleg.py && python3 states/az/contacts.py",
+   "run": "python3 states/openstates_bulk.py az; python3 states/az/fetch.py; python3 states/az/azleg.py && python3 states/az/contacts.py",
    "note": "Open States (the free tier's daily quota), then azleg.gov at its two-minute crawl delay."
   },
   {
@@ -220,7 +220,7 @@
     "data/in"
    ],
    "minutes": 60,
-   "run": "python3 states/in/fetch.py && python3 states/in/contacts.py 2024 && python3 states/in/contacts.py 2025 && python3 states/in/contacts.py"
+   "run": "python3 states/in/fetch.py && (python3 states/in/contacts.py 2023 || true) && python3 states/in/contacts.py 2024 && python3 states/in/contacts.py 2025 && python3 states/in/contacts.py"
   },
   {
    "name": "Arkansas",

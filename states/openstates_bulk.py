@@ -14,7 +14,8 @@ data/<st>/<year>/openstates.json: {"complete": true, "bulk": file name, "done": 
 the owner's Bulk_files_OpenStates/ folder, when it's there) only when bulk.json names one not imported yet. Hawaii's
 download (states/hi/fetch.py) keeps its bills in bills/ and its place in state.json, so for "hi" the records go into
 data/hi/<year>/bills/ and state.json is marked complete with "since" the file's build time: its later passes ask the API
-only for bills updated after that. Only the bill
+only for bills updated after that. Arizona's (states/az/fetch.py) the same: its years older than the API's three (2023)
+come only from a bulk file, so the API's 250-a-day free limit isn't spent on them. Only the bill
 types the state keeps are saved (KEEP below). Nothing here marks a state incomplete: a failed download is tried again
 next run.
 
@@ -27,7 +28,9 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 LOCAL = os.path.join(ROOT, "Bulk_files_OpenStates")
 URL = "https://data.openstates.org/json/latest/"
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
-KEEP = {"ia": r"(HF|SF|HJR|SJR|HSB|SSB)", "fl": r"(HB|SB|HJR|SJR)", "hi": r"(HB|SB)"}
+KEEP = {"ia": r"(HF|SF|HJR|SJR|HSB|SSB)", "fl": r"(HB|SB|HJR|SJR)", "hi": r"(HB|SB)", "az": r"(HB|SB|HCR|SCR)"}
+# States whose API download keeps bills in data/<st>/<year>/bills/ with its place in state.json.
+API_FOLDER = ("hi", "az")
 CHAMBER = {"House": "lower", "Senate": "upper", "Assembly": "lower", "Legislature": "legislature"}
 
 
@@ -97,7 +100,7 @@ def main(st):
         except Exception as e:
             print(f"{st} {year}: {name} unreadable ({type(e).__name__}: {e}); tried again next run", flush=True)
             continue
-        out = os.path.join(folder, "bills" if st == "hi" else "openstates")
+        out = os.path.join(folder, "bills" if st in API_FOLDER else "openstates")
         os.makedirs(out, exist_ok=True)
         n = 0
         for b in bills:
@@ -105,11 +108,11 @@ def main(st):
                 save(api_shape(b), os.path.join(out, b["identifier"].replace(" ", "") + ".json"))
                 n += 1
         save({"complete": True, "bulk": name, "done": date.today().isoformat()}, mark_path)
-        if st == "hi":
+        if st in API_FOLDER:
             built = datetime(*z.getinfo(next(i for i in z.namelist() if i.endswith("_bills.json"))).date_time)
             state_path = os.path.join(folder, "state.json")
             state = load(state_path, {})
-            for k in ("page", "began", "pass"):
+            for k in ("page", "began", "pass", "first_started"):
                 state.pop(k, None)
             state.update(complete=True, since=(built - timedelta(days=1)).isoformat(timespec="seconds"))
             save(state, state_path)
