@@ -76,6 +76,10 @@ def build(session):
 def main(session):
     out = build(session)
     path = os.path.join(P.DATA, f"contacts_{session}.json")
+    # An empty member list (a bad download) never replaces a good contacts file.
+    if not out["people"] and os.path.exists(path) and json.load(open(path)).get("people"):
+        print(f"{path}: no legislators read; keeping the last copy")
+        return
     json.dump(out, open(path, "w"), indent=1, ensure_ascii=False)
     ppl = out["people"].values()
     print(f"{path}: {len(out['people'])} legislators ({sum(1 for p in ppl if p['phone'])} with a phone, "

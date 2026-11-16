@@ -108,8 +108,12 @@ def members(ga):
     for name in (f"Members/{ga}HouseMembers.xml", f"Members/{ga}SenateMembers.xml",
                  f"Committees/{ga}HouseCommitteeMembers.xml", f"Committees/{ga}SenateCommitteeMembers.xml"):
         body = curl([f"{REPO}/{name}"], check=False)
-        if body and "<" in body:
+        # Only a real member or committee list replaces the last copy: on 2026-11-16 the server answered GitHub's runs
+        # with something else, which was saved, and Illinois's contacts came out empty (the build then stopped).
+        if body and re.search(r"<(?:Member|Committee)>", body):
             open(os.path.join(folder, os.path.basename(name)), "w").write(body)
+        else:
+            print(f"{name}: no member list in the answer ({len(body or '')} characters); keeping the last copy")
 
 
 def main():
