@@ -33,7 +33,10 @@ ISSUES = [
      "rules": [[r"\bdata ?cent(?:er|re)s?\b"], [r"\bhyperscale"], [r"\bhigh[- ]performance computing\b"],
                [r"\b(?:large|high)[- ]loads?\b", r"!\b(?:vehicles?|trailers?|trucks?|highways?|lanes?)\b"],
                [r"\b(?:large|high)[- ](?:energy[- ]use|energy[- ]demand|energy|use|load[- ]factor)(?: electric)? (?:facilit\w+|customers?|users?|consumers?)\b"]],
-     "none": [r"\bstate data cent(?:er|re)", r"\bconsolidat\w*\b.{0,60}\bdata cent", r"\bdata cent(?:er|re)s? (?:services|consolidation)\b"]},
+     # Not call centers ("international call or data centers": Kentucky HB 508 of 2026, on veterans' benefits
+     # consultants) or where a company keeps people's data.
+     "none": [r"\bstate data cent(?:er|re)", r"\bconsolidat\w*\b.{0,60}\bdata cent", r"\bdata cent(?:er|re)s? (?:services|consolidation)\b",
+              r"\bcall (?:or|and|centers? (?:or|and)) data cent", r"\b(?:international|overseas|offshore|foreign) data cent"]},
     {"id": "pfas", "group": "Environment and energy", "name": "PFAS (“forever chemicals”)",
      "rules": [[r"\bPFAS\b"], [r"perfluoro"], [r"polyfluoro"], [r"perfluorinated"], [r"\bforever chemicals?\b"],
                [r"\bPFOA\b"], [r"\bPFOS\b"], [r"\bfire[- ]?fighting foams?\b"], [r"(?-i)\bAFFF\b"],
