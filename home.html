@@ -20,6 +20,8 @@
   --dem: #1f5bb5; --rep: #c0322a; --ind: #6b7685;
   --heat-1: #c5d5ef; --heat-2: #6f93d0; --heat-3: #1d3b78; --heat-ink-1: #14213d; --heat-ink-2: #0b1530; --heat-ink-3: #ffffff;
   --law-mark: #c8901f; --law-ink: #18693f; --veto-ink: #a3302a;
+  --st-0: #e8ecf3; --st-0-ink: #46526b; --st-1: #dfe9fb; --st-1-ink: #1f4a99; --st-3: #fbefd6; --st-3-ink: #7a4f06;
+  --st-5: #dcf1e4; --st-5-ink: #14613a; --st-6: #fae1df; --st-6-ink: #9a2b24;
   --ctl-r1: #ecd3d0; --ctl-r1-ink: #5b2420; --ctl-r2: #d9aaa4; --ctl-r2-ink: #4a1a16;
   --ctl-d1: #d3dded; --ctl-d1-ink: #1d3560; --ctl-d2: #a9bcdc; --ctl-d2-ink: #15294d;
   --ctl-x: var(--sheet); --ctl-x-ink: var(--ink); --ctl-n: #e7e9ee; --ctl-n-ink: #3a4253;
@@ -33,6 +35,8 @@
     --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9;
     --heat-1: #2f4d85; --heat-2: #5a86d6; --heat-3: #9dbcf3; --heat-ink-1: #e6ebf5; --heat-ink-2: #ffffff; --heat-ink-3: #0f1626;
     --law-mark: #e0b04e; --law-ink: #5cc28c; --veto-ink: #f08a80;
+    --st-0: #222c42; --st-0-ink: #a9b5cc; --st-1: #1d2f52; --st-1-ink: #a8c4f5; --st-3: #3a2f17; --st-3-ink: #f0cd85;
+    --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
   --ctl-r1: #573b39; --ctl-r1-ink: #f3dedb; --ctl-r2: #7b4c47; --ctl-r2-ink: #fbe9e7;
   --ctl-d1: #36486b; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4e6995; --ctl-d2-ink: #f1f5fc;
   --ctl-x: var(--sheet); --ctl-x-ink: var(--ink); --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
@@ -45,6 +49,8 @@
   --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9;
   --heat-1: #2f4d85; --heat-2: #5a86d6; --heat-3: #9dbcf3; --heat-ink-1: #e6ebf5; --heat-ink-2: #ffffff; --heat-ink-3: #0f1626;
   --law-mark: #e0b04e; --law-ink: #5cc28c; --veto-ink: #f08a80;
+    --st-0: #222c42; --st-0-ink: #a9b5cc; --st-1: #1d2f52; --st-1-ink: #a8c4f5; --st-3: #3a2f17; --st-3-ink: #f0cd85;
+    --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
   --ctl-r1: #573b39; --ctl-r1-ink: #f3dedb; --ctl-r2: #7b4c47; --ctl-r2-ink: #fbe9e7;
   --ctl-d1: #36486b; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4e6995; --ctl-d2-ink: #f1f5fc;
   --ctl-x: var(--sheet); --ctl-x-ink: var(--ink); --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
@@ -180,9 +186,15 @@ body.issue-on main { max-width: 1080px; }
 /* The number and stage on the first line, the title below them across the whole width. */
 .panel .tt { grid-row: 2; grid-column: 1 / -1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .panel .why { color: var(--ink-2); }
-.panel .stg { grid-row: 1; grid-column: 2; justify-self: end; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
-.panel .stg.s5 { color: var(--law-ink); font-weight: 600; }
-.panel .stg.s6 { color: var(--veto-ink); font-weight: 600; }
+.panel .stg { grid-row: 1; grid-column: 2; justify-self: end; }
+/* Where each bill is, as a colored label: grey in committee, blue moving through the houses, amber passed both houses
+   or with the governor, green law, red vetoed (the panel and "Your bills"). */
+.stg { display: inline-block; font: 600 12px/1.5 var(--body); padding: 0 7px; border-radius: 999px; white-space: nowrap;
+  background: var(--st-0); color: var(--st-0-ink); }
+.stg.s1, .stg.s2 { background: var(--st-1); color: var(--st-1-ink); }
+.stg.s3, .stg.s4 { background: var(--st-3); color: var(--st-3-ink); }
+.stg.s5 { background: var(--st-5); color: var(--st-5-ink); }
+.stg.s6 { background: var(--st-6); color: var(--st-6-ink); }
 /* "Your bills": the bills starred on any state's page or in the map's panel (each state's watchlist), by state. */
 .mine { margin: -6px 0 16px; }
 .minebar { font: inherit; font-size: 15px; font-weight: 600; color: var(--navy); background: var(--sheet); border: 1px solid var(--rule);
@@ -206,8 +218,7 @@ body.issue-on main { max-width: 1080px; }
 .mine .num { font-weight: 600; color: var(--navy); white-space: nowrap; }
 .mine .tt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mine .where { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; }
-.mine .where .stg { color: var(--ink); font-weight: 600; }
-.mine .where .s5 { color: var(--law-ink); } .mine .where .s6 { color: var(--veto-ink); }
+.mine .stg { white-space: normal; }
 .mine .new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #14213d;
   font: 700 11px/1.6 var(--body); }
 /* A star beside each bill (in "Your bills" and the map's panel): filled when it's on the state's watchlist. */
@@ -217,7 +228,7 @@ body.issue-on main { max-width: 1080px; }
 .star:hover { background: var(--paper); }
 .star:focus-visible { outline: 3px solid var(--hover); outline-offset: 0; }
 .panel li { position: relative; }
-.panel li a { padding-right: 44px; }
+.panel li a { padding-right: 44px; text-decoration: none; }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 </style>
 </head>
