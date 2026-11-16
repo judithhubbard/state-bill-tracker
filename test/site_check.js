@@ -276,6 +276,13 @@ async function statePage(code, quick, counts, today, keyboard) {
     const ready = await page.waitForFunction(() => document.documentElement.classList.contains("ready") && typeof BILLS !== "undefined",
       { timeout: 45000 }).then(() => true).catch(() => false);
     if (!ready) { FAIL("Pages load", `${where}: the page never finished loading`); report("Script errors", where, errors); return; }
+    // The bill data (a separate file, 14 MB for Congress) can fail to arrive; the page then says so instead of a list.
+    const noData = async (when) => {
+      const msg = await page.evaluate(() => (DATA ? "" : document.getElementById("list")?.textContent.trim() || "no data"));
+      if (msg) FAIL("Pages load", `${where}${when}: ${msg}`);
+      return !!msg;
+    };
+    if (await noData("")) { report("Script errors", where, errors); return; }
 
     // 1. Freshness and the count of bills.
     const info = await page.evaluate(() => ({ fetched: DATA.fetched, session: DATA.session, current: DATA.current, bills: BILLS.length,
@@ -375,12 +382,17 @@ async function statePage(code, quick, counts, today, keyboard) {
       report("Script errors", `${where} during the accessibility check`, errors);
       await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
       await page.waitForFunction(() => document.documentElement.classList.contains("ready"), { timeout: 45000 });
+      if (await noData(" (loaded again after the accessibility check)")) { report("Script errors", where, errors); return; }
     }
 
     log(`${where}: axe done`);
     // Phone width: no sideways scroll with each bill open.
+    // Changing isMobile makes Chrome load the page again: wait for its data before clicking (Congress's 14 MB file took
+    // longer than the half second this once waited, and the tabs ran without data: "Cannot read properties of null").
     await page.setViewport({ width: 375, height: 800, isMobile: true, hasTouch: true });
     await sleep(500);
+    await page.waitForFunction(() => document.readyState === "complete" && document.documentElement.classList.contains("ready"), { timeout: 45000 });
+    if (await noData(" (at phone width)")) { report("Script errors", where, errors); return; }
     for (const o of opened.filter(Boolean)) {
       const w = await page.evaluate(async (o) => {
         document.querySelector('.view-tab[data-view="bills"]').click();

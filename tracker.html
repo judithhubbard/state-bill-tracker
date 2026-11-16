@@ -3574,8 +3574,10 @@ function keyDates(b) {
 }
 
 const earlierSessions = (b) => new Set(b.earlier.map((e) => e[0])).size;
-// Each tag opens the bill and shows "This bill in other sessions". Inside a summary, so a focusable span.
-const LINEAGE = `role="button" tabindex="0" data-lineage title="See this bill in other sessions"`;
+// Each tag opens the bill and shows "This bill in other sessions" (a click). Not focusable: it's inside the row's
+// summary, and a control inside a control is lost to keyboards and screen readers (axe's nested-interactive); opening
+// the row with the keyboard shows the same list in the panel.
+const LINEAGE = `data-lineage title="See this bill in other sessions"`;
 function historyTags(b) {
   const tags = [];
   // A session can hold more than one version of a bill (a new number the second year).
@@ -5327,12 +5329,20 @@ async function unpack(b64) {
     ROOT = el.dataset.root || "";
     const meta = document.querySelector('meta[name="abt-preset"]');
     if (meta) PRESET = JSON.parse(meta.content);
-    const raw = el.dataset.src ? await (await fetch(el.dataset.src)).json()
+    // A request that fails on the way (a dropped connection; Congress's file is 14 MB) is tried twice more before the
+    // page gives up: without data, every tab and filter would fail.
+    const get = async (tries = 3) => {
+      try { const r = await fetch(el.dataset.src); if (!r.ok) throw new Error(`HTTP ${r.status}`); return await r.json(); }
+      catch (e) { if (tries <= 1) throw e; await new Promise((ok) => setTimeout(ok, 1500)); return get(tries - 1); }
+    };
+    const raw = el.dataset.src ? await get()
       : el.dataset.enc === "gzip64" ? JSON.parse(await unpack(el.textContent))
       : JSON.parse(el.textContent);
     hydrate(decode(raw));
   } catch (err) {
-    $("list").innerHTML = `<div class="empty">The bill data couldn't be read (${esc(err.message)}).</div>`;
+    $("list").innerHTML = `<div class="empty">The bill data couldn't be read (${esc(err.message)}). Reload the page to try again.</div>`;
+    // Without data the tabs and filters have nothing to show (and would fail): only the message stays.
+    if (!DATA) { document.querySelector(".views").hidden = true; $("side").hidden = true; }
   }
   document.documentElement.classList.add("ready");
 })();
