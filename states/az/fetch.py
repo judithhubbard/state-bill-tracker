@@ -10,6 +10,10 @@ the owner decided (2026-10-31) to use Open States' public-domain data instead; s
 Sessions are one a year ("57th-1st-regular" is 2025). One request every 6 seconds. The free tier allows 250 requests a
 day (20 bills each), so a first copy of three sessions (about 300 requests) takes two days; then a day's changes are a
 few requests.
+Years older than the API's three (2023, in the shared window of states/window.py) aren't asked for here: they come only
+from Open States' bulk file (states/openstates_bulk.py az, listed in states/az/bulk.json by the owner: the 2023 file is
+"AZ_56th-1st-regular_json_<id>.zip"), which marks them complete, so they never cost API requests or hold Arizona off
+the site. A year the API listed before stays as it was downloaded.
 Usage: python3 states/az/fetch.py
 """
 import json, os, sys, time, urllib.error, urllib.parse, urllib.request
@@ -62,7 +66,7 @@ def get(path, params):
 
 
 def sessions():
-    """Year -> Open States session id, for the regular sessions of the last three years."""
+    """Year -> Open States session id, for the regular sessions of the last three years (older ones: the bulk file)."""
     j = get("/jurisdictions/ocd-jurisdiction/country:us/state:az/government", {"include": "legislative_sessions"}) or {}
     out = {}
     for s in j.get("legislative_sessions") or []:
