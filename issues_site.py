@@ -173,7 +173,8 @@ def load(site):
     out = {}
     for s in sorted(os.listdir(site)):
         folder = os.path.join(site, s, "data")
-        if len(s) != 2 or not os.path.isdir(folder):
+        # Congress (/us/) isn't a state: kept out of the issue pages' state counts and maps for now.
+        if len(s) != 2 or s == "us" or not os.path.isdir(folder):
             continue
         files = []
         for name in sorted(os.listdir(folder)):
