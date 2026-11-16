@@ -93,14 +93,13 @@ h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: u
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
 .legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
 .legend .dot { width: 7px; height: 7px; display: inline-block; }
-.find { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet);
-  color: var(--ink); margin: 0 0 12px; }
-ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-li a { display: block; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px;
-  color: var(--ink); text-decoration: none; height: 100%; }
-li a:hover, li a:focus-visible { border-color: var(--navy); }
-li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
-.none { color: var(--ink-2); display: none; }
+ul, ol { list-style: none; margin: 0; padding: 0; }
+/* The state list: plain names in columns (the map's squares link to the states too). */
+#states { columns: 5 130px; column-gap: 20px; }
+#states li { break-inside: avoid; padding: 3px 0; }
+#states a { color: var(--navy); text-decoration: none; font-size: 15px; }
+#states a:hover, #states a:focus-visible { text-decoration: underline; }
+#states b { font-weight: 600; }
 /* "Show": party control, or one national issue, which shades each state by its number of bills on it (issues_site.py's
    summary). Steps h1-h3 of one blue; a gold mark where a bill on the issue became law. */
 .show { display: flex; align-items: center; gap: 8px 10px; margin: 0 0 12px; font-size: 15px; flex-wrap: wrap; }
@@ -185,26 +184,34 @@ body.issue-on main { max-width: 1080px; }
 .panel .stg.s5 { color: var(--law-ink); font-weight: 600; }
 .panel .stg.s6 { color: var(--veto-ink); font-weight: 600; }
 /* "Your bills": the bills starred on any state's page or in the map's panel (each state's watchlist), by state. */
-.mine { margin: 0 0 24px; }
-.mine h2 { margin-top: 0; }
+.mine { margin: -6px 0 16px; }
+.minebar { font: inherit; font-size: 15px; font-weight: 600; color: var(--navy); background: var(--sheet); border: 1px solid var(--rule);
+  border-radius: 999px; padding: 5px 14px 5px 12px; cursor: pointer; }
+.minebar::after { content: "▾"; margin-left: 6px; color: var(--ink-2); }
+.minebar[aria-expanded="true"]::after { content: "▴"; }
+.minebar .mstar { color: var(--law-mark); }
+.minebar .cnt { color: var(--ink-2); font-weight: 400; }
+.minebar .cnt b { color: #14213d; background: var(--law-mark); border-radius: 999px; padding: 0 6px; font-weight: 700; font-size: 12px; }
+.minebar:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
+#mineList { margin-top: 8px; max-height: 50vh; overflow-y: auto; }
 .mine .mst { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; margin: 0 0 10px; }
 .mine h3 { font: 700 15px/1.2 var(--display); color: var(--navy); margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
 .mine h3 a { color: inherit; text-decoration: none; }
 .mine ol { list-style: none; margin: 0; padding: 0; }
 .mine li { position: relative; border-bottom: 1px solid var(--rule); }
 .mine li:last-child { border-bottom: 0; }
-.mine li a { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; padding: 8px 44px 8px 12px; color: var(--ink);
+.mine li a { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1px 10px; padding: 6px 44px 6px 12px; color: var(--ink);
   text-decoration: none; font-size: 14px; border: 0; border-radius: 0; background: none; height: auto; }
 .mine li a:hover, .mine li a:focus-visible { background: var(--paper); }
 .mine .num { font-weight: 600; color: var(--navy); white-space: nowrap; }
-.mine .tt { min-width: 0; }
+.mine .tt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mine .where { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; }
 .mine .where .stg { color: var(--ink); font-weight: 600; }
 .mine .where .s5 { color: var(--law-ink); } .mine .where .s6 { color: var(--veto-ink); }
 .mine .new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #14213d;
   font: 700 11px/1.6 var(--body); }
 /* A star beside each bill (in "Your bills" and the map's panel): filled when it's on the state's watchlist. */
-.star { position: absolute; right: 6px; top: 6px; width: 32px; height: 32px; border: 0; background: none; cursor: pointer;
+.star { position: absolute; right: 6px; top: 50%; margin-top: -16px; width: 32px; height: 32px; border: 0; background: none; cursor: pointer;
   font-size: 19px; line-height: 1; color: var(--ink-2); border-radius: 6px; padding: 0; }
 .star[aria-pressed="true"] { color: var(--law-mark); }
 .star:hover { background: var(--paper); }
@@ -217,9 +224,9 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 <body>
 <main>
   <h1>State Bill Tracker</h1>
-  <section class="mine" id="mine" hidden aria-labelledby="mineHead">
-    <h2 id="mineHead">Your bills</h2>
-    <div id="mineList"></div>
+  <section class="mine" id="mine" hidden>
+    <button type="button" class="minebar" id="mineBar" aria-expanded="false" aria-controls="mineList"><span class="mstar" aria-hidden="true">★</span> Your bills <span class="cnt" id="mineCount"></span></button>
+    <div id="mineList" hidden></div>
   </section>
   <div class="show" id="controls" hidden>
     <div class="when" id="years" role="group" aria-label="Year"></div>
@@ -253,11 +260,9 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <aside class="panel" id="panel" aria-live="polite" hidden></aside>
   </div>
   <h2>States</h2>
-  <input class="find" id="find" type="search" placeholder="Find a state" aria-label="Find a state" hidden>
   <ul id="states">
     <li><a href="ca/"><b>California</b></a></li>
   </ul>
-  <p class="none" id="none">No state by that name is ready yet.</p>
   <footer>Party control is from each legislature's current member list; a darker color means that party also holds a supermajority in both houses. 2027 shows the November 2026 election's reported results, before certification. Your watchlist stays in your browser.</footer>
 </main>
 <script type="application/json" id="power">{}</script>
@@ -544,20 +549,34 @@ async function drawMine() {
       const [session, num] = k.split(":"), s = await statusOf(st, session), seen = typeof w[k] === "string" ? w[k] : (w[k] || {}).seen || "";
       const lead = s ? (s.bills[num] ? num : s.alias[num]) : null, b = lead && s.bills[lead];
       const page = s && s.page && s.page !== "./" ? s.page : "";
+      if (!b && st === "ny") return null;
       if (!b) return { last: "", html: `<li><a href="${st}/"><span class="num">${esc(spaced(num))}</span><span class="tt">${session} session</span></a>${starBtn(st, +session, num, "", spaced(num))}</li>` };
       const [full, title, stage, last, action, comm, kind] = b, fresh = last && last > seen;
-      return { last, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
+      return { last, fresh, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
         + `<span class="num">${esc(spaced(full))}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh ? '<span class="new">New</span>' : ""}</span>`
-        + `<span class="where"><span class="stg s${stage}">${esc(whereText(stage, comm, kind, s.live !== false))}</span>${last ? ` · ${esc(action ? `${action} (${fmtDay(last)})` : `Last action ${fmtDay(last)}`)}` : ""}</span></a>`
+        + `<span class="where"><span class="stg s${stage}">${esc(whereText(stage, comm, kind, s.live !== false))}</span>${last ? ` · ${fmtDay(last)}` : ""}</span></a>`
         + `${starBtn(st, +session, full, last, spaced(full))}</li>` };
     }));
-    rows.sort((a, b) => (b.last > a.last ? 1 : b.last < a.last ? -1 : 0));
+    const kept = rows.filter(Boolean).sort((a, b) => (b.last > a.last ? 1 : b.last < a.last ? -1 : 0));
+    if (!kept.length) return null;
     const name = st === "us" ? "Congress" : NAMES[st.toUpperCase()];
-    return [name, `<div class="mst"><h3><a href="${st}/">${esc(name)}</a></h3><ol>${rows.map((x) => x.html).join("")}</ol></div>`];
+    return [name, `<div class="mst"><h3><a href="${st}/">${esc(name)}</a></h3><ol>${kept.map((x) => x.html).join("")}</ol></div>`, kept.length, kept.filter((x) => x.fresh).length];
   }));
-  const html = blocks.sort((a, b) => a[0].localeCompare(b[0])).map((x) => x[1]).join("");
+  const shown = blocks.filter(Boolean);
+  if (!shown.length) { sec.hidden = true; mineDrawn = ""; return; }
+  const n = shown.reduce((t, x) => t + x[2], 0), fresh = shown.reduce((t, x) => t + x[3], 0);
+  document.getElementById("mineCount").innerHTML = `· ${n} bill${n === 1 ? "" : "s"}${fresh ? ` <b>${fresh} new</b>` : ""}`;
+  const html = shown.sort((a, b) => a[0].localeCompare(b[0])).map((x) => x[1]).join("");
   if (html !== mineDrawn) { document.getElementById("mineList").innerHTML = html; mineDrawn = html; }
   sec.hidden = false;
+}
+{
+  const bar = document.getElementById("mineBar"), list = document.getElementById("mineList");
+  const setOpen = (on) => { bar.setAttribute("aria-expanded", String(on)); list.hidden = !on; try { localStorage.setItem("abt:home:mineOpen", on ? "1" : ""); } catch (e) {} };
+  let was = false;
+  try { was = localStorage.getItem("abt:home:mineOpen") === "1"; } catch (e) {}
+  setOpen(was);
+  bar.addEventListener("click", () => setOpen(list.hidden));
 }
 document.getElementById("mine").addEventListener("click", (e) => {
   if (starClick(e)) return;
@@ -571,19 +590,6 @@ document.getElementById("mine").addEventListener("click", (e) => {
 addEventListener("storage", (e) => { if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) drawMine(); });
 addEventListener("pageshow", () => drawMine());
 drawMine();
-// Find a state: filters the list as you type.
-const find = document.getElementById("find");
-find.hidden = false;
-find.addEventListener("input", () => {
-  const q = find.value.trim().toLowerCase();
-  let shown = 0;
-  for (const li of document.querySelectorAll("#states li")) {
-    const hit = !q || li.textContent.toLowerCase().includes(q);
-    li.hidden = !hit;
-    shown += hit;
-  }
-  document.getElementById("none").style.display = shown ? "none" : "block";
-});
 </script>
 </body>
 </html>
