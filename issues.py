@@ -17,20 +17,23 @@ needs two mentions (budget and omnibus bills mention a subject once in passing; 
 import re
 
 WINDOW = 400
+# The menu's groups, in order (the owner's choice 2026-11-15); each issue is in one.
+GROUPS = ["Technology", "Schools", "Health", "Housing and taxes", "Work and the economy", "Environment and energy",
+          "Rights and public safety", "Elections"]
 SHORT = 1500
 
 ISSUES = [
-    {"id": "datacenters", "name": "Data centers",
+    {"id": "datacenters", "group": "Technology", "name": "Data centers",
      "rules": [[r"\bdata ?cent(?:er|re)s?\b"], [r"\bhyperscale"], [r"\bhigh[- ]performance computing\b"],
                [r"\b(?:large|high)[- ]loads?\b", r"!\b(?:vehicles?|trailers?|trucks?|highways?|lanes?)\b"],
                [r"\b(?:large|high)[- ](?:energy[- ]use|energy[- ]demand|energy|use|load[- ]factor)(?: electric)? (?:facilit\w+|customers?|users?|consumers?)\b"]],
      "none": [r"\bstate data cent(?:er|re)", r"\bconsolidat\w*\b.{0,60}\bdata cent", r"\bdata cent(?:er|re)s? (?:services|consolidation)\b"]},
-    {"id": "pfas", "name": "PFAS (“forever chemicals”)",
+    {"id": "pfas", "group": "Environment and energy", "name": "PFAS (“forever chemicals”)",
      "rules": [[r"\bPFAS\b"], [r"perfluoro"], [r"polyfluoro"], [r"perfluorinated"], [r"\bforever chemicals?\b"],
                [r"\bPFOA\b"], [r"\bPFOS\b"], [r"\bfire[- ]?fighting foams?\b"], [r"(?-i)\bAFFF\b"],
                [r"\baqueous film[- ]forming foam"],
                [r"\b(?:turnout gear|firefighters?'? (?:personal )?protective (?:equipment|clothing))\b", r"\b(?:chemicals?|toxic|substances?)\b"]]},
-    {"id": "ai", "name": "Artificial intelligence",
+    {"id": "ai", "group": "Technology", "name": "Artificial intelligence",
      "rules": [[r"\bartificial intelligence\b"], [r"\bgenerative (?:AI|artificial)"], [r"\bAI[- ]generated\b"],
                [r"(?-i)\bAI\b"], [r"\bdeep ?fakes?\b"], [r"\bsynthetic media\b"],
                [r"\bdigitally (?:altered|fabricated|manipulated|created)\b", r"\b(?:image|video|audio|likeness|depiction|recording)s?\b"],
@@ -42,7 +45,7 @@ ISSUES = [
                  "Chatbots": [r"\bchat ?bots?\b", r"\bcompanion\b"],
                  "Hiring, insurance and decisions": [r"\bautomated decision", r"\balgorithmic discrimination\b", r"\bemploy", r"\bhiring\b", r"\binsur"],
                  "Government use": [r"\bstate agenc", r"\bgovernmental? (?:entit|agenc|bod|unit)", r"\bpublic (?:bod|entit|agenc)"]}},
-    {"id": "kidsonline", "name": "Children online and social media",
+    {"id": "kidsonline", "group": "Technology", "name": "Children online and social media",
      "filters": {"Age checks for adult websites": [r"\bpornograph", r"\bharmful (?:to minors|material)\b", r"\badult[- ](?:only )?(?:websites?|content|material)\b", r"\bsexual material\b"],
                  "Social media": [r"\bsocial (?:media|networking)\b"], "App stores": [r"\bapp stores?\b"],
                  "Design and privacy codes": [r"\bage[- ]appropriate design\b", r"\bkids code\b", r"\b(?:data|privacy)\b"]},
@@ -52,19 +55,19 @@ ISSUES = [
                [r"\b(?:online (?:services?|platforms?|products?)|digital services?)\b", r"\b(?:minors?|child|children|teens?|kids)\b"],
                [r"\bharmful (?:to minors|material)\b", r"\b(?:online|internet|websites?|digital|apps?)\b"],
                [r"\bage[- ]appropriate design\b"], [r"\bapp stores?\b", r"\b(?:minors?|age|parent)"]]},
-    {"id": "phones", "name": "Phones in schools",
+    {"id": "phones", "group": "Schools", "name": "Phones in schools",
      "rules": [[r"\b(?:cell(?:ular)? ?(?:tele)?phones?|smart ?phones?|wireless (?:communication|telecommunication)s? devices?|personal (?:electronic|communication|telecommunications?) devices?|(?:mobile|wireless|portable electronic|internet[- ]enabled|electronic|electronic telecommunications?) devices?|phone[- ]free)\b",
                 r"\b(?:schools?|students?|classrooms?|instructional (?:time|day))\b",
                 r"\b(?:use|uses|using|possess\w*|prohibit\w*|ban|bans|banned|polic(?:y|ies)|restrict\w*|free|limit\w*|access)\b",
                 r"!\b(?:recycl\w*|e-?waste|audits?)\b"]],
      "none": [r"\b(?:stopped|passing a) school bus", r"\bdistrict[- ]owned\b", r"\bwhile driving\b", r"\boperat\w* a (?:motor )?vehicle\b", r"\bbus drivers?\b", r"\bschool zones?\b"]},
-    {"id": "housing", "name": "Housing supply and zoning",
+    {"id": "housing", "group": "Housing and taxes", "name": "Housing supply and zoning",
      "rules": [[r"\baccessory dwelling"], [r"(?-i)\bADUs?\b"], [r"\bmissing[- ]middle\b"], [r"\bsingle[- ]family zon"],
                [r"\b(?:duplex|triplex|fourplex|quadplex)(?:es)?\b"], [r"\bminimum lot sizes?\b"],
                [r"\bparking (?:minimums?|requirements?|mandates?)\b", r"\bhous"], [r"\bby[- ]right\b", r"\bhous"],
                [r"\bhousing (?:production|supply)\b"], [r"\bhousing elements?\b"], [r"\bmulti-?family\b", r"\bzon(?:e|ed|ing)\b"],
                [r"\bdensity\b", r"\bhousing\b", r"\bzon(?:e|ed|ing)\b"], [r"\bstarter homes?\b"], [r"\bmanufactured hous", r"\bzon"]]},
-    {"id": "minwage", "name": "Minimum wage",
+    {"id": "minwage", "group": "Work and the economy", "name": "Minimum wage",
      # Only bills that set or change a minimum wage (the owner's decision 2026-11-15): not ones paying for its cost or
      # setting other pay by it.
      "rules": [[r"\bminimum (?:hourly )?wages?\W+(?:\w+\W+){0,6}?(?:increas\w*|rais\w*|establish\w*|eliminat\w*|repeal\w*|"
@@ -77,19 +80,19 @@ ISSUES = [
      "none": [r"\btimes the (?:state |federal |applicable )?minimum (?:hourly )?wage\b", r"\bjur(?:y|ors?)\b",
               r"\b(?:state funds?|operating costs?|costs? associated|reimburse\w*|tax credits?|grants?|grant programs?|"
               r"income tax|sales and use tax|sales tax|taxable income)\b"]},
-    {"id": "repair", "name": "Right to repair",
+    {"id": "repair", "group": "Technology", "name": "Right to repair",
      "rules": [[r"\bright[- ]to[- ]repair\b"], [r"\bdevices? repair\b"], [r"\bfair repair\b"], [r"\bdigital electronic (?:equipment|products?)\b", r"\brepair"],
                [r"\bindependent repair\b", r"\b(?:parts|tools|documentation|diagnostic)"],
                [r"\brepair", r"\b(?:powered wheelchairs?|wheelchairs?|agricultural equipment|farm equipment)\b"]],
      "none": [r"\bbody shops?\b", r"\bmotor vehicle repair\b", r"\bauto(?:mobile|motive)? repair\b"]},
-    {"id": "betting", "name": "Sports betting and online gambling",
+    {"id": "betting", "group": "Work and the economy", "name": "Sports betting and online gambling",
      "rules": [[r"\bsports (?:wagering|betting|wagers?|pools?|gaming)\b"], [r"\bsportsbooks?\b"], [r"\bi-?gaming\b"],
                [r"\binternet (?:gambling|casino)"], [r"\b(?:internet|online) gaming\b", r"\b(?:wager\w*|casinos?|gambl\w*|bets?|betting)\b"],
                [r"\bonline (?:casino|gambling|poker|lottery|sports)"],
                [r"\bsweepstakes casino"], [r"\bsweepstakes\b", r"\bgam(?:ing|bling|es)\b"],
                [r"\bfantasy (?:sports|contests?)\b"], [r"\bprediction markets?\b"]],
      "none": [r"\braffles?\b", r"\bbingo\b"]},
-    {"id": "drugcosts", "name": "Prescription drug costs",
+    {"id": "drugcosts", "group": "Health", "name": "Prescription drug costs",
      "rules": [[r"\binsulin\b", r"\b(?:costs?|prices?|pricing|co-?pay(?:ment)?s?|cost[- ]sharing|caps?|capped|out-of-pocket|affordab)"],
                [r"\bprescription drug affordability\b"], [r"\bpharmacy benefits? managers?\b"], [r"(?-i)\bPBMs?\b"],
                [r"\bdrug pric(?:e|es|ing)\b"], [r"\b(?:prescription )?drug (?:costs?|affordability)\b"],
