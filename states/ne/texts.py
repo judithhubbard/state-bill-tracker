@@ -194,9 +194,22 @@ def placed_on(year, key):
     return max(days, default="")
 
 
+def unmangle(t):
+    """Text that was UTF-8 read as Windows-1252 before it went into the PDF: a few committee statements print
+    "Commissionâ€™s" and "â€œminorâ€•" (CS-LB94 of 2023 among them; the PDFs themselves are like this). A closing quote's
+    third byte (0x9D) has no Windows character, and pdftotext gives it as "•"."""
+    t = t.replace("â€•", "”")
+    def fix(m):
+        try:
+            return m.group().encode("cp1252").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return m.group()
+    return re.sub(r"[ÂÃâ][\u0080-\u2122]{1,2}", fix, t)
+
+
 def read(path):
     try:
-        return open(path, encoding="utf-8").read()
+        return unmangle(open(path, encoding="utf-8").read())
     except OSError:
         return None
 

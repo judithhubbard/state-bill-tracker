@@ -152,6 +152,29 @@ def tally(a):
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
+def roll_calls(b):
+    """The bill's roll calls, each once. Some of 2023's are listed twice under one voteID (SF 22's 15-16 third reading;
+    SF 71's veto override, first labelled "Amendment Reconsideration Motion"), the later copy the right one, and their
+    name lists hold every name twice ("Harshman, ..., Speaker Sommers, Harshman, ..., Speaker Sommers"): a floor vote's
+    voteID is kept once (its last copy), and a list that is the same list twice is read once. (Committee votes have
+    negative ids that two different votes can share.)"""
+    rcs, last = [], {}
+    for i, r in enumerate(b.get("rollCalls") or []):
+        if (r.get("voteID") or 0) > 0:
+            last[r["voteID"]] = i
+    for i, r in enumerate(b.get("rollCalls") or []):
+        if (r.get("voteID") or 0) > 0 and last[r["voteID"]] != i:
+            continue
+        r = dict(r)
+        for k in ("yesVotes", "noVotes", "excusedVotes", "absentVotes", "conflictVotes"):
+            xs = [x.strip() for x in (r.get(k) or "").split(",")]
+            h = len(xs) // 2
+            if len(xs) >= 2 and len(xs) % 2 == 0 and xs[:h] == xs[h:]:
+                r[k] = ", ".join(xs[:h])
+        rcs.append(r)
+    return rcs
+
+
 def load_session(session):
     """Read one year's bills and return (records, bill number -> record index, fetched time, delegation)."""
     path = os.path.join(P.DATA, f"contacts_{session}.json")
@@ -201,7 +224,7 @@ def load_session(session):
         steps = [((a.get("statusDate") or "")[:10],) + decode(text(a.get("statusMessage")), amendment) + (text(a.get("statusMessage")),) for a in acts]
         steps = [(d, h if h else ({"House": "H", "Senate": "S"}.get(text(a.get("location")), "G")), t, x) for (d, h, t, x), a in zip(steps, acts)]
         # Veto override votes appear only among the roll calls: add them to the history, as written.
-        for r in b.get("rollCalls") or []:
+        for r in roll_calls(b):
             m = re.search(r"Override.*?(\d+)-(\d+)-\d+-\d+-\d+", text(r.get("action")))
             if m and r.get("chamber") in HOUSE:
                 ok = not re.search(r"did not|failed", r["action"], re.I)  # "Did Not Override Veto 35-27" (two-thirds needed)
@@ -318,7 +341,7 @@ def load_session(session):
             return out
 
         votes = []
-        for r in b.get("rollCalls") or []:
+        for r in roll_calls(b):
             # The action names its house ("S Introduced ...", "H02 - Appropriations: ..."); the chamber field is sometimes wrong.
             h = (lambda a: a[:1] if re.match(r"[HS](?: |\d{2} - )", a) else r.get("chamber") if r.get("chamber") in HOUSE else None)(text(r.get("action")))
             act = text(r.get("action"))

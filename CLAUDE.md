@@ -1931,6 +1931,18 @@ from that repo. **Nothing here may change it.**
   - A summary of a version another bill's contents replaced: KS conference reports often carry other bills' contents, and
     the supplemental note describes the bill before (HB 2043 of 2025-26: insurance as passed, property tax as law). The check
     LOOKs at laws whose summary shares almost no words with their title.
+  - (2026-11-16, found when 2023 was added) A roll call listed twice under one id, its name lists doubled: WY's SF 22
+    of 2023 (voteID 345 twice; "Biteman, ..., Steinmetz, Biteman, ..., Steinmetz") and SF 71's veto override (voteID
+    5600, first labelled "Amendment Reconsideration Motion"). `roll_calls()` in states/wy/convert.py keeps a floor
+    voteID's last copy and reads a list that is the same list twice once. The "more noes than their tally" check caught it.
+  - A history tally that can't be right: NM's SB 142 of 2023, "Passed in the Senate - Y:26 N:19" in a 42-seat Senate;
+    the roll call lists 22-19 by name (and HB 165 of 2026 "30-0" for 30-10). `floor_votes()` in states/nm/convert.py
+    takes the house's only roll call that day, when its names add up to its totals, and the history line says what the
+    record wrote. The "more ayes and noes than seats" check caught it.
+  - Stray bytes in pages that say UTF-8: NY Assembly memos carry single 0x95 bytes where a space belongs ("to be
+    known\x95as"; 518 of 2025's), decoded with "replace" as U+FFFD; `states/ny/memos.py` reads them as spaces and reads
+    those memos again. And PDFs whose own text is mojibake (NE's committee statement for LB 94 of 2023: "Commissionâ€™s",
+    "â€œminorâ€•"): `unmangle()` in states/ne/texts.py. The "wrongly decoded characters" check caught both.
 - **Hawaii (built 2026-11-15, from Open States):** the Legislature's site (capitol.hawaii.gov) turns automated readers
   away, and data.capitol.hawaii.gov is the same site without the block, so neither is ever read (the owner's decision
   2026-11-13; links on the page point there for visitors). `states/openstates_bulk.py hi` puts Open States' bulk records

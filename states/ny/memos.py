@@ -12,8 +12,22 @@ does". The memos never hold New York off the site: there is no "incomplete" mark
 
 Usage: python3 states/ny/memos.py [session_year]   (default: the current session)
 """
-import html, json, os, re, sys, time, urllib.parse, urllib.request
+import codecs, html, json, os, re, sys, time, urllib.parse, urllib.request
 from datetime import date
+
+
+def _cp1252(err):
+    """Bytes that aren't UTF-8: the Assembly's pages say UTF-8, but some memos carry single stray bytes, which a plain
+    "replace" turned into U+FFFD in 518 of 2025's memos. Most are 0x95 standing for a space ("to be known\x95as",
+    "of\x95the" in A228 and A223 of 2025; a Windows bullet makes no sense there) or 0xA0 (a non-breaking space): both are
+    read as spaces, any other as Windows-1252."""
+    out = ""
+    for b in err.object[err.start:err.end]:
+        out += " " if b in (0x95, 0xA0) else bytes([b]).decode("cp1252", "replace").replace("\ufffd", "")
+    return out, err.end
+
+
+codecs.register_error("cp1252", _cp1252)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.normpath(os.path.join(HERE, "..", "..", "data", "ny"))
@@ -61,7 +75,7 @@ def memo(print_no):
     for attempt in range(3):
         try:
             with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=60) as r:
-                page = r.read().decode("utf-8", "replace")
+                page = r.read().decode("utf-8", "cp1252")
             time.sleep(1)  # be gentle with the Assembly's site
             break
         except Exception as e:
@@ -89,6 +103,8 @@ def parse(page):
 def main():
     os.makedirs(DATA, exist_ok=True)
     have = json.load(open(OUT)) if os.path.exists(OUT) else {}
+    # Memos read before Windows bytes were decoded have U+FFFD in them: read those again.
+    have = {n: t for n, t in have.items() if "\ufffd" not in t}
     bills = assembly_bills()
     todo = [p + v for p, v in sorted(bills.items(), key=lambda x: int(x[0][1:])) if p + v not in have]
     print(f"{SESSION}: {len(bills)} Assembly bills, {len(have)} memos kept, {len(todo)} to read", flush=True)

@@ -1083,7 +1083,7 @@ def record(session, b, parties):
             if first_fate is None and r["code"] == first_ref:
                 first_fate = "defeated"
     steps.sort(key=lambda s: s[0])  # stable: the tabling lines join their day
-    votes.extend(floor_votes(session, p, vote_steps))
+    votes.extend(floor_votes(session, p, vote_steps, steps))
     votes.sort(key=lambda v: v[3])
 
     def dates(test, mode="last"):
@@ -1139,13 +1139,27 @@ def record(session, b, parties):
     return rec, what
 
 
-def floor_votes(session, p, vote_steps):
-    """Each passage or failed vote: member by member when the house's vote PDF has that tally, else the tally."""
+def floor_votes(session, p, vote_steps, steps=None):
+    """Each passage or failed vote: member by member when the house's vote PDF has that tally, else the tally.
+
+    A history tally can be wrong: SB 142 of 2023's page says "Passed in the Senate - Y:26 N:19" (45 votes in a 42-seat
+    Senate), and its roll call lists 22-19, name by name. When no roll call has the history's tally, the house's only
+    roll call that day is the vote when the history has no other vote in that house that day and the roll call's names add
+    up to its own totals: its totals are used, and the history's tally line (in `steps`) says what the record wrote."""
     out = []
     rolls = roll_calls(session, p)
     used = set()
     for h, d, y, n in vote_steps:
         r = next((r for i, r in enumerate(rolls) if i not in used and r["h"] == h and (r["y"], r["n"]) == (y, n)), None)
+        if not r and sum(1 for h2, d2, *_ in vote_steps if (h2, d2) == (h, d)) == 1:
+            same = [r for i, r in enumerate(rolls) if i not in used and r["h"] == h and r["date"] == d]
+            if len(same) == 1 and same[0]["counted"] == (same[0]["y"], same[0]["n"]):
+                r = same[0]
+                for i, st in enumerate(steps or []):
+                    if st[0] == d and st[1] == h and st[3] in ("tally", "final", "failed") and f"{y}-{n}" in st[2]:
+                        steps[i] = (st[0], st[1], st[2].replace(f"{y}-{n}", f"{r['y']}-{r['n']}") +
+                                    f" (the roll call; the Legislature's history says {y}-{n})", st[3])
+                y, n = r["y"], r["n"]
         if r:
             used.add(rolls.index(r))
             out.append([h, "F", None, d, y, n, [[seat_of(session, h, name), c] for name, c in r["listed"]]])
