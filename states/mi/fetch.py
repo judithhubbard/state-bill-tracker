@@ -11,6 +11,8 @@ Usage: python3 states/mi/fetch.py   (2023-2024 and 2025-2026)
 import glob, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.request
 from collections import Counter
 from datetime import date, datetime
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://www.legislature.mi.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "mi"))
@@ -68,7 +70,8 @@ def main():
         contacts.main(CURRENT)
     except SystemExit as e:
         print(e)
-    for start in (CURRENT, CURRENT - 2):  # the current session first
+    # The shared window's sessions (states/window.py: from 2023-24 until 2029), the current session first.
+    for start in range(CURRENT, W.first_session() - 1, -2):
         if only and start != only:
             continue
         session = f"{start}-{start + 1}"
@@ -116,7 +119,7 @@ def main():
     elif os.path.exists(marker) and not only:
         os.remove(marker)
     # The marker is settled before the analyses: they never hold Michigan off the site, even if the run is cut off.
-    for start in (CURRENT, CURRENT - 2):
+    for start in range(CURRENT, W.first_session() - 1, -2):
         if not only or start == only:
             analyses(start)
     print(f"run: {round((time.time() - START) / 60)} min" + ("; stopped at the time limit" if out_of_time() else "")

@@ -56,7 +56,7 @@ the next one once its prefiled bills are listed, into data/ia/<first year>/ (202
   present, absent or not voting and excused by surname, as text by pdftotext -layout), read once. These are the final
   passage votes (and votes on bills substituted for the other house's companion); amendment votes aren't read. The list
   is read every run during January to June of its year, weekly after while its General Assembly is current, and monthly
-  for the one before.
+  for the older ones (the shared window, states/window.py: from the 90th, 2023-24, until 2029).
 - state.json: each bill's signal ("sig", its last action and date) when its history was read, the day it was read
   ("read"), bills that answer 404 ("absent"), texts read or absent, and when the lists were read.
 And into data/ia/members/<first year>/: house.html and senate.html (/legislators/house?ga=91: name, district, party,
@@ -64,7 +64,7 @@ county, email; members who left show their dates of service), pages/<personID>.h
 personID=6174: committees with "(Chair)", "(Ranking Member)" and dates for former memberships, "Legislative Email",
 "Capitol Phone" (nearly all the House's 515.281.3221 or the Senate's 515.281.3371 switchboard), home phone and address
 where given), and members.json, what this script reads from them. Read weekly for the current General Assembly, once
-for the one before. And data/ia/committees.json and committees/<groupID>.html: the current General Assembly's House and
+for older ones. And data/ia/committees.json and committees/<groupID>.html: the current General Assembly's House and
 Senate standing committees and the joint appropriations subcommittees (/committees, then /committees/committee?ga=91&
 groupID=629: each member with party, district and "Chair", "Vice Chair" or "Ranking Member"), weekly.
 
@@ -90,6 +90,8 @@ Usage: python3 states/ia/fetch.py [first year]   (default: every General Assembl
 import html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.parse, urllib.request
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://www.legis.iowa.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "ia"))
@@ -735,9 +737,9 @@ def committee_page(part, group, section):
 
 def assemblies():
     """The General Assemblies to read, newest first: the next one (November and December of an even year, once listed),
-    the current one and the one before."""
+    the current one and those of the shared window before it (states/window.py: the 90th, 2023-24, until 2029)."""
     cur = ga_of(YEAR)
-    gas = [cur, cur - 1]
+    gas = list(range(cur, ga_of(W.first_session()) - 1, -1))
     if YEAR % 2 == 0 and TODAY.month >= 11:
         gas.insert(0, cur + 1)
     return [g for g in gas if not ONLY or first_year(g) == ONLY]

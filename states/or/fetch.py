@@ -2,7 +2,7 @@
 """Download Oregon's legislative data from the Legislature's OData API (https://api.oregonlegislature.gov/odata/
 odataservice.svc/; see the state-survey-2026-10-31 memory): for each regular session, the tables the site uses, into
 data/or/<session key>/<table>.json. One request at a time; the API pages long tables (odata.nextLink).
-Usage: python3 states/or/fetch.py [first_year]   (default: two years back)
+Usage: python3 states/or/fetch.py [first_year]   (default: four years back)
 """
 import json, os, sys, time, urllib.parse, urllib.request
 from datetime import date

@@ -95,6 +95,8 @@ Usage: python3 states/nh/fetch.py [--texts-only] [--max-requests=N]  (the option
 import functools, gzip, json, os, re, sys, time, urllib.error, urllib.request, urllib.robotparser
 from collections import Counter
 from datetime import date, datetime, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://gc.nh.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "nh"))
@@ -334,8 +336,9 @@ WEEKLY_DAYS = 7
 
 
 def history_years():
-    """The session years the SQL Server fills in: the previous biennium's and this biennium's past years."""
-    return list(range(first_year(TODAY.year) - 2, TODAY.year))
+    """The session years the SQL Server fills in: the shared window's past years (states/window.py: from 2023 until 2029,
+    a General Court's both years together)."""
+    return list(range(W.first_session(), TODAY.year))
 
 
 def sql_login(rp):

@@ -36,11 +36,13 @@ For each two-year session (2023 = 2023-2024, 2025 = 2025-2026; regular session o
   in run by run and never mark the copy incomplete. `--summaries` reads only them (`--limit=N`: at most N requests).
 data/nc/incomplete lists what was never downloaded (a failed refresh keeps the last copy; roll calls still to read count
 only before the first clean run); it is removed when nothing is missing.
-Usage: python3 states/nc/fetch.py [first_year]   (default: the session before this one, and this one)
+Usage: python3 states/nc/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029), through this one)
 """
 import html, json, math, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://www.ncleg.gov"
 WS = "https://webservices.ncleg.gov"
@@ -49,7 +51,7 @@ AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/
 YEAR = date.today().year
 CURRENT = YEAR if YEAR % 2 else YEAR - 1
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
-FIRST = int(ARGS[0]) if ARGS else CURRENT - 2
+FIRST = int(ARGS[0]) if ARGS else W.first_session()
 SUMMARIES_ONLY = "--summaries" in sys.argv
 LIMIT = next((int(a[8:]) for a in sys.argv if a.startswith("--limit=")), None)
 DELAY = 2.0  # robots.txt's Crawl-delay

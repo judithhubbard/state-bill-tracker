@@ -41,8 +41,10 @@ when nothing is missing. A year Open States doesn't list yet (January, before th
 or the daily limit during a later update keeps the saved bills; the next run asks again from the same place.
 Usage: python3 states/hi/fetch.py
 """
-import json, os, time, urllib.error, urllib.parse, urllib.request
+import json, os, sys, time, urllib.error, urllib.parse, urllib.request
 from datetime import date, datetime, timedelta, timezone
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 API = "https://v3.openstates.org"
 PEOPLE = "https://data.openstates.org/people/current/hi.csv"
@@ -50,7 +52,7 @@ DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 TODAY = date.today()
 YEAR = TODAY.year
-FIRST = (YEAR if YEAR % 2 else YEAR - 1) - 2  # the first year of last biennium
+FIRST = W.first_session()  # the shared window's first biennium (states/window.py: 2023-24 until 2029)
 DELAY = 6.0
 DAILY_MAX = int(os.environ.get("OPENSTATES_HI_DAILY") or 110)
 INCLUDE = ["sponsorships", "actions", "votes", "versions", "documents", "abstracts", "sources", "other_identifiers",

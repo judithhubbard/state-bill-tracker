@@ -8,18 +8,20 @@ robots.txt allows everything; see the state-survey-2026-10-31 memory).
   read once; the current one's bills are read again when the list shows a change, or every run for bills with
   recent activity.
 - The members (with emails and phones), committees, leadership and session laws.
-Three requests at a time. Usage: python3 states/ma/fetch.py [first_year]   (default: the General Court before this one)
+Three requests at a time. Usage: python3 states/ma/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029)
 """
 import json, os, sys, time, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 API = "https://malegislature.gov/api"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "ma"))
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 YEAR = date.today().year
 CURRENT = YEAR if YEAR % 2 else YEAR - 1
-FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else CURRENT - 2
+FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else W.first_session()
 INCOMPLETE = set()
 
 

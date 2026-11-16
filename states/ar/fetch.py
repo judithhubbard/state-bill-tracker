@@ -43,7 +43,8 @@ What's saved, in data/ar/<biennium>/ (the odd first year: 2025 is the 95th Gener
 UTF-8 with plain line ends, under the server's file names: each file from the newest place that has it filled in: the
 live folder when its bills are this biennium's (or, between sessions, for this biennium's members and committees),
 else the newest kept copy. seen.json records where each came from and its listing entry; a file is
-downloaded again only when that changes. The bienniums read are the current one and the one before, and the next once
+downloaded again only when that changes. The bienniums read are the current one and those of the shared window before it
+(states/window.py: from 2023-24 until 2029), and the next once
 the live folder holds its bills (prefiling starts in November of even years).
 
 Sessions with no kept copy, from arkleg.state.ar.us (the Legislature's site; its robots.txt allows everything to all
@@ -94,6 +95,7 @@ from datetime import date, datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from listing_dates import same  # noqa: E402
+from states import window as W
 
 SERVER = "https://webftp.blr.arkansas.gov/"
 LIVE = "SessionInformation"
@@ -585,7 +587,7 @@ def main():
                 print(f"live folder: measures by session {dict(sessions)}", flush=True)
         else:
             print("live folder: no bills (between sessions)", flush=True)
-        bienniums = [CURRENT, CURRENT - 2]
+        bienniums = list(range(CURRENT, W.first_session() - 1, -2))  # the shared window (states/window.py)
         if live_biennium and live_biennium not in bienniums:
             bienniums.insert(0, live_biennium)  # next biennium's prefiled bills
         for biennium in bienniums:

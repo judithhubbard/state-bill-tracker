@@ -63,11 +63,14 @@ data/ks/incomplete says "running" during the first copy, then lists what was nev
 the active biennium's legislators, committees or an active member's details); it is removed when nothing is missing. A
 list that fails where a last copy exists keeps that copy and doesn't count; a biennium that hasn't begun (no bills yet)
 doesn't count either.
-Usage: python3 states/ks/fetch.py [biennium first year]   (default: the active and newest archived; one leaves the marker)
+Usage: python3 states/ks/fetch.py [biennium first year]   (default: the active and the archived ones in the shared
+window, states/window.py; one leaves the marker)
 """
 import gzip, html, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import Counter
 from datetime import date, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://kslegislature.gov"
 API = SITE + "/api/v1"
@@ -442,7 +445,9 @@ def main():
             else:
                 archived = []
         if active:
-            bienniums = [active] + archived[:1]
+            # The active biennium and the archived ones in the shared window (states/window.py: from b2023_24 until
+            # 2029); a biennium the site no longer lists keeps its last copy.
+            bienniums = [active] + [x for x in archived if first_year(x) >= W.first_session()]
             if ONLY:
                 bienniums = [x for x in [active] + archived if first_year(x) == ONLY]
         # What the site needs first (each biennium's lists, the active members' details), then the extras.

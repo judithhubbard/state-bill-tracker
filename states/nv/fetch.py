@@ -13,7 +13,8 @@ the 83rd 2025, the 84th 2027; bills for it are prefiled from the November before
 NELIS folders (34th2023Special, 35th2023Special, 36th2025Special) and are left out. Vetoed bills go back to the next
 regular session, which may override them ("Return to 2027 Session."); a 2023 veto that the 2025 session left alone says
 "No further action taken." on the 2023 bill. The lower house is the Assembly. For the next regular session (once its
-bill list has bills) and the two before it, into data/nv/<year>/:
+bill list has bills) and those of the shared window before it (states/window.py: from 2023 until 2029), into
+data/nv/<year>/:
 - list.json: {"session": "83rd2025", "bills": {"AB1": {"key": 11742, "summary", "title"}}, "laws": {"AB1": {"chapter":
   "60", "effective"}}, "vetoed": {"AB44": "6/5/2025"}}, from the bill lists (/HomeBill/BillsTab, one per type, every
   bill on one page: AB, SB, AJR, SJR), the list of bills that became law (/Bills/Passed/BecameLaw: the Statutes of
@@ -82,6 +83,8 @@ Usage: python3 states/nv/fetch.py [year]   (default: every session above; a sing
 import hashlib, html, json, os, re, subprocess, sys, tempfile, time
 from collections import Counter
 from datetime import date, datetime, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://www.leg.state.nv.us"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "nv"))
@@ -216,9 +219,10 @@ def session_name(year):
 
 
 def years():
-    """The next (or current) regular session and the two before it, newest first."""
+    """The next (or current) regular session and those of the shared window before it (states/window.py: from 2023
+    until 2029), newest first."""
     latest = TODAY.year if TODAY.year % 2 else TODAY.year + 1
-    return [latest, latest - 2, latest - 4]
+    return list(range(latest, W.first_session() - 1, -2))
 
 
 def live(year):

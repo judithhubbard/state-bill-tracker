@@ -28,18 +28,20 @@ For each two-year session (2023 = 2023-2024, 2025 = 2025-2026; regular session o
   committees.json, once a week for the current session.
 data/wi/incomplete lists what was never downloaded (a failed refresh keeps the last copy; roll calls, committee records
 and journals still to read count only until a run leaves nothing missing); it is removed when nothing is missing.
-Usage: python3 states/wi/fetch.py [first_year]   (default: the session before this one, and this one)
+Usage: python3 states/wi/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029), through this one)
 """
 import html, json, math, os, re, sys, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, datetime, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://docs.legis.wisconsin.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "wi"))
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 YEAR = date.today().year
 CURRENT = YEAR if YEAR % 2 else YEAR - 1
-FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else CURRENT - 2
+FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else W.first_session()
 HOUSES = {"asm": ("AB", "assembly"), "sen": ("SB", "senate")}
 # The lists read: (house, kind, number prefix). Joint resolutions are kept only for constitutional amendments.
 KINDS = [("asm", "bill", "AB"), ("sen", "bill", "SB"), ("asm", "joint_resolution", "AJR"), ("sen", "joint_resolution", "SJR")]

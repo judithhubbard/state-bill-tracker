@@ -71,6 +71,8 @@ import gzip, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib
 import xml.etree.ElementTree as ET
 from collections import Counter
 from datetime import date, datetime, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 REVISOR = "https://www.revisor.mn.gov"
 HOUSE = "https://www.house.mn.gov"
@@ -81,7 +83,7 @@ DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 TODAY = date.today()
 ONLY = sys.argv[1] if len(sys.argv) > 1 else None
-FIRST_LS = 93
+FIRST_LS = 93 + (W.first_session() - 2023) // 2  # the shared window (states/window.py): the 93rd, 2023-24, until 2029
 CURRENT_LS = 94 + (TODAY.year - 2025) // 2
 DELAY = 1.0
 RANGE = 500  # bill numbers a list search asks for (a search returns at most 500)

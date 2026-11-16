@@ -32,11 +32,14 @@ changes, when it has an action dated from two weeks before the last run on (the 
 constraint, one request), and every bill every four weeks. Each bill is its own request (about 2 seconds): a page of
 several bills leaves out the full title. A first copy of two Legislatures takes about 1.5
 hours. One request at a time, a second apart.
-Usage: python3 states/ak/fetch.py [legislature]   (default: the current Legislature and the one before)
+Usage: python3 states/ak/fetch.py [legislature]   (default: the current Legislature and those of the shared window before it,
+states/window.py: from the 33rd, 2023-24, until 2029)
 """
 import gzip, json, os, re, sys, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 API = "https://www.akleg.gov/publicservice/basis/"
 SITE = "https://www.akleg.gov"
@@ -44,6 +47,8 @@ DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 TODAY = date.today()
 CURRENT = 34 + (TODAY.year - 2025) // 2  # the 34th Legislature is 2025-2026
+# The shared window's Legislatures (states/window.py: from the 33rd, 2023-24, until 2029), the current one first.
+LEGISLATURES = list(range(CURRENT, 34 + (W.first_session() - 2025) // 2 - 1, -1))
 KINDS = ("HB", "SB", "HJR", "SJR")
 DETAIL = "Sponsors,Actions,CommitteeActions,Subjects,Versions;Fulltext=Urlonly,Fiscalnotes,Votes,Referrals"
 AMENDMENT = re.compile(r"proposing (an )?amendments? to the constitution of the state of alaska", re.I)
@@ -351,11 +356,11 @@ def main():
         open(marker, "w").write("running\n")
     problems = []
     try:
-        for legislature in (CURRENT, CURRENT - 1):  # the current Legislature first
+        for legislature in LEGISLATURES:  # the current Legislature first
             if only and legislature != only:
                 continue
             problems += legislature_run(legislature)
-        for legislature in (CURRENT, CURRENT - 1):
+        for legislature in LEGISLATURES:
             if only and legislature != only:
                 continue
             problems += statements_run(legislature, problems)
@@ -371,7 +376,7 @@ def main():
         return
     # Only data never downloaded keeps Alaska off the site; sponsor statements still to read hold it only while the
     # first copy is being built (a failed refresh keeps the last copy).
-    gaps = [g for legislature in (CURRENT, CURRENT - 1) if begun(legislature) for g in never_read(legislature)]
+    gaps = [g for legislature in LEGISLATURES if begun(legislature) for g in never_read(legislature)]
     if not whole:
         gaps += [p for p in problems if p.endswith(":statements") or p in ("refused", "time")]
     if problems:

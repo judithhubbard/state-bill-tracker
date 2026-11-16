@@ -86,6 +86,8 @@ Usage: python3 states/ne/fetch.py [first year]   (default: the newest two Legisl
 import gzip, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, datetime, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://nebraskalegislature.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "ne"))
@@ -799,9 +801,10 @@ def committees():
 # ---- the run ----
 
 def years():
-    """The newest two Legislatures, by first year (the next one from the January it meets)."""
+    """The Legislatures of the shared window (states/window.py: from 2023-24 until 2029), by first year, newest first
+    (the next one from the January it meets)."""
     cur = first_year(number_of(TODAY.year))
-    return [cur, cur - 2]
+    return list(range(cur, W.first_session() - 1, -2))
 
 
 def finished(year, folder, listing, state):

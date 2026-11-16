@@ -55,13 +55,15 @@ Usage: python3 states/de/fetch.py [assembly]   (default: every Assembly from FIR
 import gzip, html, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import Counter
 from datetime import date, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://legis.delaware.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "de"))
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 TODAY = date.today()
 ONLY = int(sys.argv[1]) if len(sys.argv) > 1 else None
-FIRST_GA = 152  # 2023-2024
+FIRST_GA = 152 + (W.first_session() - 2023) // 2  # the shared window (states/window.py): the 152nd, 2023-24, until 2029
 DELAY = 1  # no robots.txt; a second apart
 REREAD_DAYS = 28
 PEOPLE_DAYS = 7

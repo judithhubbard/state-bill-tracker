@@ -68,13 +68,15 @@ Usage: python3 states/mt/fetch.py [year]   (default: every session from FIRST_YE
 import gzip, json, os, sys, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 API = "https://api.legmt.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "mt"))
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 TODAY = date.today()
 ONLY = int(sys.argv[1]) if len(sys.argv) > 1 else None
-FIRST_YEAR = 2023
+FIRST_YEAR = W.first_session()  # the shared window (states/window.py): 2023 until 2029
 DELAY = 10  # api.legmt.gov's robots.txt: Crawl-delay: 10
 PAGE = 100
 LIVE_DAYS = 120

@@ -70,13 +70,17 @@ Usage: python3 states/nd/fetch.py [first year]   (default: every assembly from F
 import glob, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://ndlegis.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "nd"))
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 TODAY = date.today()
 ONLY = int(sys.argv[1]) if len(sys.argv) > 1 else None
-FIRST_YEAR = 2023  # the 68th Legislative Assembly; roll_call.json starts with it
+# The shared window (states/window.py): the 68th Legislative Assembly (2023) until 2029; never earlier, since
+# roll_call.json starts with it.
+FIRST_YEAR = W.first_session()
 DELAY = 1
 FILES = ("sessions", "members", "committees", "bills", "roll_call")  # each file's top key is its name
 WEEKLY = 7

@@ -9,18 +9,20 @@ state-survey-2026-10-31 memory; robots.txt limits only an accessibility scanner)
   and committee roll calls, and each roll call's page lists every member's vote (committee votes also carry a "Brief
   Description" of the bill). Into data/pa/<year>/bills/<HB17>.json (the bill's roll-call links, read again when the
   bill's lastUpdate changes) and data/pa/<year>/rollcalls/<key>.json (one per roll call; read once).
-One request a second. Usage: python3 states/pa/fetch.py [first_year]   (default: the session before this one)
+One request a second. Usage: python3 states/pa/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029)
 """
 import html, io, json, os, re, sys, time, urllib.request, zipfile
 import xml.etree.ElementTree as ET
 from datetime import date
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://www.palegis.us"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "pa"))
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 YEAR = date.today().year
 CURRENT = YEAR if YEAR % 2 else YEAR - 1
-FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else CURRENT - 2
+FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else W.first_session()
 INCOMPLETE = set()
 WHOLE = [True]  # the last run left nothing missing (set in main): roll calls still to read then don't hold the site
 # Steps that come with a roll call: committee reports and floor votes.

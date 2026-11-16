@@ -14,13 +14,15 @@ its operations; www.legis.ga.gov's robots.txt has no rules).
 - The members (GetMembersBySession, then GetMember for addresses, phones, emails, titles and committee roles) and
   committees (GetCommitteesBySession, then GetCommitteeForSession for members and roles) into members.json and
   committees.json; a finished session's once.
-Three requests at a time. Usage: python3 states/ga/fetch.py [first_year]   (default: the session before this one)
+Three requests at a time. Usage: python3 states/ga/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029)
 """
 import json, os, re, sys, time, urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from xml.sax.saxutils import escape
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 BASE = "http://webservices.legis.ga.gov/GGAServices"
 NS = "http://www.legis.ga.gov/2009/01/01/services/"
@@ -37,7 +39,7 @@ DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 YEAR = date.today().year
 CURRENT = YEAR if YEAR % 2 else YEAR - 1
-FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else CURRENT - 2
+FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else W.first_session()
 INCOMPLETE = set()
 
 
