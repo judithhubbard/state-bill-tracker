@@ -50,7 +50,8 @@ def current(state):
            "asOf": int(re.search(r"(\d{4})", os.path.basename(path)).group(1))}
     frac = None if facts["override"] == "majority" else Fraction(facts["override"])  # Indiana: a majority of the members
     for chamber, seats in facts["seats"].items():
-        parties = Counter(party_letter(p.get("party")) for sid, p in people.items() if sid[0] == chamber)
+        # (Congress's delegates and Resident Commissioner, marked "nonvoting", sit in the House but don't vote on bills.)
+        parties = Counter(party_letter(p.get("party")) for sid, p in people.items() if sid[0] == chamber and not p.get("nonvoting"))
         if facts.get("nonpartisan"):
             # Elected without party labels (Nebraska): members count as "N", and no party holds the chamber.
             parties = Counter({"N": sum(parties.values())}) if parties else Counter()
@@ -108,7 +109,8 @@ def summary_html(state, lower_name="House", sep=" · "):
     parts = [chamber_html(names.get(c, re.sub(r" of Delegates$", "", lower_name)), ch) for c, ch in
              sorted(b["chambers"].items(), key=lambda x: x[0] != "S")]
     gov = b["governor"]
-    parts.append(f'<span class="bp-ch" title="Governor {gov[0]}">Governor {badge(gov[1])}</span>')
+    exe = table().get(state, {}).get("executive", "Governor")  # Congress: the President
+    parts.append(f'<span class="bp-ch" title="{exe} {gov[0]}">{exe} {badge(gov[1])}</span>')
     return sep.join(p for p in parts if p)
 
 

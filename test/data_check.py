@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ks", "ky", "la", "ma", "md", "me", "mi", "mn", "mo", "ms", "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ks", "ky", "la", "ma", "md", "me", "mi", "mn", "mo", "ms", "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy", "us") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -39,7 +39,9 @@ def check(state):
 
     # The shared topics, with the shared names.
     mine = {k: v[0] for k, v in P.TOPICS.items()}
-    off = {k: mine.get(k) for k in TOPICS if mine.get(k) != TOPICS[k]} | {k: v for k, v in mine.items() if k not in TOPICS}
+    # (Congress adds topics no state needs, and names "gov" for itself: P.EXTRA_TOPICS, P.TOPIC_NAMES.)
+    shared = {**TOPICS, **getattr(P, "TOPIC_NAMES", {})}
+    off = {k: mine.get(k) for k in shared if mine.get(k) != shared[k]} | {k: v for k, v in mine.items() if k not in shared and k not in getattr(P, "EXTRA_TOPICS", ())}
     if off:
         say(state, "FAIL", f"topics differ from the shared list: {off}")
 

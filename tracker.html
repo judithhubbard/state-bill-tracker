@@ -1325,6 +1325,8 @@ const roleKind = (roles = []) => roles.some((r) => /^chair/.test(r)) ? "chair" :
   : roles.some((r) => /^your /.test(r)) ? "your-legislator" : roles.some((r) => /^sponsor/.test(r)) ? "sponsor" : roles.some((r) => /^member/.test(r)) ? "committee-member" : "legislator";
 const GOV_REACH = STATE.govReach;
 const span = STATE.sessionLabel;
+// Who signs or vetoes bills, in the page's words: the governor (the states) or the President (Congress, STATE.executive).
+const EXEC = { the: "the governor", The: "The governor", office: "Governor's office", title: "Governor", dear: "Dear Governor,", ...(STATE.executive || {}) };
 const storeKey = (k) => `${STORE}${DATA.session}:${PRESET?.who ? "who:" + PRESET.who + ":" : ""}${k}`;
 function store(k, v) { try { localStorage.setItem(storeKey(k), JSON.stringify(v)); } catch (e) {} }
 function recall(k) { try { const v = localStorage.getItem(storeKey(k)); return v == null ? null : JSON.parse(v); } catch (e) { return null; } }
@@ -1359,7 +1361,7 @@ const changesMade = (b) => followUps(b).some((x) => x.stage === 5);
 function followUpStatus(x) {
   if (x.stage === 5) return "signed, so the changes are law";
   if (x.stage === 6) return "vetoed";
-  if (x.stage === 4) return "on the governor's desk";
+  if (x.stage === 4) return `on ${EXEC.the}'s desk`;
   if (x.stage === 3) return passedBothLc;
   if (x.stage === 2 && x.passedIn) return `passed the ${x.passedIn}, not yet the ${x.passedIn === HOUSE.S ? HOUSE[LOW] : HOUSE.S}`;
   return DATA.current ? "not passed yet" : "never passed";
@@ -1587,7 +1589,7 @@ function renderPipeline() {
     1: "Approved by committee",
     2: `${HOUSE.S} ${num(oneHouse[HOUSE.S] || 0)} · ${HOUSE[LOW]} ${num(oneHouse[HOUSE[LOW]] || 0)}`,
     3: !voters ? STATE.passedBothNote(DATA.current) : voters === counts[3] ? (STATE.amendmentDone ? "Constitutional amendments" : "Going to the voters")
-      : `${num(counts[3] - voters)} to the governor · ${num(voters)} ${STATE.amendmentDone ? "constitutional amendments" : "to the voters"}`,
+      : `${num(counts[3] - voters)} to ${EXEC.the} · ${num(voters)} ${STATE.amendmentDone ? "constitutional amendments" : "to the voters"}`,
     4: DATA.current ? (nextDue ? `Next decision due ${fmtDate(nextDue)}` : counts[4] ? "Deadlines have passed" : "Nothing waiting") : "No decision in the records",
   };
   // Bills on a committee agenda that hasn't met yet: a line under "In committee".
@@ -1614,8 +1616,8 @@ function renderPipeline() {
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
     <div class="pg stale">${head("Died", [0, 1, 2, 3])}${[0, 1, 2, 3].map(row).join("")}</div>
     ${counts[4] ? `<div class="pg stale">${row(4)}</div>` : ""}` : `
-    <div class="pg leg">${head("In the Legislature", [0, 1, 2, 3])}${row(0)}${agendaRow}${[1, 2, 3].map(row).join("")}</div>
-    <div class="pg live"><div class="pg-h">With the governor</div>${[4].map(row).join("")}</div>
+    <div class="pg leg">${head(`In ${BODY}`, [0, 1, 2, 3])}${row(0)}${agendaRow}${[1, 2, 3].map(row).join("")}</div>
+    <div class="pg live"><div class="pg-h">With ${EXEC.the}</div>${[4].map(row).join("")}</div>
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>`}`;
 }
 
@@ -1686,7 +1688,7 @@ function plainAction(t, d, acts, short) {
     [/^repassed (Senate|Assembly|House)$/, (m, h) => `Passed the ${h} again`],
     [/^delivered to (Senate|Assembly|House)$/, (m, h) => `Sent to the ${h}`],
     [/^returned to (Senate|Assembly|House)$/, (m, h) => `Sent back to the ${h} after passing`],
-    [/^delivered to Governor$/, () => "Sent to the governor"],
+    [/^delivered to Governor$/, () => `Sent to ${EXEC.the}`],
     [/^died in (Senate|Assembly|House)$/, (m, h) => `Died in the ${h}`],
     [/^signed chapter (\d+)$/, (m, n) => `Signed into law (chapter ${n})`],
     [/^vetoed memo (\d+)$/, (m, n) => `Vetoed (memo ${n})`],
@@ -1708,9 +1710,9 @@ const LAW_WORD = STATE.lawWord || "Chapter";
 // the signature (Maine's) says only that it became law (STATE.noSignatures).
 const overriddenLaw = (b) => b.stage === 5 && !!b.dates.vetoed;
 // A law the governor neither signed nor vetoed in time (or, in some states, returned unsigned), as its history says.
-const NO_SIGNATURE = /without (?:the |my )?(?:governor'?s )?signature|w\/o sign|w\/out governor/i;
+const NO_SIGNATURE = /without (?:the |my )?(?:governor'?s |president'?s )?signature|w\/o sign|w\/out governor/i;
 const unsignedLaw = (b) => b.stage === 5 && !overriddenLaw(b) && b.vers.some((v) => v.actions.some(([, t]) => NO_SIGNATURE.test(t)));
-const lawLine = (b) => (overriddenLaw(b) ? "Became law over the governor's veto" : unsignedLaw(b) ? "Became law without the governor's signature" : STATE.noSignatures ? "Became law" : "Signed into law");
+const lawLine = (b) => (overriddenLaw(b) ? `Became law over ${EXEC.the}'s veto` : unsignedLaw(b) ? `Became law without ${EXEC.the}'s signature` : STATE.noSignatures ? "Became law" : "Signed into law");
 const partlyVetoed = (b) => b.stage === 5 && b.vers.some((v) => v.actions.some(([, t]) => /partially vetoed|line-item veto|item veto/i.test(t)));
 function statusText(b) {
   const D = b.dates, live = DATA.current;
@@ -1742,10 +1744,10 @@ function statusText(b) {
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
   } else if (b.stage === 3) {
     t = PASSED_BOTH;
-    small = `${toVoters(b) ? "Sent to the voters, not the governor" : isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentDone || (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters")) : `First passage: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
+    small = `${toVoters(b) ? `Sent to the voters, not ${EXEC.the}` : isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentDone || (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters")) : `First passage: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
       : STATE.passedBothNote(live, b)} · passed ${fmtDate([D.passS, D.passA].sort().pop())}`;
   } else if (b.stage === 4) {
-    t = live ? "On the governor's desk" : "Sent to the governor";
+    t = live ? `On ${EXEC.the}'s desk` : `Sent to ${EXEC.the}`;
     small = live && b.due ? `Sent ${fmtDate(D.deliv)} · decision due ${fmtDate(b.due)} (est.)` : `Sent ${fmtDate(D.deliv)}`;
   } else if (b.stage === 5) {
     const how = overriddenLaw(b) ? "Veto overridden" : unsignedLaw(b) ? "Law without signature" : STATE.noSignatures ? "Became law" : "Signed";
@@ -1816,7 +1818,7 @@ const DECIDES = `<span class="decides">Decides</span>${TIP('The person whose dec
 // The same for a watchlist card's key contact (keyAction()).
 const copyLabel = (key) => (key.gov || !key.info?.email ? "Copy message" : "Copy email");
 const draftBtn = (b, house, name, ask, form = false) => `<button class="act-btn small" type="button" data-draft="${b.idx}" data-house="${house}" data-name="${esc(name)}" data-ask="${esc(ask)}">${house === "G" || form ? "Copy message" : "Copy email"}</button>`;
-const govItem = (ask, b, key = true) => `<li class="${key ? "key" : ""}"><span class="contact">Governor's office${key ? ` ${DECIDES}` : ""}</span><span class="ask">Ask: ${esc(ask)}</span><span class="reach">${draftBtn(b, "G", "", ask)} ${GOV_REACH}</span></li>`;
+const govItem = (ask, b, key = true) => `<li class="${key ? "key" : ""}"><span class="contact">${EXEC.office}${key ? ` ${DECIDES}` : ""}</span><span class="ask">Ask: ${esc(ask)}</span><span class="reach">${draftBtn(b, "G", "", ask)} ${GOV_REACH}</span></li>`;
 const commKey = (n) => (n || "").toLowerCase().split("and").join("").replace(/[^a-z]/g, "");
 const HOUSE = STATE.houses;
 // The lower house's letter ("A" for an Assembly, "H" for a House of Delegates), both houses in order, and
@@ -1951,7 +1953,8 @@ function setReps(s, a, more = {}) {
 // Assembly members are one's legislators. A town split between districts asks which one.
 const townKey = (t) => `${t[0]}|${t[1]}`;
 // A town's name, with its county where two towns share a name; and the list to pick from.
-const townName = (t) => DATA.towns.some((u) => u !== t && u[0] === t[0]) ? `${t[0]} (${t[1]} County)` : t[0];
+// (Places listed by region, Congress's by state: a place's name is unique within its state.)
+const townName = (t) => STATE.townRegions ? t[0] : DATA.towns.some((u) => u !== t && u[0] === t[0]) ? `${t[0]} (${t[1]} County)` : t[0];
 // What a place is called in the picker: "Town" (New Jersey), "County or city" (Virginia).
 const TOWN_WORD = STATE.townWord || "Town";
 // Towns that carry their own Senate and lower-house districts (Virginia's localities), not one district for both.
@@ -1961,9 +1964,9 @@ const TOWN_WORD = STATE.townWord || "Town";
 const DNAME = (h, d) => { const n = DATA.districtNames?.[h]?.[d]; return n && n.length > 1 && !/^\d+[A-Z]$/.test(n) ? n : undefined; };
 const DNUM = (h, d) => DATA.districtNames?.[h]?.[d] || d;
 const distLabel = (h, d) => DNAME(h, d) || `District ${DNUM(h, d)}`;
-const distPhrase = (h, d) => (DNAME(h, d) ? `the ${DNAME(h, d)} ${HOUSE[h]} district` : `${HOUSE[h]} District ${DNUM(h, d)}`);
+const distPhrase = (h, d) => STATE.distPhrase?.(h, d, DNAME(h, d)) || (DNAME(h, d) ? `the ${DNAME(h, d)} ${HOUSE[h]} district` : `${HOUSE[h]} District ${DNUM(h, d)}`);
 const townsSplitByHouse = () => (DATA.towns?.[0] || []).length > 3;
-const townOptions = (town) => `<option value="">Choose your ${TOWN_WORD.toLowerCase()}</option>` + DATA.towns.map((t) => `<option value="${esc(townKey(t))}"${t === town ? " selected" : ""}>${esc(townName(t))}</option>`).join("");
+const townOptions = (town, list = DATA.towns) => `<option value="">Choose your ${TOWN_WORD.toLowerCase()}</option>` + list.map((t) => `<option value="${esc(townKey(t))}"${t === town ? " selected" : ""}>${esc(townName(t))}</option>`).join("");
 // Choosing a town (here or in the Bills sidebar): its district, the one with most of its people if split.
 function setTown(key) {
   const t = DATA.towns.find((x) => townKey(x) === key);
@@ -1972,12 +1975,22 @@ function setTown(key) {
   if (townsSplitByHouse()) setReps(t[2].length === 1 ? t[2][0][0] : 0, t[3].length === 1 || STATE.townInAllDistricts ? t[3][0][0] : 0, { town: townKey(t) });
   else setReps(t[2][0][0], t[2][0][0], { town: townKey(t) });
 }
+// Places listed by region (Congress's: the state first, then the place, STATE.townRegions): a region's places, and the
+// districts they're in.
+const townRegions = () => (STATE.townRegions ? [...new Set(DATA.towns.map((t) => t[1]))] : null);
+const regionDistricts = (region, i) => [...new Set(DATA.towns.filter((t) => t[1] === region).flatMap((t) => t[i].map(([d]) => d)))].sort((a, b) => a - b);
+function setRegion(region) {
+  const S = regionDistricts(region, 2), L = regionDistricts(region, 3);
+  setReps(S.length === 1 ? S[0] : 0, L.length === 1 ? L[0] : 0, region ? { region } : {});
+}
 function renderTownRepsByHouse(box) {
   const reps = myReps(), c = chosenReps(), towns = DATA.towns;
   const town = c?.town ? towns.find((t) => townKey(t) === c.town) : null;
+  const regions = townRegions(), region = regions ? (town?.[1] || c?.region || "") : "";
   const lists = { S: town?.[2], [LOW]: town?.[3] };
   const opts = (h) => {
-    const mine = lists[h]?.length ? lists[h].map(([d]) => d) : [...new Set(LEGS.filter((L) => L.house === h).map((L) => L.district))].sort((a, b) => a - b);
+    const inRegion = region && !lists[h]?.length ? regionDistricts(region, h === "S" ? 2 : 3) : null;
+    const mine = lists[h]?.length ? lists[h].map(([d]) => d) : inRegion || [...new Set(LEGS.filter((L) => L.house === h).map((L) => L.district))].sort((a, b) => a - b);
     // (every member of a district that elects several: Vermont's, New Hampshire's)
     const who = (d) => LEGS.filter((L) => L.house === h && L.district === d).map((L) => shortName(L.name)).join(", ") || "vacant";
     return `<option value="">Choose your district</option>` + mine.map((d) => `<option value="${d}"${d === c?.[h] ? " selected" : ""}>${esc(distLabel(h, d))}: ${esc(who(d))}</option>`).join("");
@@ -1990,9 +2003,13 @@ function renderTownRepsByHouse(box) {
     ? `${esc(townName(town))} ${town[2].length > 1 && town[3].length > 1 ? `is split among ${town[2].length} Senate and ${town[3].length} ${HOUSE[LOW]} districts`
         : [["S", town[2]], [LOW, town[3]]].map(([h, ds], i) => ds.length === 1 ? `${i ? "" : "is "}in ${esc(distPhrase(h, ds[0][0]))}`
         : `${i ? "" : "is "}split among ${ds.length} ${HOUSE[h]} districts`).join(" and ")}. ${STATE.addressLookup && ROOT ? "Look up your address, or pick yours below." : `Pick yours below${STATE.findReps ? `, or <a href="${esc(STATE.findReps)}" target="_blank" rel="noopener">look up your address</a>` : ""}.`}`
-    : `${esc(townName(town))} is in ${esc(distPhrase("S", town[2][0]?.[0] ?? "?"))} and ${esc(distPhrase(LOW, town[3][0]?.[0] ?? "?"))}.`;
+    : `${esc(townName(town))} is in ${andList([["S", town[2]], [LOW, town[3]]].filter(([, ds]) => ds.length).map(([h, ds]) => esc(distPhrase(h, ds[0][0]))))}.`;
+  const picker = regions
+    ? `<label>${esc(STATE.regionWord || "State")} <select id="repR"><option value="">Choose your ${esc((STATE.regionWord || "State").toLowerCase())}</option>${regions.map((r) => `<option${r === region ? " selected" : ""}>${esc(r)}</option>`).join("")}</select></label>
+      <label>${esc(TOWN_WORD)} <select id="repT"${region ? "" : " disabled"}>${region ? townOptions(town, towns.filter((t) => t[1] === region)) : `<option value="">Choose your ${esc((STATE.regionWord || "State").toLowerCase())} first</option>`}</select></label>`
+    : `<label>${esc(TOWN_WORD)} <select id="repT">${townOptions(town)}</select></label>`;
   box.innerHTML = `<h2>Where you live</h2>
-    <div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOptions(town)}</select></label></div>
+    <div class="repsel">${picker}</div>
     ${where ? `<p class="muted">${where}</p>` : ""}
     ${STATE.addressLookup && ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
     <p class="muted" id="repMsg">The address goes to the U.S. Census Bureau's address lookup; only your district numbers are kept, in this browser.</p>` : ""}
@@ -2027,13 +2044,14 @@ function lookUpReps(address) {
     clearTimeout(timer);
     const g = data?.result?.addressMatches?.[0]?.geographies || {};
     const pick = (re) => { const k = Object.keys(g).find((x) => re.test(x)); return k && g[k][0] ? +g[k][0].BASENAME : null; };
-    const sd = pick(/Upper/), ad = pick(/Lower/);
+    // A state's own districts (Congress: STATE.lookupDistricts reads the congressional district).
+    const [sd, ad, region] = STATE.lookupDistricts ? STATE.lookupDistricts(g) : [pick(/Upper/), pick(/Lower/)];
     const county = (g.Counties?.[0]?.BASENAME || "").replace(/ County$/, "");
     countUse(sd && ad ? "lookup/found" : "lookup/not-found");
-    if (!sd || !ad) return done(`That address wasn't found in ${STATE.name || "New York"}. Try adding the town and ZIP code, or choose from the lists below.`);
+    if (!sd || !ad) return done(`That address wasn't found in ${STATE.lookupWhere || STATE.name || "New York"}. Try adding the town and ZIP code, or choose from the lists below.`);
     done("");
     if (county && (DATA.counties || []).includes(county)) { HOME = county; try { localStorage.setItem(STORE + "county", HOME); } catch (e) {} }
-    setReps(sd, ad);
+    setReps(sd, ad, region ? { region } : {});
   };
   s.src = `https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress?address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&vintage=Current_Current&layers=all&format=jsonp&callback=${cb}`;
   s.onerror = () => { clearTimeout(timer); done("The address lookup isn't available here. Choose your districts from the lists below."); };
@@ -2222,9 +2240,9 @@ function holdUp(b, v, oppose) {
   const money = commKey(STATE.moneyCommittees?.[house]) === commKey(cname);
   const skipChair = chairBacks ? ` The chair, ${chairName}, is a sponsor but hasn't brought it up for a vote.` : "";
   if (money && most && !budgetPassed()) return { leader: true, gov: true, chairBacks, ask: "include it in the budget",
-    note: `Bills that cost money often wait for the budget, which the governor and the ${lead ? leadTitle : "leaders"} negotiate until about April. Ask them to include it.${skipChair}` };
+    note: `Bills that cost money often wait for the budget, which ${EXEC.the} and the ${lead ? leadTitle : "leaders"} negotiate until about April. Ask them to include it.${skipChair}` };
   if (money && most && skipped) return { leader: true, gov: true, chairBacks,
-    note: `Most of the committee's members sponsor this bill, but it's stuck in ${commPlain(c.name)}, where bills that cost money often wait on the budget. ${lead ? `The ${leadTitle} and the governor have` : "The governor has"} a big say in that.${skipChair}` };
+    note: `Most of the committee's members sponsor this bill, but it's stuck in ${commPlain(c.name)}, where bills that cost money often wait on the budget. ${lead ? `The ${leadTitle} and ${EXEC.the} have` : `${EXEC.The} has`} a big say in that.${skipChair}` };
   if (chairBacks && most && skipped) return { leader: true, chairBacks,
     note: `The chair, ${chairName}, and most of the committee's members sponsor this bill, but it hasn't had a vote. That might mean the decision is being made higher up${lead ? `, by the ${leadTitle}` : ""}.` };
   if (chairBacks) return { chairBacks, note: skipChair.trim() };
@@ -2331,7 +2349,7 @@ function planFor(b, stance = "support") {
     book.reps([other], L(A("vote yes", "vote no")));
     if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
   } else if (b.stage === 3 && toVoters(b)) {
-    what = `<p class="when">It doesn't go to the governor. ${ballotLine(b)}</p>`;
+    what = `<p class="when">It doesn't go to ${EXEC.the}. ${ballotLine(b)}</p>`;
   } else if (b.stage === 3 && isAmendment(b)) {
     what = secondPassage(b)
       ? `<p class="when">${STATE.amendmentOnce ? "" : "Second passage. "}${ballotLine(b)}</p>`
@@ -2346,11 +2364,11 @@ function planFor(b, stance = "support") {
     book.reps(n.leaders || BOTH, A(...n.reps));
   } else if (b.stage === 4) {
     due = b.due;
-    what = `<p class="when">Next: the governor signs or vetoes it${b.due ? `, by about ${fmtDate(b.due)}` : ""}.</p>`;
+    what = `<p class="when">Next: ${EXEC.the} signs or vetoes it${b.due ? `, by about ${fmtDate(b.due)}` : ""}.</p>`;
     gov = A("sign it", "veto it") + (b.due ? ` by ${fmtDate(b.due)}` : "");
-    book.reps(BOTH, A("urge the governor to sign it", "urge the governor to veto it"));
+    book.reps(BOTH, A(`urge ${EXEC.the} to sign it`, `urge ${EXEC.the} to veto it`));
   } else if (b.stage === 5) {
-    what = `<p class="when">${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}.${partlyVetoed(b) ? " The governor vetoed part of it." : ""}</p>`;
+    what = `<p class="when">${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}.${partlyVetoed(b) ? ` ${EXEC.The} vetoed part of it.` : ""}</p>`;
     b.vers.forEach((v) => book.sponsor(v));
   } else if (b.stage === 6 && STATE.vetoReturns?.(b)) {
     // Nevada: a veto after the session goes back to the next regular session, which can override it.
@@ -2441,7 +2459,7 @@ function renderOpenNow() {
   $("openNow").innerHTML = `<h2>${L ? `${esc(L.label)}'s bills open for comment` : "Open for comment"}</h2>
     ${L ? `<p class="muted">${num(nOwn)} they sponsor and ${num(all.length - nOwn)} they co-sponsor; their own bills are listed first.</p>` : ""}
     ${comingUp(mine)}
-    <h3>On the governor's desk (${num(desk.length)}), soonest deadline first</h3>
+    <h3>On ${EXEC.the}'s desk (${num(desk.length)}), soonest deadline first</h3>
     <div class="list">${desk.map(billRow).join("") || `<div class="empty">None right now.</div>`}</div>
     <h3>${STATE.waitingHead} (${num(waiting.length)})</h3>
     <div class="list">${waiting.slice(0, openShown).map(billRow).join("") || `<div class="empty">None right now.</div>`}</div>
@@ -2579,8 +2597,8 @@ const ODDS_POINTS = [
 const isNarrow = (b) => !!(b.narrow || b.places.length);
 function oddsLine(b) {
   // Constitutional amendments don't go to the governor.
-  if (isAmendment(b)) return `A constitutional amendment doesn't go to the governor: it has to pass ${STATE.amendmentVote || (STATE.amendmentOnce ? "both houses" : "two separately elected Legislatures")}${STATE.amendmentDone ? "" : ", then the voters"}.`;
-  if (toVoters(b)) return "A measure the Legislature refers to the voters doesn't go to the governor: the voters decide.";
+  if (isAmendment(b)) return `A constitutional amendment doesn't go to ${EXEC.the}: it has to pass ${STATE.amendmentVote || (STATE.amendmentOnce ? "both houses" : "two separately elected Legislatures")}${STATE.amendmentDone ? "" : ", then the voters"}.`;
+  if (toVoters(b)) return `A measure ${BODY} refers to the voters doesn't go to ${EXEC.the}: the voters decide.`;
   // A shell's chances depend on whether the leaders pick it up, not on how past bills fared.
   if (b.stage > 4 || !DATA.insights || b.shell) return "";
   // Compared with past bills of the same kind (about one place, person or group, or not) and, where there
@@ -2603,7 +2621,7 @@ function oddsLine(b) {
   if (waiting) {
     const [mm, dd] = w.date.split("-").map(Number);
     const day = new Date(2000, mm - 1, dd).toLocaleDateString("en-US", { month: "long", day: "numeric" });
-    return `In past sessions, ${pctOf(law, n)}% of ${what} still waiting on the governor on ${day} were signed into law. ${requestLine()}`.trim();
+    return `In past sessions, ${pctOf(law, n)}% of ${what} still waiting on ${EXEC.the} on ${day} were signed into law. ${requestLine()}`.trim();
   }
   const label = { intro: "were introduced", floor: "were approved by a committee", passS: "passed the Senate", passA: `passed the ${HOUSE[LOW]}`, both: passedBothLc }[point];
   return `In past sessions, ${pctOf(law, n)}% of ${what} that ${label} became law.`;
@@ -2648,7 +2666,7 @@ function govTiming(I) {
   const yearRows = years.map(([y, who, s, v, o]) => vrow(`${y}${+y === new Date().getFullYear() && !govDone ? " (so far)" : ""} · ${who}`, "",
     [[((s + v) / maxY) * 100, "v"], [(s / maxY) * 100, "l"]], `<b class="big">${num(s + v)}</b> decisions · ${pctOf(v, s + v)}% vetoed`
       + (o ? ` · ${o === v ? (v === 1 ? "overridden" : "all overridden") : `${num(o)} overridden`}` : ""))).join("");
-  return `<h3 class="sub">The governor's decisions by year</h3>
+  return `<h3 class="sub">${EXEC.The}'s decisions by year</h3>
     <p class="key"><span><i class="k-law"></i>Signed</span><span><i class="k-veto"></i>Vetoed</span></p>
     <div class="vlist">${yearRows}</div>
     ${STATE.govYearsNote ? `<p class="note">${STATE.govYearsNote}</p>` : ""}`;
@@ -3258,7 +3276,7 @@ function sankey(odds, fate, cfate) {
     if (over) labels += `<text class="sk-p" x="${x4 + nodeW + 6}" y="${vy - 6}">${num(over)} overridden</text>`;
     g += `<rect class="sk-lawn" x="${x5}" y="${top}" width="${nodeW}" height="${h(law)}"/>`;
     labels += label(x5 + nodeW + 8, top + 11, ["Became law", `${num(law)} · ${pct(law)} of bills`,
-      over ? `${num(over)} over the governor's veto` : ""]);
+      over ? `${num(over)} over ${EXEC.the}'s veto` : ""]);
     g += `<rect class="sk-veton" x="${x5}" y="${sy}" width="${nodeW}" height="${h(vetoed)}"/>`;
     labels += label(x5 + nodeW + 8, sy + 8, ["Veto stood", `${num(vetoed)} · ${pct(vetoed)} of bills`, back("vetoed")]);
     bottom = Math.max(bottom, sy + 45, vy + h(allVetoes) + 50);
@@ -3424,7 +3442,8 @@ function renderOutcomes() {
   const max = Math.max(...rows.map((r) => r.share), 0.0001);
   $("ocUntil").textContent = STATE.openUntil(DATA.session);
   $("ocShells").textContent = shellsOut();
-  $("ocTable").innerHTML = `<thead><tr><th>Session</th><th>Bills introduced</th><th>${PASSED_BOTH}</th><th>Signed into law</th><th>Vetoed</th><th>Became law, as % of bills introduced</th><th>Governor signed, as % of bills the governor acted on</th></tr></thead>
+  if (STATE.executive) { const note = $("ocUntil").parentElement; note.innerHTML = note.innerHTML.replace("“Governor signed”: share of bills the governor acted on.", `“${EXEC.title} signed”: share of bills ${EXEC.the} acted on.`); }
+  $("ocTable").innerHTML = `<thead><tr><th>Session</th><th>Bills introduced</th><th>${PASSED_BOTH}</th><th>Signed into law</th><th>Vetoed</th><th>Became law, as % of bills introduced</th><th>${EXEC.title} signed, as % of bills ${EXEC.the} acted on</th></tr></thead>
     <tbody>${rows.map(({ session, c, share }) => `<tr class="${session === DATA.session ? "here" : ""}">
       <td>${span(session)}${session === LATEST ? " (open)" : ""}</td><td>${num(c[0])}</td><td>${num(c[1])}</td><td>${num(c[2])}</td><td>${num(c[3])}</td>
       <td class="bar"><div class="sharebar"><i style="width:${(share / max) * 70}%"></i><b>${pct(c[2], c[0])}</b></div></td>
@@ -3545,7 +3564,7 @@ function keyDates(b) {
     ...D.passSAll.map((d, i) => [d, i ? "Passed the Senate again" : "Passed the Senate"]),
     ...D.passAAll.map((d, i) => [d, i ? `Passed the ${HOUSE[LOW]} again` : `Passed the ${HOUSE[LOW]}`]),
     [D.died, "Sent back to committee for the new year (had to pass again)"],
-    [D.deliv, "Sent to the governor"],
+    [D.deliv, `Sent to ${EXEC.the}`],
     [D.signed, `${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}`],
     [D.vetoed, `Vetoed${b.veto ? `, Memo ${b.veto}` : ""}`],
   ].filter(([d]) => d).sort((x, y) => x[0].localeCompare(y[0]));
@@ -3603,7 +3622,7 @@ function whatItDoesHtml(b) {
   const lead = ps.length > 1 && ps.join(" ").length > 700 ? `${paras(ps[0])}<details class="memo"><summary>Read the rest</summary>${paras(ps.slice(1).join("\n"))}</details>` : paras(stmt);
   return `<div class="whatdoes"><h4>What it does</h4>${stmt ? `<div class="wd-stmt">${lead}<p class="muted">${esc(label || "From the sponsor's statement.")}</p></div>` : ""}
     ${commText ? `<details class="memo"><summary>As the ${esc(comm || "committee")} approved it${when ? `, ${fmtDate(when)}` : ""}</summary>${paras(commText)}</details>` : ""}
-    ${cost ? `<details class="memo"><summary>What it would cost (the Legislature's budget office)</summary>${paras(cost)}</details>` : ""}</div>`;
+    ${cost ? `<details class="memo"><summary>What it would cost (${BODY}'s budget office)</summary>${paras(cost)}</details>` : ""}</div>`;
 }
 // In a bill panel: the text if it's loaded, else a spot filled in when it arrives.
 function whatItDoes(b) {
@@ -4156,7 +4175,7 @@ function logBlock(x) {
   if (x.key) who.push(titleOf(x.key));
   for (const r of x.reps) who.push(titleOf(r));
   for (const p of x.plan?.book?.entries() || []) { const tt = `${TITLE[p.house]} ${p.name}`; if (!who.some((w) => lastName(w) === lastName(tt))) who.push(tt); }
-  if (!who.includes("Governor's office")) who.push("Governor's office");
+  if (!who.includes(EXEC.office)) who.push(EXEC.office);
   who.push("Someone else");
   return `<div class="log">
     ${entries.length ? `<ul class="logged">${entries.map((e) => `<li><time>${fmtDate(e.d)}</time> <b>${esc(e.how)}</b> · ${esc(e.who)}${e.note ? ` · <span class="note">${esc(e.note)}</span>` : ""} <button class="x" type="button" data-unlog="${e.id}" title="Delete this entry">×</button></li>`).join("")}</ul>` : ""}
@@ -4179,7 +4198,7 @@ function keyAction(b, stance) {
   const people = DATA.contacts?.people || {};
   const infoFor = (name) => people[name] || Object.entries(people).find(([n]) => lastName(n) === lastName(name))?.[1] || {};
   let key = null;
-  if (plan.gov) key = { gov: true, name: "Governor's office", ask: plan.gov };
+  if (plan.gov) key = { gov: true, name: EXEC.office, ask: plan.gov };
   else {
     const starred = plan.book.entries().filter((e) => e.star && e.asks.length);
     const p = (plan.leaderFirst && starred.find((e) => e.roles.some((r) => r.includes("decides which bills come to the floor")))) || starred[0];
@@ -4198,7 +4217,7 @@ function keyAction(b, stance) {
   return { plan, key, more, reps };
 }
 
-const titleOf = (p) => (p.gov ? "Governor's office" : /\b(?:Committee|Board)\b/.test(p.name) ? p.name : `${TITLE[p.house]} ${p.name}`);
+const titleOf = (p) => (p.gov ? EXEC.office : /\b(?:Committee|Board)\b/.test(p.name) ? p.name : `${TITLE[p.house]} ${p.name}`);
 // A bill that's out of time this session can come back next session only if its sponsors reintroduce it.
 function reintroAsk(b, stance) {
   if (stance === "oppose" || !floorVotesOver() || b.stage >= 3 || continuedTo(b)) return "";
@@ -4268,7 +4287,7 @@ function renderWatchView() {
     for (const x of xs) { const k = `${g}|${x.key.gov ? "gov" : `${x.key.house}:${lastName(x.key.name)}`}`; (byPerson.get(k) || byPerson.set(k, []).get(k)).push(x); }
     return [...byPerson.entries()].filter(([, ys]) => ys.length > 1).map(([k, ys]) => {
       multiAll[k] = ys;
-      return `<p class="multi">${num(ys.length)} of these need ${ys[0].key.gov ? "the governor's office" : esc(titleOf(ys[0].key))}. <button class="act-btn" type="button" data-multi="${esc(k)}">${copyLabel(ys[0].key).replace("Copy", "Copy one")} about all ${num(ys.length)}</button></p>`;
+      return `<p class="multi">${num(ys.length)} of these need ${ys[0].key.gov ? EXEC.office.replace(/^\w/, (c) => c.toLowerCase()).replace(/^(?!the )/, "the ") : esc(titleOf(ys[0].key))}. <button class="act-btn" type="button" data-multi="${esc(k)}">${copyLabel(ys[0].key).replace("Copy", "Copy one")} about all ${num(ys.length)}</button></p>`;
     }).join("");
   };
   $("wlActions").innerHTML = ""; $("wlActions").hidden = true;
@@ -4343,7 +4362,7 @@ function actionRecord(list) {
 
 // A short, plain email: one person, one or more bills.
 function draftFor(person, xs) {
-  const greet = person.gov ? "Dear Governor," : `Dear ${GREET[person.house]} ${shortName(person.name)},`;
+  const greet = person.gov ? EXEC.dear : `Dear ${GREET[person.house]} ${shortName(person.name)},`;
   const lines = xs.map((x) => `- ${x.b.nums.join(" / ")}, ${x.b.title}: please ${x.ask}.`).join("\n");
   return `${greet}\n\nI'm writing about ${xs.length === 1 ? "this bill" : "these bills"}:\n\n${lines}\n\nThank you,\n[Your name]\n[Your address]`;
 }
@@ -4815,8 +4834,8 @@ function wire() {
     else if (e.target.id === "repS" || e.target.id === "repA") setReps($("repS").value, $("repA").value);
     else if (e.target.id === "repDS" || e.target.id === "repDL") {
       const c = chosenReps() || {};
-      setReps(e.target.id === "repDS" ? e.target.value : c.S, e.target.id === "repDL" ? e.target.value : c[LOW], c.town ? { town: c.town } : {});
-    } else if (e.target.id === "repT") setTown(e.target.value); else if (e.target.id === "repD" && e.target.value) {
+      setReps(e.target.id === "repDS" ? e.target.value : c.S, e.target.id === "repDL" ? e.target.value : c[LOW], { ...(c.town ? { town: c.town } : {}), ...(c.region ? { region: c.region } : {}) });
+    } else if (e.target.id === "repR") setRegion(e.target.value); else if (e.target.id === "repT") setTown(e.target.value); else if (e.target.id === "repD" && e.target.value) {
       const t = DATA.towns.find((x) => townKey(x) === chosenReps()?.town);
       const d = +e.target.value;
       setReps(d, d, t && t[2].some(([x]) => x === d) ? { town: townKey(t) } : {});
@@ -4976,7 +4995,7 @@ function renderHowCal() {
   const now = DATA.current && today < `${Y + YEARS}` ? `<span class="now" style="left:${pos(today)}%;top:${LEG - 4}px;height:${GOV + H - LEG + 8}px"><i>Today</i></span>` : "";
   const BOTTOM = 262;
   $("howCal").innerHTML = `<div class="tl">
-    <span class="rl" style="top:${LEG}px">Legislature</span><span class="rl" style="top:${GOV}px">Governor</span>
+    <span class="rl" style="top:${LEG}px">${BODY_CAP.replace(/^The /, "")}</span><span class="rl" style="top:${GOV}px">${EXEC.title}</span>
     <div class="plot">
       <div class="yrs">${YEARS > 1 ? `<span style="left:0">${Y}</span><span style="left:50%">${Y + 1}</span>`
         : [[`January ${Y}`, `${Y}-01-01`], ["April", `${Y}-04-01`], ["July", `${Y}-07-01`], ["October", `${Y}-10-01`]].map(([t, d]) => `<span style="left:${pos(d)}%">${t}</span>`).join("")}</div>
@@ -5116,13 +5135,13 @@ function renderPerson(L, past) {
     <div class="photo"><span>${esc(L.name.split(" ").filter((w) => /^[A-Z]/.test(w) && !/^(Jr|Sr|II|III)\.?$/.test(w)).map((w) => w[0]).filter((c, i, a) => i === 0 || i === a.length - 1).join(""))}</span>${L.image ? `<img src="${esc(L.image)}" alt="" onerror="this.remove()">` : ""}</div>
     <div class="who-body">
       <h2>${esc(L.label)}</h2>
-      <p>${[L.party, DNAME(L.house, L.district) ? `${house}, ${DNAME(L.house, L.district)} district` : `${house} District ${DNUM(L.house, L.district)}`, since].filter(Boolean).map(esc).join(" · ")}</p>
+      <p>${[L.party, STATE.seatText ? STATE.seatText(L.house, L.district, DNAME(L.house, L.district)) : DNAME(L.house, L.district) ? `${house}, ${DNAME(L.house, L.district)} district` : `${house} District ${DNUM(L.house, L.district)}`, since].filter(Boolean).map(esc).join(" · ")}</p>
       ${!past && chairs.length ? `<p><b>Chairs:</b> ${chairs.map(esc).join(", ")}</p>` : ""}
       ${!past && member.length ? `<p><b>Committees:</b> ${member.map(esc).join(", ")}</p>` : ""}
       <p>Sponsored ${num(mine.length)} bill${mine.length === 1 ? "" : "s"} ${past ? `in ${span(DATA.session)}` : "this session"}; ${num(signed)} signed into law.</p>
       <p>${reach}</p>
       <nav class="sessions psessions" id="personSessions" aria-label="Their sessions"></nav>
-      <p>${past && ROOT && L.slug ? `<a href="${esc(ROOT + L.slug)}/">Their current page</a> · <a href="${esc(location.pathname)}">All bills in ${span(DATA.session)}</a> · ` : ""}<a href="${esc(ROOT || BASE || "./")}">← All bills in the Legislature</a></p>
+      <p>${past && ROOT && L.slug ? `<a href="${esc(ROOT + L.slug)}/">Their current page</a> · <a href="${esc(location.pathname)}">All bills in ${span(DATA.session)}</a> · ` : ""}<a href="${esc(ROOT || BASE || "./")}">← All bills in ${BODY}</a></p>
     </div>`;
   $("person").hidden = false;
 }
@@ -5161,7 +5180,7 @@ function hydrate(raw) {
     b.idx = idx;
     // "partial veto" finds the laws the governor vetoed part of.
     b._hay = [b.title, b.summary, b.law, ...b.sponsors, ...b.nums, ...b.nums.map((n) => n.replace(/[A-Z]$/, "")), partlyVetoed(b) ? "partial veto part vetoed" : ""].join(" ").toLowerCase();
-    b.sortKey = (b.nums[0][0] === "S" ? 0 : 1e6) + parseInt(b.nums[0].slice(1), 10);
+    b.sortKey = (b.nums[0][0] === "S" ? 0 : 1e6) + parseInt(b.nums[0].replace(/^[A-Z]+/, ""), 10);
     const houses = new Set(b.nums.map((n) => n[0]));
     b.house = houses.size === 2 ? "both" : [...houses][0];
     let first = "9999", signed = null;
@@ -5184,7 +5203,7 @@ function hydrate(raw) {
   const notice = [stale, sessionNotice(raw)].filter(Boolean).join(" ");
   $("notice").innerHTML = notice;
   $("notice").hidden = !notice;
-  if (raw.current) $("sort").insertAdjacentHTML("beforeend", `<option value="due">Governor's deadline, soonest first</option><option value="meeting">Next committee meeting, soonest first</option>`);
+  if (raw.current) $("sort").insertAdjacentHTML("beforeend", `<option value="due">${EXEC.title}'s deadline, soonest first</option><option value="meeting">Next committee meeting, soonest first</option>`);
   // The title goes home: the current session's main page.
   const home = raw.sessions.find((x) => x.session === LATEST)?.url;
   $("homeLink").href = ROOT || (home && /^https?:/.test(home) ? home : BASE || "./");
@@ -5205,7 +5224,7 @@ function hydrate(raw) {
   // States that find legislators by town (New Jersey) pick the town here instead.
   const you = document.querySelector(".field.you");
   you.hidden = !raw.bills.some((b) => b.places.length);
-  if (raw.towns && raw.current && !you.querySelector("#homeTown")) {
+  if (raw.towns && raw.current && !STATE.townRegions && !you.querySelector("#homeTown")) {
     you.hidden = false;
     you.querySelector(".hidebox").hidden = $("homeCounty").hidden = true;
     const label = you.querySelector("label");
