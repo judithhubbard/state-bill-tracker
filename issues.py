@@ -146,7 +146,10 @@ ISSUES = [
     {"id": "voting", "group": "Elections", "name": "Voting and elections",
      # How people vote and how elections are run. Not campaign finance, local election dates or district lines.
      "rules": [[r"\bvoter (?:ID|identification|registration|rolls?|lists?|fraud|intimidation|suppression|participation|access|eligibility|challenges?)\b"],
-               [r"\bregist\w* (?:to vote|voters?)\b"], [r"\b(?:proof of )?citizenship\b", r"\b(?:voters?|vote|voting)\b"],
+               # "registered voters" near a petition is usually a local referendum on something else (Louisiana's fluoridation
+               # elections): recalls, initiatives and candidates' petitions are caught by their own rules.
+               [r"\bregist\w* (?:to vote|voters?)\b", r"!\bpetition"], [r"\brecall (?:petitions?|elections?)\b"],
+               [r"\binitiatives? and referend"], [r"\b(?:candidate|nominating|nomination) petitions?\b"], [r"\b(?:proof of )?citizenship\b", r"\b(?:voters?|vote|voting)\b"],
                [r"\babsentee (?:ballots?|voting|voters?)\b"], [r"\bmail(?:-in| in)? (?:ballots?|voting)\b"], [r"\bvote[- ]by[- ]mail\b"], [r"\bballots? by mail\b"], [r"\bvoted by mail\b"], [r"\bballot casting\b"],
                [r"\bstraight[- ](?:ticket|party) voting\b"], [r"\bpreferential voting\b"], [r"\brecanvass"], [r"\bnational popular vote\b"],
                [r"\b(?:illegal voting|vote fraud|voting fraud)\b"], [r"\b(?:youth voting|preregist\w*)\b"],

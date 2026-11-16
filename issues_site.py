@@ -221,6 +221,17 @@ def covers(f, year):
     return f["session"] <= year < f["session"] + (f.get("years") or 1)
 
 
+def met(f, year):
+    """Whether the legislature met that year: a session file covering it, with bills introduced or acted on then (a
+    two-year session's file covers an even year Texas's Legislature doesn't meet in; a few stray actions don't count)."""
+    if not covers(f, year):
+        return False
+    if "active" not in f:
+        return True
+    n = f["active"].get(str(year), 0)
+    return n > 0 if f.get("upcoming") else n >= max(5, 0.02 * (f.get("total") or 0))
+
+
 def year_view(iid, states, year):
     """For one issue and calendar year: {state: (bills alive that year, became law that year, rows)}, the states with a
     session that year, and each state's session label and bill total. A bill is alive from the year it was introduced
@@ -230,8 +241,9 @@ def year_view(iid, states, year):
         rows, seen = [], set()
         for f in d["files"]:
             if covers(f, year):
-                open_.add(st)
                 info[st] = (f["label"], f.get("total") or 0)
+            if met(f, year):
+                open_.add(st)
             for b in f["bills"]:
                 if iid not in b[0]:
                     continue
@@ -263,7 +275,7 @@ def tile_map(iid, by, names, open_, year, upcoming):
             continue
         n, laws = by[st][:2] if st in by else (0, 0)
         if st not in open_ and not n and not laws:
-            label = f"{names[st]}: no bills filed yet for {year}"
+            label = f"{names[st]}: no bills filed yet for {year}" if upcoming else f"{names[st]}: no regular session in {year}"
             out.append(f'<span class="off wait" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}</span>')
             continue
         label = (f"{names[st]}: {n} bill{'' if n == 1 else 's'}{' prefiled' if upcoming else ''} in {year}" if n else f"{names[st]}: none in {year}")
@@ -326,7 +338,7 @@ def issue_page(issue, states, year, years, default, upcoming):
 <span class="key"><i class="sq h0"></i>None</span><span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>
 <span class="key"><i class="sq h2"></i>5&ndash;14</span><span class="key"><i class="sq h3"></i>15 or more</span>
 {"" if upcoming else '<span class="key"><span class="lawn">3</span>Number that became law</span>'}
-{'<span class="key"><i class="sq wait"></i>No bills filed yet</span>' if upcoming else ""}
+{'<span class="key"><i class="sq wait"></i>No bills filed yet</span>' if upcoming else ('<span class="key"><i class="sq wait"></i>No session that year</span>' if any(st not in open_ and st not in by for st in names) else "")}
 <span class="key"><i class="sq off"></i>Not on the site yet</span>
 </p>
 <details class="table"><summary>Show as a table</summary>
@@ -335,7 +347,7 @@ def issue_page(issue, states, year, years, default, upcoming):
 <tbody>{"".join(r for _, r in rows)}</tbody></table></div>
 <p class="note">A bill counts in each year from its introduction to its last action (in a two-year legislature, most are filed in the first year and keep moving in the second); &ldquo;Became law&rdquo; counts the year it did. &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's session, for scale.</p>
 </details>
-<p class="note">{"Most legislatures start taking bills in January; these are the bills prefiled so far. " if upcoming else ""}* The legislature publishes only bill titles, so some of its bills on this issue may be missed.{f' None in {year}: {e(", ".join(none))}.' if none else ""}{f' No bills filed yet for {year}: {e(", ".join(waiting))}.' if upcoming and waiting else ""}</p>
+<p class="note">{"Most legislatures start taking bills in January; these are the bills prefiled so far. " if upcoming else ""}* The legislature publishes only bill titles, so some of its bills on this issue may be missed.{f' None in {year}: {e(", ".join(none))}.' if none else ""}{f' No bills filed yet for {year}: {e(", ".join(waiting))}.' if upcoming and waiting else ""}{f' No regular session in {year} (these legislatures meet every other year): {e(", ".join(waiting))}.' if not upcoming and waiting else ""}</p>
 <h2 id="bills">The bills</h2>
 <div class="tools">
 <label for="filter" class="vh">Show</label>

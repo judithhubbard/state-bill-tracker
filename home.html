@@ -269,7 +269,10 @@ function drawIssue() {
   const upcoming = year > issues.default;
   const page = year === issues.default ? "" : `${year}.html`;
   document.getElementById("lawKey").hidden = upcoming;
-  document.getElementById("waitKey").hidden = !upcoming;
+  // States not filing bills yet (next year), or whose legislature didn't meet (Texas in even years).
+  const waiting = Object.keys(GRID).some((c) => built[c] && !open.has(c.toLowerCase()) && !(y.by[c.toLowerCase()] || [0])[0]);
+  document.getElementById("waitKey").hidden = !waiting;
+  document.getElementById("waitKey").lastChild.textContent = upcoming ? "No bills filed yet" : "No session that year";
   document.getElementById("offKey").hidden = Object.keys(GRID).every((c) => built[c]);
   tiles.classList.add("issue");
   tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
@@ -277,7 +280,7 @@ function drawIssue() {
     if (!built[code]) return `<span class="off" style="${style}" title="${NAMES[code]}: coming soon">${code}</span>`;
     const [n, laws] = y.by[code.toLowerCase()] || [0, 0];
     if (!n && !laws && !open.has(code.toLowerCase())) {
-      const w = `${NAMES[code]}: no bills filed yet for ${year}`;
+      const w = upcoming ? `${NAMES[code]}: no bills filed yet for ${year}` : `${NAMES[code]}: no regular session in ${year}`;
       return `<span class="off wait" style="${style}" title="${esc(w)}" aria-label="${esc(`${code}, ${w}`)}">${code}</span>`;
     }
     const label = `${NAMES[code]}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${upcoming ? " prefiled" : ""} in ${year}` : `no bills on ${issue.short} in ${year}`}`

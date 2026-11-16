@@ -157,3 +157,11 @@ Questions for the owner:
    Right?
 7. Property tax relief: levy limits and caps on total property taxes are in; school-aid formulas named "property tax
    relief" are out. Right?
+
+## 2026-11-16: Voting, "registered voters" near a petition
+
+The owner found Louisiana's fluoridation bills (SB 2 of 2025, SB 4 of 2026: a water system opts out if 15% of registered
+voters petition for a local election) under Voting. "registered voters" near "petition" no longer counts on its own (23
+bills fewer: local referendums on fluoride, police districts, town incorporation, a few school-board election bills);
+recall elections, initiatives and referenda, and candidates' nominating petitions now count by their own rules (270 more,
+read over in a sample: all election process). Voting goes from 6,980 to 7,227 bills across all sessions.

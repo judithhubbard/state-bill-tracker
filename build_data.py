@@ -1133,17 +1133,22 @@ def bill_texts(session, recs):
 def write_issues(session, recs, texts, page, current):
     """A session's bills on each national issue (issues.py), into data/issues_<session>.json for issues_site.py, which
     builds the issue pages from every state's files, by calendar year: {"state", "name", "session", "years" (P.YEARS),
-    "upcoming", "label", "page", "total" (bills counted, for scale), "bills": [[issue ids, {issue: [filters]}, number,
+    "upcoming", "label", "page", "total" (bills counted, for scale), "active" ({year: bills introduced or acted on}), "bills": [[issue ids, {issue: [filters]}, number,
     title, stage, last action's date, "const" or "", year introduced (the session's first year at the earliest, so a
     bill prefiled in December counts in its session's year), date it became law or "", {issue: the sentence that
     matched} for titles under eight words, the record's other numbers], ...]}. Local bills for one
     place and placeholder bills are left out, as in the statistics."""
     import issues
-    bills, total = [], 0
+    bills, total, active = [], 0, {}
     for r in recs:
         if r.get("narrow") == "place" or r.get("shell"):
             continue
         total += 1
+        # Bills introduced or acted on in each calendar year, so the map can tell a year the legislature didn't meet
+        # (Texas, Montana, Nevada and North Dakota in even years) from one with no bills on an issue.
+        for y in {max(session, int((r["first"] or str(session))[:4])), int((r["last"] or "0")[:4] or 0)}:
+            if y:
+                active[str(y)] = active.get(str(y), 0) + 1
         key = re.sub(r"[A-Z]$", "", r["nums"][0])
         t = texts.get(key) or []
         head = f"{r['title']}. {r['summary'] or ''}"
@@ -1165,7 +1170,7 @@ def write_issues(session, recs, texts, page, current):
                       r["nums"][1:]])
     out = {"state": STATE, "name": P.STATE_NAME, "session": session, "years": getattr(P, "YEARS", 2),
            "upcoming": session > current,
-           "label": P.session_label(session), "page": page, "total": total, "bills": bills}
+           "label": P.session_label(session), "page": page, "total": total, "active": active, "bills": bills}
     with open(os.path.join(GITHUB, "data", f"issues_{session}.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
 
