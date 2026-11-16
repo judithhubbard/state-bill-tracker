@@ -409,7 +409,10 @@ def main(site):
             # The front page map's panel (home.html): each state's bills that year, one line each, laws first.
             by, _, _ = year_view(issue["id"], states, y)
             panel[str(y)] = {st: [[shown(b[2], b[10] if len(b) > 10 else ()), b[3], (b[9].get(issue["id"]) if len(b) > 9 else "") or "", b[4],
-                                   link(f, b[2])[len("../../"):], b[6]]
+                                   link(f, b[2])[len("../../"):], b[6],
+                                   # For the star (home.html): the bill's number, its session and its last action's
+                                   # date, which make its watchlist entry, as on the state's own page.
+                                   b[2], f["session"], b[5]]
                                   for f, b, new, passed in sorted(sorted(rows, key=lambda x: x[1][5], reverse=True),
                                                                   key=lambda x: (x[1][4] != 5, -x[1][4]))]
                              for st, (n, laws, rows) in by.items()}

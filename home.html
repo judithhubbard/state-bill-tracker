@@ -184,12 +184,43 @@ body.issue-on main { max-width: 1080px; }
 .panel .stg { grid-row: 1; grid-column: 2; justify-self: end; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
 .panel .stg.s5 { color: var(--law-ink); font-weight: 600; }
 .panel .stg.s6 { color: var(--veto-ink); font-weight: 600; }
+/* "Your bills": the bills starred on any state's page or in the map's panel (each state's watchlist), by state. */
+.mine { margin: 0 0 24px; }
+.mine h2 { margin-top: 0; }
+.mine .mst { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; margin: 0 0 10px; }
+.mine h3 { font: 700 15px/1.2 var(--display); color: var(--navy); margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.mine h3 a { color: inherit; text-decoration: none; }
+.mine ol { list-style: none; margin: 0; padding: 0; }
+.mine li { position: relative; border-bottom: 1px solid var(--rule); }
+.mine li:last-child { border-bottom: 0; }
+.mine li a { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; padding: 8px 44px 8px 12px; color: var(--ink);
+  text-decoration: none; font-size: 14px; border: 0; border-radius: 0; background: none; height: auto; }
+.mine li a:hover, .mine li a:focus-visible { background: var(--paper); }
+.mine .num { font-weight: 600; color: var(--navy); white-space: nowrap; }
+.mine .tt { min-width: 0; }
+.mine .where { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; }
+.mine .where .stg { color: var(--ink); font-weight: 600; }
+.mine .where .s5 { color: var(--law-ink); } .mine .where .s6 { color: var(--veto-ink); }
+.mine .new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #14213d;
+  font: 700 11px/1.6 var(--body); }
+/* A star beside each bill (in "Your bills" and the map's panel): filled when it's on the state's watchlist. */
+.star { position: absolute; right: 6px; top: 6px; width: 32px; height: 32px; border: 0; background: none; cursor: pointer;
+  font-size: 19px; line-height: 1; color: var(--ink-2); border-radius: 6px; padding: 0; }
+.star[aria-pressed="true"] { color: var(--law-mark); }
+.star:hover { background: var(--paper); }
+.star:focus-visible { outline: 3px solid var(--hover); outline-offset: 0; }
+.panel li { position: relative; }
+.panel li a { padding-right: 44px; }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 </style>
 </head>
 <body>
 <main>
   <h1>State Bill Tracker</h1>
+  <section class="mine" id="mine" hidden aria-labelledby="mineHead">
+    <h2 id="mineHead">Your bills</h2>
+    <div id="mineList"></div>
+  </section>
   <div class="show" id="controls" hidden>
     <div class="when" id="years" role="group" aria-label="Year"></div>
     <span class="pick"><span class="lab" id="showLab">Show</span>
@@ -320,12 +351,12 @@ function showPanel(st) {
     const [n, laws] = (issue.y[year]?.by || {})[st] || [0, 0];
     const head = `<h3>${esc(NAMES[st.toUpperCase()])}</h3><p>${n ? `${n} bill${n === 1 ? "" : "s"} on ${esc(issue.short)} in ${year}` : `No bills on ${esc(issue.short)} in ${year}`}`
       + `${laws ? `, ${laws} became law` : ""}.${n ? ` <a href="issues/${issue.id}/${page}#${st}">See them on the issue page</a>` : ""}${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`;
-    panel.innerHTML = head + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind]) => {
+    panel.innerHTML = head + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last]) => {
       const stg = kind === "const" && stage === 3 ? "To voters" : STAGE_SHORT[stage];
       if (why && (why.toLowerCase().replace(/\W+/g, " ").trim() === title.toLowerCase().replace(/\W+/g, " ").trim()
         || title.toLowerCase().includes(why.toLowerCase()))) why = "";
       const full = why ? `${title}: ${why}` : title;
-      return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="stg s${stage}">${stg}</span></a></li>`;
+      return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="stg s${stage}">${stg}</span></a>${raw ? starBtn(st, session, raw, last, num) : ""}</li>`;
     }).join("")}</ul>` : "");
   });
 }
@@ -345,6 +376,7 @@ tiles.addEventListener("click", (e) => {
   showPanel(pinned || b.dataset.st);
 });
 document.getElementById("panel").addEventListener("click", (e) => {
+  if (starClick(e)) return;
   if (!e.target.closest("[data-unpin]")) return;
   e.preventDefault();
   pinned = null;
@@ -460,6 +492,85 @@ document.getElementById("controls").hidden = YEARS.length < 2 && !issues.issues.
 render();
 tiles.removeAttribute("aria-hidden");
 if (!issue) document.getElementById("legend").hidden = false;
+// Starred bills. Each state's page keeps its watchlist in this browser under "abt:<st>:watch" (New York's under
+// "abt:watch"): {"2025:SB12": {seen: the date of the last action seen, stance}}, keyed by session and the number without
+// its amendment letter. The front page reads and writes the same lists, so a star here shows on the state's page and
+// the other way around. Where each bill is comes from the state's data/status_<session>.json (build_data.py).
+const WKEY = (st) => (st === "ny" ? "abt:watch" : `abt:${st}:watch`);
+const baseNum = (n) => n.replace(/[A-Z]$/, "");
+const spaced = (n) => n.replace(/^([A-Z]+)(\d)/, "$1 $2");
+function readWatch(st) {
+  try { const o = JSON.parse(localStorage.getItem(WKEY(st)) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
+}
+function writeWatch(st, o) { try { localStorage.setItem(WKEY(st), JSON.stringify(o)); } catch (e) {} }
+function starBtn(st, session, num, last, label) {
+  const on = `${session}:${baseNum(num)}` in readWatch(st);
+  return `<button type="button" class="star" data-star="${esc(st)}|${session}|${esc(num)}|${esc(last || "")}" aria-pressed="${on}"`
+    + ` aria-label="${esc(`${on ? "Remove" : "Star"} ${label || spaced(num)}${on ? " from your bills" : ": follow it in Your bills"}`)}" title="${on ? "Remove from your bills" : "Star: follow it in Your bills"}">${on ? "★" : "☆"}</button>`;
+}
+function starClick(e) {
+  const b = e.target.closest("button[data-star]");
+  if (!b) return false;
+  e.preventDefault();
+  const [st, session, num, last] = b.dataset.star.split("|"), w = readWatch(st), k = `${session}:${baseNum(num)}`;
+  if (k in w) delete w[k]; else w[k] = { seen: last, stance: "support" };
+  writeWatch(st, w);
+  b.outerHTML = starBtn(st, +session, num, last, b.getAttribute("aria-label").replace(/^(Star|Remove) /, "").replace(/(: follow it in Your bills| from your bills)$/, ""));
+  drawMine();
+  return true;
+}
+const STATUS = {};
+const statusOf = (st, session) => (STATUS[`${st}/${session}`] ||= fetch(`${st}/data/status_${session}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+const fmtDay = (d) => (d ? new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
+function whereText(stage, comm, kind, live) {
+  if (stage === 0) return `${live ? "In" : "Died in"} committee${comm ? ` (${comm})` : ""}`;
+  if (stage === 3 && kind === "const") return "Passed both houses; goes to the voters";
+  if (!live && stage < 3) return ["", "Died on the floor", "Passed one house; died in the other"][stage];
+  return ["In committee", "On the floor", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"][stage] || "";
+}
+let mineDrawn = "";
+async function drawMine() {
+  const lists = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const m = (localStorage.key(i) || "").match(/^abt:(?:([a-z]{2}):)?watch$/);
+    if (!m) continue;
+    const st = m[1] || "ny", w = readWatch(st), keys = Object.keys(w);
+    if (keys.length && (NAMES[st.toUpperCase()] || st === "us")) lists.push([st, w, keys]);
+  }
+  const sec = document.getElementById("mine");
+  if (!lists.length) { sec.hidden = true; mineDrawn = ""; return; }
+  const blocks = await Promise.all(lists.map(async ([st, w, keys]) => {
+    const rows = await Promise.all(keys.map(async (k) => {
+      const [session, num] = k.split(":"), s = await statusOf(st, session), seen = typeof w[k] === "string" ? w[k] : (w[k] || {}).seen || "";
+      const lead = s ? (s.bills[num] ? num : s.alias[num]) : null, b = lead && s.bills[lead];
+      const page = s && s.page && s.page !== "./" ? s.page : "";
+      if (!b) return { last: "", html: `<li><a href="${st}/"><span class="num">${esc(spaced(num))}</span><span class="tt">${session} session</span></a>${starBtn(st, +session, num, "", spaced(num))}</li>` };
+      const [full, title, stage, last, action, comm, kind] = b, fresh = last && last > seen;
+      return { last, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
+        + `<span class="num">${esc(spaced(full))}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh ? '<span class="new">New</span>' : ""}</span>`
+        + `<span class="where"><span class="stg s${stage}">${esc(whereText(stage, comm, kind, s.live !== false))}</span>${last ? ` · ${esc(action ? `${action} (${fmtDay(last)})` : `Last action ${fmtDay(last)}`)}` : ""}</span></a>`
+        + `${starBtn(st, +session, full, last, spaced(full))}</li>` };
+    }));
+    rows.sort((a, b) => (b.last > a.last ? 1 : b.last < a.last ? -1 : 0));
+    const name = st === "us" ? "Congress" : NAMES[st.toUpperCase()];
+    return [name, `<div class="mst"><h3><a href="${st}/">${esc(name)}</a></h3><ol>${rows.map((x) => x.html).join("")}</ol></div>`];
+  }));
+  const html = blocks.sort((a, b) => a[0].localeCompare(b[0])).map((x) => x[1]).join("");
+  if (html !== mineDrawn) { document.getElementById("mineList").innerHTML = html; mineDrawn = html; }
+  sec.hidden = false;
+}
+document.getElementById("mine").addEventListener("click", (e) => {
+  if (starClick(e)) return;
+  // Opening a bill marks it seen, as opening it on the state's page does.
+  const a = e.target.closest("a[data-seen]");
+  if (!a) return;
+  const [st, k, last] = a.dataset.seen.split("|"), w = readWatch(st);
+  if (w[k]) { w[k] = { ...(typeof w[k] === "string" ? { stance: "support" } : w[k]), seen: last }; writeWatch(st, w); }
+});
+// Back from a state's page, or a change in another tab: redraw.
+addEventListener("storage", (e) => { if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) drawMine(); });
+addEventListener("pageshow", () => drawMine());
+drawMine();
 // Find a state: filters the list as you type.
 const find = document.getElementById("find");
 find.hidden = false;

@@ -1175,6 +1175,24 @@ def write_issues(session, recs, texts, page, current):
         json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
 
 
+def write_status(session, recs, page, live):
+    """Where each bill is, for the front page's "Your bills" (home.html), which shows the bills a visitor starred on
+    any state's page or on the front page: data/status_<session>.json, {"page", "live" (the session isn't over), "bills": {number without its amendment
+    letter: [number, title, stage, last action's date, the last action, committee, "const" or ""]}, "alias": {the
+    record's other numbers: its first}}. The watchlist keys bills as "<session>:<number without the letter>"."""
+    base = lambda n: re.sub(r"[A-Z]$", "", n)
+    bills, alias = {}, {}
+    for r in recs:
+        lead = base(r["nums"][0])
+        acts = [a for v in r["vers"] for a in v["actions"] if a[0] == r["last"]]
+        bills[lead] = [r["nums"][0], r["title"][:140], r["stage"], r["last"] or "", (acts[-1][1] if acts else "")[:120],
+                       r["comm"] or "", "const" if "const" in (r["topics"] or []) else ""]
+        for n in r["nums"][1:]:
+            alias[base(n)] = lead
+    with open(os.path.join(GITHUB, "data", f"status_{session}.json"), "w", encoding="utf-8") as f:
+        json.dump({"session": session, "page": page, "live": live, "bills": bills, "alias": alias}, f, separators=(",", ":"), ensure_ascii=False)
+
+
 def last_checked():
     """When the state's download last succeeded (data/<state>/last_checked), in the state's time zone, or None."""
     from datetime import datetime
@@ -1422,6 +1440,7 @@ def main():
                     with open(os.path.join(GITHUB, "data", f"{session}-text", f"{name}.json"), "w", encoding="utf-8") as f:
                         json.dump(part, f, separators=(",", ":"), ensure_ascii=False)
             write_issues(session, recs, texts, urls.get(str(session)) or "./", current)
+            write_status(session, recs, urls.get(str(session)) or "./", session >= current)
         # The template is written with New York's names (title, header and the script that updates them).
         template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)
         template = template.replace("How a bill becomes law in New York", f"How a bill becomes law in {P.STATE_NAME}")
