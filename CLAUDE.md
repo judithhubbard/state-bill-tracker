@@ -2045,9 +2045,12 @@ from that repo. **Nothing here may change it.**
   vetoed, four budgets item-vetoed). Places (`towns.py`, run once): cities, Census-designated places and counties, separate
   Senate (50) and House (100) lists. data/ia/incomplete (committees not downloaded yet) keeps Iowa off the site until
   fetch.py removes it on GitHub.
-- **National issues (built 2026-11-15):** the same subjects across states (data centers, PFAS, AI, children online,
-  phones in schools, housing supply, minimum wage, right to repair, sports betting, prescription drug costs; chosen in
-  notes/issues-draft.md with the owner's answers). `issues.py` holds each issue's rules (patterns that must appear within
+- **National issues (built 2026-11-15):** the same subjects across states, twenty of them: data centers, PFAS, AI, children
+  online, phones in schools, housing supply, minimum wage, right to repair, sports betting, prescription drug costs (the
+  first ten, chosen in notes/issues-draft.md with the owner's answers), and abortion, firearms, school vouchers and
+  education savings accounts, voting and elections, immigration enforcement, rent and tenants, property tax relief,
+  transgender people, diversity, equity and inclusion, cannabis (the second ten, added the same day; their scope, such as
+  voting without campaign finance or district lines, and the owner's open questions are in notes/issues-check.md). `issues.py` holds each issue's rules (patterns that must appear within
   400 characters of each other, exclusions, filters such as AI's "Chatbots"); a match in the title or summary counts, one
   only in a long "What it does" needs two mentions (budget bills name subjects in passing). Minimum wage is only bills
   that set or change one (the owner's decision). Each state's build writes data/issues_<session>.json
@@ -2068,7 +2071,7 @@ from that repo. **Nothing here may change it.**
   map (below it on a phone) lists the bills of the state pointed at, or clicked to keep it open
   (issues/<id>/bills.json, from issues_site.py). Each issue page leads with the same map, the table under "Show as a
   table", and one menu (all bills, became law, still moving, the issue's filters). Check a rule change with test/issues/get.py and check.py (30
-  random matches and possible misses per issue; notes/issues-check.md has the first check: 26-30 of 30 right).
+  random matches and possible misses per issue; notes/issues-check.md has both checks: 26-30 of 30 right).
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).

@@ -34,6 +34,16 @@ DESC = {
     "repair": "Bills giving owners and independent shops the parts, tools and manuals to fix what they own.",
     "betting": "Bills about sports betting, online casinos, fantasy sports, sweepstakes games and prediction markets.",
     "drugcosts": "Bills about what prescription drugs cost: insulin caps, pharmacy benefit managers, affordability boards, 340B.",
+    "abortion": "Bills about abortion: bans and limits, access and protections, abortion pills, and amendments for the voters.",
+    "firearms": "Bills about guns: carry permits, background checks and sales, red flag orders, ghost guns, guns in schools.",
+    "vouchers": "Bills about public money for private schooling: vouchers, education savings accounts, tax-credit scholarships.",
+    "voting": "Bills about how people vote and how elections are run: voter ID, mail voting, registration, counting and audits.",
+    "immigration": "Bills about immigration enforcement: working with federal agents, sanctuary policies, status checks, benefits and licenses.",
+    "tenants": "Bills about renting a home: rent limits, evictions, leases, security deposits, fees and tenants’ rights.",
+    "proptax": "Bills about property tax relief for homeowners and residents: homestead exemptions, assessment caps, freezes, credits.",
+    "transgender": "Bills about transgender people: sports, health care for minors, birth certificates and IDs, bathrooms, schools, protections.",
+    "dei": "Bills about diversity, equity and inclusion programs: offices, training, statements and hiring, bans and protections.",
+    "cannabis": "Bills about cannabis: legal sales, medical cannabis, hemp-derived THC such as delta-8, and clearing old records.",
 }
 
 CSS = """
@@ -197,7 +207,10 @@ GRID = {"AK": (0, 0), "ME": (0, 10), "VT": (1, 9), "NH": (1, 10),
         "FL": (7, 7)}
 SHORT = {"datacenters": "data centers", "pfas": "PFAS", "ai": "artificial intelligence", "kidsonline": "children online",
          "phones": "phones in schools", "housing": "housing supply", "minwage": "minimum wage", "repair": "right to repair",
-         "betting": "sports betting", "drugcosts": "drug costs"}
+         "betting": "sports betting", "drugcosts": "drug costs", "abortion": "abortion", "firearms": "firearms",
+         "vouchers": "school vouchers", "voting": "voting", "immigration": "immigration enforcement",
+         "tenants": "rent and tenants", "proptax": "property tax relief", "transgender": "transgender people", "dei": "DEI",
+         "cannabis": "cannabis"}
 
 
 def step(n):
