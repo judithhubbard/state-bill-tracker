@@ -155,6 +155,11 @@ body.issue-on main { max-width: 1080px; }
   body.issue-on .panel { contain: size; display: flex; flex-direction: column; }
   body.issue-on .panel ul { flex: 1 1 auto; min-height: 0; max-height: none; }
 }
+/* Below the map (narrow windows), the panel has a fixed height too, so pointing at states doesn't move the page. */
+@media (max-width: 899.98px) {
+  body.issue-on .panel { height: 340px; display: flex; flex-direction: column; }
+  body.issue-on .panel ul { flex: 1 1 auto; min-height: 0; max-height: none; }
+}
 .tiles button.tile { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12%;
   border: 0; border-radius: 6px; font: 700 clamp(10px, 2.6vw, 15px)/1 var(--display); cursor: pointer; padding: 0; }
 .tiles button.tile:hover, .tiles button.tile:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
