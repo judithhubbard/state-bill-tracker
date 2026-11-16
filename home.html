@@ -109,10 +109,12 @@ li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
 .show .pick { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
 .show .pick select { min-width: 0; }
 .mapwrap { margin: 0 0 10px; }
+.mapcol { min-width: 0; }
+.mapcol .tiles { margin-bottom: 8px; }
 .when button:disabled { color: var(--tile-off-ink); opacity: .5; cursor: default; }
 .show label { color: var(--ink-2); }
 .show select { font: inherit; padding: 6px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink);
-  max-width: 100%; }
+  max-width: min(100%, 19em); }
 .show select:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
 .tiles a.h0 { background: var(--tile-off); color: var(--tile-off-ink); box-shadow: none; }
 /* With an issue shown, states not on the site yet are outlined only, apart from states with no bills. */
@@ -127,12 +129,16 @@ li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
 .legend .sq.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
 .legend .sq.h1 { background: var(--heat-1); } .legend .sq.h2 { background: var(--heat-2); } .legend .sq.h3 { background: var(--heat-3); }
 .legend .sq.h0 { background: var(--tile-off); }
-.issueline { margin: -4px 0 12px; font-size: 15px; }
 /* With an issue shown, the page widens and a panel beside the map (below it on a phone) lists the bills of the state
    pointed at, or clicked (pinned). */
 body.issue-on main { max-width: 1080px; }
 .mapwrap { display: grid; gap: 12px 20px; }
-@media (min-width: 900px) { body.issue-on .mapwrap { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; } }
+@media (min-width: 900px) {
+  body.issue-on .mapwrap { grid-template-columns: minmax(0, 600px) minmax(300px, 1fr); align-items: stretch; }
+  /* The panel takes the map column's height (contain: size keeps its list from stretching the row); the list scrolls. */
+  body.issue-on .panel { contain: size; display: flex; flex-direction: column; }
+  body.issue-on .panel ul { flex: 1 1 auto; min-height: 0; max-height: none; }
+}
 .tiles button.tile { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12%;
   border: 0; border-radius: 6px; font: 700 clamp(10px, 2.6vw, 15px)/1 var(--display); cursor: pointer; padding: 0; }
 .tiles button.tile:hover, .tiles button.tile:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
@@ -157,7 +163,6 @@ body.issue-on main { max-width: 1080px; }
 .panel .stg { grid-row: 1; grid-column: 2; justify-self: end; font-size: 12px; color: var(--ink-2); white-space: nowrap; }
 .panel .stg.s5 { color: var(--law-ink); font-weight: 600; }
 .panel .stg.s6 { color: var(--veto-ink); font-weight: 600; }
-.issueline a { color: var(--navy); font-weight: 600; }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 </style>
 </head>
@@ -170,11 +175,9 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="pick"><label for="show">Show</label>
     <select id="show"><option value="">Party control</option></select></span>
   </div>
-  <p class="issueline" id="issueLine" hidden></p>
   <div class="mapwrap">
+  <div class="mapcol">
     <div class="tiles" id="tiles" aria-hidden="true"></div>
-    <aside class="panel" id="panel" aria-live="polite" hidden></aside>
-  </div>
   <p class="legend" id="legend" hidden>
     <span class="key"><i class="sq c-R1"></i>Republican governor and legislature</span>
     <span class="key"><i class="sq c-R2"></i>with a supermajority</span>
@@ -194,6 +197,9 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="key" id="waitKey" hidden><i class="sq wait"></i>No bills filed yet</span>
     <span class="key" id="offKey"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
   </p>
+  </div>
+    <aside class="panel" id="panel" aria-live="polite" hidden></aside>
+  </div>
   <h2>States</h2>
   <input class="find" id="find" type="search" placeholder="Find a state" aria-label="Find a state" hidden>
   <ul id="states">
@@ -239,7 +245,7 @@ let year = issues.default;  // the calendar year shown for it
 const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n >= 1 ? 1 : 0);
 function drawIssue() {
   const y = issue.y[year] || { by: {}, bills: 0, states: 0, laws: 0 }, open = new Set((issues.open || {})[year] || []);
-  const upcoming = year > issues.default, verb = upcoming ? "prefiled" : "with action";
+  const upcoming = year > issues.default;
   const page = year === issues.default ? "" : `${year}.html`;
   document.getElementById("lawKey").hidden = upcoming;
   document.getElementById("waitKey").hidden = !upcoming;
@@ -260,10 +266,6 @@ function drawIssue() {
     return `<button type="button" class="tile h${step(n)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc([NAMES[code], n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : [])].join("\n"))}" aria-label="${esc(`${code}, ${label}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${code}${mark}</button>`;
   }).join("");
   showPanel(pinned);
-  const line = document.getElementById("issueLine");
-  line.innerHTML = `${y.bills.toLocaleString()} bill${y.bills === 1 ? "" : "s"} ${verb} in ${y.states} state${y.states === 1 ? "" : "s"} in ${year}`
-    + (upcoming ? ". Most legislatures start taking bills in January." : `; ${y.laws.toLocaleString()} became law.`)
-    + ` <a href="issues/${issue.id}/${page}">See them all</a>`;
 }
 // The panel: a state's bills on the issue that year (issues/<id>/bills.json, loaded once per issue), one line each.
 const PANEL = {}, STAGE_SHORT = ["Committee", "Floor", "Passed one house", "Passed both", "Governor", "Law", "Vetoed"];
@@ -278,8 +280,12 @@ function showPanel(st) {
   panel.hidden = false;
   const page = year === issues.default ? "" : `${year}.html`;
   if (!st) {
-    panel.innerHTML = `<h3>${esc(issue.name)}, ${year}</h3><p>${canHover ? "Point at a state to see its bills; click it to keep the list open." : "Tap a state to see its bills."}</p>`
-      + `<p><a href="issues/${issue.id}/${page}">All states' bills</a></p>`;
+    const y = issue.y[year] || { bills: 0, states: 0, laws: 0 }, upcoming = year > issues.default;
+    panel.innerHTML = `<h3>${esc(issue.name)}, ${year}</h3>`
+      + `<p>${y.bills.toLocaleString()} bill${y.bills === 1 ? "" : "s"} ${upcoming ? "prefiled" : "with action"} in ${y.states} state${y.states === 1 ? "" : "s"}`
+      + (upcoming ? ". Most legislatures start taking bills in January." : `; ${y.laws.toLocaleString()} became law.`) + "</p>"
+      + `<p>${canHover ? "Point at a state to see its bills; click it to keep the list open." : "Tap a state to see its bills."}</p>`
+      + `<p><a href="issues/${issue.id}/${page}">See all states' bills</a></p>`;
     return;
   }
   const want = `${issue.id}/${year}/${st}`;
@@ -337,7 +343,6 @@ function drawMap(view) {
   if (!on) document.getElementById("panel").hidden = true;
   document.getElementById("legend").hidden = on;
   document.getElementById("issueLegend").hidden = !on;
-  document.getElementById("issueLine").hidden = !on;
   if (on) return drawIssue();
   tiles.classList.remove("issue");
   tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
