@@ -116,19 +116,18 @@ li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
 .show select:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
 .tiles a.h0 { background: var(--tile-off); color: var(--tile-off-ink); box-shadow: none; }
 /* With an issue shown, states not on the site yet are outlined only, apart from states with no bills. */
-.tiles.issue span.off { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); border: 0; opacity: 1; }
-.tiles.issue span.off.wait { border: 1px dashed var(--tile-off-ink); box-shadow: none; }
+.tiles.issue span.off { background: transparent; border: 1px dashed var(--rule); box-shadow: none; opacity: 1; }
+.tiles.issue span.off.wait { border: 0; box-shadow: inset 0 0 0 1px var(--rule); color: var(--ink-2); }
 .tiles a.h1 { background: var(--heat-1); color: var(--heat-ink-1); box-shadow: none; }
 .tiles a.h2 { background: var(--heat-2); color: var(--heat-ink-2); box-shadow: none; }
 .tiles a.h3 { background: var(--heat-3); color: var(--heat-ink-3); box-shadow: none; }
 /* The number of bills on the issue that became law that year: a gold badge under the state's letters. */
 .lawn { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6em; height: 1.6em; padding: 0 .3em;
   border-radius: 999px; background: var(--law-mark); color: #14213d; font: 700 clamp(9px, 2vw, 12px)/1 var(--body); }
-.tiles span.wait { background: transparent; border: 1px dashed var(--tile-off-ink); }
-.legend .sq.wait { background: transparent; border: 1px dashed var(--tile-off-ink); }
+.legend .sq.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
 .legend .sq.h1 { background: var(--heat-1); } .legend .sq.h2 { background: var(--heat-2); } .legend .sq.h3 { background: var(--heat-3); }
 .legend .sq.h0 { background: var(--tile-off); }
-.issueline { margin: 8px 0 0; font-size: 15px; }
+.issueline { margin: -4px 0 12px; font-size: 15px; }
 /* With an issue shown, the page widens and a panel beside the map (below it on a phone) lists the bills of the state
    pointed at, or clicked (pinned). */
 body.issue-on main { max-width: 1080px; }
@@ -138,7 +137,7 @@ body.issue-on main { max-width: 1080px; }
   border: 0; border-radius: 6px; font: 700 clamp(10px, 2.6vw, 15px)/1 var(--display); cursor: pointer; padding: 0; }
 .tiles button.tile:hover, .tiles button.tile:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
 .tiles button.tile.sel { outline: 3px solid var(--ink); outline-offset: 1px; }
-.tiles button.h0 { background: var(--tile-off); color: var(--tile-off-ink); }
+.tiles button.h0 { background: var(--tile-off); color: var(--ink); }
 .tiles button.h1 { background: var(--heat-1); color: var(--heat-ink-1); }
 .tiles button.h2 { background: var(--heat-2); color: var(--heat-ink-2); }
 .tiles button.h3 { background: var(--heat-3); color: var(--heat-ink-3); }
@@ -171,6 +170,7 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="pick"><label for="show">Show</label>
     <select id="show"><option value="">Party control</option></select></span>
   </div>
+  <p class="issueline" id="issueLine" hidden></p>
   <div class="mapwrap">
     <div class="tiles" id="tiles" aria-hidden="true"></div>
     <aside class="panel" id="panel" aria-live="polite" hidden></aside>
@@ -192,9 +192,8 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="key"><i class="sq h3"></i>15 or more</span>
     <span class="key" id="lawKey"><span class="lawn">3</span>Number that became law</span>
     <span class="key" id="waitKey" hidden><i class="sq wait"></i>No bills filed yet</span>
-    <span class="key"><i class="sq" style="box-shadow:inset 0 0 0 1px var(--rule)"></i>Not on the site yet</span>
+    <span class="key" id="offKey"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
   </p>
-  <p class="issueline" id="issueLine" hidden></p>
   <h2>States</h2>
   <input class="find" id="find" type="search" placeholder="Find a state" aria-label="Find a state" hidden>
   <ul id="states">
@@ -244,6 +243,7 @@ function drawIssue() {
   const page = year === issues.default ? "" : `${year}.html`;
   document.getElementById("lawKey").hidden = upcoming;
   document.getElementById("waitKey").hidden = !upcoming;
+  document.getElementById("offKey").hidden = Object.keys(GRID).every((c) => built[c]);
   tiles.classList.add("issue");
   tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
     const style = `grid-row:${r + 1};grid-column:${c + 1}`;
@@ -261,7 +261,7 @@ function drawIssue() {
   }).join("");
   showPanel(pinned);
   const line = document.getElementById("issueLine");
-  line.innerHTML = `${y.bills.toLocaleString()} bills ${verb} in ${y.states} states in ${year}`
+  line.innerHTML = `${y.bills.toLocaleString()} bill${y.bills === 1 ? "" : "s"} ${verb} in ${y.states} state${y.states === 1 ? "" : "s"} in ${year}`
     + (upcoming ? ". Most legislatures start taking bills in January." : `; ${y.laws.toLocaleString()} became law.`)
     + ` <a href="issues/${issue.id}/${page}">See them all</a>`;
 }
@@ -289,7 +289,7 @@ function showPanel(st) {
     const rows = ((all[year] || {})[st]) || [];
     const [n, laws] = (issue.y[year]?.by || {})[st] || [0, 0];
     const head = `<h3>${esc(NAMES[st.toUpperCase()])}</h3><p>${n ? `${n} bill${n === 1 ? "" : "s"} on ${esc(issue.short)} in ${year}` : `No bills on ${esc(issue.short)} in ${year}`}`
-      + `${laws ? `, ${laws} became law` : ""}. ${st === pinned ? `<a href="#" data-unpin>Close</a> · ` : ""}<a href="issues/${issue.id}/${page}#${st}">On the issue page</a></p>`;
+      + `${laws ? `, ${laws} became law` : ""}.${n ? ` <a href="issues/${issue.id}/${page}#${st}">See them on the issue page</a>` : ""}${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`;
     panel.innerHTML = head + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind]) => {
       const stg = kind === "const" && stage === 3 ? "To voters" : STAGE_SHORT[stage];
       if (why && (why.toLowerCase().replace(/\W+/g, " ").trim() === title.toLowerCase().replace(/\W+/g, " ").trim()
