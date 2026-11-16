@@ -26,7 +26,8 @@ robots.txt (checked 2026-11-13):
 Florida's Legislature meets once a year for 60 days: from the first Tuesday after the first Monday in March in odd
 years, and in January in even years. Bills for a session are filed from the summer before (SB 2 of 2025 was filed
 8/2/2024); the next session's appear here from about November. Special sessions (2025A, 2025B, 2025C, 2026D ...) and
-organization sessions (2026O) are left out. For each regular session from two years back through this one (and the next
+organization sessions (2026O) are left out. For each regular session in the shared window (states/window.py: this year and the four before, not
+before 2023) (and the next
 one once it lists bills), into data/fl/<year>/:
 - list.json: {"read": day, "bills": {"HB1205": {"n": 1205, "label": "CS/HB 1205", "title", "by", "last": "5/5/2025
   Chapter No. 2025-21"}}, "other": {label prefix: count}} from the Senate's bill lists (/Session/Bills/2025?chamber=
@@ -103,6 +104,8 @@ import html, json, os, re, subprocess, sys, tempfile, time, urllib.parse
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SENATE = "https://www.flsenate.gov"
 HOUSE = "https://www.flhouse.gov"
@@ -306,8 +309,9 @@ def ago(days):
 # ---- sessions ----
 
 def years():
-    """This year's session and the two before it, newest first, plus next year's from August (prefiled bills)."""
-    out = [YEAR, YEAR - 1, YEAR - 2]
+    """The shared window's sessions (states/window.py: this year and the four before, not before 2023), newest first,
+    plus next year's from August (prefiled bills)."""
+    out = W.years()[::-1]
     return ([YEAR + 1] if TODAY.month >= 8 else []) + out
 
 
@@ -894,6 +898,8 @@ def main():
           + (f"; never downloaded: {' '.join(missing)}" if missing else "; nothing missing"), flush=True)
     if ONLY:
         return
+    # A year the window added back (2023) marks only itself (states/window.py).
+    missing = W.settle(DATA, missing, yrs)
     # Left while data that was never downloaded is missing, so a partial first copy isn't published.
     if missing:
         with open(MARKER, "w") as f:

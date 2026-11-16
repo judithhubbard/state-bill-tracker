@@ -4,7 +4,9 @@ data/va/<year>1/, from lis.blob.core.windows.net. Finished sessions are download
 and next year's (bills are prefiled from November), every run. Then the legislators (states/va/contacts.py,
 once a day) and each locality's districts (states/va/towns.py).
 
-Usage: python3 states/va/fetch.py [first_session]   (default 2024)
+Usage: python3 states/va/fetch.py [first_session]   (default: the shared window's first year, states/window.py, but
+not before 2024: the LIS files start with the 2024 session. 20231/BILLS.CSV and the rest answer 404, checked
+2026-11-16; 2023 and before are only on legacylis.virginia.gov's pages, which this doesn't read)
 """
 import os, re, sys, time, urllib.error, urllib.request
 from datetime import datetime
@@ -12,8 +14,9 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states.va import profile as P
+from states import window as W
 
-FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else 2024
+FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else max(W.first_year(), 2024)
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 BASE = "https://lis.blob.core.windows.net/lisfiles"
 # The names are case-sensitive.

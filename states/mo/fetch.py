@@ -82,6 +82,8 @@ import gzip, hashlib, html, io, json, os, re, shutil, subprocess, sys, tempfile,
 import urllib.request, zipfile
 from collections import Counter
 from datetime import date, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 HOUSE = "https://documents.house.mo.gov"
 SENATE = "https://www.senate.mo.gov"
@@ -762,7 +764,7 @@ def senate_main(years):
 def years_wanted():
     if ONLY:
         return [ONLY]
-    ys = [YEAR, YEAR - 1, YEAR - 2]
+    ys = W.years()[::-1]  # the shared window (states/window.py), the current year first
     if TODAY.month == 12:
         ys.insert(0, YEAR + 1)  # prefiled bills
     return ys
@@ -834,6 +836,8 @@ def main():
         sys.exit(1)
     if ONLY:
         return
+    # A year the window added back (2023) marks only itself (states/window.py).
+    missing = W.settle(DATA, missing, years)
     # Left while data that was never downloaded is missing, so a partial first copy isn't published.
     if missing:
         with open(MARKER, "w") as f:

@@ -11,6 +11,8 @@ Usage: python3 states/md/fetch.py
 """
 import html, json, os, re, sys, time, urllib.request
 from datetime import date
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://mgaleg.maryland.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "md"))
@@ -72,8 +74,10 @@ def members():
 
 
 def sessions():
-    """The current year's session and the two before; a year's session from the second Wednesday of January."""
-    return [TODAY.year - 2, TODAY.year - 1, TODAY.year]
+    """The years of the shared window (states/window.py: this year and the four before, not before 2023), the current
+    one first; a year's session from the second Wednesday of January. Each is one file, so a year the window adds back
+    is either there or not, and never holds the state off the site."""
+    return W.years()[::-1]
 
 
 def main():

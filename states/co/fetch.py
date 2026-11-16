@@ -27,16 +27,20 @@ For each regular session (2024, 2025, 2026; one a year, January to May):
   committees.json. A finished session's once; the current one's once a week.
 data/co/incomplete lists what was never downloaded (votes not yet read don't count; a failed refresh keeps the last
 copy); it is removed when nothing is missing.
-Usage: python3 states/co/fetch.py [year]   (default: 2024, 2025 and 2026, i.e. this year and the two before)
+Usage: python3 states/co/fetch.py [year]   (default: the shared window, states/window.py: this year and the four
+before, not before 2023, newest first; a year the window added back marks only itself while its first copy downloads)
 """
 import html, json, math, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from datetime import date, datetime, timedelta
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://leg.colorado.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "co"))
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 TODAY = date.today()
-YEARS = [int(sys.argv[1])] if len(sys.argv) > 1 else [TODAY.year - 2, TODAY.year - 1, TODAY.year]
+YEARS = [int(sys.argv[1])] if len(sys.argv) > 1 else W.years()[::-1]  # the newest first
 REFRESH_DAYS = 7
 INCOMPLETE = set()
 WHOLE = [True]  # the last run left nothing missing (set in main)
@@ -650,6 +654,8 @@ def finish():
     marker = os.path.join(DATA, "incomplete")
     # A session not yet begun (prefiled bills, no members yet) is read when it's there but never holds Colorado back.
     undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    # A year the window added back (2023) marks only itself (states/window.py).
+    undone = set(W.settle(DATA, undone, YEARS))
     if undone:
         with open(marker, "w") as f:
             f.write(" ".join(sorted(undone)) + "\n")

@@ -9,8 +9,8 @@ from GlobalSign (the address the certificate itself names) and added to a copy o
 index files below, and what changed from their contents and each file's Last-Modified (sent back as If-Modified-Since;
 the server answers 304 when the file is unchanged). Every file is ISO-8859-1 and is saved as served (bytes).
 
-One regular session a year (bills don't carry over); extraordinary sessions ("20261E") are left out. For each year from
-two years back through this one (and next year's once it exists, from November), into data/ms/<year>/:
+One regular session a year (bills don't carry over); extraordinary sessions ("20261E") are left out. For each year in the shared window (states/window.py: this year and the four before, not
+before 2023) (and next year's once it exists, from November), into data/ms/<year>/:
 - allmsrs.xml (/<year>/pdf/all_measures/allmsrs.xml, "Report of All Measures"): every measure with its short title,
   principal author (as the history files' author link names him: "Horan", "Creekmore IV"), last action ("03/17 Approved
   by Governor", "02/03 (H) Died In Committee": month/day, no year) and FLAGS (* amended, % three-fifths vote required,
@@ -58,6 +58,8 @@ import json, os, re, ssl, sys, time, urllib.error, urllib.request
 import xml.etree.ElementTree as ET
 from collections import Counter
 from datetime import date, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://billstatus.ls.state.ms.us"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "ms"))
@@ -335,7 +337,8 @@ def main():
     if not ONLY:
         open(MARKER, "w").write("running\n")
     CONTEXT = ca_bundle()
-    years = [ONLY] if ONLY else [YEAR, YEAR - 1, YEAR - 2] + ([YEAR + 1] if TODAY.month >= 11 else [])
+    # The shared window (states/window.py), the current year first, and next year's prefiled bills from November.
+    years = [ONLY] if ONLY else W.years()[::-1] + ([YEAR + 1] if TODAY.month >= 11 else [])
     try:
         if not ONLY:
             members()
@@ -352,6 +355,8 @@ def main():
           + (f"; never downloaded: {' '.join(missing)}" if missing else ""), flush=True)
     if ONLY:
         return
+    # A year the window added back (2023) marks only itself (states/window.py).
+    missing = W.settle(DATA, missing, years)
     if missing:
         open(MARKER, "w").write(" ".join(missing) + "\n")
     elif os.path.exists(MARKER):

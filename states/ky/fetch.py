@@ -10,7 +10,8 @@ both hosts.
 Kentucky's General Assembly meets once a year from early January: 60 legislative days in even years (to mid-April),
 30 in odd years (to late March), with a break before the last two days for veto overrides, which are common. Bills
 don't carry over. Special (extraordinary) sessions are left out. Each regular session's record is at
-/record/<yy>rs/ ("26rs"); for each year from two years back through this one (and next year's in November and
+/record/<yy>rs/ ("26rs"); for each year in the shared window (states/window.py: this year and the four before, not
+before 2023) (and next year's in November and
 December, once it exists), into data/ky/<year>/:
 - lists/<name>.html (trimmed to the page's content) and list.json, what this script reads from them:
   {"stamp", "bills": [keys], "lists": {name: [keys]}, "amendments": {key: [anchors]}}. The indexes (house_bills,
@@ -65,6 +66,8 @@ Usage: python3 states/ky/fetch.py [year]   (default: every year above; a single 
 import gzip, html, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import Counter
 from datetime import date, datetime, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 APPS = "https://apps.legislature.ky.gov"
 LEG = "https://legislature.ky.gov"
@@ -477,7 +480,7 @@ def main():
     if not ONLY and not any(name.isdigit() for name in os.listdir(DATA)):
         with open(MARKER, "w") as f:
             f.write("running\n")
-    years = [ONLY] if ONLY else [YEAR, YEAR - 1, YEAR - 2]
+    years = [ONLY] if ONLY else W.years()[::-1]  # the shared window (states/window.py), the current year first
     nxt = [YEAR + 1] if not ONLY and TODAY.month >= 11 else []  # next session's record, once it exists
     refused = False
     try:
@@ -500,6 +503,8 @@ def main():
           + (f"; never downloaded: {' '.join(missing)}" if missing else "; nothing missing"), flush=True)
     if ONLY:
         return
+    # A year the window added back (2023) marks only itself (states/window.py).
+    missing = W.settle(DATA, missing, years)
     # Left while data that was never downloaded is missing, so a partial first copy isn't published.
     if missing:
         with open(MARKER, "w") as f:

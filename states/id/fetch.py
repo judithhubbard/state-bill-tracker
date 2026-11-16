@@ -5,7 +5,8 @@ calendar's views (/committee-calendar/action~*/, /*/action~*/), none of which ar
 1-second one for OpenAI's bots, and bars some others by name). One request at a time, at most one a second.
 
 Idaho's Legislature meets once a year, from early January to about April (bills don't carry over); extraordinary
-sessions are left out. For each year from two years back through this one, into data/id/<year>/:
+sessions are left out. For each year in the shared window (states/window.py: this year and the four before, not
+before 2023), into data/id/<year>/:
 - list.html (/sessioninfo/<year>/legislation/, trimmed to the page's content): every bill, resolution and memorial with
   its short title and status ("H St Aff", "Law"), the subject index, the Enacted Legislation table (session law
   chapter, bill, governor's signature date, effective date) and the vetoed bills (with links to the veto letters).
@@ -54,6 +55,8 @@ Usage: python3 states/id/fetch.py [year]   (default: every year above; a single 
 import gzip, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://legislature.idaho.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "id"))
@@ -473,7 +476,7 @@ def main():
     if not ONLY and not any(name.isdigit() for name in os.listdir(DATA)):
         with open(MARKER, "w") as f:
             f.write("running\n")
-    years = [ONLY] if ONLY else [YEAR, YEAR - 1, YEAR - 2]
+    years = [ONLY] if ONLY else W.years()[::-1]  # the shared window (states/window.py), the current year first
     refused = False
     try:
         if not ONLY:
@@ -498,6 +501,8 @@ def main():
           + (f"; never downloaded: {' '.join(missing)}" if missing else "; nothing missing"), flush=True)
     if ONLY:
         return
+    # A year the window added back (2023) marks only itself (states/window.py).
+    missing = W.settle(DATA, missing, years)
     # Left while data that was never downloaded is missing, so a partial first copy isn't published.
     if missing:
         with open(MARKER, "w") as f:

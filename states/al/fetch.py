@@ -10,7 +10,8 @@ request.
 
 Alabama's Legislature meets once a year in a regular session from early February (in the year after an election, from
 early March) for 30 legislative days within 105 calendar days, usually ending in May; bills don't carry over. Special
-sessions ("2026SS1") and organizational sessions are left out. For each year from two years back through this one
+sessions ("2026SS1") and organizational sessions are left out. For each year in the shared window (states/window.py:
+this year and the four before, not before 2023)
 (session "<year>RS"), into data/al/<year>/:
 - bills.json: {"read", "bills": [...]}, every House and Senate bill (instrumentType "B": HB1, SB1; constitutional
   amendments are bills here, "By Representative Hill (Constitutional Amendment)", subject "Constitutional Amendments
@@ -85,6 +86,8 @@ Usage: python3 states/al/fetch.py [year]   (default: every year above; a single 
 import gzip, json, os, re, sys, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 ENDPOINT = "https://alison.legislature.state.al.us/graphql"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "al"))
@@ -591,7 +594,7 @@ def main():
     if not ONLY and not any(name.isdigit() for name in os.listdir(DATA)):
         with open(MARKER, "w") as f:
             f.write("running\n")
-    years = [ONLY] if ONLY else [YEAR, YEAR - 1, YEAR - 2]
+    years = [ONLY] if ONLY else W.years()[::-1]  # the current year first
     refused = False
     try:
         if not ONLY:
@@ -612,6 +615,8 @@ def main():
           + (f"; never downloaded: {' '.join(missing)}" if missing else "; nothing missing"), flush=True)
     if ONLY:
         return
+    # A year the window added back (2023) marks only itself (states/window.py).
+    missing = W.settle(DATA, missing, years)
     # Left while data that was never downloaded is missing, so a partial first copy isn't published.
     if missing:
         with open(MARKER, "w") as f:

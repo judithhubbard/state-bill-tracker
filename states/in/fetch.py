@@ -28,17 +28,20 @@ data/in/<year>/state.json) or the bill list's minUpdateDatetime filter names it.
 every run (three requests; a veto is overridden in the next year's session); an earlier one, once complete, is skipped.
 Legislators and committees: this year's every run, an earlier year's once. One request at a time, 0.6 seconds apart.
 FETCH_MINUTES (set by the workflow) stops the run five minutes before it with everything saved.
-Usage: python3 states/in/fetch.py [first_year]   (default: two years back, through the newest listed session)
+Usage: python3 states/in/fetch.py [first_year]   (default: the shared window's first year, states/window.py: this year and
+the four before, not before 2023; through the newest listed session)
 """
 import hashlib, json, os, sys, time, urllib.error, urllib.request
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 API = "https://api.iga.in.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "in"))
 AGENT = "iga-api-client-statebilltracker (statebilltracker.org; contact via github.com/judithhubbard)"
 YEAR = date.today().year
-FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else YEAR - 2
+FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else W.first_year()
 KINDS = ("HB", "SB", "HJ", "SJ")
 GAP = 0.6
 START = time.time()
@@ -316,7 +319,14 @@ def finish():
           + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures")
           + (f"; still to do: {' '.join(sorted(INCOMPLETE))}" if INCOMPLETE else ""), flush=True)
     marker = os.path.join(DATA, "incomplete")
+    # A year the window added back (2023) marks only itself (states/window.py) until its first copy is whole: a run cut
+    # off mid-year raises OutOfTime before bills() can say what's missing, so its state.json decides.
+    older = [y for y in range(FIRST, YEAR + 1) if not W.recent(y)]
+    for y in older:
+        if not load(os.path.join(DATA, str(y), "state.json"), {}).get("complete"):
+            INCOMPLETE.add(f"{y}:bills")
     undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    undone = set(W.settle(DATA, undone, older))
     if undone:
         with open(marker, "w") as f:
             f.write(" ".join(sorted(undone)) + "\n")

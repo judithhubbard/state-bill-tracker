@@ -9,7 +9,8 @@ allowed. One request at a time, at most one a second (a bill page takes the serv
 
 West Virginia's Legislature meets once a year for 60 days: from the second Wednesday of January, or of February in the
 year a governor is inaugurated (2025, 2029). Special (extraordinary) sessions are left out. The lower house is the House
-of Delegates. For each year from two years back through this one (and next year's in November and December, once its
+of Delegates. For each year in the shared window (states/window.py: this year and the four before, not
+before 2023) (and next year's in November and December, once its
 bill list has bills), into data/wv/<year>/:
 - lists/<name>.html (each page's <main>, scripts removed, blank lines squeezed) and list.json, what this script reads
   from them: {"read", "bills": {"HB2001": {"href", "cells"}}, "laws": {"SB8": cells}, "governor": {"SIGNED": {"SB1":
@@ -78,6 +79,8 @@ import gzip, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, tim
 import urllib.request
 from collections import Counter
 from datetime import date, datetime, timedelta
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 SITE = "https://www.wvlegislature.gov"
 STATUS = SITE + "/Bill_Status/"
@@ -636,7 +639,7 @@ def main():
     if not ONLY and not any(name.isdigit() for name in os.listdir(DATA)):
         with open(MARKER, "w") as f:
             f.write("running\n")
-    years = [ONLY] if ONLY else [YEAR, YEAR - 1, YEAR - 2]
+    years = [ONLY] if ONLY else W.years()[::-1]  # the shared window (states/window.py), the current year first
     nxt = [YEAR + 1] if not ONLY and TODAY.month >= 11 else []  # next session's bills, once listed
     refused = False
     live = []
@@ -673,6 +676,8 @@ def main():
           + (f"; never downloaded: {' '.join(missing)}" if missing else "; nothing missing"), flush=True)
     if ONLY:
         return
+    # A year the window added back (2023) marks only itself (states/window.py).
+    missing = W.settle(DATA, missing, years)
     # Left while data that was never downloaded is missing, so a partial first copy isn't published.
     if missing:
         with open(MARKER, "w") as f:

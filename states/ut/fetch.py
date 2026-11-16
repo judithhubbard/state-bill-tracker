@@ -23,13 +23,23 @@ Usage: python3 states/ut/fetch.py [--no-votes] [--votes-minutes N]
 """
 import html, json, os, re, sys, time, urllib.error, urllib.request
 from datetime import date
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 API = "https://glen.le.utah.gov"
 SITE = "https://le.utah.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "ut"))
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 YEAR = date.today().year
-YEARS = (YEAR, YEAR - 1, YEAR - 2)  # the current session first
+YEARS = tuple(W.years()[::-1])  # the shared window (states/window.py), the current session first
+START = time.time()
+# The run's own time limit (FETCH_MINUTES, set by the workflow): stop five minutes early with everything saved, so a
+# first copy of a year (2023's status pages take hours at ten seconds apart) resumes on the next run.
+BUDGET = max(0.0, float(os.environ.get("FETCH_MINUTES") or 0) - 5) * 60
+
+
+def out_of_time():
+    return bool(BUDGET) and time.time() - START > BUDGET
 
 
 class Refused(Exception):
@@ -134,6 +144,8 @@ def session_bills(year):
              not os.path.exists(os.path.join(folder, "bills", f"{b['number']}.json")))]
     got = 0
     for b in todo:
+        if out_of_time():
+            break
         num = b["number"]
         bill = api(f"bills/{sid}/{num}")
         if isinstance(bill, dict) and (bill.get("billNumber") or bill.get("bill")):  # 2024's older layout: "bill"
@@ -196,6 +208,8 @@ def status_pages(year, listing):
     os.makedirs(out, exist_ok=True)
     got = 0
     for num in todo:
+        if out_of_time():
+            break
         body = fetch(f"{SITE}/~{year}/bills/static/{num}.html", f"{year} page {num}", 10, tries=3)
         rows = parse_status(body.decode("utf-8", "replace")) if body else None
         if rows:
@@ -315,7 +329,7 @@ def votes(minutes):
         todo = [k for k in sorted(wanted) if k not in have]
         got = bad = 0
         for k in todo:
-            if deadline and time.time() > deadline:
+            if (deadline and time.time() > deadline) or out_of_time():
                 break
             url, parse = wanted[k]
             body = fetch(url, f"{year} vote {k}", 10, tries=3)  # le.utah.gov's robots.txt: Crawl-delay 10
@@ -346,9 +360,17 @@ def main():
     problems = []
     try:
         problems += roster()
+        read = []
         for year in YEARS:
+            if out_of_time():
+                if not os.path.exists(os.path.join(DATA, str(year), "billlist.json")):
+                    problems.append(f"{year}:billlist")  # not reached: only a list never read counts
+                continue
+            read.append(year)
             found = session_bills(year)
             problems += found if begun(year) else []
+        # A year the window added back (2023) marks only itself (states/window.py); a year not reached keeps its mark.
+        problems = W.settle(DATA, problems, read)
         if "--no-votes" not in args:
             left = votes(minutes)
             if left:

@@ -6,7 +6,8 @@ but is an older copy (its 2025 House list lacks a member seated mid-session), so
 a second apart.
 
 One session a year (a general session in odd years, a budget session in even years); bills don't carry over. For each
-year from two years back through this one (and next year's once bills are numbered for it):
+year of the shared window (states/window.py: this year and the four before, not before 2023; and next year's once bills
+are numbered for it):
 - The year's bill list (lsoservice /api/BillInformation/<year>: every HB, SF, HJ and SJ with its catch title, sponsor,
   last action and its date, chapter and enrolled numbers) into data/wy/<year>/bills.json.
 - Each bill in full (/api/BillInformation/<year>/<HB0010>: actions with dates and house, sponsors, roll calls member
@@ -28,6 +29,8 @@ Usage: python3 states/wy/fetch.py [year]   (default: every year above; a single 
 """
 import json, os, sys, time, urllib.error, urllib.request
 from datetime import date, datetime, timedelta, timezone
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 LSO = "https://lsoservice.wyoleg.gov/api"
 API = "https://api.wyoleg.gov/v1"
@@ -39,6 +42,7 @@ REFRESH_DAYS = 7
 # The list fields that change when something happens to a bill.
 STAMP = ("lastAction", "lastActionDate", "chapter", "enrolledNumber", "signedDate", "isEngrossed")
 INCOMPLETE = set()
+READ = []  # the years this run reached (states/window.py's marks change only for these)
 MISSING = object()  # a 404
 MARKER = os.path.join(DATA, "incomplete")
 WHOLE = [True]  # the last run left nothing missing (set in main)
@@ -56,6 +60,8 @@ def finish():
     if ONLY:
         return
     undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    # A year the window added back (2023) marks only itself (states/window.py).
+    undone = set(W.settle(DATA, undone, READ))
     if undone:
         with open(MARKER, "w") as f:
             f.write(" ".join(sorted(undone)) + "\n")
@@ -214,7 +220,7 @@ def main():
     if not ONLY and not os.path.exists(MARKER):
         with open(MARKER, "w") as f:
             f.write("running\n")
-    years = [ONLY] if ONLY else [YEAR + 1, YEAR, YEAR - 1, YEAR - 2]  # the newest first
+    years = [ONLY] if ONLY else [YEAR + 1] + W.years()[::-1]  # the newest first
     for year in years:
         folder = os.path.join(DATA, str(year))
         live = year >= YEAR
@@ -226,6 +232,7 @@ def main():
         members(year, folder, live)
         committees(year, folder, live)
         bills(year, folder, live)
+        READ.append(year)
     finish()
 
 

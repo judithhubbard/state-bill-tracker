@@ -22,16 +22,29 @@ site's HTML page (status 200), not a 404, so any answer that isn't JSON counts a
 A finished session (an earlier year) is read once. The session of this year or later is read every run: its bill list
 and action logs (two requests) say which bills changed, and only those bills' details are read again; members,
 committees and the BillLogs lists every run. One request at a time, a second apart.
-Usage: python3 states/sd/fetch.py [first_year]   (default: two years back; also next year's session once listed)
+A run stops five minutes before its time limit (FETCH_MINUTES, set by the workflow), with what it read saved.
+Usage: python3 states/sd/fetch.py [first_year]   (default: the shared window's first year, states/window.py: this year and
+the four before, not before 2023; also next year's session once listed)
 """
 import hashlib, json, os, sys, time, urllib.error, urllib.request
 from datetime import date
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import window as W
 
 API = "https://sdlegislature.gov/api/"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "sd"))
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 YEAR = date.today().year
-FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else YEAR - 2
+FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else W.first_year()
+START = time.time()
+READ = []  # the years this run read (states/window.py's marks change only for these)
+BUDGET = max(0.0, float(os.environ.get("FETCH_MINUTES") or 0) - 5) * 60
+
+
+def out_of_time():
+    return bool(BUDGET) and time.time() - START > BUDGET
+
+
 KINDS = ("HB", "SB", "HJR", "SJR")
 LOGS = ("SignedByGovernor", "VetoedByGovernor", "Hoghouse")
 INCOMPLETE = set()
@@ -158,6 +171,8 @@ def session(year, sid):
                 save(path, d)
     got = 0
     for i, (k, b, fp) in enumerate(todo):
+        if out_of_time():
+            break
         detail = get(f"Bills/{b['BillId']}")
         versions = get(f"Bills/Versions/{b['BillId']}") if detail else None
         if not detail or versions is None:
@@ -180,6 +195,8 @@ def session(year, sid):
     vtodo = [v for v in votes if not os.path.exists(os.path.join(folder, "votes", f"{v}.json"))]
     vgot = 0
     for v in vtodo:
+        if out_of_time():
+            break
         d = get(f"Votes/{v}")
         if d and isinstance(d, dict) and "RollCalls" in d:
             save(os.path.join(folder, "votes", f"{v}.json"), d)
@@ -247,8 +264,11 @@ def main():
             sys.exit("No session list from the API; kept the last copies")
         save(os.path.join(DATA, "sessions.json"), ids)
         for y in range(YEAR, FIRST - 1, -1):  # this year's session first
+            if out_of_time():
+                break
             if y in ids:
                 session(y, ids[y])
+                READ.append(y)
             else:
                 print(f"{y}: no regular session listed")
                 INCOMPLETE.add(f"{y}:session")
@@ -262,6 +282,8 @@ def main():
     print(f"{STATS['requests']} requests in {(time.time() - began) / 60:.0f} minutes")
     # Next year's session (prefiled bills from November, its members not listed yet) never holds South Dakota back.
     undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    # A year the window added back (2023) marks only itself (states/window.py).
+    undone = set(W.settle(DATA, undone, READ))
     if undone:
         with open(marker, "w") as f:
             f.write(" ".join(sorted(undone)) + "\n")

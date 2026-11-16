@@ -10,7 +10,8 @@ New Mexico's Legislature meets every year from the third Tuesday of January: 60 
 (budget, and only what the governor puts on the call, plus vetoed bills); the governor has 3 days during the session
 and 20 days after it, and a bill not signed by then is pocket vetoed. Line-item vetoes are allowed on appropriations.
 Constitutional amendments are joint resolutions (HJR, SJR): they pass both houses and go to the voters, not the
-governor. Special sessions are left out. For each regular session from two years back through this one (and next
+governor. Special sessions are left out. For each regular session in the shared window (states/window.py: this year and the four before, not
+before 2023) (and next
 year's once the site lists it, for bills prefiled in December), into data/nm/<year>/:
 - list.json: {"session": 69 (the site's session id), "stamp" ("4/29/2026 12:27:26 PM": the site's "Last legislative
   database update", one stamp for the whole database), "read", "bills": {"HB5": {"chamber": "H", "type": "B", "number":
@@ -89,6 +90,7 @@ from datetime import date, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from listing_dates import same  # noqa: E402
+from states import window as W
 
 SITE = "https://www.nmlegis.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "nm"))
@@ -290,8 +292,9 @@ def sessions():
 
 
 def years(found):
-    """The regular sessions to read, newest first: two years back through this one, and next year's once listed."""
-    out = [y for y in range(TODAY.year - 2, TODAY.year + 2) if f"{y} Regular" in found]
+    """The regular sessions to read, newest first: the shared window (states/window.py: this year and the four before,
+    not before 2023), and next year's once listed."""
+    out = [y for y in W.years(ahead=1) if f"{y} Regular" in found]
     if ONLY:
         out = [y for y in out if y == ONLY]
     return sorted(out, reverse=True)
@@ -698,6 +701,8 @@ def main():
           + (f"; still missing: {' '.join(gaps)}" if gaps else "; nothing missing"), flush=True)
     if ONLY:
         return
+    # A year the window added back (2023) marks only itself (states/window.py).
+    gaps = W.settle(DATA, gaps, yrs)
     # Left while data that was never downloaded is missing, so a partial first copy isn't published.
     if gaps:
         with open(MARKER, "w") as f:

@@ -42,7 +42,7 @@ DELEGATION_NAMES = set()
 LEADERS = {"S": ("Randy Smith", "President of the Senate", "him"),
            "H": ("Roger Hanshaw", "Speaker of the House of Delegates", "him")}
 # The Senate President each year, for "MR PRESIDENT" in the Senate's roll calls.
-PRESIDENTS = {2024: "Blair", 2025: "Smith", 2026: "Smith"}
+PRESIDENTS = {2023: "Blair", 2024: "Blair", 2025: "Smith", 2026: "Smith"}
 
 
 def delegation(session):
