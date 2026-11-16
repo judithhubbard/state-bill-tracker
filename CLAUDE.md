@@ -324,7 +324,9 @@ from that repo. **Nothing here may change it.**
   v3.openstates.org with the owner's free API key (~/.openstates_api_key; GitHub secret OPENSTATES_API_KEY). The free tier
   allows 250 requests a day (20 bills each): the first copy of three sessions takes two days, resuming from the saved page,
   and stops cleanly at the daily limit; then a day's changes (updated_since) are a few requests. Local runs and GitHub's
-  share the quota. `states/az/azleg.py` reads www.azleg.gov at its 120-second crawl delay (member rosters for phones and
+  share the quota. Years older than the API's three (2023) come only from an Open States bulk file
+  (`states/openstates_bulk.py az`, run before fetch.py; the owner names it in states/az/bulk.json:
+  "AZ_56th-1st-regular_json_<id>.zip"), never from the API. `states/az/azleg.py` reads www.azleg.gov at its 120-second crawl delay (member rosters for phones and
   rooms; the committee pages list meetings only, so there are no chairs yet; resolutions' official titles to tell
   constitutional amendments from referred measures). `states/az/convert.py` uses Open States' action classifications;
   some committee reports don't name their committee. Open States has no chapter numbers, and about 10 bills a year stop
@@ -1699,6 +1701,18 @@ from that repo. **Nothing here may change it.**
   `stageText`/`stageTips`/`pastStageTips`/`outOfTime`, `commPairs`/`commNotes`/`moneyCommittees`/`secondCommittee`,
   `calendar`/`calendarDays`; and write how.html and weighin.html. Then run the review: record every tab, Statistics
   section, How section, bill panels at each stage and a watchlist, and grep the text for other states' names and rules.
+- **Years kept (2026-11-16): every state keeps the same window,** `states/window.py`: this year and the four before, never
+  before 2023 (`first_year()` = max(2023, year - 4): 2023-26 now, 2023-27 in 2027, 2024-28 in 2028). A two-year session
+  counts while any of its years is in the window (2023-24 until 2029; New Jersey's 2022-23 until 2028). Each fetch.py takes
+  its years from it (`W.years()`, `W.first_session()`); legiscan.py keeps sessions ending in it. States that already had
+  older sessions keep them (CA, IL, TX, WA, OH from 2021; CT, OR from 2022; NJ from 2018). A year the window added back
+  (2023 for the one-year states) never holds a state off the site: only this year and last (`W.recent()`) can;
+  `W.settle()` turns an older year's missing parts into its own marker, data/<st>/incomplete_<session>, and build_data.py
+  and data_check.py leave just that session out (`W.shown()`) until a later run finishes it. Exceptions: Virginia's LIS
+  files start with 2024 (20231/ answers 404; 2023 is only on legacylis.virginia.gov's pages, not read); Arizona's 2023
+  waits for its bulk file (above); Florida's 2023 is read from flsenate.gov's pages unless the owner adds its bulk file
+  (FL_2023_json_<id>.zip) to states/fl/bulk.json. A one-year state's 2023 may need its `STATE.dated` / `SESSION_ENDS`
+  entry once the data is there (each falls back to the computed rule).
 - **Shared conventions (2026-11-01), so states can be compared later** (a "Compare states" page waits until most
   states are built). Every state follows these; `test/data_check.py` fails when one doesn't:
   - The same 14 topics with the same names (`TOPICS` in data_check.py): ag, biz, const, edu, env, gov, health, housing,
