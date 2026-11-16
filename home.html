@@ -381,7 +381,15 @@ function remember() {
   const parts = [issue ? `issue=${issue.id}` : "", year !== NOW ? `year=${year}` : ""].filter(Boolean);
   try { history.replaceState(null, "", parts.length ? `#${parts.join("&")}` : location.pathname); } catch (e) {}
 }
-show.insertAdjacentHTML("beforeend", issues.issues.map((i) => `<option value="${esc(i.id)}">${esc(i.name)}</option>`).join(""));
+// The issues under their group headings (issues.py's GROUPS), so the menu stays easy to scan as issues are added.
+{
+  const opt = (i) => `<option value="${esc(i.id)}">${esc(i.name)}</option>`;
+  const groups = issues.groups || [];
+  show.insertAdjacentHTML("beforeend", groups.map((g) => {
+    const xs = issues.issues.filter((i) => i.group === g);
+    return xs.length ? `<optgroup label="${esc(g)}">${xs.map(opt).join("")}</optgroup>` : "";
+  }).join("") + issues.issues.filter((i) => !groups.includes(i.group)).map(opt).join(""));
+}
 yearsEl.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-year]");
   if (!b || b.disabled) return;

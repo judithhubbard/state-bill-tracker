@@ -389,22 +389,27 @@ def main(site):
             opened[str(y)] = sorted(open_)
         json.dump(panel, open(os.path.join(site, "issues", issue["id"], "bills.json"), "w"), ensure_ascii=False,
                   separators=(",", ":"))
-        summary.append({"id": issue["id"], "name": issue["name"], "short": SHORT.get(issue["id"], issue["name"]), "y": per_year})
-    cards = "".join(f'<li><a href="{s["id"]}/"><b>{e(s["name"])}</b><span>{s["y"][str(default)]["bills"]:,} bills in '
-                    f'{s["y"][str(default)]["states"]} states in {default}; {s["y"][str(default)]["laws"]:,} became law</span></a></li>'
-                    for s in summary)
+        summary.append({"id": issue["id"], "name": issue["name"], "group": issue.get("group", ""),
+                        "short": SHORT.get(issue["id"], issue["name"]), "y": per_year})
+    # The issues by group (issues.GROUPS), as in the front page's menu.
+    card = lambda s: (f'<li><a href="{s["id"]}/"><b>{e(s["name"])}</b><span>{s["y"][str(default)]["bills"]:,} bills in '
+                      f'{s["y"][str(default)]["states"]} states in {default}; {s["y"][str(default)]["laws"]:,} became law</span></a></li>')
+    cards = "".join(f'<h2>{e(g)}</h2><ul class="cards">{"".join(card(s) for s in summary if s["group"] == g)}</ul>'
+                    for g in issues.GROUPS if any(s["group"] == g for s in summary))
+    cards += "".join(card(s) for s in summary if s["group"] not in issues.GROUPS) and \
+        f'<h2>Other</h2><ul class="cards">{"".join(card(s) for s in summary if s["group"] not in issues.GROUPS)}</ul>'
     index = HEAD.format(title="Issues across the states", desc="The same subjects in every state legislature: how many bills, where, and which became law.", css=CSS) + f"""
 <p class="crumbs"><a href="../">State Bill Tracker</a></p>
 <h1>Issues across the states</h1>
 <p class="lede">The same subjects in every state legislature: how many bills, where, and which became law.</p>
-<ul class="cards">{cards}</ul>
+{cards}
 <footer>Counts are for {default} ({len(states)} states). Bills are found by the words in their titles and summaries; see each issue's page for what counts.</footer>
 </main>
 </body>
 </html>
 """
     open(os.path.join(site, "issues", "index.html"), "w", encoding="utf-8").write(index)
-    json.dump({"years": years, "default": default, "open": opened, "issues": summary},
+    json.dump({"years": years, "default": default, "open": opened, "groups": issues.GROUPS, "issues": summary},
               open(os.path.join(site, "issues", "summary.json"), "w"), ensure_ascii=False)
     print("issues:", ", ".join(f"{s['name']} {s['y'][str(default)]['bills']}" for s in summary), "; years", years)
 
