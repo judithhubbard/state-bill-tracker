@@ -35,7 +35,7 @@ def check(state):
     P = importlib.import_module(f"states.{state}.profile")
     C = importlib.import_module(f"states.{state}.convert")
     print(f"== {P.STATE_NAME}")
-    loaded = {s: C.load_session(s)[0] for s in C.sessions()}
+    loaded = {s: C.load_session(s)[0] for s in importlib.import_module("states.window").shown(P.DATA, C.sessions())}
 
     # The shared topics, with the shared names.
     mine = {k: v[0] for k, v in P.TOPICS.items()}

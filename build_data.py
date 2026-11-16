@@ -38,7 +38,9 @@ TEMPLATE = os.path.join(HERE, "tracker.html")
 SITE = os.path.join(HERE, "site", P.SITE_DIR)
 # Published URL of each session's page, filled in after the first publish of each.
 URLS_FILE = os.path.join(HERE, "artifact_urls.json")
-SESSIONS = C.sessions()
+# Sessions whose first copy is still downloading (data/<state>/incomplete_<session>: an older year added back to the
+# window, states/window.py) are left out until it's finished.
+SESSIONS = importlib.import_module("states.window").shown(P.DATA, C.sessions())
 # The lower house's letter ("A" for an Assembly, "H" for Virginia's House of Delegates) and members' titles.
 LOW = getattr(P, "LOWER", "A")
 TITLES = getattr(P, "TITLES", {"S": "Sen.", LOW: "Asm."})
