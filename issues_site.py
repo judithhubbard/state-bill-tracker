@@ -177,9 +177,9 @@ def load(site):
     return out
 
 
-def shown(num):
-    """A bill number as people write it: "HB1005" -> "HB 1005"."""
-    return re.sub(r"^([A-Z]+)(\d)", r"\1 \2", num)
+def shown(num, others=()):
+    """A bill number as people write it: "HB1005" -> "HB 1005"; with a record's other numbers, "A 11560 / S 8443"."""
+    return " / ".join(re.sub(r"^([A-Z]+)(\d)", r"\1 \2", n) for n in [num, *others])
 
 
 def link(f, num):
@@ -283,7 +283,7 @@ def issue_page(issue, states, year, years, default, upcoming):
         for f, b, new, passed in sorted(sorted(mine, key=lambda x: x[1][5], reverse=True), key=lambda x: (x[1][4] != 5, -x[1][4])):
             fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
             when = ""
-            items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}"><a href="{e(link(f, b[2]))}">{e(shown(b[2]))}</a>'
+            items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else ()))}</a>'
                          f'<span class="stage s{b[4]}">{e(stage_text(st, b[4], b[6]))}</span>'
                          f'<span class="t">{e(b[3])}{when}</span>'
                          + (f'<span class="why">{e(why)}</span>' if (why := (b[9].get(iid) if len(b) > 9 else "")) and why.lower() not in b[3].lower() else "")
@@ -377,7 +377,7 @@ def main(site):
         for y in years:
             # The front page map's panel (home.html): each state's bills that year, one line each, laws first.
             by, _, _ = year_view(issue["id"], states, y)
-            panel[str(y)] = {st: [[shown(b[2]), b[3], (b[9].get(issue["id"]) if len(b) > 9 else "") or "", b[4],
+            panel[str(y)] = {st: [[shown(b[2], b[10] if len(b) > 10 else ()), b[3], (b[9].get(issue["id"]) if len(b) > 9 else "") or "", b[4],
                                    link(f, b[2])[len("../../"):], b[6]]
                                   for f, b, new, passed in sorted(sorted(rows, key=lambda x: x[1][5], reverse=True),
                                                                   key=lambda x: (x[1][4] != 5, -x[1][4]))]
