@@ -50,6 +50,23 @@ in CLAUDE.md's launch checklist.
   are in (2026-11-15). Built 2026-11-15: each state's build writes data/issues.json (build_data.py's write_issues()),
   issues_site.py builds /issues/ and /issues/<id>/, and the front page lists the issues. Later: issue tags on the state
   pages, the next issues (notes/issues-draft.md), the free-text search.
+## Owner's list (2026-11-16)
+1. **More issues.** Twenty now (notes/issues-check.md). Candidates are the italic items in notes/issues-draft.md. First
+   settle the owner's seven open questions on the second ten (campaign finance, redistricting, DEI's scope, supplier
+   diversity, the name "Immigration enforcement", drag-show bills, school-aid "property tax relief"). Each new issue
+   needs a check (30 random matches plus a hunt for misses) and rebuilds every state. Past about 40 issues, add a
+   "Find an issue" box to the Show picker.
+2. **More years back.** Most states show 2023-26 (New York from 2017, California from 2021). Choose between full
+   history (every bill, every step) and laws only for the early years. Weigh per state: how far each source goes back
+   (Open States' bulk files reach about 2009-2011 for most states; some official files go back decades), download time
+   and LegiScan queries, and site size (Cloudflare Pages allows 20,000 files and 25 MB a file per deploy). Laws only
+   would serve the issue trends ("how many states passed X, year by year") at a fraction of the cost.
+3. **Federal bills (/us/).** Sources: GovInfo's bulk BILLSTATUS XML (every bill since the 113th Congress, 2013-14; no
+   key) or the Congress.gov API (free key); House roll calls (clerk.house.gov XML) and Senate roll calls (senate.gov
+   XML), member by member; Congressional Research Service summaries for "What it does". About 15,000-19,000 bills per
+   two-year Congress, about 2-3% enacted. It differs from states: the President (10 days, Sundays excepted; pocket
+   vetoes), 535 members, most bills never get a hearing, and members' "district" is a congressional district.
+
 ## Site checks
 - Daily site health and accessibility check (test/site_check.js, site-check.yml): review findings with the owner,
   then commit and schedule.
