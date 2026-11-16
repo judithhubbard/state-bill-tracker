@@ -54,9 +54,8 @@
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--body); padding: 40px 16px 64px; }
 main { max-width: 680px; margin: 0 auto; }
-h1 { font: 800 clamp(34px, 8vw, 48px)/1.05 var(--display); font-stretch: 85%; margin: 0 0 12px; }
+h1 { font: 800 clamp(30px, 7vw, 42px)/1.05 var(--display); font-stretch: 85%; margin: 0 0 18px; }
 h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 32px 0 12px; }
-p.lede { color: var(--ink-2); margin: 0 0 24px; font-size: 17px; }
 /* The tile map: one equal square per state, roughly where it sits on a map (11 columns by 8 rows). A ready state's square
    carries three dots, Senate, House and governor, in the party's color; a ringed dot is a supermajority. */
 .tiles { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; margin: 0 0 10px; }
@@ -112,10 +111,24 @@ li b { display: block; font: 700 17px/1.2 var(--display); color: var(--navy); }
 .mapcol { min-width: 0; }
 .mapcol .tiles { margin-bottom: 8px; }
 .when button:disabled { color: var(--tile-off-ink); opacity: .5; cursor: default; }
-.show label { color: var(--ink-2); }
-.show select { font: inherit; padding: 6px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink);
-  max-width: min(100%, 19em); }
-.show select:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
+.show .lab { color: var(--ink-2); }
+/* The Show picker: a button that opens the issues in short columns under their group headings. */
+.show .pick { position: relative; }
+#show { font: inherit; padding: 6px 30px 6px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink);
+  cursor: pointer; text-align: left; position: relative; }
+#show::after { content: ""; position: absolute; right: 11px; top: 50%; width: 6px; height: 6px; margin-top: -5px;
+  border: solid var(--ink-2); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+#show:focus-visible, .menu button:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
+.menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: min(620px, calc(100vw - 32px)); background: var(--sheet);
+  border: 1px solid var(--rule); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / .12); padding: 10px 12px 12px; }
+.menu .grp { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px 16px; }
+.menu h4 { margin: 0 0 2px; font: 600 11px/1.3 var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.menu button { display: block; width: 100%; text-align: left; font: inherit; font-size: 14px; color: var(--ink); background: none; border: 0;
+  border-radius: 5px; padding: 3px 6px; margin: 0 -6px; cursor: pointer; }
+.menu button:hover { background: var(--paper); }
+.menu button[aria-current="true"] { font-weight: 700; color: var(--navy); }
+.menu .party { border-bottom: 1px solid var(--rule); padding-bottom: 8px; margin-bottom: 10px; }
+.menu .party button { width: auto; }
 .tiles a.h0 { background: var(--tile-off); color: var(--tile-off-ink); box-shadow: none; }
 /* With an issue shown, states not on the site yet are outlined only, apart from states with no bills. */
 .tiles.issue span.off { background: transparent; border: 1px dashed var(--rule); box-shadow: none; opacity: 1; }
@@ -169,11 +182,11 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 <body>
 <main>
   <h1>State Bill Tracker</h1>
-  <p class="lede">Follow bills in your state legislature: where each one is, who decides next, and what to ask them. No account needed.</p>
   <div class="show" id="controls" hidden>
     <div class="when" id="years" role="group" aria-label="Year"></div>
-    <span class="pick"><label for="show">Show</label>
-    <select id="show"><option value="">Party control</option></select></span>
+    <span class="pick"><span class="lab" id="showLab">Show</span>
+    <button type="button" id="show" aria-haspopup="true" aria-expanded="false" aria-labelledby="showLab show">Party control</button>
+    <div class="menu" id="showMenu" hidden></div></span>
   </div>
   <div class="mapwrap">
   <div class="mapcol">
@@ -373,37 +386,55 @@ const AFTER_OK = Object.keys(after).length > 0 && new Date() < new Date("2027-01
 const YEARS = [...new Set([...(issues.years || []), NOW, ...(AFTER_OK ? [NOW + 1] : [])])].sort();
 year = NOW;
 let view = "now";
-const yearsEl = document.getElementById("years"), show = document.getElementById("show");
+const yearsEl = document.getElementById("years"), show = document.getElementById("show"), menu = document.getElementById("showMenu");
+// The picker shows short names ("Drug costs"); the panel and issue pages keep the full ones.
+const label = (i) => (i ? i.short.charAt(0).toUpperCase() + i.short.slice(1) : "Party control");
 const usable = (y) => (issue ? (issues.years || []).includes(y) : y === NOW || (y === NOW + 1 && AFTER_OK));
 function render() {
   if (!usable(year)) year = NOW;
   view = !issue && year === NOW + 1 ? "after" : "now";
   yearsEl.innerHTML = YEARS.map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === year}"${usable(y) ? "" : " disabled"}>${y}</button>`).join("");
-  show.value = issue ? issue.id : "";
+  show.textContent = label(issue);
+  for (const b of menu.querySelectorAll("button")) b.setAttribute("aria-current", String(b.dataset.id === (issue ? issue.id : "")));
   drawMap(view);
 }
 function remember() {
   const parts = [issue ? `issue=${issue.id}` : "", year !== NOW ? `year=${year}` : ""].filter(Boolean);
   try { history.replaceState(null, "", parts.length ? `#${parts.join("&")}` : location.pathname); } catch (e) {}
 }
-// The issues under their group headings (issues.py's GROUPS), so the menu stays easy to scan as issues are added.
+// The issues under their group headings (issues.py's GROUPS), in columns, so twenty-odd issues stay easy to scan.
 {
-  const opt = (i) => `<option value="${esc(i.id)}">${esc(i.name)}</option>`;
+  const opt = (i) => `<button type="button" data-id="${esc(i.id)}">${esc(label(i))}</button>`;
   const groups = issues.groups || [];
-  show.insertAdjacentHTML("beforeend", groups.map((g) => {
-    const xs = issues.issues.filter((i) => i.group === g);
-    return xs.length ? `<optgroup label="${esc(g)}">${xs.map(opt).join("")}</optgroup>` : "";
-  }).join("") + issues.issues.filter((i) => !groups.includes(i.group)).map(opt).join(""));
+  const extra = issues.issues.filter((i) => !groups.includes(i.group));
+  menu.innerHTML = `<div class="party"><button type="button" data-id="">Party control</button></div><div class="grp">`
+    + groups.map((g) => {
+      const xs = issues.issues.filter((i) => i.group === g);
+      return xs.length ? `<div><h4>${esc(g)}</h4>${xs.map(opt).join("")}</div>` : "";
+    }).join("") + (extra.length ? `<div><h4>Other</h4>${extra.map(opt).join("")}</div>` : "") + "</div>";
 }
+function openMenu(on, keys) {
+  menu.hidden = !on;
+  show.setAttribute("aria-expanded", String(on));
+  if (on && keys) (menu.querySelector('[aria-current="true"]') || menu.querySelector("button")).focus();
+}
+// Opened from the keyboard (no pointer click), focus moves into the menu.
+show.addEventListener("click", (e) => openMenu(menu.hidden, e.detail === 0));
+menu.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-id]");
+  if (!b) return;
+  issue = issues.issues.find((i) => i.id === b.dataset.id) || null;
+  openMenu(false);
+  show.focus();
+  render();
+  remember();
+});
+document.addEventListener("click", (e) => { if (!menu.hidden && !e.target.closest(".pick")) openMenu(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !menu.hidden) { openMenu(false); show.focus(); } });
 yearsEl.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-year]");
   if (!b || b.disabled) return;
   year = +b.dataset.year;
-  render();
-  remember();
-});
-show.addEventListener("change", () => {
-  issue = issues.issues.find((i) => i.id === show.value) || null;
   render();
   remember();
 });
