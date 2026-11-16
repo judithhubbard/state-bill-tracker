@@ -32,8 +32,8 @@ In session (five running sessions): about 65 fixed queries a day (5 lists + 12 x
 20 each Sunday for datasets and people, and the rest (about 220 a day) for full records when bills change: the month
 ends near 8,700 at most.
 
-What's kept, per state: the regular sessions (special sessions left out) that end this year or in the two years
-before and start no later than this year, in data/<st>/legiscan/<session_id>/ with the dataset's own layout:
+What's kept, per state: the regular sessions (special sessions left out) that end in the shared window's years
+(states/window.py: this year and the four before, not before 2023) and start no later than this year, in data/<st>/legiscan/<session_id>/ with the dataset's own layout:
 bill/<bill_number>.json, vote/<roll_call_id>.json, people/<people_id>.json (each as LegiScan gives it: {"bill": ...},
 {"roll_call": ...}, {"person": ...}), plus meta.json (the session, dataset_hash and date, the last master list's time,
 each bill's number, change_hash, when it was last read and the master list's "ml"). data/<st>/incomplete says "running"
@@ -51,6 +51,8 @@ Usage: python3 legiscan.py [--dry-run [--today=YYYY-MM-DD]] tn [ok me ri vt]
 import base64, io, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request, zipfile
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from states import window as W
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(ROOT, "data")
@@ -88,6 +90,13 @@ OPENS = {
     "ri": lambda y: nth(y, 1, 1, 1),                     # first Tuesday of January
     "vt": lambda y: nth(y, 1, 0, 1) + timedelta(days=2),  # the Wednesday after the first Monday of January
 }
+
+
+def holds_back(st, ds):
+    """A session never downloaded keeps the state off the site only once it has begun, and only if it ends this year or
+    last year: one the window added back (Rhode Island's 2023) fills in without holding anything back (a dataset is one
+    zip, so it's there whole or not at all)."""
+    return begun(st, ds) and W.recent(int(ds["year_end"]), TODAY)
 
 
 def begun(st, ds):
@@ -211,9 +220,9 @@ def dataset_list(st):
 
 
 def wanted(datasets):
-    """Regular sessions ending this year or in the two before, and starting no later than this year."""
+    """Regular sessions ending in the shared window's years (states/window.py), and starting no later than this year."""
     return sorted((d for d in datasets if not int(d.get("special") or 0)
-                   and int(d["year_end"]) >= YEAR - 2 and int(d["year_start"]) <= YEAR),
+                   and int(d["year_end"]) >= W.first_year(TODAY) and int(d["year_start"]) <= YEAR),
                   key=lambda d: -int(d["year_start"]))
 
 
@@ -469,11 +478,12 @@ def prepare_state(st, sessions, dry=False):
         meta = read_json(meta_path) or {"bills": {}}
         # Only a session never downloaded holds the state off the site, and only once it has begun; a failed refresh
         # keeps the last dataset.
-        holds = not meta.get("dataset_hash") and begun(st, ds)
+        holds = not meta.get("dataset_hash") and holds_back(st, ds)
         read_once = not holds
         if dry:
-            note = ("getDataset x1 if listed (never read" + ("" if holds else f"; opens {OPENS[st](int(ds['year_start']))}, "
-                    "so it can't mark the state incomplete") + ")") if not meta.get("dataset_hash") else \
+            why = "" if holds else (f"; opens {OPENS[st](int(ds['year_start']))}" if not begun(st, ds) else
+                                    "; an older session the window added back") + ", so it can't mark the state incomplete"
+            note = ("getDataset x1 if listed (never read" + why + ")") if not meta.get("dataset_hash") else \
                 "getDataset x1 (saved list's hash is newer)" if meta.get("dataset_hash") != ds["dataset_hash"] else \
                 "dataset unchanged in the saved list (getDataset only if today's list has a new hash: Sundays)"
             run = running(ds)
@@ -518,7 +528,7 @@ def never_read(st):
     if not saved:
         return ["datasetlist"]
     return [f"{d['session_id']}:dataset" for d in wanted(saved["datasetlist"])
-            if begun(st, d) and not (read_json(os.path.join(DATA, st, "legiscan", str(d["session_id"]), "meta.json")) or {}).get("dataset_hash")]
+            if holds_back(st, d) and not (read_json(os.path.join(DATA, st, "legiscan", str(d["session_id"]), "meta.json")) or {}).get("dataset_hash")]
 
 
 def main():
