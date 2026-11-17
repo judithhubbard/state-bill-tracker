@@ -1902,7 +1902,15 @@ const lastName = (n) => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "
 // ---- Your legislators: chosen by address or from a list, kept in this browser; otherwise
 // the defaults the site was built with (Tompkins County: Sen. Webb, Asm. Kelles). ----
 const REPS_STORE = STORE + "reps";
-function chosenReps() { try { return JSON.parse(localStorage.getItem(REPS_STORE) || "null"); } catch (e) { return null; } }
+// New York keeps the plain "abt:reps", which New Jersey and Virginia also wrote before each state had its own
+// (2026-10-29): a choice with a town is theirs (New Jersey's District 16 read as Sen. Liu and Asm. Norber), so it's dropped.
+function chosenReps() {
+  try {
+    const c = JSON.parse(localStorage.getItem(REPS_STORE) || "null");
+    if (c && STORE === "abt:" && c.town) { localStorage.removeItem(REPS_STORE); return null; }
+    return c;
+  } catch (e) { return null; }
+}
 // Your county sets your legislators unless you picked them (or looked up an address).
 function countyDistricts(county) { return DATA.districtCounties?.[county] || null; }
 function countyReps(county) {
