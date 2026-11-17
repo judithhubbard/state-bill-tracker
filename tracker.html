@@ -860,7 +860,8 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .pg.decided .srow[aria-pressed="true"] .sn { color: var(--sheet); }
 .pg.stale { border-left-color: var(--rule); padding-top: 6px; }
 .pg.stale .pg-h { color: var(--ink-2); }
-.pg.stale .pg-h span { display: block; font-weight: 400; font-size: 11.5px; }
+.pnote { font-size: 12.5px; color: var(--ink-2); margin: 0 0 8px; line-height: 1.35; }
+.pg.stale .pg-h span:not(.tip) { display: block; font-weight: 400; font-size: 11.5px; }
 .pg.stale .srow:not([aria-pressed="true"]) { color: var(--ink-2); }
 .pg.stale .srow .sl { font-size: 12.5px; }
 .pg.stale .srow .ss { display: none; }
@@ -1626,7 +1627,11 @@ function renderPipeline() {
   // After the second year's last floor votes, only bills that passed both houses can still move: shown while any
   // are left (once the governor has acted on all of them, there's nothing in play).
   const inPlay = BILLS.some((b) => b.stage === 3 || b.stage === 4);
-  $("pipeline").innerHTML = floorVotesOver() ? `
+  // The counts follow the other filters (a county, a topic ...): say so, so they don't seem to disagree with totals
+  // elsewhere on the page (the notice counts every bill).
+  const by = activeFilters().filter(([k]) => k !== "stage" && k !== "one");
+  const note = !by.length ? "" : `<p class="pnote">${by.length === 1 && by[0][0] === "nearby" ? `Counting only ${esc(by[0][3])}.` : "Counting only the bills your filters show."}</p>`;
+  $("pipeline").innerHTML = note + (floorVotesOver() ? `
     ${inPlay ? `<div class="pg live">${head("Still in play", [3, 4])}${[3, 4].map(row).join("")}</div>` : ""}
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
     <div class="pg stale">${head("Out of time", [0, 1, 2], `<span>${esc(STATE.outOfTimeLine || "Die December 31 unless lawmakers return")}</span>`, OUT_OF_TIME)}${[0, 1, 2].map(row).join("")}</div>` : `
@@ -1636,7 +1641,7 @@ function renderPipeline() {
     ${counts[4] ? `<div class="pg stale">${row(4)}</div>` : ""}` : `
     <div class="pg leg">${head(`In ${BODY}`, [0, 1, 2, 3])}${row(0)}${agendaRow}${[1, 2, 3].map(row).join("")}</div>
     <div class="pg live"><div class="pg-h">With ${EXEC.the}</div>${[4].map(row).join("")}</div>
-    <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>`}`;
+    <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>`}`);
 }
 
 // Turning on "upcoming agenda" sorts by meeting date, unless another order was chosen.
