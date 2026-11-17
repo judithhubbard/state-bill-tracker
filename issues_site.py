@@ -70,7 +70,7 @@ DESC = {
     "rcv": "Bills about ranked-choice (instant-runoff) voting and approval voting: allowing, adopting or banning them.",
     "utilityrates": "Bills about electric and gas bills: rates and rate cases, shutoffs, energy assistance, and who pays for grid upgrades.",
     "climate": "Bills about climate and clean energy: greenhouse gas limits, clean energy standards, carbon pricing, gas hookups, electric vehicles.",
-    "esg": "Bills about ESG investing and boycotts: whether state funds weigh environmental and social factors, and boycotts of energy, gun makers or Israel.",
+    "esg": "Bills on politics in state investing and contracts: whether state funds may weigh environmental and social factors (\u201cESG\u201d), and boycotts of energy companies, gun makers or Israel.",
     "religion": "Bills about religion in public schools: Ten Commandments displays, chaplains, prayer, Bible courses and released time.",
     "childlabor": "Bills about child labor: work permits, hours and hazardous jobs for minors, penalties, and child performers’ and influencers’ earnings.",
     "protest": "Bills about protests and assembly: riot and unlawful assembly crimes, blocking roads, critical infrastructure, picketing homes, masks.",
@@ -340,7 +340,7 @@ SHORT = {"datacenters": "data centers", "pfas": "PFAS", "ai": "artificial intell
          "medicaidwork": "Medicaid work requirements", "dst": "daylight saving time", "books": "book removals",
          "medicaldebt": "medical debt", "police": "police accountability", "deathpenalty": "death penalty",
          "vaccines": "vaccines", "unions": "unions", "initiatives": "ballot initiative rules", "rcv": "ranked-choice voting",
-         "utilityrates": "utility rates", "climate": "climate and clean energy", "esg": "ESG and boycotts",
+         "utilityrates": "utility rates", "climate": "climate and clean energy", "esg": "state investing and boycott rules",
          "religion": "religion in schools", "childlabor": "child labor", "protest": "protest laws", "kratom": "kratom"}
 
 
@@ -440,7 +440,7 @@ def bill_items(iid, st, mine):
         fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
         why = (b[9].get(iid) if len(b) > 9 else "") or ""
         items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}" data-k="{f["session"]}|{e(b[2])}|{e(b[5] or "")}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else (), st))}</a>'
-                     f'<span class="tags">{party_tag(party(b))}<span class="stg s{b[4]}">{e(stage_text(st, b[4], b[6]))}</span></span>'
+                     f'<span class="tags">{party_tag(party(b))}<span class="stg s{b[4]}">{e(stage_text(st, b[4], b[6]) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span></span>'
                      f'<span class="t">{e(b[3])}</span>'
                      + (f'<span class="why">{e(why)}</span>' if why and why.lower() not in b[3].lower() else "")
                      + '</li>')

@@ -564,8 +564,9 @@ function showPanel(st) {
     // (The issue pages list the states only: Congress's bills are here and on its own page.)
     const head = `<h3>${esc(nameOf(st))}</h3><p>${n ? `${n} bill${n === 1 ? "" : "s"} on ${esc(issue.short)}${pw} in ${year}` : `No bills on ${esc(issue.short)}${pw} in ${year}`}`
       + `${laws ? `, ${laws} became law` : ""}.${n && st !== "us" ? ` <a href="issues/${issue.id}/${page}#${st}">See them on the issue page</a>` : ""}${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`;
-    body.innerHTML = head + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last, pc]) => {
-      const stg = kind === "const" && stage === 3 ? "To voters" : STAGE_SHORT[stage];
+    body.innerHTML = head + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last, pc, , lawHere]) => {
+      // A law from a later (or earlier) year than the one shown says when: the map counts laws by year.
+      const stg = kind === "const" && stage === 3 ? "To voters" : stage === 5 && lawHere === 0 && last ? `Law ${last.slice(0, 4)}` : STAGE_SHORT[stage];
       if (why && (why.toLowerCase().replace(/\W+/g, " ").trim() === title.toLowerCase().replace(/\W+/g, " ").trim()
         || title.toLowerCase().includes(why.toLowerCase()))) why = "";
       if (why) title = title.replace(/[.\s]+$/, "");

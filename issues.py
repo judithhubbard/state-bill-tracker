@@ -535,7 +535,7 @@ ISSUES = [
                [r"\b(?:type|source|kind) of (?:energy|fuel|utility service)\b", r"\b(?:prohibit\w*|restrict\w*|discriminat\w*)\b", r"\b(?:political subdivisions?|municipal\w*|count(?:y|ies)|local governments?|ordinances?)\b"]],
      # California's digests open with its greenhouse gas law as background on bills about other things.
      "none": [r"\bcarbon monoxide\b(?!.{0,200}\b(?:emission|greenhouse))", r"\bdesignates the State Air Resources Board as the state agency (?:charged with|responsible for) monitoring and regulating sources of emissions of greenhouse gases\b"]},
-    {"id": "esg", "group": "Work and the economy", "name": "ESG investing and boycott laws", "words": ["esg", "boycott", "divestment", "bds", "debanking"],
+    {"id": "esg", "group": "Work and the economy", "name": "State investing and boycott rules", "words": ["esg", "boycott", "divestment", "bds", "debanking"],
      # Whether state funds, pensions and contractors may weigh environmental, social and governance factors, and laws
      # barring contracts with or investments in companies that boycott energy, firearms or Israel. Divestment from fossil
      # fuels counts; divestment from countries (China, Russia, Iran) doesn't.
