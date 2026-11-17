@@ -71,7 +71,7 @@ const STATE = {
   addressLookup: true,
   findReps: "https://wrm.capitol.texas.gov/home",
   oneNumber: true,
-  diesAfterFloor: () => "Bills that didn't pass died with it.",
+  diesAfterFloor: () => `The session ended ${fmtDate(STATE.sessionEnds(DATA.session))}, so it died with it.`,
   outOfTimeLine: "Died when the session ended",
 
   // A committee that hears a bill and doesn't vote on it "leaves it pending".

@@ -1587,6 +1587,9 @@ function sortBills(arr) {
 // The stage filter is one stage (3) or a whole group of them ("3,4", from clicking a group's heading).
 const stageSet = () => (state.stage == null ? [] : String(state.stage).split(",").map(Number));
 const PIPE_GROUPS = {}; // "3,4" -> "Still in play"
+// A stage's name in the pipeline: once the session's unpassed bills have died with it (billsDied()), stages 0-2 take
+// the finished session's wording ("Died in committee"), as on a past session's page.
+const pipeName = (k) => (k <= 2 && DATA.current && !DATA.upcoming && billsDied() ? STAGE_TEXT.final : TEXT).pipe[k];
 const AGENDA_TIP = "Bills listed for a committee meeting that hasn't happened yet. Committees post agendas about a week ahead; this is the time to write the chair and committee members." + (UNI ? "" : " Includes bills that passed one house and are on the other house's committee agenda.");
 function renderPipeline() {
   const counts = Array(7).fill(0), oneHouse = { [HOUSE.S]: 0, [HOUSE[LOW]]: 0 };
@@ -1610,9 +1613,10 @@ function renderPipeline() {
   const soon = DATA.current ? BILLS.filter((b) => nextMeeting(b) && matches(b, "agenda") && (state.stage == null || stageSet().includes(b.stage))).length : 0;
   const agendaRow = soon || state.agenda ? `<button class="srow sub" type="button" data-agenda aria-pressed="${!!state.agenda}"${ROW_DESC(AGENDA_TIP)}>
        <span class="sl">On an upcoming committee agenda${TIPR(AGENDA_TIP)}</span><span class="sn">${num(soon)}</span></button>` : "";
-  const rowTip = (k) => (!DATA.current && PAST_STAGE_TIPS[k]) || STAGE_TIPS[k];
+  const died = billsDied();
+  const rowTip = (k) => ((!DATA.current || (died && k <= 2)) && PAST_STAGE_TIPS[k]) || STAGE_TIPS[k];
   const row = (k) => UNI && k === 2 ? "" : `<button class="srow" type="button" data-k="${k}" aria-pressed="${stageSet().includes(k)}"${ROW_DESC(rowTip(k))}>
-       <span class="sl">${TEXT.pipe[k]}${TIPR(rowTip(k))}</span><span class="sn">${num(counts[k])}</span>${subs[k] ? `<span class="ss">${subs[k]}</span>` : ""}</button>`;
+       <span class="sl">${pipeName(k)}${TIPR(rowTip(k))}</span><span class="sn">${num(counts[k])}</span>${subs[k] ? `<span class="ss">${subs[k]}</span>` : ""}</button>`;
   // A group's heading selects all of its stages at once.
   const head = (label, ks, extra = "", tip = "") => {
     const key = ks.join(",");
@@ -2309,9 +2313,13 @@ function planFor(b, stance = "support") {
   const ended = b.stage <= 2 && STATE.endedNote?.(b);
   // When the session is over (STATE.floorVotesEnd === false: its last day has passed), say when it ended.
   const overAt = STATE.floorVotesEnd === false ? `The session ended ${fmtDate(STATE.sessionEnds(DATA.session))}.` : "Floor votes are over for this session.";
+  // Most states' line already says the session ended and the bill died ("The session has ended, so it died."): then
+  // it's said once, without "Floor votes are over" before it.
+  const diesLine = DIES(y2, b), saysDied = !!STATE.diesAfterFloor && /\bdied\b/.test(diesLine);
+  const overLine = saysDied ? diesLine : `${overAt} ${diesLine}`;
   const stalled = ended && !adjourned ? ended.tail : missed ? `It missed ${STATE.originWord || "the deadline"} on ${fmtDate(missed)}, the last day to pass its own house, so it can't pass this ${YEARS > 1 ? "session" : "year"}.`
     : adjourned
-    ? `${overAt} ${DIES(y2, b)}`
+    ? overLine
     : recess ? `${BODY_CAP} is out until ${STATE.opens ? fmtDate(STATE.opens(y2)) : `January ${y2}`}.` : "";
   const live = !stalled || recess; // can anything move before the session ends?
   // Once the session is over and its bills have died (not New York's, which can move until December 31), a bill
@@ -2420,7 +2428,7 @@ function planFor(b, stance = "support") {
     const other = b.passedIn === HOUSE.S ? HOUSE[LOW] : HOUSE.S;
     const where = ended ? ended.when : stopped || (b.stage === 2 ? `It passed the ${b.passedIn} but not the ${other}.`
       : b.stage === 1 ? "It never got a floor vote." : "It never got out of committee.");
-    reason = STATE.floorVotesEnd === false ? `${overAt} ${where} ${DIES(y2, b)}`
+    reason = STATE.floorVotesEnd === false || saysDied ? (saysDied ? `${where} ${diesLine}` : `${overAt} ${where} ${diesLine}`)
       : today > `${y2}-12-31`
       ? `The session ended December 31, ${y2}. ${where} It would have to be reintroduced.`
       : `Floor votes for this session ended ${fmtDate(lv)}. ${where} ${STATE.diesAfterFloor ? DIES(y2, b) : `It can move only if lawmakers return for a special session; otherwise it dies December 31, ${y2}.`}`;
@@ -3828,7 +3836,7 @@ function activeFilters() {
   if (ONE != null) out.push(["one", null, "Showing one bill", BILLS[ONE].nums.join(" / ")]);
   const opt = (id, v) => { const o = [...$(id).options].find((x) => x.value === v); return o ? o.textContent.replace(/ \([\d,]+\)$/, "") : v; };
   if (state.q) out.push(["q", null, "Search", `“${state.q}”`]);
-  if (state.stage != null) out.push(["stage", null, "Now", PIPE_GROUPS[String(state.stage)] || TEXT.pipe[state.stage]]);
+  if (state.stage != null) out.push(["stage", null, "Now", PIPE_GROUPS[String(state.stage)] || pipeName(state.stage)]);
   for (const t of state.topics) out.push(["topics", t, "Topic", TOPICS[t]]);
   if (state.party) out.push(["party", null, "Party", PARTIES[state.party]]);
   if (state.progress) out.push(["progress", null, "Furthest", opt("progress", state.progress)]);
