@@ -295,6 +295,10 @@ def load_session(session):
             summary[r[0]].append(r)
 
     seat_of, party_of = seats(session) if session == CURRENT else ({}, {})
+    if session != CURRENT:
+        # Past sessions' parties from that session's member table (no seats: today's members hold them).
+        party_of = {(r[3], r[4]): {"DEM": "D", "REP": "R"}.get(r[11] or "", "")
+                    for r in rows(session, "LEGISLATOR") if r[3] in ("A", "S") and r[4]}
     vetoes = veto_messages(session)
     # The digests (states/ca/texts.py), for finding similar bills; they aren't put in the page.
     tpath = os.path.join(P.DATA, f"texts_{session}.json")

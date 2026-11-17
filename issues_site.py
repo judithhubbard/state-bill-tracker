@@ -72,6 +72,7 @@ CSS = """
   --law: #18693f; --veto: #a3302a; --chip: #e9eef6; --tile-off: #e3e8f1; --tile-off-ink: #56627c;
   --heat-1: #c5d5ef; --heat-2: #6f93d0; --heat-3: #1d3b78; --heat-ink-1: #14213d; --heat-ink-2: #0b1530; --heat-ink-3: #ffffff;
   --law-mark: #c8901f;
+  --ctl-r1: #ecd3d0; --ctl-r1-ink: #5b2420; --ctl-d1: #d3dded; --ctl-d1-ink: #1d3560;
   --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
@@ -81,6 +82,7 @@ CSS = """
     --law: #5cc28c; --veto: #f08a80; --chip: #1f2b45; --tile-off: #1b2438; --tile-off-ink: #8a96ae;
     --heat-1: #2f4d85; --heat-2: #5a86d6; --heat-3: #9dbcf3; --heat-ink-1: #e6ebf5; --heat-ink-2: #ffffff; --heat-ink-3: #0f1626;
     --law-mark: #e0b04e; color-scheme: dark;
+    --ctl-r1: #573b39; --ctl-r1-ink: #f3dedb; --ctl-d1: #36486b; --ctl-d1-ink: #e3eaf7;
   }
 }
 :root[data-theme="dark"] {
@@ -88,6 +90,7 @@ CSS = """
   --law: #5cc28c; --veto: #f08a80; --chip: #1f2b45; --tile-off: #1b2438; --tile-off-ink: #8a96ae;
   --heat-1: #2f4d85; --heat-2: #5a86d6; --heat-3: #9dbcf3; --heat-ink-1: #e6ebf5; --heat-ink-2: #ffffff; --heat-ink-3: #0f1626;
   --law-mark: #e0b04e; color-scheme: dark;
+  --ctl-r1: #573b39; --ctl-r1-ink: #f3dedb; --ctl-d1: #36486b; --ctl-d1-ink: #e3eaf7;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--body); padding: 32px 16px 64px; }
@@ -128,6 +131,12 @@ ul.bills a:hover { text-decoration: underline; }
 .why { grid-column: 1 / -1; color: var(--ink-2); font-size: 14px; overflow-wrap: anywhere; }
 .stage { font-size: 13px; background: var(--chip); border-radius: 999px; padding: 1px 9px; white-space: nowrap; align-self: start; }
 .stage.s5 { color: var(--law); font-weight: 600; }
+/* The stage and, before it, the sponsors' party (D, R or Both; none for committee bills), in the front page map's colors. */
+.tags { display: inline-flex; gap: 4px; align-items: center; align-self: start; justify-self: end; }
+.pty { display: inline-block; font: 700 11px/1.6 var(--body); padding: 0 5px; border-radius: 4px; white-space: nowrap; }
+.pty.D { background: var(--ctl-d1); color: var(--ctl-d1-ink); }
+.pty.R { background: var(--ctl-r1); color: var(--ctl-r1-ink); }
+.pty.B { background: var(--tile-off); color: var(--tile-off-ink); }
 .stage.s6 { color: var(--veto); font-weight: 600; }
 .hidden { display: none !important; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -154,6 +163,8 @@ ul.bills a:hover { text-decoration: underline; }
 .legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
 .legend .sq.h0 { background: var(--tile-off); } .legend .sq.h1 { background: var(--heat-1); }
 .legend .sq.h2 { background: var(--heat-2); } .legend .sq.h3 { background: var(--heat-3); }
+.tools button.info { border: 0; background: none; color: var(--ink-2); padding: 2px 4px; font-size: 17px; line-height: 1; border-radius: 6px; margin-left: -4px; }
+.tools button.info[aria-expanded="true"] { color: var(--navy); }
 details.table { margin: 0 0 8px; }
 details.table summary { cursor: pointer; color: var(--navy); font-weight: 600; font-size: 15px; margin: 0 0 8px; }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
@@ -178,6 +189,30 @@ HEAD = """<!DOCTYPE html>
 """
 
 e = html.escape
+
+
+# The issue pages' and the front page panel's "Sponsor's party" menu (build_data.py's sponsor_class()).
+PARTY_NOTE = ("Sponsor&rsquo;s party is the party of a bill&rsquo;s main sponsors, not what the bill does: bills on the "
+              "same issue often pull opposite ways, and party is a rough guide to which. &ldquo;Both parties&rdquo;: main "
+              "sponsors from both, or at least one in five of its sponsors and co-sponsors from the other party. Committee "
+              "bills and Nebraska&rsquo;s nonpartisan Legislature have no party.")
+
+
+def party(b):
+    """A bill row's sponsor-party class ("D", "R", "B" or ""; build_data.py's write_issues())."""
+    return b[11] if len(b) > 11 else ""
+
+
+PARTY_TAGS = {"D": ("D", "Sponsored by Democrats"), "R": ("R", "Sponsored by Republicans"),
+              "B": ("Both", "Sponsored by both parties")}
+
+
+def party_tag(c):
+    """The badge before a bill's stage: D, R or Both, or nothing for committee bills and unknown parties."""
+    if c not in PARTY_TAGS:
+        return ""
+    short, words = PARTY_TAGS[c]
+    return f'<span class="pty {c}" role="img" title="{words}" aria-label="{words}">{short}</span>'
 
 
 def stage_text(state, stage, kind):
@@ -309,7 +344,7 @@ def tile_map(iid, by, names, open_, year, upcoming):
         label = (f"{names[st]}: {n} bill{'' if n == 1 else 's'}{' prefiled' if upcoming else ''} in {year}" if n else f"{names[st]}: none in {year}")
         label += f", {laws} became law" if laws else ""
         href = f"#{st}" if st in by else "#bills"
-        out.append(f'<a href="{href}" class="h{step(n)}" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}{badge(laws)}</a>')
+        out.append(f'<a href="{href}" data-st="{st}" data-name="{e(names[st])}" class="h{step(n)}" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}{badge(laws)}</a>')
     return '<div class="tiles">' + "".join(out) + "</div>"
 
 
@@ -328,7 +363,7 @@ def issue_page(issue, states, year, years, default, upcoming):
         intro_n, laws_n, moving = intro_n + n, laws_n + laws, moving + n_moving
         flag = " *" if st in TITLES_ONLY else ""
         label, total = info.get(st, ("", 0))
-        rows.append((n, f'<tr><th scope="row"><a href="#{st}">{e(names[st])}</a>{flag}</th><td class="n">{n}</td>'
+        rows.append((n, f'<tr data-st="{st}"><th scope="row"><a href="#{st}">{e(names[st])}</a>{flag}</th><td class="n">{n}</td>'
                         f'<td class="n">{laws}</td><td class="n">{n_moving}</td><td class="n">{f"{total:,}" if total else ""}</td>'
                         f'<td class="sess">{e(label)}</td></tr>'))
         items = []
@@ -336,13 +371,13 @@ def issue_page(issue, states, year, years, default, upcoming):
         for f, b, new, passed in sorted(sorted(mine, key=lambda x: x[1][5], reverse=True), key=lambda x: (x[1][4] != 5, -x[1][4])):
             fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
             when = ""
-            items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else ()))}</a>'
-                         f'<span class="stage s{b[4]}">{e(stage_text(st, b[4], b[6]))}</span>'
+            items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else ()))}</a>'
+                         f'<span class="tags">{party_tag(party(b))}<span class="stage s{b[4]}">{e(stage_text(st, b[4], b[6]))}</span></span>'
                          f'<span class="t">{e(b[3])}{when}</span>'
                          + (f'<span class="why">{e(why)}</span>' if (why := (b[9].get(iid) if len(b) > 9 else "")) and why.lower() not in b[3].lower() else "")
                          + '</li>')
         blocks.append(f'<section class="st" data-name="{e(names[st].lower())}"><h3 id="{st}">{e(names[st])} '
-                      f'<span class="note">({n}{flag})</span></h3><ul class="bills">{"".join(items)}</ul></section>')
+                      f'<span class="note">(<span class="cnt">{n}</span>{flag})</span></h3><ul class="bills">{"".join(items)}</ul></section>')
     in_states = len([1 for st in by if by[st][0]])
     rows.sort(key=lambda r: -r[0])
     none = sorted(names[st] for st in open_ if st not in by)
@@ -352,15 +387,15 @@ def issue_page(issue, states, year, years, default, upcoming):
     fopts = "".join(f'<option value="f:{e(re.sub(r"[^a-z]+", "-", k.lower()))}">{e(k)}</option>' for k in issue.get("filters", {}))
     verb = "prefiled" if upcoming else "with action"
     up = up_dir = "../../"
-    lede_counts = (f"<b>{intro_n:,}</b> bills {verb} in <b>{in_states}</b> states in {year}"
-                   + ("" if upcoming else f"; <b>{laws_n:,}</b> became law in {year}") + ".")
+    lede_counts = (f'<b id="nBills">{intro_n:,}</b> bills {verb} in <b id="nStates">{in_states}</b> states in {year}'
+                   + ("" if upcoming else f'; <b id="nLaws">{laws_n:,}</b> became law in {year}') + ".")
     body = HEAD.format(title=f"{issue['name']}: bills in every state, {year}", desc=e(DESC.get(iid, "")), css=CSS) + f"""
 <p class="crumbs"><a href="{up}">State Bill Tracker</a> / <a href="../">Issues</a></p>
 <h1>{e(issue['name'])}</h1>
 <p class="lede">{e(DESC.get(iid, ""))}</p>
 <div class="tools"><label for="year">Year</label>
 <select id="year" onchange="location.href=this.value">{yopts}</select></div>
-<p>{lede_counts}</p>
+<p id="lede">{lede_counts}</p>
 {tile_map(iid, by, names, open_, year, upcoming)}
 <p class="legend">
 <span class="key"><i class="sq h0"></i>None</span><span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>
@@ -380,32 +415,76 @@ def issue_page(issue, states, year, years, default, upcoming):
 <div class="tools">
 <label for="filter" class="vh">Show</label>
 <select id="filter"><option value="">All bills</option><option value="law">Became law</option><option value="moving">Still moving</option>{fopts}</select>
+<label for="party" class="vh">Sponsor's party</label>
+<select id="party"><option value="">Sponsor&rsquo;s party: all</option><option value="D">Democrats</option><option value="R">Republicans</option><option value="B">Both parties</option><option value="-">Committee or none</option></select><button type="button" class="info" id="partyInfo" aria-expanded="false" aria-controls="partyNote" aria-label="About sponsor&rsquo;s party">&#9432;</button>
 <input type="search" id="find" placeholder="Find a state" aria-label="Find a state">
 </div>
+<p class="note hidden" id="partyNote">{PARTY_NOTE}</p>
 <p class="note" id="count" aria-live="polite"></p>
 {"".join(blocks)}
 <footer>Bills are found by the words in their titles and summaries, so a few are missed and a few are only partly about the issue. Bills for one city or county are left out. Open a bill for its status, votes and who to contact.</footer>
 </main>
 <script>
+// Both menus filter the bills, and the map, the counts line and the table follow them (counted from the list's own
+// items: data-n, alive that year; data-l, became law that year; data-p, the sponsors' party). "Find a state" only
+// hides states' lists.
+const UPCOMING = {"true" if upcoming else "false"}, YEAR = {year};
+const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n ? 1 : 0);
 function apply() {{
   const q = document.getElementById("find").value.trim().toLowerCase(), v = document.getElementById("filter").value;
-  let shown = 0;
+  const pv = document.getElementById("party").value;
+  let shown = 0, bills = 0, laws = 0, states = 0;
+  const by = {{}};
   for (const sec of document.querySelectorAll("section.st")) {{
-    let any = 0;
+    let any = 0, n = 0, l = 0, mv = 0;
     for (const li of sec.querySelectorAll("li")) {{
       const s = +li.dataset.stage, f = li.dataset.f.split(" ");
-      const ok = !v || (v === "law" && s === 5) || (v === "moving" && s >= 1 && s <= 4) || (v.startsWith("f:") && f.includes(v.slice(2)));
+      const ok = (!v || (v === "law" && s === 5) || (v === "moving" && s >= 1 && s <= 4) || (v.startsWith("f:") && f.includes(v.slice(2))))
+        && (!pv || li.dataset.p === pv);
       li.classList.toggle("hidden", !ok);
-      if (ok) any++;
+      if (!ok) continue;
+      any++;
+      if (li.dataset.n === "1") {{ n++; if (s >= 1 && s <= 4) mv++; }}
+      if (li.dataset.l === "1") l++;
     }}
+    by[sec.querySelector("h3").id] = [n, l, mv];
+    bills += n; laws += l; states += n ? 1 : 0;
+    sec.querySelector(".cnt").textContent = any;
     const vis = any && (!q || sec.dataset.name.includes(q));
     sec.classList.toggle("hidden", !vis);
     if (vis) shown += any;
   }}
-  document.getElementById("count").textContent = (v || q) ? `Showing ${{shown.toLocaleString()}} bills.` : "";
+  document.getElementById("count").textContent = (v || q || pv) ? `Showing ${{shown.toLocaleString()}} bills.` : "";
+  document.getElementById("nBills").textContent = bills.toLocaleString();
+  document.getElementById("nStates").textContent = states;
+  const nl = document.getElementById("nLaws");
+  if (nl) nl.textContent = laws.toLocaleString();
+  for (const a of document.querySelectorAll(".tiles a[data-st]")) {{
+    const [n, l] = by[a.dataset.st] || [0, 0], code = a.dataset.st.toUpperCase();
+    a.className = `h${{step(n)}}`;
+    const old = a.querySelector(".lawn");
+    if (old) old.remove();
+    if (l) a.insertAdjacentHTML("beforeend", `<span class="lawn" aria-hidden="true">${{l}}</span>`);
+    const label = (n ? `${{a.dataset.name}}: ${{n}} bill${{n === 1 ? "" : "s"}}${{UPCOMING ? " prefiled" : ""}} in ${{YEAR}}` : `${{a.dataset.name}}: none in ${{YEAR}}`)
+      + (l ? `, ${{l}} became law` : "");
+    a.title = label;
+    a.setAttribute("aria-label", `${{code}}, ${{label}}`);
+  }}
+  for (const tr of document.querySelectorAll("tr[data-st]")) {{
+    const [n, l, mv] = by[tr.dataset.st] || [0, 0, 0], td = tr.querySelectorAll("td.n");
+    td[0].textContent = n; td[1].textContent = l; td[2].textContent = mv;
+    tr.classList.toggle("hidden", !n && !l);
+  }}
 }}
 document.getElementById("filter").addEventListener("change", apply);
+document.getElementById("party").addEventListener("change", apply);
 document.getElementById("find").addEventListener("input", apply);
+document.getElementById("partyInfo").addEventListener("click", (ev) => {{
+  const note = document.getElementById("partyNote"), open = note.classList.toggle("hidden") === false;
+  ev.currentTarget.setAttribute("aria-expanded", String(open));
+}});
+// Firefox and Safari keep a menu's choice when the page is reloaded or reached with Back.
+if (document.getElementById("filter").value || document.getElementById("party").value) apply();
 </script>
 </body>
 </html>
@@ -442,7 +521,10 @@ def main(site):
                                    link(f, b[2])[len("../../"):], b[6],
                                    # For the star (home.html): the bill's number, its session and its last action's
                                    # date, which make its watchlist entry, as on the state's own page.
-                                   b[2], f["session"], b[5]]
+                                   b[2], f["session"], b[5],
+                                   # The sponsors' party, and whether it counts in the year's bills and laws (the map
+                                   # follows the panel's "Sponsor's party" menu).
+                                   party(b), int(new), int(passed)]
                                   for f, b, new, passed in sorted(sorted(rows, key=lambda x: x[1][5], reverse=True),
                                                                   key=lambda x: (x[1][4] != 5, -x[1][4]))]
                              for st, (n, laws, rows) in {**by, **us_by}.items()}

@@ -183,6 +183,35 @@ def bill_parties(r, party_of):
     return [vals.count("D"), vals.count("R")]
 
 
+def sponsor_class(r, party_of):
+    """The bill's sponsors' party, for the issue pages' "Sponsor's party" menu: "D" or "R" when every prime (main)
+    sponsor whose party is known is of that party, "B" (both parties) when the prime sponsors include both, or when the
+    other party has at least one in five of the bill's sponsors and co-sponsors with a known party (so one Democrat among
+    twenty Republicans doesn't make a bill bipartisan, but a Republican and a Democrat together do), and "" when no
+    prime sponsor is a member with a known party (committee bills, bills by request, Nebraska's nonpartisan Legislature).
+    Only Democrats and Republicans count: independents and third parties don't make a bill bipartisan."""
+    primes, everyone = {}, {}
+    for v in r["vers"]:
+        house = v["p"][0]
+        names = [v["sponsor"]] + v.get("cosponsors", [])
+        k = max(1, v.get("primes") or 1)
+        for i, n in enumerate(names):
+            p = party_of.get((house, n)) if n else None
+            if p not in ("D", "R"):
+                continue
+            everyone[(house, n)] = p
+            if i < k:
+                primes[(house, n)] = p
+    lead = set(primes.values())
+    if not lead:
+        return ""
+    if len(lead) == 2:
+        return "B"
+    x = lead.pop()
+    other = sum(1 for p in everyone.values() if p != x)
+    return "B" if other and other * 5 >= len(everyone) else x
+
+
 def legislators(session):
     """Current legislators with a short page address each: last name, or first-last when shared."""
     path = os.path.join(P.DATA, f"contacts_{session}.json")
@@ -1132,13 +1161,14 @@ def bill_texts(session, recs):
     return out
 
 
-def write_issues(session, recs, texts, page, current):
+def write_issues(session, recs, texts, page, current, party_of=None):
     """A session's bills on each national issue (issues.py), into data/issues_<session>.json for issues_site.py, which
     builds the issue pages from every state's files, by calendar year: {"state", "name", "session", "years" (P.YEARS),
     "upcoming", "label", "page", "total" (bills counted, for scale), "active" ({year: bills introduced or acted on}), "bills": [[issue ids, {issue: [filters]}, number,
     title, stage, last action's date, "const" or "", year introduced (the session's first year at the earliest, so a
     bill prefiled in December counts in its session's year), date it became law or "", {issue: the sentence that
-    matched} for titles under eight words, the record's other numbers], ...]}. Local bills for one
+    matched} for titles under eight words, the record's other numbers, the sponsors' party (sponsor_class(): "D", "R", "B"
+    or "")], ...]}. Local bills for one
     place and placeholder bills are left out, as in the statistics."""
     import issues
     bills, total, active = [], 0, {}
@@ -1169,7 +1199,8 @@ def write_issues(session, recs, texts, page, current):
                       # Under a bare title ("Wages"), the sentence that matched, so readers see why the bill is there.
                       {i: issues.excerpt(i, head, body) for i in found} if len(r["title"].split()) < 8 else {},
                       # The record's other numbers (New York's identical Assembly and Senate bills are one record).
-                      r["nums"][1:]])
+                      r["nums"][1:],
+                      sponsor_class(r, party_of or {})])
     out = {"state": STATE, "name": P.STATE_NAME, "session": session, "years": getattr(P, "YEARS", 2),
            "upcoming": session > current,
            "label": P.session_label(session), "page": page, "total": total, "active": active, "bills": bills}
@@ -1210,6 +1241,13 @@ def last_checked():
 
 def main():
     loaded = {s: C.load_session(s) for s in SESSIONS}
+    # For the issue pages' "Sponsor's party": a name's party from the other sessions shown, where they all agree, for a
+    # session whose own records lack it (California's and Virginia's past sessions have no member lists with parties).
+    seen_party = defaultdict(set)
+    for s in SESSIONS:
+        for k, v in parties(s, loaded[s][0]).items():
+            seen_party[k].add(v)
+    other_party = {k: next(iter(v)) for k, v in seen_party.items() if len(v) == 1}
     urls = json.load(open(URLS_FILE)) if os.path.exists(URLS_FILE) else {}
     current_session = CURRENT
     if GITHUB:
@@ -1441,7 +1479,7 @@ def main():
                 for name, part in parts.items():
                     with open(os.path.join(GITHUB, "data", f"{session}-text", f"{name}.json"), "w", encoding="utf-8") as f:
                         json.dump(part, f, separators=(",", ":"), ensure_ascii=False)
-            write_issues(session, recs, texts, urls.get(str(session)) or "./", current)
+            write_issues(session, recs, texts, urls.get(str(session)) or "./", current, {**other_party, **party_of})
             write_status(session, recs, urls.get(str(session)) or "./", session >= current)
         # The template is written with New York's names (title, header and the script that updates them).
         template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)

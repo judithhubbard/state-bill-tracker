@@ -2202,7 +2202,22 @@ from that repo. **Nothing here may change it.**
   purple when split, grey for Nebraska; states not on the site are outlined. With an issue shown, a panel beside the
   map (below it on a phone) lists the bills of the state pointed at, or clicked to keep it open
   (issues/<id>/bills.json, from issues_site.py). Each issue page leads with the same map, the table under "Show as a
-  table", and one menu (all bills, became law, still moving, the issue's filters). Check a rule change with test/issues/get.py and check.py (30
+  table", and one menu (all bills, became law, still moving, the issue's filters). A second menu, "Sponsor's party"
+  (approved by the owner 2026-11-17, to tell apart, say, transgender bills that restrict from those that protect, with
+  party as an honest stand-in), filters by `sponsor_class()` in build_data.py (each issues row's last field): "D"/"R" when
+  every prime sponsor with a known party is of that party; "B" when the primes include both, or the other party has at
+  least one in five of the bill's sponsors and co-sponsors with a known party (one Democrat among twenty Republican
+  co-sponsors isn't bipartisan; a Republican and a Democrat alone are); "" for committee bills, bills by request, unknown
+  parties and Nebraska. Only Democrats and Republicans count (independents don't make a bill bipartisan). On an issue
+  page both menus now drive the map's shading, the counts line and the table (counted in the browser from the list's
+  items); a ⓘ note explains. The front page's panel has the same menu (`#pparty`, `PARTY`, `#...&party=R` in the
+  address); the map follows it, counted from bills.json (rows carry the class and whether they count in the year's bills
+  and laws), so summary.json stays small. Each bill in the panel and on the issue pages carries a small badge before its
+  stage, "D", "R" or "Both" (none for committee bills), in the map's muted party colors (`--ctl-d1`, `--ctl-r1`). Past
+  sessions with no parties of their own (Virginia's; California's now come from each session's LEGISLATOR table) borrow
+  a name's party from the other sessions shown when they all agree (`other_party` in main()). In a build of CA, NE, NY,
+  TX, VA and Congress (2026-11-17): transgender 65% D, 28% R, under 1% both, 7% none; abortion 57/28/2/13; firearms
+  57/30/6/7. Check a rule change with test/issues/get.py and check.py (30
   random matches and possible misses per issue; notes/issues-check.md has both checks: 26-30 of 30 right).
 - **Find a bill (built 2026-11-17):** a search box on the front page's controls row (its own line on a phone; results
   open over the map). `search_site.py`, run by build_site.sh after issues_site.py, writes search/<st>.json for each
