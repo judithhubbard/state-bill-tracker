@@ -10,7 +10,8 @@ house passes it again, "final read", after agreeing to the other's amendments), 
 ("Transmit to Governor"), "executive-signature", "executive-veto". Votes are member by member with Open States person
 ids, which the contacts file also uses. There are no summaries.
 """
-import glob, json, os, re
+import glob, json, os, re, unicodedata
+from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -119,6 +120,79 @@ def earlier(session, b):
     return out
 
 
+def _key(name):
+    """"Denise “Mitzi” Epstein", "David Marshall, Sr.", "Andrés Cano" -> "denise mitzi epstein", "david marshall",
+    "andres cano"."""
+    n = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
+    words = [w for w in re.sub(r"[^a-z\s-]", " ", n.replace(".", "")).split() if w not in ("jr", "sr", "ii", "iii", "iv")]
+    return " ".join(words)
+
+
+# Roles missing from Open States' people data, checked against the 2023 roll calls: Flavio Bravo was a representative
+# for District 26 until he was appointed to the Senate on May 8, 2023 (his file has only the Senate role).
+ROLE_FIX = {"ocd-person/36cc8d88-e944-4889-b8ab-cf5610f3f03e": [{"house": "H", "district": 26, "start": "2023-01-09", "end": "2023-05-08"}]}
+
+
+def roster(session):
+    """For records without person ids (the 2023 bulk file): (houses, name, day) -> {"id", "name", "party", "district",
+    "house"} or None, from Open States' people data (states/az/people.json, made by states/az/people.py). Candidates are
+    the people who held a seat in one of the houses ("H", or "HS": the bill's house first) during the session. A name
+    matches by its full form or one of the person's other names, else by first and last name, else by last name and first
+    initial, else by last name alone when only one candidate has it; each looser test is tried only when no stricter one
+    matched in any of the houses (Sen. Anna Hernandez co-sponsoring a House bill isn't Rep. Alma Hernández). Those seated
+    on the day come first, then anyone seated that session (roll calls keep listing a member for a few days after a
+    resignation or expulsion: Liz Harris, expelled April 12, 2023); so a seat that changed hands mid-session is told apart
+    by the day."""
+    try:
+        everyone = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "people.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return lambda houses, name, day=None: None
+    # A role ending in a session's first two weeks is the term before it (the old terms end on the opening day: Mitzi
+    # Epstein's House seat, Alma Hernández's old district).
+    first, last = f"{session}-01-15", f"{session + P.YEARS - 1}-12-31"
+    cands = defaultdict(list)  # house -> [(person, role, keys)]
+    for p in everyone:
+        keys = [n.split() for n in {_key(n) for n in [p["name"]] + p.get("other_names", []) if "," not in n}]
+        for r in p["roles"] + ROLE_FIX.get(p["id"], []):
+            if (not r["start"] or r["start"] <= last) and (not r["end"] or r["end"] > first):
+                cands[r["house"]].append((p, r, keys))
+    cache = {}
+
+    def party_of(p, day):
+        hit = [x for x in p.get("party") or [] if (not x["start"] or x["start"] <= day) and (not x["end"] or x["end"] > day)]
+        return (hit or p.get("party") or [{"name": ""}])[-1]["name"]
+
+    def resolve(houses, name, day=None):
+        day = day or f"{session}-03-01"
+        k = (houses, name, day)
+        if k in cache:
+            return cache[k]
+        words = _key(name).split()
+        tests = (lambda w: w == words,
+                 lambda w: w[:1] == words[:1] and w[-1:] == words[-1:],
+                 lambda w: w[-1:] == words[-1:] and w[0][:1] == words[0][:1],
+                 lambda w: w[-1:] == words[-1:])
+        hits = []
+        for test in tests if words else ():
+            for h in houses:
+                seated = [c for c in cands.get(h, []) if (not c[1]["start"] or c[1]["start"] <= day) and (not c[1]["end"] or c[1]["end"] > day)]
+                for pool in (seated, cands.get(h, [])):
+                    hits = list({p["id"]: (p, r) for p, r, keys in pool if any(test(w) for w in keys)}.values())
+                    if hits:
+                        break
+                if hits:
+                    break
+            if hits:
+                break
+        out = None
+        if len(hits) == 1:
+            p, r = hits[0]
+            out = {"id": p["id"], "name": p["name"], "party": party_of(p, day), "district": r["district"], "house": r["house"]}
+        cache[k] = out
+        return out
+    return resolve
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     path = os.path.join(P.DATA, f"contacts_{session}.json")
@@ -128,6 +202,17 @@ def load_session(session):
     people = json.load(open(path))["people"] if path else {}
     seat_of = {p["id"]: sid for sid, p in people.items() if p.get("id")}
     parties = _PARTIES.setdefault(session, {})
+    resolve = roster(session)
+
+    def voter(h, x, day):
+        """A roll-call name as a seat ("H:12a") when the voter holds one now, as the API's years do; else "H?Name"."""
+        pid = (x.get("voter") or {}).get("id")
+        name = text(x.get("voter_name"))
+        if not pid:
+            hit = resolve(h, name, day)
+            if hit:
+                pid, name = hit["id"], hit["name"]
+        return seat_of.get(pid) or f"{h}?{name}"
     files = glob.glob(os.path.join(folder(session), "bills", "*.json"))
     fetched = datetime.fromtimestamp(max(os.path.getmtime(f) for f in files), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
     recs, index = [], {}
@@ -209,9 +294,18 @@ def load_session(session):
         left = any(s[1] == origin and s[2] == "REPORTED" for s in steps) or origin in passed
         fate = "passed" if left else "none"
         spons = sorted(b.get("sponsorships") or [], key=lambda s: (not s.get("primary"), s.get("name") or ""))
-        names = []
+        names, district = [], 0
+        day0 = min((s[0] for s in steps if s[0]), default=None)
         for s in spons:
             person = s.get("person") or {}
+            if not person.get("id") and b.get("bulk"):
+                # The bulk file names sponsors without ids: tie the name to who held a seat that session, in the bill's
+                # house first.
+                hit = resolve(origin + other, text(s.get("name")), day0)
+                if hit:
+                    person = {"id": hit["id"], "party": hit["party"], "current_role": {"org_classification": "upper" if hit["house"] == "S" else "lower"}}
+                    district = district or (hit["district"] if not names else 0)
+                    s = dict(s, name=hit["name"])
             sid = seat_of.get(person.get("id"))
             name = people[sid]["name"] if sid else text(s.get("name"))
             party = (person.get("party") or "")[:1]
@@ -242,8 +336,8 @@ def load_session(session):
             counts = {c["option"]: c["value"] for c in v.get("counts") or []}
             if not any(counts.values()) or text(v.get("motion_text")).lower() == "do pass":
                 continue  # the Committee of the Whole's unrecorded "do pass"
-            names_ = [[seat_of.get((x.get("voter") or {}).get("id")) or f"{h}?{text(x.get('voter_name'))}", "N" if x.get("option") == "no" else "A"]
-                      for x in v.get("votes") or [] if x.get("option") != "yes"]
+            day = (v.get("start_date") or "")[:10]
+            names_ = [[voter(h, x, day), "N" if x.get("option") == "no" else "A"] for x in v.get("votes") or [] if x.get("option") != "yes"]
             votes.append([h, "F", None, (v.get("start_date") or "")[:10], counts.get("yes", 0), counts.get("no", 0), names_])
         votes.sort(key=lambda v: v[3])
         chapter = next((re.search(r"Chapter (\d+)", s[3]).group(1) for s in steps if re.search(r"Chapter \d+", s[3])), None)
@@ -274,7 +368,7 @@ def load_session(session):
                 dates(lambda h, t: t == "VETOED"),
             ],
             "votes": votes, "firstComms": [(refs[0][0], refs[0][1], left)] if refs else [],
-            "vers": [{"p": p, "sponsor": sponsor, "district": 0, "cosponsors": cos, "primes": 1, "cosp": len(cos),
+            "vers": [{"p": p, "sponsor": sponsor, "district": district, "cosponsors": cos, "primes": 1, "cosp": len(cos),
                       "statusDesc": desc, "committee": comm if place == "committee" and stage in (0, 2) else None,
                       "actions": [[s[0], s[2]] for s in steps], "link": src or b.get("openstates_url")}],
         }

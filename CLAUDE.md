@@ -326,7 +326,18 @@ from that repo. **Nothing here may change it.**
   and stops cleanly at the daily limit; then a day's changes (updated_since) are a few requests. Local runs and GitHub's
   share the quota. Years older than the API's three (2023) come only from an Open States bulk file
   (`states/openstates_bulk.py az`, run before fetch.py; the owner names it in states/az/bulk.json:
-  "AZ_56th-1st-regular_json_<id>.zip"), never from the API. `states/az/azleg.py` reads www.azleg.gov at its 120-second crawl delay (member rosters for phones and
+  "AZ_56th-1st-regular_json_<id>.zip"), never from the API. The bulk file names sponsors and voters without person ids:
+  `roster()` in convert.py ties each name to who held a seat in that house that session, from states/az/people.json
+  (Open States' public-domain people data, current and retired, roles since 2023; made once by `states/az/people.py`
+  from raw.githubusercontent.com, committed, since 2023's members won't change), by full name or another of the person's
+  names, else first and last name, else last name and initial, else a last name only one candidate has (each looser test
+  only when no stricter one matched in either house, the bill's house first: Sen. Anna Hernandez co-sponsoring a House
+  bill isn't Rep. Alma Hernández); members seated that day first, then anyone seated that session (roll calls list members days after they leave: Liz Harris, expelled
+  April 12, 2023). `ROLE_FIX` adds Flavio Bravo's House role (District 26 until his Senate appointment on May 8, 2023),
+  missing from his file. Every 2023 sponsor name (6,384 on 1,562 bills) gets a party, and the
+  prime sponsor's 2023 district goes on the bill; every roll-call name resolves to a 2023 member, but, as in the API's
+  years, a vote is tied to a seat only when the voter holds one now (their current seat) (62% of 2023's not-yes names; the rest are
+  members who have since left, kept as names: "S?Juan Mendez"). `states/az/azleg.py` reads www.azleg.gov at its 120-second crawl delay (member rosters for phones and
   rooms; the committee pages list meetings only, so there are no chairs yet; resolutions' official titles to tell
   constitutional amendments from referred measures). `states/az/convert.py` uses Open States' action classifications;
   some committee reports don't name their committee. Open States has no chapter numbers, and about 10 bills a year stop

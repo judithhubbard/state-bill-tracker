@@ -1,0 +1,4070 @@
+[
+{
+"id": "ocd-person/c6a181c7-b58e-4c2a-aa2d-9ca31fc6548f",
+"name": "Aaron Márquez",
+"other_names": [
+"A. Marquez",
+"A. Márquez",
+"A.J. Marquez",
+"A.J. Márquez",
+"Aaron Marquez",
+"Aaron Márquez",
+"Marquez, A.",
+"Márquez, A."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 5,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/102ffcb1-3028-401f-b74f-6f45db25e05e",
+"name": "Alex Kolodin",
+"other_names": [
+"A. Kolodin",
+"Alexander Kolodin",
+"Kolodin, A."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 3,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/6dba6afa-b274-4273-b8c6-270d27214eee",
+"name": "Alma Hernández",
+"other_names": [
+"A. Hernández",
+"Alma Hernandez",
+"Alma Hernández",
+"Hernández, A."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 20,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 3,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/6143aa75-8c8e-4e34-9c6c-810169a81333",
+"name": "Amish Shah",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 5,
+"start": "2023-01-09",
+"end": "2024-01-01"
+},
+{
+"house": "H",
+"district": 24,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/87e6206a-c16e-4038-a86f-0d5c88b993e3",
+"name": "Analise Ortiz",
+"other_names": [
+"A. Ortiz",
+"Ortiz, A."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 24,
+"start": "2025-01-13",
+"end": ""
+},
+{
+"house": "H",
+"district": 24,
+"start": "2023-01-09",
+"end": "2025-01-13"
+}
+]
+},
+{
+"id": "ocd-person/cfdc1ced-f218-4381-b6ec-347bc963fd5d",
+"name": "Andrea Dalessandro",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 2,
+"start": "2021-01-11",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/bf8c0b1e-77ff-49b8-8837-a82bfec24654",
+"name": "Andrés Cano",
+"other_names": [
+"Andres Cano"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 3,
+"start": "",
+"end": "2023-01-09"
+},
+{
+"house": "H",
+"district": 20,
+"start": "",
+"end": "2023-07-04"
+}
+]
+},
+{
+"id": "ocd-person/2e9c0206-d392-48a3-a599-7f6d226527b7",
+"name": "Anna Abeytia",
+"other_names": [
+"A. Abeytia",
+"A.L. Abeytia",
+"Abeytia, A."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 24,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/ddfd6808-4722-4fd4-880a-2053ac4e7223",
+"name": "Anna Hernandez",
+"other_names": [
+"A. Hernandez",
+"Hernandez, A."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 24,
+"start": "2023-01-09",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/82385dc6-0d39-4d02-aa6d-95dbc2534972",
+"name": "Anthony Kern",
+"other_names": [
+"A. Kern",
+"A.T. Kern",
+"Anthony T. Kern",
+"Kern, A."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 27,
+"start": "2023-01-09",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/226f30cc-1c58-49e3-bbf3-5f3713d988a5",
+"name": "Athena Salman",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 26,
+"start": "",
+"end": "2023-01-09"
+},
+{
+"house": "H",
+"district": 8,
+"start": "",
+"end": "2024-01-01"
+}
+]
+},
+{
+"id": "ocd-person/2af31c38-60fa-45ff-8d84-2406888ec74c",
+"name": "Austin Smith",
+"other_names": [
+"A. Smith",
+"Smith, A."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 29,
+"start": "2023-01-09",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/e632ebef-383b-4f87-a2b6-14fdfa235df6",
+"name": "Barbara Parker",
+"other_names": [
+"B. Parker",
+"Parker, B."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 10,
+"start": "2023-01-09",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/6d71c8d3-c677-4f4b-96eb-411fbc464c2c",
+"name": "Ben Toma",
+"other_names": [
+"B. Toma",
+"Toma, B."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 27,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "H",
+"district": 22,
+"start": "2017-04-26",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/81d12f3a-b635-4111-be8d-a71d2f7565f2",
+"name": "Betty Villegas",
+"other_names": [
+"B. Villegas",
+"B.J. Villegas",
+"Betty J Villegas",
+"Betty J. Villegas",
+"Villegas, B."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 20,
+"start": "2023-07-31",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/77be0e97-4c93-4332-a9f9-9348560fdf98",
+"name": "Beverly Pingerelli",
+"other_names": [
+"B. Pingerelli",
+"Pingerelli, B."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 28,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 21,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/df90b258-b808-46bc-bd70-0cc63a0bb619",
+"name": "Brenda Barton",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 6,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/5425612b-fb2c-4857-8f75-31523345eb2b",
+"name": "Brian Fernandez",
+"other_names": [
+"B. Fernandez",
+"B.S. Fernandez",
+"Brian S. Fernandez",
+"Fernandez, B."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 23,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 4,
+"start": "2021-11-23",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/c13f449f-0423-4ad5-836b-69913aad6600",
+"name": "Brian Garcia",
+"other_names": [
+"B. Garcia",
+"Garcia, B."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 8,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/051cb7cf-e965-49a7-844a-a8830447df0c",
+"name": "Carine Werner",
+"other_names": [
+"C. Werner",
+"Werner, C."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 4,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/6241112b-910b-4ad8-9c0d-9caad318874f",
+"name": "Catherine Miranda",
+"other_names": [
+"C. Miranda",
+"C.H. Miranda",
+"Catherine H. Miranda",
+"Miranda, C."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 11,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/b1da595a-8c97-42f8-ae58-694c17efa3f3",
+"name": "Cesar Aguilar",
+"other_names": [
+"Aguilar, C.",
+"C. Aguilar"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 26,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/ef2d267c-6c9a-4a1b-aa93-d7c942514a5c",
+"name": "Cesar Chavez",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 29,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/d5e0918a-5246-481c-8a2d-248cf954d331",
+"name": "Charles Lucking",
+"other_names": [
+"C. Lucking",
+"C.W. Lucking",
+"Charles W Lucking",
+"Charles Walter Lucking",
+"Lucking, C."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 5,
+"start": "2024-02-15",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/9128a4e7-1464-483c-8642-0d878da05619",
+"name": "Chris Lopez",
+"other_names": [
+"C. Lopez",
+"Lopez, C."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 16,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/b2ed48a3-b9ae-42be-a2c8-22a47477acfd",
+"name": "Chris Mathis",
+"other_names": [
+"C. Mathis",
+"C.H. Mathis",
+"Christopher Haley Mathis",
+"Christopher Mathis",
+"Mathis, C."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 18,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 9,
+"start": "2021-12-09",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/eb25f84b-434c-440f-8e32-30b870185ef7",
+"name": "Christian Solorio",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 30,
+"start": "2021-11-04",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/597de349-4f1f-4e72-a537-d0626b5abddc",
+"name": "Christine Marsh",
+"other_names": [
+"C. Marsh",
+"C.P. Marsh",
+"Christine Porter Marsh",
+"Marsh, C."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 4,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "S",
+"district": 28,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/367990a3-3e02-455b-97b3-6b8dc34d9bbf",
+"name": "Cody Reim",
+"other_names": [
+"C. Reim",
+"Reim, C."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 3,
+"start": "2026-03-18",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/0a4e4b0a-a16e-475b-8aa1-75088657d8c1",
+"name": "Consuelo Hernandez",
+"other_names": [
+"C. Hernandez",
+"Hernandez, C."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 21,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/f200e859-7563-46d4-922f-68580e1a1fb5",
+"name": "Cory McGarr",
+"other_names": [
+"C. McGarr",
+"McGarr, C."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 17,
+"start": "2023-01-09",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/bd6b8ff6-3e5d-47bf-be70-1a7df7f5caa6",
+"name": "Daniel Hernandez, Jr.",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 2,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/263ebe9c-566a-4b5c-bfbc-ea1f1d0dc3f2",
+"name": "Dave Farnsworth",
+"other_names": [
+"D. Farnsworth",
+"D.C. Farnsworth",
+"David C. Farnsworth",
+"David Christian Farnsworth",
+"Farnsworth, D."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 10,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/b7d285d8-63a8-4e65-8889-2aa064eda4ff",
+"name": "David Cook",
+"other_names": [
+"Cook, D.",
+"D. Cook",
+"D.L. Cook",
+"David L Cook",
+"David L. Cook"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 7,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "H",
+"district": 8,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/51520de4-0e87-475b-91d2-99aa18addf72",
+"name": "David Gowan",
+"other_names": [
+"D. Gowan",
+"D.M. Gowan",
+"David Mathew Gowan",
+"Gowan, D."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 19,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 14,
+"start": "2019-01-14",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/6e8f2c0d-c9d3-4cb5-ae59-5264cb6d61a7",
+"name": "David Livingston",
+"other_names": [
+"D. Livingston",
+"D.A. Livingston",
+"David Alan Livingston",
+"Livingston, D."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 28,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 22,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/8bc6f450-7fc4-4258-bf5a-86465e85b9fb",
+"name": "David Marshall",
+"other_names": [
+"D. Marshall",
+"David Marshall, Sr.",
+"Marshall, D."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 7,
+"start": "2023-01-09",
+"end": "2026-04-22"
+}
+]
+},
+{
+"id": "ocd-person/12f66188-2560-4f3b-b247-d74ad4a78bbd",
+"name": "Deborah Nardozzi",
+"other_names": [
+"D. Nardozzi",
+"Nardozzi, D."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 8,
+"start": "2024-04-04",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/b4d08028-9e26-4e14-88ea-837ca9c0fdeb",
+"name": "Domingo DeGrazia",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 10,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/93db82ca-c8b1-43e4-98ce-ba52f4d0f635",
+"name": "Elda Luna-Nájera",
+"other_names": [
+"E. Luna-Nájera",
+"Luna-Nájera, E."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 22,
+"start": "2024-03-01",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/d789143a-18c1-4a26-8b88-d6ce4a3cd002",
+"name": "Eric Meyer",
+"other_names": [
+"E. Meyer",
+"Meyer, E."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 4,
+"start": "2024-08-16",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/81fc749a-e845-49cd-be39-ca9795831417",
+"name": "Eva Burch",
+"other_names": [
+"Burch, E.",
+"E. Burch"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 9,
+"start": "2023-01-09",
+"end": "2025-03-14"
+}
+]
+},
+{
+"id": "ocd-person/e1cd66fa-a0de-45fd-ae53-a4db7d178d21",
+"name": "Eva Diaz",
+"other_names": [
+"Diaz, E.",
+"E. Diaz"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 22,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/36cc8d88-e944-4889-b8ab-cf5610f3f03e",
+"name": "Flavio Bravo",
+"other_names": [
+"Bravo, F.",
+"F. Bravo",
+"F.G. Bravo",
+"Flavio G. Bravo"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 26,
+"start": "2023-05-08",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/faca0001-6681-450b-9577-6185f4f49a3d",
+"name": "Frank Carroll",
+"other_names": [
+"Carroll, F.",
+"F. Carroll",
+"F.P. Carroll",
+"Frank P Carroll",
+"Frank P. Carroll"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 28,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 22,
+"start": "",
+"end": "2023-01-03"
+}
+]
+},
+{
+"id": "ocd-person/1e39adcf-868d-4722-a07b-09fcd36ad9ed",
+"name": "Gail Griffin",
+"other_names": [
+"G. Griffin",
+"Griffin, G."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 19,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 14,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/a739b3e9-8161-4b10-b007-3d1e90de791f",
+"name": "Hildy Angius",
+"other_names": [
+"Angius, H.",
+"H. Angius",
+"H.L. Angius"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 30,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/06adeea1-c37c-4dd1-8be5-92e9b5d3556e",
+"name": "J.D. Mesnard",
+"other_names": [
+"J. Mesnard",
+"J.D. Mesnard",
+"Javan Daniel Mesnard",
+"Mesnard, J."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 13,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 17,
+"start": "2021-01-11",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/02d71038-e99b-4bbc-babd-d1de68f189f1",
+"name": "Jacqueline Parker",
+"other_names": [
+"J. Parker",
+"Parker, J."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 15,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "H",
+"district": 16,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/35f7056c-9f29-4b66-9ae0-f041fe6e7e05",
+"name": "Jake Hoffman",
+"other_names": [
+"Hoffman, J.",
+"J. Hoffman"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 15,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 12,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/70f55f83-fed8-497f-86a9-94b6d428b9b4",
+"name": "James Taylor",
+"other_names": [
+"J. Taylor",
+"Taylor, J."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 29,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/c94f542a-52e0-4831-8479-02793a97ccd9",
+"name": "Janae Shamp",
+"other_names": [
+"J. Shamp",
+"Shamp, J."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 29,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/acfd8972-7a82-41f3-9fd7-0993cfa7365c",
+"name": "Janeen Connolly",
+"other_names": [
+"Connolly, J.",
+"J. Connolly",
+"J.R. Connolly"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 8,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/ddfb82b8-181f-4901-b453-ec910f062de5",
+"name": "Jasmine Blackwater-Nygren",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 7,
+"start": "2021-02-11",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/de8a5959-6572-44a9-bea5-ed73c27dd0ce",
+"name": "Jeff Weninger",
+"other_names": [
+"J. Weninger",
+"Weninger, J."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 13,
+"start": "2025-01-13",
+"end": ""
+},
+{
+"house": "H",
+"district": 17,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/96b48d34-f7a5-49bb-990b-99c318e19d64",
+"name": "Jennifer Jermaine",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 18,
+"start": "",
+"end": "2023-01-03"
+}
+]
+},
+{
+"id": "ocd-person/b4ba9e54-93fb-4fa2-899a-8eb47b615215",
+"name": "Jennifer Longdon",
+"other_names": [
+"Jen Longdon",
+"Jennifer L Longdon",
+"Jennifer L. Longdon",
+"Jennifer Longdon"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 5,
+"start": "2023-01-09",
+"end": "2024-01-01"
+},
+{
+"house": "H",
+"district": 24,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/3bdf978d-8979-4379-95b3-7a4d4cc770ce",
+"name": "Jennifer Pawlik",
+"other_names": [
+"J. Pawlik",
+"Pawlik, J."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 13,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "H",
+"district": 17,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/5e33f31d-1020-477e-9be6-e95e8fa064e1",
+"name": "Jevin Hodge",
+"other_names": [
+"Jevin D Hodge",
+"Jevin D. Hodge"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 8,
+"start": "2024-02-02",
+"end": "2024-03-19"
+}
+]
+},
+{
+"id": "ocd-person/dff5bfa2-8685-46cd-a9df-b310f7924c3d",
+"name": "Joanne Osborne",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 13,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/9309001a-abdc-405b-a911-c3d26c016462",
+"name": "Joel John",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 4,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/fd68e4c2-0463-477c-81ea-e2e36273e12b",
+"name": "John Gillette",
+"other_names": [
+"Gillette, J.",
+"J. Gillette"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 30,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/b6144266-5383-491f-8c87-df8fd11805ea",
+"name": "John Kavanagh",
+"other_names": [
+"J. Kavanagh",
+"Kavanagh, J."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 3,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 23,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/bb0869c0-43d2-4a04-8199-143e80f9e6b2",
+"name": "John M. Fillmore",
+"other_names": [
+"John Fillmore"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 16,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/2cfee9f0-0fab-418e-b14e-0e001a1414fa",
+"name": "Joseph Chaplik",
+"other_names": [
+"Chaplik, J.",
+"J. Chaplik"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 3,
+"start": "2023-01-09",
+"end": "2026-03-25"
+},
+{
+"house": "H",
+"district": 23,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/535e197f-a602-4194-83cc-f820756caa17",
+"name": "Juan Mendez",
+"other_names": [
+"J. Mendez",
+"J.J. Mendez",
+"Juan Jose Mendez",
+"Mendez, J."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 8,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "S",
+"district": 26,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/e467055b-a818-4f9a-b2ea-3c6502f4ba22",
+"name": "Judy M. Burges",
+"other_names": [
+"Judy Burges"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 1,
+"start": "2020-01-10",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/8e5bee66-d53d-4167-b9a8-de8f54145bf2",
+"name": "Judy Schwiebert",
+"other_names": [
+"J. Schwiebert",
+"Schwiebert, J."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 2,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "H",
+"district": 20,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/d19ab410-5bc3-4160-b279-765e25d959ab",
+"name": "Julie Willoughby",
+"other_names": [
+"J. Willoughby",
+"Willoughby, J."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 13,
+"start": "2023-05-05",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/94895484-6eda-42d7-823b-a4eab17071e8",
+"name": "Junelle Cavero",
+"other_names": [
+"Cavero, J.",
+"J. Cavero",
+"Junelle Cavero Harnal"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 11,
+"start": "2024-04-17",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/44a57af9-ca23-408a-8e36-ed0c4bac37c9",
+"name": "Justin Heap",
+"other_names": [
+"Heap, J.",
+"J. Heap"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 10,
+"start": "2023-01-09",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/448cb969-a498-4826-ad1e-c443fe9b8057",
+"name": "Justin Olson",
+"other_names": [
+"J. Olson",
+"J.D. Olson",
+"Olson, J."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 10,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/2706e746-45b7-4586-8d06-8b80e99d3869",
+"name": "Justin Wilmeth",
+"other_names": [
+"J. Wilmeth",
+"J.C. Wilmeth",
+"Wilmeth, J."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 2,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 15,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/52dbdd42-ca89-4d28-9642-f43e3b1e6358",
+"name": "Justine Wadsack",
+"other_names": [
+"J. Wadsack",
+"Wadsack, J."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 17,
+"start": "2023-01-09",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/ec5d3f80-13c8-4a87-bd47-a11967064b43",
+"name": "Karen Fann",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 1,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/378d7047-ec0c-4c8d-9c62-22a33c940a0e",
+"name": "Keith Seaman",
+"other_names": [
+"K. Seaman",
+"Seaman, K."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 16,
+"start": "2023-01-09",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/5dfd7510-6a5f-430c-a552-0e81227f0735",
+"name": "Kelli Butler",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 28,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/5656a313-454c-4eac-b634-a42c5eb05e0e",
+"name": "Kelly Townsend",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 16,
+"start": "2021-01-11",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/e0798d71-d83a-4fa7-82c8-0644ec9f96ac",
+"name": "Ken Bennett",
+"other_names": [
+"Bennett, K.",
+"K. Bennett",
+"K.R. Bennett",
+"Kenneth Roy Bennett"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 1,
+"start": "2023-01-09",
+"end": "2025-01-12"
+}
+]
+},
+{
+"id": "ocd-person/4b336587-cb71-4a49-9cf8-514cdd2771ff",
+"name": "Kevin Payne",
+"other_names": [
+"K. Payne",
+"Payne, K."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 27,
+"start": "2025-01-13",
+"end": ""
+},
+{
+"house": "H",
+"district": 27,
+"start": "2023-01-09",
+"end": "2025-01-13"
+},
+{
+"house": "H",
+"district": 21,
+"start": "2017-01-09",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/183af2d0-dd61-476d-873f-305ae591968f",
+"name": "Kevin Volk",
+"other_names": [
+"K. Volk",
+"Volk, K."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 17,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/bd3fb0ce-720a-4137-bd45-87fb6bcf8649",
+"name": "Khyl Powell",
+"other_names": [
+"K. Powell",
+"Powell, K."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 14,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/78fce9ac-3aa4-484f-b345-f55bbbf9db9b",
+"name": "Kiana Sears",
+"other_names": [
+"K. Sears",
+"K.M. Sears",
+"Sears, K."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 9,
+"start": "2025-03-31",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/60e499a9-9dad-46fb-9c2e-a6036c54a728",
+"name": "Laura Terech",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 4,
+"start": "2023-01-09",
+"end": "2024-06-30"
+}
+]
+},
+{
+"id": "ocd-person/159091af-9aa8-4cb8-8c9c-9e20ba83c0ed",
+"name": "Lauren Kuby",
+"other_names": [
+"Kuby, L.",
+"L. Kuby"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 8,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/45d0b998-57ed-4c6f-ae22-bdbc4262f3e3",
+"name": "Laurin Hendrix",
+"other_names": [
+"Hendrix, L.",
+"L. Hendrix",
+"M.L. Hendrix"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 14,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/43c27180-b99f-4508-96a2-cab6cc05da20",
+"name": "Leezah Sun",
+"other_names": [
+"Leezah Elsa Sun",
+"Leezah Sun"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 22,
+"start": "2023-01-09",
+"end": "2024-01-01"
+}
+]
+},
+{
+"id": "ocd-person/030638cb-5fcd-4637-8c59-c129e28db988",
+"name": "Lela Alston",
+"other_names": [
+"Alston, L.",
+"L. Alston"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 5,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 24,
+"start": "2019-01-14",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/433aab5d-35be-48cc-80a9-f468d5279022",
+"name": "Leo Biasiucci",
+"other_names": [
+"Biasiucci, L.",
+"L. Biasiucci"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 30,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 5,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/981d0aee-d239-4acc-9da8-1332481e57ee",
+"name": "Lisa Fink",
+"other_names": [
+"Fink, L.",
+"L. Fink"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 27,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/d4935313-9d39-4853-a36f-d80c0fceab87",
+"name": "Lisa Otondo",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 4,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/bb4d09de-2d31-41aa-9c10-6d741affaa38",
+"name": "Liz Harris",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 13,
+"start": "",
+"end": "2023-04-12"
+}
+]
+},
+{
+"id": "ocd-person/90a36fec-df56-4f22-bf16-790866d5b227",
+"name": "Lorena Austin",
+"other_names": [
+"Austin, L.",
+"L. Austin"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 9,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/4507941a-0263-4f8a-8fb2-13a9ab049fac",
+"name": "Lorenzo Sierra",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 19,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/095a6754-d7ca-4f1f-b562-974d92e7eb3c",
+"name": "Lupe Contreras",
+"other_names": [
+"Contreras, L.",
+"G.C. Contreras",
+"L. Contreras",
+"L.C. Contreras",
+"Lupe Chavira Contreras"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 22,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 19,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/bc52f516-a13b-4490-a12c-7b98fa3969e5",
+"name": "Lupe Diaz",
+"other_names": [
+"Diaz, L.",
+"L. Diaz"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 19,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 14,
+"start": "2021-11-23",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/7a33e2bd-8394-45d9-967b-0c39430ff39b",
+"name": "Lydia Hernandez",
+"other_names": [
+"Hernandez, L.",
+"L. Hernandez"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 24,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/bcc217f5-fe08-4213-b8a5-78d1e4d64184",
+"name": "Mae Peshlakai",
+"other_names": [
+"M. Peshlakai",
+"Peshlakai, M."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 6,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/5b93277b-9bb5-47e6-93e0-f75cb742b2d7",
+"name": "Marcelino Quiñonez",
+"other_names": [
+"Marcelino Quinonez",
+"Marcelino Quiñonez"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 11,
+"start": "2023-01-09",
+"end": "2024-04-04"
+},
+{
+"house": "H",
+"district": 27,
+"start": "2021-12-16",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/3b6fa6b2-0a60-4f2e-9fd8-0882b04d9e0b",
+"name": "Mariana Sandoval",
+"other_names": [
+"M. Sandoval",
+"Sandoval, M."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 23,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/77415ae8-cbbc-4f67-ac01-3f749d44ff08",
+"name": "Mark Finchem",
+"other_names": [
+"Finchem, M.",
+"M. Finchem",
+"M.W. Finchem",
+"Mark Finchem",
+"Mark W. Finchem"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 1,
+"start": "2025-01-13",
+"end": ""
+},
+{
+"house": "H",
+"district": 11,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/705bec87-a9ff-455b-a63f-ec3108e64f57",
+"name": "Martin J. Quezada",
+"other_names": [
+"Martin Quezada"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 29,
+"start": "2015-01-12",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/bfb503ce-dcb1-444b-9484-8a90e73c6a6f",
+"name": "Matt Gress",
+"other_names": [
+"Gress, M.",
+"M. Gress",
+"M.O. Gress"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 4,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/6f247e22-b02f-45f9-9b2c-27e507928c0e",
+"name": "Melody Hernandez",
+"other_names": [
+"Hernandez, M.",
+"M. Hernandez"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 8,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "H",
+"district": 26,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/8db06598-a7e1-4b25-9e76-6a2be0d9eae3",
+"name": "Michael Carbone",
+"other_names": [
+"Carbone, M.",
+"M. Carbone",
+"M.R. Carbone"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 25,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/555adc5f-cc3a-46b1-a00b-8fb209bc457e",
+"name": "Michael Way",
+"other_names": [
+"M. Way",
+"M.A. Way",
+"Way, M."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 15,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/68c38dfc-a12b-4c51-8b70-c4e02931cddf",
+"name": "Michele Peña",
+"other_names": [
+"M. Peña",
+"Michele Pena",
+"Peña, M."
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 23,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/3f186f00-1fbe-4491-8987-637a7fd59677",
+"name": "Michelle Udall",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 25,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/f496d728-bb97-40f0-a610-31b6a08f78cf",
+"name": "Michelle Ugenti-Rita",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 23,
+"start": "2019-01-14",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/f0175b18-52a0-407d-af38-c1fe118e209d",
+"name": "Mitzi Epstein",
+"other_names": [
+"D. Epstein",
+"Denise Epstein",
+"Denise “Mitzi” Epstein",
+"Epstein, M.",
+"M. Epstein"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 12,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 18,
+"start": "",
+"end": "2023-01-03"
+}
+]
+},
+{
+"id": "ocd-person/f1f94d3e-134b-4f6d-8917-29e66228383b",
+"name": "Morgan Abraham",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 10,
+"start": "2021-12-09",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/a437a3ce-e3ba-44ec-af75-3308e70f5a87",
+"name": "Myron Tsosie",
+"other_names": [
+"M. Tsosie",
+"Tsosie, M."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 6,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 7,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/923989bc-5bbd-4b65-92ce-365d62b0e9f4",
+"name": "Nancy Barto",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 15,
+"start": "2021-01-11",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/f9216229-6490-412d-aa30-8baac5c2be3e",
+"name": "Nancy Gutierrez",
+"other_names": [
+"Gutierrez, N.",
+"N. Gutierrez",
+"N.B. Gutierrez",
+"Nancy Burke Gutierrez"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 18,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/17f344ec-ffe3-46fe-ba7a-8efdc5fbf2fd",
+"name": "Neal Carter",
+"other_names": [
+"Carter, N.",
+"N. Carter",
+"N.K. Carter",
+"Neal K. Carter"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 15,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 8,
+"start": "2021-11-05",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/8595d83f-1e95-4c0d-8c24-100a4a763a8f",
+"name": "Nick Kupper",
+"other_names": [
+"Kupper, N.",
+"N. Kupper",
+"N.S. Kupper"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 25,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/a4fabea6-f50e-4fe9-8696-8b4505a481e8",
+"name": "Oscar De Los Santos",
+"other_names": [
+"De Los Santos, O.",
+"O. De Los Santos"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 11,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/d78cb0f9-fd3c-472e-aeb8-716abd42f26e",
+"name": "Pamela Carter",
+"other_names": [
+"Carter, P.",
+"P. Carter"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 4,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/8a2ae29c-b83a-4f0f-8920-168b3b16ff64",
+"name": "Pamela Powers Hannley",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 9,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/61dc96d8-140a-4042-b832-ac51bf0796f3",
+"name": "Patty Contreras",
+"other_names": [
+"Contreras, P.",
+"P. Contreras",
+"Patricia Contreras"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 12,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/bd7221f0-b15e-4876-9438-ec666862fddd",
+"name": "Paul Boyer",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 20,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/7ff01dde-5112-436f-a267-dd7a7f91ec9b",
+"name": "Priya Sundareshan",
+"other_names": [
+"P. Sundareshan",
+"P.M. Sundareshan",
+"Priyanka Malur Sundareshan",
+"Sundareshan, P."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 18,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/a4f969ab-e79a-4364-9a93-ad8c75ccf668",
+"name": "Quang Nguyen",
+"other_names": [
+"Nguyen, Q.",
+"Q. Nguyen",
+"Q.H. Nguyen",
+"Quang H Nguyen",
+"Quang H. Nguyen"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 1,
+"start": "2021-01-11",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/0fb2e73b-b140-4669-a9bd-b75facb342dd",
+"name": "Quantá Crews",
+"other_names": [
+"Crews, Q.",
+"Q. Crews",
+"Q.M. Crews",
+"Quanta Crews"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 26,
+"start": "2023-06-07",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/11b313a8-0f20-4d81-8060-4ec7e65f1a29",
+"name": "Rachel Keshel",
+"other_names": [
+"Jones, R.",
+"Keshel, R.",
+"R. Jones",
+"R. Keshel",
+"Rachel Jones"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 17,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/176a6d0b-88bb-45fa-bf37-b4610972b2ae",
+"name": "Ralph Heap",
+"other_names": [
+"Heap, R.",
+"R. Heap"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 10,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/61a50342-a072-402e-8592-29372cc93066",
+"name": "Raquel Teran",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 30,
+"start": "2021-09-28",
+"end": "2023-01-09"
+},
+{
+"house": "S",
+"district": 26,
+"start": "2023-01-09",
+"end": "2023-04-13"
+}
+]
+},
+{
+"id": "ocd-person/fdb1383c-a38d-49a8-b536-3cfc9ff6cb3b",
+"name": "Rebecca Rios",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 27,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/55cdd789-761a-415a-8a35-c83306e1e4fc",
+"name": "Regina Cobb",
+"other_names": [
+"Regina E. Cobb"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 5,
+"start": "2017-01-09",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/97d71f2f-9518-43fa-8076-5a78809563ff",
+"name": "Reginald Bolding",
+"other_names": [
+"Reginald Bolding Jr."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 27,
+"start": "2017-01-09",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/1d93637d-3a04-4e84-99f0-e137297314cb",
+"name": "Richard C. Andrade",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 29,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/8f07f729-f3a4-4608-894c-5a87bbfb8012",
+"name": "Rick Gray",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 21,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/2c613dd5-3f19-46ab-b095-be2ba2a9d44a",
+"name": "Robert Meza",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 30,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/6de57177-1b9e-4864-bb87-97c528842030",
+"name": "Rosanna Gabaldón",
+"other_names": [
+"Gabaldón, R.",
+"R. Gabaldón",
+"R.R. Gabaldón",
+"Rosanna Rodriguez Gabaldon"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 21,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 2,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/b9343c4d-9f9b-4bbd-ba02-06fbb1b09a22",
+"name": "Russell \"Rusty\" Bowers",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 25,
+"start": "2015-01-01",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/3c965e03-1e51-4f10-a037-4fb2f35292c5",
+"name": "Sally Gonzales",
+"other_names": [
+"Gonzales, S.",
+"S. Gonzales",
+"S.A. Gonzales",
+"Sally Ann Gonzales"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 20,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 3,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/99f91f84-b1db-4a48-897a-4f87593357ea",
+"name": "Sarah Liguori",
+"other_names": [
+"Liguori, S.",
+"S. Liguori"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 5,
+"start": "2024-02-08",
+"end": ""
+},
+{
+"house": "H",
+"district": 28,
+"start": "2021-10-26",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/f1a453f5-66c6-42e2-a319-9a720614ff61",
+"name": "Sean Bowie",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 18,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/bdcadc0a-7e86-4e6a-8e27-4896dbb094ce",
+"name": "Selina Bliss",
+"other_names": [
+"Bliss, S.",
+"S. Bliss"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 1,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/4b29d125-27ee-46c7-a6ac-ed870c1f10a7",
+"name": "Seth Blattman",
+"other_names": [
+"Blattman, S.",
+"S. Blattman"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 9,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/355be281-2f88-4108-b894-62c54b67fba3",
+"name": "Shawnna Bolick",
+"other_names": [
+"Bolick, S.",
+"S. Bolick",
+"S.L.M. Bolick"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 2,
+"start": "2023-07-23",
+"end": ""
+},
+{
+"house": "H",
+"district": 20,
+"start": "2019-01-04",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/b58992d4-8f2f-4df7-a29d-9f68f3bedbb5",
+"name": "Sine Kerr",
+"other_names": [
+"Kerr, S.",
+"S. Kerr"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 25,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "S",
+"district": 13,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/b861ef92-d8da-4510-98ec-c40f36d06acd",
+"name": "Sonny Borrelli",
+"other_names": [
+"Borrelli, S.",
+"S. Borrelli"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 30,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "S",
+"district": 5,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/7bd58fc8-e6df-4091-86c6-c64f54b96c35",
+"name": "Stacey Travers",
+"other_names": [
+"A. Travers",
+"Anastasia Travers",
+"S. Travers",
+"Travers, S."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 12,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/bf406953-ad2b-43f7-95ea-3af060525c90",
+"name": "Stephanie Simacek",
+"other_names": [
+"S. Simacek",
+"Simacek, S."
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 2,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/df482d8a-1ed9-41ae-b4ba-d73d4cd9aa39",
+"name": "Stephanie Stahl Hamilton",
+"other_names": [
+"S. Stahl Hamilton",
+"Stahl Hamilton, S.",
+"Stephanie Hamilton"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 21,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 10,
+"start": "2021-10-28",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/8750015c-a9dc-4eac-951d-7f7b51abd3e7",
+"name": "Steve Kaiser",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 2,
+"start": "2023-01-09",
+"end": "2023-06-13"
+},
+{
+"house": "H",
+"district": 15,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/37f8815d-1672-42dd-9e9b-305449d7bb8b",
+"name": "Steve Montenegro",
+"other_names": [
+"Montenegro, S.",
+"S. Montenegro",
+"S.B. Montenegro",
+"Steve B. Montenegro"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 29,
+"start": "2023-01-09",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/fa74a7b7-6413-4abb-813d-056b84252549",
+"name": "Sylvia Allen",
+"other_names": [
+"Allen, S.",
+"S. Allen",
+"S.T. Allen"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 7,
+"start": "2026-04-29",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/bde26535-68ee-4eef-bbc8-bfa8a4380015",
+"name": "T.J. Shope",
+"other_names": [
+"Shope, T.",
+"T. Shope",
+"T.R. Shope",
+"Thomas \"T.J.\" Shope",
+"Thomas \"T.J.\" Shope, Jr.",
+"Thomas Ray Shope",
+"Thomas Shope"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 16,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 8,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/0fa874b7-acab-4f29-b800-56bd54f375fe",
+"name": "Teresa Martinez",
+"other_names": [
+"Martinez, T.",
+"T. Martinez",
+"T.A. Martinez",
+"Teresa A. Martinez"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 16,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "H",
+"district": 11,
+"start": "2021-11-01",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/384e8b4c-d85b-4414-9372-40116a10b3b6",
+"name": "Theresa Hatathlie",
+"other_names": [
+"Hatathlie, T.",
+"T. Hatathlie",
+"Theresa Hatathlie-Delmar"
+],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 6,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 7,
+"start": "2021-01-10",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/0b8c9973-1ae5-4af3-8a73-713c8365eccd",
+"name": "Tim Dunn",
+"other_names": [
+"Dunn, T.",
+"T. Dunn",
+"T.M. Dunn",
+"Timothy \"Tim\" Dunn",
+"Timothy M Dunn",
+"Timothy M. Dunn",
+"Timothy Marvin Dunn"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 25,
+"start": "2025-01-13",
+"end": ""
+},
+{
+"house": "H",
+"district": 25,
+"start": "2023-01-09",
+"end": "2025-01-13"
+},
+{
+"house": "H",
+"district": 13,
+"start": "2018-02-13",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/ec93f89c-d32f-4f34-bbe9-1aeb8305a065",
+"name": "Tony Rivero",
+"other_names": [
+"A. Rivero",
+"Rivero, T.",
+"T. Rivero"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 27,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/f94da191-f569-4d35-a9d4-edb04a1efc02",
+"name": "Travis Grantham",
+"other_names": [
+"Grantham, T.",
+"T. Grantham",
+"T.W. Grantham",
+"Travis W. Grantham"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 14,
+"start": "2023-01-09",
+"end": "2025-01-12"
+},
+{
+"house": "H",
+"district": 12,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/1683f77e-7d5c-42b7-ba43-2c937da4c77a",
+"name": "Tyler Pace",
+"other_names": [],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 25,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/85bad9c8-db84-4385-96d4-61f16729c56a",
+"name": "Victoria Steele",
+"other_names": [],
+"party": [
+{
+"name": "Democratic",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 9,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/00f9103d-191e-40ca-8f5c-e5bf806896a6",
+"name": "Vince Leach",
+"other_names": [
+"Leach, V.",
+"V. Leach",
+"Venden \"Vince\" Leach"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 17,
+"start": "2025-01-13",
+"end": ""
+},
+{
+"house": "S",
+"district": 11,
+"start": "",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/d4068bfb-d487-4fde-b36e-7db0ac5cae38",
+"name": "Walt Blackman",
+"other_names": [
+"Blackman, W.",
+"W. Blackman",
+"W.J. Blackman"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 7,
+"start": "2025-01-13",
+"end": ""
+}
+]
+},
+{
+"id": "ocd-person/1ae813e7-9fa6-4940-bfc1-4997dbbc7918",
+"name": "Walter \"Walt\" Blackman",
+"other_names": [
+"Walter Blackman"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "H",
+"district": 6,
+"start": "",
+"end": "2023-01-09"
+}
+]
+},
+{
+"id": "ocd-person/66e496a4-a407-4af1-add3-ef6899b89807",
+"name": "Warren Petersen",
+"other_names": [
+"Petersen, W.",
+"W. Petersen",
+"W.H. Petersen",
+"Warren H. Petersen"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 14,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 12,
+"start": "2021-01-11",
+"end": "2023-01-08"
+}
+]
+},
+{
+"id": "ocd-person/417c9599-7617-4b6d-ac0a-1d1b2a005f4e",
+"name": "Wendy Rogers",
+"other_names": [
+"Rogers, W.",
+"W. Rogers"
+],
+"party": [
+{
+"name": "Republican",
+"start": "",
+"end": ""
+}
+],
+"roles": [
+{
+"house": "S",
+"district": 7,
+"start": "2023-01-09",
+"end": ""
+},
+{
+"house": "S",
+"district": 6,
+"start": "",
+"end": "2023-01-09"
+}
+]
+}
+]
