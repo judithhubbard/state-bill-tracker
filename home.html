@@ -99,7 +99,7 @@ h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: u
 .legend { color: var(--ink-2); font-size: 14px; margin: 0; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
 .legend .full { flex-basis: 100%; font-size: 13px; }
-.legend .sq + .sq { margin-left: -4px; }
+.legend .sq + .sq { margin-left: -3px; }
 .legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
 .legend .dot { width: 7px; height: 7px; display: inline-block; }
 ul, ol { list-style: none; margin: 0; padding: 0; }
@@ -328,12 +328,11 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
   <div class="mapcol">
     <div class="tiles" id="tiles" aria-hidden="true"></div>
   <p class="legend" id="legend" hidden>
-    <span class="key"><i class="sq c-R1"></i><i class="sq c-R2"></i>Republican</span>
-    <span class="key"><i class="sq c-D1"></i><i class="sq c-D2"></i>Democratic</span>
+    <span class="key"><i class="sq c-R1"></i><i class="sq c-D1"></i>One party holds the governor's office and both houses</span>
+    <span class="key"><i class="sq c-R2"></i><i class="sq c-D2"></i>&hellip; and a supermajority in both houses</span>
     <span class="key"><i class="sq c-X"></i>Split</span>
-    <span class="key"><i class="sq c-N"></i>Nonpartisan</span>
+    <span class="key"><i class="sq c-N"></i>Nonpartisan legislature (Nebraska)</span>
     <span class="key" id="offKeyP"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
-    <span class="key full">One party holds the governor's office and both houses; darker: a supermajority in both houses.</span>
   </p>
   <p class="legend" id="customLegend" hidden></p>
   <p class="legend" id="issueLegend" hidden>
