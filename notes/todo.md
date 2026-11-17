@@ -21,7 +21,6 @@ in CLAUDE.md's launch checklist.
   Arkansas, Massachusetts, Mississippi, Montana, Oklahoma, Maine, Vermont (LegiScan has bill texts, not summaries).
 
 ## States not yet on the site
-- Louisiana: built; waiting for its first download on GitHub and contacts.
 - Iowa (2026-11-14): legis.iowa.gov's firewall stops each GitHub run after about 45 requests. The first copy now comes
   from Open States (states/ia/openstates.py, 100 requests a day, about 3 days), and fetch.py reads every changed bill
   from the official site first, then the rest over the following weeks. Converter to write once the first copy is in:
@@ -61,15 +60,30 @@ in CLAUDE.md's launch checklist.
    (Open States' bulk files reach about 2009-2011 for most states; some official files go back decades), download time
    and LegiScan queries, and site size (Cloudflare Pages allows 20,000 files and 25 MB a file per deploy). Laws only
    would serve the issue trends ("how many states passed X, year by year") at a fraction of the cost.
+   **Done 2026-11-16:** every state keeps 2023 on (states/window.py: this year and the four before, never before 2023),
+   downloading on GitHub. Recommended next (owner agreed it's most useful): laws only back to about 2015 for the issue
+   pages ("where this is already law"). Still open: Virginia's 2023 exists only as legacylis.virginia.gov pages (a new
+   reader); Arizona's 2023 needs the owner's Open States bulk file (states/az/bulk.json), Florida's optionally (saves
+   about 5 hours of pages).
 3. **Federal bills (/us/).** Sources: GovInfo's bulk BILLSTATUS XML (every bill since the 113th Congress, 2013-14; no
    key) or the Congress.gov API (free key); House roll calls (clerk.house.gov XML) and Senate roll calls (senate.gov
    XML), member by member; Congressional Research Service summaries for "What it does". About 15,000-19,000 bills per
    two-year Congress, about 2-3% enacted. It differs from states: the President (10 days, Sundays excepted; pocket
    vetoes), 535 members, most bills never get a hearing, and members' "district" is a congressional district.
+   **Done 2026-11-16** (the 117th-119th Congresses, live at /us/). Open: delegates titled "Rep." (should be "Del."); a
+   Congress line on the issue pages (kept out of the states' counts for now); the 120th Congress's districts once the
+   Census Bureau publishes them; whether to keep the 117th (before the 2023 floor); the White House phone and contact
+   page unchecked; the cache is about 300 MB.
+4. **Front page (2026-11-17):** in progress: a Congress tile on the map, and a star on each state's tile where the visitor
+   has starred bills. "Your bills" shows each bill's stage and date; the legislatures' own last-action wording was
+   dropped (capitals and jargon): the state pages' plainer wording could come back later.
 
 ## Site checks
-- Daily site health and accessibility check (test/site_check.js, site-check.yml): review findings with the owner,
-  then commit and schedule.
+- The daily site check (site-check.yml) runs on a schedule. Three moderate accessibility notes remain on every state
+  (no main landmark, content outside landmarks, heading order); they don't fail the check.
+- New York's data check fails until GitHub re-reads the 518 Assembly memos with stray bytes (states/ny/memos.py, fixed
+  2026-11-16).
+- In progress: the statistics flow chart's percentage labels overlap on thin bars (Congress).
 
 ## Fixes found, not yet made
 - data_check LOOK lines not yet looked into: finished sessions' bills whose history predates the session
@@ -77,6 +91,7 @@ in CLAUDE.md's launch checklist.
 - The stage name "Signed into law" (stage 5's label in counts and filters) covers laws without a signature too; the bill
   rows now say which (2026-11-14). Consider "Became law" as the stage name in states with many unsigned laws (OK, TX).
 - notes/from-albany-2026-11-12.md: items 1-3 done; the note itself not committed.
+- The owner's open questions on the second ten issues (above, item 1).
 
 ## Watching
 - The download lanes keep chaining every 2 hours, and the quick lane's publishes go out.
