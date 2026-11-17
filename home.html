@@ -214,7 +214,10 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .stg.s5 { background: var(--st-5); color: var(--st-5-ink); }
 .stg.s6 { background: var(--st-6); color: var(--st-6-ink); }
 /* "Your bills": the bills starred on any state's page or in the map's panel (each state's watchlist), by state. */
-.mine { margin: -6px 0 16px; }
+/* The title, and "Your bills" at its right; the list drops down over the page, so opening it moves nothing. */
+.top { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 0 18px; }
+.top h1 { margin: 0; }
+.mine { position: relative; }
 .minebar { font: inherit; font-size: 15px; font-weight: 600; color: var(--navy); background: var(--sheet); border: 1px solid var(--rule);
   border-radius: 999px; padding: 5px 14px 5px 12px; cursor: pointer; }
 .minebar::after { content: "▾"; margin-left: 6px; color: var(--ink-2); }
@@ -223,7 +226,13 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .minebar .cnt { color: var(--ink-2); font-weight: 400; }
 .minebar .cnt b { color: #14213d; background: var(--law-mark); border-radius: 999px; padding: 0 6px; font-weight: 700; font-size: 12px; }
 .minebar:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
-#mineList { margin-top: 8px; max-height: 50vh; overflow-y: auto; }
+#mineList { position: absolute; right: 0; top: calc(100% + 6px); z-index: 7; width: min(600px, calc(100vw - 32px)); max-height: 70vh;
+  overflow-y: auto; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 10px 0;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .14); }
+@media (max-width: 640px) { #mineList { left: 0; right: auto; } }
+/* What's new on a bill since you last looked: its latest step, in plain words. */
+.mine .what { grid-column: 1 / -1; font-size: 13px; color: var(--ink); }
+.mine .what b { color: #7a5a12; font-weight: 700; }
 .mine .mst { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; margin: 0 0 10px; }
 .mine h3 { font: 700 15px/1.2 var(--display); color: var(--navy); margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
 .mine h3 a { color: inherit; text-decoration: none; }
@@ -311,11 +320,13 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 </head>
 <body>
 <main>
+  <div class="top">
   <h1>State Bill Tracker</h1>
   <section class="mine" id="mine" hidden>
     <button type="button" class="minebar" id="mineBar" aria-expanded="false" aria-controls="mineList"><span class="mstar" aria-hidden="true">★</span> Your bills <span class="cnt" id="mineCount"></span></button>
     <div id="mineList" hidden></div>
   </section>
+  </div>
   <div class="show" id="controls" hidden>
     <span class="pick"><span class="lab" id="showLab">Show</span>
     <button type="button" id="show" aria-haspopup="true" aria-expanded="false" aria-labelledby="showLab show">Party control</button>
@@ -830,6 +841,20 @@ function whereText(stage, comm, kind, live) {
   return ["In committee", "On the floor", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"][stage] || "";
 }
 let mineDrawn = "";
+// A bill's latest step as the state wrote it, in plainer words: "REFERRED TO LAW AND PUBLIC SAFETY" -> "Sent to the Law
+// and Public Safety Committee"; other capitals in sentence case.
+const titleCase = (t) => t.toLowerCase().replace(/\b([a-z])([a-z]*)/g, (w, a, b, i) => (i && /^(and|of|the|on|for|to|in|a)$/.test(w) ? w : a.toUpperCase() + b));
+function plainAct(a) {
+  a = String(a).trim();
+  let m;
+  if ((m = a.match(/^REFERRED TO (.+)$/))) return `Sent to the ${titleCase(m[1])} Committee`;
+  if ((m = a.match(/^SIGNED CHAP\.?\s*(\d+)/i))) return `Signed into law (chapter ${m[1]})`;
+  if (/^DELIVERED TO GOVERNOR$/i.test(a)) return "Sent to the governor";
+  if (/^VETOED/i.test(a)) return "Vetoed";
+  if (/^APPROVAL MEMO/i.test(a)) return "Signed into law";
+  if (a === a.toUpperCase() && /[A-Z]{3}/.test(a)) a = a.charAt(0) + a.slice(1).toLowerCase();
+  return a.length > 140 ? a.slice(0, 140).replace(/\s\S*$/, "") + "…" : a;
+}
 // The map's star marks: a small gold star in the corner of each tile (Congress's too) whose watchlist in this browser has
 // starred bills ({st: count}, the bills "Your bills" lists, so New York's old list counts only New York's bills), with
 // "N starred bills" in its hover text and spoken label. Redrawn with the map and with "Your bills".
@@ -866,7 +891,8 @@ async function drawMine() {
       const [full, title, stage, last, action, comm, kind] = b, fresh = last && last > seen;
       return { last, fresh, st, session: +session, full, title, stage, label: whereText(stage, comm, kind, s.live !== false),
         href: `${st}/${page}#${full}`, seen: `${st}|${k}|${last}`, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
-        + `<span class="num">${esc(spaced(full))}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh ? '<span class="new">New</span>' : ""}</span>`
+        + `<span class="num">${esc(spaced(full))}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh && !action ? '<span class="new">New</span>' : ""}</span>`
+        + (fresh && action ? `<span class="what"><b>New:</b> ${esc(plainAct(action))}</span>` : "")
         + `<span class="where"><span class="stg s${stage}">${esc(whereText(stage, comm, kind, s.live !== false))}</span>${last ? ` · ${fmtDay(last)}` : ""}</span></a>`
         + `${starBtn(st, +session, full, last, spaced(full))}</li>` };
     }));
@@ -889,11 +915,11 @@ async function drawMine() {
 }
 {
   const bar = document.getElementById("mineBar"), list = document.getElementById("mineList");
-  const setOpen = (on) => { bar.setAttribute("aria-expanded", String(on)); list.hidden = !on; try { localStorage.setItem("abt:home:mineOpen", on ? "1" : ""); } catch (e) {} };
-  let was = false;
-  try { was = localStorage.getItem("abt:home:mineOpen") === "1"; } catch (e) {}
-  setOpen(was);
+  const setOpen = (on) => { bar.setAttribute("aria-expanded", String(on)); list.hidden = !on; };
+  setOpen(false);
   bar.addEventListener("click", () => setOpen(list.hidden));
+  document.addEventListener("click", (e) => { if (!list.hidden && !e.target.closest("#mine")) setOpen(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !list.hidden) { setOpen(false); bar.focus(); } });
 }
 // Opening a bill marks it seen, as opening it on the state's page does.
 function markSeen(e) {
@@ -907,6 +933,8 @@ document.getElementById("mine").addEventListener("click", (e) => { if (!starClic
 // Back from a state's page, or a change in another tab: redraw.
 addEventListener("storage", (e) => { if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) drawMine(); });
 addEventListener("pageshow", () => drawMine());
+// Show the bar at once when this browser has a watchlist, so it doesn't appear late and move the page (drawMine() fills it).
+try { for (let i = 0; i < localStorage.length; i++) if (/^abt:(?:[a-z]{2}:)?watch$/.test(localStorage.key(i) || "") && localStorage.getItem(localStorage.key(i)) !== "{}") { document.getElementById("mine").hidden = false; break; } } catch (e) {}
 drawMine();
 // "Find a bill": bills by number ("HB 1234", "hb1234", "H.B. 1234", "A5663") or words in the title, in every built state's
 // and Congress's live sessions (current, and next year's prefiled bills), from search/<st>.json (search_site.py). Nothing
