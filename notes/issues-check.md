@@ -331,3 +331,104 @@ Questions for the owner:
 3. Medical debt includes hospital price transparency laws when they bar collecting from patients of noncompliant
    hospitals. Keep?
 **Answered 2026-11-17 (owner, agreeing with the drafts):** keep all three. No rule changes.
+
+# National issues: the fifth ten (2026-11-17)
+
+Vaccines and public health powers, unions and collective bargaining, ballot initiatives, ranked-choice voting, energy
+costs and utility rates, climate and clean energy, ESG investing and boycott laws, religion in public schools, child labor,
+and protest and assembly laws, approved by the owner the same day, plus kratom, added on the owner's approval during the
+work. All were added and checked the same way, over every bill the published site shows (454,901 bills in 50 states and
+Congress, read with test/issues/get.py; local and placeholder bills left out). There were five or six rounds, each with a
+fresh random sample of 30 per issue (title and the words that matched) and a search for likely misses (titles with related
+words that didn't match). The first forty issues' rules are unchanged. Every issue now also has `words`, a few extra terms
+for the front page's search, which don't change what matches. Groups: Health (vaccines, kratom), Work and the economy
+(unions, child labor, ESG), Elections (initiatives, ranked-choice voting), Environment and energy (utility rates, climate),
+Schools (religion), Rights and public safety (protest).
+
+| Issue | Bills (this session) | Right of 30 read | States with none |
+|---|---|---|---|
+| Vaccines and public health powers | 2,623 (643) | 27-28 | none |
+| Unions and collective bargaining | 2,065 (788) | 26-27 | ND |
+| Ballot initiatives | 451 (136) | 27 | AK, DE, MN, NC, NH, NM, PA, VA, VT |
+| Ranked-choice voting | 290 (87) | 30 | AZ, DE, NC, NE, NV, TN |
+| Energy costs and utility rates | 1,683 (820) | 27 | ND, SD |
+| Climate and clean energy | 3,207 (1,027) | 27 | none |
+| ESG investing and boycott laws | 324 (83) | 29 | AK, DE, NM, RI |
+| Religion in public schools | 321 (135) | 28 | AK, CO, DE, MA, NM, VT, WA |
+| Child labor | 376 (128) | 27 | DE, MT, NC, SC, SD, VT |
+| Protest and assembly laws | 339 (155) | 26-27 | AK, AR, CO, MA, ME, MT, NE, RI, SD, UT, WY |
+| Kratom | 278 (145) | 30 | AK, AL, ME, NM |
+
+Counts include Congress. Earlier rounds: vaccines 22, then 25-26, then 28 (bills that mention "the COVID-19 public health
+emergency" in passing: telehealth, tax credits, price gouging); unions 22-25, then 26-27 ("collective bargaining
+agreement" in passing, labor organizations named on task forces and boards, "meet and confer" in court rules, Nebraska's
+"AM 503 strikes ..."); initiatives 19, then 22, then 27 (Arkansas's "initiated Act 1 of 2000" and California's "an
+initiative measure approved by the voters" as background, local tax referendums, Oregon's "referred to the people ... by
+referendum petition" clause); utility rates 26, then 27 (water bills, "energy cost savings" contracts, the "Coastal Resources
+and Energy Assistance Act", wildfire power shutoffs); climate 26-27 ("net-zero endowment", California's digests opening
+with its greenhouse gas law); religion 25, then 28 (state-house Ten Commandments monuments, vaccine exemptions, religious
+holidays in arts-council grants); child labor 19, then 27 (child care, youth job programs, "minor construction",
+"Whole Child Model"); protest 21, then 25-27 (Pennsylvania's crimes-code heading "riot, disorderly conduct and related
+offenses", lists of emergencies "disaster, war, riot", bid and tax protests, "demonstration programs", race-riot monuments,
+officers' masks, the "Legislative Assembly" read as assembly); ESG, ranked-choice voting and kratom 29-30 from the start.
+Ranked-choice voting's 290 bills are nearly all under Voting and elections too (284); about two thirds of initiative bills
+are (the other third name initiatives, referendums or petitions without words Voting's rules use; Voting's rules weren't
+changed). New York's S8925A of 2025-26 ("Prohibits the sale of 7-hydroxymitragynine products") matches Kratom.
+
+Scope decided here:
+- Vaccines and public health powers: requirements and exemptions (school, employer, religious, medical), mRNA bans and
+  labels, vaccine status discrimination, access (pharmacists, dentists, insurance coverage), immunization registries
+  (counted as vaccine records; trivial registry bills are few), and limits on governors' and health officers' emergency
+  powers (declarations, quarantine, closures, mask orders). Not animals' vaccines (rabies, livestock, hens) or plant
+  quarantines, and not bills that only run "during the public health emergency".
+- Unions and collective bargaining: bargaining rights for public and private workers (including rideshare drivers and
+  graduate assistants), dues and payroll deduction, right-to-work, exclusive representation, arbitration and impasse,
+  strikes and strikers' benefits, captive-audience meetings, union contracts' ratification and funding. Not a passing
+  "subject to (or covered by) the collective bargaining agreement", labor organizations named among a board's members,
+  plea bargains, credit unions.
+- Ballot initiatives: citizens' initiatives and referendums, statewide and local processes (a county initiative act),
+  signatures and circulators, thresholds for initiated amendments, ballot titles and summaries, single subject, fiscal
+  statements. Not laws that were themselves enacted by initiative, local tax referendums, or recall and nominating
+  petitions.
+- Ranked-choice voting: adopting, allowing, studying or banning ranked-choice (instant-runoff, "preferential") voting,
+  and approval voting. Not runoff elections.
+- Energy costs and utility rates: electric and gas rates and rate cases, fixed charges, fuel and purchased-power cost
+  recovery, shutoffs and disconnections, energy assistance (LIHEAP, arrearage programs), public benefits charges, retail
+  energy suppliers, net metering, who pays for large loads (data centers; also under Data centers). Not water and sewer
+  rates, phone and broadband, or energy-savings contracts.
+- Climate and clean energy: greenhouse gas limits and targets, renewable and clean energy standards, cap-and-trade and
+  carbon pricing (RGGI), clean fuel and clean heat standards, zero-emission vehicle rules, building electrification and
+  bans on gas hookups (and bans on those bans), climate superfunds, climate risk disclosure, climate education and
+  resilience, carbon capture and storage. Nuclear power counts when framed as clean energy (zero-emission credits).
+- ESG investing and boycott laws: ESG factors in state pensions, contracts and banking, proxy voting, "fair access" and
+  debanking laws, social credit scores, laws on contractors that boycott energy, firearms or Israel, and divestment from
+  fossil fuels, firearms or Israel (both directions). Not divestment from countries (Russia, China, Iran).
+- Religion in public schools: Ten Commandments displays, "In God We Trust", chaplains, prayer and moments of silence, Bible
+  courses, released time, religious expression and dress, religious holidays and parents' notice of religious content. Not
+  vaccine exemptions, private or religious schools, or Ten Commandments monuments outside schools.
+- Child labor: work permits and certificates, hours, hazardous jobs, penalties and enforcement, minors in particular jobs
+  (referees, theater, athletes), child performers' and child influencers' earnings and trust accounts, and laws against
+  buying goods made with child labor. Not youth job programs, child care, or a "minor child" of an employee.
+- Protest and assembly laws: riot and unlawful assembly crimes and penalties, rioting organizers, blocking roads, critical
+  infrastructure trespass and damage, picketing homes of judges and others, clinic buffer zones and access, masked
+  intimidation and loitering while masked, campus protest rules, liability for protest damage. Not prison riots, tax or bid
+  protests, police officers' masks, drone and cyber attacks on infrastructure, or protests abroad.
+- Kratom: kratom, mitragynine and 7-hydroxymitragynine ("7-OH"): consumer protection acts, age limits, labeling, sales bans
+  and scheduling. Not tianeptine ("gas station heroin") unless kratom is in the bill.
+
+Questions for the owner (each with a suggested answer):
+1. Unions includes the bills that fund or ratify public employees' union contracts (Hawaii files one per bargaining unit
+   each year: 174 of Hawaii's bills; Wisconsin and California ratify agreements). Keep? Suggested: keep; they are the
+   contracts.
+2. Child labor includes child influencers' earnings (as asked) and bills barring the state from buying goods made with
+   child labor abroad (electric vehicle batteries, cobalt, solar). Keep both? Suggested: keep influencers; keep
+   supply-chain bills too.
+3. Climate includes carbon capture and storage (CO2 storage rules, pipelines' eminent domain) and climate education.
+   Keep? Suggested: keep.
+4. Utility rates includes net metering (what solar owners are paid). Keep? Suggested: keep (it's how they're billed).
+5. ESG includes Israel divestment bills of both kinds (barring boycotts of Israel, and divesting from Israel). Keep both?
+   Suggested: keep; the issue is the subject, not a side.
+6. Protest includes anti-mask crimes generally (masked harassment and intimidation), since most were written with
+   protests in mind; it leaves out bills on police and immigration agents' masks. Keep? Suggested: keep.
+7. Ballot initiatives includes local initiative and referendum processes (county and city), not just statewide. Keep?
+   Suggested: keep.

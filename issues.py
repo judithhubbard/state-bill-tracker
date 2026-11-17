@@ -6,7 +6,8 @@ so a long text doesn't match on words pages apart), and a list it must not have 
 expressions matched without regard to case, except those starting "(?-i)"; one starting "!" is an exclusion for that
 rule alone. Bills for one city or county (narrow
 "place") and placeholder bills (shell) are left out. `filters` are the subsets an issue's page offers (AI: deepfakes,
-chatbots ...); a bill can be in several.
+chatbots ...); a bill can be in several. `words` (optional) are a few other terms a visitor might type for the issue
+in the front page's search ("forever chemicals", "7-oh"); they don't change which bills match.
 
 A match in the title or summary counts; so does one in a short "What it does" (under SHORT characters); a longer one
 needs two mentions (budget and omnibus bills mention a subject once in passing; checked 2026-11-15).
@@ -28,8 +29,24 @@ NOT_HOMES = r"!\b(?:commercial (?:tenants?|leases?|landlords?|propert\w*|space|c
 # Hunting seasons and licenses: firearms bills, but not about gun laws.
 HUNTING = r"!\b(?:deer|turkeys?|bears?|antlerless|archery|crossbows?|muzzleloaders?|hunting seasons?|firearms? seasons?|game animals?|trapping|wildlife code|hunter (?:safety|education)|hunting licen\w*|rod and gun clubs?)\b"
 
+# Shared exclusions for the fifth ten's rules.
+# Animals' and plants' vaccines and quarantines.
+ANIMALS = r"!\b(?:rabies|animals?|livestock|dogs?|cats?|pets?|veterinar\w*|poultry|cattle|swine|horses?|equine|brucellosis|wildlife|herds?|deer|hens?|chickens?|birds?|fowl|flocks?)\b"
+# A passing mention of a union contract in a bill about something else ("subject to the collective bargaining agreement").
+NOT_CBA = r"!\b(?:subject to (?:the terms of )?(?:a |the |any |an |applicable |such )?(?:existing )?collective bargaining agreements?|(?:not|nothing) (?:\w+ ){0,6}?(?:impair|supersede|affect|alter|abrogate|diminish|interfere)\w* (?:\w+ ){0,6}?collective bargaining agreements?|unless otherwise provided (?:in|by) (?:a |the |an )?(?:applicable )?collective bargaining agreements?|(?:consistent|in accordance) with (?:any |the |a |an )?(?:applicable )?collective bargaining agreements?|(?:notwithstanding|except as provided in) (?:any |a |the )?collective bargaining agreements?|(?:governed by|covered by|pursuant to|according to|violation of|set by|in) (?:a |an |the |any )?(?:applicable |valid |existing )?collective bargaining agreements?|labor peace agreements?)\b"
+# Water and sewer utilities' rates (not energy).
+NOT_WATER = r"!\b(?:sewer\w*|wastewater|water (?:utilit\w*|rates?|bills?|service|compan\w*|districts?|authorit\w*|systems?|corporations?))\b"
+# Federal laws that ran "during the COVID-19 public health emergency" (telehealth, Medicaid): not about the powers.
+NOT_PHE = r"!\b(?:telehealth|telemedicine|Medicare|Medicaid|flexibilit\w*|tax credits?|unemployment|supply chains?|drug shortages?|reserves?|sick leave)\b"
+# Youth job programs: not child labor rules.
+NOT_YOUTHJOBS = r"!\b(?:summer youth|youth employment (?:and \w+ )?(?:funds?|funding|programs?|immersion|initiatives?|opportunit\w*|services|grants?)|youth (?:jobs?|workforce) (?:programs?|initiatives?|grants?))\b"
+# Lists of emergencies ("disaster, war, acts of terrorism, riot or civil disorder").
+NOT_DISASTER = r"!\b(?:tornado\w*|storms?|cyberterrorism|tumult|public disasters?|earthquakes?|floods?|hurricanes?|acts? of (?:war|God|terrorism)|natural (?:or man-made )?disasters?|epidemics?)\b"
+# Tax, bid and assessment protests.
+NOT_TAXPROTEST = r"!\b(?:bid protests?|protest(?:s|ed)? (?:of |against )?(?:an? |the )?(?:award|bid|assessment|valuation|tax\w*|appraisal|levy|annexation|rates?)|under protest|tax protests?|protest petitions?|appraisal review|procurement|solicitation|contract awards?)\b"
+
 ISSUES = [
-    {"id": "datacenters", "group": "Technology", "name": "Data centers",
+    {"id": "datacenters", "group": "Technology", "name": "Data centers", "words": ["data center", "hyperscale", "large load"],
      "rules": [[r"\bdata ?cent(?:er|re)s?\b"], [r"\bhyperscale"], [r"\bhigh[- ]performance computing\b"],
                [r"\b(?:large|high)[- ]loads?\b", r"!\b(?:vehicles?|trailers?|trucks?|highways?|lanes?)\b"],
                [r"\b(?:large|high)[- ](?:energy[- ]use|energy[- ]demand|energy|use|load[- ]factor)(?: electric)? (?:facilit\w+|customers?|users?|consumers?)\b"]],
@@ -37,12 +54,12 @@ ISSUES = [
      # consultants) or where a company keeps people's data.
      "none": [r"\bstate data cent(?:er|re)", r"\bconsolidat\w*\b.{0,60}\bdata cent", r"\bdata cent(?:er|re)s? (?:services|consolidation)\b",
               r"\bcall (?:or|and|centers? (?:or|and)) data cent", r"\b(?:international|overseas|offshore|foreign) data cent"]},
-    {"id": "pfas", "group": "Environment and energy", "name": "PFAS (“forever chemicals”)",
+    {"id": "pfas", "group": "Environment and energy", "name": "PFAS (“forever chemicals”)", "words": ["forever chemicals", "pfoa", "pfos", "firefighting foam"],
      "rules": [[r"\bPFAS\b"], [r"perfluoro"], [r"polyfluoro"], [r"perfluorinated"], [r"\bforever chemicals?\b"],
                [r"\bPFOA\b"], [r"\bPFOS\b"], [r"\bfire[- ]?fighting foams?\b"], [r"(?-i)\bAFFF\b"],
                [r"\baqueous film[- ]forming foam"],
                [r"\b(?:turnout gear|firefighters?'? (?:personal )?protective (?:equipment|clothing))\b", r"\b(?:chemicals?|toxic|substances?)\b"]]},
-    {"id": "ai", "group": "Technology", "name": "Artificial intelligence",
+    {"id": "ai", "group": "Technology", "name": "Artificial intelligence", "words": ["ai", "deepfake", "chatbot", "algorithm"],
      "rules": [[r"\bartificial intelligence\b"], [r"\bgenerative (?:AI|artificial)"], [r"\bAI[- ]generated\b"],
                [r"(?-i)\bAI\b"], [r"\bdeep ?fakes?\b"], [r"\bsynthetic media\b"],
                [r"\bdigitally (?:altered|fabricated|manipulated|created)\b", r"\b(?:image|video|audio|likeness|depiction|recording)s?\b"],
@@ -54,7 +71,7 @@ ISSUES = [
                  "Chatbots": [r"\bchat ?bots?\b", r"\bcompanion\b"],
                  "Hiring, insurance and decisions": [r"\bautomated decision", r"\balgorithmic discrimination\b", r"\bemploy", r"\bhiring\b", r"\binsur"],
                  "Government use": [r"\bstate agenc", r"\bgovernmental? (?:entit|agenc|bod|unit)", r"\bpublic (?:bod|entit|agenc)"]}},
-    {"id": "kidsonline", "group": "Technology", "name": "Children online and social media",
+    {"id": "kidsonline", "group": "Technology", "name": "Children online and social media", "words": ["social media", "age verification", "app store", "kids online"],
      "filters": {"Age checks for adult websites": [r"\bpornograph", r"\bharmful (?:to minors|material)\b", r"\badult[- ](?:only )?(?:websites?|content|material)\b", r"\bsexual material\b"],
                  "Social media": [r"\bsocial (?:media|networking)\b"], "App stores": [r"\bapp stores?\b"],
                  "Design and privacy codes": [r"\bage[- ]appropriate design\b", r"\bkids code\b", r"\b(?:data|privacy)\b"]},
@@ -64,19 +81,19 @@ ISSUES = [
                [r"\b(?:online (?:services?|platforms?|products?)|digital services?)\b", r"\b(?:minors?|child|children|teens?|kids)\b"],
                [r"\bharmful (?:to minors|material)\b", r"\b(?:online|internet|websites?|digital|apps?)\b"],
                [r"\bage[- ]appropriate design\b"], [r"\bapp stores?\b", r"\b(?:minors?|age|parent)"]]},
-    {"id": "phones", "group": "Schools", "name": "Phones in schools",
+    {"id": "phones", "group": "Schools", "name": "Phones in schools", "words": ["cell phone", "cellphone", "smartphone", "phone ban", "bell to bell"],
      "rules": [[r"\b(?:cell(?:ular)? ?(?:tele)?phones?|smart ?phones?|wireless (?:communication|telecommunication)s? devices?|personal (?:electronic|communication|telecommunications?) devices?|(?:mobile|wireless|portable electronic|internet[- ]enabled|electronic|electronic telecommunications?) devices?|phone[- ]free)\b",
                 r"\b(?:schools?|students?|classrooms?|instructional (?:time|day))\b",
                 r"\b(?:use|uses|using|possess\w*|prohibit\w*|ban|bans|banned|polic(?:y|ies)|restrict\w*|free|limit\w*|access)\b",
                 r"!\b(?:recycl\w*|e-?waste|audits?)\b"]],
      "none": [r"\b(?:stopped|passing a) school bus", r"\bdistrict[- ]owned\b", r"\bwhile driving\b", r"\boperat\w* a (?:motor )?vehicle\b", r"\bbus drivers?\b", r"\bschool zones?\b"]},
-    {"id": "housing", "group": "Housing and taxes", "name": "Housing supply and zoning",
+    {"id": "housing", "group": "Housing and taxes", "name": "Housing supply and zoning", "words": ["zoning", "adu", "accessory dwelling", "missing middle", "housing supply"],
      "rules": [[r"\baccessory dwelling"], [r"(?-i)\bADUs?\b"], [r"\bmissing[- ]middle\b"], [r"\bsingle[- ]family zon"],
                [r"\b(?:duplex|triplex|fourplex|quadplex)(?:es)?\b"], [r"\bminimum lot sizes?\b"],
                [r"\bparking (?:minimums?|requirements?|mandates?)\b", r"\bhous"], [r"\bby[- ]right\b", r"\bhous"],
                [r"\bhousing (?:production|supply)\b"], [r"\bhousing elements?\b"], [r"\bmulti-?family\b", r"\bzon(?:e|ed|ing)\b"],
                [r"\bdensity\b", r"\bhousing\b", r"\bzon(?:e|ed|ing)\b"], [r"\bstarter homes?\b"], [r"\bmanufactured hous", r"\bzon"]]},
-    {"id": "minwage", "group": "Work and the economy", "name": "Minimum wage",
+    {"id": "minwage", "group": "Work and the economy", "name": "Minimum wage", "words": ["minimum wage", "tipped wage", "living wage"],
      # Only bills that set or change a minimum wage (the owner's decision 2026-11-15): not ones paying for its cost or
      # setting other pay by it.
      "rules": [[r"\bminimum (?:hourly )?wages?\W+(?:\w+\W+){0,6}?(?:increas\w*|rais\w*|establish\w*|eliminat\w*|repeal\w*|"
@@ -89,25 +106,25 @@ ISSUES = [
      "none": [r"\btimes the (?:state |federal |applicable )?minimum (?:hourly )?wage\b", r"\bjur(?:y|ors?)\b",
               r"\b(?:state funds?|operating costs?|costs? associated|reimburse\w*|tax credits?|grants?|grant programs?|"
               r"income tax|sales and use tax|sales tax|taxable income)\b"]},
-    {"id": "repair", "group": "Technology", "name": "Right to repair",
+    {"id": "repair", "group": "Technology", "name": "Right to repair", "words": ["right to repair", "fair repair"],
      "rules": [[r"\bright[- ]to[- ]repair\b"], [r"\bdevices? repair\b"], [r"\bfair repair\b"], [r"\bdigital electronic (?:equipment|products?)\b", r"\brepair"],
                [r"\bindependent repair\b", r"\b(?:parts|tools|documentation|diagnostic)"],
                [r"\brepair", r"\b(?:powered wheelchairs?|wheelchairs?|agricultural equipment|farm equipment)\b"]],
      "none": [r"\bbody shops?\b", r"\bmotor vehicle repair\b", r"\bauto(?:mobile|motive)? repair\b"]},
-    {"id": "betting", "group": "Work and the economy", "name": "Sports betting and online gambling",
+    {"id": "betting", "group": "Work and the economy", "name": "Sports betting and online gambling", "words": ["sports betting", "gambling", "igaming", "sweepstakes", "prediction market"],
      "rules": [[r"\bsports (?:wagering|betting|wagers?|pools?|gaming)\b"], [r"\bsportsbooks?\b"], [r"\bi-?gaming\b"],
                [r"\binternet (?:gambling|casino)"], [r"\b(?:internet|online) gaming\b", r"\b(?:wager\w*|casinos?|gambl\w*|bets?|betting)\b"],
                [r"\bonline (?:casino|gambling|poker|lottery|sports)"],
                [r"\bsweepstakes casino"], [r"\bsweepstakes\b", r"\bgam(?:ing|bling|es)\b"],
                [r"\bfantasy (?:sports|contests?)\b"], [r"\bprediction markets?\b"]],
      "none": [r"\braffles?\b", r"\bbingo\b"]},
-    {"id": "drugcosts", "group": "Health", "name": "Prescription drug costs",
+    {"id": "drugcosts", "group": "Health", "name": "Prescription drug costs", "words": ["drug prices", "insulin", "pbm", "pharmacy benefit manager", "340b"],
      "rules": [[r"\binsulin\b", r"\b(?:costs?|prices?|pricing|co-?pay(?:ment)?s?|cost[- ]sharing|caps?|capped|out-of-pocket|affordab)"],
                [r"\bprescription drug affordability\b"], [r"\bpharmacy benefits? managers?\b"], [r"(?-i)\bPBMs?\b"],
                [r"\bdrug pric(?:e|es|ing)\b"], [r"\b(?:prescription )?drug (?:costs?|affordability)\b"],
                [r"\bprescription drugs?\b", r"\b(?:cost[- ]sharing|co-?pay(?:ment)?s?|out-of-pocket)\b"], [r"\b340B\b"]]},
     # The second ten (2026-11-15; notes/issues-check.md).
-    {"id": "abortion", "group": "Health", "name": "Abortion",
+    {"id": "abortion", "group": "Health", "name": "Abortion", "words": ["reproductive rights", "pro-life", "abortion pill", "mifepristone", "heartbeat"],
      "rules": [[r"\babortions?\b"], [r"\bterminat\w* (?:of )?(?:a |the |her )?pregnanc", r"!\b(?:miscarriage|childbirth|leave of absence)\b"], [r"\bmifepristone\b"], [r"\bmisoprostol\b"],
                [r"\bfetal heartbeat\b"], [r"\breproductive (?:freedom|rights|autonomy|liberty)\b"], [r"\blegally protected health care\b"],
                # Shield laws: protecting providers and patients from other states' subpoenas and prosecutions.
@@ -117,7 +134,7 @@ ISSUES = [
                  "Access and protections": [r"\bright to\b", r"\bprotect", r"\bshield\b", r"\baccess\b", r"\breproductive (?:freedom|rights|autonomy|liberty|health care)\b", r"\bcoverage\b"],
                  "Medication abortion": [r"\bmifepristone\b", r"\bmisoprostol\b", r"\babortion[- ]inducing\b", r"\b(?:medication|chemical) abortion", r"\babortion pills?\b"],
                  "Ballot measures": [r"\bconstitution", r"\bballot\b", r"\breferendum\b", r"\bvoters\b"]}},
-    {"id": "firearms", "group": "Rights and public safety", "name": "Firearms",
+    {"id": "firearms", "group": "Rights and public safety", "name": "Firearms", "words": ["guns", "gun control", "concealed carry", "red flag", "ghost gun", "second amendment"],
      "rules": [# "Other than by the discharge of a firearm" is the criminal code's way of setting firearms aside.
                [r"\bfirearms?\b", r"!\balcohol,? tobacco,? (?:and )?firearms\b", r"!\bother than (?:by )?(?:the )?discharg\w* of a firearm\b", HUNTING], [r"\bhandguns?\b"], [r"\b(?:rifles?|shotguns?|pistols?)\b", HUNTING],
                [r"\bguns?\b", r"!\b(?:nail|staple|spray|radar|glue|heat|paint|tattoo|speed|caulk|grease|stun) guns?\b|\bgun clubs?\b"],
@@ -130,7 +147,7 @@ ISSUES = [
                  "Red flag laws": [r"\bextreme risk", r"\bred flag\b", r"\brisk protection orders?\b"],
                  "Ghost guns and devices": [r"\bghost guns?\b", r"\bunserialized\b", r"\bprivately made\b", r"\b3-?D[- ]print", r"\bbump[- ]stock", r"\bmachine ?guns?\b", r"\bauto sears?\b", r"\bconversion devices?\b", r"\brapid[- ]fire\b", r"\bsilencers?\b", r"\bsuppressors?\b", r"\bframes? or receivers?\b"],
                  "Firearms in schools": [r"\bschools?\b", r"\bcampus"]}},
-    {"id": "vouchers", "group": "Schools", "name": "School vouchers and education savings accounts",
+    {"id": "vouchers", "group": "Schools", "name": "School vouchers and education savings accounts", "words": ["school choice", "esa", "education savings account", "voucher"],
      "rules": [[r"\bvouchers?\b", r"\b(?:schools?|tuition|students?)\b", r"!\b(?:housing|rent|rental|child ?care|day ?care|section 8|food|meals?|travel|bus|buses|vehicles?|trucks?|electric|plates?)\b"],
                [r"\beducation(?:al)? (?:savings|scholarship|freedom|opportunity) accounts?\b"], [r"\bempowerment scholarship"],
                [r"\bscholarship (?:granting|funding|tax credit)"], [r"\btax[- ]credit scholarships?\b"],
@@ -146,7 +163,7 @@ ISSUES = [
                [r"\bHope Scholarship (?:Program|Board|Act|accounts?)\b", r"!\b(?:colleges?|universit\w*|postsecondary|higher education|lottery)\b"],
                [r"\bscholarships?\b", r"\b(?:nonpublic|private|parochial|participating|religious) (?:schools?|elementary|secondary)\b",
                 r"!\b(?:colleges?|universit\w*|postsecondary|higher education|community college|dual (?:enrollment|credit)|teach\w*|work obligation|independent charter schools?)\b"]]},
-    {"id": "voting", "group": "Elections", "name": "Voting and elections",
+    {"id": "voting", "group": "Elections", "name": "Voting and elections", "words": ["elections", "voter id", "mail ballots", "absentee", "voter registration"],
      # How people vote and how elections are run. Not campaign finance, local election dates or district lines.
      "rules": [[r"\bvoter (?:ID|identification|registration|rolls?|lists?|fraud|intimidation|suppression|participation|access|eligibility|challenges?)\b"],
                # "registered voters" near a petition is usually a local referendum on something else (Louisiana's fluoridation
@@ -178,7 +195,7 @@ ISSUES = [
                   "Mail and absentee voting": [r"\babsentee\b", r"\bmail(?:-in| in)? (?:ballots?|voting)\b", r"\bvote[- ]by[- ]mail\b", r"\bballots? by mail\b"],
                   "Voter registration": [r"\bregist\w* (?:to vote|voters?)\b", r"\bvoter (?:registration|rolls?|lists?)\b", r"\bsame[- ]day registration\b"],
                   "Election administration and security": [r"\baudits?\b", r"\btabulat", r"\bequipment\b", r"\bmachines?\b", r"\bsecurity\b", r"\bintegrity\b", r"\belection (?:officials?|workers?|judges?|administrat|clerks?)", r"\bpoll (?:watchers?|workers?|books?)", r"\bcanvass", r"\bcertif", r"\bdrop ?box"]}},
-    {"id": "immigration", "group": "Rights and public safety", "name": "Immigration",
+    {"id": "immigration", "group": "Rights and public safety", "name": "Immigration", "words": ["immigrants", "ice", "sanctuary", "undocumented", "deportation"],
      # Working with federal immigration enforcement (287(g), detainers, sanctuary policies), state immigration crimes,
      # checks of immigration status (E-Verify), and what a person's status allows: benefits, licenses, in-state tuition.
      # Not noncitizen voting (Voting and elections), refugee services or foreign land ownership.
@@ -199,7 +216,7 @@ ISSUES = [
      # Domestic violence laws list threats about a person's immigration status among forms of coercive control,
      # and "nonresident alien" is a tax term.
      "none": [r"\bcoercive control\b", r"\bnonresident aliens?\b"]},
-    {"id": "tenants", "group": "Housing and taxes", "name": "Rent and tenants",
+    {"id": "tenants", "group": "Housing and taxes", "name": "Rent and tenants", "words": ["rent", "renters", "eviction", "landlord", "rent control"],
      "rules": [[r"\btenan(?:ts?|cy|cies)\b", r"!\b(?:tenants? in common|tenancy in common|tenancy by the entiret\w*|joint tenan\w*|life tenan\w*|tenancy at sufferance)\b", NOT_HOMES],
                [r"\blandlords?\b", r"!\b(?:employers|lenders|journalists),? (?:\w+,? )?(?:and )?landlords\b", NOT_HOMES], [r"\bevict\w*\b"], [r"\brent (?:control|stabiliz\w*|increases?|caps?|gouging|regulat\w*|limits?|hikes?|escrow|withholding)\b"],
                [r"\brental (?:housing|units?|propert\w*|agreements?|applications?|assistance|dwellings?|apartments?)\b",
@@ -208,7 +225,7 @@ ISSUES = [
                [r"\b(?:residential|apartment|dwelling) leases?\b"], [r"\bforcible entry and detainer\b"], [r"\bunlawful detainer\b"],
                [r"\bsummary (?:possession|ejectment)\b"], [r"\bwarranty of habitability\b"], [r"\bsquatt\w*\b", r"\b(?:remov\w*|evict\w*|unlawful\w*|occup\w*)\b"], [r"\blot rent\b"],
                [r"\bhousing choice vouchers?\b"], [r"\bsource of income\b", r"\b(?:housing|rent\w*|landlords?|tenants?)\b"]]},
-    {"id": "proptax", "group": "Housing and taxes", "name": "Property tax relief",
+    {"id": "proptax", "group": "Housing and taxes", "name": "Property tax relief", "words": ["property tax", "homestead", "assessment cap"],
      # Relief for homeowners and residents: homestead exemptions, caps on assessments and levies, circuit breakers,
      # freezes and deferrals for seniors, exemptions for veterans and people with disabilities. Not business property,
      # one organization's exemption, or tax administration (appeals, collection, sales).
@@ -233,7 +250,7 @@ ISSUES = [
                [r"\b(?:eliminat\w*|abolish\w*|repeal\w*) (?:the |all )?(?:residential |real )?(?:property|ad valorem) tax(?:es|ation)?\b(?! (?:exemptions?|credits?|code|laws?|provisions|abatements?))"]],
      # New Jersey's Energy Tax Receipts Property Tax Relief aid goes to municipalities, not households.
      "none": [r"\benergy tax receipts\b"]},
-    {"id": "transgender", "group": "Rights and public safety", "name": "Transgender people",
+    {"id": "transgender", "group": "Rights and public safety", "name": "Transgender people", "words": ["trans", "gender identity", "gender-affirming care", "lgbtq"],
      "rules": [[r"\btransgender\b"],
                # "Gender identity" in a list of protected classes or data fields (parole factors, data brokers, demographic
                # forms) isn't about transgender people; a bill adding it to such a list is.
@@ -255,7 +272,7 @@ ISSUES = [
                  "Bathrooms and locker rooms": [r"\brestrooms?\b", r"\bbathrooms?\b", r"\blocker rooms?\b", r"\bchanging (?:rooms?|facilities)\b"],
                  "Schools": [r"\bschools?\b", r"\bstudents?\b", r"\bpronouns?\b"],
                  "Discrimination protections": [r"\bdiscriminat", r"\bcivil rights\b", r"\bhuman rights\b", r"\bhate crimes?\b"]}},
-    {"id": "dei", "group": "Rights and public safety", "name": "Diversity, equity and inclusion",
+    {"id": "dei", "group": "Rights and public safety", "name": "Diversity, equity and inclusion", "words": ["diversity", "equity", "inclusion", "affirmative action"],
      # DEI offices, officers, training, statements and plans, bans on them, and the nearby fights the same bills take up:
      # implicit bias training, "divisive concepts" and critical race theory, affirmative action and preferential treatment.
      "rules": [[r"\bdiversity,? equity,? (?:and )?inclusion\b"], [r"\bequity,? diversity,? (?:and )?inclusion\b"], [r"(?-i)\bDEI\b"],
@@ -268,7 +285,7 @@ ISSUES = [
                [r"\binclusion (?:officers?|offices?)\b"], [r"\bdivisive concepts?\b"], [r"\bcritical race theory\b"],
                [r"\baffirmative action\b", r"!\b(?:affirmative action by|minority business\w*)\b"],
                [r"\bpreferential treatment\b", r"\b(?:race|sex|color|ethnicity|national origin)\b"]]},
-    {"id": "cannabis", "group": "Rights and public safety", "name": "Cannabis",
+    {"id": "cannabis", "group": "Rights and public safety", "name": "Cannabis", "words": ["marijuana", "weed", "thc", "delta-8", "hemp"],
      "rules": [[r"\bcannabis\b"], [r"\bmarijuana\b"], [r"\bmarihuana\b"], [r"(?-i)\bTHC\b"], [r"\btetrahydrocannabinol"], [r"\bdelta[- ]?[89]\b"],
                [r"\bhemp[- ]derived\b"], [r"\bcannabinoids?\b"], [r"(?-i)\bCBD\b"], [r"\bcannabidiol\b"],
                [r"\bhemp\b", r"\b(?:intoxicat\w*|consumable|ingestible|edibles?|beverages?|smokable|inhal\w*)\b"],
@@ -277,7 +294,7 @@ ISSUES = [
                  "Hemp-derived THC": [r"\bhemp\b", r"\bdelta[- ]?[89]\b", r"\bintoxicating\b"],
                  "Expungement": [r"\bexpunge", r"\bsealing\b", r"\bseal (?:the )?records?\b"]}},
     # The third ten (2026-11-17; notes/issues-check.md).
-    {"id": "privacy", "group": "Technology", "name": "Data privacy",
+    {"id": "privacy", "group": "Technology", "name": "Data privacy", "words": ["data privacy", "data broker", "biometric", "personal data"],
      # Consumer data privacy: what businesses may collect, keep and sell. Not government records or what agencies and
      # police may do, not "invasion of privacy" crimes, and not children's design codes (Children online), though a
      # broad consumer privacy act with parts for minors counts.
@@ -295,7 +312,7 @@ ISSUES = [
                 r"!\b(?:public records?|open records?|freedom of information|data breach\w*|security breach\w*|breach of (?:the )?security|judges?|judicial|law enforcement officers?|public safety officers?|government(?:al)? entit\w*|state agenc\w*|election\w*|voters?|defraud\w*|fraudulent|identity theft)\b"]],
      # California's digests name the Consumer Privacy Act as background on bills about other things.
      "none": [r"\bstate (?:public protection and general government )?budget\b", r"\bExisting (?:state )?law, the California Consumer Privacy Act\b"]},
-    {"id": "campaignfinance", "group": "Elections", "name": "Campaign finance",
+    {"id": "campaignfinance", "group": "Elections", "name": "Campaign finance", "words": ["campaign contributions", "pac", "dark money", "super pac"],
      # Money in politics: contributions, spending, disclosure, PACs, public financing. Not lobbying or ethics alone.
      "rules": [[r"\bcampaign financ\w*\b", r"!\bappropriat\w*\W+(?:\w+\W+){0,12}?campaign finance (?:and public disclosure )?board\b"],
                [r"\bcampaign (?:contributions?|expenditures?|spending|funds?|accounts?|disclosures?|committees?|finance reports?|treasurers?)\b",
@@ -309,7 +326,7 @@ ISSUES = [
      # California's digests open with the Political Reform Act as background on bills about other things.
      # Bills on AI and deepfakes in political ads name the committees that pay for them.
      "none": [r"\bprovides for the comprehensive regulation of campaign financing\b", r"\b(?:artificial intelligence|deep ?fakes?|synthetic media|materially deceptive)\b"]},
-    {"id": "redistricting", "group": "Elections", "name": "Redistricting",
+    {"id": "redistricting", "group": "Elections", "name": "Redistricting", "words": ["gerrymandering", "district maps"],
      # Drawing legislative and congressional districts. Local ward lines only when statewide rules change: not one
      # county's or city's map.
      "rules": [[r"\bredistrict\w*\b"], [r"\breapportion\w*\b", r"\b(?:districts?|legislat\w*|congress\w*|senate|house|census)\b"], [r"\bgerrymander\w*\b"],
@@ -323,7 +340,7 @@ ISSUES = [
               r"\b(?:judicial (?:redistricting|districts?)|supreme court districts?|redistricting of the (?:\w+ )?supreme court|chancery|circuit courts?|justices? of the peace|constables?|presidential electors?)\b",
               # Boards whose members are appointed or elected by district (school boards, regents, commissions).
               r"\b(?:school boards?|boards? of (?:education|regents)|university|appointed based|commissioners? (?:will|shall) be appointed)\b"]},
-    {"id": "paidleave", "group": "Work and the economy", "name": "Paid family and sick leave",
+    {"id": "paidleave", "group": "Work and the economy", "name": "Paid family and sick leave", "words": ["paid leave", "sick leave", "family leave", "parental leave", "fmla"],
      # Paid leave laws and programs: family and medical leave insurance, paid sick and safe leave, parental leave
      # (public employees' too). Not leave banks or donations for one employee, payouts of unused leave, or paid
      # administrative leave.
@@ -334,7 +351,7 @@ ISSUES = [
                [r"\bparental leave\b"], [r"\bmaternity leave\b"], [r"\bpaternity leave\b"], [r"(?-i)\bFMLA\b"], [r"\bsafe leave\b"]],
      "none": [r"\bsick leave banks?\b", r"\b(?:unused|accumulated) (?:sick|annual|vacation)\b", r"\bdonat\w* (?:of )?(?:sick )?leave\b",
               r"\bpaid administrative leave\b", r"\bterminal leave\b"]},
-    {"id": "childcare", "group": "Work and the economy", "name": "Child care",
+    {"id": "childcare", "group": "Work and the economy", "name": "Child care", "words": ["daycare", "day care", "early childhood"],
      # Child care for working families: subsidies, licensing, workforce, tax credits. Not K-12, pre-K or foster care,
      # and not lists of places near which something is banned (sex offenders, tobacco shops).
      "rules": [[r"\b(?:child|day)[- ]?care\b",
@@ -342,15 +359,15 @@ ISSUES = [
                 r"!\b(?:child[- ]?care institutions?|child[- ]placing|residential child[- ]?care|host homes?|nontraditional child[- ]?care)\b"],
                [r"\bearly (?:care and education|learning (?:programs?|providers?|centers?))\b"], [r"\bearly childhood (?:care|services)\b"], [r"\bchild and dependent care\b"]],
      "none": [r"\bfoster care\b(?!.{0,40}child ?care)"]},
-    {"id": "ivf", "group": "Health", "name": "IVF and fertility",
+    {"id": "ivf", "group": "Health", "name": "IVF and fertility", "words": ["in vitro", "infertility", "surrogacy", "embryos"],
      "rules": [[r"\bin vitro\b", r"!\b(?:cell[- ]cultivated|cultured|cultivated meat|animal cells?)\b"], [r"(?-i)\bIVF\b"], [r"\binfertility\b"], [r"\bfertility[- ](?:treatments?|preservation|services|care|coverage|benefits?|clinics?|patients?|fraud|health|related)\b"],
                [r"\bassisted reproduct\w*\b"], [r"\bsurrogacy\b"], [r"\bgestational (?:carriers?|surroga\w*)\b"], [r"\bextrauterine\b"],
                [r"\b(?:egg|oocyte|sperm|semen|gamete|embryo) (?:donors?|donations?|banks?|freezing|retrieval|storage|transfer)\b"], [r"\bdonor[- ]conceived\b"],
                [r"\bembryos?\b", r"\b(?:frozen|cryopreserv\w*|fertility|in vitro|IVF|reproductive technolog\w*)\b", r"!\bfetal tissue\b"]]},
-    {"id": "fluoride", "group": "Health", "name": "Fluoride in drinking water",
+    {"id": "fluoride", "group": "Health", "name": "Fluoride in drinking water", "words": ["fluoridation", "water fluoride"],
      "rules": [[r"\bfluoridat\w*\b"], [r"\bfluorid\w*\b", r"\bwater\b", r"!\b(?:sulfuryl|hydrogen) fluoride\b", r"!\bfluoride varnish\b"],
                [r"\beffects? of fluoride\b"], [r"\blaws? (?:governing|regarding|concerning|relating to) fluoride\b"]]},
-    {"id": "nuclear", "group": "Environment and energy", "name": "Nuclear energy",
+    {"id": "nuclear", "group": "Environment and energy", "name": "Nuclear energy", "words": ["nuclear power", "smr", "small modular reactor", "fusion"],
      # Nuclear power, including small modular reactors, fusion and repeals of moratoriums. Not weapons, medicine, or
      # radioactive waste alone; not lists that leave nuclear out ("other than fossil fuel or nuclear") or name nuclear
      # plants among targets of crimes.
@@ -360,7 +377,7 @@ ISSUES = [
                [r"\bfusion (?:energy|power|technology|science|industry|reactors?)\b"], [r"\baneutronic\b"],
                [r"\bfusion\b", r"\b(?:renewable|clean) energ\w*\b", r"!\bfusion (?:voting|centers?)\b"]],
      "none": [r"\bnuclear medicine\b", r"\bnuclear pharmac\w*\b"]},
-    {"id": "wildfire", "group": "Environment and energy", "name": "Wildfire",
+    {"id": "wildfire", "group": "Environment and energy", "name": "Wildfire", "words": ["wildfires", "prescribed burn", "forest fire"],
      # Prevention, utilities' wildfire liability and mitigation plans, insurance and rebuilding, firefighting. Not
      # ordinary fire codes.
      "rules": [[r"\bwild ?fires?\b"], [r"\bwildland[- ](?:fires?|firefight\w*|urban interface|fire ?fighters?)\b"], [r"\b(?:forest|brush|grass|range) ?fires?\b"], [r"\bprescribed (?:fires?|burn\w*)\b"], [r"\bcontrolled burn\w*\b"],
@@ -368,20 +385,20 @@ ISSUES = [
                [r"\bfuels? (?:reduction|breaks?|treatments?|management)\b", r"\bfires?\b"]],
      # California's 2024 bond act is named for wildfire prevention among other things; forest rangers' retirement titles.
      "none": [r"\bWildfire Prevention, Drought Preparedness, and Clean Air Bond Act\b", r"\bforest rangers?\b"]},
-    {"id": "noncompete", "group": "Work and the economy", "name": "Noncompete agreements",
+    {"id": "noncompete", "group": "Work and the economy", "name": "Noncompete agreements", "words": ["non-compete", "noncompete", "no-poach"],
      # Noncompete agreements and other restraints on workers changing jobs ("non-solicitation", "no-poach"). Not
      # "noncompetitive" bidding or positions.
      "rules": [[r"\bnon-?compet(?:e|es|ition)\b"], [r"\bcovenants? not to (?:compete|solicit)\b"], [r"\bagreements? not to compete\b"],
                [r"\brestrictive (?:employment )?covenants?\b", r"\b(?:employ\w*|workers?|physicians?)\b"],
                [r"\bno-?poach\w*\b"], [r"\bnon-?solicitation\b", r"\bemploy\w*\b"]]},
     # The fourth ten (2026-11-17; notes/issues-check.md).
-    {"id": "strentals", "group": "Housing and taxes", "name": "Short-term rentals",
+    {"id": "strentals", "group": "Housing and taxes", "name": "Short-term rentals", "words": ["airbnb", "vrbo", "vacation rental", "str"],
      # Homes rented by the night (Airbnb, Vrbo): local rules, registration, taxes. Not hotel taxes generally.
      "rules": [[r"\bshort[- ]term (?:residential )?rentals?\b", r"!\bshort[- ]term rentals? of (?:motor )?(?:vehicles?|cars?|equipment|passenger)", r"!\b(?:child is placed|placement of (?:a |the )?child)\b"],
                [r"\bvacation (?:rentals?|homes? rentals?)\b"], [r"\b(?:Airbnb|VRBO|home[- ]?sharing|homestay)\b", r"!\b(?:Amazon|eBay|Etsy)\b"],
                [r"\btransient (?:rentals?|occupancy|lodging|accommodations?)\b", r"\b(?:short[- ]term|vacation|hosting platforms?|residential (?:dwellings?|propert\w*|units?)|home[- ]?sharing)\b"],
                [r"\b(?:hosting|booking|rental) platforms?\b", r"\b(?:rentals?|lodging|accommodations?)\b"]]},
-    {"id": "water", "group": "Environment and energy", "name": "Water rights and supply",
+    {"id": "water", "group": "Environment and energy", "name": "Water rights and supply", "words": ["groundwater", "drought", "aquifer", "colorado river"],
      # Water rights, allocation, groundwater, drought and interstate compacts. Not water quality alone (PFAS and fluoride
      # are their own issues) or utility billing.
      # Not foreign ownership lists ("agricultural land, forest land, water rights, mining claims").
@@ -392,24 +409,24 @@ ISSUES = [
                 r"!\b(?:public water suppl(?:y|ies)|drinking water|fluorid\w*|lead|PFAS|contaminat\w*|sewer|wastewater|solid waste|non-?payment|shutoffs?|discontinu\w*|water bills?)\b"]],
      # Soil and water conservation districts work on erosion and farm runoff; California's 2024 bond act's name.
      "none": [r"\bsoil\W*(?:and|&)\W*water conservation\b", r"\bwater rates\b", r"\bappliance\w*\b", r"\bwater conservation board\b", r"\bWildfire Prevention, Drought Preparedness, and Clean Air Bond Act\b"]},
-    {"id": "psychedelics", "group": "Health", "name": "Psychedelics",
+    {"id": "psychedelics", "group": "Health", "name": "Psychedelics", "words": ["psilocybin", "magic mushrooms", "mdma", "ibogaine"],
      # Psilocybin, MDMA, ibogaine and the like: therapy programs, decriminalization, research. Not cannabis.
      # Not lists of controlled substances in sentencing laws.
      "rules": [[r"\bpsilocybin\b", r"!\b(?:heroin|cocaine|fentanyl|methamphetamine|phencyclidine)\b"], [r"\bpsilocin\b", r"!\b(?:heroin|cocaine|fentanyl|methamphetamine|phencyclidine)\b"], [r"\bpsychedelic"], [r"(?-i)\bMDMA\b"], [r"\bibogaine\b"], [r"\bentheogen"],
                [r"\bnatural medicines?\b", r"\b(?:healing|psilocybin|therapy|facilitat\w*|mushrooms?)\b"],
                [r"\bmethylenedioxymethamphetamine\b", r"\b(?:therap\w*|research|treatment|clinical)\b"]]},
-    {"id": "cryptoatm", "group": "Technology", "name": "Crypto ATMs",
+    {"id": "cryptoatm", "group": "Technology", "name": "Crypto ATMs", "words": ["bitcoin atm", "crypto kiosk", "cryptocurrency"],
      "rules": [[r"\b(?:virtual|digital|crypto) ?(?:currency|assets?)? ?kiosks?\b"], [r"\bcryptocurrency kiosks?\b"], [r"\b(?:crypto|cryptocurrency|bitcoin|virtual currency) ATMs?\b"],
                [r"\bkiosks?\b", r"\b(?:virtual currenc\w*|cryptocurrenc\w*|crypto|digital assets?|digital currenc\w*|bitcoin)\b"]]},
-    {"id": "medicaidwork", "group": "Health", "name": "Medicaid work requirements",
+    {"id": "medicaidwork", "group": "Health", "name": "Medicaid work requirements", "words": ["work requirements", "medicaid"],
      "rules": [[r"\bwork (?:or|and) community engagement\b"], [r"\bcommunity engagement requirements?\b"],
                [r"\bwork requirements?\b", r"\b(?:medicaid|medical assistance|MassHealth|Medi-Cal|TennCare|SoonerCare|HUSKY|BadgerCare|KanCare|Healthy Indiana Plan|HIP|Pathways|ARHOME|Arkansas Works|expansion (?:population|adults?))\b"],
                [r"\bable-bodied adults?\b", r"\b(?:work|employment|volunteer)\b", r"\b(?:medicaid|medical assistance|Medicaid expansion)\b", r"!\b(?:SNAP|food (?:assistance|stamps))\b"],
                [r"\b(?:employment|work) (?:as a )?(?:condition|requirement) (?:of|for) (?:medicaid|medical assistance) eligibility\b"]]},
-    {"id": "dst", "group": "", "name": "Daylight saving time",
+    {"id": "dst", "group": "", "name": "Daylight saving time", "words": ["daylight saving", "daylight savings", "standard time", "clock change", "time change"],
      "rules": [[r"\bdaylight sav(?:ing|ings)\b"], [r"\bstandard time\b", r"\b(?:year[- ]round|permanent\w*|observ\w*|exempt\w*|daylight)\b"],
                [r"\b(?:Atlantic|Central|Eastern|Mountain|Pacific) (?:standard )?time\b", r"\b(?:year[- ]round|permanent\w*|observ\w*|time zones?)\b"]]},
-    {"id": "books", "group": "Schools", "name": "Book removals in schools and libraries",
+    {"id": "books", "group": "Schools", "name": "Book removals in schools and libraries", "words": ["book bans", "banned books", "library books", "obscenity"],
      # Challenges to and removal of books and materials, "harmful to minors" rules for libraries, librarians' liability.
      # Not library funding alone.
      "rules": [[r"\bbook (?:bans?|banning|removals?|challenges?)\b"], [r"\bfreedom to read\b"], [r"\bchallenged (?:books?|materials?)\b"],
@@ -417,13 +434,13 @@ ISSUES = [
                 r"\b(?:challeng\w*|obscen\w*|harmful to minors|sexually explicit|pornograph\w*|reconsideration|censor\w*|book removals?|remov\w* (?:of |the )?(?:books?|materials?|titles?)|(?:books?|materials?|titles?) (?:to be |be |are |were )?removed)\b"],
                [r"\blibrar(?:y|ies|ians?)\b", r"\b(?:obscen\w*|harmful to minors|sexually explicit|pornograph\w*|censor\w*|book bans?)\b"],
                [r"\blibrarians?\b", r"\b(?:prosecut\w*|criminal liability|affirmative defense|immunit\w*)\b"]]},
-    {"id": "medicaldebt", "group": "Health", "name": "Medical debt",
+    {"id": "medicaldebt", "group": "Health", "name": "Medical debt", "words": ["medical bills", "hospital bills", "debt collection"],
      # Not hospitals' liens on injury settlements, or charity care as a line in hospital reporting.
      "rules": [[r"\bmedical (?:debts?|bills?|billing)\b", r"\b(?:credit reports?|credit reporting|consumer reports?|collect\w*|interest|garnish\w*|debts?)\b"],
                [r"\bmedical debts?\b"], [r"\bhealth care debts?\b"], [r"\bextraordinary collection actions?\b"],
                [r"\b(?:debt collect\w*|collection actions?|wage garnishment)\b", r"\b(?:hospitals?|medical|health care (?:providers?|facilit\w*|services))\b"],
                [r"\b(?:hospital financial assistance|charity care|financial assistance polic(?:y|ies))\b", r"\b(?:medical debts?|collection actions?|debt collect\w*|collect\w* (?:a |the )?(?:debt|bill)s?|bills? (?:to|sent))\b"]]},
-    {"id": "police", "group": "Rights and public safety", "name": "Police accountability",
+    {"id": "police", "group": "Rights and public safety", "name": "Police accountability", "words": ["police reform", "body cameras", "use of force", "qualified immunity"],
      # Use of force, body cameras, misconduct records, decertification, qualified immunity, civilian oversight. Not
      # police funding or pay alone.
      "rules": [[r"\buse of (?:deadly |physical |excessive )?force\b", r"\b(?:police|law enforcement|peace officers?|officers?)\b", r"!\b(?:self[- ]defense|security (?:guards?|officers?))\b"],
@@ -433,7 +450,7 @@ ISSUES = [
                [r"\bexcessive force\b"], [r"\bduty to intervene\b"], [r"\bBrady (?:lists?|disclosures?|material)\b"],
                [r"\b(?:misconduct|disciplinary|personnel) records?\b", r"\b(?:police|law enforcement|peace officers?)\b", r"!\bstudents?\b"],
                [r"\bofficer[- ]involved (?:shootings?|deaths?)\b"], [r"\bdeadly force\b", r"\b(?:police|law enforcement|peace officers?|officers?)\b"]]},
-    {"id": "deathpenalty", "group": "Rights and public safety", "name": "Death penalty",
+    {"id": "deathpenalty", "group": "Rights and public safety", "name": "Death penalty", "words": ["capital punishment", "execution", "death row"],
      # "Capital murder" (Texas, Mississippi) is also the name of crimes punished by life in prison: only with death in
      # the same passage, unless the bill creates a capital crime.
      "rules": [[r"\bdeath penalty\b"], [r"\bcapital (?:punishment|cases?|sentenc\w*|defendants?|trials?|prosecutions?|sexual battery|child rape)\b"],
@@ -444,6 +461,136 @@ ISSUES = [
                [r"\bexecutions?\b", r"\b(?:lethal|condemned|death|capital|execution (?:protocols?|drugs?|chambers?|teams?|methods?|witness\w*))\b",
                 r"!\bexecution of (?:a |the |any )?(?:documents?|warrants?|instruments?|contracts?|wills?|deeds?|agreements?|search|judgments?|leases?)\b",
                 r"!\bexecution of (?:their|his|her|its|the|such|official) (?:\w+ )?(?:duties|powers|functions|responsibilit\w*|office)\b"]]},
+    # The fifth ten (2026-11-17; notes/issues-check.md).
+    {"id": "vaccines", "group": "Health", "name": "Vaccines and public health powers", "words": ["vaccine", "vaccination", "immunization", "mrna", "vaccine exemption", "public health emergency"],
+     # Vaccine requirements, exemptions, access and mRNA bills, and the limits of health officers' and governors' emergency
+     # powers (quarantine, closures, mask orders). Not animals' vaccines or plant quarantines.
+     "rules": [[r"\bvaccin\w*\b", ANIMALS], [r"\bimmuni[sz]ations?\b", ANIMALS], [r"\b(?:un)?immuni[sz](?:e|ed|ing)\b", r"\b(?:vaccin\w*|against|children|students?|diseases?|schools?)\b", ANIMALS, r"!\b(?:liab\w*|lawsuits?|claims?|suits?)\b"], [r"\bmRNA\b"], [r"\binoculat\w*\b", ANIMALS],
+               [r"\bpublic health (?:orders?|powers?|authority|mandates?|disasters?)\b"],
+               [r"\bpublic health emergenc\w*\b", r"\b(?:emergency powers?|governor'?s? (?:authority|powers?)|terminat\w*|renew\w*|extend\w* (?:a|an|the|any)|extension of|duration|legislat\w* (?:approval|consent|oversight)|limit\w* (?:on|the)|quarantin\w*|isolation|clos(?:e|ure|ing)|mandates?|process for declaring|(?:may|to) declare)\b", NOT_PHE],
+               [r"\b(?:emergency (?:powers?|orders?|declarations?|executive orders?)|disaster emergenc\w*)\b", r"\b(?:public health|pandemic|epidemic|COVID|infectious disease|contagious disease|communicable disease|health officers?)\b", NOT_PHE],
+               [r"\b(?:health officers?|boards? of health|health (?:directors?|commissioners?|departments?))\b", r"\b(?:quarantin\w*|isolation orders?|clos(?:e|ure|ing) (?:of )?(?:businesses|schools|churches|places of worship)|business closures?|mask (?:orders?|mandates?|requirements?)|emergency powers?|(?:authority|powers?) to (?:order|mandate|close|require))\b"],
+               [r"\bquarantin\w*\b", ANIMALS, NOT_PHE, r"!\b(?:plants?|pests?|insects?|seeds?|nurser\w*|agricultur\w*|crops?|trees?|weeds?|beetles?|fruit|citrus|forest\w*)\b"],
+               [r"\bmask (?:mandates?|requirements?|orders?)\b"], [r"\bmedical freedom\b"]]},
+    {"id": "unions", "group": "Work and the economy", "name": "Unions and collective bargaining", "words": ["union", "labor unions", "collective bargaining", "right to work", "strike"],
+     # Bargaining rights, public and private; union dues and payroll deduction, right-to-work, recognition, strikes. Not
+     # a passing "subject to the collective bargaining agreement" in a bill about something else.
+     "rules": [[r"\bcollective(?:ly)? bargain\w*\b", NOT_CBA],
+               [r"\b(?:labor|employee|public employee|employees'?) (?:unions?|organizations?)\b", r"\b(?:bargain\w*|dues|represent\w*|recogni\w*|organiz(?:e|ing)|strikes?|membership|release time|members' rights)\b", NOT_CBA, r"!\b(?:representatives? (?:of|from) (?:a |an |the )?(?:statewide )?(?:labor|employee) organizations?|members? of (?:a |an )?labor organization (?:that|who)|(?:one|two|three|four) (?:members?|representatives?) (?:of|from|representing|recommended by)|recommendation of the labor organization)\b"],
+               [r"\b(?:labor organizing|unioni[sz](?:e|ed|ing|ation)|union (?:labor|busting|violence|organizing|avoidance)|anti-?union)\b"],
+               [r"(?<!collective )(?<!collectively )\bbargain\w*\b", r"\b(?:employ\w*|workers?|unions?|labor|teachers?|physicians?|nurses?)\b", r"!\bplea (?:bargain\w*|agreements?)\b", NOT_CBA],
+               [r"\bunions?\b", r"\b(?:dues|membership|organiz\w*|representation|recogni\w*|bargain\w*|members|officers|stewards?|release time|neutrality|card check)\b", r"\b(?:employ\w*|workers?|labor|teachers?)\b", NOT_CBA, r"!\b(?:credit unions?|European Union|civil unions?|union county|union (?:station|pacific|city|township|parish)|student unions?)\b"],
+               [r"\bright[- ]to[- ]work\b", r"!\b(?:authori[sz]ation|documentation|immigra\w*|visas?|work permits?)\b"],
+               [r"\bexclusive (?:bargaining )?represent\w*\b"], [r"\bcard check\b"], [r"\bmeet and confer\b", r"\b(?:employee organizations?|unions?|bargaining|labor relations|exclusive represent\w*|memorand(?:um|a) of understanding)\b"],
+               [r"\b(?:public employment relations|public employee relations|labor relations (?:act|board|commission))\b"],
+               [r"\bunfair labor practices?\b"], [r"\b(?:right to strike|work stoppages?|lockouts?|striking (?:workers|employees)|strikers)\b", r"!\bstrikers? (?:in|of) (?:bowling|baseball)\b"],
+               [r"\bstrikes?\b", r"\b(?:public employees?|teachers?|labor disputes?|unions?|workers|employees)\b", r"!\b(?:strike (?:out|through|teams?|forces?)|strikes (?:all|the|section|sections|original|everything|out)|AM ?\d+ strikes|stricken|lightning|motions? to strike|three strikes?|drone strikes?|military strikes?|air ?strikes?|strike (?:a|the) (?:word|provision|language|section))\b"]],
+     "none": [r"\bcredit unions?\b"]},
+    {"id": "initiatives", "group": "Elections", "name": "Ballot initiatives", "words": ["ballot initiative", "referendum", "ballot measure", "petition signatures"],
+     # Citizens' initiatives and referendums: signature rules, vote thresholds, single subject, circulators, ballot
+     # titles. These bills are under Voting and elections too.
+     "rules": [[r"\binitiative (?:and referend\w* )?(?:petitions?|measures?|process\w*|proposals?|powers?|rights?)\b"], [r"\breferend(?:um|a|ums) (?:petitions?|process\w*|powers?|rights?)\b"],
+               [r"\binitiative and referend\w*\b"], [r"\b(?:citizens?'?|people'?s|popular|indirect|direct) initiatives?\b"], [r"\bstatewide initiatives?\b", r"\b(?:ballot|voters|electors|petitions?|referend\w*|signatures?)\b"],
+               [r"\binitiated (?:measures?|statutes?|constitutional amendments?|acts?|laws?|petitions?)\b(?!,? (?:no\. )?\d| of \d{4}| \d+ of \d{4})"],
+               [r"\bballot (?:initiatives?|measures?|questions?)\b(?! committees?)", r"\b(?:petitions?|signatures?|circulat(?:ors?|ing petitions?|ion of (?:a |the )?petitions?)|proposed by initiative|citizen-initiated)\b"],
+               
+               [r"\bpetition (?:circulators?|circulation|signatures?|gatherers?)\b", r"\b(?:initiative|referend\w*|ballot|constitutional amendment)\b"],
+               [r"\bsignature (?:gatherers?|gathering|requirements?|thresholds?|verification)\b", r"\b(?:initiative|referend\w*|ballot (?:measure|question|issue)|constitutional amendment)\b"],
+               [r"\bballot (?:titles?|summar(?:y|ies))\b", r"\b(?:initiative|referend\w*|measures?|petitions?)\b"],
+               [r"\bpeople'?s veto\b"]],
+     # California's digests name the initiative acts a bill amends ("an initiative measure approved by the voters").
+     # Oregon's bills say when they take effect "if the Act is referred to the people ... by referendum petition".
+     "none": [r"\b(?:an|the|this) initiative (?:measure|statute|act)(?:,)? (?:approved|enacted|adopted|passed)\b", r"\breferred to the people by (?:either )?the Legislative Assembly or by referendum petition\b", r"\b(?:ordinance|regulation|resolution),? or initiative measure\b", r"\binfluence (?:\w+ ){0,3}?referendum petitions?\b", r"\b(?:enacted|approved|adopted) (?:in \d{4} )?by (?:an?|the) (?:citizens?'? )?initiative(?: measure)?\b", r"\ban initiative (?:measure|statute)[,.]", r"\bProposition \d+\b(?:.{0,80})\binitiative (?:measure|statute)\b(?!.{0,40}\b(?:petition|signature))"]},
+    {"id": "rcv", "group": "Elections", "name": "Ranked-choice voting", "words": ["ranked choice", "instant runoff", "rcv", "approval voting"],
+     # Ranked-choice (instant-runoff) voting, adopting or banning it, and approval voting. These bills are under Voting and
+     # elections too.
+     "rules": [[r"\branked[- ]choice\b"], [r"\binstant[- ]run-?offs?\b"], [r"\bapproval voting\b"], [r"\bpreferential (?:voting|ballots?)\b(?! pupil)"],
+               [r"\branked (?:voting|ballots?)\b"], [r"\brank(?:ing)? (?:the )?candidates? in order of preference\b"], [r"\bfinal[- ]five voting\b"],
+               [r"(?-i)\bSTAR voting\b"], [r"(?-i)\bRCV\b"]]},
+    {"id": "utilityrates", "group": "Environment and energy", "name": "Energy costs and utility rates", "words": ["electric bills", "electricity prices", "utility bills", "rate case", "liheap", "shutoffs"],
+     # Electric and gas rates and rate cases, shutoffs, energy assistance, who pays for grid upgrades (large loads). Not
+     # water and sewer rates, phone or broadband. Net metering (what solar owners are paid) counts as a rate.
+     "rules": [[r"\b(?:electric(?:al|ity)?|natural gas|gas utility|gas and electric) (?:rates?|bills?|prices?|costs?|affordability|tariffs?)\b", NOT_WATER],
+               [r"\b(?:energy|power|utility|utilities) (?:rates?|bills?|prices?|costs?|affordability|tariffs?)\b", r"\b(?:customers?|ratepayers?|households?|residential|consumers?|families|public (?:service|utilit\w*) commission|electric\w*)\b", NOT_WATER, r"!\benergy cost sav\w*\b"],
+               [r"\bratepayers?\b", NOT_WATER], [r"\brate (?:cases?|increases?|hikes?|base|design|freezes?|caps?|adjustments?|proceedings?|schedules?|filings?)\b", r"\b(?:electric\w*|natural gas|gas (?:utilit|compan|corporation)|energy|public (?:service|utilit\w*) commission|investor[- ]owned)\b", NOT_WATER],
+               [r"\b(?:shut[- ]?offs?|disconnect\w*|terminat\w* of (?:utility |electric |gas )?service)\b", r"\b(?:electric\w*|natural gas|gas service|heat\w*|energy|utility service)\b", NOT_WATER, r"!\b(?:telecommunications?|telephone|broadband|internet|cable|power shutoffs?|public safety power|de-?energiz\w*|wildfires?)\b"],
+               [r"(?-i)\bLIHEAP\b"], [r"\bnet (?:energy )?metering\b"], [r"\bretail (?:electric(?:ity)?|energy|gas) (?:suppliers?|providers?|customers?|choice)\b"],
+               [r"\b(?:arrear\w*|past[- ]due (?:bills?|balances?)|payment (?:plans?|forgiveness))\b", r"\b(?:electric\w*|gas (?:utilit\w*|service)|energy|public utilit\w*)\b", NOT_WATER], [r"\b(?:(?:low[- ]income|home|household|heating|utility) energy assistance|energy assistance (?:programs?|funds?|payments?|benefits?))\b"], [r"\b(?:energy|utility) (?:burden|affordability|bill assistance|bill credits?)\b", NOT_WATER], [r"\butility assistance\b", NOT_WATER, r"!\b(?:rent(?:al)?|mortgage)\b"],
+               [r"\bpercentage of income payment\b"], [r"\b(?:large[- ]loads?|large[- ]load customers?)\b", r"\b(?:rates?|tariffs?|costs?|ratepayers?|customers?|pay)\b", r"!\b(?:vehicles?|trailers?|trucks?|highways?)\b"],
+               [r"\b(?:fuel (?:cost )?adjustment|cost recovery|securiti[sz]ation|rate of return|return on equity|storm recovery (?:costs?|charges?))\b", r"\b(?:electric\w*|gas utilit\w*|public utilit\w*|ratepayers?|energy)\b", NOT_WATER]],
+     "none": [r"\b(?:water|sewer|wastewater) (?:rates?|bills?|utilit\w*|service)\b(?!.{0,80}\belectric)"]},
+    {"id": "climate", "group": "Environment and energy", "name": "Climate and clean energy", "words": ["climate change", "greenhouse gas", "renewable energy", "clean energy", "carbon", "electric vehicles", "gas stoves"],
+     # Greenhouse gas limits and targets, renewable and clean energy standards, carbon pricing, electrification and gas
+     # hookups (bans and bans on bans), zero-emission vehicle rules, climate superfunds. Nuclear power counts when framed as
+     # clean energy (and is its own issue too).
+     "rules": [[r"\bclimate (?:change|crisis|emergency|action|goals?|targets?|plans?|policy|policies|pollution|superfund|resilien\w*|adaptation|leadership|mitigation|solutions?|council|commission|office|corps|bonds?|accountability|disclosure|risks?|justice|protection)\b"],
+               [r"\bgreenhouse gas\w*\b"], [r"\b(?:carbon|GHG|CO2) emissions?\b"], [r"\bcarbon (?:neutral\w*|free|pricing|tax|fees?|dioxide removal|capture|sequestration|intensity|offsets?|markets?|reduction|budget|pollution|storage)\b"],
+               [r"\bnet[- ]zero\b", r"\b(?:emissions?|carbon|energy|greenhouse|climate|buildings?)\b"], [r"\bdecarboni[sz]\w*\b"], [r"\bcap[- ]and[- ](?:trade|invest)\b"], [r"\bclimate superfund\b"],
+               [r"\b(?:renewable|clean|alternative|zero[- ]carbon|carbon[- ]free) (?:energy|electricity) (?:portfolio )?(?:standards?|targets?|goals?|credits?|certificates?|requirements?|procurement|mandates?|plans?)\b"],
+               [r"\brenewable portfolio\b"], [r"\bclean energy (?:and \w+ (?:\w+ )?)?(?:objectives|goals|plans?|targets?|transition|economy|future)\b"], [r"\bzero[- ]emissions? credits?\b"], [r"\btransportation electrification\b"], [r"\b(?:low|clean)[- ]carbon fuels? standards?\b"], [r"\bclean (?:heat|fuels?|transportation) (?:standards?|programs?)\b"],
+               [r"\bzero[- ]emissions? (?:vehicles?|trucks?|buses|cars|standards?|mandates?)\b"], [r"\badvanced clean (?:cars|trucks|fleets)\b"],
+               [r"\belectric vehicles?\b", r"\b(?:mandates?|requir\w* (?:the )?sale|sales? (?:of new )?(?:gas|gasoline|internal combustion)|phase[- ]?out|ban\w*|prohibit\w*)\b", r"\b(?:gas|gasoline|internal combustion|diesel)\b"],
+               [r"\b(?:building )?electrification\b", r"\b(?:buildings?|homes?|appliances?|heat pumps?|gas)\b"],
+               [r"\b(?:gas (?:stoves?|appliances?|bans?|hook-?ups?)|all[- ]electric (?:buildings?|construction|homes?))\b"],
+               [r"\b(?:type|source|kind) of (?:energy|fuel|utility service)\b", r"\b(?:prohibit\w*|restrict\w*|discriminat\w*)\b", r"\b(?:political subdivisions?|municipal\w*|count(?:y|ies)|local governments?|ordinances?)\b"]],
+     # California's digests open with its greenhouse gas law as background on bills about other things.
+     "none": [r"\bcarbon monoxide\b(?!.{0,200}\b(?:emission|greenhouse))", r"\bdesignates the State Air Resources Board as the state agency (?:charged with|responsible for) monitoring and regulating sources of emissions of greenhouse gases\b"]},
+    {"id": "esg", "group": "Work and the economy", "name": "ESG investing and boycott laws", "words": ["esg", "boycott", "divestment", "bds", "debanking"],
+     # Whether state funds, pensions and contractors may weigh environmental, social and governance factors, and laws
+     # barring contracts with or investments in companies that boycott energy, firearms or Israel. Divestment from fossil
+     # fuels counts; divestment from countries (China, Russia, Iran) doesn't.
+     "rules": [[r"(?-i)\bESG\b"], [r"\benvironmental, social,? (?:and|or|&) (?:corporate )?governance\b"],
+               [r"\bboycott\w*\b", r"\b(?:energy|fossil fuels?|oil|gas|firearms?|ammunition|Israel\w*|contract\w*|companies|investments?|state funds?|public funds?|retirement|pension\w*)\b", r"!\b(?:consumer boycotts?|Islamophobia)\b"],
+               [r"\bdivest\w*\b", r"\b(?:fossil fuels?|coal|oil|thermal coal|Israel\w*|firearms?|ammunition)\b", r"!\bdivestiture\b"],
+               [r"\b(?:pecuniary|nonpecuniary|non-pecuniary) factors?\b"], [r"\bdebank\w*\b"],
+               [r"\bfair access to (?:banking|financial services)\b"], [r"\bfair access\b", r"\b(?:banks?|financial (?:services|institutions?))\b", r"\b(?:deny|denial|refus\w*|discriminat\w*|political|social|environmental)\b"],
+               [r"\bproxy (?:voting|votes?|advisors?|advisers?)\b", r"\b(?:state|retirement|pension|public funds?|investment)\b"],
+               [r"\bsocial credit scor\w*\b"], [r"\b(?:discriminat\w*) against (?:the )?(?:firearm|fossil fuel|energy|oil and gas)\w* (?:industr\w*|compan\w*|entit\w*)\b"]]},
+    {"id": "religion", "group": "Schools", "name": "Religion in public schools", "words": ["ten commandments", "school prayer", "chaplains", "bible", "released time"],
+     # Ten Commandments displays, school chaplains, Bible courses, prayer, released time for religious instruction,
+     # "In God We Trust" in schools, religious expression and dress. Not vaccine exemptions or private religious schools.
+     "rules": [[r"\b(?:Ten Commandments|Decalogue)\b", r"\b(?:schools?|classrooms?|students?|educational institutions?|boards? of education)\b"], [r"\bchaplains?\b", r"\b(?:schools?|students?|boards? of education)\b", r"!\b(?:hospitals?|police|law enforcement|fire|military|national guard|legislat\w*|correctional|prisons?|jails?)\b"],
+               [r"\bbible\b", r"\b(?:schools?|courses?|electives?|curricul\w*|students?|literacy|classrooms?)\b", r"!\b(?:state book|museums?)\b"],
+               [r"\bprayers?\b", r"\b(?:public schools?|school districts?|students?|classrooms?|school (?:day|events?|boards?|governing bod\w*))\b"],
+               [r"\breleased[- ]time\b"], [r"\bIn God We Trust\b", r"\b(?:schools?|classrooms?|students?)\b"],
+               [r"\bmoment of (?:silence|silent (?:reflection|prayer))\b"],
+               [r"\breligio\w* (?:expression|liberty|liberties|freedom|instruction|texts?|clubs?|displays?|holidays?|attire|garb|dress|neutrality|viewpoints?|activit\w*|speech)\b",
+                r"\b(?:public schools?|school districts?|students?|classrooms?|teachers?)\b", r"!\b(?:vaccin\w*|immuniz\w*|postsecondary|colleges?|universit\w*|retirement)\b"],
+               [r"\b(?:religious|sectarian) (?:charter schools?|instruction)\b", r"!\b(?:nonpublic|tuition)\b"],
+               [r"\breligio(?:n|us) (?:or religious )?(?:values|texts?|content|instruction|studies)\b", r"\b(?:instructional materials?|curricul\w*)\b", r"\b(?:public schools?|school districts?|students?)\b", r"!\b(?:vaccin\w*|immuniz\w*|nonpublic|private schools?|postsecondary|colleges?|universit\w*)\b"]],
+     "none": [r"\bCouncil on (?:the )?Arts\b"]},
+    {"id": "childlabor", "group": "Work and the economy", "name": "Child labor", "words": ["child labor", "work permits", "teen jobs", "youth employment", "child influencers"],
+     # Work permits, hours, hazardous jobs and penalties for employing minors, and child performers' and child
+     # influencers' earnings. Not minor league athletes.
+     "rules": [[r"\bchild labou?r\b"], [r"\b(?:employment|employing|employ) (?:of )?(?:minors|children|youth|persons under (?:the age of )?1[4-8])\b"],
+               [r"\b(?:child|minor|youth|teen(?:age)?) (?:workers?|employees?|employment|labou?r)\b", r"!\b(?:minor league|work opportunity)\b", NOT_YOUTHJOBS],
+               [r"\bminors?\b (?:\w+ ){0,8}?(?:to |may |who |shall )?(?:work|be employed|employed|working|in the workplace)\b", r"!\bminor (?:and|or) (?:technical|routine)\b", r"!\bminor (?:child|maintenance|repairs?|changes|modifications|revisions|amendments|construction|projects?|works?|alterations?|improvements?|capital)\b"],
+               [r"\b(?:employ\w*|hir\w*|work) (?:of |with )?minors\b"],
+               [r"\b(?:minors?|youths?|teens?|under (?:the age of )?1[4-8]|1[4-7][- ]year[- ]olds?)\b",
+                r"\b(?:work permits?|employment certificates?|certificates? of (?:age|employment)|working papers|age certificates?|hazardous (?:occupations?|employment|work|jobs)|hours (?:of (?:work|employment)|worked)|work(?:ing)? hours|maximum hours)\b",
+                r"\b(?:employ\w*|work\w*|jobs?)\b", r"!\bminor league\b"],
+               [r"(?<!Whole )\bchild (?:performers?|actors?|entertainers?|influencers?|content creators?|models?)\b"],
+               [r"\b(?:minors?|child|children)\b", r"\b(?:vlog\w*|content creat\w*|influencers?|monetiz\w*)\b", r"\b(?:compensat\w*|earnings?|trust|paid|income)\b"],
+               [r"\bCoogan\b"]],
+     "none": [r"\b(?:child ?care|day ?care)\b(?!.{0,60}\b(?:work permits?|employment of minors))"]},
+    {"id": "protest", "group": "Rights and public safety", "name": "Protest and assembly laws", "words": ["protests", "riot", "protesters", "masks", "critical infrastructure"],
+     # Riot and unlawful assembly crimes, blocking roads, critical infrastructure trespass, protests near homes, clinics
+     # and schools, masks while committing crimes, drivers' liability for hitting protesters. Not prison riots, tax or
+     # bid protests.
+     "rules": [[r"\briot(?:s|ing|ous|ers?)?\b(?!, disorderly conduct and related offenses| gear| control equipment)", r"!\b(?:inmates?|prisoners?|correctional|jails?|detention|incarcerat\w*|offenders? in custody)\b", NOT_DISASTER, r"!\b(?:race riots?|massacres?|monuments?|memorials?|commemorat\w*|Election Day Riots?)\b"],
+               [r"\bunlawful assembl\w*\b(?! or disassembl)"], [r"\bcivil disorders?\b", r"!\b(?:inmates?|prisoners?|correctional)\b", NOT_DISASTER], [r"\bpublic demonstrations?\b(?! of)", r"!\beducational purposes\b"], [r"\b(?:peaceabl[ey]|peacefully|right to) (?:to )?assembl\w*\b"],
+               [r"\bprotest(?:s|ers?|ors?|ing)?\b", r"!\b(?:political prisoners|Iran\w*|Hong Kong|Cuba\w*|Venezuel\w*|Belarus\w*|Georgia's|Serbia\w*)\b", r"\b(?:demonstrat(?:ions?|ors?)|unlawful assembl\w*|peaceabl\w* assembl\w*|right to assemble|assemblies|picket\w*|riot\w*|masks?|first amendment|free speech|peaceful\w*|marches|block\w* (?:a |the )?(?:roads?|highways?|streets?|traffic|roadways?))\b", NOT_TAXPROTEST],
+               [r"\bpicket\w*\b", r"\b(?:residences?|dwellings?|homes?|funerals?|clinics?|schools?|protest\w*)\b"],
+               [r"\bcritical infrastructure\b", r"\b(?:trespass\w*|damag\w*|tamper\w*|imped\w*|interfer\w*|unauthori[sz]ed entry|enter\w*|vandal\w*)\b", r"!\b(?:cyber\w*|drones?|unmanned aircraft|ransom\w*|foreign (?:adversar\w*|countr\w*|principals?|entit\w*)|countr(?:y|ies) of concern|electromagnetic|computers?|electronic|data)\b"],
+               [r"\b(?:obstruct\w*|block\w*|imped\w*)\b (?:\w+ ){0,3}?(?:highways?|roadways?|roads?|streets?|traffic|interstates?|sidewalks?)\b", r"\b(?:protest\w*|demonstrat(?:ions?|ors?)|riot\w*|unlawful assembl\w*|pedestrians?|on foot)\b", NOT_TAXPROTEST, r"!\b(?:trains?|railroads?|rail crossings?|grade crossings?)\b"],
+               [r"\b(?:masks?|masked|masking|face coverings?|disguises?|disguised|hoods?)\b", r"\b(?:conceal\w* (?:\w+ )?identity|harass\w*|intimidat\w*|riot\w*|protest\w*|unlawful assembl\w*|while committing|loiter\w*|unlawful masking)\b", r"!\b(?:COVID|pandemic|health|medical|mandates?|respirat\w*|law enforcement|peace officers?|police|officers?|agents?|immigration|callers?|telephone|voice|caller ID)\b"],
+               [r"\bbuffer zones?\b", r"\b(?:clinics?|health care facilit\w*|reproductive|abortion|funerals?|places? of worship|polling)\b"],
+               [r"\b(?:obstruct\w*|imped\w*|interfer\w*)\b (?:\w+ ){0,3}?(?:access|entrance|passage)\b", r"\b(?:clinics?|reproductive health|places? of (?:religious )?worship|health care facilit\w*)\b"]]},
+    {"id": "kratom", "group": "Health", "name": "Kratom", "words": ["kratom", "7-oh", "7-hydroxy", "mitragynine"],
+     # Kratom and its alkaloids (mitragynine, 7-hydroxymitragynine, "7-OH"): sales and age limits, labeling, scheduling,
+     # kratom consumer protection acts.
+     "rules": [[r"\bkratom\b"], [r"\bmitragyn\w*\b"], [r"\b7[- ]?hydroxy[- ]?mitragyn\w*\b"], [r"\b7[- ]?hydroxy\b", r"\b(?:kratom|mitragyn\w*|alkaloids?)\b"], [r"(?-i)\b7[- ]OH\b"],
+               [r"\bMitragyna speciosa\b"]]},
 ]
 
 

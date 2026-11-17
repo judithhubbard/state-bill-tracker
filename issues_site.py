@@ -64,6 +64,17 @@ DESC = {
     "medicaldebt": "Bills about medical debt: credit reports, collection limits, interest, relief programs and hospital financial assistance.",
     "police": "Bills about police accountability: use of force, body cameras, misconduct records, decertification, oversight.",
     "deathpenalty": "Bills about the death penalty: abolishing or restoring it, which crimes it covers, and how executions are carried out.",
+    "vaccines": "Bills about vaccines and public health powers: requirements and exemptions, access, mRNA, and limits on emergency health orders.",
+    "unions": "Bills about unions and collective bargaining: bargaining rights, union dues, right-to-work, public employees and strikes.",
+    "initiatives": "Bills about citizens’ initiatives and referendums: signatures, vote thresholds, petition circulators and ballot titles.",
+    "rcv": "Bills about ranked-choice (instant-runoff) voting and approval voting: allowing, adopting or banning them.",
+    "utilityrates": "Bills about electric and gas bills: rates and rate cases, shutoffs, energy assistance, and who pays for grid upgrades.",
+    "climate": "Bills about climate and clean energy: greenhouse gas limits, clean energy standards, carbon pricing, gas hookups, electric vehicles.",
+    "esg": "Bills about ESG investing and boycotts: whether state funds weigh environmental and social factors, and boycotts of energy, gun makers or Israel.",
+    "religion": "Bills about religion in public schools: Ten Commandments displays, chaplains, prayer, Bible courses and released time.",
+    "childlabor": "Bills about child labor: work permits, hours and hazardous jobs for minors, penalties, and child performers’ and influencers’ earnings.",
+    "protest": "Bills about protests and assembly: riot and unlawful assembly crimes, blocking roads, critical infrastructure, picketing homes, masks.",
+    "kratom": "Bills about kratom and 7-OH (7-hydroxymitragynine): sales and age limits, labeling, bans and scheduling, consumer protection acts.",
 }
 
 CSS = """
@@ -273,7 +284,10 @@ SHORT = {"datacenters": "data centers", "pfas": "PFAS", "ai": "artificial intell
          "fluoride": "fluoride", "nuclear": "nuclear energy", "wildfire": "wildfire", "noncompete": "noncompetes",
          "strentals": "short-term rentals", "water": "water rights", "psychedelics": "psychedelics", "cryptoatm": "crypto ATMs",
          "medicaidwork": "Medicaid work requirements", "dst": "daylight saving time", "books": "book removals",
-         "medicaldebt": "medical debt", "police": "police accountability", "deathpenalty": "death penalty"}
+         "medicaldebt": "medical debt", "police": "police accountability", "deathpenalty": "death penalty",
+         "vaccines": "vaccines", "unions": "unions", "initiatives": "ballot initiatives", "rcv": "ranked-choice voting",
+         "utilityrates": "utility rates", "climate": "climate and clean energy", "esg": "ESG and boycotts",
+         "religion": "religion in schools", "childlabor": "child labor", "protest": "protest laws", "kratom": "kratom"}
 
 
 def step(n):
