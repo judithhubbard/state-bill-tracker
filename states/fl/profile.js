@@ -24,7 +24,7 @@ const STATE = {
   amendmentOnce: true,
   amendmentVote: "three-fifths of each house's members (24 senators, 72 representatives)",
   ballotEvenYears: true,
-  govReach: `<a href="https://www.flgov.com/eog/contact" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Tallahassee <a class="phone" href="tel:+18507179337" data-contact="call|governor">(850) 717-9337</a>`,
+  govReach: `<a href="https://www.flgov.com/eog/leadership/people/ron-desantis/contact" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Tallahassee <a class="phone" href="tel:+18507179337" data-contact="call|governor">(850) 717-9337</a>`,
 
   // The Florida Senate's bill pages cover both houses' bills (a House bill's page is /Session/Bill/2025/1195 too).
   billUrl(p, session = DATA.session) {

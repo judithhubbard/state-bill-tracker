@@ -22,7 +22,7 @@ const STATE = {
   // One number through both houses (H.1 stays H.1 in the Senate).
   oneNumber: true,
   // The governor's office (not checked by the owner yet).
-  govReach: `<a href="https://governor.vermont.gov/contact-us" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Montpelier <a class="phone" href="tel:+18028283333" data-contact="call|governor">(802) 828-3333</a>`,
+  govReach: `<a href="https://governor.vermont.gov/contact-us-requests" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Montpelier <a class="phone" href="tel:+18028283333" data-contact="call|governor">(802) 828-3333</a>`,
 
   // Each bill's page on the Legislature's site (v.link, from LegiScan's record) and on LegiScan.
   billUrl: (p, session = DATA.session) => `https://legislature.vermont.gov/bill/status/${session + 1}/${p.replace(/^([HS])/, "$1.")}`,

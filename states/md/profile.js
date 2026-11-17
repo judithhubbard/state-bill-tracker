@@ -21,7 +21,7 @@ const STATE = {
   amendmentVote: "both houses by three-fifths",
   ballotEvenYears: true,
   sessionLabel: (s) => String(s),
-  govReach: `<a href="https://md.accessgov.com/governor/Forms/Page/cs/contact-the-governor" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Annapolis <a class="phone" href="tel:+14109743901" data-contact="call|governor">(410) 974-3901</a> · toll-free <a class="phone" href="tel:+18008118336" data-contact="call|governor">(800) 811-8336</a>`,
+  govReach: `<a href="https://govassist.maryland.gov/gov-assist/constituent-management/p/intake/dept-the-office-of-the-governor-987ee424" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Annapolis <a class="phone" href="tel:+14109743901" data-contact="call|governor">(410) 974-3901</a> · toll-free <a class="phone" href="tel:+18008118336" data-contact="call|governor">(800) 811-8336</a>`,
 
   // The General Assembly's bill page (status, text, fiscal and policy note, votes).
   billUrl: (p, session = DATA.session) => `https://mgaleg.maryland.gov/mgawebsite/Legislation/Details/${p.slice(0, 2).toLowerCase()}${p.slice(2).padStart(4, "0")}?ys=${session}RS`,

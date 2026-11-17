@@ -27,7 +27,7 @@ const STATE = {
     const y = +d.slice(0, 4);
     return isoToday() > `${y + 1}-11-10` ? "It went to the voters at the election the resolution named; the records here don't show the result." : "Next: the voters, at the election the resolution names (usually the next November general election).";
   },
-  govReach: `<a href="https://governorreeves.ms.gov/contact/" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Jackson <a class="phone" href="tel:+16013593150" data-contact="call|governor">(601) 359-3150</a>`,
+  govReach: `<a href="mailto:governor@govreeves.ms.gov" data-contact="email|governor">Email the governor</a> · Jackson <a class="phone" href="tel:+16013593150" data-contact="call|governor">(601) 359-3150</a>`,
 
   // The bill's status page in the Legislature's bill status system (each version's `link`, from convert.py):
   // /2026/pdf/history/HB/HB0001.xml.

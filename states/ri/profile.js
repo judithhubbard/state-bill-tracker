@@ -25,7 +25,7 @@ const STATE = {
   ballotEvenYears: true,
   amendmentVote: "a majority of each house's members",
   // The governor's office (not checked by the owner yet).
-  govReach: `<a href="https://governor.ri.gov/contact-us" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Providence <a class="phone" href="tel:+14012222080" data-contact="call|governor">(401) 222-2080</a>`,
+  govReach: `<a href="https://governor.ri.gov/contact" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Providence <a class="phone" href="tel:+14012222080" data-contact="call|governor">(401) 222-2080</a>`,
 
   // Each bill's page on LegiScan (v.link). The General Assembly's bill status site has no page per bill to link to.
   billUrl: (p, session = DATA.session) => `https://legiscan.com/RI/bill/${p}/${session}`,
