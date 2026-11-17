@@ -8,7 +8,10 @@ would more than double the download. Each file is small enough to load all 51 on
 (Cloudflare compresses them); a query naming a state loads that state's first.
 
 Each file: {"st", "name", "s": [{"session", "page" ("" for the state's index page), "live", "up" (prefiled for a session
-not begun), "b": [[number, title, stage, ("c" for a constitutional amendment, else 0), [other numbers]?], ...]}]}.
+not begun), "b": [[number, title, stage, ("c" for a constitutional amendment, else 0), [other numbers]?], ...],
+"t": {issue id: [indexes into b]}}]}: "t" is each national issue's bills (the state's data/issues_<session>.json), so a
+search for "kratom" also finds "Prohibits the sale of 7-hydroxymitragynine products". search/topics.json gives each issue
+the words that call it up: its name, short name and issues.py's "words".
 Titles are cut at about 110 characters (at a word).
 
 Usage: python3 search_site.py SITE_DIR
@@ -49,13 +52,23 @@ def main(out):
             others = {}
             for a, lead in (d.get("alias") or {}).items():
                 others.setdefault(lead, []).append(a)
-            rows = []
+            # Each national issue's bills in this session, by number without its amendment letter.
+            on = {}
+            try:
+                for x in json.load(open(os.path.join(out, st, "data", f"issues_{d['session']}.json"), encoding="utf-8"))["bills"]:
+                    for n in [x[2], *(x[10] if len(x) > 10 else [])]:
+                        on.setdefault(re.sub(r"[A-Z]$", "", n), set()).update(x[0])
+            except (OSError, ValueError, KeyError):
+                pass
+            rows, tags = [], {}
             for key, b in d["bills"].items():
+                for i in on.get(key, set()) | on.get(re.sub(r"[A-Z]$", "", b[0]), set()):
+                    tags.setdefault(i, []).append(len(rows))
                 row = [b[0], short(b[1]), b[2], "c" if b[6] == "const" else 0]
                 if key in others:
                     row.append(others[key])
                 rows.append(row)
-            sessions.append({"session": d["session"], "page": page, "live": True, "up": bool(page), "b": rows})
+            sessions.append({"session": d["session"], "page": page, "live": True, "up": bool(page), "b": rows, "t": tags})
             total += len(rows)
         if not sessions:
             continue
@@ -65,6 +78,11 @@ def main(out):
             name = st.upper()
         with open(os.path.join(out, "search", f"{st}.json"), "w", encoding="utf-8") as f:
             json.dump({"st": st, "name": name, "s": sessions}, f, separators=(",", ":"), ensure_ascii=False)
+    import issues, issues_site
+    with open(os.path.join(out, "search", "topics.json"), "w", encoding="utf-8") as f:
+        json.dump({i["id"]: sorted({i["name"].lower(), issues_site.SHORT.get(i["id"], i["name"]).lower(),
+                                    *(w.lower() for w in i.get("words", []))}) for i in issues.ISSUES},
+                  f, separators=(",", ":"), ensure_ascii=False)
     print(f"search: {total} bills")
 
 

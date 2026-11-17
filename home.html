@@ -670,7 +670,7 @@ function searchView(words, hits) {
   }
   const states = Object.keys(by).filter((x) => x !== "us").length;
   return { kind: "search", label: `“${words}”`, by, rows, step, badge: "lawn",
-    head: `${hits.length.toLocaleString()} bill${hits.length === 1 ? "" : "s"} with “${esc(words)}” in the title, in ${states} state${states === 1 ? "" : "s"}${by.us ? " and Congress" : ""}: this session's bills and next year's prefiled ones.`,
+    head: `${hits.length.toLocaleString()} bill${hits.length === 1 ? "" : "s"} on “${esc(words)}”, by their titles or topic, in ${states} state${states === 1 ? "" : "s"}${by.us ? " and Congress" : ""}: this session's bills and next year's prefiled ones.`,
     none: (st) => `No bills with “${esc(words)}” in ${nameOf(st)}.`,
     some: (st, k, l) => `${k} bill${k === 1 ? "" : "s"} with “${esc(words)}”${l ? `, ${l} became law` : ""}.`,
     legend: `<span class="key"><i class="sq h0"></i>None</span><span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>`
@@ -925,11 +925,29 @@ drawMine();
   // A bill number split into its letters and its number without leading zeros or the amendment letter ("S1234A" -> S, 1234).
   const numParts = (n) => { const m = String(n).toUpperCase().replace(/[^A-Z0-9]/g, "").match(/^([A-Z]*)0*(\d+)[A-Z]?$/); return m ? [m[1], m[2]] : null; };
   function prep(d) {
+    // Each bill's national issues (search_site.py's "t"), so a search naming an issue finds its bills by any wording.
+    for (const s of d.s) for (const [id, xs] of Object.entries(s.t || {})) for (const i of xs) if (s.b[i]) (s.b[i].iss ||= []).push(id);
     for (const s of d.s) for (const r of s.b) {
       r.low = " " + fold(r[1]).replace(/[^a-z0-9]+/g, " ") + " ";
       r.np = [r[0], ...(r[4] || [])].map((n) => [n, numParts(n)]).filter((x) => x[1]);
     }
     return d;
+  }
+  // The words that call up each national issue (search/topics.json: its name, short name and a few more, "7-oh" for
+  // kratom): a query that is one of them, or starts one, also lists the issue's bills, first.
+  let TOPICS = null, topicsAsked = false;
+  function loadTopics() {
+    if (topicsAsked) return;
+    topicsAsked = true;
+    fetch("search/topics.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((t) => { TOPICS = t; schedule(0); });
+  }
+  function topicsOf(words) {
+    const q = words.join(" ");
+    if (!TOPICS || q.length < 3) return new Set();
+    return new Set(Object.entries(TOPICS).filter(([, ts]) => ts.some((t) => {
+      const f = fold(t).replace(/[^a-z0-9]+/g, " ").trim();
+      return f === q || (q.length >= 4 && f.startsWith(q)) || (` ${q} `).includes(` ${f} `);
+    })).map(([id]) => id));
   }
   function load(st) {
     return SEARCH[st] ||= fetch(`search/${st}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
@@ -987,6 +1005,7 @@ drawMine();
     const raw = q.value.trim();
     if (!raw) { only = ""; close(); return; }
     const p = parse(raw);
+    loadTopics();
     const want = p.st ? [p.st] : codes();
     const missing = want.filter((st) => !ready[st]);
     for (const st of missing) load(st);
@@ -1005,6 +1024,7 @@ drawMine();
     // A word matches the start of a title's word ("center" finds "centers"); words of three letters or fewer ("ai") only whole.
     const keys = words.map((w) => (w.length <= 3 ? ` ${w} ` : ` ${w}`));
     const byNum = new Set(hits.map((h) => h.r));
+    const onTopic = p.allNumbers ? new Set() : topicsOf(fold(p.words.join(" ")).replace(/[^a-z0-9]+/g, " ").trim().split(" "));
     // Bills with some of the words rank by how rare the words they have are ("data" before "center").
     const df = keys.map(() => 0), part = [];
     let total = 0;
@@ -1016,6 +1036,10 @@ drawMine();
         if (byNum.has(r)) continue;
         const has = keys.map((w) => r.low.includes(w)), k = has.filter(Boolean).length;
         has.forEach((x, i) => { if (x) df[i]++; });
+        if (onTopic.size && r.iss && r.iss.some((x) => onTopic.has(x))) {
+          hits.push({ st, name: d.name, s, r, tier: 6, score: k === words.length ? 1 : 0, shown: r[0] });
+          continue;
+        }
         if (k < need) continue;
         const h = { st, name: d.name, s, r, tier: k === words.length ? 5 : 1, score: 0, shown: r[0], has };
         if (h.tier === 5) h.score = phrase && r.low.includes(phrase) ? 1 : 0;
@@ -1050,8 +1074,8 @@ drawMine();
     }).join("");
     const more = hits.length > limit ? `<li><button type="button" class="more">Show ${Math.min(PAGE, hits.length - limit)} more</button></li>` : "";
     // Words found in several places: "Show on the map" shades each state by its matches (searchView()).
-    const mapIt = !p.st && !only && p.words.length && hits.length > 1 && !most && hits.some((h) => h.tier === 5) && new Set(hits.map((h) => h.st)).size > 1;
-    lastHits = mapIt ? [p.words.join(" "), hits.filter((h) => h.tier === 5)] : null;
+    const mapIt = !p.st && !only && p.words.length && hits.length > 1 && !most && hits.some((h) => h.tier === 5 || h.tier === 6) && new Set(hits.map((h) => h.st)).size > 1;
+    lastHits = mapIt ? [p.words.join(" "), hits.filter((h) => h.tier === 5 || h.tier === 6)] : null;
     found.innerHTML = `<div class="fhead"><span class="cnt" aria-live="polite">${count}</span>${mapIt && !loading ? '<button type="button" class="onmap">Show on the map</button>' : ""}${pick}</div>` + (rows ? `<ul>${rows}${more}</ul>` : "");
     found.hidden = false;
     q.setAttribute("aria-expanded", "true");
