@@ -264,7 +264,11 @@ table.oc th { vertical-align: bottom; }
 
 /* ---- Page structure: masthead, view tabs, sidebar + results ---- */
 .wrap { gap: 16px; }
-.mast { display: grid; gap: 10px; }
+.mast { display: grid; gap: 10px; position: relative; }
+/* Back to statebilltracker.org's front page (the public site only), at the top right. */
+.home-link { position: absolute; top: 0; right: 0; font: 600 13px/1.2 var(--body); color: var(--navy); text-decoration: none; }
+.home-link:hover, .home-link:focus-visible { text-decoration: underline; }
+@media (max-width: 560px) { .home-link { position: static; justify-self: start; } }
 /* Party control under the title (balance.py, written in by the build for the current session): the letter carries the meaning. */
 .power { margin: 6px 0 0; color: var(--ink-2); font-size: 13px; line-height: 1.6; }
 .power:empty { display: none; }
@@ -969,6 +973,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 
 <div class="wrap">
   <header class="mast">
+    <a class="home-link" id="siteHome" href="../" hidden>&larr; State Bill Tracker</a>
     <div class="mast-top">
       <div>
         <div class="eyebrow" id="sessionLabel">New York State Legislature</div>
@@ -3224,14 +3229,17 @@ function sankey(odds, fate, cfate) {
   let exitTop = 0, bottom = 0;
   const label = (x, y, lines) => lines.filter(Boolean).map((l, i) => `<text class="sk-l${i ? "" : " sk-b"}" x="${x}" y="${y + i * 15}">${l}</text>`).join("");
   let g = "", labels = "";
+  // The two shares at a split: the upper one centred on its band, the lower one just under it. On a thin band the lower
+  // one is pushed down so the two never overlap (Congress's "Passed one house": 33% and 67% were drawn on top of each other).
+  const split = (x, hUp, upper, lower) => { const y1 = top + Math.max(hUp / 2 + 4, 12), y2 = Math.max(top + hUp + 16, y1 + 15);
+    return `<text class="sk-p" x="${x}" y="${y1}">${upper}</text><text class="sk-p" x="${x}" y="${y2}">${lower}</text>`; };
   for (let i = 0; i <= L3; i++) {
     g += `<rect class="sk-node" x="${xs[i]}" y="${top}" width="${nodeW}" height="${h(N[i])}"/>`;
     labels += `<text class="sk-l" x="${xs[i]}" y="${top - 10}"><tspan class="sk-b">${STEPS[i]}</tspan> ${num(N[i])}</text>`;
     if (i === L3) break;
     g += band(xs[i] + nodeW, top, top + h(N[i + 1]), xs[i + 1], top, top + h(N[i + 1]), "sk-go");
     // On each band: the share of the bills at this step that went this way.
-    labels += `<text class="sk-p" x="${xs[i] + nodeW + 6}" y="${top + Math.max(h(N[i + 1]) / 2 + 4, 12)}">${pct(N[i + 1], N[i])}</text>`
-      + `<text class="sk-p" x="${xs[i] + nodeW + 6}" y="${top + h(N[i + 1]) + 16}">${pct(N[i] - N[i + 1], N[i])}</text>`;
+    labels += split(xs[i] + nodeW + 6, h(N[i + 1]), pct(N[i + 1], N[i]), pct(N[i] - N[i + 1], N[i]));
     const out = N[i] - N[i + 1], ex = xs[i + 1];
     exitTop = top + h(N[i + 1]) + gap;
     bottom = Math.max(bottom, exitTop + Math.max(h(out), i === 0 && cfate ? 137 : 50));
@@ -3269,8 +3277,7 @@ function sankey(odds, fate, cfate) {
     g += band(xs[L3] + nodeW, top + h(signed), top + h(signed) + h(allVetoes), x4, vy, vy + h(allVetoes), "sk-veto");
     g += band(x4 + nodeW, vy, vy + h(over), x5, top + h(signed), top + h(law), "sk-law");
     if (vetoed) g += band(x4 + nodeW, vy + h(over), vy + h(allVetoes), x5, sy, sy + h(vetoed), "sk-veto");
-    labels += `<text class="sk-p" x="${xs[L3] + nodeW + 6}" y="${top + Math.max(h(signed) / 2 + 4, 12)}">${pct(signed, N[L3])} signed</text>`
-      + `<text class="sk-p" x="${xs[L3] + nodeW + 6}" y="${top + h(signed) + 16}">${pct(allVetoes, N[L3])} vetoed (${num(allVetoes)})</text>`;
+    labels += split(xs[L3] + nodeW + 6, h(signed), `${pct(signed, N[L3])} signed`, `${pct(allVetoes, N[L3])} vetoed (${num(allVetoes)})`);
     g += `<rect class="sk-veton" x="${x4}" y="${vy}" width="${nodeW}" height="${h(allVetoes)}"/>`;
     // On the veto's two branches: how many the legislature overrode, and how many stood.
     if (over) labels += `<text class="sk-p" x="${x4 + nodeW + 6}" y="${vy - 6}">${num(over)} overridden</text>`;
@@ -5328,6 +5335,8 @@ async function unpack(b64) {
     const el = $("bill-data");
     BASE = el.dataset.base || "";
     ROOT = el.dataset.root || "";
+    // The public site's pages link back to the front page, the folder above the state's.
+    if (ROOT) { try { $("siteHome").href = new URL("../", ROOT).href; $("siteHome").hidden = false; } catch (e) {} }
     const meta = document.querySelector('meta[name="abt-preset"]');
     if (meta) PRESET = JSON.parse(meta.content);
     // A request that fails on the way (a dropped connection; Congress's file is 14 MB) is tried twice more before the
