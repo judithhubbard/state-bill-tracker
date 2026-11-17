@@ -366,10 +366,11 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
   <ul id="states">
     <li><a href="ca/"><b>California</b></a></li>
   </ul>
-  <footer>Party control is from each legislature's current member list; a darker color means that party also holds a supermajority in both houses. 2027 shows the November 2026 election's reported results, before certification. Congress is colored the same way, from the House, the Senate and the President. Your watchlist stays in your browser.</footer>
+  <footer>Party control is from each legislature's current member list; a darker color means that party also holds a supermajority in both houses. 2027 shows the November 2026 election's reported results, before certification; 2023 to 2025 show one day mid-session each year, from the National Conference of State Legislatures' counts. Congress is colored the same way, from the House, the Senate and the President. Your watchlist stays in your browser.</footer>
 </main>
 <script type="application/json" id="power">{}</script>
 <script type="application/json" id="after">{}</script>
+<script type="application/json" id="past">{}</script>
 <script type="application/json" id="issues">[]</script>
 <script>
 // Grid positions (row, column) of a common tile-map layout.
@@ -395,6 +396,12 @@ try { power = JSON.parse(document.getElementById("power").textContent); } catch 
 // After the 2026 election (reported results, states/elected_2026.json): the "From January" view, shown only until the
 // new sessions begin.
 try { after = JSON.parse(document.getElementById("after").textContent); } catch (e) {}
+// Earlier years' party control (party_history.py): {"2024": {_asOf: "2024-03-01", ca: {dots, title}, ...}}, one day
+// mid-session each year, for the years before this one.
+let past = {};
+try { past = JSON.parse(document.getElementById("past").textContent); } catch (e) {}
+const PAST_YEARS = Object.keys(past).filter((y) => Object.keys(past[y]).some((k) => k !== "_asOf")).map(Number);
+const asOfText = (y) => new Date(past[y]._asOf + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const tiles = document.getElementById("tiles");
 const same = (a, b) => JSON.stringify(a?.dots) === JSON.stringify(b?.dots);
@@ -570,11 +577,11 @@ function partyPanel(a) {
     }
     const line = (cls, words, k, sub) => (k ? `<li${sub ? ' class="sub"' : ""}><span class="sum"><i class="sq ${cls}"></i>${words}</span><b>${k}</b></li>` : "");
     const R = (n.R1 || 0) + (n.R2 || 0), D = (n.D1 || 0) + (n.D2 || 0);
-    body.innerHTML = `<h3>Party control${view === "after" ? ", from January" : ""}</h3>`
+    body.innerHTML = `<h3>Party control${view === "after" ? ", from January" : view === "past" ? `, ${year}` : ""}</h3>`
       + `<ul class="tally">${line("c-R1", "Republican", R)}${line("c-R2", "with a supermajority", n.R2, 1)}`
       + `${line("c-D1", "Democratic", D)}${line("c-D2", "with a supermajority", n.D2, 1)}`
       + `${line("c-X", "Split", n.X)}</ul>`
-      + `<p>Of the ${R + D + (n.X || 0) + (n.N || 0)} states on the site. Point at a state to see the governor's party and each house's seats; click it to open its bills.</p>`;
+      + `<p>Of the ${R + D + (n.X || 0) + (n.N || 0)} states on the site${view === "past" ? `, as of ${asOfText(year)}` : ""}. Point at a state to see the governor's party and each house's seats; click it to open its bills.</p>`;
     return;
   }
   const [name, ...rest] = (a.getAttribute("title") || "").split("\n");
@@ -598,8 +605,9 @@ function drawMap(view) {
   tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
     const style = `grid-row:${r + 1};grid-column:${c + 1}`;
     if (!built[code]) return `<span class="off" style="${style}" title="${NAMES[code]}: coming soon">${code}</span>`;
-    let now = power[code.toLowerCase()], next = after[code.toLowerCase()];
-    if (code === "NE") { now = now && { ...now, title: neTitle(now.title) }; next = next && { ...next, title: neTitle(next.title) }; }
+    // An earlier year shows that year's colors alone (no "from January" comparison).
+    let now = view === "past" ? past[year][code.toLowerCase()] : power[code.toLowerCase()], next = view === "after" ? after[code.toLowerCase()] : null;
+    if (code === "NE" && view !== "past") { now = now && { ...now, title: neTitle(now.title) }; next = next && { ...next, title: neTitle(next.title) }; }
     const p = view === "after" && next ? next : now;
     const changed = view === "after" && next && now && !same(now, next);
     const ctl = p ? control(p.dots) : "";
@@ -623,7 +631,7 @@ function drawMap(view) {
 const FED = `grid-row:1;grid-column:5 / span 3`, FED_LABEL = `<span class="fl"><small>U.S.</small>Congress</span>`;
 function fedParty(view) {
   if (!built.US) return "";
-  const p = power.us;
+  const p = view === "past" ? past[year].us : power.us;
   if (!p) return `<a href="${built.US}" data-st="us" class="fed" style="${FED}" title="U.S. Congress" aria-label="U.S. Congress">${FED_LABEL}</a>`;
   const later = view === "after" && !after.us;
   const lines = [later ? "U.S. Congress from January" : "U.S. Congress", ...p.title.split("; "),
@@ -727,20 +735,23 @@ function customPanel(st) {
 // address (#issue=ai&year=2027) so a view can be shared.
 const NOW = issues.default || new Date().getFullYear();
 const AFTER_OK = Object.keys(after).length > 0 && new Date() < new Date("2027-01-15");
-const YEARS = [...new Set([...(issues.years || []), NOW, ...(AFTER_OK ? [NOW + 1] : [])])].sort();
+const YEARS = [...new Set([...(issues.years || []), ...PAST_YEARS, NOW, ...(AFTER_OK ? [NOW + 1] : [])])].sort();
 year = NOW;
 let view = "now";
 const yearsEl = document.getElementById("years"), show = document.getElementById("show"), menu = document.getElementById("showMenu");
 // The picker shows short names ("Drug costs"); the panel and issue pages keep the full ones.
 const label = (i) => (i ? i.short.charAt(0).toUpperCase() + i.short.slice(1) : "Party control");
-const usable = (y) => (issue ? (issues.years || []).includes(y) : y === NOW || (y === NOW + 1 && AFTER_OK));
+const usable = (y) => (issue ? (issues.years || []).includes(y) : y === NOW || (y === NOW + 1 && AFTER_OK) || (y < NOW && PAST_YEARS.includes(y)));
 function render() {
   if (!usable(year)) year = NOW;
   yearsEl.hidden = !!CUSTOM || (YEARS.length < 2 && !issues.issues.length);
-  view = !issue && year === NOW + 1 ? "after" : "now";
-  // Party control has only this year and next (today's member lists, and the election's results), so its past years
-  // aren't shown; an issue shows every year.
-  yearsEl.innerHTML = YEARS.filter((y) => issue || usable(y)).map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === year}"${usable(y) ? "" : ` disabled title="Party control is shown for ${NOW}${AFTER_OK ? ` and from January ${NOW + 1}` : ""}; pick an issue for other years"`}>${y}</button>`).join("");
+  view = issue ? "now" : year === NOW + 1 ? "after" : year < NOW ? "past" : "now";
+  // Party control has earlier years (party_history.py), this year (today's member lists) and next (the election's
+  // results); an issue has the years its pages cover. Both show every year either has, so the row keeps its length,
+  // with a year the view lacks greyed out.
+  const lacks = issue ? `${label(issue)} is shown for ${(issues.years || []).join(", ")}`
+    : `Party control is shown for ${YEARS.filter(usable).join(", ")}`;
+  yearsEl.innerHTML = YEARS.map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === year}"${usable(y) ? "" : ` disabled title="${esc(lacks)}"`}>${y}</button>`).join("");
   show.textContent = CUSTOM ? CUSTOM.label : label(issue);
   const cur = CUSTOM ? CUSTOM.kind : issue ? issue.id : "";
   for (const b of menu.querySelectorAll("button")) b.setAttribute("aria-current", String(b.dataset.id === cur));

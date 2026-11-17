@@ -107,6 +107,14 @@ for s in sorted(os.listdir(out)):
             after[s] = nxt
         items.append((P.STATE_NAME, f'    <li><a href="{s}/"><b>{P.STATE_NAME}</b></a></li>\n'))
 block = "".join(i for _, i in sorted(items))
+# Past years' party control (party_history.py: NCSL's tables and Congress's members, one day mid-session each year), for
+# the map's earlier years; only the states built in this run, with each year's day ("_asOf").
+try:
+    shown = {s for s in os.listdir(out) if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html"))}
+    past = {y: {k: v for k, v in states.items() if k == "_asOf" or k in shown}
+            for y, states in json.load(open(os.path.join("states", "party_history.json"))).items()}
+except (OSError, ValueError):
+    past = {}
 # The national issues for the map's "Show" menu (issues_site.py's summary: each issue's counts by state).
 try:
     summ = json.load(open(os.path.join(out, "issues", "summary.json")))
@@ -119,6 +127,8 @@ page = page.replace('<script type="application/json" id="power">{}</script>',
                     '<script type="application/json" id="power">' + json.dumps(power, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
 page = page.replace('<script type="application/json" id="after">{}</script>',
                     '<script type="application/json" id="after">' + json.dumps(after, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
+page = page.replace('<script type="application/json" id="past">{}</script>',
+                    '<script type="application/json" id="past">' + json.dumps(past, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
 page = re.sub(r'(<ul id="states">\n)(?:    <li><a href="[a-z]{2}/">.*?</li>\n)*', lambda m: m.group(1) + block, page, count=1, flags=re.S)
 open(os.path.join(out, "index.html"), "w").write(page)
 print("front page:", ", ".join(n.strip() for n, _ in sorted(items)))
