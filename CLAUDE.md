@@ -2173,13 +2173,12 @@ from that repo. **Nothing here may change it.**
   keep the seat until a successor's term starts. Committees: the current Congress's only (the data has no past
   committees); chairs from the "Chairman"/"Chair" title. Leaders: Speaker Mike Johnson; the Senate's Majority Leader, John
   Thune, stands for the Senate (the Vice President presides); the 120th Congress chooses its own on January 3, 2027
-  (`LEADERS`). The White House's contact page and comments line ((202) 456-1111) are from general knowledge, not checked by
-  the owner. Party balance: states/legislatures.json's "us" (`executive` "President", seats S 100, H 435). Not done: no
+  (`LEADERS`). The White House's contact form is the only contact shown (the comments line, (202) 456-1111, was dropped 2026-11-17: whitehouse.gov lists only the form, and the line closed during the 2025 shutdown). Party balance: states/legislatures.json's "us" (`executive` "President", seats S 100, H 435). Not done: no
   hearings or committee schedules (`agendas()`), no CBO cost estimates, the Senate's committee roll calls, House
   committees' member votes. issues_site.py reads every two-letter folder, so it counts Congress among the states (a "Congress"
   row in each issue's table, and in the "N states" and bill counts; not on the tile maps, which only have states): to be
   kept out for now (an owner's decision; not changed here).
-- **National issues (built 2026-11-15):** the same subjects across states, fifty-one of them: data centers, PFAS, AI, children
+- **National issues (built 2026-11-15):** the same subjects across states, sixty-five of them: data centers, PFAS, AI, children
   online, phones in schools, housing supply, minimum wage, right to repair, sports betting, prescription drug costs (the
   first ten, chosen in notes/issues-draft.md with the owner's answers), and abortion, firearms, school vouchers and
   education savings accounts, voting and elections, immigration (named "Immigration enforcement" until 2026-11-17; the id
@@ -2192,11 +2191,18 @@ from that repo. **Nothing here may change it.**
   and vaccines and public health powers, unions and collective bargaining, ballot initiatives, ranked-choice voting
   (nearly all ranked-choice and about two thirds of initiative bills also match voting), energy costs and utility
   rates, climate and clean energy, ESG investing and boycott laws, religion in public schools, child labor, protest and
-  assembly laws, and kratom (the fifth ten plus one, the same day). Each issue may have `words`, a few extra terms for the front page's search (not used for matching).
+  assembly laws, and kratom (the fifth ten plus one, the same day), and health insurance coverage, sexual assault and
+  domestic violence (the sixth batch, with PFAS's "Sludge on farmland" filter and Voting's "Presidential electors and
+  popular vote"), and homelessness and camping bans, income tax cuts, homeowners insurance, bail and pretrial release, drug
+  penalties and overdoses, contraception, mental health and 988, food additives and dyes, school meals, plastics and
+  packaging, heat protections for workers, same-sex marriage (the seventh batch, the same day). Groups (`GROUPS`) include
+  "Drugs" (cannabis, psychedelics, kratom, overdoses). Each issue may have `words`, a few extra terms for the front page's search (not used for matching).
   Each one's scope, the checks, the owner's answers
   and open questions are in notes/issues-check.md. `issues.py` holds each issue's rules (patterns that must appear within
   400 characters of each other, exclusions, filters such as AI's "Chatbots"); a match in the title or summary counts, one
-  only in a long "What it does" needs two mentions (budget bills name subjects in passing). Minimum wage is only bills
+  only in a long "What it does" needs two mentions (budget bills name subjects in passing), or as many as the issue's
+  `"body"` says (`0`: the title or summary must name it; homelessness, income tax cuts, bail, assault, plastics); for those
+  issues the opening of "What it does" (`lead()`) counts like the summary, except school meals (`"lead": False`). Minimum wage is only bills
   that set or change one (the owner's decision). Each state's build writes data/issues_<session>.json
   (`write_issues()` in build_data.py; local and placeholder bills left out); `issues_site.py`, run by build_site.sh
   after the states, builds /issues/ and /issues/<id>/ (a table by state, every bill linked to its state's page, filters)

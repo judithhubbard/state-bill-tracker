@@ -455,3 +455,270 @@ leave, none join, ESG unchanged.
 - Transgender: none moved (SB 261 never matched it).
 
 **2026-11-17, owner:** the anti-ESG boycott-list exclusion applies to abortion and transgender people only; the nine "firearm industry nondiscrimination" bills stay under Firearms as well as ESG (AL SB 261 of 2023 is now Firearms and ESG, not Abortion).
+
+# National issues: the sixth batch (2026-11-17)
+
+Health insurance coverage and sexual assault and domestic violence, approved by the owner the same day, plus a "Sludge on
+farmland" filter for PFAS, a "Presidential electors and popular vote" filter for Voting, and a new menu group, "Drugs"
+(cannabis, psychedelics and kratom moved into it; overdoses joined it in the seventh batch). Checked the same way as the
+fifth ten, over every bill the published site shows (454,708 bills in 50 states and Congress, .issues-cache refreshed
+2026-11-17 after that afternoon's publish): four to six rounds, each a fresh random sample of 30 per issue, and searches
+for likely misses. The other issues' rules are unchanged, except Voting (new rules for electors, below) and PFAS (sludge).
+Groups: Health (coverage), Rights and public safety (assault). Short names: "health coverage", "sexual & domestic abuse"
+(the full name doesn't fit the front page's column).
+
+| Issue | Bills (this session) | Right of 30 read | States with none |
+|---|---|---|---|
+| Health insurance coverage | 1,608 (574) | 16, 21, 22, 24, then 28, 27, 25 | none |
+| Sexual assault and domestic violence | 7,752 (2,707) | 24, 26, 27, 26, then 27-28, 26 | none |
+| PFAS (with sludge) | 764 (299); was 730 | sludge filter 27-28 | AR, ID, ND, NE, SD, UT, WY |
+| Voting: electors filter | 269 in the filter (voting 8,680) | 27 | |
+
+Filters: coverage: Medicaid 1,016, Marketplaces and the ACA 652, Single payer and universal coverage 141, Public option 133.
+Assault: Domestic violence and stalking 3,085, Trafficking 1,683, Child sexual abuse 1,047, Time limits 389, Rape kits 296,
+Campus 253. PFAS: Sludge on farmland 110. Voting: Presidential electors and popular vote 269 (the National Popular Vote
+compact, joining and leaving it in CT, MN, ME, NJ, OR, RI; winner-take-all vs. by congressional district: Nebraska LB 3 of
+2025, Maine HLD1356 of 2025, Michigan HB 4216, Mississippi HB 600/823, Connecticut HB 6072 and HB 6005; faithless and false
+electors; the Electoral Count Reform Act). Voting's new rules: "presidential elector(s)", "electoral college/votes/count",
+"electors for/of the President", "winner-take-all" near "elector" or "president", "faithless/faithful/false/fake/alternate
+electors". Before, about 120 titles with those words matched nothing (Nebraska LB 3, the Uniform Faithful Presidential
+Electors Acts, Maine's switch to winner-take-all). The filter's misses in the sample are ranked-choice and omnibus bills
+whose long text names presidential electors.
+
+What went wrong in early rounds and was fixed:
+- Coverage: "eligible for medical assistance" in passing (a hospital's eligibility, "a person eligible for medical
+  assistance" in a court-of-claims or air-ambulance bill, enrollees of a drug purchasing program); now Medicaid needs
+  eligibility, enrollment or expansion worded as the subject ("expands eligibility for Medicaid", "Medicaid eligibility",
+  presumptive or continuous eligibility, postpartum coverage extended). The Affordable Care Act's own name ("Patient
+  Protection ...") satisfied "protect"; California's digests give the federal essential benefits as background ("none");
+  "ACA 1" is a California Assembly Constitutional Amendment; mandates "as an essential health benefit" (IVF, hearing
+  aids) are left out; "uninsured" only as a population ("uninsured rate", "coverage for the uninsured"), never motorists.
+- Assault: rape "or incest" exceptions in abortion bills; lists of crimes in sentencing, bail and voting-rights bills
+  (`NOT_CRIMELIST`); leave laws ("safe leave from domestic violence, stalking, sexual assault"); boards with a member from
+  a state coalition against domestic violence; gun-violence and workplace-violence protective orders; "affirmative
+  consent" in auto-renewal laws.
+- Remaining misses are mostly lists of victims in other programs (address confidentiality, victim compensation), counted
+  wrong in about 1 of 30.
+
+Scope decided here:
+- Health insurance coverage: single-payer and universal coverage, public options and Medicaid buy-ins, Medicaid expansion
+  and eligibility rules (who qualifies, enrollment, renewals, postpartum and immigrant coverage, coverage for people
+  leaving prison), CHIP eligibility, state marketplaces and their subsidies and reinsurance, the ACA's protections
+  (pre-existing conditions, guaranteed issue, codifying the ACA), special enrollment periods, short-term and association
+  plans, coverage for the uninsured. Not a mandate to cover one treatment, Medicaid rates and billing, dental or vision
+  alone, workers' compensation. Medicaid work requirements are also their own issue (overlap allowed).
+- Sexual assault and domestic violence: sexual assault and abuse crimes and penalties, rape kits and forensic exams,
+  time limits for abuse cases, campus sexual assault and Title IX, survivors' rights and confidentiality, protective orders,
+  domestic and dating violence, stalking, human trafficking (decided: all of it, sex and otherwise, except forced-labor
+  supply chains and drug trafficking; nearly all state trafficking bills are about sex trafficking), child sexual abuse
+  and child sexual abuse material, intimate images shared without consent, sextortion and grooming. Not the sex offender
+  registry's administration (`NOT_REGISTRY`; bills about where registrants live or how they register), divorce, custody and
+  support bills that name domestic violence among other factors (`NOT_PASSING`), leave laws, sexual harassment alone.
+- PFAS: sewage sludge, biosolids and septage spread on land count, even when the bill doesn't name PFAS (decided: these
+  are the PFAS-on-farmland fights in Maine, Texas, Oklahoma and Michigan; about 40 such bills). Not sludge turned into
+  energy, prevailing wages at treatment plants, sludge in landfills or leachate, or manure. Every sludge bill that names
+  PFAS already matched before.
+
+Questions for the owner (each with a suggested answer):
+1. PFAS now includes about 40 sludge and biosolids bills that don't mention PFAS (Oklahoma's biosolids bans, Florida's
+   "Biosolids Management", Connecticut's "use of biosolids by farmers"). Keep? Suggested: keep, under the filter.
+2. Assault includes all human trafficking bills, not only sex trafficking (1,683 under the filter). Keep? Suggested: keep;
+   or rename the filter "Trafficking" to make it plain.
+3. Assault includes child sexual abuse material and nonconsensual intimate images (deepfakes too: those are also under
+   AI). Keep? Suggested: keep.
+4. Coverage includes Medicare bills about who's covered (Medigap's pre-existing conditions, "Choose Medicare") and
+   federal ACA subsidy bills. Keep? Suggested: keep.
+5. The NY bills that make an offense "qualifying" for bail (doxing a police officer, stolen property) are in Bail and
+   pretrial release (seventh batch) and, when sexual, here. Fine as is? Suggested: yes.
+
+**Answered 2026-11-17 (owner): as suggested.**
+
+# National issues: the seventh batch (2026-11-17)
+
+Twelve issues approved by the owner the same day: homelessness and camping bans, income tax cuts, homeowners insurance,
+bail and pretrial release, drug penalties and overdoses, contraception, mental health and 988, food additives and dyes,
+school meals, plastics and packaging, heat protections for workers, same-sex marriage. Same method: three or four rounds
+of 30 random matches each, plus misses searches. One shared change: an issue can ask for more mentions in a long "What it
+does" (`"body": 3`, read by `body_need()` in issues.py; the default stays two, so no other issue changes): homelessness and
+school meals, which budget trailer bills and omnibus education bills name again and again. Groups: Housing and taxes
+(homelessness, income tax, homeowners insurance), Rights and public safety (bail, same-sex marriage), Drugs (overdoses),
+Health (contraception, mental health, food additives), Schools (school meals), Environment and energy (plastics), Work and
+the economy (heat).
+
+| Issue | Short name | Bills (this session) | Right of 30 read (rounds) | States with none |
+|---|---|---|---|---|
+| Homelessness and camping bans | homelessness | 1,586 (518) | 23, 25, 20, then 24-25 | AR, WY |
+| Income tax cuts | income tax cuts | 260 (81) | 23, 25, 23, then 24-25 | AL, CA, FL, MD, NH, NV, SD, TN, TX, VA, WA, WY |
+| Homeowners insurance | homeowners insurance | 906 (339) | 25, 26, 25, 27-28 | OH, SD, WY |
+| Bail and pretrial release | bail and pretrial | 1,426 (512) | 21, 26-27, 24 | AZ, ID, WY |
+| Drug penalties and overdoses | drugs and overdoses | 2,665 (751) | 25, 28, 27 | none |
+| Contraception | contraception | 699 (203) | 25, 26, 26-27, 28-29 | SD, UT, VT, WY |
+| Mental health and 988 | mental health and 988 | 1,990 (658) | 22, 24-25, 26 | none |
+| Food additives and dyes | food additives | 154 (97) | 18, 26, 25-26, 27 | CO, IA, ME, MT, NC, ND, NM, NV, SD, WA, WY |
+| School meals | school meals | 880 (314) | 22, 25-26, 25 | AL, ID, OH, WY |
+| Plastics and packaging | plastics and packaging | 903 (309) | 21, 25, 26-27 | AR, MS, OH, OK, SD |
+| Heat protections for workers | workplace heat | 83 (38) | 29, 28-29, 29-30 | 29 states |
+| Same-sex marriage | same-sex marriage | 111 (34) | 24, 27, 28-29 | 23 states |
+
+Several are below the 27 aimed for. What's left wrong, by issue:
+- Homelessness (24-25): bills that name homeless people among other groups (veterans' documents, school funding weights,
+  vital-records fee waivers count, as they're about homeless people; lists of "foster care, disabilities or homeless" don't)
+  and budget trailer bills. A homelessness match now needs a homelessness word nearby (shelters, services, encampments,
+  "homeless persons", housing programs). Tightening further would drop real bills (ID waivers, shelter rules).
+- Income tax (24-25): rate bills that also change other taxes, and Missouri's and Minnesota's omnibus tax bills; bills on
+  one kind of income ("income tax on tips", "liability on the earned income of a minor") are left out (`NOT_TAXITEM`).
+  Rate changes worded only "modified" ("Individual income tax rates modified", Oklahoma's "income tax; rates; brackets")
+  are left out unless they say cut, reduce, lower, phase out, eliminate, flat or trigger.
+- Bail (24): New York bills that make an offense qualifying for bail (doxing a police officer, stolen property) and bills
+  on electronic monitoring and failure to appear; pretrial intervention and diversion programs are left out.
+- Mental health (26): "mental health" is everywhere, so it counts only for 988 and crisis lines and teams, involuntary
+  commitment and treatment (Kendra's Law, the Baker Act, CARE Court), parity, suicide prevention, and mental health in
+  schools; the rest are veterans' and correctional programs that name crisis services.
+- School meals (25): omnibus education and appropriation bills (three mentions needed in a long text), family child care
+  meals; summer EBT and summer meals count only when they say school meals.
+- Plastics (26-27): composting and paint-recycling bills that mention packaging; plastic guns, plastic bullets and plastic
+  utensils in prisons are left out.
+
+Scope decided here:
+- Homelessness and camping bans: camping and sleeping bans and encampments (Grants Pass laws, "unlawful camping"),
+  housing first, shelters and services and their funding, homeless youth and students, IDs and records for homeless
+  people. Not campgrounds, state-park camping fees, or campus protest encampments (those are under Protest).
+- Income tax cuts: personal income tax rate cuts, a flat tax, triggers, phase-outs and elimination, and bills that suspend
+  scheduled cuts. Not credits, deductions and exemptions for one kind of income or person, and not corporate rates alone.
+  Filters: Elimination 125, Flat tax 28.
+- Homeowners insurance: homeowners, dwelling, renters, condominium and flood insurance (including the National Flood
+  Insurance Program's extensions: about a fifth of the bills, mostly in Congress), cancellations and nonrenewals, insurers
+  of last resort (Citizens, FAIR plans, Hawaii Property Insurance Association, Texas Windstorm), fortified roofs and
+  mitigation discounts, dog-breed underwriting. Not title, auto, commercial or credit property insurance. No filters.
+- Bail and pretrial release: bail and bail reform, pretrial detention and release conditions, bail bond agents, bond
+  amounts and schedules, personal recognizance. Not pretrial diversion programs. No filters.
+- Drug penalties and overdoses: fentanyl and other drug crimes and penalties, drug-induced homicide, naloxone and other
+  opioid antagonists, test strips, xylazine and nitazenes, Good Samaritan laws, syringe services and overdose prevention
+  sites, harm reduction. Cannabis, psychedelics, kratom, tobacco and alcohol are left out (`NOT_OTHERDRUGS`); a bill
+  naming both counts. Filters: Penalties 1,003, Fentanyl 921, Naloxone and test strips 645, Overdose prevention sites and
+  harm reduction 174.
+- Contraception: a right to contraception, insurance and Medicaid coverage (including vasectomies), pharmacists
+  prescribing birth control, over-the-counter pills, emergency contraception (including in sexual assault care), family
+  planning services. Not abortion bills that say they don't reach contraception, or wildlife fertility control. Filters:
+  Insurance coverage 270, Pharmacists 123, Emergency contraception 83, Right to contraception 45.
+- Mental health and 988: as above. Filters: Schools 851, 988 and crisis response 577, Involuntary treatment 436, Parity 127.
+- Food additives and dyes: dye and additive bans (Red 40, Red 3, titanium dioxide, potassium bromate, brominated vegetable
+  oil), additives in school food and SNAP, ultra-processed food, "generally recognized as safe", seed oils, "Make America
+  Healthy Again" food bills. Not animal feed, pet food, hemp and CBD, dietary supplements, or cosmetics and menstrual
+  products. Filters: School food 74, Dyes 73, Ultra-processed food 31, Labels and warnings 27.
+- School meals: universal free meals, the community eligibility provision, school breakfast and breakfast after the bell,
+  meal debt and lunch shaming, school nutrition standards and plant-based options. Filters: Free meals for all 305, Meal
+  debt and lunch shaming 55.
+- Plastics and packaging: bag, foam, straw and foodware bans (and repeals of them), extended producer responsibility for
+  packaging, microplastics and microbeads, recycling labels, bottle deposits and redemption centers, chemical recycling.
+  Filters: Bag and foam bans 450, Bottle deposits 111, Producer responsibility 72, Microplastics 60.
+- Heat protections for workers: heat illness standards (water, rest, shade, training) and extreme-temperature protections,
+  outdoors and indoors, and state laws barring local ones (Florida's "Employment Regulations"/"Labor Regulations"). Not
+  student athletes, prisons or housing temperatures. No filters.
+- Same-sex marriage: repealing state bans and constitutional definitions, protecting marriage equality (Respect for
+  Marriage Act), gender-neutral marriage law, and bills against it (marriage "between one man and one woman", against
+  Obergefell). Resolutions urging the Supreme Court to reverse Obergefell aren't in the site's data (resolutions are left
+  out), so only bills and constitutional amendments show. Not covenant marriage (divorce rules), IVF coverage for
+  same-sex couples, or SSI's "marriage penalty" (the "Marriage Equality for Disabled Adults Act"). No filters.
+
+Questions for the owner (each with a suggested answer):
+1. Homelessness includes students experiencing homelessness (school enrollment, coordinators: 380 under "Students") and
+   ID fee waivers. Keep? Suggested: keep.
+2. Income tax cuts leaves out rate bills that only say "modified" or "amendments" (Minnesota's "rates and brackets
+   modified", Utah's "Income Tax Rate Amendments" is in only because of its title's wording); some raise rates. Keep it
+   to clear cuts? Suggested: yes; or rename the issue "Income tax rates" and take every rate bill.
+3. Homeowners insurance includes flood insurance and the National Flood Insurance Program's many short extensions in
+   Congress. Keep? Suggested: keep flood insurance; consider leaving out bare NFIP extensions.
+4. Contraception includes family planning services and their funding (Texas's women's health program, Title X). Keep?
+   Suggested: keep.
+5. Mental health and 988 includes suicide prevention training and programs. Keep? Suggested: keep.
+6. Drug penalties and overdoses includes every drug crime bill (possession, trafficking, paraphernalia), not only fentanyl.
+   Keep? Suggested: keep; the Penalties filter separates them.
+7. Same-sex marriage can't show the Obergefell resolutions (resolutions aren't in the data). Add resolutions on this one
+   subject? Suggested: no; say so on the issue page's description if visitors ask.
+
+**Answered 2026-11-17 (owner): as suggested** (questions 1-11 across both batches: all kept; income tax cuts stays clear
+cuts only; flood insurance kept, bills that only extend the National Flood Insurance Program dropped, by Homeowners
+insurance's `none`; no resolutions).
+
+## Final rounds (2026-11-17, after review)
+
+The issues under 27 were tightened until two fresh samples in a row (new seeds, never reused) read 27 or better. Nearly
+every remaining error was a bill matched only in a long "What it does" (budget trailer bills, omnibus education and tax
+bills, programs that list homeless people or crime victims among others), so the main change is `"body"` in issues.py
+(read by `body_need()`; `matches()` is the one test): how many mentions a long "What it does" needs, `0` meaning it never
+counts on its own and the title or summary has to name the subject (the coordinator's suggestion). Other issues keep the
+default, two.
+
+| Issue | "body" | Bills (this session), before -> after | Last two samples |
+|---|---|---|---|
+| Homelessness and camping bans | 0 | 1,586 (518) -> 1,236 (379) | 28-29, 27-28 |
+| Income tax cuts | 0 | 260 (81) -> 159 (45) | 30, 29 (then 29) |
+| Bail and pretrial release | 0 | 1,426 (512) -> 1,141 (376) | 29, 28 |
+| School meals | 4 | 880 (314) -> 790 (287) | 27, 27 |
+| Mental health and 988 | 4 | 1,990 (658) -> 1,698 (549) | 27, 27 |
+| Health insurance coverage | 3 | 1,608 (574) -> 1,511 (537) | 27, 27 |
+| Sexual assault and domestic violence | 0 | 7,752 (2,707) -> 6,014 (1,948) | 29-30, 28-29 |
+| Plastics and packaging | 0 | 903 (309) -> 676 (213) | 30, 29 |
+| Homeowners insurance (NFIP extensions out) | 2 | 906 (339) -> 893 (328) | 28 |
+
+Other fixes in these rounds:
+- Income tax: rate-change wording in the summary only, and not for a business incentive ("income tax rate reductions"
+  for a manufacturing reinvestment account), a corporate rate ("corporation net income tax rate"), tips and withholding,
+  extending or restoring a rate (New York City's, Idaho's 2026 restoration), a defunct act's repeal, school district
+  income taxes, or assessments; "Personal Income Tax Reduction Fund" in a data center revenue bill still counts (it funds
+  cuts). States with none rise to 18 (AK, AL, CA, DE, FL, IL, KY, MD, NE, NH, NV, PA, SD, TN, TX, VA, WA, WY): several
+  have no income tax, and Delaware, Illinois, Kentucky and Pennsylvania's rate bills say so only in "What it does".
+- Bail: bills making an offense "qualifying" for bail (New York's lists since 2020) are counted right; they change who
+  can be held on bail. Pretrial diversion programs stay out.
+- Mental health: schools count only for "school/student mental health" services, screenings, staff, days and
+  instruction ("school bus drivers' mental health evaluations", careers in mental health and educator preparation don't).
+- Coverage: "for purposes of Medicaid eligibility" (disability definitions), "expansion of Medicaid services", benefits
+  for part-time faculty, "individual mandate" only (not Texas's benefit-mandate review center), animal insurance, dental
+  loss ratios.
+- School meals: the National School Lunch Act named in child care and CACFP bills, "school food authority" in food
+  donation laws, "eligible for free or reduced-price lunch" as an income test for other programs (prekindergarten seats,
+  bus passes).
+- Plastics: producer responsibility only for packaging, paper products and plastics (not paint, batteries, mattresses).
+- Assault: "Election Code" restraining orders.
+
+The cost is recall: bills whose title and summary are bland and whose subject shows only in "What it does" are now missed
+for the six issues set to 0 or 4 (California's digests and Nebraska's statements are the usual cases: "Crimes: diversion"
+that's about domestic violence; "Personal income taxation" that cuts Oregon's rates). For the owner: accept the lower
+counts for precision? Suggested: yes for now; a later pass could let a "What it does" count when its first sentence
+names the subject.
+
+## The opening of "What it does" counts (2026-11-17)
+
+For the eight issues with their own `"body"`, a match in the opening of "What it does" (its first 250 characters, carried
+to the end of that sentence if it ends within 150 more: `lead()` in issues.py) now counts like the title and summary
+(`matches()`). The opening says what the bill does; budget and omnibus bills name these subjects later. It brings back
+bills like Oregon's "Personal income taxation" ("Modifies personal income tax brackets. Decreases rates ..."), Kentucky's
+"The individual income tax rate", Michigan's rate rollback, Illinois's and Louisiana's digests, California's digests and
+New York's memos that start with what the bill does. Not for school meals (`"lead": False`): school funding and early
+childhood bills name the lunch program in their first sentence (a sample read 25-26); school meals also needs two
+mentions in a short "What it does" (`"short": 2`: one-line summaries that use free-lunch eligibility as an income test).
+Income tax also gained a rule for "reduce/eliminate/phase in a reduction in the (top) tax rate" near "individual income
+tax" (Alabama's HB 115 and SB 48 of 2023), and lost "withholding" as an exclusion (it blocked Pennsylvania's "Elimination
+of the Personal Income Tax", whose summary mentions withholding; only "be deducted and withheld" is excluded now); Iowa's
+"individual and corporate income taxes" no longer trip the corporate-only exclusion.
+
+| Issue | Bills (this session): head only -> with the opening | States with none, before -> after | Two fresh samples |
+|---|---|---|---|
+| Homelessness and camping bans | 1,236 (379) -> 1,410 (451) | AR, WY -> same | 28, 28 |
+| Income tax cuts | 159 (45) -> 230 (68) | 18 -> 11 | 28, 27 (earlier version 28, 27-28) |
+| Bail and pretrial release | 1,141 (376) -> 1,267 (432) | AZ, ID, WY -> same | 27, 29 |
+| School meals (opening not used) | 790 (287) -> 716 (261) | AL, ID, OH, WY -> same | 28-29, 28 |
+| Mental health and 988 | 1,698 (549) -> 1,747 (569) | none | 28, 27 |
+| Health insurance coverage | 1,511 (537) -> 1,533 (545) | none | 27-28, 27 |
+| Sexual assault and domestic violence | 6,014 (1,948) -> 6,837 (2,265) | none | 28, 28 |
+| Plastics and packaging | 676 (213) -> 744 (250) | AR, IN, MS, NE, OH, OK, SD, TN, UT -> AR, MS, OH, OK, SD, TN, UT | 28, 29 |
+
+Income tax's states with none went from 18 (AK, AL, CA, DE, FL, IL, KY, MD, NE, NH, NV, PA, SD, TN, TX, VA, WA, WY) to 11:
+the nine without a tax on wages (AK, FL, NH, NV, SD, TN, TX, WA, WY), Maryland (its 2024 "Alteration of Brackets and Rates"
+and 2026 "Income Tax and Sales and Use Tax - Rate Reductions" don't say an individual cut; county income tax rates and
+corporate rate cuts are left out) and Virginia (only inflation indexing of brackets, SB 702 of 2026). Alabama, California,
+Delaware, Illinois, Kentucky, Nebraska and Pennsylvania now have bills. School meals is smaller than before because of
+`"short": 2`. In the samples, openings that look like passing mentions mostly turned out to be on the subject (Louisiana's
+domestic abuse battery registry rule, New Jersey's earned income credit for domestic abuse victims, Utah's civil actions
+for human trafficking).
