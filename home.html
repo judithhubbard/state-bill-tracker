@@ -110,8 +110,12 @@ h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: u
 ul, ol { list-style: none; margin: 0; padding: 0; }
 /* The state list: plain names in columns (the map's squares link to the states too). */
 /* Every state as one quiet run of links under the map (the map's squares are the main way in). */
-.allst { margin: 28px 0 0; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 13.5px; line-height: 1.9; color: var(--ink-2); }
-.allst h2 { display: inline; margin: 0 8px 0 0; font: 600 13.5px/1 var(--body); letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+.allst { margin: 24px 0 0; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 13.5px; line-height: 1.9; color: var(--ink-2); }
+/* Folded to one line ("All states ▸"); the links stay in the page for search engines and screen readers. */
+.allst summary { cursor: pointer; font-weight: 600; color: var(--ink-2); width: max-content; }
+.allst summary:hover { color: var(--navy); }
+.allst summary:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; }
+.allst details[open] summary { margin-bottom: 4px; }
 #states { display: inline; }
 #states li { display: inline; }
 #states li { margin-right: 14px; }
@@ -419,10 +423,10 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
       <div id="pbody" aria-live="polite"></div>
     </aside>
   </div>
-  <nav class="allst" aria-label="All states"><h2>All states</h2>
+  <nav class="allst" aria-label="All states"><details><summary>All states</summary>
   <ul id="states">
     <li><a href="ca/"><b>California</b></a></li>
-  </ul></nav>
+  </ul></details></nav>
   <footer>Party control: today&rsquo;s member lists; 2023&ndash;2025 from the National Conference of State Legislatures; 2027 from reported November 2026 results.</footer>
 </main>
 <script type="application/json" id="power">{}</script>
