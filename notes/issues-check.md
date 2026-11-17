@@ -259,3 +259,72 @@ Questions for the owner:
 3. Redistricting includes statewide laws on how counties and cities redraw their own districts. Keep, or legislative and
    congressional maps only?
 4. Nuclear energy includes nuclear plants' security, emergency planning and decommissioning. Keep?
+
+# National issues: the fourth ten (2026-11-17)
+
+Short-term rentals, water rights and supply, psychedelics, crypto ATMs, Medicaid work requirements, daylight saving time,
+book removals in schools and libraries, medical debt, police accountability and the death penalty, approved by the owner
+the same day, added and checked the same way over the same bills: three to five rounds, a fresh random sample each. The
+first thirty issues' rules are unchanged by this batch. Daylight saving time has no group (`"group": ""`): the issues index
+(issues_site.py) and the front page's menu (home.html) both put issues outside issues.GROUPS under "Other", so it shows
+there.
+
+| Issue | Bills (this session) | Right of 30 read | States with none |
+|---|---|---|---|
+| Short-term rentals | 277 (97) | 28 | ND, NM, NV, SD, WY |
+| Water rights and supply | 953 (394) | 27-28 | AK, KY, NC, OH, VT |
+| Psychedelics | 182 (89) | 29 | AL, AR, DE, ID, NC, ND, OH, SC, TN, WY |
+| Crypto ATMs | 87 (72) | 29 | AR, CA, GA, MT, ND, NE, NM, NV, OR, VT |
+| Medicaid work requirements | 48 (30) | 28 | 27 states (AK, AL, AR, AZ, DE, GA, IL, KY, LA, MA, ME, MI, NC, ND, NM, NV, OH, OK, OR, RI, SC, TN, TX, VA, VT, WA, WI) |
+| Daylight saving time | 194 (72) | 30 | AL, AZ, CO, DE, LA, MT, OH, SD, WY |
+| Book removals in schools and libraries | 137 (50) | 28 | AZ, DE, IN, KS, KY, MA, ME, NC, NH, OR, WA |
+| Medical debt | 231 (106) | 28 | AL, AR, AZ, MS, ND, NH, UT, WV |
+| Police accountability | 873 (283) | 28-29 | MT, SD |
+| Death penalty | 332 (120) | 28 | AK, ME, ND, RI, VT, WY |
+
+Earlier rounds: water 26, then 24-26 (passing mentions of groundwater and water supply), then 27-28; medical debt 13 at
+first ("financial assistance" and liens in unrelated bills), then 28; books 27, then 28; police 26, then 28; death penalty
+26, then 28; short-term rentals 28; the others 28-30 from the start. Medicaid work requirements are few because the
+federal requirement (2025) left little for states to pass, and some states (Georgia's Pathways, Arkansas) set theirs by
+waiver; Crypto ATMs are mostly 2025-26 bills, so the session totals are nearly all this session.
+
+Scope decided here:
+- Short-term rentals: local regulation and its limits, registration, hosting platforms, occupancy and sales taxes on
+  short-term rentals, safety rules, property tax classification. Not hotel taxes generally (a bill on lodging taxes counts
+  when it names short-term rentals), car rentals, or a child's short-term placement.
+- Water rights and supply: water rights and their transfer or abandonment, groundwater management and conservation
+  districts, aquifers, drought plans, water conservation, water banks and markets, interstate compacts, the Colorado River,
+  long-term supply planning. Not water quality (contamination, discharge permits, monitoring wells, stormwater), soil and
+  water conservation districts, appliance efficiency standards, utility rates and shutoffs, foreign land ownership lists,
+  "prior appropriation" of money, or California's bond act named for drought among other things.
+- Psychedelics: psilocybin (therapy programs, Oregon's and Colorado's "natural medicine" services, decriminalization,
+  rescheduling when the FDA approves it), MDMA, ibogaine research. Not lists of controlled substances in sentencing laws.
+- Crypto ATMs: virtual currency, cryptocurrency and digital asset kiosks; broader crypto laws only where they cover kiosks.
+- Medicaid work requirements: work or community engagement requirements for Medicaid (and its state names), waivers to
+  seek them, studies of their effects, constitutional amendments allowing them. Not SNAP or TANF work rules alone.
+- Daylight saving time: permanent standard or daylight time, leaving or joining the clock change, time zones, studies.
+- Book removals: challenges to and removal of books and materials in school and public libraries, "harmful to minors"
+  and obscenity rules for libraries (including removing schools' and libraries' exemption from obscenity laws), "freedom
+  to read" laws, review of instructional materials for sexual content, librarians' liability. Not library funding, and not
+  ordinary curriculum or instructional materials adoption.
+- Medical debt: credit reporting of medical debt, collection limits (liens on homes, garnishment, lawsuits), interest
+  caps, debt relief programs, hospital financial assistance and charity care tied to bills and collection, price
+  transparency laws that bar collection. Not hospitals' liens on injury settlements or charity care as a reporting line.
+- Police accountability: use of force (including chokeholds and deadly force), body and dashboard cameras and their
+  footage, no-knock warrants, qualified immunity, decertification, misconduct records and databases, civilian oversight,
+  independent investigation of police killings, duty to intervene. Body-camera grants count (not funding alone in general,
+  but the cameras are the subject); correctional officers' cameras and standards count too. Not security guards or
+  general strangulation crimes.
+- Death penalty: abolition and reinstatement, methods (nitrogen hypoxia, firing squad), execution procedures and secrecy,
+  which crimes are capital, intellectual disability and mental illness exemptions, capital defense. "Capital murder" alone
+  (a life-sentence crime in Texas and Mississippi) needs death in the same passage, unless the bill creates a capital
+  crime. Not "execution" of documents or duties, physician-assisted death, or Louisiana's phrase for any felony ("may be
+  sentenced to death or imprisonment at hard labor").
+
+Questions for the owner:
+1. Police accountability includes correctional officers (body cameras in prisons, a corrections standards commission).
+   Keep, or police only?
+2. Water rights and supply includes water conservation (turf and landscaping limits, homeowners' associations and
+   lawns). Keep?
+3. Medical debt includes hospital price transparency laws when they bar collecting from patients of noncompliant
+   hospitals. Keep?

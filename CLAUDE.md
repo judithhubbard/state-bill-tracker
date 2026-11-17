@@ -2166,14 +2166,17 @@ from that repo. **Nothing here may change it.**
   committees' member votes. issues_site.py reads every two-letter folder, so it counts Congress among the states (a "Congress"
   row in each issue's table, and in the "N states" and bill counts; not on the tile maps, which only have states): to be
   kept out for now (an owner's decision; not changed here).
-- **National issues (built 2026-11-15):** the same subjects across states, thirty of them: data centers, PFAS, AI, children
+- **National issues (built 2026-11-15):** the same subjects across states, forty of them: data centers, PFAS, AI, children
   online, phones in schools, housing supply, minimum wage, right to repair, sports betting, prescription drug costs (the
   first ten, chosen in notes/issues-draft.md with the owner's answers), and abortion, firearms, school vouchers and
   education savings accounts, voting and elections, immigration (named "Immigration enforcement" until 2026-11-17; the id
   is still "immigration"), rent and tenants, property tax relief, transgender people, diversity, equity and inclusion,
   cannabis (the second ten, added the same day), and data privacy, campaign finance, redistricting, paid family and sick
   leave, child care, IVF and fertility, fluoride in drinking water, nuclear energy, wildfire, noncompete agreements (the
-  third ten, 2026-11-17, after the owner's answers on the second ten). Each one's scope, the checks, the owner's answers
+  third ten, 2026-11-17, after the owner's answers on the second ten), and short-term rentals, water rights and supply,
+  psychedelics, crypto ATMs, Medicaid work requirements, daylight saving time (group "", shown under "Other"), book
+  removals in schools and libraries, medical debt, police accountability, death penalty (the fourth ten, the same day).
+  Each one's scope, the checks, the owner's answers
   and open questions are in notes/issues-check.md. `issues.py` holds each issue's rules (patterns that must appear within
   400 characters of each other, exclusions, filters such as AI's "Chatbots"); a match in the title or summary counts, one
   only in a long "What it does" needs two mentions (budget bills name subjects in passing). Minimum wage is only bills

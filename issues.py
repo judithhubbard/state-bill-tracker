@@ -374,6 +374,76 @@ ISSUES = [
      "rules": [[r"\bnon-?compet(?:e|es|ition)\b"], [r"\bcovenants? not to (?:compete|solicit)\b"], [r"\bagreements? not to compete\b"],
                [r"\brestrictive (?:employment )?covenants?\b", r"\b(?:employ\w*|workers?|physicians?)\b"],
                [r"\bno-?poach\w*\b"], [r"\bnon-?solicitation\b", r"\bemploy\w*\b"]]},
+    # The fourth ten (2026-11-17; notes/issues-check.md).
+    {"id": "strentals", "group": "Housing and taxes", "name": "Short-term rentals",
+     # Homes rented by the night (Airbnb, Vrbo): local rules, registration, taxes. Not hotel taxes generally.
+     "rules": [[r"\bshort[- ]term (?:residential )?rentals?\b", r"!\bshort[- ]term rentals? of (?:motor )?(?:vehicles?|cars?|equipment|passenger)", r"!\b(?:child is placed|placement of (?:a |the )?child)\b"],
+               [r"\bvacation (?:rentals?|homes? rentals?)\b"], [r"\b(?:Airbnb|VRBO|home[- ]?sharing|homestay)\b", r"!\b(?:Amazon|eBay|Etsy)\b"],
+               [r"\btransient (?:rentals?|occupancy|lodging|accommodations?)\b", r"\b(?:short[- ]term|vacation|hosting platforms?|residential (?:dwellings?|propert\w*|units?)|home[- ]?sharing)\b"],
+               [r"\b(?:hosting|booking|rental) platforms?\b", r"\b(?:rentals?|lodging|accommodations?)\b"]]},
+    {"id": "water", "group": "Environment and energy", "name": "Water rights and supply",
+     # Water rights, allocation, groundwater, drought and interstate compacts. Not water quality alone (PFAS and fluoride
+     # are their own issues) or utility billing.
+     # Not foreign ownership lists ("agricultural land, forest land, water rights, mining claims").
+     "rules": [[r"\bwater rights?\b", r"!\bforeign (?:governments?|adversar\w*|principals?|entit\w*|state-controlled)\b"], [r"\bgroundwater\b", r"!\b(?:contaminat\w*|pollut\w*|remediat\w*|cleanup|PFAS|nitrate|cannabis|discharg\w*|stormwater|landfills?|waste|quality|groundwater protection|monitoring wells?|groundwater monitoring|carbon (?:sequestration|dioxide))\b"], [r"\baquifers?\b"],
+               [r"\bdroughts?\b", r"!\bburn bans?\b"], [r"\bwater (?:allocation|appropriation|banking|transfers?|conservation|shortages?|scarcity|use permits?|resources? (?:plan|management|board|commission))\b"],
+               [r"\b(?:interstate )?(?:water|river) compacts?\b"], [r"\binstream flow"], [r"\bprior appropriation\b", r"\bwater\b", r"!\bprior appropriation from\b"], [r"\bColorado River\b"],
+               [r"\bwater suppl(?:y|ies)\b", r"\b(?:drought|shortage|long[- ]term|planning|plans?|future|regional|reservoirs?|storage|sustainab\w*)\b",
+                r"!\b(?:public water suppl(?:y|ies)|drinking water|fluorid\w*|lead|PFAS|contaminat\w*|sewer|wastewater|solid waste|non-?payment|shutoffs?|discontinu\w*|water bills?)\b"]],
+     # Soil and water conservation districts work on erosion and farm runoff; California's 2024 bond act's name.
+     "none": [r"\bsoil\W*(?:and|&)\W*water conservation\b", r"\bwater rates\b", r"\bappliance\w*\b", r"\bwater conservation board\b", r"\bWildfire Prevention, Drought Preparedness, and Clean Air Bond Act\b"]},
+    {"id": "psychedelics", "group": "Health", "name": "Psychedelics",
+     # Psilocybin, MDMA, ibogaine and the like: therapy programs, decriminalization, research. Not cannabis.
+     # Not lists of controlled substances in sentencing laws.
+     "rules": [[r"\bpsilocybin\b", r"!\b(?:heroin|cocaine|fentanyl|methamphetamine|phencyclidine)\b"], [r"\bpsilocin\b", r"!\b(?:heroin|cocaine|fentanyl|methamphetamine|phencyclidine)\b"], [r"\bpsychedelic"], [r"(?-i)\bMDMA\b"], [r"\bibogaine\b"], [r"\bentheogen"],
+               [r"\bnatural medicines?\b", r"\b(?:healing|psilocybin|therapy|facilitat\w*|mushrooms?)\b"],
+               [r"\bmethylenedioxymethamphetamine\b", r"\b(?:therap\w*|research|treatment|clinical)\b"]]},
+    {"id": "cryptoatm", "group": "Technology", "name": "Crypto ATMs",
+     "rules": [[r"\b(?:virtual|digital|crypto) ?(?:currency|assets?)? ?kiosks?\b"], [r"\bcryptocurrency kiosks?\b"], [r"\b(?:crypto|cryptocurrency|bitcoin|virtual currency) ATMs?\b"],
+               [r"\bkiosks?\b", r"\b(?:virtual currenc\w*|cryptocurrenc\w*|crypto|digital assets?|digital currenc\w*|bitcoin)\b"]]},
+    {"id": "medicaidwork", "group": "Health", "name": "Medicaid work requirements",
+     "rules": [[r"\bwork (?:or|and) community engagement\b"], [r"\bcommunity engagement requirements?\b"],
+               [r"\bwork requirements?\b", r"\b(?:medicaid|medical assistance|MassHealth|Medi-Cal|TennCare|SoonerCare|HUSKY|BadgerCare|KanCare|Healthy Indiana Plan|HIP|Pathways|ARHOME|Arkansas Works|expansion (?:population|adults?))\b"],
+               [r"\bable-bodied adults?\b", r"\b(?:work|employment|volunteer)\b", r"\b(?:medicaid|medical assistance|Medicaid expansion)\b", r"!\b(?:SNAP|food (?:assistance|stamps))\b"],
+               [r"\b(?:employment|work) (?:as a )?(?:condition|requirement) (?:of|for) (?:medicaid|medical assistance) eligibility\b"]]},
+    {"id": "dst", "group": "", "name": "Daylight saving time",
+     "rules": [[r"\bdaylight sav(?:ing|ings)\b"], [r"\bstandard time\b", r"\b(?:year[- ]round|permanent\w*|observ\w*|exempt\w*|daylight)\b"],
+               [r"\b(?:Atlantic|Central|Eastern|Mountain|Pacific) (?:standard )?time\b", r"\b(?:year[- ]round|permanent\w*|observ\w*|time zones?)\b"]]},
+    {"id": "books", "group": "Schools", "name": "Book removals in schools and libraries",
+     # Challenges to and removal of books and materials, "harmful to minors" rules for libraries, librarians' liability.
+     # Not library funding alone.
+     "rules": [[r"\bbook (?:bans?|banning|removals?|challenges?)\b"], [r"\bfreedom to read\b"], [r"\bchallenged (?:books?|materials?)\b"],
+               [r"\b(?:library|instructional|reading|classroom|school) (?:materials?|books?|collections?)\b",
+                r"\b(?:challeng\w*|obscen\w*|harmful to minors|sexually explicit|pornograph\w*|reconsideration|censor\w*|book removals?|remov\w* (?:of |the )?(?:books?|materials?|titles?)|(?:books?|materials?|titles?) (?:to be |be |are |were )?removed)\b"],
+               [r"\blibrar(?:y|ies|ians?)\b", r"\b(?:obscen\w*|harmful to minors|sexually explicit|pornograph\w*|censor\w*|book bans?)\b"],
+               [r"\blibrarians?\b", r"\b(?:prosecut\w*|criminal liability|affirmative defense|immunit\w*)\b"]]},
+    {"id": "medicaldebt", "group": "Health", "name": "Medical debt",
+     # Not hospitals' liens on injury settlements, or charity care as a line in hospital reporting.
+     "rules": [[r"\bmedical (?:debts?|bills?|billing)\b", r"\b(?:credit reports?|credit reporting|consumer reports?|collect\w*|interest|garnish\w*|debts?)\b"],
+               [r"\bmedical debts?\b"], [r"\bhealth care debts?\b"], [r"\bextraordinary collection actions?\b"],
+               [r"\b(?:debt collect\w*|collection actions?|wage garnishment)\b", r"\b(?:hospitals?|medical|health care (?:providers?|facilit\w*|services))\b"],
+               [r"\b(?:hospital financial assistance|charity care|financial assistance polic(?:y|ies))\b", r"\b(?:medical debts?|collection actions?|debt collect\w*|collect\w* (?:a |the )?(?:debt|bill)s?|bills? (?:to|sent))\b"]]},
+    {"id": "police", "group": "Rights and public safety", "name": "Police accountability",
+     # Use of force, body cameras, misconduct records, decertification, qualified immunity, civilian oversight. Not
+     # police funding or pay alone.
+     "rules": [[r"\buse of (?:deadly |physical |excessive )?force\b", r"\b(?:police|law enforcement|peace officers?|officers?)\b", r"!\b(?:self[- ]defense|security (?:guards?|officers?))\b"],
+               [r"\bbody[- ](?:worn )?cameras?\b"], [r"\bchoke ?holds?\b", r"\b(?:police|law enforcement|peace officers?|officers?)\b"], [r"\bno[- ]knock\b"], [r"\bqualified immunity\b", r"\b(?:police|law enforcement|peace officers?|officers?|government\w*|public (?:officials?|employees?)|civil rights)\b"],
+               [r"\bdecertif\w*\b", r"\b(?:police|law enforcement|peace officers?|officers?)\b"],
+               [r"\bcivilian (?:review|oversight|complaint)"], [r"\b(?:police|officer|law enforcement) (?:misconduct|accountability|discipline|disciplinary)\b"],
+               [r"\bexcessive force\b"], [r"\bduty to intervene\b"], [r"\bBrady (?:lists?|disclosures?|material)\b"],
+               [r"\b(?:misconduct|disciplinary|personnel) records?\b", r"\b(?:police|law enforcement|peace officers?)\b", r"!\bstudents?\b"],
+               [r"\bofficer[- ]involved (?:shootings?|deaths?)\b"], [r"\bdeadly force\b", r"\b(?:police|law enforcement|peace officers?|officers?)\b"]]},
+    {"id": "deathpenalty", "group": "Rights and public safety", "name": "Death penalty",
+     # "Capital murder" (Texas, Mississippi) is also the name of crimes punished by life in prison: only with death in
+     # the same passage, unless the bill creates a capital crime.
+     "rules": [[r"\bdeath penalty\b"], [r"\bcapital (?:punishment|cases?|sentenc\w*|defendants?|trials?|prosecutions?|sexual battery|child rape)\b"],
+               [r"\bcapital (?:murder|offenses?|crimes?|felon\w*)\b", r"\b(?:death|executions?|aggravating|mitigating|creat\w*|establish\w*)\b"],
+               # Louisiana's statutes call a felony a crime "for which an offender may be sentenced to death or imprisonment at hard labor".
+               [r"\bsentences? of death\b"], [r"\bdeath sentences?\b"], [r"\bsentenced to death\b", r"!\bsentenced to death or (?:life )?imprisonment at hard labor\b"], [r"\bdeath row\b"], [r"\blethal injection\b", r"!\b(?:euthanasia|mercy killing|patients?|end of life|aid in dying)\b"],
+               [r"\bnitrogen hypoxia\b"], [r"\bfiring squad\b"], [r"\belectrocution\b", r"\b(?:execut\w*|sentence)\b"],
+               [r"\bexecutions?\b", r"\b(?:lethal|condemned|death|capital|execution (?:protocols?|drugs?|chambers?|teams?|methods?|witness\w*))\b",
+                r"!\bexecution of (?:a |the |any )?(?:documents?|warrants?|instruments?|contracts?|wills?|deeds?|agreements?|search|judgments?|leases?)\b",
+                r"!\bexecution of (?:their|his|her|its|the|such|official) (?:\w+ )?(?:duties|powers|functions|responsibilit\w*|office)\b"]]},
 ]
 
 

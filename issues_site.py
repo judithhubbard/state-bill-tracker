@@ -54,6 +54,16 @@ DESC = {
     "nuclear": "Bills about nuclear power: new reactors and small modular reactors, lifting moratoriums, fusion, plants and their costs.",
     "wildfire": "Bills about wildfires: prevention and prescribed burns, utilities’ wildfire plans and liability, insurance, firefighting.",
     "noncompete": "Bills about noncompete agreements and other limits on workers taking a new job, for all workers or for doctors and others.",
+    "strentals": "Bills about short-term rentals such as Airbnb: local rules, registration, taxes and booking platforms.",
+    "water": "Bills about who gets water: water rights, groundwater, drought, conservation and interstate river compacts.",
+    "psychedelics": "Bills about psilocybin, MDMA, ibogaine and other psychedelics: therapy programs, research, decriminalization.",
+    "cryptoatm": "Bills about crypto ATMs (virtual currency kiosks): licensing, transaction limits and fraud protections.",
+    "medicaidwork": "Bills about work or community engagement requirements for people on Medicaid.",
+    "dst": "Bills about daylight saving time: permanent standard or daylight time, or leaving the yearly clock change.",
+    "books": "Bills about challenges to and removal of books and materials in schools and libraries, and librarians’ liability.",
+    "medicaldebt": "Bills about medical debt: credit reports, collection limits, interest, relief programs and hospital financial assistance.",
+    "police": "Bills about police accountability: use of force, body cameras, misconduct records, decertification, oversight.",
+    "deathpenalty": "Bills about the death penalty: abolishing or restoring it, which crimes it covers, and how executions are carried out.",
 }
 
 CSS = """
@@ -225,7 +235,10 @@ SHORT = {"datacenters": "data centers", "pfas": "PFAS", "ai": "artificial intell
          "tenants": "rent and tenants", "proptax": "property tax relief", "transgender": "transgender people", "dei": "DEI",
          "cannabis": "cannabis", "privacy": "data privacy", "campaignfinance": "campaign finance",
          "redistricting": "redistricting", "paidleave": "paid leave", "childcare": "child care", "ivf": "IVF and fertility",
-         "fluoride": "fluoride", "nuclear": "nuclear energy", "wildfire": "wildfire", "noncompete": "noncompetes"}
+         "fluoride": "fluoride", "nuclear": "nuclear energy", "wildfire": "wildfire", "noncompete": "noncompetes",
+         "strentals": "short-term rentals", "water": "water rights", "psychedelics": "psychedelics", "cryptoatm": "crypto ATMs",
+         "medicaidwork": "Medicaid work requirements", "dst": "daylight saving time", "books": "book removals",
+         "medicaldebt": "medical debt", "police": "police accountability", "deathpenalty": "death penalty"}
 
 
 def step(n):
