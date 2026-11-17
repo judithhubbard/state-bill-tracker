@@ -7,8 +7,8 @@ Only the sessions still live (the current one, and next year's prefiled bills wh
 would more than double the download. Each file is small enough to load all 51 on a phone when the box is first used
 (Cloudflare compresses them); a query naming a state loads that state's first.
 
-Each file: {"st", "name", "s": [{"session", "page" ("" for the state's index page), "live", "up" (prefiled for a session
-not begun), "b": [[number, title, stage, ("c" for a constitutional amendment, else 0), [other numbers]?], ...],
+Each file: {"st", "name", "s": [{"session", "label" ("2025–26": shown beside a result when a state has two sessions in the
+search), "page" ("" for the state's index page), "live", "up" (prefiled for a session not begun), "b": [[number, title, stage, ("c" for a constitutional amendment, else 0), [other numbers]?], ...],
 "t": {issue id: [indexes into b]}}]}: "t" is each national issue's bills (the state's data/issues_<session>.json), so a
 search for "kratom" also finds "Prohibits the sale of 7-hydroxymitragynine products". search/topics.json gives each issue
 the words that call it up: its name, short name and issues.py's "words".
@@ -53,9 +53,11 @@ def main(out):
             for a, lead in (d.get("alias") or {}).items():
                 others.setdefault(lead, []).append(a)
             # Each national issue's bills in this session, by number without its amendment letter.
-            on = {}
+            on, label = {}, str(d["session"])
             try:
-                for x in json.load(open(os.path.join(out, st, "data", f"issues_{d['session']}.json"), encoding="utf-8"))["bills"]:
+                iss = json.load(open(os.path.join(out, st, "data", f"issues_{d['session']}.json"), encoding="utf-8"))
+                label = iss.get("label") or label
+                for x in iss["bills"]:
                     for n in [x[2], *(x[10] if len(x) > 10 else [])]:
                         on.setdefault(re.sub(r"[A-Z]$", "", n), set()).update(x[0])
             except (OSError, ValueError, KeyError):
@@ -68,7 +70,7 @@ def main(out):
                 if key in others:
                     row.append(others[key])
                 rows.append(row)
-            sessions.append({"session": d["session"], "page": page, "live": True, "up": bool(page), "b": rows, "t": tags})
+            sessions.append({"session": d["session"], "label": label, "page": page, "live": True, "up": bool(page), "b": rows, "t": tags})
             total += len(rows)
         if not sessions:
             continue

@@ -486,7 +486,7 @@ ISSUES = [
                [r"\bunfair labor practices?\b"], [r"\b(?:right to strike|work stoppages?|lockouts?|striking (?:workers|employees)|strikers)\b", r"!\bstrikers? (?:in|of) (?:bowling|baseball)\b"],
                [r"\bstrikes?\b", r"\b(?:public employees?|teachers?|labor disputes?|unions?|workers|employees)\b", r"!\b(?:strike (?:out|through|teams?|forces?)|strikes (?:all|the|section|sections|original|everything|out)|AM ?\d+ strikes|stricken|lightning|motions? to strike|three strikes?|drone strikes?|military strikes?|air ?strikes?|strike (?:a|the) (?:word|provision|language|section))\b"]],
      "none": [r"\bcredit unions?\b"]},
-    {"id": "initiatives", "group": "Elections", "name": "Ballot initiatives", "words": ["ballot initiative", "referendum", "ballot measure", "petition signatures"],
+    {"id": "initiatives", "group": "Elections", "name": "Ballot initiative rules", "words": ["ballot initiative", "referendum", "ballot measure", "petition signatures"],
      # Citizens' initiatives and referendums: signature rules, vote thresholds, single subject, circulators, ballot
      # titles. These bills are under Voting and elections too.
      "rules": [[r"\binitiative (?:and referend\w* )?(?:petitions?|measures?|process\w*|proposals?|powers?|rights?)\b"], [r"\breferend(?:um|a|ums) (?:petitions?|process\w*|powers?|rights?)\b"],
@@ -600,10 +600,32 @@ def _compile(p):
     return re.compile(p, re.I)
 
 
+# Anti-ESG and boycott laws list the industries and causes a company mustn't be penalized for ("companies that boycott
+# businesses because the business engages in the fossil fuel or firearm industry ... or does not facilitate access to
+# abortion or sex or gender change surgery": Alabama SB 261 of 2023). A mention in such a list is the ESG issue's,
+# not abortion's, firearms', transgender people's or climate's: every other issue skips a window that has one.
+NOT_BOYCOTT = (r"\b(?:boycott\w*|environmental, social,? (?:and|or|&) (?:corporate )?governance|economic boycott criteria"
+               r"|corporate governance standards|(?:discriminat\w*) against (?:a |the )?(?:firearm|fossil fuel|energy|oil and gas)\w* "
+               r"(?:industr\w*|compan\w*|entit\w*|trade associations?))\b|(?-i:\bESG\b)")
+# ESG's own issue keeps them; so do DEI (anti-ESG bills often target DEI programs too: Kentucky HB 388 of 2025), unions
+# (a labor boycott is a union matter) and climate (climate risk disclosure sits beside ESG metrics: H.R. 1187 of the 117th
+# Congress; no boycott list made a climate match).
+BOYCOTT_OK = {"esg", "dei", "unions", "climate"}
+
+
+class _NotBoycott:
+    """The exclusion above, except where "boycott" is a labor one (a labor peace agreement barring "picketing, work
+    stoppages, boycotts": Hawaii SB 2241 of 2023 is still a cannabis bill)."""
+    pat = re.compile(NOT_BOYCOTT, re.I)
+    labor = re.compile(r"\b(?:labor peace|work stoppages?|picketing|labor organi[sz]ations?|strikes?)\b", re.I)
+
+    def search(self, win):
+        return self.pat.search(win) and not self.labor.search(win)
+
 for _issue in ISSUES:
     _issue["_rules"] = [([_compile(p) for p in rule if not p.startswith("!")],
                          [_compile(p[1:]) for p in rule if p.startswith("!")]) for rule in _issue["rules"]]
-    _issue["_none"] = [_compile(p) for p in _issue.get("none", [])]
+    _issue["_none"] = [_compile(p) for p in _issue.get("none", [])] + ([] if _issue["id"] in BOYCOTT_OK else [_NotBoycott()])
     _issue["_filters"] = {k: [_compile(p) for p in v] for k, v in _issue.get("filters", {}).items()}
 BY_ID = {i["id"]: i for i in ISSUES}
 

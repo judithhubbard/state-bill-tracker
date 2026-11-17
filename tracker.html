@@ -20,7 +20,7 @@
   --gold: #c8921a;
   --gold-soft: #f6ead0;
   --gold-ink: #8a5f0c;
-  --signed: #1f7a4d; --signed-ink: #18693f;
+  --signed: #1f7a4a; --signed-ink: #1f7a4a;
   --signed-soft: #dcefe4;
   --law-bar: #43b072;
   --veto: #b3372b;
@@ -32,6 +32,12 @@
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --dem: #1f5bb5; --rep: #b3261e; --ind: #5f6b7a; --badge-ink: #ffffff;
+  /* Colors mean the same on every page: blue and red only for party (muted), green for became law, red-brown for
+     vetoed, gold only for what's yours, needs your action or is new, grey for stalled. Moving bills are slate. */
+  --pty-d: #d2def5; --pty-d-ink: #1b3566; --pty-d-step: #92aee3;
+  --pty-r: #f5d3cf; --pty-r-ink: #6e1f18; --pty-r-step: #e49b93;
+  --law-c: #1f7a4a;
+  --move: #5d6b86; --move-2: #2c3a57; --move-soft: #e4e9f2;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -39,6 +45,9 @@
     --navy: #8fb0f0; --gold: #e3b04b; --gold-ink: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
     --veto: #ee7d70; --veto-soft: #3d1f1d; --refer: #4f5d7c; --pip-off: #26324b; --chip: #1d2944; --focus: #8fb0f0;
     --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1626;
+    --pty-d: #2f4670; --pty-d-ink: #e3eaf7; --pty-d-step: #4a70b5;
+    --pty-r: #5c3431; --pty-r-ink: #f8dfdb; --pty-r-step: #93473f;
+    --law-c: #5cc28c; --move: #8e9bb5; --move-2: #c3cde0; --move-soft: #22304d;
     color-scheme: dark;
   }
 }
@@ -47,6 +56,9 @@
   --navy: #8fb0f0; --gold: #e3b04b; --gold-ink: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
   --veto: #ee7d70; --veto-soft: #3d1f1d; --refer: #4f5d7c; --pip-off: #26324b; --chip: #1d2944; --focus: #8fb0f0;
   --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1626;
+  --pty-d: #2f4670; --pty-d-ink: #e3eaf7; --pty-d-step: #4a70b5;
+  --pty-r: #5c3431; --pty-r-ink: #f8dfdb; --pty-r-step: #93473f;
+  --law-c: #5cc28c; --move: #8e9bb5; --move-2: #c3cde0; --move-soft: #22304d;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -82,7 +94,8 @@ h1 a { color: inherit; text-decoration: none; }
 
 /* Filters */
 .field { display: grid; gap: 4px; min-width: 0; }
-.field label { font: 600 11px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.field label { font: 600 12px/1.2 var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.field label.inline { font: 400 13px/1.35 var(--body); letter-spacing: 0; text-transform: none; }
 input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-size: 14px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 5px; padding: 8px 10px; }
 .toggles { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font-size: 13px; color: var(--ink-2); }
 .toggles label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
@@ -111,20 +124,23 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .meta { font-size: 12.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .tag { font-size: 11px; font-weight: 600; background: var(--chip); color: var(--ink-2); border-radius: 3px; padding: 1px 6px; }
-.tag.env { background: var(--signed-soft); color: var(--signed-ink); }
-.tag.party::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
-.tag.party.dem::before { background: #3b6fd1; }
-.tag.party.rep::before { background: #c8423a; }
-.tag.party.both::before { background: linear-gradient(90deg, #3b6fd1 50%, #c8423a 50%); }
+.pty { display: inline-block; font: 700 11px/1.6 var(--body); padding: 0 5px; border-radius: 4px; white-space: nowrap; }
+.pty.D { background: var(--pty-d); color: var(--pty-d-ink); }
+.pty.R { background: var(--pty-r); color: var(--pty-r-ink); }
+.pty.B { background: var(--chip); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); }
+.ptyline { font-size: 12.5px; color: var(--ink-2); }
+.ptags { display: grid; gap: 6px; }
+.ptags .pfacts { font-size: 12.5px; color: var(--ink-2); }
 .status { display: grid; gap: 5px; justify-items: start; }
 .track { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; width: 100%; }
 .pip { height: 6px; border-radius: 1px; background: var(--pip-off); }
-.pip.on { background: var(--navy); }
-.pip.on.gold { background: var(--gold); }
+.pip.on { background: var(--move); }
+.pip.on.gold { background: var(--move-2); }
 .pip.on.ok { background: var(--signed); }
 .pip.on.no { background: var(--veto); }
 .st { font-size: 12px; font-weight: 600; line-height: 1.25; }
-.st.s3, .st.s4 { color: var(--gold-ink); }
+.st.s3, .st.s4 { color: var(--ink); }
+.st.over { color: var(--ink-2); }
 .st.s5 { color: var(--signed); }
 .st.s6 { color: var(--veto); }
 .st small { display: block; font-weight: 400; color: var(--ink-2); font-variant-numeric: tabular-nums; }
@@ -140,7 +156,7 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .ver .who { font-size: 12.5px; color: var(--ink-2); }
 .ver ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 12.5px; max-height: 220px; overflow-y: auto; }
 .ver li { display: grid; grid-template-columns: minmax(88px, max-content) minmax(0, 1fr); gap: 6px; }
-.ver li time { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ver li time { font-family: var(--body); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .more { justify-self: center; appearance: none; border: 1px solid var(--navy); background: var(--sheet); color: var(--navy); font: 600 14px var(--body); border-radius: 5px; padding: 9px 18px; cursor: pointer; margin-top: 16px; }
 .more:hover { background: var(--chip); }
@@ -166,7 +182,7 @@ footer p { margin: 0; max-width: 90ch; }
 .c-com { background: var(--pip-off); }
 .c-floor { background: color-mix(in srgb, var(--navy) 45%, var(--pip-off)); }
 .c-one { background: var(--navy); }
-.c-both { background: var(--gold); }
+.c-both { background: var(--move-2); }
 .c-law { background: var(--law-bar); }
 .c-veto { background: var(--veto); }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--ink-2); }
@@ -177,16 +193,16 @@ footer p { margin: 0; max-width: 90ch; }
 .chart svg .grid { stroke: var(--rule); stroke-width: 1; }
 
 /* Session notice and process explainer */
-.notice { background: var(--gold-soft); border-radius: 6px; padding: 10px 14px; font-size: 14px; max-width: none; margin: 0; }
+.notice { background: var(--chip); border-radius: 6px; padding: 10px 14px; font-size: 14px; max-width: none; margin: 0; }
 /* Key dates under each bill */
-.whatdoes h4, .sponsors h4, .keydates h4 { margin: 0 0 4px; font: 600 11px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.whatdoes h4, .sponsors h4, .keydates h4 { margin: 0 0 4px; font: 600 12px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 .sponsors p { margin: 0 0 3px; font-size: 13.5px; }
 .whatdoes { display: grid; gap: 6px; }
 .whatdoes .wd-stmt p { margin: 0 0 6px; font-size: 14px; }
 .whatdoes .wd-stmt p.muted { font-size: 12.5px; margin: 0; }
 .keydates ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
 .keydates li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; }
-.keydates time { font-family: var(--mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.keydates time { font-family: var(--body); font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .keydates .est { color: var(--gold-ink); font-weight: 600; }
 .votes .theirs { font-size: 12.5px; color: var(--ink-2); }
 .votes .vy { color: var(--signed); } .votes .vn { color: var(--veto); } .votes .vo { color: var(--ink-2); }
@@ -196,7 +212,7 @@ footer p { margin: 0; max-width: 90ch; }
 
 /* Session switcher */
 .sessions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.sessions a, .sessions span { font: 600 13px/1 var(--mono); padding: 6px 9px; border-radius: 4px; border: 1px solid var(--rule); text-decoration: none; color: var(--ink-2); background: var(--sheet); }
+.sessions a, .sessions span { font: 600 13px/1 var(--body); font-variant-numeric: tabular-nums; padding: 6px 9px; border-radius: 4px; border: 1px solid var(--rule); text-decoration: none; color: var(--ink-2); background: var(--sheet); }
 .sessions a:hover { border-color: var(--navy); color: var(--navy); }
 .sessions .here { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 .sessions .off { opacity: .55; }
@@ -204,7 +220,7 @@ footer p { margin: 0; max-width: 90ch; }
 /* Outcomes across sessions */
 .tablewrap { overflow-x: auto; }
 table.oc { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
-table.oc th { text-align: right; font: 600 11px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding: 6px 8px; border-bottom: 1px solid var(--ink); }
+table.oc th { text-align: right; font: 600 12px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding: 6px 8px; border-bottom: 1px solid var(--ink); }
 table.oc td { text-align: right; padding: 7px 8px; border-bottom: 1px solid var(--rule); }
 table.oc th:first-child, table.oc td:first-child { text-align: left; font-family: var(--mono); font-weight: 700; }
 table.oc tr.here td { background: var(--chip); }
@@ -216,7 +232,7 @@ table.oc th { vertical-align: bottom; }
 .note { font-size: 12.5px; color: var(--ink-2); margin: 0; max-width: 90ch; }
 
 /* Bill history across sessions */
-.tag.hist { background: var(--gold-soft); color: var(--ink); }
+.tag.hist { background: var(--chip); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--rule); }
 .tag[data-lineage] { cursor: pointer; }
 .tag[data-lineage]:hover { text-decoration: underline; }
 .tag.agenda { background: var(--navy); color: var(--sheet); }
@@ -231,25 +247,25 @@ table.oc th { vertical-align: bottom; }
 .tag.veto { background: var(--veto-soft); color: var(--veto); }
 .tag.law { background: var(--signed-soft); color: var(--signed); }
 .lineage { display: grid; gap: 4px; }
-.lineage h4 { margin: 0 0 2px; font: 600 11px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.lineage h4 { margin: 0 0 2px; font: 600 12px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 .lineage ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-left: 2px solid var(--rule); }
 .lineage li { display: grid; grid-template-columns: 70px minmax(0, 150px) minmax(0, 1fr); gap: 10px; padding: 4px 0 4px 12px; font-size: 13px; align-items: baseline; position: relative; }
 .lineage li::before { content: ""; position: absolute; left: -6px; top: 10px; width: 10px; height: 10px; border-radius: 50%; background: var(--sheet); border: 2px solid var(--pip-off); }
 .lineage li.s5::before { border-color: var(--signed); background: var(--signed); }
 .lineage li.s6::before { border-color: var(--veto); background: var(--veto); }
-.lineage li.s3::before, .lineage li.s4::before { border-color: var(--gold); background: var(--gold); }
-.lineage li.s2::before, .lineage li.s1::before { border-color: var(--navy); }
+.lineage li.s3::before, .lineage li.s4::before { border-color: var(--move-2); background: var(--move-2); }
+.lineage li.s2::before, .lineage li.s1::before { border-color: var(--move); }
 .lineage li.this { font-weight: 700; }
 .lineage li.this::before { border-color: var(--ink); }
-.lineage .yr { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+.lineage .yr { font-family: var(--body); font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--ink-2); }
 .lineage .bn { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
 .lineage .oc5 { color: var(--signed); font-weight: 600; }
 .lineage.similar li { grid-template-columns: minmax(0, 130px) minmax(0, 1fr) minmax(0, 150px); }
 .lineage.similar .sim-t { min-width: 0; }
-.lineage .twin { display: inline-block; font: 600 11px var(--body); background: var(--gold-soft); border-radius: 3px; padding: 0 5px; }
+.lineage .twin { display: inline-block; font: 600 11px var(--body); background: var(--chip); box-shadow: inset 0 0 0 1px var(--rule); border-radius: 3px; padding: 0 5px; }
 @media (max-width: 600px) { .lineage.similar li { grid-template-columns: minmax(0, 1fr); gap: 2px; } .lineage.similar li .oc { grid-column: auto; } }
 .lineage .oc6 { color: var(--veto); font-weight: 600; }
-.lineage .oc3, .lineage .oc4 { color: var(--gold-ink); font-weight: 600; }
+.lineage .oc3, .lineage .oc4 { color: var(--ink); font-weight: 600; }
 
 @media (max-width: 860px) {
 }
@@ -273,10 +289,11 @@ table.oc th { vertical-align: bottom; }
 .power { margin: 6px 0 0; color: var(--ink-2); font-size: 13px; line-height: 1.6; }
 .power:empty { display: none; }
 .power .bp-ch { white-space: nowrap; }
-.power .bp-why { display: block; }
-.bp-pty { display: inline-block; min-width: 1.3em; padding: 0 3px; border-radius: 3px; text-align: center; font-weight: 700;
-  font-size: 11px; line-height: 1.5; color: var(--badge-ink); text-decoration: none; vertical-align: 1px; }
-.bp-D { background: var(--dem); } .bp-R { background: var(--rep); } .bp-I, .bp-O, .bp-C { background: var(--ind); }
+.power .bp-why { display: none; }
+.bp-pty { display: inline-block; min-width: 1.3em; padding: 0 4px; border-radius: 4px; text-align: center; font-weight: 700;
+  font-size: 11px; line-height: 1.6; text-decoration: none; vertical-align: 1px; }
+.bp-D { background: var(--pty-d); color: var(--pty-d-ink); } .bp-R { background: var(--pty-r); color: var(--pty-r-ink); }
+.bp-I, .bp-O, .bp-C { background: var(--chip); color: var(--ink); }
 .bp-vp { font-size: 11px; font-style: italic; }
 .mast-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 10px 24px; }
 .mast .sessions { margin-top: 0; }
@@ -285,12 +302,22 @@ table.oc th { vertical-align: bottom; }
 .view-tab:hover { color: var(--ink); background: var(--chip); }
 .view-tab-end { margin-left: auto; }
 .view-tab[aria-current="page"] { background: var(--ink); color: var(--paper); }
+.view-tab .tab-short { display: none; }
+@media (max-width: 760px) {
+  .view-tab { padding: 7px 10px; font-size: 15px; }
+  .view-tab .tab-long { display: none; }
+  .view-tab .tab-short { display: inline; }
+  .view-tab-end { margin-left: 0; }
+}
+main { display: grid; gap: 16px; min-width: 0; }
+.resultbar .view-help { padding: 0; font-size: 13px; }
+.notice .nmore { font-size: 13px; margin-left: 4px; }
 .layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 32px; align-items: start; }
 .side { position: sticky; top: env(safe-area-inset-top, 0px); max-height: 100vh; overflow-y: auto; padding: 4px 22px 16px 0; border-right: 1px solid var(--rule); }
 .side-toggle { display: none; }
 .side-body { display: grid; gap: 16px; }
 .group { display: grid; gap: 8px; }
-.group-h { font: 600 11px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+.group-h { font: 600 12px/1.2 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
 .side .field { gap: 5px; }
 .side .field > label:not(.inline):not(.subsel) { font: 600 13px/1.2 var(--body); letter-spacing: 0; text-transform: none; color: var(--ink); }
 .morebody { display: grid; gap: 14px; margin-top: 10px; padding: 12px; background: var(--chip); border-radius: 6px; }
@@ -307,7 +334,7 @@ table.oc th { vertical-align: bottom; }
 .person h2 { margin: 0 0 2px; font: 700 22px var(--display); font-stretch: 85%; }
 .person p { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 90ch; }
 .person p b { color: var(--ink); font-weight: 600; }
-.person .phone { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+.person .phone { font-family: var(--body); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink); }
 .results { min-width: 0; display: grid; gap: 10px; align-content: start; }
 .sortby { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); }
 .sortby select { width: auto; padding: 4px 8px; font-size: 13px; }
@@ -329,7 +356,7 @@ table.oc th { vertical-align: bottom; }
 .srow .sn { font: 600 12px/1.5 var(--body); font-variant-numeric: tabular-nums; color: var(--ink-2); background: var(--chip); border-radius: 999px; padding: 0 8px; align-self: center; }
 .srow .ss { grid-column: 1 / -1; font-size: 11.5px; color: var(--ink-2); }
 .srow[aria-pressed="true"] .ss { color: var(--sheet); opacity: .85; }
-.srow[data-k="3"] .sn, .srow[data-k="4"] .sn { color: var(--gold-ink); }
+.srow[data-k="3"] .sn, .srow[data-k="4"] .sn { color: var(--ink); }
 .srow[data-k="5"] .sn { color: var(--signed); }
 .srow[data-k="6"] .sn { color: var(--veto); }
 .srow[aria-pressed="true"] .sn { color: var(--navy); background: var(--sheet); }
@@ -364,25 +391,25 @@ table.oc th { vertical-align: bottom; }
 .vrow .lab small, .vrow .val small { display: block; color: var(--ink-2); font-size: 11.5px; line-height: 1.25; }
 .vtrack { position: relative; height: 7px; background: var(--pip-off); border-radius: 2px; }
 .vtrack i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
-.vtrack i.a { background: var(--navy); }
+.vtrack i.a { background: var(--move); }
 .vtrack i.l { background: var(--law-bar); }
 .vtrack .tick { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; border-radius: 1px; box-shadow: 0 0 0 1px var(--paper); }
-.vtrack .tick.a { background: var(--navy); }
+.vtrack .tick.a { background: var(--move); }
 .net svg { display: block; max-width: 900px; }
 .whowrap { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; }
 @media (max-width: 900px) { .whowrap { grid-template-columns: minmax(0, 1fr); } }
 .who svg { display: block; width: 100%; height: auto; }
 .who .ring { fill: none; stroke: var(--rule); stroke-dasharray: 3 4; }
 .who circle[data-whol], .who rect[data-whol] { fill: var(--ink-2); stroke: var(--paper); stroke-width: 1; cursor: pointer; }
-.who .dem { fill: #3b6fd1; stroke: #3b6fd1; } .who .rep { fill: #c8423a; stroke: #c8423a; }
-.who circle[data-whol].dem, .who rect[data-whol].dem { fill: #3b6fd1; stroke: var(--paper); }
-.who circle[data-whol].rep, .who rect[data-whol].rep { fill: #c8423a; stroke: var(--paper); }
+.who .dem { fill: var(--pty-d-step); stroke: var(--pty-d-step); } .who .rep { fill: var(--pty-r-step); stroke: var(--pty-r-step); }
+.who circle[data-whol].dem, .who rect[data-whol].dem { fill: var(--pty-d-step); stroke: var(--paper); }
+.who circle[data-whol].rep, .who rect[data-whol].rep { fill: var(--pty-r-step); stroke: var(--paper); }
 .who line { stroke-opacity: .45; stroke-linecap: round; }
 .who svg.focus [data-whol]:not(.on) { opacity: .14; }
 .who .tlab { cursor: grab; touch-action: none; }
 .who svg { touch-action: pan-y; }
-.who [data-whol].split { stroke: var(--gold); stroke-width: 2.5; }
-.key .k-split { background: none; border: 2px solid var(--gold); border-radius: 50%; }
+.who [data-whol].split { stroke: var(--ink); stroke-width: 2.5; }
+.key .k-split { background: none; border: 2px solid var(--ink); border-radius: 50%; }
 .who .tlab circle { fill: var(--sheet); stroke: var(--navy); stroke-width: 2; }
 .who .tlab text { font: 600 15px var(--body); fill: var(--ink); }
 .who .tlab .abbr { display: none; }
@@ -396,18 +423,18 @@ table.oc th { vertical-align: bottom; }
 .wb { display: grid; grid-template-columns: minmax(0, 1fr) 90px 34px; gap: 6px; align-items: center; font-size: 12.5px; }
 .wb .bar { position: relative; height: 8px; background: var(--pip-off); border-radius: 4px; }
 .wb .bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--navy); border-radius: 4px; }
-.wb .bar b { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--gold); margin-left: -1.5px; border-radius: 1px; }
+.wb .bar b { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--ink); margin-left: -1.5px; border-radius: 1px; }
 .wb .v { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 .wholead { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 .tcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; }
 .tcard { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; font-size: 13.5px; }
 .tcard h3 { margin: 0; font: 700 15px var(--body); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.tcard .times { font: 700 18px var(--display); color: var(--gold-ink); }
+.tcard .times { font: 700 18px var(--display); color: var(--ink); }
 .tcard p { margin: 0; }
 .tcard .muted { color: var(--ink-2); font-size: 12.5px; }
 .spark .ln { fill: none; stroke-width: 2; }
 .spark .area { stroke: none; opacity: .15; }
-.spark .ln.new { stroke: var(--gold); } .spark .area.new, .spark circle.new { fill: var(--gold); }
+.spark .ln.new { stroke: var(--move-2); } .spark .area.new, .spark circle.new { fill: var(--move-2); }
 .spark .ln.old { stroke: var(--ink-2); stroke-dasharray: 3 3; } .spark circle.old { fill: var(--ink-2); }
 .repfind { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 8px 0 2px; }
 .repfind label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--ink-2); }
@@ -425,43 +452,43 @@ table.oc th { vertical-align: bottom; }
 .netzoom button { font: 600 13px var(--body); min-width: 30px; height: 28px; padding: 0 8px; border: 1px solid var(--rule); border-radius: 5px; background: var(--sheet); color: var(--ink); cursor: pointer; }
 .net svg.zoomed text { opacity: 1; }
 .net circle, .net rect { stroke: var(--paper); stroke-width: 1; cursor: pointer; fill: var(--ink-2); }
-.net .dem, .key .k-dem { fill: #3b6fd1; background: #3b6fd1; }
-.net .rep, .key .k-rep { fill: #c8423a; background: #c8423a; }
-.net line.x { stroke: var(--gold); stroke-opacity: .55; }
-.key .k-cross { background: var(--gold); height: 3px !important; width: 14px !important; }
+.net .dem, .key .k-dem { fill: var(--pty-d-step); background: var(--pty-d-step); }
+.net .rep, .key .k-rep { fill: var(--pty-r-step); background: var(--pty-r-step); }
+.net line.x { stroke: var(--move-2); stroke-opacity: .55; }
+.key .k-cross { background: var(--move-2); height: 3px !important; width: 14px !important; }
 .commctl input[type="search"] { width: 220px; padding: 4px 8px; font-size: 13px; }
 .net text { font: 600 9px var(--body); font-size: calc(10px / var(--k, 1)); fill: var(--ink); text-anchor: middle; pointer-events: none; opacity: 0; }
 .net svg.focus circle:not(.on), .net svg.focus rect:not(.on), .net svg.focus line:not(.on) { opacity: .15; }
 .net svg.focus text.on { opacity: 1; }
 .net svg.focus line.on { stroke-opacity: .9; }
-.vtrack .tick.p, .key .k-tick.p { background: var(--gold); }
+.vtrack .tick.p, .key .k-tick.p { background: var(--ink); }
 .mcols { display: grid; gap: 2px; height: 46px; align-items: end; }
 /* Month charts get more room than a single bar: 24 columns need it. */
 .vrow.wide { grid-template-columns: minmax(0, 230px) minmax(0, 480px) minmax(0, 200px); }
 .mcol { position: relative; height: 100%; background: var(--pip-off); border-radius: 1px; }
 .mcol i { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 1px; }
-.mcol i.a { background: var(--navy); } .mcol i.l { background: var(--law-bar); } .mcol i.v { background: var(--veto); }
-.mcol b { position: absolute; left: -1px; right: -1px; height: 3px; margin-bottom: -1px; background: var(--gold); }
+.mcol i.a { background: var(--move); } .mcol i.l { background: var(--law-bar); } .mcol i.v { background: var(--veto); }
+.mcol b { position: absolute; left: -1px; right: -1px; height: 3px; margin-bottom: -1px; background: var(--ink); }
 .mcol.gap, .mcols.axis span.gap { margin-left: 4px; }
 .mcols.axis { height: auto; font: 11px var(--mono, monospace); color: var(--ink-2); text-align: center; }
 .myears { display: grid; grid-template-columns: 1fr 1fr; font-size: 12.5px; color: var(--ink-2); }
 .myears span + span { padding-left: 4px; }
 .vtrack i.v { background: var(--veto); }
-.key .k-tick.now { background: var(--gold); width: 10px !important; height: 2px !important; box-shadow: none; }
+.key .k-tick.now { background: var(--ink); width: 10px !important; height: 2px !important; box-shadow: none; }
 .vtrack i.n, .vtrack .tick.n, .key .k-n, .key .k-tick.n { background: var(--refer); }
 .commctl { display: flex; gap: 20px; flex-wrap: wrap; }
 .vtrack .tick.l { background: var(--law-bar); }
 .vrow .val { font-size: 12.5px; line-height: 1.25; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .vrow .val b.big { font: 700 14px var(--display); font-stretch: 85%; color: var(--ink); }
 .key .k-tick { width: 3px !important; height: 12px !important; box-shadow: 0 0 0 1px var(--paper); }
-.key .k-tick.a { background: var(--navy); }
+.key .k-tick.a { background: var(--move); }
 .key .k-tick.l { background: var(--law-bar); }
 .houses { display: grid; gap: 22px; }
 .house h3.sub { margin-bottom: 8px; }
 .house .muted { color: var(--ink-2); font-size: 12.5px; margin: 6px 0 0; }
 .stack { display: flex; height: 22px; border-radius: 4px; overflow: hidden; max-width: 760px; }
 .stack i { display: block; height: 100%; }
-.t0 { background: var(--law-bar); } .t1 { background: var(--navy); } .t2 { background: var(--gold); } .t3 { background: var(--veto); }
+.t0 { background: var(--law-bar); } .t1 { background: var(--move); } .t2 { background: var(--move-2); } .t3 { background: var(--refer); }
 .key i.t0, .key i.t1, .key i.t2, .key i.t3 { width: 12px; height: 10px; border-radius: 2px; display: inline-block; }
 .perscards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
 .pcard { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; display: grid; gap: 8px; align-content: start; }
@@ -472,13 +499,13 @@ table.oc th { vertical-align: bottom; }
 .pcard .muted { color: var(--ink-2); font-size: 12.5px; }
 .dots { display: flex; gap: 6px; flex-wrap: wrap; }
 .dots .d { display: grid; justify-items: center; gap: 2px; }
-.dots small { font: 10px var(--mono); color: var(--ink-2); }
+.dots small { font: 11px var(--body); font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; background: var(--pip-off); }
 .dot.none { background: none; border: 1px dashed var(--rule); }
 .dot.s-1, .dot.s-2 { background: none; border: 2px solid var(--ink-2); }
 .dot.s0 { background: var(--ink-2); opacity: .55; }
-.dot.s2 { background: var(--navy); }
-.dot.s3 { background: var(--gold); }
+.dot.s2 { background: var(--move); }
+.dot.s3 { background: var(--move-2); }
 .dot.s5 { background: var(--signed); }
 .dot.s6 { background: var(--veto); }
 .dot.now { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -502,6 +529,19 @@ table.oc th { vertical-align: bottom; }
 .statsview .act-btn { justify-self: start; }
 .statsview .note { color: var(--ink-2); font-size: 13px; }
 .stattopic { max-width: 300px; }
+.funnel { display: grid; gap: 8px; max-width: 760px; }
+.frow { display: grid; grid-template-columns: 190px minmax(0, 1fr) 110px; gap: 12px; align-items: center; }
+.frow .fl { font-size: 14px; font-weight: 600; }
+.frow .fbar { height: 18px; background: var(--pip-off); border-radius: 3px; position: relative; overflow: hidden; }
+.frow .fbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--move); border-radius: 3px; }
+.frow.law .fbar i { background: var(--law-bar); }
+.frow .fn { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.frow .fn b { font-size: 15px; color: var(--ink); margin-right: 4px; }
+@media (max-width: 560px) { .frow { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; } .frow .fbar { grid-column: 1 / -1; grid-row: 2; } }
+details.statmore { border-top: 1px solid var(--rule); padding-top: 12px; }
+details.statmore > summary { cursor: pointer; font: 700 17px var(--display); font-stretch: 90%; color: var(--navy); }
+details.statmore[open] > summary { margin-bottom: 14px; }
+.statmore-body { display: grid; gap: 18px; }
 table.st { min-width: 0; }
 /* A legislator's tables: as wide as their content, not the page. */
 #personStats, #view-person { min-width: 0; }
@@ -532,7 +572,7 @@ table.st.comm thead tr:nth-child(2) th { top: calc(env(safe-area-inset-top, 0px)
 .twobar { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
 .twobar .track { position: relative; width: 140px; height: 10px; background: var(--pip-off); border-radius: 2px; flex: none; }
 .twobar .track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
-.twobar .a { background: var(--navy); }
+.twobar .a { background: var(--move); }
 .twobar .l { background: var(--law-bar); }
 .twobar b { font-weight: 600; min-width: 34px; color: var(--navy); }
 .twobar em { font-style: normal; color: var(--signed); font-weight: 600; }
@@ -544,7 +584,7 @@ p.key { flex-wrap: wrap; }
 p.key { display: flex; gap: 16px; font-size: 12.5px; color: var(--ink-2); margin: 0; }
 p.key span { display: inline-flex; align-items: center; gap: 6px; }
 p.key i { width: 12px; height: 10px; border-radius: 2px; display: inline-block; }
-.key .k-appr { background: var(--navy); }
+.key .k-appr { background: var(--move); }
 .key .k-law { background: var(--law-bar); }
 .key .k-veto { background: var(--veto); }
 .twobar .track.wide { width: 220px; }
@@ -607,8 +647,8 @@ table.st col.c-m { width: 80px; }
 .wcard .wlogged { margin: 0; font-size: 12.5px; color: var(--signed); font-weight: 600; }
 .wcard .wlogged::before { content: "✓ "; }
 .spill { font: 600 12.5px var(--body); border-radius: 999px; padding: 3px 10px; background: var(--pip-off); color: var(--ink); white-space: nowrap; }
-.spill.p2 { background: var(--chip); color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); }
-.spill.p3, .spill.p4 { background: var(--gold-soft); box-shadow: inset 0 0 0 1px var(--gold); }
+.spill.p2 { background: var(--chip); color: var(--ink); box-shadow: inset 0 0 0 1px var(--move); }
+.spill.p3, .spill.p4 { background: var(--move-soft); color: var(--ink); box-shadow: inset 0 0 0 1px var(--move-2); }
 .spill.p5 { background: var(--signed-soft); color: var(--signed); }
 .spill.p6 { background: var(--veto-soft); color: var(--veto); }
 .wsec { border-radius: 12px; padding: 14px 16px 16px; margin-top: 14px; }
@@ -653,7 +693,7 @@ details.actrec[open] > summary { margin-bottom: 8px; }
 .wcard .do .star { color: var(--gold); }
 .wcard .do .reach { font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .wcard .do .also { font-size: 13px; color: var(--ink-2); }
-.wcard .phone { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+.wcard .phone { font-family: var(--body); font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink); }
 a.phone { color: inherit; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 2px; }
 a.phone:hover { text-decoration-color: currentColor; }
 .act-btn.small { padding: 3px 9px; font-size: 12px; }
@@ -664,19 +704,19 @@ a.phone:hover { text-decoration-color: currentColor; }
 .wcard .why { margin: 0; font-size: 13.5px; color: var(--ink-2); border-left: 3px solid var(--rule); padding: 2px 0 2px 12px; max-width: 85ch; }
 .log { display: grid; gap: 6px; justify-items: start; }
 .logged { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; }
-.logged time { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+.logged time { font-family: var(--body); font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--ink-2); }
 .logged .note { color: var(--ink-2); }
 .x { appearance: none; border: 0; background: none; color: var(--ink-2); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 4px; }
 .x:hover { color: var(--veto); }
 .logform { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 10px; width: 100%; }
-.logform label { display: grid; gap: 3px; font: 600 11px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.logform label { display: grid; gap: 3px; font: 600 12px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
 .logform label.wide { flex: 1 1 220px; }
 .logform input, .logform select { font: 13px var(--body); color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 5px; padding: 5px 7px; text-transform: none; letter-spacing: 0; }
 .act-btn.ghost { border-color: var(--rule); color: var(--ink-2); }
 .logtable { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 620px; }
-.logtable th { text-align: left; font: 600 11px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding: 6px 8px; border-bottom: 1px solid var(--ink); }
+.logtable th { text-align: left; font: 600 12px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding: 6px 8px; border-bottom: 1px solid var(--ink); }
 .logtable td { padding: 7px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
-.logtable td:first-child { white-space: nowrap; font-family: var(--mono); font-size: 12.5px; }
+.logtable td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; font-size: 13px; }
 .logtable .bn { font: 700 12px var(--mono); }
 .wnews { border: 1px solid var(--navy); border-radius: 12px; padding: 12px 16px 10px; margin-top: 14px; background: var(--sheet); }
 .wnews-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
@@ -708,7 +748,7 @@ a.phone:hover { text-decoration-color: currentColor; }
 .todo-g h3 { margin: 0; font: 700 16px var(--display); font-stretch: 90%; }
 .todo-g .star { color: var(--gold); }
 .todo-g .reach { margin: 0; font-size: 12.5px; color: var(--ink-2); }
-.todo-g .phone { font-family: var(--mono); color: var(--ink); }
+.todo-g .phone { font-variant-numeric: tabular-nums; color: var(--ink); }
 .todo-g ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13.5px; }
 .todo-g .bn { font: 700 12px var(--mono); }
 .todo-g .ask { font-weight: 600; }
@@ -748,7 +788,7 @@ table.commcounts td { font-variant-numeric: tabular-nums; font-weight: 600; }
 .ccard .cnote { margin: 0; font-size: 13px; color: var(--ink-2); }
 .chalves { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .ch { display: grid; gap: 2px; align-content: start; font-size: 13px; background: var(--paper); border-radius: 6px; padding: 8px 10px; }
-.ch .house { font: 700 11px var(--body); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); }
+.ch .house { font: 700 12px var(--body); text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); }
 .ch b { font-size: 14px; }
 .ch .muted, .ch p.muted { color: var(--ink-2); font-size: 12px; margin: 0; }
 .ch.none { opacity: .7; }
@@ -787,21 +827,21 @@ table.commcounts td { font-variant-numeric: tabular-nums; font-weight: 600; }
 .intro .intro-x { grid-area: x; appearance: none; border: 0; background: none; font-size: 18px; line-height: 1; color: var(--ink-2); cursor: pointer; padding: 0 2px; }
 .intro ol { grid-area: ol; list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
 .intro li { display: block; }
-.intro .n { display: inline-block; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--gold); color: #fff; font: 700 11px/18px var(--body); text-align: center; }
+.intro .n { display: inline-block; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--ink-2); color: var(--sheet); font: 700 11px/18px var(--body); text-align: center; }
 ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 75ch; }
 .view-help { appearance: none; background: none; border: 0; padding: 5px 8px; font: 600 12.5px var(--body); color: var(--navy); text-decoration: underline; cursor: pointer; }
 .ver details.acts > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--navy); margin-top: 4px; }
 .ver details.acts ol { margin-top: 6px; }
 .sankey { overflow-x: auto; margin: 6px 0 14px; }
 .sankey svg { display: block; width: 100%; min-width: 640px; max-width: 1000px; height: auto; }
-.sankey .sk-node { fill: var(--navy); }
-.sankey .sk-go { fill: var(--navy); opacity: .28; }
+.sankey .sk-node { fill: var(--move); }
+.sankey .sk-go { fill: var(--move); opacity: .28; }
 .sankey .sk-out { fill: var(--refer); opacity: .45; }
 .sankey .sk-exit { fill: var(--refer); }
 .sankey .sk-c0 { fill: var(--refer); }
-.sankey .sk-c1 { fill: var(--gold); }
-.sankey .sk-c2 { fill: var(--veto); }
-.sankey .sk-c3 { fill: var(--navy); }
+.sankey .sk-c1 { fill: var(--move-2); }
+.sankey .sk-c2 { fill: var(--ink-2); }
+.sankey .sk-c3 { fill: var(--move); }
 .sankey .sk-c4 { fill: var(--ink); }
 .sankey .sk-law { fill: var(--law-bar); opacity: .45; }
 .sankey .sk-lawn { fill: var(--law-bar); }
@@ -831,8 +871,8 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .next details.others ul { margin-top: 6px; }
 .statgen { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); margin-left: 14px; }
 .tag.narrow { background: none; border: 1px dashed var(--refer); }
-.tag.chap { background: var(--gold-soft); color: var(--ink); cursor: help; }
-.chapam { background: var(--gold-soft); border-radius: 6px; padding: 8px 10px; margin: 0 0 1em; }
+.tag.chap { background: var(--chip); color: var(--ink); cursor: help; }
+.chapam { background: var(--chip); border-radius: 6px; padding: 8px 10px; margin: 0 0 1em; }
 .chapam .memo { margin-top: 6px; }
 .chapam .memo summary { cursor: pointer; color: var(--navy); }
 .chapam .memo p { margin: 6px 0 0; }
@@ -843,12 +883,12 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .pg { padding: 8px 6px 6px; border-radius: 8px; border-left: 4px solid transparent; }
 .pg + .pg { margin-top: 10px; }
 .pg .pg-h { padding: 0 8px 2px; }
-.pg.leg { background: var(--chip); border-left-color: var(--navy); }
+.pg.leg { background: var(--chip); border-left-color: var(--move); }
 .pg-h.pick { cursor: pointer; border-radius: 6px; }
 .pg-h.pick:hover { text-decoration: underline; }
 .pg-h.pick.on { color: var(--navy); text-decoration: underline; text-decoration-thickness: 2px; }
-.pg.live { background: var(--gold-soft); border-left-color: var(--gold); }
-.pg.live .srow:hover { background: color-mix(in srgb, var(--gold) 15%, transparent); }
+.pg.live { background: var(--chip); border-left-color: var(--move-2); }
+.pg.live .srow:hover { background: color-mix(in srgb, var(--move) 15%, transparent); }
 .pg.decided { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 0 0; border-left: 0; }
 .pg.decided .pg-h { grid-column: 1 / -1; padding: 0 2px; }
 .pg.decided .srow { display: flex; flex-direction: column-reverse; align-items: flex-start; gap: 0; padding: 8px 10px; border-radius: 8px; }
@@ -879,7 +919,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .tl .rl { position: absolute; left: 0; width: 90px; font: 600 11px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); line-height: 22px; }
 .tl .track { position: absolute; left: 0; right: 0; height: 22px; background: var(--chip); border-radius: 4px; }
 .tl .track b { position: absolute; top: 0; bottom: 0; border-radius: 4px; font: 600 11.5px/22px var(--body); padding: 0 8px; overflow: hidden; white-space: nowrap; }
-.tl .leg b { background: var(--navy); color: var(--sheet); }
+.tl .leg b { background: var(--move); color: var(--sheet); }
 .tl .gov b { background: var(--law-bar); color: #fff; }
 .tl .gov b.light { background: var(--signed-soft); color: var(--signed); }
 .tl .leg b.light { background: none; color: var(--ink-2); }
@@ -889,7 +929,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .tl .now i { position: absolute; top: -15px; left: 4px; font: 600 11px var(--body); font-style: normal; color: var(--veto); }
 .tl ol { list-style: none; margin: 0; padding: 0; }
 .tl li { position: absolute; width: 0; border-left: 1px solid var(--ink-2); }
-.tl li::after { content: ""; position: absolute; left: -7px; width: 11px; height: 11px; border-radius: 50%; background: var(--gold); border: 1.5px solid var(--sheet); }
+.tl li::after { content: ""; position: absolute; left: -7px; width: 11px; height: 11px; border-radius: 50%; background: var(--move-2); border: 1.5px solid var(--sheet); }
 .tl li.up::after { bottom: -6px; }
 .tl li.down::after { top: -6px; }
 .tl li div { position: absolute; width: 158px; left: 8px; font-size: 12.5px; line-height: 1.3; color: var(--ink); }
@@ -916,7 +956,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 
 /* What's next, in each bill's details */
 .next { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; display: grid; gap: 8px; max-width: 78ch; }
-.next h4 { margin: 0; font: 600 11px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.next h4 { margin: 0; font: 600 12px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 .next p { margin: 0; }
 .next .when { font-weight: 600; }
 .next ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13.5px; }
@@ -929,7 +969,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .next .contact { overflow-wrap: anywhere; }
 /* A title with no spaces (AK's "capital/funds/supplemental/reapprop/amend") breaks anywhere rather than widen the page. */
 .bill .main { min-width: 0; overflow-wrap: anywhere; }
-.next .phone { font-family: var(--mono); font-size: 12.5px; user-select: all; }
+.next .phone { font-variant-numeric: tabular-nums; font-size: 13px; user-select: all; }
 .next .ours { color: var(--signed); font-weight: 600; font-size: 12px; }
 .next li .ask { font-size: 13px; font-weight: 600; }
 .next li.key { border-left: 3px solid var(--gold); padding-left: 8px; margin-left: -11px; }
@@ -955,7 +995,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
 .card ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 14px; }
 .stagehelp { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
-.stagehelp th { text-align: left; font: 600 11px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding: 6px 8px; border-bottom: 1px solid var(--ink); }
+.stagehelp th { text-align: left; font: 600 12px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding: 6px 8px; border-bottom: 1px solid var(--ink); }
 .stagehelp td { padding: 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
 .stagehelp td:first-child { font-weight: 600; white-space: nowrap; }
 
@@ -993,10 +1033,11 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     <button class="view-tab" type="button" data-view="act">Weigh in</button>
     <button class="view-tab" type="button" data-view="stats">Statistics</button>
     <button class="view-tab" type="button" data-view="person" hidden>Their numbers</button>
-    <button class="view-help view-tab-end" type="button" data-intro aria-controls="howto">How to use this site</button>
-    <button class="view-tab" type="button" data-view="how">How a bill becomes law in New York</button>
+    <button class="view-tab view-tab-end" type="button" data-view="how"><span class="tab-long">How a bill becomes law in New York</span><span class="tab-short">How laws are made</span></button>
   </nav>
-  <section class="intro" id="howto" hidden aria-label="How to use this site"></section>
+  <main id="main">
+  <noscript><p class="notice">This page needs JavaScript to show the bills.</p></noscript>
+  <section class="intro" id="howto" hidden aria-label="How this site works"></section>
 
   <!-- Bills and Statistics share the filter sidebar -->
   <section class="layout" id="filtered">
@@ -1013,27 +1054,27 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
           <div class="group-h">Where it is now</div>
           <div id="pipeline" role="group" aria-label="Filter by where bills are now"></div>
         </div>
-        <details class="group morefilters" id="topicBox">
+        <details class="group morefilters" id="topicBox" open>
           <summary class="group-h">Topic <span id="topicCount"></span></summary>
           <div class="topics" id="topics" role="group" aria-label="Filter by topic"></div>
         </details>
-        <div class="field">
-          <label for="who">Sponsor</label>
-          <input type="search" id="who" list="whoOptions" placeholder="Type a legislator's name" autocomplete="off">
-          <datalist id="whoOptions"></datalist>
-          <label class="inline" for="whoCos"><input type="checkbox" id="whoCos"> Include bills they co-sponsored</label>
-        </div>
-        <div class="field" id="votedField" hidden>
-          <label for="voted"><span id="votedLabel">How your legislators voted</span> <button type="button" class="tip" aria-label="What this means" data-tip="Each legislator&#x27;s last floor vote on the bill in their own house. “Didn&#x27;t vote” means excused or absent; the records don&#x27;t say why.">i</button></label>
-          <select id="voted"><option value="">Any vote</option></select>
-        </div>
-        <div class="field" id="changedField">
-          <label for="changed">New activity <button type="button" class="tip" aria-label="What this means" data-tip="Bills with any new action in that period. “Since your last visit” uses the last time this browser opened the site.">i</button></label>
-          <select id="changed"><option value="">Any time</option></select>
-        </div>
         <details class="group morefilters" id="moreFilters">
           <summary class="group-h">More filters <span id="moreCount"></span></summary>
           <div class="morebody">
+          <div class="field">
+            <label for="who">Sponsor</label>
+            <input type="search" id="who" list="whoOptions" placeholder="Type a legislator's name" autocomplete="off">
+            <datalist id="whoOptions"></datalist>
+            <label class="inline" for="whoCos"><input type="checkbox" id="whoCos"> Include bills they co-sponsored</label>
+          </div>
+          <div class="field" id="votedField" hidden>
+            <label for="voted"><span id="votedLabel">How your legislators voted</span> <button type="button" class="tip" aria-label="What this means" data-tip="Each legislator&#x27;s last floor vote on the bill in their own house. “Didn&#x27;t vote” means excused or absent; the records don&#x27;t say why.">i</button></label>
+            <select id="voted"><option value="">Any vote</option></select>
+          </div>
+          <div class="field" id="changedField">
+            <label for="changed">New activity <button type="button" class="tip" aria-label="What this means" data-tip="Bills with any new action in that period. “Since your last visit” uses the last time this browser opened the site.">i</button></label>
+            <select id="changed"><option value="">Any time</option></select>
+          </div>
           <div class="field" id="partyField">
             <label for="party">Party of sponsors and co-sponsors <button type="button" class="tip" aria-label="What this means" data-tip="Counts the sponsors and co-sponsors of both versions of the bill. “Both parties” means at least one from each party.">i</button></label>
             <select id="party"><option value="">Any</option></select>
@@ -1073,6 +1114,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
         <span class="qbox"><input type="search" id="q" class="q" placeholder="Search bills: number, words, sponsor" autocomplete="off" aria-label="Search bills">
         <button type="button" class="tip" aria-label="How to search" data-tip="Bills must have every word you type. Use OR for either (climate OR energy), a minus to leave out a word (wage -farm), and quote marks for words together (&quot;paid sick leave&quot;).">i</button></span>
         <span id="count"></span>
+        <button class="view-help" type="button" id="introLink" data-intro aria-controls="howto" hidden>How this works</button>
         <button class="act-btn csv" type="button" id="csv" title="Download the bills shown, as a spreadsheet file">Download</button>
         <button class="act-btn" type="button" id="viewLinkBtn" hidden title="Copy a link that opens this list with these filters">Copy link</button>
         <span id="starAllBox"></span>
@@ -1100,6 +1142,10 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
       <select id="statTopic"><option value="all">All bills</option></select>
       <label class="inline statgen"><input type="checkbox" id="statGeneral"> Leave out bills about one place, person or group, and road namings <button type="button" class="tip" aria-label="What this means" data-tip="Bills about one place, person or group pass far more often than other bills, so including them makes the odds look better than they are for most bills.">i</button></label>
     </div>
+    <section class="act-sec" id="statFunnel" aria-labelledby="funnelHead"></section>
+    <details class="statmore" id="statMore">
+    <summary>Explore more: odds in detail, committees, timing, who works with whom</summary>
+    <div class="statmore-body">
     <nav class="subtabs" id="statTabs" aria-label="Statistics sections">
       <button type="button" data-sec="statOdds">Odds of becoming law</button>
       <button type="button" data-sec="statComm">Committees</button>
@@ -1124,6 +1170,8 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
       <div class="tablewrap"><table class="oc" id="ocTable"></table></div>
       <p class="note">“Became law”: share of all bills introduced. “Governor signed”: share of bills the governor acted on. Current session changes until <span id="ocUntil"></span>.<span id="ocShells"></span></p>
     </section>
+    </div>
+    </details>
   </section>
 
   <!-- Watchlist -->
@@ -1251,6 +1299,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     </div>
     </div>
   </section>
+  </main>
 </div>
 
 <script type="application/json" id="bill-data"></script>
@@ -1288,6 +1337,10 @@ try { HOME = localStorage.getItem(STORE + "county") || HOME; } catch (e) {}
 // "Only bills that could affect your county": statewide bills plus bills about your county; hides bills only
 // about other counties, bills for one person or group, and road namings.
 const farAway = (b) => (b.places.length > 0 || !!b.narrow) && !b.places.includes(HOME);
+// What the places bills are tied to are called: counties (most states), or the state's own word where bills are tied to
+// towns (STATE.placeWord: Vermont's towns and cities).
+const PLACE_WORD = STATE.placeWord || "county";
+const placeName = (h) => (PLACE_WORD === "county" ? `${h} County` : h);
 
 // The day of this browser's previous visit, for "new activity since your last visit".
 let LAST_VISIT = "";
@@ -1595,18 +1648,19 @@ const AGENDA_TIP = "Bills listed for a committee meeting that hasn't happened ye
 function renderPipeline() {
   const counts = Array(7).fill(0), oneHouse = { [HOUSE.S]: 0, [HOUSE[LOW]]: 0 };
   const today = isoToday();
-  let nextDue = null, voters = 0;  // constitutional amendments that passed: they go to the voters, not the governor
+  let nextDue = null, voters = 0, voted = 0;  // constitutional amendments that passed: they go to the voters, not the governor
   for (const b of BILLS) {
     if (!matches(b, "stage")) continue;
     counts[b.stage]++;
     if (b.stage === 3 && ((isAmendment(b) && secondPassage(b)) || toVoters(b))) voters++;
+    if (votersDone(b)) voted++;
     if (b.stage === 2 && b.passedIn) oneHouse[b.passedIn]++;
     if (b.stage === 4 && b.due && b.due >= today && (!nextDue || b.due < nextDue)) nextDue = b.due;
   }
   const subs = {
     1: "Approved by committee",
     2: `${HOUSE.S} ${num(oneHouse[HOUSE.S] || 0)} · ${HOUSE[LOW]} ${num(oneHouse[HOUSE[LOW]] || 0)}`,
-    3: !voters ? STATE.passedBothNote(DATA.current) : voters === counts[3] ? (STATE.amendmentDone ? "Constitutional amendments" : "Going to the voters")
+    3: !voters ? STATE.passedBothNote(DATA.current) : voters === counts[3] ? (STATE.amendmentDone ? "Constitutional amendments" : voted === voters ? "Went to the voters" : "Going to the voters")
       : `${num(counts[3] - voters)} to ${EXEC.the} · ${num(voters)} ${STATE.amendmentDone ? "constitutional amendments" : "to the voters"}`,
     4: DATA.current ? (nextDue ? `Next decision due ${fmtDate(nextDue)}` : counts[4] ? "Deadlines have passed" : "Nothing waiting") : "No decision in the records",
   };
@@ -1626,15 +1680,17 @@ function renderPipeline() {
   };
   // After the second year's last floor votes, only bills that passed both houses can still move: shown while any
   // are left (once the governor has acted on all of them, there's nothing in play).
-  const inPlay = BILLS.some((b) => b.stage === 3 || b.stage === 4);
+  // (Amendments whose election has passed aren't in play: the voters decided.)
+  const inPlay = BILLS.some((b) => (b.stage === 3 && !votersDone(b)) || b.stage === 4);
+  const wentToVoters = !inPlay && BILLS.some((b) => votersDone(b));
   // The counts follow the other filters (a county, a topic ...): say so, so they don't seem to disagree with totals
   // elsewhere on the page (the notice counts every bill).
   const by = activeFilters().filter(([k]) => k !== "stage" && k !== "one");
   const note = !by.length ? "" : `<p class="pnote">${by.length === 1 && by[0][0] === "nearby" ? `Counting only ${esc(by[0][3])}.` : "Counting only the bills your filters show."}</p>`;
   $("pipeline").innerHTML = note + (floorVotesOver() ? `
-    ${inPlay ? `<div class="pg live">${head("Still in play", [3, 4])}${[3, 4].map(row).join("")}</div>` : ""}
+    ${inPlay ? `<div class="pg live">${head("Still in play", [3, 4])}${[3, 4].map(row).join("")}</div>` : wentToVoters ? `<div class="pg">${head("Sent to the voters", [3])}${row(3)}</div>` : ""}
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
-    <div class="pg stale">${head("Out of time", [0, 1, 2], `<span>${esc(STATE.outOfTimeLine || "Die December 31 unless lawmakers return")}</span>`, OUT_OF_TIME)}${[0, 1, 2].map(row).join("")}</div>` : `
+    <div class="pg stale">${head("Out of time", [0, 1, 2], `<span>${esc(outLine())}</span>`, outTip())}${[0, 1, 2].map(row).join("")}</div>` : `
     ${!DATA.current ? `
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
     <div class="pg stale">${head("Died", [0, 1, 2, 3])}${[0, 1, 2, 3].map(row).join("")}</div>
@@ -1737,13 +1793,34 @@ const NO_SIGNATURE = /without (?:the |my )?(?:governor'?s |president'?s )?signat
 const unsignedLaw = (b) => b.stage === 5 && !overriddenLaw(b) && b.vers.some((v) => v.actions.some(([, t]) => NO_SIGNATURE.test(t)));
 const lawLine = (b) => (overriddenLaw(b) ? `Became law over ${EXEC.the}'s veto` : unsignedLaw(b) ? `Became law without ${EXEC.the}'s signature` : STATE.noSignatures ? "Became law" : "Signed into law");
 const partlyVetoed = (b) => b.stage === 5 && b.vers.some((v) => v.actions.some(([, t]) => /partially vetoed|line-item veto|item veto/i.test(t)));
+// Lines that only name who wrote or signed on to a bill ("Coauthored by Representative George (principal House author)"):
+// never a bill's "latest action".
+const AUTHORSHIP = /^(?:co-?)?authored by|^(?:co-?)?sponsored by|(?:co-?author|co-?sponsor|sponsor)s?\b.{0,40}\b(?:added|removed|withdrawn)|added as (?:a )?(?:co-?)?(?:author|sponsor)|^remove(?:d)? as (?:co-?|principal )?author|principal (?:house|senate) author/i;
+// The latest real step and its day: paperwork (a new print number) and authorship lines are skipped.
+function latestStep(b) {
+  const all = b.vers.flatMap((v) => v.actions);
+  const days = [...new Set(all.map(([d]) => d))].sort().reverse();
+  for (const d of days) {
+    const t = all.filter(([x]) => x === d).map(([, x]) => x).find((x) => !/^PRINT NUMBER/.test(x) && !AUTHORSHIP.test(x));
+    if (t) return [d, t, all];
+  }
+  return [b.last, null, all];
+}
+// A step in a few plain words for a bill's row: a long line from the legislature ("Committee on Commerce, Science, and
+// Transportation. Reported by Senator Cruz with an amendment ...") keeps its first sentence, cut short; the full text
+// is under "Every action".
+function shortStep(t, d, all) {
+  let s = plainAction(t, d, all, true).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, "");
+  if (s.length > 70) { const first = s.split(/(?<=[a-z0-9)])\. (?=[A-Z])/)[0]; if (first.length >= 12) s = first.replace(/\.$/, ""); }
+  if (s.length > 80) s = s.slice(0, 76).replace(/[\s,;:]+\S*$/, "") + "…";
+  return s;
+}
 function statusText(b) {
   const D = b.dates, live = DATA.current;
   // Say what the latest action was ("Amended by the sponsor"), not just when.
-  const all = b.vers.flatMap((v) => v.actions);
-  const latest = all.filter(([d]) => d === b.last).map(([, t]) => t).find((t) => !/^PRINT NUMBER/.test(t));
-  const what = latest ? plainAction(latest, b.last, all, true).replace(/; back to .*$/, "").replace(/ \(calendar \d+\)$/, "") : "Last action";
-  let t = TEXT.long[b.stage], small = `${what} · ${fmtDate(b.last)}`;
+  const [lastDay, latest, all] = latestStep(b);
+  const what = latest ? shortStep(latest, lastDay, all) : "Last action";
+  let t = stageLong(b.stage), small = `${what} · ${fmtDate(lastDay)}`;
   // A bill that died with the session reads as one in a finished session's page.
   const alive = live && !billsDied();
   if (b.stage === 0) {
@@ -1760,13 +1837,17 @@ function statusText(b) {
       small = `Approved by committee ${fmtDate(ok[0])}; missed a deadline ${fmtDate(acts[back][0])}`;
     }
     // Massachusetts: a study order ends a bill in its committee (New Hampshire's heldAction is a pattern: the house's vote).
-    if (STATE.heldAction && b.vers.some((v) => v.actions.some(([, x]) => (STATE.heldAction instanceof RegExp ? STATE.heldAction.test(x) : x === STATE.heldAction))))
-      t = `${STATE.heldLabel}${b.comm ? ` by the ${commPlain(b.comm)} Committee` : ""}`;
+    const held = endedOf(b);
+    if (held) t = held.status;
     // A bill kept over to the next session (Virginia's continued bills, New Hampshire's retained ones) didn't die.
     if (!alive && continuedTo(b)) t = `Carried over to ${continuedTo(b)}${b.comm ? ` in the ${commPlain(b.comm)} Committee` : ""}`;
   } else if (b.stage === 2 && b.passedIn) {
     t = `Passed one house${alive || continuedTo(b) ? "" : " only"} (${b.passedIn})`;
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
+  } else if (b.stage === 3 && votersDone(b)) {
+    // A constitutional amendment (or a measure referred to the voters) whose election day has passed.
+    t = PASSED_BOTH;
+    small = votersDone(b);
   } else if (b.stage === 3) {
     t = PASSED_BOTH;
     small = `${toVoters(b) ? `Sent to the voters, not ${EXEC.the}` : isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentDone || (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters")) : `First passage: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
@@ -1787,9 +1868,10 @@ function statusText(b) {
   // A bill that ended before the session did (North Dakota's floor defeats and withdrawals: STATE.endedNote).
   const ended = b.stage <= 2 && STATE.endedNote?.(b);
   if (ended) t = ended.status;
-  // Between sessions, a line saying the latest step isn't progress (interimNote()).
-  const gap = interimNote(b)?.row;
-  return `<div class="st s${b.stage}">${esc(t)}<small>${esc(small)}</small>${gap ? `<small class="gap">${esc(gap)}</small>` : ""}</div>`;
+  // (What the break between sessions means for a bill is said once, in the notice and the "Out of time" heading, and
+  // in the bill's panel: not on every row.)
+  const over = b.stage <= 2 && !stillAlive(b) ? " over" : "";
+  return `<div class="st s${b.stage}${over}">${esc(t)}<small>${esc(small)}</small></div>`;
 }
 
 // ---- What's next and who to contact (current session only) ----
@@ -1879,7 +1961,7 @@ const BODY = STATE.bodyName || "the Legislature", BODY_CAP = BODY[0].toUpperCase
 //     already shows them as out of time.
 // Never for legislatures that meet until a fixed last day or all year (STATE.floorVotesEnd === false).
 function interimNote(b) {
-  if (!DATA.current || DATA.upcoming || STATE.floorVotesEnd === false || b.stage > 2 || STATE.endedNote?.(b)) return null;
+  if (!DATA.current || DATA.upcoming || STATE.floorVotesEnd === false || b.stage > 2 || endedOf(b)) return null;
   const lv = DATA.lastVote || "", today = isoToday();
   if (!lv || (new Date(today) - new Date(lv)) / 864e5 <= 21) return null;
   const over = floorVotesOver(), cont = over && continuedTo(b), after = (b.last || "") > lv;
@@ -1901,7 +1983,7 @@ function interimNote(b) {
 }
 
 // A last name as written, for lists of districts ("Jr." isn't one).
-const shortName = (n) => (n || "").replace(/,?\s+(Jr\.?|Sr\.?|II|III)$/, "").split(" ").pop();
+const shortName = (n) => (n || "").replace(/,?\s+(Jr\.?|Sr\.?|II|III|IV)$/, "").split(" ").pop();
 const lastName = (n) => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\s-]/g, "").split(/\s+/).filter((w) => !["jr", "sr", "ii", "iii"].includes(w)).pop() || "";
 
 // ---- Your legislators: chosen by address or from a list, kept in this browser; otherwise
@@ -1953,6 +2035,12 @@ function myReps() {
 function renderMyReps() {
   const box = $("myReps");
   if (!box) return;
+  // The state's "how to weigh in" text ("Pick your town above to see who they are") names them once they're chosen.
+  const chosen = chosenReps() && LEGS.length ? myReps() : [];
+  for (const el of document.querySelectorAll(".pickline")) {
+    el.dataset.orig ||= el.textContent;
+    el.textContent = chosen.length ? `Yours: ${andList(chosen.map((r) => `${r.title} ${r.name}`))}.` : el.dataset.orig;
+  }
   if (!DATA.current || !LEGS.length || PRESET?.who) { box.hidden = true; return; }
   if (DATA.towns) return renderTownReps(box);
   const reps = myReps(), c = chosenReps();
@@ -2026,6 +2114,9 @@ function renderTownRepsByHouse(box) {
     const mine = lists[h]?.length ? lists[h].map(([d]) => d) : inRegion || [...new Set(LEGS.filter((L) => L.house === h).map((L) => L.district))].sort((a, b) => a - b);
     // (every member of a district that elects several: Vermont's, New Hampshire's)
     const who = (d) => LEGS.filter((L) => L.house === h && L.district === d).map((L) => shortName(L.name)).join(", ") || "vacant";
+    // Congress (places by state): senators represent the whole state, so the state picked above sets them.
+    if (regions && h === "S") return region ? mine.map((d) => `<option value="${d}" selected>${esc(distLabel(h, d))}: ${esc(who(d))}</option>`).join("")
+      : `<option value="">Pick your ${esc((STATE.regionWord || "State").toLowerCase())} above</option>`;
     return `<option value="">Choose your district</option>` + mine.map((d) => `<option value="${d}"${d === c?.[h] ? " selected" : ""}>${esc(distLabel(h, d))}: ${esc(who(d))}</option>`).join("");
   };
   const all = STATE.townInAllDistricts;
@@ -2046,7 +2137,7 @@ function renderTownRepsByHouse(box) {
     ${where ? `<p class="muted">${where}</p>` : ""}
     ${STATE.addressLookup && ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
     <p class="muted" id="repMsg">The address goes to the U.S. Census Bureau's address lookup; only your district numbers are kept, in this browser.</p>` : ""}
-    <div class="repsel"><label>Senate <select id="repDS">${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repDL">${opts(LOW)}</select></label></div>
+    <div class="repsel"><label>${regions ? "Your senators" : "Senate"} <select id="repDS"${regions ? " disabled" : ""}>${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repDL">${opts(LOW)}</select></label></div>
     <p>Your legislators: ${andList(reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`)) || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
 }
 function renderTownReps(box) {
@@ -2175,12 +2266,14 @@ function contactBook(b, canMove = true, oppose = false) {
         const kind = roleKind(p.roles);
         const reach = [emailHtml(info.email, kind), formHtml(info.form, kind), phonesHtml(info, kind)].filter(Boolean).join(" · ");
         const draft = p.asks.length && (info.email || info.url) ? draftBtn(b, p.house, p.name, p.asks.join("; "), !info.email) + " " : "";
+        // Someone with no way to reach them and no decision to make is left out, rather than shown as an empty card.
+        if (!reach && !info.url && !p.star) return null;
         const roles = p.roles.join("; ");
         const ask = p.asks.length ? `<span class="ask">Ask: ${esc(p.asks.join("; "))}</span>` : "";
         return { star: p.star, html: `<li class="${p.star ? "key" : ""}"><span class="contact">${name}${status}${p.star ? ` ${DECIDES}` : ""}</span><span class="role">${esc(roles.charAt(0).toUpperCase() + roles.slice(1))}</span>${ask}${reach ? `<span class="reach">${draft}${reach}</span>` : ""}</li>` };
       });
-      items.sort((x, y) => y.star - x.star);
-      return (gov ? gov : "") + items.map((x) => x.html).join("");
+      const shown = items.filter(Boolean).sort((x, y) => y.star - x.star);
+      return (gov ? gov : "") + shown.map((x) => x.html).join("");
     },
   };
 }
@@ -2310,6 +2403,24 @@ function ballotLine(b) {
   if (STATE.ballotEvenYears && y % 2) y++;  // Maryland votes on amendments at general elections, in even years
   return isoToday() > `${y}-11-10` ? `It went to the voters in November ${y}; the records here don't show the result.` : `Next: the voters, in November ${y}.`;
 }
+// The ballot line as shown: once the election has passed, the state's official results page when the profile gives one
+// (STATE.electionResults), instead of "the records here don't show the result".
+function ballotText(b) {
+  const line = ballotLine(b);
+  if (!/^It went to the voters/.test(line)) return line;
+  return line.replace(/[;,] the records here don't show the result\.?$/, ".")
+    + (STATE.electionResults ? ` <a href="${esc(STATE.electionResults)}" target="_blank" rel="noopener">Official election results ↗</a>` : "");
+}
+// A constitutional amendment (or a measure referred to the voters) whose election has passed: "Went to the voters
+// (November 2025)", or "" for anything else. It's decided, not still in play.
+const BALLOT_MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December";
+function votersDone(b) {
+  if (b.stage !== 3 || STATE.amendmentDone || !((isAmendment(b) && secondPassage(b)) || toVoters(b))) return "";
+  const line = ballotLine(b);
+  if (!/^It went to the voters/.test(line)) return "";
+  const m = line.match(new RegExp(`(${BALLOT_MONTHS}) (\\d{4})`));
+  return m ? `Went to the voters (${m[1]} ${m[2]})` : "Went to the voters";
+}
 function planFor(b, stance = "support") {
   if (!DATA.current || !DATA.contacts) return null;
   const opp = stance === "oppose";
@@ -2322,13 +2433,14 @@ function planFor(b, stance = "support") {
   // A state's deadline for passing a bill's own house (Virginia's crossover), once it has gone by.
   const origin = !adjourned && b.stage <= 1 && DATA.current && STATE.originDeadline?.(b);
   const missed = origin && today > origin ? origin : null;
-  // A bill that ended before the session did, where a floor defeat or a withdrawal ends it (North Dakota: STATE.endedNote).
-  const ended = b.stage <= 2 && STATE.endedNote?.(b);
+  // A bill that ended before the session did, where a floor defeat or a withdrawal ends it (North Dakota: STATE.endedNote),
+  // or a committee step ended it (Massachusetts's study orders: STATE.heldAction).
+  const ended = b.stage <= 2 && endedOf(b);
   // When the session is over (STATE.floorVotesEnd === false: its last day has passed), say when it ended.
   const overAt = STATE.floorVotesEnd === false ? `The session ended ${fmtDate(STATE.sessionEnds(DATA.session))}.` : "Floor votes are over for this session.";
   // Most states' line already says the session ended and the bill died ("The session has ended, so it died."): then
   // it's said once, without "Floor votes are over" before it.
-  const diesLine = DIES(y2, b), saysDied = !!STATE.diesAfterFloor && /\bdied\b/.test(diesLine);
+  const diesLine = diesLineNow(y2, b), saysDied = !!STATE.diesAfterFloor && /\bdied\b/.test(diesLine);
   const overLine = saysDied ? diesLine : `${overAt} ${diesLine}`;
   const stalled = ended && !adjourned ? ended.tail : missed ? `It missed ${STATE.originWord || "the deadline"} on ${fmtDate(missed)}, the last day to pass its own house, so it can't pass this ${YEARS > 1 ? "session" : "year"}.`
     : adjourned
@@ -2342,6 +2454,9 @@ function planFor(b, stance = "support") {
   const stopped = dead && !ended && b.stage <= 2 ? (b.stage === 2 ? `It passed the ${b.passedIn} but not the ${other_}.`
     : b.stage === 1 ? `It never passed the ${HOUSE[b.vers[0].p[0]] || "full house"}.` : "It never got out of committee.") : "";
   const book = contactBook(b, live || b.stage >= 3, opp);
+  // The same proposal (a "nearly the same" bill) became law: nothing to reintroduce.
+  const twinLaw = b.stage <= 2 ? lawTwin(b) : null;
+  const again = (v) => { if (!twinLaw && sittingMember(v.sponsor, v.p[0])) book.sponsor(v, A("reintroduce it next session", "")); };
   const inComm = b.vers.filter((v) => v.committee && /committee/i.test(v.statusDesc || ""));
   let what = "", gov = null, due = null, govAlso = null;
   const L = (x) => (live ? x : "");
@@ -2370,15 +2485,18 @@ function planFor(b, stance = "support") {
     what = `<p class="when">${ended ? ended.when : stopped || `Next: ${nextText}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     inComm.forEach((v) => book.chair(v.p[0], v.committee, L(A(...agendaAsk(v.committee))), live));
     inComm.forEach(stuck);
-    if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
+    if (!live && !continuedTo(b)) b.vers.forEach(again);
     book.reps(BOTH, L(A("", "oppose it")));
   } else if (b.stage === 1) {
-    const houses = b.vers.filter((v) => /floor/i.test(v.statusDesc || "")).map((v) => v.p[0]);
-    what = `<p class="when">${ended ? ended.when : stopped || `Next: a vote of the full ${houses.map((h) => HOUSE[h]).join(" and ") || "house"}.`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
+    // The house whose floor it's on: a version marked as on the floor, else one out of committee, else the bill's own.
+    let houses = b.vers.filter((v) => /floor/i.test(v.statusDesc || "")).map((v) => v.p[0]);
+    if (!houses.length) houses = b.vers.filter((v) => !v.committee || !/committee/i.test(v.statusDesc || "")).map((v) => v.p[0]).slice(0, 1);
+    if (!houses.length) houses = [b.vers[0].p[0]];
+    what = `<p class="when">${ended ? ended.when : stopped || `Next: a vote of the full ${houses.map((h) => HOUSE[h]).join(" and ")}.`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     houses.forEach((h) => floorLeader(h));
     // Its version in the other house still has to get out of committee there.
     if (live) inComm.filter((v) => !houses.includes(v.p[0])).forEach((v) => book.chair(v.p[0], v.committee, A(...agendaAsk(v.committee)), true));
-    if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
+    if (!live && !continuedTo(b)) b.vers.forEach(again);
     book.reps(houses.length ? houses : BOTH, L(A("vote yes", "vote no")));
   } else if (b.stage === 2) {
     const other = b.passedIn === HOUSE.S ? LOW : "S";
@@ -2392,12 +2510,12 @@ function planFor(b, stance = "support") {
     if (twin && twin.committee) stuck(twin);
     else floorLeader(other);
     book.reps([other], L(A("vote yes", "vote no")));
-    if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
+    if (!live && !continuedTo(b)) b.vers.forEach(again);
   } else if (b.stage === 3 && toVoters(b)) {
-    what = `<p class="when">It doesn't go to ${EXEC.the}. ${ballotLine(b)}</p>`;
+    what = `<p class="when">It doesn't go to ${EXEC.the}. ${ballotText(b)}</p>`;
   } else if (b.stage === 3 && isAmendment(b)) {
     what = secondPassage(b)
-      ? `<p class="when">${STATE.amendmentOnce ? "" : "Second passage. "}${ballotLine(b)}</p>`
+      ? `<p class="when">${STATE.amendmentOnce ? "" : "Second passage. "}${ballotText(b)}</p>`
       : `<p class="when">${STATE.amendmentAgain ? STATE.amendmentAgain(b) : `Next: the Legislature elected in November ${DATA.session + 1} has to pass it again; then it goes to the voters.`}</p>`;
     if (!secondPassage(b)) book.reps(BOTH, A("pass it again in the next Legislature", "vote against it when it comes back"));
   } else if (b.stage === 3) {
@@ -2426,12 +2544,13 @@ function planFor(b, stance = "support") {
     what = `<p class="when">Vetoed. The sponsors can ${again}.</p>`;
     b.vers.forEach((v) => book.sponsor(v, A(again, "")));
   }
-  // A step taken while the Legislature wasn't meeting isn't progress (interimNote()).
+  // A step taken while the Legislature wasn't meeting isn't progress (interimNote()); and what the break means for it.
   const gap = interimNote(b);
+  if (gap?.row && !stalled && !stopped) what += `<p>${esc(gap.row)}</p>`;
   if (gap?.step) what += `<p>${esc(gap.step)}</p>`;
   const v = b.vetoNote;
   if (v && !v.own && b.stage <= 2 && live && !opp && lastName(v.governor) === lastName(DATA.governor)) govAlso = govAlso || "support it this time";
-  const actionable = (b.stage <= 4 || !!STATE.vetoReturns?.(b)?.live) && (live || b.stage >= 3);
+  const actionable = (b.stage <= 4 || !!STATE.vetoReturns?.(b)?.live) && (live || b.stage >= 3) && !votersDone(b);
   // Why nothing can be done now, in plain words.
   let reason = "";
   if (b.stage === 5) reason = `${lawLine(b)}${b.chapter ? ` as ${LAW_WORD} ${b.chapter}` : ""}. Changing it would take a new bill.`;
@@ -2472,8 +2591,9 @@ function nextSteps(b) {
   }
   what += plan.notes.map((n) => `<p class="holdup">${esc(n)}</p>`).join("");
   if (plan.actionable && oddsLine(b)) what += `<p class="odds">${oddsLine(b)}</p>`;
-  if (!plan.actionable) what += reintroAsk(b, panelStance(b));
   const who = plan.book.html((plan.gov ? govItem(plan.gov, b) : "") + (plan.govAlso ? govItem(plan.govAlso, b, false) : ""));
+  // The sponsors' contact details are on their cards below: the reintroduce line doesn't repeat them.
+  if (!plan.actionable) what += reintroAsk(b, panelStance(b), !!who);
   if (plan.actionable && who) what += `<p class="hint">Asks if you <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${(plan.opp ? "oppose" : "support") === s}">${s}</button>`).join("")}</span> this bill</p>`;
   // The person who decides the next step comes first, set apart; everyone else folds away.
   const box = document.createElement("ul");
@@ -2725,11 +2845,13 @@ function showStatSec(id) {
   for (const s of document.querySelectorAll(".statsec")) s.hidden = s.id !== id;
   for (const b of document.querySelectorAll("#statTabs button")) b.setAttribute("aria-pressed", b.dataset.sec === id);
   try { localStorage.setItem(STORE + "statsec", id); } catch (e) {}
-  if (id === "statNet") renderNet();
+  // (The network and "Who works on what" are drawn only once "Explore more" is open: they measure the space they have.)
+  const shown = $("statMore").open;
+  if (id === "statNet" && shown) renderNet();
   // The topic choice and the "leave out" box don't apply to these two sections.
-  document.querySelector(".stattopic").hidden = ["statWho", "statTrend"].includes(id);
-  if (id === "statWho") renderWho();
-  if (id === "statTrend") renderTrends();
+  document.querySelector(".stattopic").hidden = $("statMore").open && ["statWho", "statTrend"].includes(id);
+  if (id === "statWho" && shown) renderWho();
+  if (id === "statTrend" && shown) renderTrends();
 }
 
 // ---- Who works on what: each legislator is a dot pulled toward the topics of the bills they
@@ -3362,6 +3484,14 @@ function renderStats() {
   // What usually happens next: a funnel. Bar length is how many bills got that far; green is how many of them became law.
   const odds = I.odds[t] || {};
   const [nI, lI] = odds.intro || [0, 0], [nF, lF] = odds.floor || [0, 0];
+  // First, one plain picture: how far bills get, as bars with numbers.
+  const steps = [["Introduced", nI], ["Got through a committee", nF], ...(UNI ? [] : [["Passed one house", (odds.house || [0])[0]]]),
+    [UNI ? PASSED_BOTH : "Passed both houses", (odds.both || [0])[0]], ["Became law", lI]].filter(([, x], i, all) => i === 0 || i === all.length - 1 || x > 0);
+  const per100 = nI ? Math.round((lI / nI) * 100) : 0;
+  $("statFunnel").innerHTML = !nI ? "" : `<h2 id="funnelHead">How far bills get</h2>
+    <p class="takeaway">${per100 >= 1 ? `About ${per100} in 100 bills introduced became law.` : "Fewer than 1 in 100 bills introduced became law."}</p>
+    <div class="funnel">${steps.map(([l, x], i) => `<div class="frow${i === steps.length - 1 ? " law" : ""}"><span class="fl">${esc(l)}</span><span class="fbar"><i style="width:${Math.max(0.6, (x / nI) * 100).toFixed(1)}%"></i></span><span class="fn"><b>${num(x)}</b> ${pctOf(x, nI)}%</span></div>`).join("")}</div>
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}: every bill introduced, and how many got to each step.${shellsOut()}</p>`;
   $("statOdds").innerHTML = `<h2>Odds of becoming law</h2>
     ${sankey(odds, I.fate?.[t], I.commFate?.[t])}
     <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}. Band widths are numbers of bills; the percentage on each band is the share of the bills at that step that went that way.${STATE.heldNote && (I.commFate?.[t]?.held || [0])[0] > 0 ? ` “${STATE.heldLabel}”: ${STATE.heldNote}` : ""}${shellsOut()}</p>
@@ -3481,7 +3611,7 @@ function renderStats() {
     <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${PARTY.some(([x]) => (pPast[x] || [0])[0] > 0) ? pastSpan() : `${span(DATA.session)} session`}. “Both parties”: at least one sponsor or co-sponsor from each party on either version. ${STATE.partySource}.${shellsOut()}</p>`}`;
 
   renderOutcomes();
-  if (statSec === "statNet" && !$("view-stats").hidden) renderNet();
+  if (statSec === "statNet" && !$("view-stats").hidden && $("statMore").open) renderNet();
 }
 
 function renderOutcomes() {
@@ -3716,13 +3846,21 @@ function cosponsorList(v) {
   return `<details class="cosp"><summary>${label}</summary><p>${names.map((n) => mine.has(lastName(n)) ? `<b>${esc(n)}</b>` : esc(n)).join(", ")}</p></details>`;
 }
 
-function verBlock(v) {
+function verBlock(v, b) {
   if (!v) return "";
   const acts = v.actions.slice().reverse().map((a) => `<li><time>${fmtDate(a[0])}</time><span>${esc(plainAction(a[1], a[0], v.actions))}</span></li>`).join("");
+  // A bill that can't move any more says so here too, in the same words as its status at the top ("Died on the House
+  // calendar", not the record's "On the House floor").
+  let st = esc(v.statusDesc), where = v.committee ? " · " + esc(commPlain(v.committee)) : "";
+  if (b && b.stage <= 2 && !stillAlive(b)) {
+    const inComm = v.committee && /committee/i.test(v.statusDesc || "");
+    st = b.vers.length > 1 && inComm && !endedOf(b) ? esc(`Died in the ${commPlain(v.committee)} Committee`) : (statusText(b).match(/^<div[^>]*>(.*?)<small>/) || [, st])[1];
+    where = "";
+  }
   return `<div class="ver">
     <h3><span>${esc(v.p)}</span></h3>
     <div class="who">${esc(v.sponsor || "No sponsor listed")}${v.cosp ? ` · ${cosponsorList(v)}` : ""}</div>
-    <div class="who"><b>${esc(v.statusDesc)}</b>${v.committee ? " · " + esc(commPlain(v.committee)) : ""}</div>
+    <div class="who"><b>${st}</b>${where}</div>
     <details class="acts"><summary>Every action (${v.actions.length})</summary><ol>${acts}</ol></details>
   </div>`;
 }
@@ -3747,17 +3885,23 @@ function likelierOf(a, b) {
     return { win: a.dates.intro > b.dates.intro ? a : b, why: "it's the sponsor's newer version" };
   return null;
 }
-// Near-duplicate bills, named so both versions can be followed, with which one is likelier to move.
+// A link that opens another bill on this page.
+const billBtn = (o) => `<button type="button" class="linkish" data-bill="${esc(baseNum(o.nums[0]))}">${esc(o.nums.join(" / "))}</button>`;
+// A near-identical bill that became law: the same proposal passed under another number.
+const lawTwin = (b) => b.similar.filter((x) => x.s >= 70).map(({ j }) => BILLS[j]).find((o) => o.stage === 5 && o !== b) || null;
+// Near-duplicate bills, named so both versions can be followed, with which one is likelier to move (only while both can
+// still move: once one is a law, or dead, there's nothing to compare).
 function twinLine(b) {
   const twins = b.similar.filter((x) => x.s >= 70).map(({ j }) => BILLS[j]);
   if (!twins.length) return "";
-  const link = (o) => `<button type="button" class="linkish" data-bill="${esc(baseNum(o.nums[0]))}">${esc(o.nums.join(" / "))}</button>`;
-  const notes = twins.map((o) => {
+  const law = b.stage <= 2 && lawTwin(b);
+  if (law) return `<p class="wtwin">The same proposal became law as ${billBtn(law)}.</p>`;
+  const notes = !stillAlive(b) ? [] : twins.filter(stillAlive).map((o) => {
     const l = likelierOf(b, o);
     if (!l) return "";
-    return l.win === b ? `This one is more likely to move: ${l.why}.` : `${link(o)} is more likely to move: ${l.why}.`;
+    return l.win === b ? `This one is more likely to move: ${l.why}.` : `${billBtn(o)} is more likely to move: ${l.why}.`;
   }).filter(Boolean);
-  return `<p class="wtwin">Nearly the same as ${twins.map((o) => `${link(o)} (${esc(TEXT.pipe[o.stage].toLowerCase())})`).join(", ")}.${notes.length ? ` ${notes[0]}` : ""}</p>`;
+  return `<p class="wtwin">Nearly the same as ${twins.map((o) => `${billBtn(o)} (${esc(stageWord(o))})`).join(", ")}.${notes.length ? ` ${notes[0]}` : ""}</p>`;
 }
 // Other bills this session on the same subject, closest first.
 function similarBlock(b) {
@@ -3766,7 +3910,7 @@ function similarBlock(b) {
     const o = BILLS[j];
     return `<li class="s${o.stage}"><span class="bn"><button type="button" class="linkish" data-bill="${esc(baseNum(o.nums[0]))}">${esc(o.nums.join(" / "))}</button></span>
       <span class="sim-t">${esc(o.title)}${s >= 70 ? ` <span class="twin">Nearly the same</span>` : ""}</span>
-      <span class="oc oc${o.stage}">${esc(TEXT.pipe[o.stage])}</span></li>`;
+      <span class="oc oc${o.stage}">${esc(stageWord(o).replace(/^./, (c) => c.toUpperCase()))}</span></li>`;
   }).join("")}</ol></div>`;
 }
 function lineage(b) {
@@ -3808,31 +3952,45 @@ function renderList() {
   $("more").textContent = `Show ${num(Math.min(PAGE, rows.length - state.shown))} more`;
 }
 
-// Party of the sponsors and co-sponsors, with head counts (current session only).
-function partyTag(b) {
+// Party of the sponsors and co-sponsors: a "D", "R" or "Both" badge in the muted party colors, with the head counts.
+function partyTag(b, counts = true) {
   const [d, r] = b.partyCount || [0, 0];
   if (!d && !r) return "";
-  const label = d && r ? `Both parties: ${d} D, ${r} R` : d ? `Democrats only (${d})` : `Republicans only (${r})`;
-  return `<span class="tag party ${d && r ? "both" : d ? "dem" : "rep"}" title="Sponsors and co-sponsors, both versions">${label}</span>`;
+  const k = d && r ? "B" : d ? "D" : "R";
+  const label = [d && `${d} Democrat${d === 1 ? "" : "s"}`, r && `${r} Republican${r === 1 ? "" : "s"}`].filter(Boolean).join(", ");
+  return `<span class="ptyline" title="Sponsors and co-sponsors, both versions"><span class="pty ${k}">${k === "B" ? "Both" : k}</span>${counts ? ` Sponsors: ${label}` : ""}</span>`;
+}
+const NARROW_TAG = { person: "For one person", org: "For one group", naming: "Road or place naming", place: "For one city or county" };
+const chapTag = (b) => amendedBills(b) ? `<span class="tag chap">Chapter amendment${TIPI(CHAPTER_AMENDMENT)}</span>`
+  : b.memo && changesAgreed(b) ? `<span class="tag chap">${changesMade(b) ? "Changed by a later bill" : "Changes to come"}${TIPI(CHANGES_AGREED)}</span>` : "";
+// What used to crowd each row (party, topics, the law it changes, earlier sessions ...), shown when the bill is opened.
+function panelTags(b, inCard = false) {
+  const noes = DATA.current ? votePeople().filter((L) => floorVote(b, L) === "No") : [];
+  const facts = [b.law && `Changes ${esc(b.law)}`, DATA.current && b.intro && YEARS > 1 && `Introduced ${b.intro}`, b.budget && "Budget bill", b.program && esc(b.program)].filter(Boolean);
+  const tags = (b.shell ? `<span class="tag narrow">${STATE.shellTag || "Shell bill"}${TIPI(SHELL_TIP)}</span>` : "") + (STATE.rowTags?.(b) || "")
+    + (NARROW_TAG[b.narrow] ? `<span class="tag narrow">${NARROW_TAG[b.narrow]}</span>` : "") + chapTag(b)
+    + noes.map((L) => `<span class="tag vno">${esc(shortName(L.name))} voted no</span>`).join("")
+    + b.topics.map((t) => `<span class="tag">${esc(TOPICS[t])}</span>`).join("") + historyTags(b);
+  const party = NOPARTY || inCard ? "" : partyTag(b);
+  if (!tags && !party && !facts.length) return "";
+  return `<div class="ptags">${party}${facts.length ? `<span class="pfacts">${facts.join(" · ")}</span>` : ""}${tags ? `<span class="tags">${tags}</span>` : ""}</div>`;
 }
 
-// One bill as an expandable row; used on the Bills tab and the Weigh in tab.
+// One bill as an expandable row; used on the Bills tab and the Weigh in tab. A row says only what it is, where it is and
+// who sponsors it, with at most one quiet tag; the rest is in the panel that opens.
 function billRow(b) {
       const [first, second] = b.nums;
-      const noes = DATA.current ? votePeople().filter((L) => floorVote(b, L) === "No") : [];
-      const chap = amendedBills(b) ? `<span class="tag chap">Chapter amendment${TIPI(CHAPTER_AMENDMENT)}</span>`
-        : b.memo && changesAgreed(b) ? `<span class="tag chap">${changesMade(b) ? "Changed by a later bill" : "Changes to come"}${TIPI(CHANGES_AGREED)}</span>` : "";
-      const narrowTag = { person: "For one person", org: "For one group", naming: "Road or place naming", place: "For one city or county" }[b.narrow];
-      const tags = (b.shell ? `<span class="tag narrow">${STATE.shellTag || "Shell bill"}${TIPI(SHELL_TIP)}</span>` : "") + (STATE.rowTags?.(b) || "") + (narrowTag ? `<span class="tag narrow">${narrowTag}</span>` : "") + chap + noes.map((L) => `<span class="tag vno">${esc(shortName(L.name))} voted no</span>`).join("") + partyTag(b) + b.topics.map((t) => `<span class="tag${t === "env" ? " env" : ""}">${esc(TOPICS[t])}</span>`).join("") + historyTags(b);
-      const intro = DATA.current && b.intro ? `<span>Introduced ${b.intro}</span>` : "";
       const meet = isWatched(b) ? null : nextMeeting(b);
+      const one = meet ? `<span class="tag agenda">On the agenda: ${esc(meet.committee)}, ${fmtMeet(meet.when)}</span>`
+        : b.shell ? `<span class="tag narrow">${STATE.shellTag || "Shell bill"}${TIPI(SHELL_TIP)}</span>`
+        : STATE.rowTags?.(b) || (NARROW_TAG[b.narrow] ? `<span class="tag narrow">${NARROW_TAG[b.narrow]}</span>` : "") || chapTag(b);
       return `<div class="billrow"><details class="bill" data-idx="${b.idx}">
         <summary>
           <div class="nums"><span>${esc(first)}</span>${second ? `<span class="other">${esc(second)}</span>` : ""}<span class="starspace" aria-hidden="true">${starSpace(b)}</span></div>
           <div class="main">
             <div class="title">${esc(b.title)}${newsTags(b)}</div>
-            <div class="meta">${pageRole(b)}${b.sponsors.map(esc).join(" / ")}${b.law ? `<span>${esc(b.law)}</span>` : ""}${intro}${b.budget ? "<span>Budget bill</span>" : ""}${b.program ? `<span>${esc(b.program)}</span>` : ""}</div>
-            <div class="tags">${meet ? `<span class="tag agenda">On the agenda: ${esc(meet.committee)}, ${fmtMeet(meet.when)}</span>` : ""}${tags}</div>
+            <div class="meta">${pageRole(b)}${b.sponsors.map(esc).join(" / ")}</div>
+            ${one ? `<div class="tags">${one}</div>` : ""}
           </div>
           <div class="status">${track(b)}${statusText(b)}</div>
         </summary>
@@ -3860,7 +4018,7 @@ function activeFilters() {
   if (state.hist) out.push(["hist", null, "History", opt("hist", state.hist)]);
   if (state.intro) out.push(["intro", null, "Introduced", state.intro]);
   if (state.voted) out.push(["voted", null, "Vote", opt("voted", state.voted)]);
-  if (state.nearby) out.push(["nearby", null, "Only", `bills that could affect ${HOME ? `${HOME} County` : "your county"}`]);
+  if (state.nearby) out.push(["nearby", null, "Only", `bills that could affect ${HOME ? placeName(HOME) : `your ${PLACE_WORD}`}`]);
   if (state.changed) out.push(["changed", null, "New activity", CHANGED[state.changed].label()]);
   if (state.agenda) out.push(["agenda", null, "On", "an upcoming committee agenda"]);
   return out;
@@ -3876,7 +4034,7 @@ function renderActive() {
     : `<button class="chipx" type="button" data-k="${k}" data-v="${esc(v ?? "")}" title="Remove this filter"><b>${esc(label)}:</b> ${esc(val)} <span aria-hidden="true">×</span></button>`).join("")
     + (removable ? `<button class="clearall" type="button" data-clear="all">Clear all</button>` : "") : "";
   const note = LINK_COUNTY && state.nearby && HOME === LINK_COUNTY.from && LINK_COUNTY.mine !== HOME
-    ? `<p class="linkcounty">This link shows bills that could affect ${esc(HOME)} County. <button type="button" class="linkish" data-mycounty>Show ${esc(LINK_COUNTY.mine)} County instead</button></p>` : "";
+    ? `<p class="linkcounty">This link shows bills that could affect ${esc(placeName(HOME))}. <button type="button" class="linkish" data-mycounty>Show ${esc(placeName(LINK_COUNTY.mine))} instead</button></p>` : "";
   $("active").innerHTML = html + note; $("active").hidden = !list.length && !note;
   $("filterCount").textContent = list.length ? `${list.length} active` : "";
 }
@@ -4040,7 +4198,8 @@ function newsBox(list) {
 }
 // My watched bills in the order they show, for share links and published lists.
 function myOrdered() { const { active, idle, decided } = watchItems(BILLS.filter(isWatched), (b) => watchStance(b) || "support", myRank); return [...active, ...idle, ...decided].map((x) => x.b); }
-function toggleWatch(b) { if (!isWatched(b)) { countUse(`starred/${baseNum(b.nums[0])}`); step("starred"); } setWatch(b, isWatched(b) ? null : { seen: b.last || "", stance: "support" }); }
+// A new star has no side yet: the person picks support or oppose (a decided bill has none to pick).
+function toggleWatch(b) { if (!isWatched(b)) { countUse(`starred/${baseNum(b.nums[0])}`); step("starred"); } setWatch(b, isWatched(b) ? null : { seen: b.last || "", stance: null }); }
 function markSeen(b) { const e = watchEntry(b); if (e && e.seen !== (b.last || "")) { setWatch(b, { ...e, seen: b.last || "" }); updateWatchTab(); } }
 // The Watchlist tab: how many bills, and a badge for how many have news.
 function updateWatchTab() {
@@ -4050,14 +4209,17 @@ function updateWatchTab() {
 }
 // The bill row keeps an invisible copy of the star (and stance) in its number column, holding the place where the real
 // buttons (.rowstar, just after the summary: a summary can't contain buttons) are drawn over it.
+// The side a watched bill's owner takes: "Support", "Oppose", or not picked yet. Decided bills have no side to pick.
+const stanceWord = (st) => (st === "oppose" ? "Oppose" : st === "support" ? "Support" : "Pick a side");
+const showStance = (b, e) => !!e && b.stage < 5;
 function starSpace(b) {
   const e = watchEntry(b);
-  return `<span class="watchbtn">${e ? "★" : "☆"}</span>` + (e ? `<span class="stance">${e.stance === "oppose" ? "Oppose" : "Support"}</span>` : "");
+  return `<span class="watchbtn">${e ? "★" : "☆"}</span>` + (showStance(b, e) ? `<span class="stance">${stanceWord(e.stance)}</span>` : "");
 }
 function watchButton(b, withStance = true) {
   const e = watchEntry(b);
   return `<button class="watchbtn" type="button" data-watch="${b.idx}" aria-pressed="${!!e}" title="${e ? "Remove from" : "Add to"} my watchlist">${e ? "★" : "☆"}</button>`
-    + (e && withStance ? `<button class="stance ${e.stance}" type="button" data-stance="${b.idx}" title="Switch between support and oppose">${e.stance === "oppose" ? "Oppose" : "Support"}</button>` : "");
+    + (withStance && showStance(b, e) ? `<button class="stance ${e.stance || "unset"}" type="button" data-stance="${b.idx}" title="${e.stance ? "Switch between support and oppose" : "Do you support or oppose this bill?"}">${stanceWord(e.stance)}</button>` : "");
 }
 // ---- Published lists: kept online, updated by whoever holds the edit key, readable by anyone with the link.
 // Creating one needs an invite code from the site's owner (one per group).
@@ -4272,21 +4434,26 @@ function keyAction(b, stance) {
   return { plan, key, more, reps };
 }
 
+// Whether a sponsor still sits in the Legislature (on the current member list): one who has left can't reintroduce a
+// bill. Unknown (true) without a member list.
+const sittingMember = (name, house) => !LEGS.length || !DATA.current || LEGS.some((L) => L.house === house && lastName(L.name) === lastName(name));
 const titleOf = (p) => (p.gov ? EXEC.office : /\b(?:Committee|Board)\b/.test(p.name) ? p.name : `${TITLE[p.house]} ${p.name}`);
 // A bill that's out of time this session can come back next session only if its sponsors reintroduce it.
-function reintroAsk(b, stance) {
-  if (stance === "oppose" || !floorVotesOver() || b.stage >= 3 || continuedTo(b)) return "";
+function reintroAsk(b, stance, brief = false) {
+  if (stance === "oppose" || !floorVotesOver() || b.stage >= 3 || continuedTo(b) || lawTwin(b)) return "";
   const people = DATA.contacts?.people || {};
   const infoFor = (name) => people[name] || Object.entries(people).find(([n]) => lastName(n) === lastName(name))?.[1] || {};
-  const sponsors = b.vers.filter((v) => v.sponsor).map((v) => ({ name: v.sponsor, house: v.p[0], info: infoFor(v.sponsor), role: "sponsor" }));
-  if (!sponsors.length) return "";
+  const sitting = sittingMember;
+  const all = b.vers.filter((v) => v.sponsor && !/\b(?:Committee|Board)\b/.test(v.sponsor)).map((v) => ({ name: v.sponsor, house: v.p[0], info: infoFor(v.sponsor), role: "sponsor" }));
+  const sponsors = all.filter((p) => sitting(p.name, p.house));
+  if (!sponsors.length) return all.length ? `<div class="do reintro"><p class="who"><b>Next session</b> ${andList([...new Set(all.map((p) => esc(titleOf(p))))])} ${all.length > 1 ? "are" : "is"} no longer in ${BODY}; someone else would have to file it again.</p></div>` : "";
   // A bill with a version in only one house needs a sponsor in the other to pass; your legislator there could carry it.
   const missing = !STATE.oneNumber && BOTH.find((h) => !b.vers.some((v) => v.p[0] === h));
   const rep = missing && votePeople().find((L) => L.house === missing && !sponsors.some((p) => p.house === missing));
   const carry = rep ? `<p class="who">It has no ${HOUSE[missing]} version. Ask ${esc(titleOf({ house: rep.house, name: rep.name }))} to sponsor one.</p>
     <p class="reach">${reachOf({ house: rep.house, name: rep.name, info: infoFor(rep.apiName || rep.name), role: "your-legislator" })}</p>` : "";
   return `<div class="do reintro"><p class="who"><b>Next session</b> Ask the sponsor${sponsors.length > 1 ? "s" : ""} to reintroduce it in ${STATE.opens ? new Date(`${STATE.opens(DATA.session + YEARS)}T12:00`).toLocaleString("en-US", { month: "long" }) : "January"} ${DATA.session + YEARS}.</p>
-    ${sponsors.map((p) => `<p class="reach"><b>${esc(titleOf(p))}</b> ${reachOf(p)}</p>`).join("")}${carry}</div>`;
+    ${brief ? "" : sponsors.map((p) => `<p class="reach"><b>${esc(titleOf(p))}</b> ${reachOf(p)}</p>`).join("")}${carry}</div>`;
 }
 function reachOf(p) {
   if (p.gov) return GOV_REACH;
@@ -4367,7 +4534,7 @@ function renderWatchView() {
       <div class="whead" data-wtoggle="${b.idx}" role="button" tabindex="0" aria-expanded="${open}">
         <div class="wtop"><div class="nums">${!SHARED && list.length > 1 ? `<button class="whandle" type="button" data-whandle aria-label="Move ${esc(b.nums[0])} up or down" title="Drag to change the order (or use the arrow keys)">⠿</button>` : ""}<span class="chev" aria-hidden="true"></span>${esc(b.nums.join(" / "))}${SHARED
           ? `${watchButton(b, false)}<span class="stance fixed ${x.stance}" title="The position of whoever shared this list">${x.stance === "oppose" ? "Oppose" : "Support"}</span>`
-          : watchButton(b)}</div><span class="spill p${b.stage}">${esc(TEXT.pipe[b.stage])}${esc(due)}</span></div>
+          : watchButton(b)}</div><span class="spill p${b.stage}">${esc(stageWord(b).replace(/^./, (c) => c.toUpperCase()))}${esc(due)}</span></div>
         <h3>${esc(b.title)}${SHARED ? "" : newsTags(b)}</h3>
         ${b.sponsors.length ? `<p class="wspons">${b.sponsors.map(esc).join(" / ")}</p>` : ""}
         ${x.key ? `<div class="wask"><span><b>${esc(andList([x.key, ...(x.more || [])].map(titleOf)))}:</b> ${esc(x.key.ask)}</span>${x.more?.length ? "" : `<button class="act-btn small primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button>`}</div>` : ""}
@@ -4471,7 +4638,7 @@ function fillSelects() {
   if ($("homeTown")) $("homeTown").value = chosenReps()?.town || "";
   for (const id of ["who", "law", "voted", "changed", ...MORE_KEYS]) $(id)?.classList.toggle("on", !!state[id]);
   // How many more bills each "hide" box takes out, given the other filters.
-  $("nearbyCounty").textContent = HOME ? `${HOME} County` : "your county";
+  $("nearbyCounty").textContent = HOME ? placeName(HOME) : `your ${PLACE_WORD}`;
   $("nearbyN").textContent = `(hides ${num(BILLS.filter((b) => matches(b, "nearby") && farAway(b)).length)})`;
   const more = MORE_KEYS.filter((k) => state[k]).length;
   $("moreCount").textContent = more ? `${more} active` : "";
@@ -4515,6 +4682,7 @@ function fillDetail(el) {
   // On a watchlist card the summary and the key action are already shown above.
   const inCard = el.classList.contains("morebill");
   d.innerHTML = `${b.summary && !inCard ? `<p>${esc(b.summary)}</p>` : ""}
+    ${panelTags(b, inCard)}
     <p class="textlink">${STATE.textLinks(b)}</p>
     ${chapterAmendment(b)}
     ${signingMemo(b)}${vetoMemo(b)}
@@ -4528,7 +4696,7 @@ function fillDetail(el) {
     ${lineage(b)}
     ${inCard ? "" : twinLine(b)}
     ${similarBlock(b)}
-    <div class="versions">${b.vers.map(verBlock).join("")}</div>`;
+    <div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>`;
 }
 
 const VIEWS = ["bills", "watch", "stats", "how", "act", "person"];
@@ -4549,8 +4717,10 @@ function showView(v, push = true) {
   }
   for (const id of ["bills", "watch", "stats", "how", "act", "person"]) $("view-" + id).hidden = id !== v;
   if (v === "watch") renderWatchView();
-  if (v === "stats" && statSec === "statNet") renderNet();
+  if (v === "stats" && statSec === "statNet" && $("statMore").open) renderNet();
   $("filtered").hidden = v !== "bills";
+  // "New here?" belongs with the bill list.
+  $("howto").hidden = v !== "bills" || !INTRO_OPEN;
 }
 
 function syncControls() {
@@ -4593,7 +4763,7 @@ function wire() {
       const n = BILLS.filter((b) => matches(b) && !isWatched(b)).length;
       if (n > 100 && !confirm(`Add ${num(n)} bills to your watchlist? You can undo this right after.`)) return;
       STAR_UNDO = sortBills(BILLS.filter((b) => matches(b))).filter((b) => !isWatched(b));
-      for (const b of STAR_UNDO) WATCH.set(billKey(b), { seen: b.last || "", stance: "support" });
+      for (const b of STAR_UNDO) WATCH.set(billKey(b), { seen: b.last || "", stance: null });
       saveWatch(); countUse("starred-all");
     } else {
       for (const b of STAR_UNDO || []) setWatch(b, null);
@@ -4644,7 +4814,7 @@ function wire() {
     if (s) {
       e.preventDefault(); e.stopPropagation();
       const b = BILLS[+s.dataset.stance], en = watchEntry(b);
-      setWatch(b, { ...en, stance: en.stance === "oppose" ? "support" : "oppose" });
+      setWatch(b, { ...en, stance: en.stance === "support" ? "oppose" : "support" });
       refreshWatchButtons(b); return;
     }
     const btn = e.target.closest(".watchbtn"); if (!btn) return;
@@ -4660,14 +4830,16 @@ function wire() {
   // In-page links to one bill are buttons, not #S1234 anchors: some viewers (Claude's artifact
   // viewer among them) reload the page on a hash link, which lost the bill and showed old filters.
   document.addEventListener("click", (e) => {
-    if (e.target.closest("[data-intro-close]")) { try { localStorage.setItem(INTRO_STORE, "hidden"); } catch (err) {} $("howto").hidden = true; return; }
+    if (e.target.closest("[data-intro-close]")) { try { localStorage.setItem(INTRO_STORE, "hidden"); } catch (err) {} INTRO_OPEN = false; $("howto").hidden = true; $("introLink").hidden = false; return; }
     if (e.target.closest("[data-intro]")) { if ($("howto").hidden) {
       renderIntro(true);
       // Scroll only if it's out of view (e.g. after scrolling down), and then just enough to show it.
       const r = $("howto").getBoundingClientRect();
       if (r.top < 0 || r.bottom > innerHeight) $("howto").scrollIntoView({ block: "nearest" });
-    } else $("howto").hidden = true;
+    } else { INTRO_OPEN = false; $("howto").hidden = true; $("introLink").hidden = false; }
     return; }
+    const nm = e.target.closest("[data-nmore]");
+    if (nm) { const rest = $("notice").querySelector(".nrest"), open = rest.hidden; rest.hidden = !open; nm.textContent = open ? "Less" : "More"; nm.setAttribute("aria-expanded", open); return; }
     if (e.target.closest("[data-impact]")) { showView("how"); showHowSec("impact"); $("view-how").scrollIntoView({ block: "start" }); return; }
     const hs = e.target.closest("[data-how]");
     if (hs) { showHowSec(hs.dataset.how); if (!hs.closest("#howTabs")) $("view-how").scrollIntoView({ block: "start" }); return; }
@@ -4856,6 +5028,11 @@ function wire() {
     openShown += 25; renderOpenNow();
   });
   $("statTopic").addEventListener("change", renderStats);
+  // "Explore more": the detailed charts draw when it opens (the network and "Who works on what" need to be visible).
+  $("statMore").addEventListener("toggle", () => {
+    try { localStorage.setItem(STORE + "statmore", $("statMore").open ? "1" : ""); } catch (e) {}
+    if ($("statMore").open) showStatSec(statSec); else document.querySelector(".stattopic").hidden = false;
+  });
   $("statGeneral").addEventListener("change", (e) => { STAT_GENERAL = e.target.checked; renderStats(); });
   $("homeCounty").addEventListener("change", (e) => setCounty(e.target.value));
   for (const id of ["statTabs"]) $(id).addEventListener("click", (e) => { const b = e.target.closest("[data-sec]"); if (b) showStatSec(b.dataset.sec); });
@@ -4918,17 +5095,23 @@ function wire() {
 // "How to use this site": shown until dismissed, and again from the link by the tabs.
 const INTRO_STORE = STORE + "intro";
 const PUBLIC_SITE = STATE.publicSite;
+// Shown on a first visit (on the Bills tab only), then folded to a small "How this works" link by the bill count.
+let INTRO_OPEN = false;
 function renderIntro(force) {
   const box = $("howto");
-  let hidden = false;
-  try { hidden = localStorage.getItem(INTRO_STORE) === "hidden"; } catch (e) {}
-  if (!DATA.current || PRESET?.watch || SHARED || (hidden && !force)) { box.hidden = true; return; }
+  let seen = null;
+  try { seen = localStorage.getItem(INTRO_STORE); } catch (e) {}
+  const can = DATA.current && !PRESET?.watch && !SHARED;
+  INTRO_OPEN = !!can && (force || !seen);
+  $("introLink").hidden = !can || INTRO_OPEN;
+  if (!INTRO_OPEN) { box.hidden = true; return; }
+  if (!seen) try { localStorage.setItem(INTRO_STORE, "seen"); } catch (e) {}
   // One line: the four things a newcomer can do, sharing included. Share links work only on the public site.
   const shareStep = ROOT ? "Share your watchlist so others can weigh in"
     : `Share your watchlist from the <a href="${PUBLIC_SITE}" target="_blank" rel="noopener">public site</a> so others can weigh in`;
   const steps = ["☆ Star bills to build your watchlist", "Mark whether you support or oppose them", "Open a bill to see who to contact and what to ask", shareStep];
-  box.hidden = false;
-  box.innerHTML = `<b class="intro-h">New here?</b><ol>${steps.map((t, i) => `<li><span class="n">${i + 1}</span>${t}</li>`).join("")}</ol>
+  box.hidden = $("view-bills").hidden;
+  box.innerHTML = `<b class="intro-h">${seen ? "How this works" : "New here?"}</b><ol>${steps.map((t, i) => `<li><span class="n">${i + 1}</span>${t}</li>`).join("")}</ol>
     <button type="button" class="linkish" data-impact>Tips</button><button type="button" class="intro-x" data-intro-close aria-label="Hide these tips">×</button>`;
 }
 
@@ -5124,8 +5307,80 @@ function floorVotesOver() {
 
 // True once the current session is over and its unpassed bills have died with it (Texas between its odd-year
 // sessions, Virginia after its spring session); not New York's, which can still move until December 31.
-const billsDied = () => floorVotesOver() && (STATE.floorVotesEnd === false || !!STATE.diesAfterFloor);
+// A state whose bills die only later (Vermont's and Washington's bienniums end in January; Massachusetts's informal
+// sessions run until then) keeps New York's wording until that day: out of time, but not dead yet.
+const billsDied = () => floorVotesOver() && (STATE.floorVotesEnd === false || (!!STATE.diesAfterFloor
+  && (/\bdied\b/.test(DIES(lastYear(DATA.session))) || !STATE.sessionEnds || isoToday() > STATE.sessionEnds(DATA.session))));
+// The day the session ended (or ends), for "it died when the session ended Nov 1, 2026".
+const sessionEndDay = () => (STATE.sessionEnds ? STATE.sessionEnds(DATA.session) : DATA.lastVote || "");
+// What the panel says about a bill that ran out of time: the state's own line, in the past tense once that day has gone
+// by (a profile's "it dies when the session ends in May 2026", read in November, would say it hasn't happened yet).
+function diesLineNow(y2, b) {
+  const line = DIES(y2, b);
+  if (!billsDied() || /\bdied\b/.test(line)) return line;
+  const end = sessionEndDay();
+  return end && end < isoToday() ? `The session ended ${fmtDate(end)}, so it died. It would have to be introduced again.` : line;
+}
+// The "Out of time" heading's second line: "Died when ..." once bills have died; until then, when they will.
+function outLine() {
+  const l = STATE.outOfTimeLine || "Die December 31 unless lawmakers return";
+  if (billsDied() || !/^Died\b/.test(l)) return l;
+  if (STATE.outOfTimeLive) return STATE.outOfTimeLive;
+  const end = sessionEndDay();
+  return end ? `Die in ${fmtMonth(end).replace(/^(\w+)/, (m) => ({ Jan: "January", Feb: "February", Mar: "March", Apr: "April", Jun: "June", Jul: "July", Aug: "August", Sep: "September", Oct: "October", Nov: "November", Dec: "December" }[m] || m))} unless lawmakers return` : l;
+}
+// The "Out of time" tip, the same way: "This biennium is over" isn't true until it is.
+const outTip = () => (billsDied() || !STATE.sessionEnds ? OUT_OF_TIME
+  : `Floor votes are over. Bills that haven't ${passedBothLc} die when ${BODY} ends, ${fmtDate(sessionEndDay())}, unless lawmakers return for a special session.`);
+// A stage's long name: once the session's unpassed bills have died, stages 0-2 take the finished session's wording
+// ("Died awaiting a floor vote"), as on a past session's page.
+const stageLong = (k) => (k <= 2 && DATA.current && !DATA.upcoming && billsDied() ? STAGE_TEXT.final : TEXT).long[k];
+// A bill that can no longer move this session: decided, died with the session, ended early (a floor defeat, a study order).
+function stillAlive(b) {
+  if (b.stage >= 5 || !DATA.current) return false;
+  if (b.stage <= 2 && (billsDied() || endedOf(b))) return false;
+  return true;
+}
+// How a bill ended before the session did: the state's own reading (STATE.endedNote: North Dakota's floor defeats,
+// Mississippi's deadlines), or a committee step that ends it (STATE.heldAction: Massachusetts's study orders).
+function endedOf(b) {
+  const own = b.stage <= 2 && STATE.endedNote?.(b);
+  if (own) return own;
+  if (b.stage !== 0 || !STATE.heldAction) return null;
+  const held = (x) => (STATE.heldAction instanceof RegExp ? STATE.heldAction.test(x) : x === STATE.heldAction);
+  const hit = b.vers.flatMap((v) => v.actions).filter(([, x]) => held(x)).pop();
+  if (!hit) return null;
+  const where = b.comm ? ` by the ${commPlain(b.comm)} Committee` : "";
+  return { status: `${STATE.heldLabel}${where}`, when: `${STATE.heldLabel}${where}, ${fmtDate(hit[0])}.`, tail: STATE.heldTip || "" };
+}
+// A bill's place in a list of other bills ("died in committee", "became law"), in the wording that's true today.
+function stageWord(o) {
+  const e = endedOf(o);
+  if (e) return e.status.toLowerCase();
+  if (o.stage === 5) return "became law";
+  if (o.stage === 6) return "vetoed";
+  return (o.stage <= 2 && DATA.current && !DATA.upcoming && billsDied() ? STAGE_TEXT.final : TEXT).pipe[o.stage].toLowerCase();
+}
 
+// The notice above the tabs, kept short: the first sentence of each part, the rest behind "More".
+function shortNotice(parts) {
+  // The end of the first sentence, outside any tag: ". " followed by a capital (or a link).
+  const split = (h) => {
+    let depth = 0;
+    for (let i = 0; i < h.length - 2; i++) {
+      const c = h[i];
+      if (c === "<") depth++; else if (c === ">") depth--;
+      else if (!depth && c === "." && h[i + 1] === " " && /[A-Z<]/.test(h[i + 2]) && i > 25 && !/\b(?:[A-Z]|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|St|No)$/.test(h.slice(Math.max(0, i - 5), i)))
+        return [h.slice(0, i + 1), h.slice(i + 2)];
+    }
+    return [h, ""];
+  };
+  const firsts = [], rests = [];
+  for (const p of parts) { const [a, r] = split(p.trim()); firsts.push(a); if (r) rests.push(r); }
+  const text = (x) => x.replace(/<[^>]+>/g, "");
+  if (!rests.length || text(parts.join(" ")).length <= 170) return parts.join(" ");
+  return `${firsts.join(" ")}<span class="nrest" hidden> ${rests.join(" ")}</span> <button type="button" class="linkish nmore" data-nmore aria-expanded="false">More</button>`;
+}
 function sessionNotice(raw) {
   if (raw.upcoming) {
     const cur = raw.sessions.find((x) => x.session === LATEST);
@@ -5260,10 +5515,9 @@ function hydrate(raw) {
   try { renderHowComm(); } catch (e) { console.error(e); }
   try { const h = localStorage.getItem(STORE + "howsec"); if (h && $(h)?.classList.contains("howsec")) showHowSec(h); } catch (e) {}
   try { renderIntro(); } catch (e) { console.error(e); }
-  const stale = staleNotice(raw);
-  const notice = [stale, sessionNotice(raw)].filter(Boolean).join(" ");
-  $("notice").innerHTML = notice;
-  $("notice").hidden = !notice;
+  const parts = [staleNotice(raw), sessionNotice(raw)].filter(Boolean);
+  $("notice").innerHTML = shortNotice(parts);
+  $("notice").hidden = !parts.length;
   if (raw.current) $("sort").insertAdjacentHTML("beforeend", `<option value="due">${EXEC.title}'s deadline, soonest first</option><option value="meeting">Next committee meeting, soonest first</option>`);
   // The title goes home: the current session's main page.
   const home = raw.sessions.find((x) => x.session === LATEST)?.url;
@@ -5285,6 +5539,7 @@ function hydrate(raw) {
   // States that find legislators by town (New Jersey) pick the town here instead.
   const you = document.querySelector(".field.you");
   you.hidden = !raw.bills.some((b) => b.places.length);
+  if (PLACE_WORD !== "county") you.querySelector("label").textContent = `Your ${PLACE_WORD}`;
   if (raw.towns && raw.current && !STATE.townRegions && !you.querySelector("#homeTown")) {
     you.hidden = false;
     you.querySelector(".hidebox").hidden = $("homeCounty").hidden = true;
@@ -5318,6 +5573,9 @@ function hydrate(raw) {
     syncControls();
   }
   if (applyViewLink()) syncControls();
+  // "Only bills that could affect your county" exists only where bills are tied to counties: a choice saved or linked
+  // elsewhere (or before a state picked towns instead) would otherwise filter, and show a chip, with no box to undo it.
+  if (state.nearby && (document.querySelector(".field.you").hidden || $("nearby").closest(".hidebox").hidden)) { state.nearby = false; syncControls(); }
   if (PRESET?.who) {
     // A legislator's page: start from their bills, keeping only filters saved on this page.
     if (!saved) Object.assign(state, blank());
@@ -5367,6 +5625,7 @@ function hydrate(raw) {
   // "What's changing" needs subjects picked by hand (TRENDS in the state's profile.py).
   if (NOPARTY) document.querySelector('[data-sec="statCosp"]').textContent = "Co-sponsors";
   if (!DATA.insights?.trends?.subjects?.length) { document.querySelector('[data-sec="statTrend"]').hidden = true; if (statSec === "statTrend") statSec = "statOdds"; }
+  try { if (localStorage.getItem(STORE + "statmore")) $("statMore").open = true; } catch (e) {}
   showStatSec(statSec);
   const one = openFromHash();
   if (one) showView("bills");

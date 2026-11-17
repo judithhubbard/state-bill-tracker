@@ -19,6 +19,19 @@ const STATE = {
     if (m) return `Failed in the ${m[1][0] + m[1].slice(1).toLowerCase()}` + (short || !m[2] ? "" : `: ${m[2]}`);
     if (t === "SIGNED BY THE PRESIDENT") return "Signed by the President";
     if (/^VETOED by the President/.test(t)) return t.replace(/^VETOED/, "Vetoed");
+    // In a bill's row, a committee's report in a few words ("Approved by the Commerce Committee, with changes"); the
+    // full line ("... Reported by Senator Cruz with an amendment in the nature of a substitute. With written report No.
+    // 119-161.") is under "Every action".
+    if (short) {
+      const comm = (n) => n.split(",")[0].replace(/^the /, "");
+      const changed = (x) => (/with an amendment|with amendments|in the nature of a substitute|\(Amended\)/.test(x) ? ", with changes" : "");
+      m = t.match(/^Committee on ([^.]+?)\. (?:Ordered to be )?[Rr]eported\b(.*)$/);
+      if (m) return `Approved by the ${comm(m[1])} Committee${changed(m[2])}`;
+      m = t.match(/^Reported( \(Amended\))? by the Committee on ([^.]+?)\./);
+      if (m) return `Approved by the ${comm(m[2])} Committee${changed(m[1] || "")}`;
+      m = t.match(/^Ordered to be Reported( \(Amended\))?/);
+      if (m) return `Committee voted to approve it${changed(m[1] || "")}`;
+    }
     return null;
   },
   publicSite: "https://statebilltracker.org/us/",

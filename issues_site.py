@@ -77,49 +77,40 @@ DESC = {
     "kratom": "Bills about kratom and 7-OH (7-hydroxymitragynine): sales and age limits, labeling, bans and scheduling, consumer protection acts.",
 }
 
-CSS = """
-:root {
-  --paper: #f6f8fb; --sheet: #ffffff; --ink: #14213d; --ink-2: #4a5878; --rule: #d9e0ec; --navy: #1d3b78; --hover: #c8901f;
-  --law: #18693f; --veto: #a3302a; --chip: #e9eef6; --tile-off: #e3e8f1; --tile-off-ink: #56627c;
-  --heat-1: #c5d5ef; --heat-2: #6f93d0; --heat-3: #1d3b78; --heat-ink-1: #14213d; --heat-ink-2: #0b1530; --heat-ink-3: #ffffff;
-  --law-mark: #c8901f;
-  --ctl-r1: #ecd3d0; --ctl-r1-ink: #5b2420; --ctl-d1: #d3dded; --ctl-d1-ink: #1d3560;
-  --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
-  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0; --hover: #e0b04e;
-    --law: #5cc28c; --veto: #f08a80; --chip: #1f2b45; --tile-off: #1b2438; --tile-off-ink: #8a96ae;
-    --heat-1: #2f4d85; --heat-2: #5a86d6; --heat-3: #9dbcf3; --heat-ink-1: #e6ebf5; --heat-ink-2: #ffffff; --heat-ink-3: #0f1626;
-    --law-mark: #e0b04e; color-scheme: dark;
-    --ctl-r1: #573b39; --ctl-r1-ink: #f3dedb; --ctl-d1: #36486b; --ctl-d1-ink: #e3eaf7;
-  }
-}
-:root[data-theme="dark"] {
-  --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0; --hover: #e0b04e;
-  --law: #5cc28c; --veto: #f08a80; --chip: #1f2b45; --tile-off: #1b2438; --tile-off-ink: #8a96ae;
-  --heat-1: #2f4d85; --heat-2: #5a86d6; --heat-3: #9dbcf3; --heat-ink-1: #e6ebf5; --heat-ink-2: #ffffff; --heat-ink-3: #0f1626;
-  --law-mark: #e0b04e; color-scheme: dark;
-  --ctl-r1: #573b39; --ctl-r1-ink: #f3dedb; --ctl-d1: #36486b; --ctl-d1-ink: #e3eaf7;
-}
+def tokens():
+    """The front page's color tokens (home.html's :root blocks, light and dark), so both kinds of page share one palette:
+    blue and red for party only, teal for amounts of bills, green for "became law", gold for the visitor's own."""
+    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "home.html"), encoding="utf-8").read()
+    m = re.search(r"<style>\s*(:root \{.*?)\n\* \{ box-sizing", src, re.S)
+    if not m:
+        raise SystemExit("issues: home.html's color tokens weren't found")
+    return m.group(1)
+
+
+# The same components as the front page (home.html): the year buttons, the tile map, the legend, the stage labels and the
+# party badges.
+CSS_PARTS = """
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--body); padding: 32px 16px 64px; }
-main { max-width: 760px; margin: 0 auto; }
+main { max-width: 1080px; margin: 0 auto; }
 a { color: var(--navy); }
-a:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; }
 .crumbs { font-size: 14px; margin: 0 0 16px; }
 h1 { font: 800 clamp(30px, 7vw, 42px)/1.08 var(--display); font-stretch: 85%; margin: 0 0 10px; }
 h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 32px 0 12px; }
 h3 { font: 700 19px/1.2 var(--display); margin: 24px 0 8px; color: var(--navy); }
-p.lede { color: var(--ink-2); margin: 0 0 20px; font-size: 17px; }
+p.lede { color: var(--ink-2); margin: 0 0 20px; font-size: 17px; max-width: 760px; }
 .note { color: var(--ink-2); font-size: 14px; }
-.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
-.cards a { display: block; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px;
-  color: var(--ink); text-decoration: none; height: 100%; }
+.note abbr { text-decoration: none; cursor: help; }
+/* The issues index: equal cards, each with its name and a two-line count (bills and states; laws in green). */
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); grid-auto-rows: 1fr; }
+.cards li { display: flex; }
+.cards a { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px;
+  padding: 12px 14px; color: var(--ink); text-decoration: none; }
 .cards a:hover, .cards a:focus-visible { border-color: var(--navy); }
-.cards b { display: block; font: 700 18px/1.2 var(--display); color: var(--navy); margin-bottom: 4px; }
-.cards span { color: var(--ink-2); font-size: 14px; }
+.cards b { display: block; font: 700 18px/1.2 var(--display); color: var(--navy); }
+.cards .nums { margin-top: auto; display: flex; flex-direction: column; font-size: 14px; color: var(--ink-2); line-height: 1.4; font-variant-numeric: tabular-nums; }
+.cards .nums .l { color: var(--lawn); font-weight: 600; }
 .tablewrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; font-size: 15px; }
 th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); }
@@ -128,11 +119,11 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 td.sess { white-space: nowrap; }
 tbody tr:last-child td { border-bottom: 0; }
 .tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; align-items: center; }
-.tools button { font: inherit; font-size: 14px; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); border-radius: 999px;
-  padding: 4px 12px; cursor: pointer; }
-.tools button[aria-pressed="true"] { background: var(--navy); color: var(--sheet); border-color: var(--navy); }
 .tools input { font: inherit; padding: 6px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink);
   min-width: 0; flex: 1 1 180px; }
+.tools select { font: inherit; font-size: 15px; padding: 6px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink); max-width: 100%; }
+.tools button.info { font: inherit; border: 0; background: none; color: var(--ink-2); padding: 2px 4px; font-size: 17px; line-height: 1; border-radius: 6px; margin-left: -4px; cursor: pointer; }
+.tools button.info[aria-expanded="true"] { color: var(--navy); }
 ul.bills { list-style: none; margin: 0; padding: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; }
 ul.bills li { padding: 8px 12px; border-bottom: 1px solid var(--rule); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; }
 ul.bills li:last-child { border-bottom: 0; }
@@ -140,46 +131,103 @@ ul.bills a { font-weight: 600; text-decoration: none; }
 ul.bills a:hover { text-decoration: underline; }
 .t { grid-column: 1 / -1; overflow-wrap: anywhere; }
 .why { grid-column: 1 / -1; color: var(--ink-2); font-size: 14px; overflow-wrap: anywhere; }
-.stage { font-size: 13px; background: var(--chip); border-radius: 999px; padding: 1px 9px; white-space: nowrap; align-self: start; }
-.stage.s5 { color: var(--law); font-weight: 600; }
-/* The stage and, before it, the sponsors' party (D, R or Both; none for committee bills), in the front page map's colors. */
+/* Where each bill is, as on the front page: grey in committee, blue moving, amber passed both houses or with the
+   governor, green law, red-brown vetoed. Before it, the sponsors' party: D, R or Both (none for committee bills). */
+.stg { display: inline-block; font: 600 12px/1.5 var(--body); padding: 0 7px; border-radius: 999px; white-space: nowrap;
+  background: var(--st-0); color: var(--st-0-ink); }
+.stg.s1, .stg.s2 { background: var(--st-1); color: var(--st-1-ink); }
+.stg.s3, .stg.s4 { background: var(--st-3); color: var(--st-3-ink); }
+.stg.s5 { background: var(--st-5); color: var(--st-5-ink); }
+.stg.s6 { background: var(--st-6); color: var(--st-6-ink); }
 .tags { display: inline-flex; gap: 4px; align-items: center; align-self: start; justify-self: end; }
 .pty { display: inline-block; font: 700 11px/1.6 var(--body); padding: 0 5px; border-radius: 4px; white-space: nowrap; }
 .pty.D { background: var(--ctl-d1); color: var(--ctl-d1-ink); }
 .pty.R { background: var(--ctl-r1); color: var(--ctl-r1-ink); }
 .pty.B { background: var(--tile-off); color: var(--tile-off-ink); }
-.stage.s6 { color: var(--veto); font-weight: 600; }
-.hidden { display: none !important; }
+.hidden, [hidden] { display: none !important; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.tools select { font: inherit; font-size: 15px; padding: 6px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink); }
-.tiles { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; margin: 16px 0 10px; }
-.tiles a, .tiles span.off { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12%;
+/* The year buttons (links here), as on the front page. */
+.when { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 0 0 16px; font-size: 14px; max-width: 100%; }
+.when a { color: var(--ink-2); background: var(--sheet); padding: 6px 12px; text-decoration: none; }
+.when a + a { border-left: 1px solid var(--rule); }
+.when a[aria-current="page"] { background: var(--navy); color: var(--sheet); font-weight: 600; }
+.when a:hover { color: var(--ink); }
+.when a:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
+/* The map and, beside it (below it on a phone), the counts, the legend and the notes. */
+.mapwrap { display: grid; gap: 12px 24px; margin: 0 0 16px; }
+.mapcol { min-width: 0; }
+.mapcol .tiles { margin-bottom: 10px; }
+/* The panel beside the map (below it on narrow screens), as on the front page: the counts and notes, or the bills of the
+   state pointed at or clicked (pinned). It keeps the map column's height (contain: size), and its list scrolls, so
+   pointing at states moves nothing. */
+@media (min-width: 900px) {
+  .mapwrap { grid-template-columns: minmax(0, 600px) minmax(300px, 1fr); align-items: stretch; }
+  .panel { contain: size; }
+}
+@media (max-width: 899.98px) { .panel { height: 360px; } }
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 12px 4px; min-width: 0;
+  display: flex; flex-direction: column; overflow: hidden; }
+.panel > div { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+#pdefault { overflow-y: auto; }
+.panel p { margin: 0 0 10px; font-size: 14px; color: var(--ink-2); }
+.panel #lede { font-size: 17px; color: var(--ink); margin-bottom: 12px; }
+.panel h3 { font: 700 18px/1.2 var(--display); color: var(--navy); margin: 0 0 4px; }
+.panel ul { list-style: none; margin: 0 -12px; padding: 0; border-top: 1px solid var(--rule); overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+.panel li { position: relative; }
+.panel li a { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1px 8px; align-items: baseline; padding: 6px 44px 6px 12px;
+  border-bottom: 1px solid var(--rule); color: var(--ink); text-decoration: none; font-size: 14px; }
+.panel li:last-child a { border-bottom: 0; }
+.panel li a:hover, .panel li a:focus-visible { background: var(--paper); }
+.panel li a:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
+.panel li b { font: 600 14px/1.3 var(--body); color: var(--navy); white-space: nowrap; }
+.panel .tt { grid-row: 2; grid-column: 1 / -1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.panel .tt .why { color: var(--ink-2); }
+.panel .tags { grid-row: 1; grid-column: 2; }
+.star { position: absolute; right: 6px; top: 50%; margin-top: -16px; width: 32px; height: 32px; border: 0; background: none; cursor: pointer;
+  font-size: 19px; line-height: 1; color: var(--ink-2); border-radius: 6px; padding: 0; }
+.star[aria-pressed="true"] { color: var(--law-mark); }
+.star:hover { background: var(--paper); }
+.tiles a.sel { outline: 3px solid var(--ink); outline-offset: 1px; }
+@media (hover: hover) { .panel .tap { display: none; } }
+@media (hover: none) { .panel .hov { display: none; } }
+.tiles { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; margin: 0; }
+.tiles > * { position: relative; }
+.tiles a, .tiles span.off { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 17%;
   border-radius: 6px; font: 700 clamp(10px, 2.6vw, 15px)/1 var(--display); text-decoration: none; }
-.tiles span.off { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule); }
+.tiles span.off { background: transparent; color: var(--ink); border: 1px dashed var(--rule); }
+.tiles span.wait { border: 0; box-shadow: inset 0 0 0 1px var(--rule); color: var(--ink-2); }
+.tiles span.nodata { border: 0; color: var(--ink-2); background: repeating-linear-gradient(135deg, transparent 0 4px, var(--rule) 4px 5.5px);
+  box-shadow: inset 0 0 0 1px var(--rule); }
 .tiles a:hover, .tiles a:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
-.tiles a.h0 { background: var(--tile-off); color: var(--tile-off-ink); }
+.tiles a.h0 { background: var(--tile-off); color: var(--ink); }
 .tiles a.h1 { background: var(--heat-1); color: var(--heat-ink-1); }
 .tiles a.h2 { background: var(--heat-2); color: var(--heat-ink-2); }
 .tiles a.h3 { background: var(--heat-3); color: var(--heat-ink-3); }
-/* The number of bills on the issue that became law: a gold badge under the state's letters. */
+/* The number of bills on the issue that became law: a green badge pinned to the tile's bottom (a dot on a phone). */
 .lawn { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6em; height: 1.6em; padding: 0 .3em;
-  border-radius: 999px; background: var(--law-mark); color: #14213d; font: 700 clamp(9px, 2vw, 12px)/1 var(--body); }
-.tiles span.wait, .legend .sq.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
-.tiles span.wait { border: 1px dashed var(--tile-off-ink); box-shadow: none; }
-.legend .sq.wait { border: 1px dashed var(--tile-off-ink); box-shadow: none; }
-.legend .sq.off { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
-.tools label { color: var(--ink-2); }
+  border-radius: 999px; background: var(--lawn); color: var(--lawn-ink); font: 700 clamp(9px, 2vw, 12px)/1 var(--body); }
+.tiles .lawn { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); box-shadow: 0 0 0 1.5px var(--sheet); }
+@media (max-width: 479.98px) {
+  .tiles .lawn { min-width: 0; width: 7px; height: 7px; padding: 0; font-size: 0; bottom: 12%; box-shadow: 0 0 0 1px var(--sheet); }
+}
 .legend { color: var(--ink-2); font-size: 14px; margin: 0 0 12px; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
 .legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
 .legend .sq.h0 { background: var(--tile-off); } .legend .sq.h1 { background: var(--heat-1); }
 .legend .sq.h2 { background: var(--heat-2); } .legend .sq.h3 { background: var(--heat-3); }
-.tools button.info { border: 0; background: none; color: var(--ink-2); padding: 2px 4px; font-size: 17px; line-height: 1; border-radius: 6px; margin-left: -4px; }
-.tools button.info[aria-expanded="true"] { color: var(--navy); }
+.legend .sq.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
+.legend .sq.nodata { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--rule) 4px 5.5px); box-shadow: inset 0 0 0 1px var(--rule); }
+.legend .sq.off { background: transparent; border: 1px dashed var(--rule); }
 details.table { margin: 0 0 8px; }
 details.table summary { cursor: pointer; color: var(--navy); font-weight: 600; font-size: 15px; margin: 0 0 8px; }
+section.fed h3 small { font: 400 14px/1.3 var(--body); color: var(--ink-2); }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 """
+
+
+def css():
+    return tokens() + CSS_PARTS
+
 
 HEAD = """<!DOCTYPE html>
 <html lang="en">
@@ -231,6 +279,8 @@ def stage_text(state, stage, kind):
         return "Sent to the voters"
     if state == "ne" and stage == 3:
         return "Passed the Legislature"
+    if state == "us" and stage == 4:
+        return "On the President’s desk"
     return STAGES[stage]
 
 
@@ -256,9 +306,13 @@ def load(site, congress=False):
     return out
 
 
-def shown(num, others=()):
-    """A bill number as people write it: "HB1005" -> "HB 1005"; with a record's other numbers, "A 11560 / S 8443"."""
-    return " / ".join(re.sub(r"^([A-Z]+)(\d)", r"\1 \2", n) for n in [num, *others])
+def shown(num, others=(), st=""):
+    """A bill number as people write it: "HB1005" -> "HB 1005"; with a record's other numbers, "A 11560 / S 8443".
+    Maine's records are "HLD307"/"SLD307" (the house that has the paper, then its LD number): "LD 307"."""
+    out = [re.sub(r"^([A-Z]+)(\d)", r"\1 \2", n) for n in [num, *others]]
+    if st == "me":
+        out = [re.sub(r"^[HS]LD ", "LD ", n) for n in out]
+    return " / ".join(out)
 
 
 def link(f, num):
@@ -285,7 +339,7 @@ SHORT = {"datacenters": "data centers", "pfas": "PFAS", "ai": "artificial intell
          "strentals": "short-term rentals", "water": "water rights", "psychedelics": "psychedelics", "cryptoatm": "crypto ATMs",
          "medicaidwork": "Medicaid work requirements", "dst": "daylight saving time", "books": "book removals",
          "medicaldebt": "medical debt", "police": "police accountability", "deathpenalty": "death penalty",
-         "vaccines": "vaccines", "unions": "unions", "initiatives": "ballot initiatives", "rcv": "ranked-choice voting",
+         "vaccines": "vaccines", "unions": "unions", "initiatives": "ballot initiative rules", "rcv": "ranked-choice voting",
          "utilityrates": "utility rates", "climate": "climate and clean energy", "esg": "ESG and boycotts",
          "religion": "religion in schools", "childlabor": "child labor", "protest": "protest laws", "kratom": "kratom"}
 
@@ -325,7 +379,9 @@ def year_view(iid, states, year):
                 if iid not in b[0]:
                     continue
                 intro, law = (b[7] if len(b) > 7 else f["session"]), (b[8] if len(b) > 8 else "")
-                last = int((b[5] or "0")[:4] or 0)
+                # Alive through its last action, but not past its session's end: Illinois and New Jersey close a General
+                # Assembly with a line on every pending bill in the next January, which isn't the bill moving then.
+                last = min(int((b[5] or "0")[:4] or 0), f["session"] + (f.get("years") or 1) - 1)
                 new, passed = intro <= year <= max(intro, last), law[:4] == str(year)
                 key = (f["session"], b[2])
                 if (new or passed) and key not in seen:
@@ -340,91 +396,155 @@ def badge(laws):
     return f'<span class="lawn" aria-hidden="true">{laws}</span>' if laws else ""
 
 
-def tile_map(iid, by, names, open_, year, upcoming):
+def tile_map(iid, by, names, open_, year, upcoming, nodata=()):
     """The tile map, each state shaded by its bills on the issue introduced that year, with the number that became law,
-    each square a link to the state's bills below."""
+    each square a link to the state's bills below. A state with no bills that year is "no session" when its legislature
+    didn't meet (Texas in even years), "no data" when it met but the site has no data for that year (nodata), and "no
+    bills filed yet" for next year."""
     out = []
     for code, (r, c) in GRID.items():
         st = code.lower()
         style = f"grid-row:{r + 1};grid-column:{c + 1}"
         if st not in names:
-            out.append(f'<span class="off" style="{style}" title="Coming soon">{code}</span>')
+            out.append(f'<span class="off" style="{style}" title="Coming soon" aria-label="{code}, coming soon">{code}</span>')
             continue
         n, laws = by[st][:2] if st in by else (0, 0)
         if st not in open_ and not n and not laws:
-            label = f"{names[st]}: no bills filed yet for {year}" if upcoming else f"{names[st]}: no regular session in {year}"
-            out.append(f'<span class="off wait" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}</span>')
+            gap = not upcoming and st in nodata
+            label = (f"{names[st]}: no bills filed yet for {year}" if upcoming else
+                     f"{names[st]}: no data on this site for {year}" if gap else f"{names[st]}: no regular session in {year}")
+            out.append(f'<span class="off {"nodata" if gap else "wait"}" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}</span>')
             continue
         label = (f"{names[st]}: {n} bill{'' if n == 1 else 's'}{' prefiled' if upcoming else ''} in {year}" if n else f"{names[st]}: none in {year}")
         label += f", {laws} became law" if laws else ""
         href = f"#{st}" if st in by else "#bills"
-        out.append(f'<a href="{href}" data-st="{st}" data-name="{e(names[st])}" class="h{step(n)}" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}">{code}{badge(laws)}</a>')
+        out.append(f'<a href="{href}" data-st="{st}" data-name="{e(names[st])}" class="h{step(n)}" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}" aria-controls="panel">{code}{badge(laws)}</a>')
     return '<div class="tiles">' + "".join(out) + "</div>"
+
+
+def no_data(states, year):
+    """The states whose legislature met that year but whose data for it isn't on the site: no session file covers the
+    year (Indiana's, Utah's and Virginia's pages begin with 2024)."""
+    return {st for st, d in states.items() if not any(covers(f, year) for f in d["files"])}
 
 
 def page_name(year, default):
     return "./" if year == default else f"{year}.html"
 
 
-def issue_page(issue, states, year, years, default, upcoming):
+def bill_items(iid, st, mine):
+    """A state's (or Congress's) bills on the issue, one line each: laws first, then the furthest along; within a stage,
+    the latest action first."""
+    items = []
+    for f, b, new, passed in sorted(sorted(mine, key=lambda x: x[1][5], reverse=True), key=lambda x: (x[1][4] != 5, -x[1][4])):
+        fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
+        why = (b[9].get(iid) if len(b) > 9 else "") or ""
+        items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}" data-k="{f["session"]}|{e(b[2])}|{e(b[5] or "")}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else (), st))}</a>'
+                     f'<span class="tags">{party_tag(party(b))}<span class="stg s{b[4]}">{e(stage_text(st, b[4], b[6]))}</span></span>'
+                     f'<span class="t">{e(b[3])}</span>'
+                     + (f'<span class="why">{e(why)}</span>' if why and why.lower() not in b[3].lower() else "")
+                     + '</li>')
+    return "".join(items)
+
+
+STAR_TIP = "The legislature publishes only bill titles, so some of its bills on this issue may be missed."
+
+
+def issue_page(issue, states, year, years, default, upcoming, congress=None):
     iid = issue["id"]
     names = {st: d["name"] for st, d in states.items()}
     by, open_, info = year_view(iid, states, year)
+    nodata = set() if upcoming else no_data(states, year)
     rows, blocks, intro_n, laws_n, moving = [], [], 0, 0, 0
     for st in sorted(by, key=lambda s: names[s]):
         n, laws, mine = by[st]
         n_moving = sum(1 for f, b, new, _ in mine if new and 1 <= b[4] <= 4)
         intro_n, laws_n, moving = intro_n + n, laws_n + laws, moving + n_moving
-        flag = " *" if st in TITLES_ONLY else ""
+        flag = f'&nbsp;<abbr title="{STAR_TIP}">*</abbr>' if st in TITLES_ONLY else ""
         label, total = info.get(st, ("", 0))
         rows.append((n, f'<tr data-st="{st}"><th scope="row"><a href="#{st}">{e(names[st])}</a>{flag}</th><td class="n">{n}</td>'
                         f'<td class="n">{laws}</td><td class="n">{n_moving}</td><td class="n">{f"{total:,}" if total else ""}</td>'
                         f'<td class="sess">{e(label)}</td></tr>'))
-        items = []
-        # Laws first, then the furthest along; within a stage, the latest action first.
-        for f, b, new, passed in sorted(sorted(mine, key=lambda x: x[1][5], reverse=True), key=lambda x: (x[1][4] != 5, -x[1][4])):
-            fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
-            when = ""
-            items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else ()))}</a>'
-                         f'<span class="tags">{party_tag(party(b))}<span class="stage s{b[4]}">{e(stage_text(st, b[4], b[6]))}</span></span>'
-                         f'<span class="t">{e(b[3])}{when}</span>'
-                         + (f'<span class="why">{e(why)}</span>' if (why := (b[9].get(iid) if len(b) > 9 else "")) and why.lower() not in b[3].lower() else "")
-                         + '</li>')
         blocks.append(f'<section class="st" data-name="{e(names[st].lower())}"><h3 id="{st}">{e(names[st])} '
-                      f'<span class="note">(<span class="cnt">{n}</span>{flag})</span></h3><ul class="bills">{"".join(items)}</ul></section>')
+                      f'<span class="note">(<span class="cnt">{n}</span>{flag})</span></h3><ul class="bills">{bill_items(iid, st, mine)}</ul></section>')
+    # Congress: its own line under the map and its own list after the states', never in the states' counts.
+    us_n = us_l = 0
+    fed_line = fed_block = ""
+    if congress:
+        us_by, _, _ = year_view(iid, congress, year)
+        if "us" in us_by:
+            us_n, us_l, mine = us_by["us"]
+            fed_block = (f'<section class="st fed" data-name="congress"><h3 id="us">Congress <small>(not in the states&rsquo; counts)</small> '
+                         f'<span class="note">(<span class="cnt">{us_n}</span>)</span></h3><ul class="bills">{bill_items(iid, "us", mine)}</ul></section>')
+        fed_line = (f'<p class="note" id="fedLine">Congress, not counted above: <b id="usN">{us_n}</b> bill{"" if us_n == 1 else "s"}{" prefiled" if upcoming else ""} in {year}'
+                    + ("" if upcoming else f', <b id="usL">{us_l}</b> became law')
+                    + (f'. <a href="#us">See Congress&rsquo;s bills</a>.' if fed_block else ".") + "</p>")
     in_states = len([1 for st in by if by[st][0]])
     rows.sort(key=lambda r: -r[0])
+    quiet = [st for st in names if st not in open_ and st not in by]
     none = sorted(names[st] for st in open_ if st not in by)
-    waiting = sorted(names[st] for st in names if st not in open_ and st not in by)
-    yopts = "".join(f'<option value="{page_name(y, default)}"{" selected" if y == year else ""}>'
-                    f'{y}{" (prefiled so far)" if y > default else ""}</option>' for y in years)
+    gaps = sorted(names[st] for st in quiet if st in nodata)
+    nosession = sorted(names[st] for st in quiet if st not in nodata)
+    unbuilt = any(code.lower() not in names for code in GRID)
+    cur, pre = ' aria-current="page"', ' title="Prefiled so far"'
+    year_links = "".join(f'<a href="{page_name(y, default)}"{cur if y == year else ""}{pre if y > default else ""}>{y}</a>'
+                         for y in years)
     fopts = "".join(f'<option value="f:{e(re.sub(r"[^a-z]+", "-", k.lower()))}">{e(k)}</option>' for k in issue.get("filters", {}))
     verb = "prefiled" if upcoming else "with action"
-    up = up_dir = "../../"
+    up = "../../"
     lede_counts = (f'<b id="nBills">{intro_n:,}</b> bills {verb} in <b id="nStates">{in_states}</b> states in {year}'
                    + ("" if upcoming else f'; <b id="nLaws">{laws_n:,}</b> became law in {year}') + ".")
-    body = HEAD.format(title=f"{issue['name']}: bills in every state, {year}", desc=e(DESC.get(iid, "")), css=CSS) + f"""
+    keys = ['<span class="key"><i class="sq h0"></i>None</span>', '<span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>',
+            '<span class="key"><i class="sq h2"></i>5&ndash;14</span>', '<span class="key"><i class="sq h3"></i>15 or more</span>']
+    if not upcoming:
+        keys.append('<span class="key"><span class="lawn">3</span>Number that became law</span>')
+    if upcoming and quiet:
+        keys.append('<span class="key"><i class="sq wait"></i>No bills filed yet</span>')
+    if not upcoming and nosession:
+        keys.append('<span class="key"><i class="sq wait"></i>No session that year</span>')
+    if gaps:
+        keys.append('<span class="key"><i class="sq nodata"></i>No data for this year</span>')
+    if unbuilt:
+        keys.append('<span class="key"><i class="sq off"></i>Not on the site yet</span>')
+    notes = []
+    if upcoming:
+        notes.append("Most legislatures start taking bills in January; these are the bills prefiled so far.")
+    if none:
+        notes.append(f"None in {year}: {e(', '.join(none))}.")
+    if upcoming and quiet:
+        notes.append(f"No bills filed yet for {year}: {e(', '.join(sorted(names[st] for st in quiet)))}.")
+    if not upcoming and nosession:
+        notes.append(f"No regular session in {year} (these legislatures meet every other year): {e(', '.join(nosession))}.")
+    if gaps:
+        notes.append(f"No data on this site for {year} (the legislature met; this site&rsquo;s data for it begins later): {e(', '.join(gaps))}.")
+    note_html = "".join(f'<p class="note">{x}</p>' for x in notes)
+    star_note = (f'<p class="note">* {STAR_TIP}</p>' if any(st in TITLES_ONLY for st in by) else "")
+    body = HEAD.format(title=f"{issue['name']}: bills in every state, {year}", desc=e(DESC.get(iid, "")), css=css()) + f"""
 <p class="crumbs"><a href="{up}">State Bill Tracker</a> / <a href="../">Issues</a></p>
 <h1>{e(issue['name'])}</h1>
 <p class="lede">{e(DESC.get(iid, ""))}</p>
-<div class="tools"><label for="year">Year</label>
-<select id="year" onchange="location.href=this.value">{yopts}</select></div>
+<nav class="when" aria-label="Year">{year_links}</nav>
+<div class="mapwrap">
+<div class="mapcol">
+{tile_map(iid, by, names, open_, year, upcoming, nodata)}
+<p class="legend">{"".join(keys)}</p>
+</div>
+<aside class="panel" id="panel">
+<div id="pdefault">
 <p id="lede">{lede_counts}</p>
-{tile_map(iid, by, names, open_, year, upcoming)}
-<p class="legend">
-<span class="key"><i class="sq h0"></i>None</span><span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>
-<span class="key"><i class="sq h2"></i>5&ndash;14</span><span class="key"><i class="sq h3"></i>15 or more</span>
-{"" if upcoming else '<span class="key"><span class="lawn">3</span>Number that became law</span>'}
-{'<span class="key"><i class="sq wait"></i>No bills filed yet</span>' if upcoming else ('<span class="key"><i class="sq wait"></i>No session that year</span>' if any(st not in open_ and st not in by for st in names) else "")}
-<span class="key"><i class="sq off"></i>Not on the site yet</span>
-</p>
+{note_html}{fed_line}
+
+</div>
+<div id="pstate" aria-live="polite" hidden></div>
+</aside>
+</div>
 <details class="table"><summary>Show as a table</summary>
 <div class="tablewrap"><table>
 <thead><tr><th scope="col">State</th><th scope="col" class="n">{"Prefiled" if upcoming else "Bills"}</th><th scope="col" class="n">Became law</th><th scope="col" class="n">Moving</th><th scope="col" class="n">All bills</th><th scope="col">Session</th></tr></thead>
 <tbody>{"".join(r for _, r in rows)}</tbody></table></div>
-<p class="note">A bill counts in each year from its introduction to its last action (in a two-year legislature, most are filed in the first year and keep moving in the second); &ldquo;Became law&rdquo; counts the year it did. &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's session, for scale.</p>
+<p class="note">A bill counts in each year from its introduction to its last action in its session (in a two-year legislature, most are filed in the first year and keep moving in the second); &ldquo;Became law&rdquo; counts the year it did. &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's session, for scale.</p>
+{star_note}
 </details>
-<p class="note">{"Most legislatures start taking bills in January; these are the bills prefiled so far. " if upcoming else ""}* The legislature publishes only bill titles, so some of its bills on this issue may be missed.{f' None in {year}: {e(", ".join(none))}.' if none else ""}{f' No bills filed yet for {year}: {e(", ".join(waiting))}.' if upcoming and waiting else ""}{f' No regular session in {year} (these legislatures meet every other year): {e(", ".join(waiting))}.' if not upcoming and waiting else ""}</p>
 <h2 id="bills">The bills</h2>
 <div class="tools">
 <label for="filter" class="vh">Show</label>
@@ -435,13 +555,13 @@ def issue_page(issue, states, year, years, default, upcoming):
 </div>
 <p class="note hidden" id="partyNote">{PARTY_NOTE}</p>
 <p class="note" id="count" aria-live="polite"></p>
-{"".join(blocks)}
+{"".join(blocks)}{fed_block}
 <footer>Bills are found by the words in their titles and summaries, so a few are missed and a few are only partly about the issue. Bills for one city or county are left out. Open a bill for its status, votes and who to contact.</footer>
 </main>
 <script>
 // Both menus filter the bills, and the map, the counts line and the table follow them (counted from the list's own
 // items: data-n, alive that year; data-l, became law that year; data-p, the sponsors' party). "Find a state" only
-// hides states' lists.
+// hides states' lists. Congress's list (section.fed) is filtered too, and counted on its own line.
 const UPCOMING = {"true" if upcoming else "false"}, YEAR = {year};
 const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n ? 1 : 0);
 function apply() {{
@@ -461,12 +581,18 @@ function apply() {{
       if (li.dataset.n === "1") {{ n++; if (s >= 1 && s <= 4) mv++; }}
       if (li.dataset.l === "1") l++;
     }}
-    by[sec.querySelector("h3").id] = [n, l, mv];
-    bills += n; laws += l; states += n ? 1 : 0;
     sec.querySelector(".cnt").textContent = any;
     const vis = any && (!q || sec.dataset.name.includes(q));
     sec.classList.toggle("hidden", !vis);
     if (vis) shown += any;
+    if (sec.classList.contains("fed")) {{
+      const un = document.getElementById("usN"), ul = document.getElementById("usL");
+      if (un) un.textContent = n;
+      if (ul) ul.textContent = l;
+      continue;
+    }}
+    by[sec.querySelector("h3").id] = [n, l, mv];
+    bills += n; laws += l; states += n ? 1 : 0;
   }}
   document.getElementById("count").textContent = (v || q || pv) ? `Showing ${{shown.toLocaleString()}} bills.` : "";
   document.getElementById("nBills").textContent = bills.toLocaleString();
@@ -475,7 +601,7 @@ function apply() {{
   if (nl) nl.textContent = laws.toLocaleString();
   for (const a of document.querySelectorAll(".tiles a[data-st]")) {{
     const [n, l] = by[a.dataset.st] || [0, 0], code = a.dataset.st.toUpperCase();
-    a.className = `h${{step(n)}}`;
+    a.className = `h${{step(n)}}` + (a.dataset.st === pinned ? " sel" : "");
     const old = a.querySelector(".lawn");
     if (old) old.remove();
     if (l) a.insertAdjacentHTML("beforeend", `<span class="lawn" aria-hidden="true">${{l}}</span>`);
@@ -489,7 +615,77 @@ function apply() {{
     td[0].textContent = n; td[1].textContent = l; td[2].textContent = mv;
     tr.classList.toggle("hidden", !n && !l);
   }}
+  if (showing) showState(showing);
 }}
+// The panel: pointing at a state (or focusing it) lists its bills on the issue, as the menus filter them; clicking pins
+// it (a tap does, on a phone). Stars write the state's watchlist in this browser, as on the state's page and the front
+// page ("abt:<st>:watch"; New York's "abt:watch").
+const pdef = document.getElementById("pdefault"), pst = document.getElementById("pstate"), tiles = document.querySelector(".tiles");
+const canHover = matchMedia("(hover: hover)").matches;
+let pinned = null, showing = null;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({{ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }}[c]));
+const WKEY = (st) => (st === "ny" ? "abt:watch" : `abt:${{st}}:watch`);
+function readWatch(st) {{
+  try {{ const o = JSON.parse(localStorage.getItem(WKEY(st)) || "{{}}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {{}}; }} catch (e) {{ return {{}}; }}
+}}
+function writeWatch(st, o) {{ try {{ localStorage.setItem(WKEY(st), JSON.stringify(o)); }} catch (e) {{}} }}
+const baseNum = (n) => n.replace(/[A-Z]$/, "");
+function starBtn(st, k, label) {{
+  const [session, num] = k.split("|"), on = `${{session}}:${{baseNum(num)}}` in readWatch(st);
+  return `<button type="button" class="star" data-st="${{st}}" data-k="${{esc(k)}}" aria-pressed="${{on}}" aria-label="${{esc(`${{on ? "Remove" : "Star"}} ${{label}}${{on ? " from your bills" : ": follow it in Your bills"}}`)}}" title="${{on ? "Remove from your bills" : "Star: follow it in Your bills"}}">${{on ? "★" : "☆"}}</button>`;
+}}
+const FILTER_WORDS = () => {{
+  const f = document.getElementById("filter"), p = document.getElementById("party");
+  return [f.value ? f.options[f.selectedIndex].text.toLowerCase() : "", p.value ? `sponsors: ${{p.options[p.selectedIndex].text}}` : ""].filter(Boolean).join(", ");
+}};
+function showState(st) {{
+  showing = st;
+  pst.hidden = !st; pdef.hidden = !!st;
+  if (!st) return;
+  const tile = tiles.querySelector(`a[data-st="${{st}}"]`), name = tile ? tile.dataset.name : st.toUpperCase();
+  const h = document.getElementById(st), sec = h && h.closest("section.st");
+  const items = sec ? [...sec.querySelectorAll("li:not(.hidden)")] : [];
+  const n = items.filter((li) => li.dataset.n === "1").length, l = items.filter((li) => li.dataset.l === "1").length;
+  const fw = FILTER_WORDS(), only = fw ? ` (${{fw}})` : "";
+  const links = st === pinned ? ` ${{items.length ? `<a href="#${{st}}" data-jump>Jump to its bills below</a> · ` : ""}}<a href="#" data-close>Close</a>` : "";
+  pst.innerHTML = `<h3>${{esc(name)}}</h3><p>${{n ? `${{n}} bill${{n === 1 ? "" : "s"}}${{UPCOMING ? " prefiled" : ""}} in ${{YEAR}}` : `No bills in ${{YEAR}}`}}${{only}}${{l ? `, ${{l}} became law` : ""}}.${{links}}</p>`
+    + (items.length ? `<ul>${{items.map((li) => {{
+      const a = li.querySelector("a"), why = li.querySelector(".why"), t = li.querySelector(".t").textContent;
+      return `<li><a href="${{esc(a.getAttribute("href"))}}" title="${{esc(t)}}"><b>${{esc(a.textContent)}}</b>${{li.querySelector(".tags").outerHTML}}`
+        + `<span class="tt">${{esc(why ? t.replace(/[.\\s]+$/, "") : t)}}${{why ? `<span class="why">: ${{esc(why.textContent)}}</span>` : ""}}</span></a>`
+        + `${{li.dataset.k ? starBtn(st, li.dataset.k, a.textContent) : ""}}</li>`;
+    }}).join("")}}</ul>` : "");
+}}
+function pin(st) {{
+  pinned = st;
+  for (const t of tiles.querySelectorAll("a[data-st]")) t.classList.toggle("sel", t.dataset.st === pinned);
+  showState(pinned);
+}}
+tiles.addEventListener("pointerover", (e) => {{
+  const a = e.target.closest("a[data-st]");
+  if (a && !pinned && canHover) showState(a.dataset.st);
+}});
+tiles.addEventListener("mouseleave", () => {{ if (!pinned && canHover) showState(null); }});
+tiles.addEventListener("focusin", (e) => {{ const a = e.target.closest("a[data-st]"); if (a && !pinned) showState(a.dataset.st); }});
+tiles.addEventListener("focusout", (e) => {{ if (!pinned && !tiles.contains(e.relatedTarget)) showState(null); }});
+tiles.addEventListener("click", (e) => {{
+  const a = e.target.closest("a[data-st]");
+  if (!a) return;
+  e.preventDefault();
+  pin(pinned === a.dataset.st ? null : a.dataset.st);
+  if (!pinned && canHover) showState(a.dataset.st);
+}});
+pst.addEventListener("click", (e) => {{
+  if (e.target.closest("[data-close]")) {{ e.preventDefault(); const was = pinned; pin(null); tiles.querySelector(`a[data-st="${{was}}"]`)?.focus(); return; }}
+  const b = e.target.closest("button.star");
+  if (!b) return;
+  const [session, num, last] = b.dataset.k.split("|"), w = readWatch(b.dataset.st), k = `${{session}}:${{baseNum(num)}}`;
+  if (k in w) delete w[k]; else w[k] = {{ seen: last, stance: "support" }};
+  writeWatch(b.dataset.st, w);
+  const label = b.getAttribute("aria-label").replace(/^(Star|Remove) /, "").replace(/(: follow it in Your bills| from your bills)$/, "");
+  b.outerHTML = starBtn(b.dataset.st, b.dataset.k, label);
+  pst.querySelector(`button.star[data-k="${{CSS.escape(b.dataset.k)}}"]`)?.focus();
+}});
 document.getElementById("filter").addEventListener("change", apply);
 document.getElementById("party").addEventListener("change", apply);
 document.getElementById("find").addEventListener("input", apply);
@@ -523,6 +719,9 @@ def main(site):
     years = list(range(first, default + 1)) + ([default + 1] if default + 1 in upcoming_years else [])
     os.makedirs(os.path.join(site, "issues"), exist_ok=True)
     summary, opened = [], {}
+    # The legislatures that met each year but whose data for it isn't on the site (the front page's map marks them "no
+    # data", apart from "no session").
+    nodata = {str(y): sorted(no_data(states, y)) for y in years if y <= default}
     for issue in issues.ISSUES:
         os.makedirs(os.path.join(site, "issues", issue["id"]), exist_ok=True)
         per_year, panel = {}, {}
@@ -531,7 +730,7 @@ def main(site):
             by, _, _ = year_view(issue["id"], states, y)
             # Congress: its own entries, apart from the states' totals ("N bills in M states" leaves it out).
             us_by, us_open, _ = year_view(issue["id"], congress, y) if congress else ({}, set(), {})
-            panel[str(y)] = {st: [[shown(b[2], b[10] if len(b) > 10 else ()), b[3], (b[9].get(issue["id"]) if len(b) > 9 else "") or "", b[4],
+            panel[str(y)] = {st: [[shown(b[2], b[10] if len(b) > 10 else (), st), b[3], (b[9].get(issue["id"]) if len(b) > 9 else "") or "", b[4],
                                    link(f, b[2])[len("../../"):], b[6],
                                    # For the star (home.html): the bill's number, its session and its last action's
                                    # date, which make its watchlist entry, as on the state's own page.
@@ -542,7 +741,7 @@ def main(site):
                                   for f, b, new, passed in sorted(sorted(rows, key=lambda x: x[1][5], reverse=True),
                                                                   key=lambda x: (x[1][4] != 5, -x[1][4]))]
                              for st, (n, laws, rows) in {**by, **us_by}.items()}
-            page, info, open_ = issue_page(issue, states, y, years, default, y > default)
+            page, info, open_ = issue_page(issue, states, y, years, default, y > default, congress)
             name = "index.html" if y == default else f"{y}.html"
             open(os.path.join(site, "issues", issue["id"], name), "w", encoding="utf-8").write(page)
             if us_by:
@@ -554,26 +753,28 @@ def main(site):
         summary.append({"id": issue["id"], "name": issue["name"], "group": issue.get("group", ""),
                         "short": SHORT.get(issue["id"], issue["name"]), "y": per_year})
     # The issues by group (issues.GROUPS), as in the front page's menu.
-    card = lambda s: (f'<li><a href="{s["id"]}/"><b>{e(s["name"])}</b><span>{s["y"][str(default)]["bills"]:,} bills in '
-                      f'{s["y"][str(default)]["states"]} states in {default}; {s["y"][str(default)]["laws"]:,} became law</span></a></li>')
+    def card(s):
+        y = s["y"][str(default)]
+        return (f'<li><a href="{s["id"]}/"><b>{e(s["name"])}</b><span class="nums"><span>{y["bills"]:,} bill{"" if y["bills"] == 1 else "s"} in '
+                f'{y["states"]} state{"" if y["states"] == 1 else "s"}</span><span class="l">{y["laws"]:,} became law</span></span></a></li>')
     # Alphabetical within each group.
     abc = sorted(summary, key=lambda s: s["name"].lower())
     cards = "".join(f'<h2>{e(g)}</h2><ul class="cards">{"".join(card(s) for s in abc if s["group"] == g)}</ul>'
                     for g in issues.GROUPS if any(s["group"] == g for s in summary))
     cards += "".join(card(s) for s in abc if s["group"] not in issues.GROUPS) and \
         f'<h2>Other</h2><ul class="cards">{"".join(card(s) for s in abc if s["group"] not in issues.GROUPS)}</ul>'
-    index = HEAD.format(title="Issues across the states", desc="The same subjects in every state legislature: how many bills, where, and which became law.", css=CSS) + f"""
+    index = HEAD.format(title="Issues across the states", desc="The same subjects in every state legislature: how many bills, where, and which became law.", css=css()) + f"""
 <p class="crumbs"><a href="../">State Bill Tracker</a></p>
 <h1>Issues across the states</h1>
 <p class="lede">The same subjects in every state legislature: how many bills, where, and which became law.</p>
 {cards}
-<footer>Counts are for {default} ({len(states)} states). Bills are found by the words in their titles and summaries; see each issue's page for what counts.</footer>
+<footer>Counts are for {default} ({len(states)} states; Congress is on each issue&rsquo;s page, apart from the states). Bills are found by the words in their titles and summaries; see each issue's page for what counts.</footer>
 </main>
 </body>
 </html>
 """
     open(os.path.join(site, "issues", "index.html"), "w", encoding="utf-8").write(index)
-    json.dump({"years": years, "default": default, "open": opened, "groups": issues.GROUPS, "issues": summary},
+    json.dump({"years": years, "default": default, "open": opened, "nodata": nodata, "groups": issues.GROUPS, "issues": summary},
               open(os.path.join(site, "issues", "summary.json"), "w"), ensure_ascii=False)
     print("issues:", ", ".join(f"{s['name']} {s['y'][str(default)]['bills']}" for s in summary), "; years", years)
 

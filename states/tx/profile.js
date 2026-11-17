@@ -21,6 +21,8 @@ const STATE = {
   // never to the governor (Texas Constitution, Art. XVII, Sec. 1).
   amendments: true,
   amendmentOnce: true,
+  // Where the voters' decisions are (the Secretary of State's election results), once an amendment's election has passed.
+  electionResults: "https://www.sos.state.tx.us/elections/historical/index.shtml",
   amendmentVote: "two-thirds of each house's members",
 
   billUrl(p, session = DATA.session) {

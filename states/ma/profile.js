@@ -69,6 +69,8 @@ const STATE = {
   oneNumber: true,
   diesAfterFloor: (y2) => `It dies when the General Court ends in January ${y2 + 1}, unless it passes in an informal session, which takes every member's consent.`,
   outOfTimeLine: "Died when the General Court ended",
+  // Until then (formal sessions are over, informal ones go on), what the "Out of time" heading says.
+  get outOfTimeLive() { return `Die in January ${DATA.session + 2} unless passed in an informal session`; },
 
   // A joint committee that won't move a bill usually sends it to a "study order", which ends it for the session.
   heldAction: "SENT TO STUDY",

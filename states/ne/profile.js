@@ -33,6 +33,8 @@ const STATE = {
   // the governor (Constitution, Art. XVI, sec. 1).
   amendments: true,
   amendmentOnce: true,
+  // The Secretary of State's election results, once an amendment's election has passed.
+  electionResults: "https://electionresults.nebraska.gov/",
   amendmentVote: "three-fifths of the senators (30 of 49) on Final Reading",
   ballotEvenYears: true,
 

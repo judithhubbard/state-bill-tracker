@@ -432,3 +432,24 @@ Questions for the owner (each with a suggested answer):
    protests in mind; it leaves out bills on police and immigration agents' masks. Keep? Suggested: keep.
 7. Ballot initiatives includes local initiative and referendum processes (county and city), not just statewide. Keep?
    Suggested: keep.
+
+## Mentions inside anti-ESG and boycott lists (2026-11-17)
+
+Alabama SB 261 of 2023 bars contracts with companies that boycott businesses in "the fossil fuel or firearm industry ...
+or [that don't] facilitate access to abortion or sex or gender change surgery", and it counted for Abortion and
+Firearms. issues.py now skips a match whose window also has "boycott", "environmental, social(,) and governance", "ESG",
+"economic boycott criteria", "corporate governance standards" or "discriminates against firearm entities"
+(`NOT_BOYCOTT`), except for ESG itself, DEI (anti-ESG bills often target DEI programs too: Kentucky HB 388 of 2025), unions
+(labor boycotts) and climate (climate risk disclosure beside ESG metrics: H.R. 1187 of the 117th Congress); a labor
+peace agreement's "picketing, work stoppages, boycotts" doesn't count as such a list (Hawaii SB 2241 of 2023 stays a
+cannabis bill).
+
+Run over every cached bill (.issues-cache, only bills with one of those words compared, before and after): 10 matches
+leave, none join, ESG unchanged.
+- Abortion 1: AL SB 261 of 2023.
+- Firearms 9: AL SB 261 of 2023, AR SB 62 of 2023, KY HB 254 and HB 533 of 2023, UT SB 298 of 2026 (programmable money;
+  "lawful ownership of a firearm" among the grounds an issuer can't deny), WV SB 112 of 2023, SB 275 of 2024, HB 3342 and
+  SB 776 of 2025 ("Firearms Industry Nondiscrimination Act": banks and contractors that boycott gun makers). All read
+  over: each is about boycotts of the gun industry, not gun laws, and stays in ESG (whose description names "boycotts
+  of ... gun makers"). For the owner: keep them out of Firearms? Suggested: yes.
+- Transgender: none moved (SB 261 never matched it).
