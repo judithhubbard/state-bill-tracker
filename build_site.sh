@@ -69,14 +69,16 @@ items, power, after = [], {}, {}
 for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
         P = importlib.import_module(f"states.{s}.profile")
-        if s == "us":
-            # Congress (/us/) isn't a state: listed first, not on the map, no party dots.
-            items.append((" Congress", f'    <li><a href="us/"><b>Congress</b> (federal bills)</a></li>\n'))
-            continue
-        # Party control for the map's dots (balance.py), from the latest member list.
+        # Party control for the map's colors (balance.py), from the latest member list. Congress (/us/) gets its own
+        # tile on the map, colored from the House, the Senate and the President.
         data = front_page.map_data(s, getattr(P, "LOWER_NAME", "Assembly"))
         if data:
             power[s] = data
+        if s == "us":
+            # Congress isn't a state: listed first; no "From January" colors (the 2026 congressional results aren't in
+            # states/elected_2026.json).
+            items.append((" Congress", f'    <li><a href="us/"><b>Congress</b> (federal bills)</a></li>\n'))
+            continue
         # After the 2026 election (states/elected_2026.json), for the map's "From January" view.
         nxt = front_page.next_data(s, getattr(P, "LOWER_NAME", "Assembly"))
         if nxt:

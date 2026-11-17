@@ -178,13 +178,15 @@ def stage_text(state, stage, kind):
     return STAGES[stage]
 
 
-def load(site):
-    """{state: {"name", "files": [each session's issues file]}} for the states built."""
+def load(site, congress=False):
+    """{state: {"name", "files": [each session's issues file]}} for the states built; with congress=True, Congress's
+    alone ({"us": ...}, or {} when it isn't built)."""
     out = {}
     for s in sorted(os.listdir(site)):
         folder = os.path.join(site, s, "data")
-        # Congress (/us/) isn't a state: kept out of the issue pages' state counts and maps for now.
-        if len(s) != 2 or s == "us" or not os.path.isdir(folder):
+        # Congress (/us/) isn't a state: kept out of the issue pages' state counts, tables and maps. The front page's
+        # map shows it as its own tile, from summary.json's "us" entries and bills.json's "us" list (main()).
+        if len(s) != 2 or (s == "us") != congress or not os.path.isdir(folder):
             continue
         files = []
         for name in sorted(os.listdir(folder)):
@@ -400,7 +402,7 @@ document.getElementById("find").addEventListener("input", apply);
 
 def main(site):
     from datetime import date
-    states = load(site)
+    states, congress = load(site), load(site, congress=True)
     if not states:
         print("issues: no state has data/issues_<session>.json; not built")
         return
@@ -421,6 +423,8 @@ def main(site):
         for y in years:
             # The front page map's panel (home.html): each state's bills that year, one line each, laws first.
             by, _, _ = year_view(issue["id"], states, y)
+            # Congress: its own entries, apart from the states' totals ("N bills in M states" leaves it out).
+            us_by, us_open, _ = year_view(issue["id"], congress, y) if congress else ({}, set(), {})
             panel[str(y)] = {st: [[shown(b[2], b[10] if len(b) > 10 else ()), b[3], (b[9].get(issue["id"]) if len(b) > 9 else "") or "", b[4],
                                    link(f, b[2])[len("../../"):], b[6],
                                    # For the star (home.html): the bill's number, its session and its last action's
@@ -428,12 +432,14 @@ def main(site):
                                    b[2], f["session"], b[5]]
                                   for f, b, new, passed in sorted(sorted(rows, key=lambda x: x[1][5], reverse=True),
                                                                   key=lambda x: (x[1][4] != 5, -x[1][4]))]
-                             for st, (n, laws, rows) in by.items()}
+                             for st, (n, laws, rows) in {**by, **us_by}.items()}
             page, info, open_ = issue_page(issue, states, y, years, default, y > default)
             name = "index.html" if y == default else f"{y}.html"
             open(os.path.join(site, "issues", issue["id"], name), "w", encoding="utf-8").write(page)
+            if us_by:
+                info["by"]["us"] = list(us_by["us"][:2])
             per_year[str(y)] = info
-            opened[str(y)] = sorted(open_)
+            opened[str(y)] = sorted(open_ | us_open)
         json.dump(panel, open(os.path.join(site, "issues", issue["id"], "bills.json"), "w"), ensure_ascii=False,
                   separators=(",", ":"))
         summary.append({"id": issue["id"], "name": issue["name"], "group": issue.get("group", ""),

@@ -2,7 +2,7 @@
 whose changes rebuild them all), so a change to the front page rebuilds no state."""
 import re
 
-from balance import ADJ, current
+from balance import ADJ, current, table
 WORD = {**ADJ, "C": "bipartisan coalition"}  # a chamber run by a coalition (Alaska)
 
 
@@ -30,7 +30,11 @@ def map_data(state, lower_name="House"):
                      + (" (supermajority)" if sm else ""))
     gov = b["governor"][1]
     dots.append([gov, False])
-    words.append(f"Governor: {ADJ.get(gov, gov)}")
+    exe = table().get(state, {}).get("executive", "Governor")  # Congress: the President
+    words.append(f"{exe}: {ADJ.get(gov, gov)}")
+    if exe != "Governor":
+        # Congress's tooltip names the President first (the dots keep the executive last, for home.html's control()).
+        words.insert(0, words.pop())
     return {"dots": dots, "title": "; ".join(words)}
 
 

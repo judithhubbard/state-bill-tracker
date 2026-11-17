@@ -229,6 +229,17 @@ body.issue-on main { max-width: 1080px; }
 .star:focus-visible { outline: 3px solid var(--hover); outline-offset: 0; }
 .panel li { position: relative; }
 .panel li a { padding-right: 44px; text-decoration: none; }
+/* Congress: one wide tile in the map's empty top row, colored and shaded like a state's, with "U.S." above its name and
+   a faint inner ring so it doesn't read as a state. */
+.tiles a.fed, .tiles button.tile.fed, .tiles span.off.fed { aspect-ratio: auto; flex-direction: row; gap: 8px; }
+.tiles .fed .fl { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+.tiles .fed small { font: 600 .62em/1.1 var(--body); letter-spacing: .1em; opacity: .8; }
+.tiles a.fed, .tiles button.fed { box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent); }
+.tiles a.fed:not([class*="c-"]) { box-shadow: inset 0 0 0 1.5px var(--navy); }
+/* A starred bill's state: a small gold star in the tile's top-right corner (markStars()), clear of the law-count badge. */
+.tiles > * { position: relative; }
+.smark { position: absolute; top: 2px; right: 3px; color: var(--law-mark); font: 400 clamp(8px, 1.6vw, 11px)/1 var(--body); pointer-events: none; }
+@media (max-width: 560px) { .smark { top: 1px; right: 1px; font-size: 8px; } }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 </style>
 </head>
@@ -274,7 +285,7 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
   <ul id="states">
     <li><a href="ca/"><b>California</b></a></li>
   </ul>
-  <footer>Party control is from each legislature's current member list; a darker color means that party also holds a supermajority in both houses. 2027 shows the November 2026 election's reported results, before certification. Your watchlist stays in your browser.</footer>
+  <footer>Party control is from each legislature's current member list; a darker color means that party also holds a supermajority in both houses. 2027 shows the November 2026 election's reported results, before certification. Congress is colored the same way, from the House, the Senate and the President. Your watchlist stays in your browser.</footer>
 </main>
 <script type="application/json" id="power">{}</script>
 <script type="application/json" id="after">{}</script>
@@ -308,6 +319,7 @@ const tiles = document.getElementById("tiles");
 const same = (a, b) => JSON.stringify(a?.dots) === JSON.stringify(b?.dots);
 let issues = { issues: [] };
 try { const raw = JSON.parse(document.getElementById("issues").textContent); if (raw && raw.issues) issues = raw; } catch (e) {}
+let STARS = {};  // starred bills by state (drawMine(), markStars())
 let issue = null;  // the national issue shown on the map, or null for party control
 let year = issues.default;  // the calendar year shown for it
 const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n >= 1 ? 1 : 0);
@@ -328,14 +340,15 @@ function drawIssue() {
     const [n, laws] = y.by[code.toLowerCase()] || [0, 0];
     if (!n && !laws && !open.has(code.toLowerCase())) {
       const w = upcoming ? `${NAMES[code]}: no bills filed yet for ${year}` : `${NAMES[code]}: no regular session in ${year}`;
-      return `<span class="off wait" style="${style}" title="${esc(w)}" aria-label="${esc(`${code}, ${w}`)}">${code}</span>`;
+      return `<span class="off wait" data-st="${code.toLowerCase()}" style="${style}" title="${esc(w)}" aria-label="${esc(`${code}, ${w}`)}">${code}</span>`;
     }
     const label = `${NAMES[code]}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${upcoming ? " prefiled" : ""} in ${year}` : `no bills on ${issue.short} in ${year}`}`
       + (laws ? `, ${laws} became law` : "");
     const mark = laws ? `<span class="lawn" aria-hidden="true">${laws}</span>` : "";
     const st = code.toLowerCase();
     return `<button type="button" class="tile h${step(n)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc([NAMES[code], n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : [])].join("\n"))}" aria-label="${esc(`${code}, ${label}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${code}${mark}</button>`;
-  }).join("");
+  }).join("") + fedIssue(y, open, upcoming);
+  markStars();
   showPanel(pinned);
 }
 // The panel: a state's bills on the issue that year (issues/<id>/bills.json, loaded once per issue), one line each.
@@ -365,8 +378,9 @@ function showPanel(st) {
     if (panel.dataset.want !== want) return;  // the pointer has moved on
     const rows = ((all[year] || {})[st]) || [];
     const [n, laws] = (issue.y[year]?.by || {})[st] || [0, 0];
-    const head = `<h3>${esc(NAMES[st.toUpperCase()])}</h3><p>${n ? `${n} bill${n === 1 ? "" : "s"} on ${esc(issue.short)} in ${year}` : `No bills on ${esc(issue.short)} in ${year}`}`
-      + `${laws ? `, ${laws} became law` : ""}.${n ? ` <a href="issues/${issue.id}/${page}#${st}">See them on the issue page</a>` : ""}${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`;
+    // (The issue pages list the states only: Congress's bills are here and on its own page.)
+    const head = `<h3>${esc(nameOf(st))}</h3><p>${n ? `${n} bill${n === 1 ? "" : "s"} on ${esc(issue.short)} in ${year}` : `No bills on ${esc(issue.short)} in ${year}`}`
+      + `${laws ? `, ${laws} became law` : ""}.${n && st !== "us" ? ` <a href="issues/${issue.id}/${page}#${st}">See them on the issue page</a>` : ""}${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`;
     panel.innerHTML = head + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last]) => {
       const stg = kind === "const" && stage === 3 ? "To voters" : STAGE_SHORT[stage];
       if (why && (why.toLowerCase().replace(/\W+/g, " ").trim() === title.toLowerCase().replace(/\W+/g, " ").trim()
@@ -432,10 +446,39 @@ function drawMap(view) {
       ? [`${NAMES[code]} from January${next.close ? " (some races still close)" : ""}`, ...next.title.split("; "),
          ...(changed && now ? ["", "Now:", ...now.title.split("; ")] : [])].join("\n")
       : [NAMES[code], ...p.title.split("; ")].join("\n");
-    return `<a href="${built[code]}" class="${ctl}${changed ? " changed" : ""}" style="${style}" title="${esc(lines)}" aria-label="${esc(`${code}, ${label}`)}">${code}</a>`;
-  }).join("");
+    return `<a href="${built[code]}" data-st="${code.toLowerCase()}" class="${ctl}${changed ? " changed" : ""}" style="${style}" title="${esc(lines)}" aria-label="${esc(`${code}, ${label}`)}">${code}</a>`;
+  }).join("") + fedParty(view);
+  markStars();
   document.getElementById("changedKey").hidden = view !== "after";
 }
+// Congress (/us/): one wide tile in the map's empty top row, built only when its pages are, colored like a state from the
+// President, the Senate and the House. The November 2026 congressional results aren't in states/elected_2026.json, so
+// the "From January" view keeps today's colors and says so.
+const FED = `grid-row:1;grid-column:5 / span 3`, FED_LABEL = `<span class="fl"><small>U.S.</small>Congress</span>`;
+function fedParty(view) {
+  if (!built.US) return "";
+  const p = power.us;
+  if (!p) return `<a href="${built.US}" data-st="us" class="fed" style="${FED}" title="U.S. Congress" aria-label="U.S. Congress">${FED_LABEL}</a>`;
+  const later = view === "after" && !after.us;
+  const lines = [later ? "U.S. Congress from January" : "U.S. Congress", ...p.title.split("; "),
+    ...(later ? ["", "The new Congress's election results", "aren't in this data yet; colors show today's."] : [])].join("\n");
+  const label = later ? `U.S. Congress. ${p.title}. The new Congress's election results aren't in this data yet; these are today's` : `U.S. Congress. ${p.title}`;
+  return `<a href="${built.US}" data-st="us" class="fed ${control(p.dots)}" style="${FED}" title="${esc(lines)}" aria-label="${esc(label)}">${FED_LABEL}</a>`;
+}
+// Issue view: shaded by Congress's bills on the issue that year, with the number that became law; its bills in the panel.
+function fedIssue(y, open, upcoming) {
+  if (!built.US) return "";
+  const [n, laws] = y.by.us || [0, 0];
+  if (!n && !laws && !open.has("us")) {
+    const w = upcoming ? `U.S. Congress: no bills filed yet for ${year}` : `U.S. Congress: no bills in ${year}`;
+    return `<span class="off wait fed" data-st="us" style="${FED}" title="${esc(w)}" aria-label="${esc(w)}">${FED_LABEL}</span>`;
+  }
+  const label = `U.S. Congress: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${upcoming ? " prefiled" : ""} in ${year}` : `no bills on ${issue.short} in ${year}`}`
+    + (laws ? `, ${laws} became law` : "");
+  const mark = laws ? `<span class="lawn" aria-hidden="true">${laws}</span>` : "";
+  return `<button type="button" class="tile fed h${step(n)}${pinned === "us" ? " sel" : ""}" data-st="us" style="${FED}" title="${esc(["U.S. Congress", n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : [])].join("\n"))}" aria-label="${esc(label)}" aria-pressed="${pinned === "us"}" aria-controls="panel">${FED_LABEL}${mark}</button>`;
+}
+const nameOf = (st) => (st === "us" ? "Congress" : NAMES[st.toUpperCase()]);
 // The controls: year buttons, then "Show" (party control or a national issue). For party control, this year is now and
 // next year is after the November 2026 election (reported results, until the new sessions begin); last year has no party
 // view. For an issue, the years the issue pages have (last year, this year, next year's prefiled bills). Remembered in the
@@ -547,6 +590,20 @@ function whereText(stage, comm, kind, live) {
   return ["In committee", "On the floor", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"][stage] || "";
 }
 let mineDrawn = "";
+// The map's star marks: a small gold star in the corner of each tile (Congress's too) whose watchlist in this browser has
+// starred bills ({st: count}, the bills "Your bills" lists, so New York's old list counts only New York's bills), with
+// "N starred bills" in its hover text and spoken label. Redrawn with the map and with "Your bills".
+function markStars() {
+  for (const t of tiles.querySelectorAll("[data-st]")) {
+    if (t.dataset.baseTitle === undefined) { t.dataset.baseTitle = t.getAttribute("title") || ""; t.dataset.baseLabel = t.getAttribute("aria-label") || ""; }
+    const n = STARS[t.dataset.st] || 0, words = `${n} starred bill${n === 1 ? "" : "s"}`;
+    t.setAttribute("title", n ? `${t.dataset.baseTitle}\n${words}` : t.dataset.baseTitle);
+    if (t.dataset.baseLabel) t.setAttribute("aria-label", n ? `${t.dataset.baseLabel}. ${words}` : t.dataset.baseLabel);
+    const m = t.querySelector(".smark");
+    if (n && !m) t.insertAdjacentHTML("beforeend", '<span class="smark" aria-hidden="true">★</span>');
+    else if (!n && m) m.remove();
+  }
+}
 async function drawMine() {
   const lists = [];
   for (let i = 0; i < localStorage.length; i++) {
@@ -556,7 +613,7 @@ async function drawMine() {
     if (keys.length && (NAMES[st.toUpperCase()] || st === "us")) lists.push([st, w, keys]);
   }
   const sec = document.getElementById("mine");
-  if (!lists.length) { sec.hidden = true; mineDrawn = ""; return; }
+  if (!lists.length) { sec.hidden = true; mineDrawn = ""; STARS = {}; markStars(); return; }
   const blocks = await Promise.all(lists.map(async ([st, w, keys]) => {
     const rows = await Promise.all(keys.map(async (k) => {
       const [session, num] = k.split(":"), s = await statusOf(st, session), seen = typeof w[k] === "string" ? w[k] : (w[k] || {}).seen || "";
@@ -573,13 +630,15 @@ async function drawMine() {
     const kept = rows.filter(Boolean).sort((a, b) => (b.last > a.last ? 1 : b.last < a.last ? -1 : 0));
     if (!kept.length) return null;
     const name = st === "us" ? "Congress" : NAMES[st.toUpperCase()];
-    return [name, `<div class="mst"><h3><a href="${st}/">${esc(name)}</a></h3><ol>${kept.map((x) => x.html).join("")}</ol></div>`, kept.length, kept.filter((x) => x.fresh).length];
+    return [name, st, `<div class="mst"><h3><a href="${st}/">${esc(name)}</a></h3><ol>${kept.map((x) => x.html).join("")}</ol></div>`, kept.length, kept.filter((x) => x.fresh).length];
   }));
   const shown = blocks.filter(Boolean);
+  STARS = Object.fromEntries(shown.map((x) => [x[1], x[3]]));  // [name, st, html, count, new]
+  markStars();
   if (!shown.length) { sec.hidden = true; mineDrawn = ""; return; }
-  const n = shown.reduce((t, x) => t + x[2], 0), fresh = shown.reduce((t, x) => t + x[3], 0);
+  const n = shown.reduce((t, x) => t + x[3], 0), fresh = shown.reduce((t, x) => t + x[4], 0);
   document.getElementById("mineCount").innerHTML = `· ${n} bill${n === 1 ? "" : "s"}${fresh ? ` <b>${fresh} new</b>` : ""}`;
-  const html = shown.sort((a, b) => a[0].localeCompare(b[0])).map((x) => x[1]).join("");
+  const html = shown.sort((a, b) => a[0].localeCompare(b[0])).map((x) => x[2]).join("");
   if (html !== mineDrawn) { document.getElementById("mineList").innerHTML = html; mineDrawn = html; }
   sec.hidden = false;
 }
