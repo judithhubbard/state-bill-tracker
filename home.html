@@ -332,7 +332,7 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="key"><i class="sq c-D1"></i><i class="sq c-D2"></i>Democratic</span>
     <span class="key"><i class="sq c-X"></i>Split</span>
     <span class="key"><i class="sq c-N"></i>Nonpartisan</span>
-    <span class="key"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
+    <span class="key" id="offKeyP"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
     <span class="key full">One party holds the governor's office and both houses; darker: a supermajority in both houses.</span>
   </p>
   <p class="legend" id="customLegend" hidden></p>
@@ -601,6 +601,7 @@ function drawMap(view) {
   }).join("") + fedParty(view);
   markStars();
   partyPanel(null);
+  document.getElementById("offKeyP").hidden = Object.keys(GRID).every((c) => built[c]);
 }
 // Congress (/us/): one wide tile in the map's empty top row, built only when its pages are, colored like a state from the
 // President, the Senate and the House. The November 2026 congressional results aren't in states/elected_2026.json, so
