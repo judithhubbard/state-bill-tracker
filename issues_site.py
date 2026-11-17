@@ -542,10 +542,12 @@ def main(site):
     # The issues by group (issues.GROUPS), as in the front page's menu.
     card = lambda s: (f'<li><a href="{s["id"]}/"><b>{e(s["name"])}</b><span>{s["y"][str(default)]["bills"]:,} bills in '
                       f'{s["y"][str(default)]["states"]} states in {default}; {s["y"][str(default)]["laws"]:,} became law</span></a></li>')
-    cards = "".join(f'<h2>{e(g)}</h2><ul class="cards">{"".join(card(s) for s in summary if s["group"] == g)}</ul>'
+    # Alphabetical within each group.
+    abc = sorted(summary, key=lambda s: s["name"].lower())
+    cards = "".join(f'<h2>{e(g)}</h2><ul class="cards">{"".join(card(s) for s in abc if s["group"] == g)}</ul>'
                     for g in issues.GROUPS if any(s["group"] == g for s in summary))
-    cards += "".join(card(s) for s in summary if s["group"] not in issues.GROUPS) and \
-        f'<h2>Other</h2><ul class="cards">{"".join(card(s) for s in summary if s["group"] not in issues.GROUPS)}</ul>'
+    cards += "".join(card(s) for s in abc if s["group"] not in issues.GROUPS) and \
+        f'<h2>Other</h2><ul class="cards">{"".join(card(s) for s in abc if s["group"] not in issues.GROUPS)}</ul>'
     index = HEAD.format(title="Issues across the states", desc="The same subjects in every state legislature: how many bills, where, and which became law.", css=CSS) + f"""
 <p class="crumbs"><a href="../">State Bill Tracker</a></p>
 <h1>Issues across the states</h1>

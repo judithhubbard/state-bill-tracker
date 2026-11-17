@@ -744,10 +744,10 @@ function remember() {
 {
   const opt = (i) => `<button type="button" data-id="${esc(i.id)}">${esc(label(i))}</button>`;
   const groups = issues.groups || [];
-  const extra = issues.issues.filter((i) => !groups.includes(i.group));
+  const extra = issues.issues.filter((i) => !groups.includes(i.group)).sort((x, y) => label(x).localeCompare(label(y)));
   menu.innerHTML = `<div class="party"><button type="button" data-id="">Party control</button><button type="button" data-id="mine" id="showMine" hidden>★ Your bills</button></div><div class="grp">`
     + groups.map((g) => {
-      const xs = issues.issues.filter((i) => i.group === g);
+      const xs = issues.issues.filter((i) => i.group === g).sort((x, y) => label(x).localeCompare(label(y)));
       return xs.length ? `<div><h4>${esc(g)}</h4>${xs.map(opt).join("")}</div>` : "";
     }).join("") + (extra.length ? `<div><h4>Other</h4>${extra.map(opt).join("")}</div>` : "") + "</div>";
 }
