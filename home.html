@@ -331,7 +331,6 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="key"><i class="sq c-R1"></i><i class="sq c-D1"></i>One party holds the governor's office and both houses</span>
     <span class="key"><i class="sq c-R2"></i><i class="sq c-D2"></i>&hellip; and a supermajority in both houses</span>
     <span class="key"><i class="sq c-X"></i>Split</span>
-    <span class="key"><i class="sq c-N"></i>Nonpartisan legislature (Nebraska)</span>
     <span class="key" id="offKeyP"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
   </p>
   <p class="legend" id="customLegend" hidden></p>
@@ -531,9 +530,13 @@ document.getElementById("panel").addEventListener("click", (e) => {
 });
 // One color per state for who holds power (the owner's choice 2026-11-15, in place of three dots): red or blue when one
 // party holds the governor's office and both houses (darker with a supermajority in both), purple when power is split,
-// grey for Nebraska's nonpartisan legislature. The square's tooltip keeps the seat counts.
+// Nebraska's legislature has no official parties (candidates run without a party label), but registered Republicans hold
+// 33 of its 49 seats (2025-26, Nebraska Public Media) and the governor is a Republican: light red, with a line saying so
+// (the owner's choice 2026-11-17). The square's tooltip keeps the seat counts.
+const NE_NOTE = "Legislature (one house): candidates run without party labels, but registered Republicans hold 33 of the 49 seats";
+const neTitle = (t) => t.replace(/Legislature: nonpartisan, one house/, NE_NOTE);
 function control(dots) {
-  if (dots.some(([party]) => party === "N")) return "c-N";
+  if (dots.some(([party]) => party === "N")) { const gov = dots[dots.length - 1][0]; return ["R", "D"].includes(gov) ? `c-${gov}1` : "c-X"; }
   const parties = new Set(dots.map(([party]) => party));
   if (parties.size !== 1 || !["R", "D"].includes(dots[0][0])) return "c-X";
   const legislature = dots.slice(0, -1);
@@ -559,7 +562,7 @@ function partyPanel(a) {
     body.innerHTML = `<h3>Party control${view === "after" ? ", from January" : ""}</h3>`
       + `<ul class="tally">${line("c-R1", "Republican", R)}${line("c-R2", "with a supermajority", n.R2, 1)}`
       + `${line("c-D1", "Democratic", D)}${line("c-D2", "with a supermajority", n.D2, 1)}`
-      + `${line("c-X", "Split", n.X)}${line("c-N", "Nonpartisan", n.N)}</ul>`
+      + `${line("c-X", "Split", n.X)}</ul>`
       + `<p>Of the ${R + D + (n.X || 0) + (n.N || 0)} states on the site. Point at a state to see the governor's party and each house's seats; click it to open its bills.</p>`;
     return;
   }
@@ -584,7 +587,8 @@ function drawMap(view) {
   tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
     const style = `grid-row:${r + 1};grid-column:${c + 1}`;
     if (!built[code]) return `<span class="off" style="${style}" title="${NAMES[code]}: coming soon">${code}</span>`;
-    const now = power[code.toLowerCase()], next = after[code.toLowerCase()];
+    let now = power[code.toLowerCase()], next = after[code.toLowerCase()];
+    if (code === "NE") { now = now && { ...now, title: neTitle(now.title) }; next = next && { ...next, title: neTitle(next.title) }; }
     const p = view === "after" && next ? next : now;
     const changed = view === "after" && next && now && !same(now, next);
     const ctl = p ? control(p.dots) : "";
