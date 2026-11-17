@@ -2204,6 +2204,19 @@ from that repo. **Nothing here may change it.**
   (issues/<id>/bills.json, from issues_site.py). Each issue page leads with the same map, the table under "Show as a
   table", and one menu (all bills, became law, still moving, the issue's filters). Check a rule change with test/issues/get.py and check.py (30
   random matches and possible misses per issue; notes/issues-check.md has both checks: 26-30 of 30 right).
+- **Find a bill (built 2026-11-17):** a search box on the front page's controls row (its own line on a phone; results
+  open over the map). `search_site.py`, run by build_site.sh after issues_site.py, writes search/<st>.json for each
+  built state and Congress from its live data/status_<session>.json (the current session and next year's prefiled
+  bills; past sessions left out, as they'd more than double the download): number, title cut at 110 characters, stage,
+  "c" for an amendment, the record's other numbers. home.html loads nothing until the first search, then every state's
+  file, or only the state the query names ("texas data center", "NY A5663"; two-letter codes that are words, "in",
+  "or", "me", count only in capitals) or picked in the results. Numbers in any form ("H.B. 1234", "hb1234"; "HB" also
+  finds "H", "LD" Maine's "HLD"; aliases such as NY's other house's number) come first, then bills whose title has
+  every word (a word matches the start of a title word; three letters or fewer only whole); bills with most of the
+  words show only when none has them all ("No bill has all those words; these have most of them"), rarer words
+  first. 50 at a time; each with its status label and a star that writes the state's watchlist (with the last
+  action's date from the status file). Size: 50,000 bills (NY, NJ, TX, VA, US) are 0.9 MB brotli; all states should
+  be about 3 MB the first time someone searches every state.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).

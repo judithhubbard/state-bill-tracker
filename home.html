@@ -816,16 +816,19 @@ drawMine();
     }
     const idf = df.map((n) => Math.log((total + 1) / (n + 1)));
     for (const h of part) if (h.tier === 1) h.score = h.has.reduce((t, x, i) => t + (x ? idf[i] : 0), 0);
+    // Bills with only some of the words are listed only when no bill has them all (or the number).
+    if (hits.some((h) => h.tier >= 5)) hits = hits.filter((h) => h.tier >= 5);
     hits.sort((a, b) => b.tier - a.tier || b.score - a.score || (a.s.up - b.s.up) || b.r[2] - a.r[2] || a.name.localeCompare(b.name));
     draw(hits, p, want.filter((st) => !ready[st]).length);
   }
   function draw(hits, p, loading) {
-    const all = hits.filter((h) => h.tier >= 5).length, some = hits.length - all;
+    const most = hits.length && hits.every((h) => h.tier === 1);
     const where = p.st ? ` in ${esc(stateName(p.st))}` : "";
     let count;
     if (!hits.length) count = loading ? "Searching…" : `No bills found${where}. Try other words, or a number such as HB 1234.`;
     else if (p.nums.length && hits.every((h) => h.tier > 5)) count = `<b>${hits.length.toLocaleString()}</b> bill${hits.length === 1 ? "" : "s"} with that number${where}`;
-    else count = `<b>${hits.length.toLocaleString()}</b> bill${hits.length === 1 ? "" : "s"} found${where}` + (some && all ? ` (${all.toLocaleString()} with every word)` : "");
+    else if (most) count = `No bill${where} has all those words; these ${hits.length === 1 ? "has" : `<b>${hits.length.toLocaleString()}</b> have`} most of them`;
+    else count = `<b>${hits.length.toLocaleString()}</b> bill${hits.length === 1 ? "" : "s"} found${where}`;
     if (loading && hits.length) count += ` · loading ${loading} more state${loading === 1 ? "" : "s"}…`;
     const opts = [["", "All states"], ...codes().map((c) => [c, stateName(c)]).sort((a, b) => (a[0] === "us" ? -1 : b[0] === "us" ? 1 : a[1].localeCompare(b[1])))];
     const pick = `<select id="fstate" aria-label="Search one state, or all">${opts.map(([c, n]) => `<option value="${c}"${c === (only === "all" ? "" : only || p.st || "") ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
