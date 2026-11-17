@@ -3922,7 +3922,8 @@ function watchItems(list, stanceOf, rank) {
   const byRank = (f) => (x, y) => rank(x.b) - rank(y.b) || f(x, y);
   return {
     active: items.filter((x) => x.key).sort(byRank((x, y) => (x.plan.due || "9999").localeCompare(y.plan.due || "9999") || rankOf(y.b.stage) - rankOf(x.b.stage))),
-    idle: items.filter((x) => !x.key && x.b.stage < 5).sort(byRank(() => 0)),
+    // Below the person's own order: furthest along first, then the most recent action.
+    idle: items.filter((x) => !x.key && x.b.stage < 5).sort(byRank((x, y) => rankOf(y.b.stage) - rankOf(x.b.stage) || String(y.b.last || "").localeCompare(String(x.b.last || "")))),
     decided: items.filter((x) => !x.key && x.b.stage >= 5).sort(byRank((x, y) => (y.b.dates.signed || y.b.dates.vetoed || "").localeCompare(x.b.dates.signed || x.b.dates.vetoed || ""))),
   };
 }
