@@ -45,7 +45,8 @@ const STATE = {
   // The session's dates follow from its opening day (the second Wednesday of January): it runs 60 days in even
   // years and 46 in odd ones, and crossover, the last day for each house to pass its own bills, has been the 35th
   // day of a 60-day session and the 28th of a 46-day one (2024-26). A year that differs goes in `dated`.
-  dated: {},
+  // 2023 reconvened a week later than the rule gives (April 12, not April 5; the votes on the governor's amendments).
+  dated: { 2023: { reconvenes: "2023-04-12" } },
   day: (year, n) => { const [y, m, d] = STATE.opens(year).split("-").map(Number), t = new Date(y, m - 1, d + n - 1);
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; },
   sessionEnds: (session) => STATE.dated[session]?.adjourns || STATE.day(session, session % 2 ? 46 : 60),
@@ -55,6 +56,7 @@ const STATE = {
   originWord: "crossover",
   // The reconvened session, for the governor's amendments and vetoes: the sixth Wednesday after adjournment.
   reconvenes(session) {
+    if (STATE.dated[session]?.reconvenes) return STATE.dated[session].reconvenes;
     const [y, m, d] = STATE.sessionEnds(session).split("-").map(Number);
     const end = new Date(y, m - 1, d), wed = new Date(end);
     wed.setDate(end.getDate() + ((3 - end.getDay() + 7) % 7 || 7) + 35);

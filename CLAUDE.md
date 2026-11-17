@@ -89,7 +89,15 @@ from that repo. **Nothing here may change it.**
   rarity-weighted similarity of 0.66; 40% and 0.55 with the same chief patron; never "Relief" claims or the yearly
   drug-schedule bill). Checked by hand 2026-10-29: of 30 random links, 27 were plainly the same bill and 3 closely
   related; some heavily reworked repeats are missed), so "this bill in other sessions", repeat tries and watchlist carry-over work. One-year
-  sessions use `YEARS` for "the next session" (build_data.py's comeback counts, carryCandidates()).
+  sessions use `YEARS` for "the next session" (build_data.py's comeback counts, carryCandidates()). 2023 (added
+  2026-11-17): the LIS files start with 2024, so fetch.py reads a finished session they lack once from the legacy LIS
+  (legacylis.virginia.gov/SiteInformation/csv/231/<name>, robots.txt allows all; saved under the usual names). Its
+  formats differ: dates "02/15/23", padded numbers ("HB0029"), Patron_id "H309", "Last, First" names (`member_name()`),
+  governor's lines marked "G ", 2022's committee votes "H01C0038", summary kinds "Introduced"/"Passed House of
+  Origin"/"Passed Both Chambers"/"Enacted", and Summaries.csv in UTF-8 (`rows()` tries UTF-8 first). Bills continued
+  from 2022 (162 died in committee in November 2022) are in it. Totals: 811 laws (chapters 1-812, 739 being SJ 231, a
+  constitutional amendment), 8 vetoes (3 in March, 5 in May; 819 bills sent, as the governor's office counted). It
+  reconvened April 12 (`dated`; the rule gives April 5).
 - **California (built 2026-10-29):** `python3 states/ca/fetch.py` reads the Legislature's database tables out of its pubinfo
   zips (see the ca-data-sources memory) into data/ca/<session>/ (session = its odd first year); `states/ca/pubinfo.py`
   reads only the wanted files from a remote zip by HTTP range (with curl: the server turns away Python's client), so
@@ -1725,7 +1733,7 @@ from that repo. **Nothing here may change it.**
   (2023 for the one-year states) never holds a state off the site: only this year and last (`W.recent()`) can;
   `W.settle()` turns an older year's missing parts into its own marker, data/<st>/incomplete_<session>, and build_data.py
   and data_check.py leave just that session out (`W.shown()`) until a later run finishes it. Exceptions: Virginia's LIS
-  files start with 2024 (20231/ answers 404; 2023 is only on legacylis.virginia.gov's pages, not read); Arizona's 2023
+  files start with 2024, so 2023 comes once from the legacy LIS's CSVs (Virginia paragraph); Arizona's 2023
   waits for its bulk file (above); Florida's 2023 is read from flsenate.gov's pages unless the owner adds its bulk file
   (FL_2023_json_<id>.zip) to states/fl/bulk.json. A one-year state's 2023 may need its `STATE.dated` / `SESSION_ENDS`
   entry once the data is there (each falls back to the computed rule).

@@ -4,9 +4,13 @@ data/va/<year>1/, from lis.blob.core.windows.net. Finished sessions are download
 and next year's (bills are prefiled from November), every run. Then the legislators (states/va/contacts.py,
 once a day) and each locality's districts (states/va/towns.py).
 
-Usage: python3 states/va/fetch.py [first_session]   (default: the shared window's first year, states/window.py, but
-not before 2024: the LIS files start with the 2024 session. 20231/BILLS.CSV and the rest answer 404, checked
-2026-11-16; 2023 and before are only on legacylis.virginia.gov's pages, which this doesn't read)
+Usage: python3 states/va/fetch.py [first_session]   (default: the shared window's first year, states/window.py)
+
+The LIS files start with the 2024 session (20231/BILLS.CSV and the rest answer 404, checked 2026-11-16). A finished
+session they don't have comes, once, from the legacy LIS (legacylis.virginia.gov/SiteInformation/csv/231/, linked from
+its ftp.html; robots.txt allows everything): the same tables with mixed-case names, saved here under the names the
+converter reads. Their formats differ (dates "02/15/23", padded bill numbers, "Last, First" member names, other summary
+labels); states/va/convert.py and texts.py read both.
 """
 import os, re, sys, time, urllib.error, urllib.request
 from datetime import datetime
@@ -16,12 +20,18 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from states.va import profile as P
 from states import window as W
 
-FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else max(W.first_year(), 2024)
+FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else W.first_year()
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 BASE = "https://lis.blob.core.windows.net/lisfiles"
 # The names are case-sensitive.
 FILES = ["BILLS.CSV", "HISTORY.CSV", "VOTE.CSV", "Members.csv", "Committees.csv", "Sponsors.csv",
          "Summaries.csv", "DOCKET.CSV", "SUBDOCKET.CSV", "FiscalImpactStatements.csv"]
+LEGACY = "https://legacylis.virginia.gov/SiteInformation/csv"
+# The legacy site's name -> the name saved (Docket.csv and Subdocket.csv are empty for a finished session). BILLS.CSV
+# last: its presence marks the session as downloaded.
+LEGACY_FILES = {"History.csv": "HISTORY.CSV", "Vote.csv": "VOTE.CSV", "Members.csv": "Members.csv",
+                "Committees.csv": "Committees.csv", "Sponsors.csv": "Sponsors.csv", "Summaries.csv": "Summaries.csv",
+                "Fiscalimpactstatements.csv": "FiscalImpactStatements.csv", "Bills.csv": "BILLS.CSV"}
 
 
 def get(url, path):
@@ -48,17 +58,28 @@ def get(url, path):
 
 def main():
     for session in range(FIRST, CURRENT + 2):
-        folder = os.path.join(P.DATA, f"{session}1")
-        if session < CURRENT and os.path.exists(os.path.join(folder, "BILLS.CSV")):
-            continue
-        got = []
-        for name in FILES:
-            os.makedirs(folder, exist_ok=True)
-            if get(f"{BASE}/{session}1/{name}", os.path.join(folder, name)):
-                got.append(name)
-        print(f"{session}: {len(got)} files" if got else f"{session}: not published yet")
-        if not got and not os.listdir(folder):
-            os.rmdir(folder)
+        one(session)
+
+
+def one(session):
+    """One session's files (a finished one only once)."""
+    folder = os.path.join(P.DATA, f"{session}1")
+    if session < CURRENT and os.path.exists(os.path.join(folder, "BILLS.CSV")):
+        return
+    got = []
+    for name in FILES:
+        os.makedirs(folder, exist_ok=True)
+        if get(f"{BASE}/{session}1/{name}", os.path.join(folder, name)):
+            got.append(name)
+    if not got and session < CURRENT:
+        # A finished session the LIS files don't have: the legacy LIS, once.
+        got = [name for src, name in LEGACY_FILES.items()
+               if get(f"{LEGACY}/{str(session)[2:]}1/{src}", os.path.join(folder, name))]
+        if got and "BILLS.CSV" not in got:
+            print(f"{session}: the legacy LIS has no Bills.csv; tried again next run", file=sys.stderr)
+    print(f"{session}: {len(got)} files" if got else f"{session}: not published yet")
+    if not got and not os.listdir(folder):
+        os.rmdir(folder)
 
 
 def legislators():

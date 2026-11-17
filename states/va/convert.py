@@ -16,7 +16,7 @@ houses in two sessions with a House of Delegates election between ("first refere
 the voters (Constitution of Virginia, Art. XII, sec. 1). The bill that puts the question on the ballot is an ordinary
 bill, signed by the governor.
 """
-import csv, glob, json, math, os, re
+import csv, glob, io, json, math, os, re
 from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -40,16 +40,23 @@ def rows(session, name):
     path = os.path.join(folder(session), name)
     if not os.path.exists(path):
         return
-    with open(path, encoding="cp1252", errors="replace", newline="") as f:
-        for r in csv.DictReader(f, skipinitialspace=True):
-            yield {(k or "").strip(): (v or "").strip() for k, v in r.items() if k}
+    # Windows text, except 2023's Summaries.csv (legacy LIS), which is UTF-8 ("criteria\u2014holding" read as
+    # Windows text gives "criteriaâ€”holding"): UTF-8 when the whole file decodes as UTF-8.
+    data = open(path, "rb").read()
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        text = data.decode("cp1252", errors="replace")
+    for r in csv.DictReader(io.StringIO(text, newline=""), skipinitialspace=True):
+        yield {(k or "").strip(): (v or "").strip() for k, v in r.items() if k}
 
 
 def iso(d):
-    """"3/14/2026" or (the 2024 files) "2024-03-02T00:00:00" -> "2026-03-14"."""
-    m = re.match(r"(\d+)/(\d+)/(\d{4})", d or "")
+    """"3/14/2026", (the 2023 files) "02/15/23" or (the 2024 files) "2024-03-02T00:00:00" -> "2026-03-14"."""
+    m = re.match(r"(\d+)/(\d+)/(\d{4}|\d\d)\b", d or "")
     if m:
-        return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+        y = m.group(3) if len(m.group(3)) == 4 else f"20{m.group(3)}"
+        return f"{y}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
     m = re.match(r"(\d{4})-(\d\d)-(\d\d)", d or "")
     return m.group(0) if m else ""
 
@@ -68,6 +75,27 @@ def amendment_title(desc, summary):
     rest = re.sub(r"^Constitutional amendment[;:,.]?\s*", "", rest, flags=re.I).strip().rstrip(".")
     head = f"Constitutional amendment, {m.group(1).lower()} passage" if m else "Constitutional amendment"
     return f"{head}: {rest}" if rest else head
+
+
+def mid(member):
+    """A member id as the member and sponsor files write it: "H309" (2023's BILLS.CSV) -> "H0309"."""
+    m = re.match(r"([HS])(\d+)$", (member or "").strip())
+    return f"{m.group(1)}{m.group(2).zfill(4)}" if m else (member or "").strip()
+
+
+SUFFIX = r"(?:Jr|Sr|II|III|IV)\.?"
+
+
+def member_name(name):
+    """A member's name as the site shows it: "Adams, Dawn M." (2023's Members.csv) -> "Dawn M. Adams", "Bloxom,
+    Robert S., Jr." -> "Robert S. Bloxom, Jr." ("Robert S. Bloxom, Jr.", the later files' form, stays); and without the
+    sponsor file's notes ("Nadarius Clark-Resigned 3/17", "Ronnie R. Campbell (deceased)", "Jen Kiggans - to resign 12/31")."""
+    name = re.sub(r"\s+", " ", name or "").strip()
+    name = re.sub(r"\s*(?:\(deceased\)|-\s*(?:Resigned|to resign)\b.*)$", "", name, flags=re.I).strip()
+    parts = [x.strip() for x in name.split(",")]
+    if len(parts) > 1 and not re.fullmatch(SUFFIX, parts[1]):
+        return " ".join([parts[1], parts[0]]) + "".join(f", {x}" for x in parts[2:])
+    return name
 
 
 def num(bill):
@@ -243,11 +271,11 @@ def _year(session):
         for r in rows(session, "BILLS.CSV"):
             if r["Bill_id"][:2] in ("HB", "SB"):
                 text = texts.get(num(r["Bill_id"]), {}).get("statement") or r["Bill_description"]
-                out[num(r["Bill_id"])] = (_heading(r["Bill_description"]), _words(text), r["Patron_id"], _vector(text))
+                out[num(r["Bill_id"])] = (_heading(r["Bill_description"]), _words(text), mid(r["Patron_id"]), _vector(text))
             elif is_amendment(r):
                 text = texts.get(num(r["Bill_id"]), {}).get("statement") or r["Bill_description"]
                 text = re.sub(r"\((?:first|second)\s+reference\)|\b(?:first|second)\s+reference\b", " ", text, flags=re.I)
-                out[num(r["Bill_id"])] = ("", _words(text), r["Patron_id"], _vector(text))
+                out[num(r["Bill_id"])] = ("", _words(text), mid(r["Patron_id"]), _vector(text))
         _EARLIER[session] = out
     return _EARLIER[session]
 
@@ -282,7 +310,7 @@ def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     live = session >= CURRENT
     comms = {r["COM_COMNO"]: (r["CHAMBER"], r["COM_NAME"]) for r in rows(session, "Committees.csv")}
-    names = {r["MBR_MBRNO"]: re.sub(r"\s+", " ", r["MBR_NAME"]).strip() for r in rows(session, "Members.csv")}
+    names = {r["MBR_MBRNO"]: member_name(r["MBR_NAME"]) for r in rows(session, "Members.csv")}
     bills = {num(r["Bill_id"]): r for r in rows(session, "BILLS.CSV") if r["Bill_id"][:2] in ("HB", "SB") or is_amendment(r)}
     summaries = {}
     for r in rows(session, "Summaries.csv"):
@@ -313,7 +341,8 @@ def load_session(session):
         for h in hist[p]:
             desc = h["History_description"]
             house = desc[:1] if desc[:2] in ("H ", "S ") else ""
-            text = desc[2:] if house else desc.strip()
+            # 2023's file marks the governor's lines "G " (later files leave them unmarked).
+            text = desc[2:] if house or desc[:2] == "G " else desc.strip()
             d = iso(h["History_date"])
             t = decode(text, comms)
             # A passage the house undid ("Reconsideration of passage agreed to by Senate"); it's usually voted on again.
@@ -326,7 +355,8 @@ def load_session(session):
             ref = h["History_refid"]
             if ref in calls and VOTES.match(text):
                 roll = calls[ref]
-                cm = re.match(r"([HS]\d+)V", ref)
+                # Committee votes are "H01V0038" ("H01C0038" for 2023's file's lines from 2022).
+                cm = re.match(r"([HS]\d+)[VC]", ref)
                 # Vote records write Senate committees "S2"; the committee list writes "S02".
                 code = cm and cm.group(1)[0] + cm.group(1)[1:].zfill(2)
                 comm = comms.get(code, ("", ""))[1] if cm else None
@@ -375,10 +405,10 @@ def load_session(session):
                 "held" if any(re.match(r"Passed by indefinitely", x) for x in raw) else "none")
 
         sp = spons[p]
-        chief = [names.get(r["MEMBER_ID"], re.sub(r"\s+", " ", r["MEMBER_NAME"])) for r in sp if "Chief Patron" in r["PATRON_TYPE"]]
-        chief_co = [re.sub(r"\s+", " ", r["MEMBER_NAME"]).strip() for r in sp if "Chief Co-Patron" in r["PATRON_TYPE"]]
-        co = [re.sub(r"\s+", " ", r["MEMBER_NAME"]).strip() for r in sp if re.search(r"\bCo-Patron\b", r["PATRON_TYPE"]) and "Chief" not in r["PATRON_TYPE"]]
-        sponsor = chief[0].strip() if chief else names.get(b["Patron_id"], b["Patron_name"])
+        chief = [names.get(r["MEMBER_ID"], member_name(r["MEMBER_NAME"])) for r in sp if "Chief Patron" in r["PATRON_TYPE"]]
+        chief_co = [member_name(r["MEMBER_NAME"]) for r in sp if "Chief Co-Patron" in r["PATRON_TYPE"]]
+        co = [member_name(r["MEMBER_NAME"]) for r in sp if re.search(r"\bCo-Patron\b", r["PATRON_TYPE"]) and "Chief" not in r["PATRON_TYPE"]]
+        sponsor = chief[0].strip() if chief else names.get(mid(b["Patron_id"]), b["Patron_name"])
         if stage == 0 and committee:
             desc = f"In {HOUSE[now_house]} committee"
         elif stage == 1:
@@ -396,10 +426,10 @@ def load_session(session):
         chap = re.match(r"CHAP0*(\d+)", b["Chapter_id"] or "")
         intro = iso(b["Introduction_date"])
         action_dates = [d for d, _, _, _ in acts if d]
-        chief_id = next((r["MEMBER_ID"] for r in sp if "Chief Patron" in r["PATRON_TYPE"]), b["Patron_id"])
+        chief_id = next((r["MEMBER_ID"] for r in sp if "Chief Patron" in r["PATRON_TYPE"]), mid(b["Patron_id"]))
         for r in sp:
             if r["MEMBER_ID"] in party_of:
-                _PARTIES.setdefault(session, {})[(r["MEMBER_ID"][0], re.sub(r"\s+", " ", r["MEMBER_NAME"]).strip())] = party_of[r["MEMBER_ID"]]
+                _PARTIES.setdefault(session, {})[(r["MEMBER_ID"][0], member_name(r["MEMBER_NAME"]))] = party_of[r["MEMBER_ID"]]
         _PARTIES.setdefault(session, {})[(p[0], sponsor)] = party_of.get(chief_id, "")
         vers = {"p": p, "sponsor": sponsor, "district": int(seat_of.get(chief_id, "X:0")[2:]),
                 "cosponsors": chief_co + co, "primes": 1 + len(chief_co), "cosp": len(chief_co) + len(co),

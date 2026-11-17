@@ -15,6 +15,10 @@ from states.va.convert import num, rows, sessions
 # Later versions of the summary replace earlier ones.
 ORDER = ["SUMMARY AS INTRODUCED", "SUMMARY AS PASSED HOUSE", "SUMMARY AS PASSED SENATE", "SUMMARY AS PASSED",
          "SUMMARY AS ENACTED WITH GOVERNOR'S RECOMMENDATION"]
+# 2023's file (from the legacy LIS) names the same versions differently; "Passed House of Origin" is the House's or
+# the Senate's by the bill's number, and "Enacted" summaries are all of bills enacted with the governor's amendments.
+OLD = {"Introduced": "SUMMARY AS INTRODUCED", "Passed Both Chambers": "SUMMARY AS PASSED",
+       "Enacted": "SUMMARY AS ENACTED WITH GOVERNOR'S RECOMMENDATION"}
 LABEL = {"SUMMARY AS INTRODUCED": "as introduced", "SUMMARY AS PASSED HOUSE": "as passed by the House",
          "SUMMARY AS PASSED SENATE": "as passed by the Senate", "SUMMARY AS PASSED": "as passed",
          "SUMMARY AS ENACTED WITH GOVERNOR'S RECOMMENDATION": "as enacted with the governor's amendments"}
@@ -36,9 +40,11 @@ def main(session):
     best = {}
     for r in rows(session, "Summaries.csv"):
         kind = r["SUMMARY_TYPE"].strip()
+        bill = num(r["SUM_BILNO"])
+        kind = OLD.get(kind) or (f"SUMMARY AS PASSED {'HOUSE' if bill[:1] == 'H' else 'SENATE'}"
+                                 if kind == "Passed House of Origin" else kind)
         if kind not in ORDER or not r["SUMMARY_TEXT"].strip():
             continue
-        bill = num(r["SUM_BILNO"])
         if bill not in best or ORDER.index(kind) >= ORDER.index(best[bill][0]):
             best[bill] = (kind, plain(r["SUMMARY_TEXT"]))
     out = {b: {"statement": text, "label": f"From the Legislature's summary of the bill {LABEL[kind]}."}

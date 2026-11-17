@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from fetch_contacts import committee_key, name_key
 from states.va import profile as P
-from states.va.convert import rows
+from states.va.convert import member_name, rows
 
 HOUSE_SITE = "https://house.vga.virginia.gov"
 SENATE_SITE = "https://apps.senate.virginia.gov"
@@ -151,7 +151,8 @@ def senate(session, lis_names):
 
 
 def build(session):
-    lis_names = {r["MBR_MBRNO"]: re.sub(r"\s+", " ", r["MBR_NAME"]).strip() for r in rows(session, "Members.csv")}
+    # Members.csv names "Jessica L. Anderson" (2024 on) or "Anderson, Jessica L." (2023, from the legacy LIS).
+    lis_names = {r["MBR_MBRNO"]: member_name(r["MBR_NAME"]) for r in rows(session, "Members.csv")}
     h_people, h_comms, h_since = house(session, lis_names)
     s_people, s_comms = senate(session, lis_names)
     since = {k: p.pop("_since") for k, p in s_people.items() if p.get("_since")}
