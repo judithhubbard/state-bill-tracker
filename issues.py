@@ -178,7 +178,7 @@ ISSUES = [
                   "Mail and absentee voting": [r"\babsentee\b", r"\bmail(?:-in| in)? (?:ballots?|voting)\b", r"\bvote[- ]by[- ]mail\b", r"\bballots? by mail\b"],
                   "Voter registration": [r"\bregist\w* (?:to vote|voters?)\b", r"\bvoter (?:registration|rolls?|lists?)\b", r"\bsame[- ]day registration\b"],
                   "Election administration and security": [r"\baudits?\b", r"\btabulat", r"\bequipment\b", r"\bmachines?\b", r"\bsecurity\b", r"\bintegrity\b", r"\belection (?:officials?|workers?|judges?|administrat|clerks?)", r"\bpoll (?:watchers?|workers?|books?)", r"\bcanvass", r"\bcertif", r"\bdrop ?box"]}},
-    {"id": "immigration", "group": "Rights and public safety", "name": "Immigration enforcement",
+    {"id": "immigration", "group": "Rights and public safety", "name": "Immigration",
      # Working with federal immigration enforcement (287(g), detainers, sanctuary policies), state immigration crimes,
      # checks of immigration status (E-Verify), and what a person's status allows: benefits, licenses, in-state tuition.
      # Not noncitizen voting (Voting and elections), refugee services or foreign land ownership.
@@ -276,6 +276,104 @@ ISSUES = [
      "filters": {"Medical cannabis": [r"\bmedical (?:cannabis|marijuana|marihuana)\b", r"\bmedicinal\b", r"\bqualifying (?:patients?|conditions?)\b"],
                  "Hemp-derived THC": [r"\bhemp\b", r"\bdelta[- ]?[89]\b", r"\bintoxicating\b"],
                  "Expungement": [r"\bexpunge", r"\bsealing\b", r"\bseal (?:the )?records?\b"]}},
+    # The third ten (2026-11-17; notes/issues-check.md).
+    {"id": "privacy", "group": "Technology", "name": "Data privacy",
+     # Consumer data privacy: what businesses may collect, keep and sell. Not government records or what agencies and
+     # police may do, not "invasion of privacy" crimes, and not children's design codes (Children online), though a
+     # broad consumer privacy act with parts for minors counts.
+     "rules": [[r"\b(?:consumer|online|internet|genetic|biometric|health|location|customer) (?:data )?privacy\b",
+                r"!\b(?:public records?|open records?|freedom of information|age[- ]appropriate design|kids code|invasion of (?:personal )?privacy|governmental data|state agenc\w*|law enforcement|police)\b"],
+               # "Data privacy" alone is also a line in many bills about government programs' records.
+               [r"\bdata privacy\b", r"\b(?:consumers?|businesses|controllers?|processors?|sell\w*|sale|targeted advertising)\b",
+                r"!\b(?:public records?|open records?|governmental data|state agenc\w*|law enforcement|police)\b"],
+               [r"\bdata brokers?\b"], [r"\bbiometric (?:data|information|identifiers?|surveillance|privacy)\b",
+                r"!\b(?:state agenc\w*|government(?:al)? entit\w*|law enforcement|police|jury|probable cause|arrest\w*|background checks?|justice information|criminal justice)\b"],
+               [r"\bconsumer health (?:data|information)\b"], [r"\bconsumer data protection\b"],
+               [r"\b(?:precise )?geolocation (?:data|information)\b", r"!\bknown minors?\b"], [r"\blocation data\b", r"!\b(?:harvest|open records?|students?)\b"],
+               [r"\bprivacy polic(?:y|ies)\b", r"\b(?:internet|websites?|online|consumers?|apps?|applications?|service providers?)\b"],
+               [r"\bpersonal (?:data|information)\b", r"\b(?:controllers?|processors?|opt[- ]out|sell\w*|sale|targeted advertising|profiling|consumers?|businesses|business entit\w*)\b",
+                r"!\b(?:public records?|open records?|freedom of information|data breach\w*|security breach\w*|breach of (?:the )?security|judges?|judicial|law enforcement officers?|public safety officers?|government(?:al)? entit\w*|state agenc\w*|election\w*|voters?|defraud\w*|fraudulent|identity theft)\b"]],
+     # California's digests name the Consumer Privacy Act as background on bills about other things.
+     "none": [r"\bstate (?:public protection and general government )?budget\b", r"\bExisting (?:state )?law, the California Consumer Privacy Act\b"]},
+    {"id": "campaignfinance", "group": "Elections", "name": "Campaign finance",
+     # Money in politics: contributions, spending, disclosure, PACs, public financing. Not lobbying or ethics alone.
+     "rules": [[r"\bcampaign financ\w*\b", r"!\bappropriat\w*\W+(?:\w+\W+){0,12}?campaign finance (?:and public disclosure )?board\b"],
+               [r"\bcampaign (?:contributions?|expenditures?|spending|funds?|accounts?|disclosures?|committees?|finance reports?|treasurers?)\b",
+                r"!\b(?:awareness|education(?:al)?|advertising|information(?:al)?|outreach|marketing|recruitment|media|prevention|safety) campaigns?\b"],
+               [r"\bpolitical (?:contributions?|donations?|action committees?|committees?|expenditures?|spending)\b"],
+               [r"\bpolitical (?:advertis\w*|ads?)\b", r"!\b(?:artificial intelligence|deep ?fakes?|synthetic|deceptive|materially|manipulated|AI)\b"],
+               [r"(?-i)\b(?:super )?PACs?\b"], [r"\bdark money\b"], [r"\bindependent expenditures?\b"], [r"\belectioneering communications?\b", r"!\b(?:deep ?fakes?|synthetic media)\b"],
+               [r"\bclean elections?\b"], [r"\bpublic (?:campaign )?financ\w*\b", r"\b(?:campaigns?|candidates?|elections?)\b"],
+               [r"\bcontribution limits?\b"], [r"\bpay[- ]to[- ]play\b"],
+               [r"\b(?:contributions?|donations?)\b", r"\b(?:candidates?|campaign committees?|political part(?:y|ies)|inaugura\w*)\b", r"\b(?:limit\w*|report\w*|disclos\w*|prohibit\w*|accept\w*|solicit\w*)\b"]],
+     # California's digests open with the Political Reform Act as background on bills about other things.
+     # Bills on AI and deepfakes in political ads name the committees that pay for them.
+     "none": [r"\bprovides for the comprehensive regulation of campaign financing\b", r"\b(?:artificial intelligence|deep ?fakes?|synthetic media|materially deceptive)\b"]},
+    {"id": "redistricting", "group": "Elections", "name": "Redistricting",
+     # Drawing legislative and congressional districts. Local ward lines only when statewide rules change: not one
+     # county's or city's map.
+     "rules": [[r"\bredistrict\w*\b"], [r"\breapportion\w*\b", r"\b(?:districts?|legislat\w*|congress\w*|senate|house|census)\b"], [r"\bgerrymander\w*\b"],
+               [r"\bapportion\w*\b", r"\b(?:legislative|congressional|senate|house|representatives?) districts?\b"],
+               [r"\b(?:district (?:maps?|boundar\w*|lines)|districting plans?|composition of (?:the )?districts)\b",
+                r"\b(?:(?:legislative|congressional|senate|house|state representative) (?:districts?|seats?)|house of representatives|members of the (?:senate|house|legislature)|congress)\b"]],
+     "none": [r"(?-i)\b(?:County of [A-Z]\w+|[A-Z]\w+ County (?:Board|Citizens|Commission|Redistricting|Municipal)|City of [A-Z]\w+)",
+              r"\bmaking an appropriation\b|\bappropriation for the purpose\b|\blegislative expenses\b|\bfor fiscal year\b",
+              # Waiting "until the next redistricting", the Census Bureau's redistricting files, courts' and electors' districts.
+              r"\b(?:until|before|after|following) (?:the )?(?:next )?(?:decennial )?redistricting\b", r"\bcensus redistricting (?:data|TIGER)",
+              r"\b(?:judicial (?:redistricting|districts?)|supreme court districts?|redistricting of the (?:\w+ )?supreme court|chancery|circuit courts?|justices? of the peace|constables?|presidential electors?)\b",
+              # Boards whose members are appointed or elected by district (school boards, regents, commissions).
+              r"\b(?:school boards?|boards? of (?:education|regents)|university|appointed based|commissioners? (?:will|shall) be appointed)\b"]},
+    {"id": "paidleave", "group": "Work and the economy", "name": "Paid family and sick leave",
+     # Paid leave laws and programs: family and medical leave insurance, paid sick and safe leave, parental leave
+     # (public employees' too). Not leave banks or donations for one employee, payouts of unused leave, or paid
+     # administrative leave.
+     "rules": [[r"\bpaid (?:family|medical|sick|parental|safe|maternity|paternity|prenatal)(?: and (?:medical|safe))? (?:leave|time|days?|benefits?)\b"], [r"\bfamily and medical leave\b"],
+               [r"\bfamily (?:leave|temporary disability)\b"], [r"\bearned (?:sick|paid) (?:and safe )?(?:leave|time)\b"], [r"\bsick and safe (?:leave|time)\b"],
+               [r"\bsick (?:leave|time|days)\b", r"\b(?:earn\w* (?:paid )?sick|hours worked|employers? (?:to|must|shall) provide|mandat\w*|requir\w* (?:all |private )?employers)\b",
+                r"!\b(?:unused|payouts?|retirement|service credit)\b"],
+               [r"\bparental leave\b"], [r"\bmaternity leave\b"], [r"\bpaternity leave\b"], [r"(?-i)\bFMLA\b"], [r"\bsafe leave\b"]],
+     "none": [r"\bsick leave banks?\b", r"\b(?:unused|accumulated) (?:sick|annual|vacation)\b", r"\bdonat\w* (?:of )?(?:sick )?leave\b",
+              r"\bpaid administrative leave\b", r"\bterminal leave\b"]},
+    {"id": "childcare", "group": "Work and the economy", "name": "Child care",
+     # Child care for working families: subsidies, licensing, workforce, tax credits. Not K-12, pre-K or foster care,
+     # and not lists of places near which something is banned (sex offenders, tobacco shops).
+     "rules": [[r"\b(?:child|day)[- ]?care\b",
+                r"!\b(?:adult day|sex offenders?|registrants?|within (?:\d|one|two|five)[\w,]* (?:feet|yards)|tobacco|nicotine|vap(?:e|or|ing)|firearms?|cannabis|marijuana|alcohol\w*|liquor)\b",
+                r"!\b(?:child[- ]?care institutions?|child[- ]placing|residential child[- ]?care|host homes?|nontraditional child[- ]?care)\b"],
+               [r"\bearly (?:care and education|learning (?:programs?|providers?|centers?))\b"], [r"\bearly childhood (?:care|services)\b"], [r"\bchild and dependent care\b"]],
+     "none": [r"\bfoster care\b(?!.{0,40}child ?care)"]},
+    {"id": "ivf", "group": "Health", "name": "IVF and fertility",
+     "rules": [[r"\bin vitro\b", r"!\b(?:cell[- ]cultivated|cultured|cultivated meat|animal cells?)\b"], [r"(?-i)\bIVF\b"], [r"\binfertility\b"], [r"\bfertility[- ](?:treatments?|preservation|services|care|coverage|benefits?|clinics?|patients?|fraud|health|related)\b"],
+               [r"\bassisted reproduct\w*\b"], [r"\bsurrogacy\b"], [r"\bgestational (?:carriers?|surroga\w*)\b"], [r"\bextrauterine\b"],
+               [r"\b(?:egg|oocyte|sperm|semen|gamete|embryo) (?:donors?|donations?|banks?|freezing|retrieval|storage|transfer)\b"], [r"\bdonor[- ]conceived\b"],
+               [r"\bembryos?\b", r"\b(?:frozen|cryopreserv\w*|fertility|in vitro|IVF|reproductive technolog\w*)\b", r"!\bfetal tissue\b"]]},
+    {"id": "fluoride", "group": "Health", "name": "Fluoride in drinking water",
+     "rules": [[r"\bfluoridat\w*\b"], [r"\bfluorid\w*\b", r"\bwater\b", r"!\b(?:sulfuryl|hydrogen) fluoride\b", r"!\bfluoride varnish\b"],
+               [r"\beffects? of fluoride\b"], [r"\blaws? (?:governing|regarding|concerning|relating to) fluoride\b"]]},
+    {"id": "nuclear", "group": "Environment and energy", "name": "Nuclear energy",
+     # Nuclear power, including small modular reactors, fusion and repeals of moratoriums. Not weapons, medicine, or
+     # radioactive waste alone; not lists that leave nuclear out ("other than fossil fuel or nuclear") or name nuclear
+     # plants among targets of crimes.
+     "rules": [[r"\bnuclear[- ](?:power(?:ed)?|energy|reactors?|generat\w*|electric\w*|plants?|fission|fusion|facilit\w*|fuel(?:ed)?|industry|innovation|development|technolog\w*|resources?|units?|workforce|recycling|and hydrogen|feasibility|production|moratorium)\b",
+                r"!\bnuclear weapons?\b", r"!\b(?:fossil fuels? or nuclear|radiological|terroris\w*|security coverage|defense contractors?|submarines?|firearms?)\b"],
+               [r"\bsmall modular reactors?\b"], [r"(?-i)\bSMRs?\b"], [r"\badvanced (?:nuclear|reactors?)\b"], [r"\bmicro-?reactors?\b"],
+               [r"\bfusion (?:energy|power|technology|science|industry|reactors?)\b"], [r"\baneutronic\b"],
+               [r"\bfusion\b", r"\b(?:renewable|clean) energ\w*\b", r"!\bfusion (?:voting|centers?)\b"]],
+     "none": [r"\bnuclear medicine\b", r"\bnuclear pharmac\w*\b"]},
+    {"id": "wildfire", "group": "Environment and energy", "name": "Wildfire",
+     # Prevention, utilities' wildfire liability and mitigation plans, insurance and rebuilding, firefighting. Not
+     # ordinary fire codes.
+     "rules": [[r"\bwild ?fires?\b"], [r"\bwildland[- ](?:fires?|firefight\w*|urban interface|fire ?fighters?)\b"], [r"\b(?:forest|brush|grass|range) ?fires?\b"], [r"\bprescribed (?:fires?|burn\w*)\b"], [r"\bcontrolled burn\w*\b"],
+               [r"\bdefensible space\b"], [r"\bfire[- ]?wise\b"], [r"\bfire (?:hazard severity|risk) zones?\b"], [r"\bpublic safety power shut\w*\b"],
+               [r"\bfuels? (?:reduction|breaks?|treatments?|management)\b", r"\bfires?\b"]],
+     # California's 2024 bond act is named for wildfire prevention among other things; forest rangers' retirement titles.
+     "none": [r"\bWildfire Prevention, Drought Preparedness, and Clean Air Bond Act\b", r"\bforest rangers?\b"]},
+    {"id": "noncompete", "group": "Work and the economy", "name": "Noncompete agreements",
+     # Noncompete agreements and other restraints on workers changing jobs ("non-solicitation", "no-poach"). Not
+     # "noncompetitive" bidding or positions.
+     "rules": [[r"\bnon-?compet(?:e|es|ition)\b"], [r"\bcovenants? not to (?:compete|solicit)\b"], [r"\bagreements? not to compete\b"],
+               [r"\brestrictive (?:employment )?covenants?\b", r"\b(?:employ\w*|workers?|physicians?)\b"],
+               [r"\bno-?poach\w*\b"], [r"\bnon-?solicitation\b", r"\bemploy\w*\b"]]},
 ]
 
 

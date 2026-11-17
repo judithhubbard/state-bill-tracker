@@ -38,12 +38,22 @@ DESC = {
     "firearms": "Bills about guns: carry permits, background checks and sales, red flag orders, ghost guns, guns in schools.",
     "vouchers": "Bills about public money for private schooling: vouchers, education savings accounts, tax-credit scholarships.",
     "voting": "Bills about how people vote and how elections are run: voter ID, mail voting, registration, counting and audits.",
-    "immigration": "Bills about immigration enforcement: working with federal agents, sanctuary policies, status checks, benefits and licenses.",
+    "immigration": "Bills about immigration: working with federal enforcement, sanctuary policies, status checks, benefits, licenses and tuition.",
     "tenants": "Bills about renting a home: rent limits, evictions, leases, security deposits, fees and tenants’ rights.",
     "proptax": "Bills about property tax relief for homeowners and residents: homestead exemptions, assessment caps, freezes, credits.",
     "transgender": "Bills about transgender people: sports, health care for minors, birth certificates and IDs, bathrooms, schools, protections.",
     "dei": "Bills about diversity, equity and inclusion programs: offices, training, statements and hiring, bans and protections.",
     "cannabis": "Bills about cannabis: legal sales, medical cannabis, hemp-derived THC such as delta-8, and clearing old records.",
+    "privacy": "Bills about consumer data privacy: what businesses may collect and sell, data brokers, biometric, health and location data.",
+    "campaignfinance": "Bills about money in politics: contribution limits, spending and disclosure, PACs, public financing of campaigns.",
+    "redistricting": "Bills about drawing legislative and congressional districts: commissions, maps, the rules for drawing them.",
+    "paidleave": "Bills about paid leave: family and medical leave programs, paid sick and safe time, parental leave.",
+    "childcare": "Bills about child care: help paying for it, licensing, the child care workforce and tax credits.",
+    "ivf": "Bills about IVF and fertility: insurance coverage, embryos, surrogacy, donors and fertility fraud.",
+    "fluoride": "Bills about adding fluoride to public drinking water: bans, local choice, and the levels allowed.",
+    "nuclear": "Bills about nuclear power: new reactors and small modular reactors, lifting moratoriums, fusion, plants and their costs.",
+    "wildfire": "Bills about wildfires: prevention and prescribed burns, utilities’ wildfire plans and liability, insurance, firefighting.",
+    "noncompete": "Bills about noncompete agreements and other limits on workers taking a new job, for all workers or for doctors and others.",
 }
 
 CSS = """
@@ -209,9 +219,11 @@ GRID = {"AK": (0, 0), "ME": (0, 10), "VT": (1, 9), "NH": (1, 10),
 SHORT = {"datacenters": "data centers", "pfas": "PFAS", "ai": "artificial intelligence", "kidsonline": "children online",
          "phones": "phones in schools", "housing": "housing supply", "minwage": "minimum wage", "repair": "right to repair",
          "betting": "sports betting", "drugcosts": "drug costs", "abortion": "abortion", "firearms": "firearms",
-         "vouchers": "school vouchers", "voting": "voting", "immigration": "immigration enforcement",
+         "vouchers": "school vouchers", "voting": "voting", "immigration": "immigration",
          "tenants": "rent and tenants", "proptax": "property tax relief", "transgender": "transgender people", "dei": "DEI",
-         "cannabis": "cannabis"}
+         "cannabis": "cannabis", "privacy": "data privacy", "campaignfinance": "campaign finance",
+         "redistricting": "redistricting", "paidleave": "paid leave", "childcare": "child care", "ivf": "IVF and fertility",
+         "fluoride": "fluoride", "nuclear": "nuclear energy", "wildfire": "wildfire", "noncompete": "noncompetes"}
 
 
 def step(n):

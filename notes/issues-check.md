@@ -53,7 +53,7 @@ Still to say on the pages:
 
 # National issues: the second ten (2026-11-15)
 
-Abortion, firearms, school vouchers, voting, immigration enforcement, rent and tenants, property tax relief, transgender
+Abortion, firearms, school vouchers, voting, immigration (named "Immigration enforcement" until 2026-11-17), rent and tenants, property tax relief, transgender
 people, DEI and cannabis, added to issues.py and checked the same way as the first ten, over the same 365,378 bills: 30
 random matches per issue read in each round (title and the matched words), the possible misses (titles with related
 words that didn't match) read over, then the rules fixed. Eight rounds, each with a fresh random sample; the table gives
@@ -65,7 +65,7 @@ the last round, read on the rules as committed.
 | Firearms | 6,893 (2,180) | 30 | none |
 | School vouchers and education savings accounts | 617 (271) | 28 | none (CT, DE, VA and AR this session) |
 | Voting and elections | 6,980 (2,286) | 30 | none |
-| Immigration enforcement | 1,976 (996) | 28 | none |
+| Immigration | 1,976 (996) | 28 | none |
 | Rent and tenants | 4,663 (1,651) | 27 | none |
 | Property tax relief | 3,240 (1,223) | 26-27 | none |
 | Transgender people | 1,354 (494) | 28 | none |
@@ -85,7 +85,7 @@ Scope decided here (the names are the subject, never a side):
   anchors on them; a bill that only moves a town's election date doesn't match). Not votes by shareholders,
   cooperatives or homeowners' associations, nor Mississippi's private bills restoring one person's right to vote
   ("Suffrage; restore to Frankie Ward, Jr": about 60 a year).
-- Immigration enforcement: working with federal immigration enforcement (287(g), detainers, ICE access to courthouses
+- Immigration: working with federal immigration enforcement (287(g), detainers, ICE access to courthouses
   and schools, sanctuary policies either way), state immigration crimes and human smuggling, checks of status (E-Verify,
   lawful presence), and what status allows (benefits, driver's licenses, professional licenses, in-state tuition, DACA).
   Legal help for people facing deportation counts. Not noncitizen voting (under Voting), refugee resettlement services,
@@ -165,3 +165,97 @@ voters petition for a local election) under Voting. "registered voters" near "pe
 bills fewer: local referendums on fluoride, police districts, town incorporation, a few school-board election bills);
 recall elections, initiatives and referenda, and candidates' nominating petitions now count by their own rules (270 more,
 read over in a sample: all election process). Voting goes from 6,980 to 7,227 bills across all sessions.
+
+## The owner's answers on the second ten (2026-11-17)
+
+1. Campaign finance becomes its own issue (below), not part of "Voting and elections".
+2. Statewide redistricting becomes its own issue (below).
+3. DEI stays as written: implicit bias training, "divisive concepts", critical race theory and affirmative action stay in.
+4. Supplier diversity stays out of DEI.
+5. "Immigration enforcement" is renamed "Immigration" (the id stays "immigration", so links keep working).
+6. Drag-show and "adult cabaret" bills count under Transgender people only when they mention transgender people (as now).
+7. School-aid funds named "property tax relief" stay out of Property tax relief (as now).
+
+# National issues: the third ten (2026-11-17)
+
+Data privacy, campaign finance, redistricting, paid family and sick leave, child care, IVF and fertility, fluoride in
+drinking water, nuclear energy, wildfire and noncompete agreements, added to issues.py and checked as the second ten were,
+over the same 365,378 bills (the copy of 2026-11-15): 30 random matches per issue read in each round (title and the matched
+window), the possible misses (titles with related words that didn't match) read over, then the rules fixed. Four rounds;
+the table gives the last round, read on the rules as committed. The first twenty issues' rules are unchanged (compared
+with the commit before: only the immigration issue's name differs).
+
+| Issue | Bills (this session) | Right of 30 read | States with none |
+|---|---|---|---|
+| Data privacy | 633 (291) | 28 | ND, SD |
+| Campaign finance | 1,672 (585) | 28 | none |
+| Redistricting | 345 (118) | 29 | ID, KS, ND, SD |
+| Paid family and sick leave | 820 (280) | 28 | SD |
+| Child care | 3,068 (1,163) | 29 | none |
+| IVF and fertility | 467 (180) | 28 | AK, KS, WY |
+| Fluoride in drinking water | 74 (41) | 30 | AL, CA, CO, DE, ID, MD, MI, NC, NM, NV, OR, RI, WI, WY |
+| Nuclear energy | 506 (211) | 28 | AK, AL, DE, ID, NC, NV, SD |
+| Wildfire | 630 (247) | 27-28 | DE, KY, MA, MD, MI, MO, MS, NC, NH, OH, TN, VA, VT |
+| Noncompete agreements | 211 (80) | 30 | AK, AL, DE, MT, NC, ND, WV |
+
+Earlier rounds: privacy 26, then 27; campaign finance 23-26, then 28; redistricting 25, 22-24 (a sample heavy with local
+and passing mentions), then 29; paid leave 19 (sick leave banks for one employee, payouts of unused leave), then 26-28;
+child care 26, then 29; IVF 29; fluoride 30; nuclear 24-27, then 28; wildfire 28; noncompete 24 ("noncompetitive" bids and
+positions), then 30. Fluoride's states with none are real: the subject came up in 2025, mostly in states that moved to ban
+it.
+
+Scope decided here (the names are the subject, never a side):
+- Data privacy: what businesses may collect, keep and sell: comprehensive consumer privacy acts, data brokers, biometric
+  privacy (Illinois's BIPA bills), consumer health data, location data, privacy policies. Not government records and open
+  records, what agencies and police may collect (license plate readers, facial recognition for arrests), protecting judges'
+  and officers' home addresses from publication (unless the bill regulates data brokers), "invasion of privacy" crimes,
+  data breach notification alone, or children's design codes and kids' online acts (Children online). California's
+  digests name the Consumer Privacy Act as background on bills about other things; those windows are left out, which
+  also drops a few real California privacy bills whose titles don't say so.
+- Campaign finance: contributions, spending, disclosure, PACs, dark money, independent expenditures, public financing and
+  clean elections, personal use of campaign funds, pay-to-play. Not lobbying or ethics alone, and not AI or deepfakes in
+  political ads (under AI) even when the bill names the committees that pay for them.
+- Redistricting: drawing legislative and congressional districts, commissions, standards, counting prisoners at home,
+  mid-decade maps. Statewide rules for local districts count (a law on when counties redraw after a census); one county's,
+  city's, school board's or university board's districts don't, nor judicial districts, presidential electors, or
+  "until the next redistricting" in passing.
+- Paid family and sick leave: paid family and medical leave programs and insurance, paid sick and safe time, parental and
+  maternity leave (public employees' too), and unpaid family leave laws (FMLA-style). Not sick leave banks for one
+  employee (Massachusetts files dozens), donating or buying back leave, payouts of unused leave or retirement credit for
+  it, paid administrative leave.
+- Child care: subsidies and eligibility, licensing and background checks, the workforce, tax credits (including child and
+  dependent care credits), employer child care, facilities. Not foster or residential child care ("child care
+  institutions", child-placing agencies, host homes), pre-K and K-12, and not lists of places something may not be near
+  (sex offenders, tobacco, firearms).
+- IVF and fertility: IVF, infertility coverage, fertility preservation, embryos as they bear on IVF (Alabama's 2024
+  immunity law), surrogacy and parentage of children born by assisted reproduction, donors, fertility fraud. Abortion-only
+  bills stay under Abortion; lab-grown meat ("in vitro animal cell cultures") is left out.
+- Fluoride in drinking water: fluoridation bans, local choice and elections, levels, warnings, studies of its effects. Not
+  fluoride varnish for children's teeth.
+- Nuclear energy: reactors and small modular reactors, moratorium repeals, fusion energy, plants' taxes, workers,
+  decommissioning and emergency planning, nuclear in clean energy standards. Not weapons, nuclear medicine, "fusion
+  voting" or "fusion centers", radioactive waste alone, or lists that leave nuclear out ("other than fossil fuel or
+  nuclear") or name plants among crime targets.
+- Wildfire: prevention, prescribed burns, defensible space, fire hazard zones, utilities' wildfire plans, shutoffs and
+  liability, insurance, tax relief and rebuilding after fires, wildland firefighters. Not ordinary fire codes, forest
+  rangers' retirement, or California's 2024 bond act named "Safe Drinking Water, Wildfire Prevention ...".
+- Noncompete agreements: noncompetes, "covenants not to compete", non-solicitation and no-poach clauses, restrictive
+  employment covenants, for all workers or for doctors, nurses and others. Not "noncompetitive" bids, grants or positions.
+
+What the rounds changed:
+- Words with a second meaning: "personal privacy" (voyeurism crimes), "data privacy" as a line in bills about government
+  programs; "awareness campaign fund"; "reapportions the nominations" (a commission's members); "paid medical expenses";
+  "noncompetitive"; "in vitro" cell cultures; "nuclear-powered submarines" in a firearms bill; "wildland areas" (a park).
+- Wordings first missed: "Consumer Data Protection Act" (Virginia's), privacy policies, "composition of districts"
+  (Texas's map bills), pay-to-play, donations to inaugural committees, "early childhood care", "extrauterine" embryos,
+  "fertility-related services", "the law governing fluoride" (Ohio), fusion technology and fusion in clean energy
+  standards, "nuclear-fueled", "nuclear workforce".
+
+Questions for the owner:
+1. Data privacy leaves out government surveillance (police buying data, facial recognition, license plate readers) and
+   data breach notification laws. Add either, or make government surveillance its own issue?
+2. Paid leave includes unpaid family and medical leave laws (state FMLA bills) and parental leave for public employees.
+   Keep both?
+3. Redistricting includes statewide laws on how counties and cities redraw their own districts. Keep, or legislative and
+   congressional maps only?
+4. Nuclear energy includes nuclear plants' security, emergency planning and decommissioning. Keep?
