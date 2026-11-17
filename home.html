@@ -28,6 +28,8 @@
   --ctl-d1: #c4d4f1; --ctl-d1-ink: #1b3566; --ctl-d2: #87a5df; --ctl-d2-ink: #0f2550;
   --ctl-x: #e6e2da; --ctl-x-ink: #4a4438; --ctl-n: #e4e7ed; --ctl-n-ink: #3a4253;
   --lawn: #1f7a4a; --lawn-ink: #ffffff;
+  /* Sponsors' party on the issue maps: Democratic, both parties (purple), Republican, none (committee bills). */
+  --pty-d: #87a5df; --pty-b: #a487d1; --pty-r: #e49b93; --pty-n: #aab3c2;
   --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
@@ -44,6 +46,7 @@
   --ctl-d1: #2f4670; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4a70b5; --ctl-d2-ink: #ffffff;
   --ctl-x: #34312b; --ctl-x-ink: #e6e2da; --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
   --lawn: #5cc28c; --lawn-ink: #0f1626;
+  --pty-d: #5b82c8; --pty-b: #8a6cbd; --pty-r: #b0574e; --pty-n: #5d6880;
     color-scheme: dark;
   }
 }
@@ -59,6 +62,7 @@
   --ctl-d1: #2f4670; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4a70b5; --ctl-d2-ink: #ffffff;
   --ctl-x: #34312b; --ctl-x-ink: #e6e2da; --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
   --lawn: #5cc28c; --lawn-ink: #0f1626;
+  --pty-d: #5b82c8; --pty-b: #8a6cbd; --pty-r: #b0574e; --pty-n: #5d6880;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -203,6 +207,69 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
   .tiles .fed .lawn, .tiles .fed .newn { right: 6px; bottom: auto; }
 }
 .legend .sq.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
+/* Sponsors' party (issue view): a thin bar along the bottom of each tile with bills, its bills split Democratic, both
+   parties, Republican and none, left to right; the law badge sits just above it. In the panel, a bigger bar with its
+   counts, each part a button that sets "Sponsor's party". issues_site.py's pages use the same rules. */
+.tiles .pbar { position: absolute; left: 7px; right: 7px; bottom: 3px; height: 4px; display: flex; gap: 1px; border-radius: 2px;
+  overflow: hidden; background: var(--sheet); box-shadow: 0 0 0 1px var(--sheet); pointer-events: none; }
+.pbar i, .pbs i { min-width: 1px; flex: 0 1 0; }
+.pD { background: var(--pty-d); } .pB { background: var(--pty-b); } .pR { background: var(--pty-r); } .pN { background: var(--pty-n); }
+.tiles.issue > :not(.fed):has(.pbar) .lawn { bottom: 9px; height: 1.45em; font-size: clamp(9px, 1.8vw, 11px); }
+.tiles.issue > button.tile:not(.fed), .tiles.issue > span.off:not(.fed) { padding-top: 13%; }
+.tiles .fed .pbar { left: 10px; right: 10px; }
+@media (max-width: 479.98px) {
+  .tiles .pbar { left: 4px; right: 4px; bottom: 2px; height: 3px; box-shadow: none; }
+  .tiles.issue > :not(.fed):has(.pbar) .lawn { bottom: 6px; left: auto; right: 3px; transform: none; height: 6px; min-width: 0; width: 6px; font-size: 0; }
+}
+.legend .pbs { display: inline-flex; width: 24px; height: 5px; gap: 1px; border-radius: 2px; overflow: hidden; }
+.legend .pbs i { flex: 1 1 0; }
+.pbig { display: flex; height: 18px; gap: 2px; border-radius: 5px; overflow: hidden; margin: 2px 0 6px; flex: 0 0 auto; }
+.pbig button { border: 0; padding: 0; min-width: 6px; flex: 0 1 0; cursor: pointer; }
+.pbig.f button:not([aria-pressed="true"]), .pkey.f button:not([aria-pressed="true"]) i { opacity: .3; }
+.panel .pkey { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 13px; color: var(--ink-2); margin: 0 0 8px; }
+.pkey button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center;
+  gap: 5px; font-variant-numeric: tabular-nums; border-radius: 3px; }
+.pkey button i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.pkey button:hover { color: var(--navy); text-decoration: underline; }
+.pkey button[aria-pressed="true"] { color: var(--ink); font-weight: 700; }
+.pkey button:focus-visible, .pbig button:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
+/* "Map | Chart" (issue view; the owner's choice 2026-11-17): the chart takes the map's place and size (it lies over the
+   hidden map, so switching moves nothing) and scrolls inside. One row per state with bills that year, most first: the
+   state's name, a bar as long as its bills (scaled to the largest state), split by sponsors' party like the tiles' bars,
+   the count and the number that became law. Congress below a rule, on the same scale (cut at the end when longer). */
+.mapbox { position: relative; }
+.mapbox.charted .tiles { visibility: hidden; }
+.chart { display: none; }
+.mapbox.charted .chart { display: flex; flex-direction: column; position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 0; }
+.crow { display: grid; grid-template-columns: 8.6em minmax(0, 1fr); align-items: center; gap: 8px; width: 100%; flex: 0 0 auto; min-height: 22px;
+  font: 13.5px/1.2 var(--body); color: var(--ink); background: none; border: 0; padding: 2px 10px; cursor: pointer; text-align: left; }
+.crow:hover { background: var(--paper); }
+.crow:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
+.crow.sel { background: var(--paper); box-shadow: inset 3px 0 0 var(--ink); font-weight: 700; }
+.crow .cn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crow .ab { display: none; }
+.crow .ct { display: flex; align-items: center; gap: 6px; min-width: 0; }
+/* The bar's length is its share of the room left after the count and badge (about 5.5em). */
+.cbar { display: flex; gap: 1px; height: 12px; border-radius: 3px; overflow: hidden; flex: 0 0 auto; min-width: 2px; }
+.cbar i { flex: 0 1 0; min-width: 1px; }
+.cbar.cut { border-radius: 3px 0 0 3px; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.crow .cv { font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: 12.5px; }
+.crow .lawn { font-size: 11px; height: 1.45em; }
+.chart .cfed { border-top: 1px solid var(--rule); margin-top: 6px; padding-top: 4px; }
+.chart .cnote { margin: 4px 10px 0; font-size: 12.5px; color: var(--ink-2); }
+@media (max-width: 479.98px) {
+  .crow { grid-template-columns: 2.4em minmax(0, 1fr); padding: 2px 8px; gap: 6px; }
+  .crow .full { display: none; }
+  .crow .ab { display: inline; }
+}
+/* The legend: the map's keys, or in chart view the party colors and the law badge. Both sets share one place (the
+   hidden one keeps its room), so switching moves nothing below. */
+#issueLegend { display: grid; }
+#issueLegend .kset { grid-area: 1 / 1; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
+#issueLegend .ck, #issueLegend.charted .mk { visibility: hidden; }
+#issueLegend.charted .ck { visibility: visible; }
+.legend .ck i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
 /* A legislature that met that year whose data for it isn't on the site: hatched. */
 .tiles.issue span.off.nodata, .legend .sq.nodata { border: 0; color: var(--ink-2);
   background: repeating-linear-gradient(135deg, transparent 0 4px, var(--rule) 4px 5.5px); box-shadow: inset 0 0 0 1px var(--rule); }
@@ -391,13 +458,15 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
     <div class="menu" id="showMenu" hidden></div></span>
     <a class="allis" href="issues/">All issues</a>
     <div class="when" id="years" role="group" aria-label="Year"></div>
+    <div class="when" id="vsw" role="group" aria-label="Show as" hidden><button type="button" data-v="map" aria-pressed="true">Map</button><button type="button" data-v="chart" aria-pressed="false">Chart</button></div>
     <span class="find"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input type="search" id="q" placeholder="Find a bill: HB 1234, or words" aria-label="Find a bill by its number or words in its title, in any state or Congress" autocomplete="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-controls="found" aria-expanded="false"></span>
     <div class="found" id="found" role="region" aria-label="Bills found" hidden></div>
   </div>
   <div class="mapwrap">
   <nav class="showside" id="showSide" aria-label="Show on the map" hidden></nav>
   <div class="mapcol">
-    <div class="tiles" id="tiles" aria-hidden="true"></div>
+    <div class="mapbox" id="mapbox"><div class="tiles" id="tiles" aria-hidden="true"></div>
+    <div class="chart" id="chart" role="group" aria-label="States by number of bills"></div></div>
   <p class="legend" id="legend" hidden>
     <span class="key"><i class="sq c-R1"></i><i class="sq c-D1"></i>One party holds the governor's office and both houses</span>
     <span class="key"><i class="sq c-R2"></i><i class="sq c-D2"></i>&hellip; and enough seats to override a veto in both houses</span>
@@ -406,14 +475,23 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
   </p>
   <p class="legend" id="customLegend" hidden></p>
   <p class="legend" id="issueLegend" hidden>
+    <span class="kset mk">
     <span class="key"><i class="sq h0"></i>None</span>
     <span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>
     <span class="key"><i class="sq h2"></i>5&ndash;14</span>
     <span class="key"><i class="sq h3"></i>15 or more</span>
-    <span class="key" id="lawKey"><span class="lawn">3</span>Number that became law</span>
+    <span class="key lawk"><span class="lawn">3</span>Number that became law</span>
     <span class="key" id="waitKey" hidden><i class="sq wait"></i>No bills filed yet</span>
     <span class="key" id="nodataKey" hidden><i class="sq nodata"></i>No data for this year</span>
     <span class="key" id="offKey"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
+    </span>
+    <span class="kset ck">
+    <span class="key"><i class="pD"></i>Democratic sponsors</span>
+    <span class="key"><i class="pB"></i>Both parties</span>
+    <span class="key"><i class="pR"></i>Republican</span>
+    <span class="key"><i class="pN"></i>Committee or none</span>
+    <span class="key lawk"><span class="lawn">3</span>Number that became law</span>
+    </span>
   </p>
   </div>
     <aside class="panel" id="panel" hidden>
@@ -485,6 +563,33 @@ const PARTY_WORDS = { D: "with Democratic sponsors", R: "with Republican sponsor
 const partyOk = (row) => (row[9] || "-") === PARTY;
 const PARTY_TAG = { D: ["D", "Sponsored by Democrats"], R: ["R", "Sponsored by Republicans"], B: ["Both", "Sponsored by both parties"] };
 const partyTag = (c) => (PARTY_TAG[c] ? `<span class="pty ${c}" role="img" title="${PARTY_TAG[c][1]}" aria-label="${PARTY_TAG[c][1]}">${PARTY_TAG[c][0]}</span>` : "");
+// Sponsors' party on the map: summary.json's count for a state is [bills, laws, D, B, R] (trailing zeros left off; the
+// rest have no party sponsor), from which each tile gets a thin bar and the panel a bigger one whose parts set PARTY.
+const PARTS = [["D", "Democratic"], ["B", "both"], ["R", "Republican"], ["-", "committee"]];
+const PCLASS = { D: "pD", B: "pB", R: "pR", "-": "pN" };
+function splitOf(e) {
+  if (!e || !e[0]) return null;
+  const [n, , d = 0, b = 0, r = 0] = e;
+  return [d, b, r, Math.max(0, n - d - b - r)];
+}
+const splitWords = (sp) => PARTS.map(([, w], i) => (sp[i] ? `${sp[i]} ${w}` : "")).filter(Boolean).join(", ");
+// The tiles show the number of bills only (the owner's choice 2026-11-17: the thin party bar was hard to see on the
+// green); the party split is in the panel, the chart view and each tile's tooltip.
+const pbar = () => "";
+// The panel's bar and its key: each part a button (the key's are the ones read aloud); the chosen party stands out.
+function pbig(sp) {
+  if (!sp || !sp.some(Boolean)) return "";
+  const f = PARTY ? " f" : "", on = (c) => String(PARTY === c);
+  const words = { D: "Democratic sponsors", B: "sponsors from both parties", R: "Republican sponsors", "-": "no party sponsor (committee bills)" };
+  return `<div class="pbig${f}">${PARTS.map(([c], i) => (sp[i] ? `<button type="button" class="${PCLASS[c]}" style="flex-grow:${sp[i]}" data-pp="${c}" aria-pressed="${on(c)}" tabindex="-1" aria-hidden="true" title="${esc(`${sp[i]} with ${words[c]}`)}"></button>` : "")).join("")}</div>`
+    + `<p class="pkey${f}"><span>Sponsors:</span>${PARTS.map(([c, w], i) => (sp[i] ? `<button type="button" data-pp="${c}" aria-pressed="${on(c)}" aria-label="${esc(`${sp[i]} with ${words[c]}: ${PARTY === c ? "show all bills" : "show only these"}`)}"><i class="${PCLASS[c]}"></i>${sp[i]} ${w}</button>` : "")).join("")}</p>`;
+}
+let PP_FOCUS = null;  // after a part of the panel's bar is used, the key's button to focus again once the panel is redrawn
+function ppFocus(body) {
+  if (!PP_FOCUS) return;
+  body.querySelector(`.pkey button[data-pp="${PP_FOCUS}"]`)?.focus();
+  PP_FOCUS = null;
+}
 function yView() {
   const base = issue.y[year] || { by: {}, bills: 0, states: 0, laws: 0 };
   if (!PARTY) return base;
@@ -510,7 +615,7 @@ function drawIssue() {
   // Legislatures that met that year but whose data for it isn't on the site (issues_site.py's "nodata": no session file
   // covers the year), apart from those that didn't meet (Texas in even years).
   const nodata = new Set(upcoming ? [] : (issues.nodata || {})[year] || []);
-  document.getElementById("lawKey").hidden = upcoming;
+  for (const k of document.querySelectorAll("#issueLegend .lawk")) k.hidden = upcoming;
   const quiet = Object.keys(GRID).filter((c) => built[c] && !open.has(c.toLowerCase()) && !(y.by[c.toLowerCase()] || [0, 0]).some(Boolean)).map((c) => c.toLowerCase());
   document.getElementById("waitKey").hidden = !quiet.some((st) => !nodata.has(st));
   document.getElementById("nodataKey").hidden = !quiet.some((st) => nodata.has(st));
@@ -530,10 +635,67 @@ function drawIssue() {
       + (laws ? `, ${laws} became law` : "");
     const mark = laws ? `<span class="lawn" aria-hidden="true">${laws}</span>` : "";
     const st = code.toLowerCase();
-    return `<button type="button" class="tile h${step(n)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc([NAMES[code], n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : [])].join("\n"))}" aria-label="${esc(`${code}, ${label}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${code}${mark}</button>`;
+    // The party bar shows all the state's bills; with one party chosen, the shading already counts only its bills.
+    const sp = PARTY ? null : splitOf((issue.y[year] || { by: {} }).by[st]);
+    return `<button type="button" class="tile h${step(n)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc([NAMES[code], n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : []), ...(sp ? [`Sponsors: ${splitWords(sp)}`] : [])].join("\n"))}" aria-label="${esc(`${code}, ${label}${sp ? `; sponsors: ${splitWords(sp)}` : ""}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${code}${mark}${pbar(sp)}</button>`;
   }).join("") + fedIssue(y, open, upcoming);
+  drawChart(y, open, upcoming);
   markStars();
   showPanel(pinned);
+}
+// "Map | Chart": the chart is drawn with the map each time (the switch only shows one or the other). CHART is the
+// visitor's choice, kept in the address (&view=chart) and in this browser.
+let CHART = false;
+try { CHART = localStorage.getItem("abt:issueview") === "chart"; } catch (e) {}
+const chartEl = document.getElementById("chart"), vsw = document.getElementById("vsw");
+function chartRow(st, name, n, laws, sp, max, upcoming) {
+  const cut = n > max, frac = Math.min(n, max) / (max || 1);
+  const parts = PARTY ? `<i class="${PCLASS[PARTY]}" style="flex-grow:1"></i>`
+    : sp ? PARTS.map(([c], i) => (sp[i] ? `<i class="${PCLASS[c]}" style="flex-grow:${sp[i]}"></i>` : "")).join("") : `<i class="pN" style="flex-grow:1"></i>`;
+  const words = `${name}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${PARTY ? ` ${PARTY_WORDS[PARTY]}` : ""}${upcoming ? " prefiled" : ""} in ${year}` : `no bills on ${issue.short} in ${year}`}`
+    + (laws ? `, ${laws} became law` : "") + (sp && !PARTY ? `; sponsors: ${splitWords(sp)}` : "");
+  return `<button type="button" class="crow${st === pinned ? " sel" : ""}" data-st="${st}" title="${esc(words.replace(": ", "\n").replace("; ", "\n"))}" aria-label="${esc(words)}" aria-pressed="${st === pinned}" aria-controls="panel">`
+    + `<span class="cn"><span class="full">${esc(name)}</span><span class="ab">${st === "us" ? "U.S." : st.toUpperCase()}</span></span>`
+    + `<span class="ct">${n ? `<span class="cbar${cut ? " cut" : ""}" style="width:calc((100% - 5.5em) * ${frac.toFixed(4)})" aria-hidden="true">${parts}</span>` : ""}`
+    + `<span class="cv" aria-hidden="true">${n}</span>${laws ? `<span class="lawn" aria-hidden="true">${laws}</span>` : ""}</span></button>`;
+}
+function drawChart(y, open, upcoming) {
+  const full = issue.y[year] || { by: {} };
+  const rows = Object.keys(GRID).map((c) => c.toLowerCase()).filter((st) => built[st.toUpperCase()])
+    .map((st) => [st, ...(y.by[st] || [0, 0])]).filter(([, n, l]) => n || l)
+    .sort((a, b) => b[1] - a[1] || b[2] - a[2] || NAMES[a[0].toUpperCase()].localeCompare(NAMES[b[0].toUpperCase()]));
+  const max = Math.max(1, ...rows.map((r) => r[1]));
+  let html = rows.map(([st, n, l]) => chartRow(st, NAMES[st.toUpperCase()], n, l, PARTY ? null : splitOf(full.by[st]), max, upcoming)).join("");
+  if (!rows.length) html += `<p class="cnote">No state has bills on ${esc(issue.short)}${PARTY ? ` ${PARTY_WORDS[PARTY]}` : ""} in ${year}.</p>`;
+  // States that met that year with none (not those with no session or no data here): named only when it's a short list.
+  const none = Object.keys(GRID).filter((c) => built[c] && open.has(c.toLowerCase()) && !rows.some((r) => r[0] === c.toLowerCase())).map((c) => NAMES[c]);
+  if (rows.length && none.length && none.length <= 6) html += `<p class="cnote">None: ${esc(none.join(", "))}.</p>`;
+  const [un, ul] = y.by.us || [0, 0];
+  if (built.US && (un || ul)) {
+    html += `<div class="cfed">${chartRow("us", "Congress", un, ul, PARTY ? null : splitOf(full.by.us), max, upcoming)}`
+      + (un > max ? `<p class="cnote">Congress&rsquo;s bar is cut short: its ${un} bills are more than any state&rsquo;s ${max}.</p>` : "") + "</div>";
+  }
+  chartEl.innerHTML = html;
+}
+// Which of the two the page shows (drawMap() calls it for every view: the switch is for issues only).
+function setChart() {
+  const on = !!issue && !CUSTOM;
+  vsw.hidden = !on;
+  for (const b of vsw.querySelectorAll("button")) b.setAttribute("aria-pressed", String((b.dataset.v === "chart") === CHART));
+  document.getElementById("mapbox").classList.toggle("charted", on && CHART);
+  document.getElementById("issueLegend").classList.toggle("charted", on && CHART);
+  tiles.inert = on && CHART;
+}
+vsw.addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-v]");
+  if (!b || (b.dataset.v === "chart") === CHART) return;
+  CHART = b.dataset.v === "chart";
+  try { localStorage.setItem("abt:issueview", CHART ? "chart" : "map"); } catch (e) {}
+  setChart();
+  remember();
+});
+function markPin() {
+  for (const x of document.querySelectorAll("#tiles button.tile, #chart button.crow")) { x.classList.toggle("sel", x.dataset.st === pinned); x.setAttribute("aria-pressed", String(x.dataset.st === pinned)); }
 }
 // The panel: a state's bills on the issue that year (issues/<id>/bills.json, loaded once per issue), one line each.
 const PANEL = {}, STAGE_SHORT = ["Committee", "Floor", "Passed one house", "Passed both", "Governor", "Law", "Vetoed"];
@@ -558,7 +720,9 @@ function showPanel(st) {
     body.innerHTML = `<h3>${esc(issue.name)}, ${year}</h3>`
       + `<p>${y.bills.toLocaleString()} bill${y.bills === 1 ? "" : "s"}${pw} ${upcoming ? "prefiled" : "with action"} in ${y.states} state${y.states === 1 ? "" : "s"}`
       + (upcoming ? ". Most legislatures start taking bills in January." : `; ${y.laws.toLocaleString()} became law.`) + "</p>"
+      + pbig(allSplit())
       + `<p><a href="issues/${issue.id}/${page}">See all states' bills</a></p>`;
+    ppFocus(body);
     return;
   }
   const want = `${issue.id}/${year}/${st}`;
@@ -570,7 +734,7 @@ function showPanel(st) {
     // (The issue pages list the states only: Congress's bills are here and on its own page.)
     const head = `<h3>${esc(nameOf(st))}</h3><p>${n ? `${n} bill${n === 1 ? "" : "s"} on ${esc(issue.short)}${pw} in ${year}` : `No bills on ${esc(issue.short)}${pw} in ${year}`}`
       + `${laws ? `, ${laws} became law` : ""}.${n && st !== "us" ? ` <a href="issues/${issue.id}/${page}#${st}">See them on the issue page</a>` : ""}${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`;
-    body.innerHTML = head + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last, pc, , lawHere]) => {
+    body.innerHTML = head + pbig(splitOf((issue.y[year] || { by: {} }).by[st])) + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last, pc, , lawHere]) => {
       // A law from a later (or earlier) year than the one shown says when: the map counts laws by year.
       const stg = kind === "const" && stage === 3 ? "To voters" : stage === 5 && lawHere === 0 && last ? `Law ${last.slice(0, 4)}` : STAGE_SHORT[stage];
       if (why && (why.toLowerCase().replace(/\W+/g, " ").trim() === title.toLowerCase().replace(/\W+/g, " ").trim()
@@ -579,36 +743,57 @@ function showPanel(st) {
       const full = why ? `${title}: ${why}` : title;
       return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="tags">${partyTag(pc)}<span class="stg s${stage}">${stg}</span></span></a>${raw ? starBtn(st, session, raw, last, num) : ""}</li>`;
     }).join("")}</ul>` : "");
+    ppFocus(body);
   });
 }
-tiles.addEventListener("pointerover", (e) => {
-  const b = e.target.closest("button.tile");
-  if (b && !pinned && canHover) showPanel(b.dataset.st);
-});
-tiles.addEventListener("focusin", (e) => {
-  const b = e.target.closest("button.tile");
-  if (b && !pinned) showPanel(b.dataset.st);
-});
-tiles.addEventListener("click", (e) => {
-  const b = e.target.closest("button.tile");
-  if (!b) return;
-  pinned = pinned === b.dataset.st ? null : b.dataset.st;
-  for (const x of tiles.querySelectorAll("button.tile")) { x.classList.toggle("sel", x.dataset.st === pinned); x.setAttribute("aria-pressed", String(x.dataset.st === pinned)); }
-  showPanel(pinned || b.dataset.st);
-});
+// All states' bills that year by sponsors' party (Congress kept out, as in the states' totals).
+function allSplit() {
+  const out = [0, 0, 0, 0];
+  for (const [st, e] of Object.entries((issue.y[year] || { by: {} }).by)) {
+    const sp = st !== "us" && splitOf(e);
+    if (sp) sp.forEach((k, i) => { out[i] += k; });
+  }
+  return out;
+}
+// The map's tiles and the chart's rows work alike: pointing at or focusing one shows its state's bills; clicking pins it.
+for (const [el, sel] of [[tiles, "button.tile"], [chartEl, "button.crow"]]) {
+  el.addEventListener("pointerover", (e) => {
+    const b = e.target.closest(sel);
+    if (b && !pinned && canHover) showPanel(b.dataset.st);
+  });
+  el.addEventListener("focusin", (e) => {
+    const b = e.target.closest(sel);
+    if (b && !pinned) showPanel(b.dataset.st);
+  });
+  el.addEventListener("click", (e) => {
+    const b = e.target.closest(sel);
+    if (!b) return;
+    pinned = pinned === b.dataset.st ? null : b.dataset.st;
+    markPin();
+    showPanel(pinned || b.dataset.st);
+  });
+}
 document.getElementById("pparty").addEventListener("change", (e) => {
   PARTY = e.target.value;
   drawIssue();
   remember();
 });
 document.getElementById("panel").addEventListener("click", (e) => {
+  const pp = e.target.closest("[data-pp]");
+  if (pp && issue) {
+    PARTY = PARTY === pp.dataset.pp ? "" : pp.dataset.pp;
+    PP_FOCUS = pp.closest(".pkey") ? pp.dataset.pp : null;
+    drawIssue();
+    remember();
+    return;
+  }
   if (starClick(e)) return;
   if (markSeen(e)) return;
   if (e.target.closest("[data-endview]")) { e.preventDefault(); CUSTOM = null; render(); remember(); return; }
   if (!e.target.closest("[data-unpin]")) return;
   e.preventDefault();
   pinned = null;
-  for (const x of tiles.querySelectorAll("button.tile")) { x.classList.remove("sel"); x.setAttribute("aria-pressed", "false"); }
+  markPin();
   showPanel(null);
 });
 // One color per state for who holds power (the owner's choice 2026-11-15, in place of three dots): red or blue when one
@@ -683,6 +868,7 @@ function drawMap(view) {
   document.getElementById("legend").hidden = on;
   document.getElementById("issueLegend").hidden = !issue;
   document.getElementById("customLegend").hidden = !CUSTOM;
+  setChart();
   if (CUSTOM) return drawCustom();
   if (on) return drawIssue();
   tiles.classList.remove("issue");
@@ -735,7 +921,8 @@ function fedIssue(y, open, upcoming) {
   const label = `U.S. Congress: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${upcoming ? " prefiled" : ""} in ${year}` : `no bills on ${issue.short} in ${year}`}`
     + (laws ? `, ${laws} became law` : "");
   const mark = laws ? `<span class="lawn" aria-hidden="true">${laws}</span>` : "";
-  return `<button type="button" class="tile fed h${step(n)}${pinned === "us" ? " sel" : ""}" data-st="us" style="${FED}" title="${esc(["U.S. Congress", n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : [])].join("\n"))}" aria-label="${esc(label)}" aria-pressed="${pinned === "us"}" aria-controls="panel">${FED_LABEL}${mark}</button>`;
+  const sp = PARTY ? null : splitOf((issue.y[year] || { by: {} }).by.us);
+  return `<button type="button" class="tile fed h${step(n)}${pinned === "us" ? " sel" : ""}" data-st="us" style="${FED}" title="${esc(["U.S. Congress", n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : []), ...(sp ? [`Sponsors: ${splitWords(sp)}`] : [])].join("\n"))}" aria-label="${esc(label + (sp ? `; sponsors: ${splitWords(sp)}` : ""))}" aria-pressed="${pinned === "us"}" aria-controls="panel">${FED_LABEL}${mark}${pbar(sp)}</button>`;
 }
 const nameOf = (st) => (st === "us" ? "Congress" : NAMES[st.toUpperCase()]);
 // The visitor's own views on the map: "Your bills" and a search's matches. Each built state is a tile shaded by its
@@ -848,7 +1035,7 @@ function render() {
 }
 function remember() {
   if (CUSTOM) { try { history.replaceState(null, "", CUSTOM.kind === "mine" ? "#mine" : location.pathname); } catch (e) {} return; }
-  const parts = [issue ? `issue=${issue.id}` : "", year !== NOW ? `year=${year}` : "", issue && PARTY ? `party=${PARTY === "-" ? "none" : PARTY}` : ""].filter(Boolean);
+  const parts = [issue ? `issue=${issue.id}` : "", year !== NOW ? `year=${year}` : "", issue && PARTY ? `party=${PARTY === "-" ? "none" : PARTY}` : "", issue && CHART ? "view=chart" : ""].filter(Boolean);
   try { history.replaceState(null, "", parts.length ? `#${parts.join("&")}` : location.pathname); } catch (e) {}
 }
 // The issues under their group headings (issues.py's GROUPS), in columns, so twenty-odd issues stay easy to scan.
@@ -919,11 +1106,12 @@ yearsEl.addEventListener("click", (e) => {
 });
 let WANT_MINE = location.hash === "#mine";  // shown once "Your bills" has loaded (drawMine())
 {
-  const m = location.hash.match(/^#(?:issue=([a-z]+))?&?(?:year=(\d{4}))?&?(?:party=(D|R|B|none))?$/);
+  const m = location.hash.match(/^#(?:issue=([a-z]+))?&?(?:year=(\d{4}))?&?(?:party=(D|R|B|none))?&?(?:view=(chart|map))?$/);
   if (m) {
     issue = issues.issues.find((i) => i.id === m[1]) || null;
     if (m[2]) year = +m[2];
     if (m[3] && issue) PARTY = m[3] === "none" ? "-" : m[3];
+    if (m[4] && issue) CHART = m[4] === "chart";
   }
 }
 // The controls' row always shows (it holds "Find a bill"); the year buttons and Show picker only when there's a choice.

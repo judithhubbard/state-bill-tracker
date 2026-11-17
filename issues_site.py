@@ -25,7 +25,7 @@ STAGES = ["In committee", "On the floor", "Passed one house", "Passed both house
           "Became law", "Vetoed"]
 DESC = {
     "datacenters": "Bills about data centers and other very large electricity users: siting, power and water use, rates, tax breaks.",
-    "pfas": "Bills about PFAS, the “forever chemicals”: bans in products, drinking water limits, firefighting foam, cleanup.",
+    "pfas": "Bills about PFAS, the “forever chemicals”: bans in products, drinking water limits, firefighting foam, cleanup, and sewage sludge spread on farmland.",
     "ai": "Bills about artificial intelligence: deepfakes, chatbots, AI in hiring, insurance and health care, and government use.",
     "kidsonline": "Bills about children online: social media rules for minors, age checks, app stores, design codes.",
     "phones": "Bills about students’ phones and other devices in schools: bans, policies, phone-free days.",
@@ -37,7 +37,7 @@ DESC = {
     "abortion": "Bills about abortion: bans and limits, access and protections, abortion pills, and amendments for the voters.",
     "firearms": "Bills about guns: carry permits, background checks and sales, red flag orders, ghost guns, guns in schools.",
     "vouchers": "Bills about public money for private schooling: vouchers, education savings accounts, tax-credit scholarships.",
-    "voting": "Bills about how people vote and how elections are run: voter ID, mail voting, registration, counting and audits.",
+    "voting": "Bills about how people vote and how elections are run: voter ID, mail voting, registration, counting and audits, and how presidential electors are chosen.",
     "immigration": "Bills about immigration: working with federal enforcement, sanctuary policies, status checks, benefits, licenses and tuition.",
     "tenants": "Bills about renting a home: rent limits, evictions, leases, security deposits, fees and tenants’ rights.",
     "proptax": "Bills about property tax relief for homeowners and residents: homestead exemptions, assessment caps, freezes, credits.",
@@ -75,6 +75,20 @@ DESC = {
     "childlabor": "Bills about child labor: work permits, hours and hazardous jobs for minors, penalties, and child performers’ and influencers’ earnings.",
     "protest": "Bills about protests and assembly: riot and unlawful assembly crimes, blocking roads, critical infrastructure, picketing homes, masks.",
     "kratom": "Bills about kratom and 7-OH (7-hydroxymitragynine): sales and age limits, labeling, bans and scheduling, consumer protection acts.",
+    "coverage": "Bills about who has health insurance: single-payer and universal coverage, public options, Medicaid expansion and eligibility, state marketplaces and the Affordable Care Act's protections.",
+    "assault": "Bills about sexual assault and domestic violence: rape kits, time limits for abuse cases, protective orders, stalking, sex trafficking, child sexual abuse and survivors' rights.",
+    "homeless": "Bills about homelessness: bans on camping and sleeping in public, encampments, housing first, shelters and services.",
+    "incometax": "Bills that cut personal income tax rates: lower rates, a flat tax, triggers, phasing out or ending the income tax.",
+    "homeinsurance": "Bills about homeowners insurance: rates and cancellations, state insurers of last resort (Citizens, FAIR plans), fortified roofs and flood insurance.",
+    "bail": "Bills about bail and pretrial release: cash bail, pretrial detention, release conditions, bail bond agents.",
+    "overdose": "Bills about drug crimes and overdoses: fentanyl penalties, drug-induced homicide, naloxone, test strips, overdose prevention sites.",
+    "contraception": "Bills about contraception: a right to birth control, insurance coverage, pharmacists prescribing it, emergency contraception.",
+    "mentalhealth": "Bills about mental health crises and care: the 988 line, crisis teams, involuntary commitment, mental health in schools, insurance parity.",
+    "foodadditives": "Bills about food dyes and additives: bans and warning labels, additives in school food, ultra-processed food.",
+    "schoolmeals": "Bills about school meals: free meals for all students, school breakfast, lunch debt and lunch shaming.",
+    "plastics": "Bills about plastics and packaging: bag and foam bans, producer responsibility for packaging, microplastics, bottle deposits, recycling labels.",
+    "heat": "Bills that protect workers from heat: heat illness standards, water, rest and shade, and limits on local rules.",
+    "samesex": "Bills about same-sex marriage: protecting marriage equality in state law, repealing old bans, or defining marriage as between a man and a woman.",
 }
 
 def tokens():
@@ -210,6 +224,29 @@ ul.bills a:hover { text-decoration: underline; }
 @media (max-width: 479.98px) {
   .tiles .lawn { min-width: 0; width: 7px; height: 7px; padding: 0; font-size: 0; bottom: 12%; box-shadow: 0 0 0 1px var(--sheet); }
 }
+/* Sponsors' party, as on the front page: a thin bar along each tile's bottom (Democratic, both, Republican, none), the
+   law badge just above it; in the panel a bigger bar whose parts set the "Sponsor's party" menu. */
+.tiles a, .tiles span.off { padding-top: 13%; }
+.tiles .pbar { position: absolute; left: 7px; right: 7px; bottom: 3px; height: 4px; display: flex; gap: 1px; border-radius: 2px;
+  overflow: hidden; background: var(--sheet); box-shadow: 0 0 0 1px var(--sheet); pointer-events: none; }
+.pbar i { min-width: 1px; flex: 0 1 0; }
+.pD { background: var(--pty-d); } .pB { background: var(--pty-b); } .pR { background: var(--pty-r); } .pN { background: var(--pty-n); }
+.tiles > :has(.pbar) .lawn { bottom: 9px; height: 1.45em; font-size: clamp(9px, 1.8vw, 11px); }
+@media (max-width: 479.98px) {
+  .tiles .pbar { left: 4px; right: 4px; bottom: 2px; height: 3px; box-shadow: none; }
+  .tiles > :has(.pbar) .lawn { bottom: 6px; left: auto; right: 3px; transform: none; height: 6px; min-width: 0; width: 6px; font-size: 0; }
+}
+.legend .pbs { display: inline-flex; width: 24px; height: 5px; gap: 1px; border-radius: 2px; overflow: hidden; }
+.legend .pbs i { flex: 1 1 0; }
+.pbig { display: flex; height: 18px; gap: 2px; border-radius: 5px; overflow: hidden; margin: 2px 0 6px; flex: 0 0 auto; }
+.pbig button { border: 0; padding: 0; min-width: 6px; flex: 0 1 0; cursor: pointer; }
+.pbig.f button:not([aria-pressed="true"]), .pkey.f button:not([aria-pressed="true"]) i { opacity: .3; }
+.panel .pkey { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 13px; color: var(--ink-2); margin: 0 0 8px; }
+.pkey button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center;
+  gap: 5px; font-variant-numeric: tabular-nums; border-radius: 3px; }
+.pkey button i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.pkey button:hover { color: var(--navy); text-decoration: underline; }
+.pkey button[aria-pressed="true"] { color: var(--ink); font-weight: 700; }
 .legend { color: var(--ink-2); font-size: 14px; margin: 0 0 12px; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
 .legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
@@ -218,6 +255,43 @@ ul.bills a:hover { text-decoration: underline; }
 .legend .sq.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
 .legend .sq.nodata { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--rule) 4px 5.5px); box-shadow: inset 0 0 0 1px var(--rule); }
 .legend .sq.off { background: transparent; border: 1px dashed var(--rule); }
+/* "Map | Chart", as on the front page: the chart lies over the hidden map (same size, scrolls inside), one row per
+   state with bills, most first, its bar split by sponsors' party; Congress below a rule, on the states' scale. */
+.views { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0 0 16px; }
+.views .when { margin: 0; }
+.when button { font: inherit; border: 0; background: var(--sheet); color: var(--ink-2); padding: 6px 12px; cursor: pointer; }
+.when button[aria-pressed="true"] { background: var(--navy); color: var(--sheet); font-weight: 600; }
+.when button:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
+.mapbox { position: relative; margin: 0 0 10px; }
+.mapbox.charted .tiles { visibility: hidden; }
+.chart { display: none; }
+.mapbox.charted .chart { display: flex; flex-direction: column; position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 0; }
+.crow { display: grid; grid-template-columns: 8.6em minmax(0, 1fr); align-items: center; gap: 8px; width: 100%; flex: 0 0 auto; min-height: 22px;
+  font: 13.5px/1.2 var(--body); color: var(--ink); background: none; border: 0; padding: 2px 10px; cursor: pointer; text-align: left; }
+.crow:hover { background: var(--paper); }
+.crow:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
+.crow.sel { background: var(--paper); box-shadow: inset 3px 0 0 var(--ink); font-weight: 700; }
+.crow .cn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crow .ab { display: none; }
+.crow .ct { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cbar { display: flex; gap: 1px; height: 12px; border-radius: 3px; overflow: hidden; flex: 0 0 auto; min-width: 2px; }
+.cbar i { flex: 0 1 0; min-width: 1px; }
+.cbar.cut { border-radius: 3px 0 0 3px; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.crow .cv { font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: 12.5px; }
+.crow .lawn { font-size: 11px; height: 1.45em; }
+.chart .cfed { border-top: 1px solid var(--rule); margin-top: 6px; padding-top: 4px; }
+.chart .cnote { margin: 4px 10px 0; font-size: 12.5px; color: var(--ink-2); }
+@media (max-width: 479.98px) {
+  .crow { grid-template-columns: 2.4em minmax(0, 1fr); padding: 2px 8px; gap: 6px; }
+  .crow .full { display: none; }
+  .crow .ab { display: inline; }
+}
+#legend { display: grid; }
+#legend .kset { grid-area: 1 / 1; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
+#legend .ck, #legend.charted .mk { visibility: hidden; }
+#legend.charted .ck { visibility: visible; }
+.legend .ck i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
 details.table { margin: 0 0 8px; }
 details.table summary { cursor: pointer; color: var(--navy); font-weight: 600; font-size: 15px; margin: 0 0 8px; }
 section.fed h3 small { font: 400 14px/1.3 var(--body); color: var(--ink-2); }
@@ -341,7 +415,12 @@ SHORT = {"datacenters": "data centers", "pfas": "PFAS", "ai": "artificial intell
          "medicaldebt": "medical debt", "police": "police accountability", "deathpenalty": "death penalty",
          "vaccines": "vaccines", "unions": "unions", "initiatives": "ballot initiative rules", "rcv": "ranked-choice voting",
          "utilityrates": "utility rates", "climate": "climate and clean energy", "esg": "investing and boycotts",
-         "religion": "religion in schools", "childlabor": "child labor", "protest": "protest laws", "kratom": "kratom"}
+         "religion": "religion in schools", "childlabor": "child labor", "protest": "protest laws", "kratom": "kratom",
+         "coverage": "health coverage", "assault": "sexual & domestic abuse",
+         "homeless": "homelessness", "incometax": "income tax cuts", "homeinsurance": "homeowners insurance",
+         "bail": "bail and pretrial", "overdose": "drugs and overdoses", "contraception": "contraception",
+         "mentalhealth": "mental health and 988", "foodadditives": "food additives", "schoolmeals": "school meals",
+         "plastics": "plastics and packaging", "heat": "workplace heat", "samesex": "same-sex marriage"}
 
 
 def step(n):
@@ -396,6 +475,30 @@ def badge(laws):
     return f'<span class="lawn" aria-hidden="true">{laws}</span>' if laws else ""
 
 
+# Sponsors' party on the maps: each state's bills that year split D, B (both), R, and none (committee or unknown), left
+# to right like the political spectrum (home.html draws the same bar from summary.json's counts).
+PARTS = (("D", "Democratic"), ("B", "both"), ("R", "Republican"), ("-", "committee"))
+
+
+def split(rows):
+    """[D, B, R, none]: a state's bills alive that year by sponsors' party."""
+    out = [0, 0, 0, 0]
+    for _, b, new, _ in rows:
+        if new:
+            out["DBR".find(party(b)) if party(b) in ("D", "B", "R") else 3] += 1
+    return out
+
+
+def split_words(sp):
+    return ", ".join(f"{k} {w}" for k, (_, w) in zip(sp, PARTS) if k)
+
+
+def pbar(sp):
+    """The thin bar along a tile's bottom: not drawn (the owner's choice 2026-11-17: hard to see on the green; the panel and
+    the chart view show the split)."""
+    return ""
+
+
 def tile_map(iid, by, names, open_, year, upcoming, nodata=()):
     """The tile map, each state shaded by its bills on the issue introduced that year, with the number that became law,
     each square a link to the state's bills below. A state with no bills that year is "no session" when its legislature
@@ -417,9 +520,12 @@ def tile_map(iid, by, names, open_, year, upcoming, nodata=()):
             continue
         label = (f"{names[st]}: {n} bill{'' if n == 1 else 's'}{' prefiled' if upcoming else ''} in {year}" if n else f"{names[st]}: none in {year}")
         label += f", {laws} became law" if laws else ""
+        sp = split(by[st][2]) if st in by else [0, 0, 0, 0]
+        said = f"; sponsors: {split_words(sp)}" if n else ""
         href = f"#{st}" if st in by else "#bills"
-        out.append(f'<a href="{href}" data-st="{st}" data-name="{e(names[st])}" class="h{step(n)}" style="{style}" title="{e(label)}" aria-label="{e(code + ", " + label)}" aria-controls="panel">{code}{badge(laws)}</a>')
-    return '<div class="tiles">' + "".join(out) + "</div>"
+        out.append(f'<a href="{href}" data-st="{st}" data-name="{e(names[st])}" class="h{step(n)}" style="{style}" title="{e(label + said)}" aria-label="{e(code + ", " + label + said)}" aria-controls="panel">{code}{badge(laws)}{pbar(sp)}</a>')
+    return ('<div class="mapbox" id="mapbox"><div class="tiles">' + "".join(out) + "</div>"
+            '<div class="chart" id="chart" role="group" aria-label="States by number of bills"></div></div>')
 
 
 def no_data(states, year):
@@ -496,8 +602,12 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
                    + ("" if upcoming else f'; <b id="nLaws">{laws_n:,}</b> became law in {year}') + ".")
     keys = ['<span class="key"><i class="sq h0"></i>None</span>', '<span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>',
             '<span class="key"><i class="sq h2"></i>5&ndash;14</span>', '<span class="key"><i class="sq h3"></i>15 or more</span>']
+    # The chart view's keys (the party colors and the law badge), in the same place as the map's.
+    ckeys = ['<span class="key"><i class="pD"></i>Democratic sponsors</span>', '<span class="key"><i class="pB"></i>Both parties</span>',
+             '<span class="key"><i class="pR"></i>Republican</span>', '<span class="key"><i class="pN"></i>Committee or none</span>']
     if not upcoming:
         keys.append('<span class="key"><span class="lawn">3</span>Number that became law</span>')
+        ckeys.append(keys[-1])
     if upcoming and quiet:
         keys.append('<span class="key"><i class="sq wait"></i>No bills filed yet</span>')
     if not upcoming and nosession:
@@ -523,15 +633,17 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
 <p class="crumbs"><a href="{up}">State Bill Tracker</a> / <a href="../">Issues</a></p>
 <h1>{e(issue['name'])}</h1>
 <p class="lede">{e(DESC.get(iid, ""))}</p>
-<nav class="when" aria-label="Year">{year_links}</nav>
+<div class="views"><nav class="when" aria-label="Year">{year_links}</nav>
+<div class="when" id="vsw" role="group" aria-label="Show as"><button type="button" data-v="map" aria-pressed="true">Map</button><button type="button" data-v="chart" aria-pressed="false">Chart</button></div></div>
 <div class="mapwrap">
 <div class="mapcol">
 {tile_map(iid, by, names, open_, year, upcoming, nodata)}
-<p class="legend">{"".join(keys)}</p>
+<p class="legend" id="legend"><span class="kset mk">{"".join(keys)}</span><span class="kset ck">{"".join(ckeys)}</span></p>
 </div>
 <aside class="panel" id="panel">
 <div id="pdefault">
 <p id="lede">{lede_counts}</p>
+<div id="pall"></div>
 {note_html}{fed_line}
 
 </div>
@@ -564,17 +676,45 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
 // hides states' lists. Congress's list (section.fed) is filtered too, and counted on its own line.
 const UPCOMING = {"true" if upcoming else "false"}, YEAR = {year};
 const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n ? 1 : 0);
+// Sponsors' party: each state's bills that year (as the Show menu filters them) split D, B, R and none, drawn as a thin
+// bar on its tile (hidden when one party is chosen) and a bigger one in the panel, whose parts set the party menu.
+const PARTS = [["D", "Democratic"], ["B", "both"], ["R", "Republican"], ["-", "committee"]];
+const PCLASS = {{ D: "pD", B: "pB", R: "pR", "-": "pN" }};
+const PWORDS = {{ D: "Democratic sponsors", B: "sponsors from both parties", R: "Republican sponsors", "-": "no party sponsor (committee bills)" }};
+let SPLIT = {{}}, PP_FOCUS = null;
+const splitWords = (sp) => PARTS.map(([, w], i) => (sp[i] ? `${{sp[i]}} ${{w}}` : "")).filter(Boolean).join(", ");
+const pbar = (sp) => (false && sp && sp.some(Boolean) ? `<span class="pbar" aria-hidden="true">${{PARTS.map(([c], i) => (sp[i] ? `<i class="${{PCLASS[c]}}" style="flex-grow:${{sp[i]}}"></i>` : "")).join("")}}</span>` : "");
+function pbig(sp) {{
+  if (!sp || !sp.some(Boolean)) return "";
+  const pv = document.getElementById("party").value, f = pv ? " f" : "", on = (c) => String(pv === c);
+  return `<div class="pbig${{f}}">${{PARTS.map(([c], i) => (sp[i] ? `<button type="button" class="${{PCLASS[c]}}" style="flex-grow:${{sp[i]}}" data-pp="${{c}}" aria-pressed="${{on(c)}}" tabindex="-1" aria-hidden="true" title="${{esc(`${{sp[i]}} with ${{PWORDS[c]}}`)}}"></button>` : "")).join("")}}</div>`
+    + `<p class="pkey${{f}}"><span>Sponsors:</span>${{PARTS.map(([c, w], i) => (sp[i] ? `<button type="button" data-pp="${{c}}" aria-pressed="${{on(c)}}" aria-label="${{esc(`${{sp[i]}} with ${{PWORDS[c]}}: ${{pv === c ? "show all bills" : "show only these"}}`)}}"><i class="${{PCLASS[c]}}"></i>${{sp[i]}} ${{w}}</button>` : "")).join("")}}</p>`;
+}}
+function ppClick(e) {{
+  const b = e.target.closest("[data-pp]");
+  if (!b) return false;
+  const sel = document.getElementById("party");
+  sel.value = sel.value === b.dataset.pp ? "" : b.dataset.pp;
+  PP_FOCUS = b.closest(".pkey") ? b.dataset.pp : null;
+  const box = b.closest("#pall") ? document.getElementById("pall") : pst;
+  apply();
+  if (PP_FOCUS) box.querySelector(`.pkey button[data-pp="${{PP_FOCUS}}"]`)?.focus();
+  PP_FOCUS = null;
+  return true;
+}}
 function apply() {{
   const q = document.getElementById("find").value.trim().toLowerCase(), v = document.getElementById("filter").value;
   const pv = document.getElementById("party").value;
-  let shown = 0, bills = 0, laws = 0, states = 0;
+  let shown = 0, bills = 0, laws = 0, states = 0, usBy = null;
   const by = {{}};
   for (const sec of document.querySelectorAll("section.st")) {{
     let any = 0, n = 0, l = 0, mv = 0;
+    const sp = [0, 0, 0, 0];
     for (const li of sec.querySelectorAll("li")) {{
       const s = +li.dataset.stage, f = li.dataset.f.split(" ");
-      const ok = (!v || (v === "law" && s === 5) || (v === "moving" && s >= 1 && s <= 4) || (v.startsWith("f:") && f.includes(v.slice(2))))
-        && (!pv || li.dataset.p === pv);
+      const shows = !v || (v === "law" && s === 5) || (v === "moving" && s >= 1 && s <= 4) || (v.startsWith("f:") && f.includes(v.slice(2)));
+      if (shows && li.dataset.n === "1") sp[Math.max(0, PARTS.findIndex(([c]) => c === li.dataset.p))]++;
+      const ok = shows && (!pv || li.dataset.p === pv);
       li.classList.toggle("hidden", !ok);
       if (!ok) continue;
       any++;
@@ -586,12 +726,15 @@ function apply() {{
     sec.classList.toggle("hidden", !vis);
     if (vis) shown += any;
     if (sec.classList.contains("fed")) {{
+      SPLIT.us = sp;
       const un = document.getElementById("usN"), ul = document.getElementById("usL");
       if (un) un.textContent = n;
       if (ul) ul.textContent = l;
+      usBy = [n, l];
       continue;
     }}
     by[sec.querySelector("h3").id] = [n, l, mv];
+    SPLIT[sec.querySelector("h3").id] = sp;
     bills += n; laws += l; states += n ? 1 : 0;
   }}
   document.getElementById("count").textContent = (v || q || pv) ? `Showing ${{shown.toLocaleString()}} bills.` : "";
@@ -599,17 +742,22 @@ function apply() {{
   document.getElementById("nStates").textContent = states;
   const nl = document.getElementById("nLaws");
   if (nl) nl.textContent = laws.toLocaleString();
+  const all = [0, 0, 0, 0];
+  for (const [st, sp] of Object.entries(SPLIT)) if (st !== "us") sp.forEach((k, i) => {{ all[i] += k; }});
+  document.getElementById("pall").innerHTML = pbig(all);
   for (const a of document.querySelectorAll(".tiles a[data-st]")) {{
     const [n, l] = by[a.dataset.st] || [0, 0], code = a.dataset.st.toUpperCase();
     a.className = `h${{step(n)}}` + (a.dataset.st === pinned ? " sel" : "");
-    const old = a.querySelector(".lawn");
-    if (old) old.remove();
+    for (const old of a.querySelectorAll(".lawn, .pbar")) old.remove();
     if (l) a.insertAdjacentHTML("beforeend", `<span class="lawn" aria-hidden="true">${{l}}</span>`);
+    const sp = !pv && n ? SPLIT[a.dataset.st] : null;
+    if (sp) a.insertAdjacentHTML("beforeend", pbar(sp));
     const label = (n ? `${{a.dataset.name}}: ${{n}} bill${{n === 1 ? "" : "s"}}${{UPCOMING ? " prefiled" : ""}} in ${{YEAR}}` : `${{a.dataset.name}}: none in ${{YEAR}}`)
-      + (l ? `, ${{l}} became law` : "");
+      + (l ? `, ${{l}} became law` : "") + (sp ? `; sponsors: ${{splitWords(sp)}}` : "");
     a.title = label;
     a.setAttribute("aria-label", `${{code}}, ${{label}}`);
   }}
+  drawChart(by, usBy, pv);
   for (const tr of document.querySelectorAll("tr[data-st]")) {{
     const [n, l, mv] = by[tr.dataset.st] || [0, 0, 0], td = tr.querySelectorAll("td.n");
     td[0].textContent = n; td[1].textContent = l; td[2].textContent = mv;
@@ -642,13 +790,14 @@ function showState(st) {{
   showing = st;
   pst.hidden = !st; pdef.hidden = !!st;
   if (!st) return;
-  const tile = tiles.querySelector(`a[data-st="${{st}}"]`), name = tile ? tile.dataset.name : st.toUpperCase();
+  const tile = tiles.querySelector(`a[data-st="${{st}}"]`), name = tile ? tile.dataset.name : st === "us" ? "Congress" : st.toUpperCase();
   const h = document.getElementById(st), sec = h && h.closest("section.st");
   const items = sec ? [...sec.querySelectorAll("li:not(.hidden)")] : [];
   const n = items.filter((li) => li.dataset.n === "1").length, l = items.filter((li) => li.dataset.l === "1").length;
   const fw = FILTER_WORDS(), only = fw ? ` (${{fw}})` : "";
   const links = st === pinned ? ` ${{items.length ? `<a href="#${{st}}" data-jump>Jump to its bills below</a> · ` : ""}}<a href="#" data-close>Close</a>` : "";
   pst.innerHTML = `<h3>${{esc(name)}}</h3><p>${{n ? `${{n}} bill${{n === 1 ? "" : "s"}}${{UPCOMING ? " prefiled" : ""}} in ${{YEAR}}` : `No bills in ${{YEAR}}`}}${{only}}${{l ? `, ${{l}} became law` : ""}}.${{links}}</p>`
+    + pbig(SPLIT[st])
     + (items.length ? `<ul>${{items.map((li) => {{
       const a = li.querySelector("a"), why = li.querySelector(".why"), t = li.querySelector(".t").textContent;
       return `<li><a href="${{esc(a.getAttribute("href"))}}" title="${{esc(t)}}"><b>${{esc(a.textContent)}}</b>${{li.querySelector(".tags").outerHTML}}`
@@ -659,8 +808,67 @@ function showState(st) {{
 function pin(st) {{
   pinned = st;
   for (const t of tiles.querySelectorAll("a[data-st]")) t.classList.toggle("sel", t.dataset.st === pinned);
+  for (const t of chartEl.querySelectorAll("button.crow")) {{ t.classList.toggle("sel", t.dataset.st === pinned); t.setAttribute("aria-pressed", String(t.dataset.st === pinned)); }}
   showState(pinned);
 }}
+// "Map | Chart": the chart (one bar per state with bills, most first, split by sponsors' party; Congress below, on the
+// states' scale) is drawn by apply() with the map. The choice is kept in the address (?view=chart) and in this browser,
+// shared with the front page.
+const chartEl = document.getElementById("chart"), vsw = document.getElementById("vsw");
+let CHART = false;
+try {{ CHART = localStorage.getItem("abt:issueview") === "chart"; }} catch (e) {{}}
+{{ const v = new URLSearchParams(location.search).get("view"); if (v === "chart" || v === "map") CHART = v === "chart"; }}
+function chartRow(st, name, n, l, sp, pv, max) {{
+  const cut = n > max, frac = Math.min(n, max) / (max || 1);
+  const parts = pv ? `<i class="${{PCLASS[pv]}}" style="flex-grow:1"></i>`
+    : sp && sp.some(Boolean) ? PARTS.map(([c], i) => (sp[i] ? `<i class="${{PCLASS[c]}}" style="flex-grow:${{sp[i]}}"></i>` : "")).join("") : `<i class="pN" style="flex-grow:1"></i>`;
+  const fw = FILTER_WORDS(), words = `${{name}}: ${{n ? `${{n}} bill${{n === 1 ? "" : "s"}}${{UPCOMING ? " prefiled" : ""}} in ${{YEAR}}` : `none in ${{YEAR}}`}}${{fw ? ` (${{fw}})` : ""}}`
+    + (l ? `, ${{l}} became law` : "") + (sp && !pv && n ? `; sponsors: ${{splitWords(sp)}}` : "");
+  return `<button type="button" class="crow${{st === pinned ? " sel" : ""}}" data-st="${{st}}" title="${{esc(words)}}" aria-label="${{esc(words)}}" aria-pressed="${{st === pinned}}" aria-controls="panel">`
+    + `<span class="cn"><span class="full">${{esc(name)}}</span><span class="ab">${{st === "us" ? "U.S." : st.toUpperCase()}}</span></span>`
+    + `<span class="ct">${{n ? `<span class="cbar${{cut ? " cut" : ""}}" style="width:calc((100% - 5.5em) * ${{frac.toFixed(4)}})" aria-hidden="true">${{parts}}</span>` : ""}}`
+    + `<span class="cv" aria-hidden="true">${{n}}</span>${{l ? `<span class="lawn" aria-hidden="true">${{l}}</span>` : ""}}</span></button>`;
+}}
+function drawChart(by, usBy, pv) {{
+  const name = (st) => tiles.querySelector(`a[data-st="${{st}}"]`)?.dataset.name || st.toUpperCase();
+  const rows = Object.entries(by).filter(([, [n, l]]) => n || l)
+    .sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1] || name(a[0]).localeCompare(name(b[0])));
+  const max = Math.max(1, ...rows.map((r) => r[1][0]));
+  let html = rows.map(([st, [n, l]]) => chartRow(st, name(st), n, l, SPLIT[st], pv, max)).join("");
+  if (!rows.length) html += `<p class="cnote">No state has bills that match.</p>`;
+  if (usBy && (usBy[0] || usBy[1])) {{
+    html += `<div class="cfed">${{chartRow("us", "Congress", usBy[0], usBy[1], SPLIT.us, pv, max)}}`
+      + (usBy[0] > max ? `<p class="cnote">Congress&rsquo;s bar is cut short: its ${{usBy[0]}} bills are more than any state&rsquo;s ${{max}}.</p>` : "") + "</div>";
+  }}
+  chartEl.innerHTML = html;
+}}
+function setChart() {{
+  for (const b of vsw.querySelectorAll("button")) b.setAttribute("aria-pressed", String((b.dataset.v === "chart") === CHART));
+  document.getElementById("mapbox").classList.toggle("charted", CHART);
+  document.getElementById("legend").classList.toggle("charted", CHART);
+  tiles.inert = CHART;
+}}
+vsw.addEventListener("click", (e) => {{
+  const b = e.target.closest("button[data-v]");
+  if (!b || (b.dataset.v === "chart") === CHART) return;
+  CHART = b.dataset.v === "chart";
+  try {{ localStorage.setItem("abt:issueview", CHART ? "chart" : "map"); }} catch (e) {{}}
+  try {{ history.replaceState(null, "", (CHART ? "?view=chart" : location.pathname) + location.hash); }} catch (e) {{}}
+  setChart();
+}});
+chartEl.addEventListener("pointerover", (e) => {{
+  const b = e.target.closest("button.crow");
+  if (b && !pinned && canHover) showState(b.dataset.st);
+}});
+chartEl.addEventListener("mouseleave", () => {{ if (!pinned && canHover) showState(null); }});
+chartEl.addEventListener("focusin", (e) => {{ const b = e.target.closest("button.crow"); if (b && !pinned) showState(b.dataset.st); }});
+chartEl.addEventListener("focusout", (e) => {{ if (!pinned && !chartEl.contains(e.relatedTarget)) showState(null); }});
+chartEl.addEventListener("click", (e) => {{
+  const b = e.target.closest("button.crow");
+  if (!b) return;
+  pin(pinned === b.dataset.st ? null : b.dataset.st);
+  if (!pinned && canHover) showState(b.dataset.st);
+}});
 tiles.addEventListener("pointerover", (e) => {{
   const a = e.target.closest("a[data-st]");
   if (a && !pinned && canHover) showState(a.dataset.st);
@@ -675,8 +883,10 @@ tiles.addEventListener("click", (e) => {{
   pin(pinned === a.dataset.st ? null : a.dataset.st);
   if (!pinned && canHover) showState(a.dataset.st);
 }});
+document.getElementById("pall").addEventListener("click", ppClick);
 pst.addEventListener("click", (e) => {{
-  if (e.target.closest("[data-close]")) {{ e.preventDefault(); const was = pinned; pin(null); tiles.querySelector(`a[data-st="${{was}}"]`)?.focus(); return; }}
+  if (ppClick(e)) return;
+  if (e.target.closest("[data-close]")) {{ e.preventDefault(); const was = pinned; pin(null); (CHART ? chartEl.querySelector(`button.crow[data-st="${{was}}"]`) : tiles.querySelector(`a[data-st="${{was}}"]`))?.focus(); return; }}
   const b = e.target.closest("button.star");
   if (!b) return;
   const [session, num, last] = b.dataset.k.split("|"), w = readWatch(b.dataset.st), k = `${{session}}:${{baseNum(num)}}`;
@@ -694,12 +904,23 @@ document.getElementById("partyInfo").addEventListener("click", (ev) => {{
   ev.currentTarget.setAttribute("aria-expanded", String(open));
 }});
 // Firefox and Safari keep a menu's choice when the page is reloaded or reached with Back.
-if (document.getElementById("filter").value || document.getElementById("party").value) apply();
+// apply() also draws the panel's party bar (and keeps the menus' choices after a reload or Back).
+apply();
+setChart();
 </script>
 </body>
 </html>
 """
-    return body, {"bills": intro_n, "states": in_states, "laws": laws_n, "by": {st: list(v[:2]) for st, v in by.items()}}, open_
+    return body, {"bills": intro_n, "states": in_states, "laws": laws_n, "by": {st: by_entry(v) for st, v in by.items()}}, open_
+
+
+def by_entry(v):
+    """summary.json's count for a state: [bills, laws], then its bills by sponsors' party, D, B, R (the rest have none),
+    trailing zeros left off (home.html's tiles draw the party bar from them)."""
+    sp = split(v[2])[:3]
+    while sp and not sp[-1]:
+        sp.pop()
+    return [v[0], v[1], *sp]
 
 
 def main(site):
@@ -745,7 +966,7 @@ def main(site):
             name = "index.html" if y == default else f"{y}.html"
             open(os.path.join(site, "issues", issue["id"], name), "w", encoding="utf-8").write(page)
             if us_by:
-                info["by"]["us"] = list(us_by["us"][:2])
+                info["by"]["us"] = by_entry(us_by["us"])
             per_year[str(y)] = info
             opened[str(y)] = sorted(open_ | us_open)
         json.dump(panel, open(os.path.join(site, "issues", issue["id"], "bills.json"), "w"), ensure_ascii=False,
