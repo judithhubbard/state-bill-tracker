@@ -602,15 +602,13 @@ def _compile(p):
 
 # Anti-ESG and boycott laws list the industries and causes a company mustn't be penalized for ("companies that boycott
 # businesses because the business engages in the fossil fuel or firearm industry ... or does not facilitate access to
-# abortion or sex or gender change surgery": Alabama SB 261 of 2023). A mention in such a list is the ESG issue's,
-# not abortion's, firearms', transgender people's or climate's: every other issue skips a window that has one.
+# abortion or sex or gender change surgery": Alabama SB 261 of 2023). A mention there of abortion or gender surgery is
+# the ESG issue's, not abortion's or transgender people's: those two skip a window that has one. Firearms keeps them (the
+# owner's choice 2026-11-17: "firearm industry nondiscrimination" laws are followed as gun bills too).
 NOT_BOYCOTT = (r"\b(?:boycott\w*|environmental, social,? (?:and|or|&) (?:corporate )?governance|economic boycott criteria"
                r"|corporate governance standards|(?:discriminat\w*) against (?:a |the )?(?:firearm|fossil fuel|energy|oil and gas)\w* "
                r"(?:industr\w*|compan\w*|entit\w*|trade associations?))\b|(?-i:\bESG\b)")
-# ESG's own issue keeps them; so do DEI (anti-ESG bills often target DEI programs too: Kentucky HB 388 of 2025), unions
-# (a labor boycott is a union matter) and climate (climate risk disclosure sits beside ESG metrics: H.R. 1187 of the 117th
-# Congress; no boycott list made a climate match).
-BOYCOTT_OK = {"esg", "dei", "unions", "climate"}
+BOYCOTT_SKIP = {"abortion", "transgender"}
 
 
 class _NotBoycott:
@@ -625,7 +623,7 @@ class _NotBoycott:
 for _issue in ISSUES:
     _issue["_rules"] = [([_compile(p) for p in rule if not p.startswith("!")],
                          [_compile(p[1:]) for p in rule if p.startswith("!")]) for rule in _issue["rules"]]
-    _issue["_none"] = [_compile(p) for p in _issue.get("none", [])] + ([] if _issue["id"] in BOYCOTT_OK else [_NotBoycott()])
+    _issue["_none"] = [_compile(p) for p in _issue.get("none", [])] + ([_NotBoycott()] if _issue["id"] in BOYCOTT_SKIP else [])
     _issue["_filters"] = {k: [_compile(p) for p in v] for k, v in _issue.get("filters", {}).items()}
 BY_ID = {i["id"]: i for i in ISSUES}
 

@@ -453,3 +453,5 @@ leave, none join, ESG unchanged.
   over: each is about boycotts of the gun industry, not gun laws, and stays in ESG (whose description names "boycotts
   of ... gun makers"). For the owner: keep them out of Firearms? Suggested: yes.
 - Transgender: none moved (SB 261 never matched it).
+
+**2026-11-17, owner:** the anti-ESG boycott-list exclusion applies to abortion and transgender people only; the nine "firearm industry nondiscrimination" bills stay under Firearms as well as ESG (AL SB 261 of 2023 is now Firearms and ESG, not Abortion).
