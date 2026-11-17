@@ -3270,14 +3270,18 @@ function sankey(odds, fate, cfate) {
     labels += label(x4 + nodeW + 8, top + 11, ["Became law", `${num(law)} · ${pct(law)} of bills`]);
   } else {
     // Six columns: the vetoed node in the fifth, "Became law" and "Veto stood" in the sixth.
-    const x4 = xs[L3 + 1], x5 = xs[L3 + 2];
+    // The veto band runs level under its label ("14% vetoed (874)") and bends down to the vetoed node only past the
+    // label's end, so the band never crosses it (about 6.8px a character at the label's bold 11.5px).
+    const vetoText = `${pct(allVetoes, N[L3])} vetoed (${num(allVetoes)})`, vetoEnd = xs[L3] + nodeW + 6 + vetoText.length * 6.8 + 6;
+    const x4 = Math.max(xs[L3 + 1], vetoEnd + 34), x5 = xs[L3 + 2];
     const vy = top + h(signed) + 26;                                   // the vetoed node, under the signed band
     const sy = Math.max(top + h(law) + 46, vy + h(over) + 30);         // "Veto stood", under the law label
     g += band(xs[L3] + nodeW, top, top + h(signed), x5, top, top + h(signed), "sk-law");
-    g += band(xs[L3] + nodeW, top + h(signed), top + h(signed) + h(allVetoes), x4, vy, vy + h(allVetoes), "sk-veto");
+    g += `<rect class="sk-veto" x="${xs[L3] + nodeW}" y="${top + h(signed)}" width="${vetoEnd - xs[L3] - nodeW}" height="${h(allVetoes)}"/>`
+      + band(vetoEnd, top + h(signed), top + h(signed) + h(allVetoes), x4, vy, vy + h(allVetoes), "sk-veto");
     g += band(x4 + nodeW, vy, vy + h(over), x5, top + h(signed), top + h(law), "sk-law");
     if (vetoed) g += band(x4 + nodeW, vy + h(over), vy + h(allVetoes), x5, sy, sy + h(vetoed), "sk-veto");
-    labels += split(xs[L3] + nodeW + 6, h(signed), `${pct(signed, N[L3])} signed`, `${pct(allVetoes, N[L3])} vetoed (${num(allVetoes)})`);
+    labels += split(xs[L3] + nodeW + 6, h(signed), `${pct(signed, N[L3])} signed`, vetoText);
     g += `<rect class="sk-veton" x="${x4}" y="${vy}" width="${nodeW}" height="${h(allVetoes)}"/>`;
     // On the veto's two branches: how many the legislature overrode, and how many stood.
     if (over) labels += `<text class="sk-p" x="${x4 + nodeW + 6}" y="${vy - 6}">${num(over)} overridden</text>`;
