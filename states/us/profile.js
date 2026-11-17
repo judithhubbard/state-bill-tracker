@@ -43,7 +43,7 @@ const STATE = {
   // A page is a two-year Congress: 2025–26 is the 119th.
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
   congress: (s) => (s - 1789) / 2 + 1,
-  govReach: `<a href="https://www.whitehouse.gov/contact/" target="_blank" rel="noopener" data-contact="online|governor">Contact the White House</a> · <a class="phone" href="tel:+12024561111" data-contact="call|governor">(202) 456-1111</a> (comments line)`,
+  govReach: `<a href="https://www.whitehouse.gov/contact/" target="_blank" rel="noopener" data-contact="online|governor">Contact the White House</a>`,  // no phone: the comments line, (202) 456-1111, closes at times (the 2025 shutdown) and whitehouse.gov lists only the form
   lawWord: "Public Law",
 
   // Seats: the Senate's by state (both senators), the House's by district ("California's 12th"), with their names from
