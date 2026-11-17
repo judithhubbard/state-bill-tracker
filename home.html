@@ -90,14 +90,12 @@ h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: u
 .when button { font: inherit; border: 0; background: var(--sheet); color: var(--ink-2); padding: 6px 12px; cursor: pointer; }
 .when button[aria-pressed="true"] { background: var(--navy); color: var(--sheet); font-weight: 600; }
 .when button:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
-.tiles a.changed { box-shadow: inset 0 0 0 1.5px var(--navy), 0 0 0 2px var(--hover); }
 .tiles a.c-R1, .legend .c-R1 { background: var(--ctl-r1); color: var(--ctl-r1-ink); box-shadow: none; }
 .tiles a.c-R2, .legend .c-R2 { background: var(--ctl-r2); color: var(--ctl-r2-ink); box-shadow: none; }
 .tiles a.c-D1, .legend .c-D1 { background: var(--ctl-d1); color: var(--ctl-d1-ink); box-shadow: none; }
 .tiles a.c-D2, .legend .c-D2 { background: var(--ctl-d2); color: var(--ctl-d2-ink); box-shadow: none; }
 .tiles a.c-X, .legend .c-X { background: var(--ctl-x); color: var(--ctl-x-ink); box-shadow: none; }
 .tiles a.c-N, .legend .c-N { background: var(--ctl-n); color: var(--ctl-n-ink); box-shadow: none; }
-.tiles a.changed[class*="c-"] { box-shadow: 0 0 0 3px var(--hover); }
 .legend { color: var(--ink-2); font-size: 14px; margin: 0; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
 .legend .full { flex-basis: 100%; font-size: 13px; }
@@ -336,7 +334,6 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="key"><i class="sq c-N"></i>Nonpartisan</span>
     <span class="key"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
     <span class="key full">One party holds the governor's office and both houses; darker: a supermajority in both houses.</span>
-    <span class="key" id="changedKey" hidden><i class="sq" style="background:var(--sheet);box-shadow:0 0 0 2px var(--hover)"></i>Changes in January</span>
   </p>
   <p class="legend" id="customLegend" hidden></p>
   <p class="legend" id="issueLegend" hidden>
@@ -600,11 +597,10 @@ function drawMap(view) {
       ? [`${NAMES[code]} from January${next.close ? " (some races still close)" : ""}`, ...next.title.split("; "),
          ...(changed && now ? ["", "Now:", ...now.title.split("; ")] : [])].join("\n")
       : [NAMES[code], ...p.title.split("; ")].join("\n");
-    return `<a href="${built[code]}" data-st="${code.toLowerCase()}" class="${ctl}${changed ? " changed" : ""}" style="${style}" title="${esc(lines)}" aria-label="${esc(`${code}, ${label}`)}">${code}</a>`;
+    return `<a href="${built[code]}" data-st="${code.toLowerCase()}" class="${ctl}" style="${style}" title="${esc(lines)}" aria-label="${esc(`${code}, ${label}`)}">${code}</a>`;
   }).join("") + fedParty(view);
   markStars();
   partyPanel(null);
-  document.getElementById("changedKey").hidden = view !== "after";
 }
 // Congress (/us/): one wide tile in the map's empty top row, built only when its pages are, colored like a state from the
 // President, the Senate and the House. The November 2026 congressional results aren't in states/elected_2026.json, so
