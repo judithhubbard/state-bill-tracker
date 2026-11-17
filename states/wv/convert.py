@@ -354,9 +354,20 @@ def gov_date(t, d):
     """The date written in a governor's line ("Approved by Governor 3/26/2025 - Senate Journal"), else the row's."""
     m = re.search(r"(\d{1,2}/\d{1,2}/\d{2,4})", t)
     try:
-        return iso(m.group(1)) if m else d
+        g = iso(m.group(1)) if m else d
     except ValueError:
         return d
+    # A typo in a year: the written one ("DELIVERED TO GOVERNOR 2/20/2202", SB 239 of 2023) or the row's (HB 5348 of
+    # 2024: "Approved by Governor 3/27/24" on a row dated 03/27/28), or the month (HB 4088 of 2026: "To Governor
+    # 8/24/2026" on a row dated 02/24/26, signed March 2). The journal copies' rows are only days off, so when the two
+    # are half a year or more apart the row's date wins, unless it's in the future.
+    try:
+        if d and g and abs((date.fromisoformat(g[:10]) - date.fromisoformat(d[:10])).days) > 180:
+            today = date.today().isoformat()
+            return g if d[:10] > today and g[:10] <= today else d
+    except ValueError:
+        return d
+    return g
 
 
 # ---- One bill ----

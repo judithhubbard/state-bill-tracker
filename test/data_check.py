@@ -134,6 +134,32 @@ def check(state):
         if stray:
             say(state, "FAIL" if len(set(stray)) > 0.005 * len(recs) else "LOOK",
                 f"{s}: {len(stray)} history lines dated years from the session, e.g. {sorted(set(stray))[:4]}")
+        # Dates in the future: an effective date read as the event's (NH "Chapter 340;eff. 01/01/2027", GA's "Effective
+        # Date" lines), a typo in a year (VT H.790 of 2025-26 "February 27, 2027", WV SB 239 of 2023 "2/20/2202"), a
+        # source's own future date (MA's session laws). A day's grace for time zones.
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        future = sorted({r["nums"][0] for r in recs if any(str(d)[:10] > tomorrow for d in
+                         [r.get("last") or ""] + list(r["keyDates"]) + [d for v in r["vers"] for d, _ in v["actions"] if d])})
+        if future:
+            say(state, "FAIL", f"{s}: {len(future)} bills with a history line, key date or last action in the future, e.g. {future[:4]}")
+        # A year or more after the session's end: a typo or an effective date that's still in the past.
+        late_by = f"{s + years}-12-31"
+        late = sorted({r["nums"][0] for r in recs for v in r["vers"] for d, _ in v["actions"] if d and tomorrow >= str(d)[:10] > late_by})
+        if late:
+            say(state, "LOOK", f"{s}: {len(late)} bills with history lines more than a year after the session ended, e.g. {late[:4]}")
+        # Titles: blank (NJ's number-only placeholders, NH's HB 8002-8012 of 2024), or with HTML entities left in
+        # (PA's "&#8211;"), or with a "?" for a lost apostrophe or okina (HI's "Authority?s", "Hawai?i").
+        # (A number with no title and no dates is a placeholder build_data.py leaves out: IL SB 4214 of 2025; one with dates
+        # gets a stand-in title there: OH SB 342 of 2023, LOOK.)
+        blank = [r["nums"][0] for r in recs if not (r.get("title") or "").strip() and (r.get("first") or r.get("stage"))]
+        if blank:
+            say(state, "FAIL" if len(blank) > 3 else "LOOK", f"{s}: {len(blank)} bills with no title, e.g. {blank[:4]}")
+        ents = [r["nums"][0] for r in recs if re.search(r"&(?:#\d+|#x[0-9a-f]+|amp|lt|gt|quot|apos|nbsp|ndash|mdash|lsquo|rsquo|ldquo|rdquo|hellip|sect|reg|copy|trade);", (r.get("title") or "") + " " + (r.get("summary") or ""), re.I)]
+        if ents:
+            say(state, "FAIL", f"{s}: {len(ents)} titles or summaries with HTML entities (&#8211;), e.g. {ents[:4]}")
+        qmark = [r["nums"][0] for r in recs if re.search(r"[a-z]\?[a-z]", r.get("title") or "", re.I)]
+        if qmark:
+            say(state, "LOOK", f"{s}: {len(qmark)} titles with a '?' between letters (a lost apostrophe?), e.g. {qmark[:4]}")
         # A record left over from an earlier session: MO's House exports file the previous year's budget bills under each
         # new year with nothing but the governor's spending restrictions, dated before the session ("Message Received from
         # the Governor, pursuant to Article IV, Section 27", 12/27/2023 in 2024's folder). In a finished session, a bill

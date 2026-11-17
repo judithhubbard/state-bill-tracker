@@ -43,7 +43,7 @@ downloaded so far; the rest show their tallies.
 "What it does" is the Kansas Legislative Research Department's supplemental note on the bill's latest version
 (notes/<bill>.json): its Brief, then its Background, as two parts.
 """
-import json, os, re
+import html, json, os, re
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
@@ -242,7 +242,8 @@ def short_title(b):
 def long_summary(b):
     """The official title without "AN ACT" and the list of sections it amends and repeals: "Concerning taxation;
     relating to ...". """
-    t = text(b.get("LONGTITLE"))
+    # Some long titles carry HTML entities ("&#8211;", HB 2648 of 2023).
+    t = html.unescape(text(b.get("LONGTITLE")))
     t = re.sub(r"^(AN ACT|A PROPOSITION to amend)\s+", lambda m: "" if m.group(1) == "AN ACT" else "Proposing to amend ", t)
     t = re.sub(r";?\s*(and )?(amending|repealing)\b.*$", "", t, flags=re.I | re.S)
     t = re.sub(r"\s*;\s*$", "", t).strip()
@@ -728,7 +729,7 @@ def record(session, b, read, parties):
     budget = bool(re.search(r"\bappropriations for (?:the )?fiscal years?\b", text(b.get("LONGTITLE")), re.I))
     rec = {
         "nums": [p], "base": [p], "prev": earlier(session, p, b),
-        "title": title, "summary": summary,
+        "title": html.unescape(title).replace("\xa0", " "), "summary": summary,
         "act": "", "lawCode": "", "law": None, "laws": [],
         "comms": sorted({f"{h} · {c}" for h, c in refs}), "topics": topics, "places": [], "narrow": narrow,
         "commFate": fate, "mainTopic": topics[0] if topics else "", "local": "local" in topics,

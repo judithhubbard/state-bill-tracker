@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states.ct import profile as P
+from states import window as W
 
 FTP = "ftp://ftp.cga.ct.gov/pub/data"
 FILES = ["bill_info", "bill_history", "introducer", "comm_ref", "committee", "subject", "actions", "LegislatorDatabase"]
@@ -91,30 +92,41 @@ def xlsx_rows(body):
 
 
 def flat_year(y, folder):
-    """An old year from the archive's flat files (no year folder). Finished years don't change: read once."""
-    if os.path.exists(os.path.join(folder, "bill_info.csv")) and os.path.exists(os.path.join(folder, "LegislatorData.csv")):
+    """An old year from the archive's flat files (no year folder). Finished years don't change: each file is read once,
+    and a file a run failed to get is read again by the next (a check of only two files once kept 2023 without its
+    bill_history for good, and the site showed every 2023 bill with no history). Until every file is there the year is
+    marked incomplete (states/window.py), so the site leaves it out rather than show it empty."""
+    have = lambda name: os.path.exists(os.path.join(folder, name))
+    missing = [n for n in FLAT if not have(f"{n}.csv")] + ([] if have("LegislatorData.csv") else ["LegislatorData"])
+    if not missing:
         print(f"{y}: kept")
+        W.mark(P.DATA, y, [])
         return
-    got = 0
-    for name in FLAT:
+    for name in [n for n in FLAT if n in missing]:
         body = curl(f"{FTP}/archive/{y}{name}.csv")
         if body and len(body) > 100:
             open(os.path.join(folder, f"{name}.csv"), "wb").write(body)
-            got += 1
-    body = curl(f"{FTP}/archive/{y}LegislatorData.xlsx")
-    if body and body[:2] == b"PK":
-        rows = xlsx_rows(body)
-        with open(os.path.join(folder, "LegislatorData.csv"), "w", newline="", encoding="utf-8") as f:
-            csv.writer(f).writerows(r for r in rows if r)
-        got += 1
-    print(f"{y}: {got} of {len(FLAT) + 1} files (flat archive)")
+            missing.remove(name)
+    if "LegislatorData" in missing:
+        body = curl(f"{FTP}/archive/{y}LegislatorData.xlsx")
+        if body and body[:2] == b"PK":
+            rows = xlsx_rows(body)
+            with open(os.path.join(folder, "LegislatorData.csv"), "w", newline="", encoding="utf-8") as f:
+                csv.writer(f).writerows(r for r in rows if r)
+            missing.remove("LegislatorData")
+    W.mark(P.DATA, y, [f"{y}:{m}" for m in missing])
+    print(f"{y}: {len(FLAT) + 1 - len(missing)} of {len(FLAT) + 1} files (flat archive)"
+          + (f"; still missing {', '.join(missing)}" if missing else ""))
 
 
 def year(y):
     folder = os.path.join(P.DATA, str(y))
     os.makedirs(folder, exist_ok=True)
     newest_ = newest()
-    if y != newest_ and str(y) not in archive() and f"{y}bill_info.csv" in archive():
+    # A flat year: the archive lists its flat files, or (when the listing failed) the folder already holds them.
+    flat_here = os.path.exists(os.path.join(folder, "LegislatorData.csv")) and not os.path.exists(
+        os.path.join(folder, "comm_ref.csv"))
+    if y != newest_ and str(y) not in archive() and (f"{y}bill_info.csv" in archive() or flat_here):
         return flat_year(y, folder)
     base = FTP if y == newest_ else f"{FTP}/archive/{y}"
     got = 0

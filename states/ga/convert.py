@@ -173,7 +173,9 @@ def load_session(session):
         amend = is_amendment(b)
         p = f"{b['DocumentType']}{int(b['Number'])}"
         origin = p[0]
-        hist = sorted(b.get("StatusHistory") or [], key=lambda h: (h.get("Date") or "", int(h.get("StatusListingId") or 0)))
+        # "Effective Date" (code EFF, Id -2) isn't a step: it's the law's effective date, often a year or two ahead
+        # (HB 90 of 2025-26: 2027-01-01), and as a history line it became the bill's last action, dated in the future.
+        hist = sorted([h for h in b.get("StatusHistory") or [] if h.get("Code") != "EFF"], key=lambda h: (h.get("Date") or "", int(h.get("StatusListingId") or 0)))
         steps = [((h.get("Date") or "")[:10],) + decode(h) + (text(h.get("Description")),) for h in hist]
         comms = {c.get("Type"): c.get("Name") for c in b.get("Committees") or []}
         # Referrals don't name the committee: it's the bill's committee in that house.

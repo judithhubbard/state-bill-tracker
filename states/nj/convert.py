@@ -325,6 +325,10 @@ def load_session(session):
         subj_keys[r["BillType"] + r["BillNumber"]].add(r["SubjectKey"])
     main = {}
     for r in _rows(z, "MAINBILL.TXT"):
+        # A number held open for a bill not yet introduced (FirstPrime "OPEN", no synopsis, no date: 21 in 2026, A3988,
+        # S364 ...): not a bill yet. Its history, if one comes, starts with its introduction, and the synopsis with it.
+        if not r["Synopsis"].strip() and not r["IntroDate"].strip() and r["FirstPrime"].strip() in ("OPEN", ""):
+            continue
         if r["CurrentStatus"] != "WAPP" and (r["BillType"] in ("A", "S") or is_amendment(r, subj_keys[r["BillType"] + r["BillNumber"]])):
             main[r["BillType"] + r["BillNumber"]] = r
     hist = defaultdict(list)

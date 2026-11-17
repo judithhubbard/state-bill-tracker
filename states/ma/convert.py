@@ -184,10 +184,21 @@ def load_session(session):
     court = P.court_of(session)
     laws = {}
     for f in glob.glob(os.path.join(P.DATA, "*", "laws_*.json")):
+        # A few acts' ApprovedDate is in the future (2026-11-30 for H4716, H4721, H5685 and S3097 in a file read in
+        # November 2026): the Status's own date ("Approved by the Governor, October 27, 2026") when it gives one, else
+        # no later than the day the file was read.
+        read_on = datetime.fromtimestamp(os.path.getmtime(f), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d")
         for x in json.load(open(f)):
             o = x.get("OriginBill")
             if isinstance(o, dict) and o.get("GeneralCourtNumber") == court and x.get("ApprovedDate"):
                 when = datetime.strptime(x["ApprovedDate"], "%b %d %Y").strftime("%Y-%m-%d")
+                if when > read_on:
+                    m = re.search(r"([A-Z][a-z]+ \d{1,2}, \d{4})", x.get("Status") or "")
+                    try:
+                        said = datetime.strptime(m.group(1), "%B %d, %Y").strftime("%Y-%m-%d") if m else ""
+                    except ValueError:
+                        said = ""
+                    when = said if said and said <= read_on else read_on
                 laws[o["BillNumber"]] = (int(x["ChapterNumber"]), when)
     rollcalls = load(session, "senate_rollcalls.json", {})
     seat_of = seats(session)

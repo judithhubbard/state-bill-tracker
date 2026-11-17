@@ -30,12 +30,38 @@ def table():
     return json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"]
 
 
-def contacts_path(state):
-    """The newest member list: contacts_<session>.json with the highest session (New York's are at the top of data/)."""
+# Where members-elect take office before their session's year begins (elsewhere it's in January, before or at the
+# session's start): Florida's legislators on election (Constitution Art. III, sec. 15(d)), Nevada's and Alabama's the day
+# after, North Dakota's on December 1. Only these may count a next session's member list before January.
+TAKE_OFFICE_EARLY = {"fl": 0, "nv": 1, "al": 1, "nd": None}
+
+
+def in_office_from(state, session):
+    """The day a session's members take office (sessions are named by their first year)."""
+    from datetime import date, timedelta
+    early = TAKE_OFFICE_EARLY.get(state, "january")
+    if early == "january":
+        return date(session, 1, 1)
+    if early is None:
+        return date(session - 1, 12, 1)
+    nov1 = date(session - 1, 11, 1)
+    election = nov1 + timedelta(days=(7 - nov1.weekday()) % 7 + 1)  # the Tuesday after the first Monday
+    return election + timedelta(days=early)
+
+
+def contacts_path(state, today=None):
+    """The member list of the session in office: contacts_<session>.json with the highest session whose members have
+    taken office (New York's are at the top of data/). A next session's list of members-elect (Montana's and Nevada's
+    contacts_2027.json from November 2026) isn't the legislature in office until they're sworn in: Montana's January 4,
+    2027, so its 2025 list counts until then (front_page.next_data shows the election's results meanwhile)."""
+    from datetime import date
+    today = today or date.today()
     paths = glob.glob(os.path.join(HERE, "data", state, "contacts_*.json")) if state != "ny" else \
         glob.glob(os.path.join(HERE, "data", "contacts_*.json"))
     paths = [p for p in paths if re.search(r"contacts_\d{4}\.json$", p)]
-    return max(paths, key=lambda p: int(re.search(r"(\d{4})", os.path.basename(p)).group(1))) if paths else None
+    year = lambda p: int(re.search(r"(\d{4})", os.path.basename(p)).group(1))
+    begun = [p for p in paths if in_office_from(state, year(p)) <= today]
+    return max(begun or paths, key=year) if paths else None
 
 
 def current(state):

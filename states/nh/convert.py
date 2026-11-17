@@ -277,6 +277,9 @@ def bill_rows(session):
             continue
         p = number(r[4], r[3] or "H", n)
         y = int(r[0])
+        d = dockets.get((y, r[10].replace(" ", "").upper()), [])
+        if not r[2].strip() and not d:
+            continue  # a number set aside with no title and no history (HB 8002-8012 of 2024, HB 8003 of 2023)
         out.append((r, p, dockets.get((y, r[10].replace(" ", "").upper()), []), sponsors.get((y, int(r[1]))) or [], carried))
     return out
 
@@ -333,7 +336,9 @@ def load_session(session):
         for d in docket:
             a = text(d[5])
             h = d[4] if d[4] in HOUSE else origin
-            day = iso(a) or iso(d[2])
+            # The line's own date, never the effective date it may also give ("...; Chapter 340;eff. 01/01/2027", or a
+            # line that is only one: "I. Sections 1-4 Effective 01/01/2027"): those take the entry's day.
+            day = iso(re.split(r"\beff(?:ective)?\b", a, flags=re.I)[0]) or iso(d[2])
             if iso(d[2]) and abs((datetime.fromisoformat(iso(d[2])) - datetime.fromisoformat(day)).days) > 180:
                 day = iso(d[2])  # a slip in the line's date ("04/13/2022" in HB 49 of 2023, "03/06/2035" in HB 425 of 2025)
             if re.match(r"(?:Signed by|Vetoed by|Law Without|Enacted in accordance)", a, re.I):

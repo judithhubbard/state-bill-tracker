@@ -9,7 +9,7 @@ When the second house amends it, the first has to concur. Both houses' presiding
 the governor, who signs it (an "Act No."), lets it become law, or vetoes it. Floor and committee votes by member come
 from the roll-call pages fetch.py reads; committee votes carry the "Brief Description" used as "What it does".
 """
-import glob, io, json, os, re, zipfile
+import glob, html, io, json, os, re, zipfile
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from datetime import datetime
@@ -28,7 +28,8 @@ def sessions():
 
 
 def text(x):
-    return re.sub(r"\s+", " ", x or "").strip()
+    # Some fields carry HTML entities inside the XML's own escaping ("Pennsylvania Preferred&#174;"): decode them.
+    return re.sub(r"\s+", " ", html.unescape(x or "")).strip()
 
 
 def bills(session):
@@ -54,11 +55,32 @@ def proper(name):
 
 def memo_title(b):
     """The co-sponsorship memo's short title ("Mandating Cursive Handwriting (Formerly HB1934)") -> (title, earlier numbers)."""
-    t = text(b.findtext("cosponsorshipMemo"))
-    notes = " ".join(re.findall(r"\((?:Former(?:ly)?|Previously|Prior)\b[^)]*\)", t, re.I))
+    t = memo_text(b.findtext("cosponsorshipMemo"))
+    # The earlier numbers: "(Formerly HB1934)", or after a dash, "– Former HB 1582", "– Prior HB 568 (2023-2024)".
+    note = r"\((?:Former(?:ly)?|Previously|Prior)\b[^)]*\)|\s[-–—]\s*(?:Former(?:ly)?|Previously|Prior)\s+(?:Session\s+)?(?:[HS]\.?\s*B\.?\s*\d|House\b|Senate\b).*$"
+    notes = " ".join(m.group(0) for m in re.finditer(note, t, re.I))
     formerly = re.findall(r"\b([HS])(?:\.?\s*B\.?|ouse Bills?|enate Bills?)\s*(\d+)", notes)
-    t = text(re.sub(r"\((?:Former(?:ly)?|Previously|Prior)\b[^)]*\)", "", t, flags=re.I)).strip(" .-")
+    t = text(re.sub(note, "", t, flags=re.I)).strip(" .-–—")
     return t, [f"{h}B{int(n)}" for h, n in formerly]
+
+
+# Short words kept in capitals when an all-capitals memo title is put in title case.
+ACRONYMS = {"PA", "US", "U.S.", "AI", "NIZ", "PSP", "DEP", "PUC", "DUI", "EMS", "ID", "REAL", "LLC", "STEM", "PFAS", "COVID-19",
+            "SNAP", "ATV", "UTV", "PACE", "PACENET", "CHIP", "K-12", "II", "III", "IV", "911", "LGBTQ", "MS4", "PLCB", "PHEAA"}
+
+
+def memo_text(t):
+    """A memo's title as written: HTML entities decoded ("&#8211;", "&#174;"), zero-width and no-break spaces taken out,
+    the "COSPONSOR MEMO -" / "COSPONSORSHIP MEMO -" heading dropped, and all-capitals titles ("TAX RETURN RELIEF FOR
+    SENIOR CITIZENS") put in title case like the others, acronyms kept."""
+    t = html.unescape(t or "")
+    t = text(re.sub(r"[\u200b\u200c\u200d\ufeff]", "", t).replace("\u00a0", " ").replace("\u202f", " "))
+    t = re.sub(r"^(?:CO-?SPONSOR(?:SHIP)?\s+MEMO(?:RANDUM)?)\s*[-–—:]?\s*", "", t, flags=re.I)
+    if len(re.findall(r"[A-Z]", t)) > 8 and not re.search(r"[a-z]", t):
+        words = [w if w in ACRONYMS or re.sub(r"\W", "", w) in ACRONYMS else proper(w) for w in t.split(" ")]
+        t = " ".join(words)
+        t = re.sub(r"(?<=\s)(And|Of|The|On|For|To|In|A|An|Or|At|By|With|From)\b", lambda m: m.group(1).lower(), t)
+    return t.strip(" -–—")
 
 
 def short(title):

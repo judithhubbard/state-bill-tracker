@@ -86,12 +86,16 @@ def analytics_tags():
     return tags
 
 
+# Until launch every page asks search engines not to list it; LAUNCHED=1 (build_site.sh's setting) drops the tag.
+ROBOTS_META = "" if os.environ.get("LAUNCHED", "0") == "1" else '<meta name="robots" content="noindex, nofollow">\n'
+
+
 def github_page(html):
     """Claude artifacts get a document skeleton added when published; GitHub Pages doesn't."""
     split = html.index('<div class="wrap">')
     return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-            '<meta name="robots" content="noindex, nofollow">\n'
+            + ROBOTS_META +
             '<style>body { margin: 0; } [hidden] { display: none !important; }</style>\n'
             + analytics_tags() + html[:split] + '\n</head>\n<body>\n' + html[split:] + '\n</body>\n</html>\n')
 
@@ -343,7 +347,7 @@ def choose_page(legs):
         f'<span>{P.seat_name(l["house"], l["district"]) if hasattr(P, "seat_name") else ("Senate" if l["house"] == "S" else getattr(P, "LOWER_NAME", "Assembly")) + " District " + str(l["district"])}</span></li>' for l in legs)
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231d3b78'/><path d='M32 10 52 23H12z' fill='%23fff'/><rect x='14' y='25' width='36' height='4' fill='%23fff'/><rect x='17' y='31' width='6' height='16' fill='%23fff'/><rect x='29' y='31' width='6' height='16' fill='%23fff'/><rect x='41' y='31' width='6' height='16' fill='%23fff'/><rect x='11' y='49' width='42' height='5' fill='%23e3b04b'/></svg>"><title>Which {html_escape(last)}? · {P.SITE_NAME}</title>
+{ROBOTS_META.strip()}<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231d3b78'/><path d='M32 10 52 23H12z' fill='%23fff'/><rect x='14' y='25' width='36' height='4' fill='%23fff'/><rect x='17' y='31' width='6' height='16' fill='%23fff'/><rect x='29' y='31' width='6' height='16' fill='%23fff'/><rect x='41' y='31' width='6' height='16' fill='%23fff'/><rect x='11' y='49' width='42' height='5' fill='%23e3b04b'/></svg>"><title>Which {html_escape(last)}? · {P.SITE_NAME}</title>
 <style>
 :root {{ --bg: #f6f8fb; --fg: #14213d; --muted: #4a5878; --link: #1d3b78; color-scheme: light; }}
 @media (prefers-color-scheme: dark) {{ :root {{ --bg: #0f1626; --fg: #e6ebf5; --muted: #a3b0c9; --link: #8fb0f0; color-scheme: dark; }} }}
@@ -1241,6 +1245,14 @@ def last_checked():
 
 def main():
     loaded = {s: C.load_session(s) for s in SESSIONS}
+    # A number with no title and no dates is a placeholder the source lists before a bill exists: left out. One with
+    # dates but no title yet (OH SB 342 of 2023, IL SB 4214 of 2025) gets a stand-in title.
+    for s in SESSIONS:
+        recs = loaded[s][0]
+        recs[:] = [r for r in recs if (r.get("title") or "").strip() or r.get("first") or r.get("stage")]
+        for r in recs:
+            if not (r.get("title") or "").strip():
+                r["title"] = "(No title in the Legislature's records yet)"  # OH SB 342 of 2023: introduced, never titled
     # For the issue pages' "Sponsor's party": a name's party from the other sessions shown, where they all agree, for a
     # session whose own records lack it (California's and Virginia's past sessions have no member lists with parties).
     seen_party = defaultdict(set)

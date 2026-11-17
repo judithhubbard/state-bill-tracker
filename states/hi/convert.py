@@ -313,9 +313,16 @@ def sentence(t):
     return re.sub(r"\b(article [ivxlc]+)\b", lambda m: m.group(1)[:8].capitalize() + m.group(1)[8:].upper(), t, flags=re.I)
 
 
+def unquestion(t):
+    """A few descriptions have "?" for an apostrophe or an ʻokina lost on the way ("Authority?s", "Hawai?i"): an
+    apostrophe before a possessive or contraction ending, an ʻokina before a vowel (Hawaiian words: Hawaiʻi, Oʻahu)."""
+    t = re.sub(r"(?<=[A-Za-z])\?(?=(?:s|t|d|ll|re|ve|m)\b)", "'", t)
+    return re.sub(r"(?<=[A-Za-z])\?(?=[aeiouAEIOU])", "ʻ", t)
+
+
 def description(b):
     """The bill's description (Open States' abstract) without its version tag "(CD1)": (text, tag)."""
-    ab = next((text(a.get("abstract")) for a in b.get("abstracts") or [] if a.get("abstract")), "")
+    ab = unquestion(next((text(a.get("abstract")) for a in b.get("abstracts") or [] if a.get("abstract")), ""))
     m = re.search(r"\s*\(([HSC]D ?\d+|Proposed [HSC]D ?\d+)\)\s*$", ab)
     return (ab[:m.start()].strip() if m else ab), (m.group(1).replace(" ", "") if m else "")
 

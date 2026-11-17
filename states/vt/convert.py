@@ -37,7 +37,7 @@ shared reading is states/legiscan_convert.py; this file says what's particular t
   "statement of purpose" is only in the bill texts (PDFs on the Legislature's site), so there's no "What it does".
 """
 import json, os, re, sys
-
+from datetime import date
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
@@ -150,12 +150,16 @@ def classify(b):
     lines = [(L.text(a.get("action")), a.get("chamber") if a.get("chamber") in HOUSE else "") for a in hist]
     out = [decode(a, h, b, None) for a, h in lines]
     # Year slips in the governor's lines (H.289 of 2023-24: "Vetoed by the Governor on May 23, 2023", filed in May 2024
-    # and messaged as May 23, 2024): a date well before the journal day it's filed under takes that day's year.
+    # and messaged as May 23, 2024): a date well before the journal day it's filed under takes that day's year. And the
+    # other way (H.790 of 2025-26: "Delivered to the Governor on February 27, 2027", filed in 2026, signed March 5, 2026):
+    # a date in a later year, months after the day it's filed under, takes that day's year too.
     for i, steps in enumerate(out):
         filed = (hist[i].get("date") or "")[:10]
         for st in steps:
             d = st[3].get("date")
             if d and filed and d < filed and (int(filed[:4]) - int(d[:4])) * 365 > 45 and d[:4] < filed[:4]:
+                st[3]["date"] = filed[:4] + d[4:]
+            elif d and filed and d[:4] > filed[:4] and (date.fromisoformat(d) - date.fromisoformat(filed)).days > 180:
                 st[3]["date"] = filed[:4] + d[4:]
 
     def vote_step(i):
