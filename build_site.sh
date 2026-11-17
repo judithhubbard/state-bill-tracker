@@ -56,6 +56,8 @@ done
 echo "rebuilt:${REBUILT:- none}"
 # The national issue pages (/issues/), from each built state's data/issues_<session>.json; issues/summary.json feeds the front page.
 python3 issues_site.py "$OUT" || echo "issue pages: BUILD FAILED"
+# The front page's "Find a bill" data (search/<st>.json), from each built state's live status_<session>.json.
+python3 search_site.py "$OUT" || echo "search data: BUILD FAILED"
 if [ -n "$FAILED" ]; then echo "build failed for:$FAILED"; fi
 # The front page lists exactly the states built in this run (home.html's own list is replaced), so a state appears there
 # as soon as its pages are published (New York's too, at /ny/).

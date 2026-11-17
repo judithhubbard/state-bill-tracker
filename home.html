@@ -240,6 +240,40 @@ body.issue-on main { max-width: 1080px; }
 .tiles > * { position: relative; }
 .smark { position: absolute; top: 2px; right: 3px; color: var(--law-mark); font: 400 clamp(8px, 1.6vw, 11px)/1 var(--body); pointer-events: none; }
 @media (max-width: 560px) { .smark { top: 1px; right: 1px; font-size: 8px; } }
+/* "Find a bill": one box on the controls' row (its own line on a phone); results open in a box over the map, so the map
+   doesn't move. */
+.show { position: relative; }
+.find { flex: 1 1 200px; min-width: 0; position: relative; display: flex; }
+.find svg { position: absolute; left: 10px; top: 50%; width: 15px; height: 15px; margin-top: -7.5px; fill: none; stroke: var(--ink-2);
+  stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
+#q { width: 100%; min-width: 0; font: inherit; font-size: 15px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule);
+  border-radius: 8px; padding: 6px 10px 6px 32px; }
+#q::placeholder { color: var(--ink-2); opacity: .85; }
+#q:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
+.found { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 6; background: var(--sheet); border: 1px solid var(--rule);
+  border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / .14); max-height: min(70vh, 600px); display: flex; flex-direction: column; overflow: hidden; }
+.found .fhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 12px; border-bottom: 1px solid var(--rule);
+  font-size: 14px; color: var(--ink-2); }
+.found .fhead .cnt { flex: 1 1 auto; min-width: 0; }
+.found .fhead b { color: var(--ink); }
+.found select { font: inherit; font-size: 14px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 2px 4px; max-width: 100%; }
+.found select:focus-visible, .found .more:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
+.found ul { overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+.found li { position: relative; border-bottom: 1px solid var(--rule); }
+.found li:last-child { border-bottom: 0; }
+.found li a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; align-items: baseline; padding: 6px 44px 6px 12px;
+  color: var(--ink); text-decoration: none; font-size: 14px; }
+.found li a:hover, .found li a:focus-visible { background: var(--paper); }
+.found li a:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
+.found .fn { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink-2); }
+.found .fn b { font-weight: 600; color: var(--navy); }
+.found .tt { grid-column: 1 / -1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.found .stg { justify-self: end; }
+.found .note { padding: 10px 12px; margin: 0; font-size: 14px; color: var(--ink-2); }
+.found .more { display: block; width: 100%; font: inherit; font-size: 14px; font-weight: 600; color: var(--navy); background: none; border: 0;
+  border-top: 1px solid var(--rule); padding: 8px 12px; cursor: pointer; text-align: left; }
+.found .more:hover { background: var(--paper); }
 footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 </style>
 </head>
@@ -255,6 +289,8 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <span class="pick"><span class="lab" id="showLab">Show</span>
     <button type="button" id="show" aria-haspopup="true" aria-expanded="false" aria-labelledby="showLab show">Party control</button>
     <div class="menu" id="showMenu" hidden></div></span>
+    <span class="find"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input type="search" id="q" placeholder="Find a bill: HB 1234, or words" aria-label="Find a bill by its number or words in its title, in any state or Congress" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-controls="found" aria-expanded="false"></span>
+    <div class="found" id="found" role="region" aria-label="Bills found" hidden></div>
   </div>
   <div class="mapwrap">
   <div class="mapcol">
@@ -549,7 +585,9 @@ yearsEl.addEventListener("click", (e) => {
     if (m[2]) year = +m[2];
   }
 }
-document.getElementById("controls").hidden = YEARS.length < 2 && !issues.issues.length;
+// The controls' row always shows (it holds "Find a bill"); the year buttons and Show picker only when there's a choice.
+document.getElementById("controls").hidden = false;
+yearsEl.hidden = document.querySelector(".show .pick").hidden = YEARS.length < 2 && !issues.issues.length;
 render();
 tiles.removeAttribute("aria-hidden");
 if (!issue) document.getElementById("legend").hidden = false;
@@ -662,6 +700,208 @@ document.getElementById("mine").addEventListener("click", (e) => {
 addEventListener("storage", (e) => { if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) drawMine(); });
 addEventListener("pageshow", () => drawMine());
 drawMine();
+// "Find a bill": bills by number ("HB 1234", "hb1234", "H.B. 1234", "A5663") or words in the title, in every built state's
+// and Congress's live sessions (current, and next year's prefiled bills), from search/<st>.json (search_site.py). Nothing
+// loads until the first search; a query naming a state ("texas data center", "NY A5663") loads only that state. Best
+// matches first: the number, then every word in the title, then most of the words.
+{
+  const q = document.getElementById("q"), found = document.getElementById("found");
+  const PAGE = 50, SEARCH = {}, ready = {};
+  let limit = PAGE, only = "", timer = 0, lastKey = "", quiet = false;
+  const fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const STOP = new Set("a an the of to and or for in on by with at from as is be into its it this that act bill relating relates concerning regarding".split(" "));
+  // Two-letter codes that are also everyday words count as a state only when typed in capitals ("IN", "OR").
+  const WORDY = new Set(["in", "or", "me", "hi", "ok", "de", "la", "pa", "ma", "co", "al", "id", "oh", "us", "ga", "mo", "ne", "nd", "md"]);
+  const codes = () => Object.keys(built).map((c) => c.toLowerCase());
+  const stateName = (st) => (st === "us" ? "Congress" : NAMES[st.toUpperCase()] || st.toUpperCase());
+  // A bill number split into its letters and its number without leading zeros or the amendment letter ("S1234A" -> S, 1234).
+  const numParts = (n) => { const m = String(n).toUpperCase().replace(/[^A-Z0-9]/g, "").match(/^([A-Z]*)0*(\d+)[A-Z]?$/); return m ? [m[1], m[2]] : null; };
+  function prep(d) {
+    for (const s of d.s) for (const r of s.b) {
+      r.low = " " + fold(r[1]).replace(/[^a-z0-9]+/g, " ") + " ";
+      r.np = [r[0], ...(r[4] || [])].map((n) => [n, numParts(n)]).filter((x) => x[1]);
+    }
+    return d;
+  }
+  function load(st) {
+    return SEARCH[st] ||= fetch(`search/${st}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((d) => { ready[st] = d ? prep(d) : { st, name: stateName(st), s: [] }; schedule(0); return ready[st]; });
+  }
+  // The query: a state named in it, bill numbers, and the other words.
+  function parse(raw) {
+    let text = " " + raw.replace(/\s+/g, " ") + " ", st = only === "all" ? "" : only;
+    if (!only) {
+      const lowText = fold(text);
+      const names = [...codes().map((c) => [c, fold(stateName(c))]), ["us", "us congress"], ["us", "u.s. congress"], ["us", "federal"], ["us", "u.s."]]
+        .sort((a, b) => b[1].length - a[1].length);
+      for (const [c, name] of names) {
+        const i = lowText.indexOf(` ${name} `);
+        if (i >= 0) { st = c; text = text.slice(0, i) + " " + text.slice(i + name.length + 1); break; }
+      }
+      if (!st) {
+        const m = text.match(/ ([A-Za-z]{2}) /g) || [];
+        for (const t of m) {
+          const c = t.trim();
+          if (codes().includes(c.toLowerCase()) && (c === c.toUpperCase() || !WORDY.has(c.toLowerCase()))) {
+            // Not when the code is the bill's letters ("SC 12" is a number in some states; "NY A5663" is a state).
+            const after = text.slice(text.indexOf(t) + t.length);
+            if (/^\d/.test(after)) continue;
+            st = c.toLowerCase(); text = text.replace(t, " "); break;
+          }
+        }
+      }
+    }
+    // Numbers: letters (dots and spaces allowed) followed by digits, or digits alone.
+    const nums = [];
+    const rest = text.replace(/\b((?:[A-Za-z]\.?\s?){0,6}?)\s*(\d{1,5}[A-Za-z]?)\b/g, (all, letters, digits) => {
+      const p = numParts(letters.replace(/[.\s]/g, "") + digits);
+      if (p) nums.push(p);
+      return " ";
+    });
+    // Only numbers typed: words are searched only if no bill has the number ("covid 19").
+    const allNumbers = !!nums.length && !rest.trim();
+    const words = [...new Set(fold(text).replace(/[^a-z0-9]+/g, " ").split(" ").filter((w) => w && !STOP.has(w)))];
+    return { st, nums, words, allNumbers };
+  }
+  // How well a bill's numbers match: 3 exactly, 2 the same number with letters written another way ("HB" for "H", "LD"
+  // for Maine's "HLD"), 1 the number alone (no letters typed).
+  function numScore(r, nums) {
+    let best = 0, which = null;
+    for (const [n, [P, D]] of r.np) for (const [qp, qd] of nums) {
+      if (D !== qd) continue;
+      const s = !qp ? 1 : P === qp ? 3 : P.replace(/B$/, "") === qp.replace(/B$/, "") || (qp.length >= 2 && P.endsWith(qp)) ? 2 : 0;
+      if (s > best) { best = s; which = n; }
+    }
+    return [best, which];
+  }
+  const stem = (w) => (w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
+  function run() {
+    const raw = q.value.trim();
+    if (!raw) { only = ""; close(); return; }
+    const p = parse(raw);
+    const want = p.st ? [p.st] : codes();
+    const missing = want.filter((st) => !ready[st]);
+    for (const st of missing) load(st);
+    let hits = [];
+    if (p.nums.length) {
+      for (const st of want) {
+        const d = ready[st];
+        if (d) for (const s of d.s) for (const r of s.b) {
+          const [n, which] = numScore(r, p.nums);
+          if (n) hits.push({ st, name: d.name, s, r, tier: 10 + n, score: 0, shown: which });
+        }
+      }
+    }
+    const words = (p.allNumbers && hits.length ? [] : p.words).map(stem), need = words.length >= 2 ? Math.ceil(words.length / 2) : 1;
+    const phrase = words.length >= 2 ? ` ${p.words.join(" ")}` : "";
+    // A word matches the start of a title's word ("center" finds "centers"); words of three letters or fewer ("ai") only whole.
+    const keys = words.map((w) => (w.length <= 3 ? ` ${w} ` : ` ${w}`));
+    const byNum = new Set(hits.map((h) => h.r));
+    // Bills with some of the words rank by how rare the words they have are ("data" before "center").
+    const df = keys.map(() => 0), part = [];
+    let total = 0;
+    for (const st of words.length ? want : []) {
+      const d = ready[st];
+      if (!d) continue;
+      for (const s of d.s) for (const r of s.b) {
+        total++;
+        if (byNum.has(r)) continue;
+        const has = keys.map((w) => r.low.includes(w)), k = has.filter(Boolean).length;
+        has.forEach((x, i) => { if (x) df[i]++; });
+        if (k < need) continue;
+        const h = { st, name: d.name, s, r, tier: k === words.length ? 5 : 1, score: 0, shown: r[0], has };
+        if (h.tier === 5) h.score = phrase && r.low.includes(phrase) ? 1 : 0;
+        hits.push(h); part.push(h);
+      }
+    }
+    const idf = df.map((n) => Math.log((total + 1) / (n + 1)));
+    for (const h of part) if (h.tier === 1) h.score = h.has.reduce((t, x, i) => t + (x ? idf[i] : 0), 0);
+    hits.sort((a, b) => b.tier - a.tier || b.score - a.score || (a.s.up - b.s.up) || b.r[2] - a.r[2] || a.name.localeCompare(b.name));
+    draw(hits, p, want.filter((st) => !ready[st]).length);
+  }
+  function draw(hits, p, loading) {
+    const all = hits.filter((h) => h.tier >= 5).length, some = hits.length - all;
+    const where = p.st ? ` in ${esc(stateName(p.st))}` : "";
+    let count;
+    if (!hits.length) count = loading ? "Searching…" : `No bills found${where}. Try other words, or a number such as HB 1234.`;
+    else if (p.nums.length && hits.every((h) => h.tier > 5)) count = `<b>${hits.length.toLocaleString()}</b> bill${hits.length === 1 ? "" : "s"} with that number${where}`;
+    else count = `<b>${hits.length.toLocaleString()}</b> bill${hits.length === 1 ? "" : "s"} found${where}` + (some && all ? ` (${all.toLocaleString()} with every word)` : "");
+    if (loading && hits.length) count += ` · loading ${loading} more state${loading === 1 ? "" : "s"}…`;
+    const opts = [["", "All states"], ...codes().map((c) => [c, stateName(c)]).sort((a, b) => (a[0] === "us" ? -1 : b[0] === "us" ? 1 : a[1].localeCompare(b[1])))];
+    const pick = `<select id="fstate" aria-label="Search one state, or all">${opts.map(([c, n]) => `<option value="${c}"${c === (only === "all" ? "" : only || p.st || "") ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
+    const rows = hits.slice(0, limit).map(({ st, name, s, r, shown }) => {
+      const [num, title, stage, kind] = r;
+      const page = s.page ? s.page : "";
+      const label = s.up ? `Prefiled for ${s.session}` : whereText(stage, "", kind === "c" ? "const" : "", s.live !== false);
+      const same = shown !== num ? ` <span>(same bill as ${esc(spaced(num))})</span>` : "";
+      return `<li><a href="${st}/${page}#${esc(num)}" title="${esc(title)}"><span class="fn">${esc(name)} <b>${esc(spaced(shown))}</b>${same}</span>`
+        + `<span class="stg s${s.up ? 0 : stage}">${esc(label)}</span><span class="tt">${esc(title)}</span></a>${starBtn(st, s.session, num, "", `${name} ${spaced(num)}`)}</li>`;
+    }).join("");
+    const more = hits.length > limit ? `<li><button type="button" class="more">Show ${Math.min(PAGE, hits.length - limit)} more</button></li>` : "";
+    found.innerHTML = `<div class="fhead"><span class="cnt" aria-live="polite">${count}</span>${pick}</div>` + (rows ? `<ul>${rows}${more}</ul>` : "");
+    found.hidden = false;
+    q.setAttribute("aria-expanded", "true");
+  }
+  function close() { found.hidden = true; q.setAttribute("aria-expanded", "false"); }
+  // Re-run as typing pauses, and as each state's file arrives (at most a few times a second).
+  function schedule(wait) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => { timer = 0; run(); }, wait ?? 150);
+  }
+  q.addEventListener("input", () => {
+    if (q.value.trim() !== lastKey) { lastKey = q.value.trim(); limit = PAGE; }
+    schedule(180);
+  });
+  // Back in the box (not from Escape), the last results open again.
+  q.addEventListener("focus", () => { if (!quiet && q.value.trim() && found.hidden) run(); });
+  const links = () => [...found.querySelectorAll("li a, li .more")];
+  q.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" && !found.hidden) { e.preventDefault(); links()[0]?.focus(); }
+    else if (e.key === "Enter") { e.preventDefault(); if (timer) { clearTimeout(timer); timer = 0; run(); } links()[0]?.focus(); }
+    else if (e.key === "Escape") { if (!found.hidden) { e.preventDefault(); close(); } else if (q.value) { q.value = ""; lastKey = ""; } }
+  });
+  found.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.preventDefault(); close(); quiet = true; q.focus(); quiet = false; return; }
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    if (e.target.tagName === "SELECT") return;
+    const xs = links(), i = xs.indexOf(e.target.closest("a, .more"));
+    e.preventDefault();
+    if (e.key === "ArrowUp" && i <= 0) q.focus();
+    else xs[Math.min(xs.length - 1, i + (e.key === "ArrowDown" ? 1 : -1))]?.focus();
+  });
+  found.addEventListener("change", (e) => {
+    if (e.target.id !== "fstate") return;
+    // "All states" also overrides a state named in the words, until the box is cleared.
+    only = e.target.value || "all"; limit = PAGE;
+    run();
+  });
+  found.addEventListener("click", (e) => {
+    const more = e.target.closest(".more");
+    if (more) {
+      const i = links().indexOf(more);
+      limit += PAGE; run();
+      links()[i]?.focus();
+      return;
+    }
+    const b = e.target.closest("button[data-star]");
+    if (!b) return;
+    e.preventDefault();
+    // Starring needs the date of the bill's last action (so "Your bills" doesn't call it new): from the state's status
+    // file, which "Your bills" loads anyway.
+    const li = b.closest("li"), [st, session, num] = b.dataset.star.split("|");
+    const done = () => { starClick({ target: b, preventDefault() {} }); li.querySelector("button[data-star]")?.focus(); };
+    if (`${session}:${baseNum(num)}` in readWatch(st)) return done();
+    statusOf(st, session).then((s) => {
+      const k = baseNum(num), lead = s ? (s.bills[k] ? k : s.alias[k]) : null;
+      b.dataset.star = `${st}|${session}|${num}|${lead ? s.bills[lead][3] || "" : ""}`;
+      done();
+    });
+  });
+  document.addEventListener("click", (e) => { if (!found.hidden && e.target.isConnected && !e.target.closest(".find, .found")) close(); });
+  // The Show menu and the results don't open together.
+  show.addEventListener("click", close);
+  q.addEventListener("focus", () => openMenu(false));
+}
 </script>
 </body>
 </html>
