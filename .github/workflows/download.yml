@@ -57,7 +57,8 @@ jobs:
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json, os, subprocess
           from datetime import datetime
-          want = {s.strip() for s in (os.environ.get("WANT") or "all").split(",") if s.strip()}
+          # Commas or spaces between codes; "va" is in New Jersey's job ("nj").
+          want = {{"va": "nj"}.get(s.strip(), s.strip()) for s in (os.environ.get("WANT") or "all").replace(",", " ").split() if s.strip()}
           lane = os.environ.get("LANE") or "all"
           states = json.load(open(".github/states.json"))["states"]
           if want - {"all"} - {s["code"] for s in states}:
