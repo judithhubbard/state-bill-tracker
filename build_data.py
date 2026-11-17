@@ -90,12 +90,25 @@ def analytics_tags():
 ROBOTS_META = "" if os.environ.get("LAUNCHED", "0") == "1" else '<meta name="robots" content="noindex, nofollow">\n'
 
 
-def github_page(html):
-    """Claude artifacts get a document skeleton added when published; GitHub Pages doesn't."""
+def page_meta(title, desc, path=""):
+    """A public page's description, link preview tags and canonical link (site_meta.py); path is the page's address
+    within the state's folder ("", "2023.html", "watchlist/")."""
+    import site_meta
+    return (f'<meta name="description" content="{site_meta.attr(desc)}">\n'
+            + site_meta.tags(title, desc, site_meta.state_root(P.PUBLIC_URL, P.SITE_URL) + path))
+
+
+def state_words():
+    """"Wyoming bills" (or "Bills in Congress") for link previews' titles."""
+    return "Bills in Congress" if P.STATE_NAME == "Congress" else f"{P.STATE_NAME} bills"
+
+
+def github_page(html, meta=""):
+    """Claude artifacts get a document skeleton added when published; GitHub Pages doesn't. meta: page_meta()'s tags."""
     split = html.index('<div class="wrap">')
     return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-            + ROBOTS_META +
+            + ROBOTS_META + meta +
             '<style>body { margin: 0; } [hidden] { display: none !important; }</style>\n'
             + analytics_tags() + html[:split] + '\n</head>\n<body>\n' + html[split:] + '\n</body>\n</html>\n')
 
@@ -1544,7 +1557,15 @@ def main():
                                 f'data-enc="gzip64">{packed}</script>\n<script type="application/octet-stream" id="bill-text" data-enc="gzip64">{tpacked}</script>', 1)
         if GITHUB:
             out = os.path.join(GITHUB, "index.html" if session == current else f"{session}.html")
-            html = github_page(template.replace(marker, f'<script type="application/json" id="bill-data" data-src="data/{session}.json" data-root="{P.SITE_URL}"></script>'))
+            if session == current:
+                meta = page_meta(f"{state_words()} · State Bill Tracker",
+                                 f"Follow bills in the {P.LEGISLATURE}: where each one is, who decides next, and what to ask them.")
+            else:
+                meta = page_meta(f"{state_words()}, {P.session_label(session)} · State Bill Tracker",
+                                 (f"Bills prefiled so far for the {P.LEGISLATURE}'s {P.session_label(session)} session." if session > current
+                                  else f"Every bill in the {P.LEGISLATURE}'s {P.session_label(session)} session, and where it ended up."),
+                                 f"{session}.html")
+            html = github_page(template.replace(marker, f'<script type="application/json" id="bill-data" data-src="data/{session}.json" data-root="{P.SITE_URL}"></script>'), meta)
             if session == current:
                 for leg in data.get("legislators", []):
                     page = template.replace(marker, f'<script type="application/json" id="bill-data" data-src="../data/{session}.json" data-base="../" data-root="{P.SITE_URL}"></script>')
@@ -1553,14 +1574,17 @@ def main():
                                         f'<title>{leg["title"]} {leg["name"]} · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{preset}">', 1)
                     os.makedirs(os.path.join(GITHUB, leg["slug"]), exist_ok=True)
                     with open(os.path.join(GITHUB, leg["slug"], "index.html"), "w") as f:
-                        f.write(github_page(page))
+                        f.write(github_page(page, page_meta(f'{leg["title"]} {leg["name"]} · {state_words()} · State Bill Tracker',
+                                                            f'{leg["title"]} {leg["name"]} in the {P.LEGISLATURE}: bills, committees and how to get in touch.',
+                                                            f'{leg["slug"]}/')))
                 # /watchlist/: the same page, opened to the visitor's own watchlist.
                 page = template.replace(marker, f'<script type="application/json" id="bill-data" data-src="../data/{session}.json" data-base="../" data-root="{P.SITE_URL}"></script>')
                 page = page.replace(f"<title>{P.SITE_NAME}</title>",
                                     f'<title>Watchlist · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{{&quot;watch&quot;: true}}">', 1)
                 os.makedirs(os.path.join(GITHUB, "watchlist"), exist_ok=True)
                 with open(os.path.join(GITHUB, "watchlist", "index.html"), "w") as f:
-                    f.write(github_page(page))
+                    f.write(github_page(page, page_meta(f"Watchlist · {state_words()} · State Bill Tracker",
+                                                        f"Your own list of {P.LEGISLATURE} bills to follow.", "watchlist/")))
                 # A shared last name gets a page for picking the right person, e.g. /ramos/.
                 by_last = defaultdict(list)
                 for leg in data.get("legislators", []):

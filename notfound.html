@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!-- The page-not-found page: build_site.sh copies it to the top of the site as 404.html, which Cloudflare Pages serves
+     (with status 404) for any address that isn't there, at any depth: so its links and icons start with "/". The color
+     tokens are home.html's (light and dark). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Page not found · State Bill Tracker</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+:root {
+  --paper: #f6f8fb; --ink: #14213d; --ink-2: #4a5878; --navy: #1d3b78; --hover: #9a6a0e;
+  --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --paper: #0f1626; --ink: #e6ebf5; --ink-2: #a3b0c9; --navy: #8fb0f0; --hover: #e0b04e; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --paper: #0f1626; --ink: #e6ebf5; --ink-2: #a3b0c9; --navy: #8fb0f0; --hover: #e0b04e; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--body); padding: 40px 16px 64px; }
+main { max-width: 1080px; margin: 0 auto; }
+.site { font: 800 clamp(30px, 7vw, 42px)/1.05 var(--display); font-stretch: 85%; margin: 0 0 18px; color: var(--ink); }
+.site a { color: inherit; text-decoration: none; }
+h1 { font: 600 20px/1.3 var(--body); margin: 0 0 14px; }
+p { margin: 0; color: var(--ink-2); }
+p a { color: var(--navy); }
+a:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; border-radius: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="site"><a href="/">State Bill Tracker</a></p>
+  <h1>That page isn&rsquo;t here.</h1>
+  <p><a href="/">Front page</a> &middot; <a href="/issues/">Issues across the states</a></p>
+</main>
+</body>
+</html>

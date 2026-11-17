@@ -84,9 +84,12 @@ if [ -n "$FAILED" ]; then echo "build failed for:$FAILED"; fi
 python3 - "$OUT" <<'PY'
 import html, importlib, json, os, re, sys
 sys.path.insert(0, ".")
-import balance, front_page
+import balance, front_page, site_meta
 out = sys.argv[1]
 page = open("home.html").read()
+# Link previews and the canonical link (site_meta.py: the public address once LAUNCHED=1, else the preview's).
+desc = re.search(r'<meta name="description" content="([^"]*)">\n', page)
+page = page.replace(desc.group(0), desc.group(0) + site_meta.tags("State Bill Tracker", html.unescape(desc.group(1)), site_meta.root()), 1)
 items, power, after = [], {}, {}
 for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
@@ -134,7 +137,11 @@ open(os.path.join(out, "index.html"), "w").write(page)
 print("front page:", ", ".join(n.strip() for n, _ in sorted(items)))
 PY
 # The pages ask for their icons at the top of the site.
-cp "$OUT/nj/favicon.ico" "$OUT/nj/favicon-32.png" "$OUT/nj/apple-touch-icon.png" "$OUT/"
+cp static/favicon.ico static/favicon-32.png static/apple-touch-icon.png "$OUT/"
+# The link preview image every page names (og:image; made by tools/og_image.sh), and the page for addresses that aren't
+# there (Cloudflare Pages serves 404.html with status 404, instead of the front page).
+cp tools/og-image.png "$OUT/og-image.png"
+cp notfound.html "$OUT/404.html"
 if [ "${LAUNCHED:-0}" = 1 ]; then
   printf 'User-agent: *\nAllow: /\n' > "$OUT/robots.txt"
 else

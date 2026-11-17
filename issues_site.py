@@ -18,6 +18,7 @@ Usage: python3 issues_site.py SITE_DIR
 import html, json, os, re, sys
 
 import issues
+import site_meta
 
 # States whose legislatures publish titles only (no summaries or "What it does"): matched on fewer words.
 TITLES_ONLY = {"ak", "ar", "ma", "me", "ms", "mt", "nd", "ne", "nh", "ok", "vt"}
@@ -310,7 +311,7 @@ HEAD = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
 <meta name="description" content="{desc}">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+{meta}<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -629,7 +630,10 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
         notes.append(f"No data on this site for {year} (the legislature met; this site&rsquo;s data for it begins later): {e(', '.join(gaps))}.")
     note_html = "".join(f'<p class="note">{x}</p>' for x in notes)
     star_note = (f'<p class="note">* {STAR_TIP}</p>' if any(st in TITLES_ONLY for st in by) else "")
-    body = HEAD.format(title=f"{issue['name']}: bills in every state, {year}", desc=e(DESC.get(iid, "")), css=css()) + f"""
+    # Link previews and the canonical link (site_meta.py): the default year's page is the issue's folder.
+    meta = site_meta.tags(f"{issue['name']}: bills in every state, {year} · State Bill Tracker", DESC.get(iid, ""),
+                          site_meta.root() + f"issues/{iid}/" + ("" if year == default else f"{year}.html"))
+    body = HEAD.format(title=f"{issue['name']}: bills in every state, {year}", desc=e(DESC.get(iid, "")), meta=meta, css=css()) + f"""
 <p class="crumbs"><a href="{up}">State Bill Tracker</a> / <a href="../">Issues</a></p>
 <h1>{e(issue['name'])}</h1>
 <p class="lede">{e(DESC.get(iid, ""))}</p>
@@ -984,7 +988,9 @@ def main(site):
                     for g in issues.GROUPS if any(s["group"] == g for s in summary))
     cards += "".join(card(s) for s in abc if s["group"] not in issues.GROUPS) and \
         f'<h2>Other</h2><ul class="cards">{"".join(card(s) for s in abc if s["group"] not in issues.GROUPS)}</ul>'
-    index = HEAD.format(title="Issues across the states", desc="The same subjects in every state legislature: how many bills, where, and which became law.", css=css()) + f"""
+    lede = "The same subjects in every state legislature: how many bills, where, and which became law."
+    index = HEAD.format(title="Issues across the states", desc=lede, css=css(),
+                        meta=site_meta.tags("Issues across the states · State Bill Tracker", lede, site_meta.root() + "issues/")) + f"""
 <p class="crumbs"><a href="../">State Bill Tracker</a></p>
 <h1>Issues across the states</h1>
 <p class="lede">The same subjects in every state legislature: how many bills, where, and which became law.</p>

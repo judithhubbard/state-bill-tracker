@@ -27,6 +27,7 @@ def files():
                 if n != "last_checked":
                     yield os.path.join(d, n)
     for f in ("tracker.html", "build_data.py", "stages.py", "issues.py", "fetch_contacts.py", "listing_dates.py", "balance.py",
+              "site_meta.py",
               os.path.join("states", "legislatures.json")):
         yield os.path.join(HERE, f)
     for s in sorted({state, "ny"}):
@@ -37,7 +38,7 @@ def files():
 
 
 h = hashlib.sha256()
-h.update(f"{datetime.date.today()} {os.environ.get('SITE_BASE', '')}\0".encode())
+h.update(f"{datetime.date.today()} {os.environ.get('SITE_BASE', '')} {os.environ.get('LAUNCHED', '0')}\0".encode())
 for path in files():
     h.update(os.path.relpath(path, HERE).encode() + b"\0")
     with open(path, "rb") as f:
