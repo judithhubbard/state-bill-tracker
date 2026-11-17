@@ -348,6 +348,9 @@ def subject(title):
 def title_of(title, const):
     kw, t = subject(title)
     t = re.sub(r"^\(Constitutional Amendment\)\s*", "", t, flags=re.I)
+    # Louisiana's stock phrase for "about": "Provides relative to water fluoridation" (about 40% of titles) and "Provides
+    # with respect to ...": the subject alone reads plainly ("Water fluoridation"); "Provides for ..." says what it does.
+    t = re.sub(r"^(?:(?:constitutional amendment:\s*)?)provides (?:relative|with respect) to (?:the )?", lambda m: m.group(0)[:m.group(0).lower().find("provides")], t, flags=re.I)
     t = t[:1].upper() + t[1:]
     if const and not re.match(r"Constitutional amendment", t, re.I):
         t = f"Constitutional amendment: {t[:1].lower() + t[1:]}"
