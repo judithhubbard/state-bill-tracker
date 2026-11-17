@@ -22,9 +22,10 @@
   --law-mark: #c8901f; --law-ink: #18693f; --veto-ink: #a3302a;
   --st-0: #e8ecf3; --st-0-ink: #46526b; --st-1: #dfe9fb; --st-1-ink: #1f4a99; --st-3: #fbefd6; --st-3-ink: #7a4f06;
   --st-5: #dcf1e4; --st-5-ink: #14613a; --st-6: #fae1df; --st-6-ink: #9a2b24;
-  --ctl-r1: #ecd3d0; --ctl-r1-ink: #5b2420; --ctl-r2: #d9aaa4; --ctl-r2-ink: #4a1a16;
-  --ctl-d1: #d3dded; --ctl-d1-ink: #1d3560; --ctl-d2: #a9bcdc; --ctl-d2-ink: #15294d;
-  --ctl-x: var(--sheet); --ctl-x-ink: var(--ink); --ctl-n: #e7e9ee; --ctl-n-ink: #3a4253;
+  --ctl-r1: #f5d3cf; --ctl-r1-ink: #6e1f18; --ctl-r2: #e49b93; --ctl-r2-ink: #4a120d;
+  --ctl-d1: #d2def5; --ctl-d1-ink: #1b3566; --ctl-d2: #92aee3; --ctl-d2-ink: #0f2550;
+  --ctl-x: #e7e0f1; --ctl-x-ink: #3d2f5c; --ctl-n: #e4e7ed; --ctl-n-ink: #3a4253;
+  --lawn: #1f7a4a; --lawn-ink: #ffffff;
   --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
@@ -37,9 +38,10 @@
     --law-mark: #e0b04e; --law-ink: #5cc28c; --veto-ink: #f08a80;
     --st-0: #222c42; --st-0-ink: #a9b5cc; --st-1: #1d2f52; --st-1-ink: #a8c4f5; --st-3: #3a2f17; --st-3-ink: #f0cd85;
     --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
-  --ctl-r1: #573b39; --ctl-r1-ink: #f3dedb; --ctl-r2: #7b4c47; --ctl-r2-ink: #fbe9e7;
-  --ctl-d1: #36486b; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4e6995; --ctl-d2-ink: #f1f5fc;
-  --ctl-x: var(--sheet); --ctl-x-ink: var(--ink); --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
+  --ctl-r1: #5c3431; --ctl-r1-ink: #f8dfdb; --ctl-r2: #93473f; --ctl-r2-ink: #ffffff;
+  --ctl-d1: #2f4670; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4a70b5; --ctl-d2-ink: #ffffff;
+  --ctl-x: #3a3150; --ctl-x-ink: #e6def5; --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
+  --lawn: #5cc28c; --lawn-ink: #0f1626;
     color-scheme: dark;
   }
 }
@@ -51,9 +53,10 @@
   --law-mark: #e0b04e; --law-ink: #5cc28c; --veto-ink: #f08a80;
     --st-0: #222c42; --st-0-ink: #a9b5cc; --st-1: #1d2f52; --st-1-ink: #a8c4f5; --st-3: #3a2f17; --st-3-ink: #f0cd85;
     --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
-  --ctl-r1: #573b39; --ctl-r1-ink: #f3dedb; --ctl-r2: #7b4c47; --ctl-r2-ink: #fbe9e7;
-  --ctl-d1: #36486b; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4e6995; --ctl-d2-ink: #f1f5fc;
-  --ctl-x: var(--sheet); --ctl-x-ink: var(--ink); --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
+  --ctl-r1: #5c3431; --ctl-r1-ink: #f8dfdb; --ctl-r2: #93473f; --ctl-r2-ink: #ffffff;
+  --ctl-d1: #2f4670; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4a70b5; --ctl-d2-ink: #ffffff;
+  --ctl-x: #3a3150; --ctl-x-ink: #e6def5; --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
+  --lawn: #5cc28c; --lawn-ink: #0f1626;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -92,11 +95,13 @@ h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: u
 .tiles a.c-R2, .legend .c-R2 { background: var(--ctl-r2); color: var(--ctl-r2-ink); box-shadow: none; }
 .tiles a.c-D1, .legend .c-D1 { background: var(--ctl-d1); color: var(--ctl-d1-ink); box-shadow: none; }
 .tiles a.c-D2, .legend .c-D2 { background: var(--ctl-d2); color: var(--ctl-d2-ink); box-shadow: none; }
-.tiles a.c-X, .legend .c-X { background: var(--ctl-x); color: var(--ctl-x-ink); box-shadow: inset 0 0 0 1px var(--rule); }
+.tiles a.c-X, .legend .c-X { background: var(--ctl-x); color: var(--ctl-x-ink); box-shadow: none; }
 .tiles a.c-N, .legend .c-N { background: var(--ctl-n); color: var(--ctl-n-ink); box-shadow: none; }
 .tiles a.changed[class*="c-"] { box-shadow: 0 0 0 3px var(--hover); }
 .legend { color: var(--ink-2); font-size: 14px; margin: 0; display: flex; gap: 6px 16px; flex-wrap: wrap; align-items: center; }
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
+.legend .full { flex-basis: 100%; font-size: 13px; }
+.legend .sq + .sq { margin-left: -4px; }
 .legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
 .legend .dot { width: 7px; height: 7px; display: inline-block; }
 ul, ol { list-style: none; margin: 0; padding: 0; }
@@ -109,7 +114,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 /* "Show": party control, or one national issue, which shades each state by its number of bills on it (issues_site.py's
    summary). Steps h1-h3 of one blue; a gold mark where a bill on the issue became law. */
 .show { display: flex; align-items: center; gap: 8px 10px; margin: 0 0 22px; font-size: 15px; flex-wrap: wrap; }
-.show .when { margin: 0 6px 0 0; }
+.show .when { margin: 0; }
 .show .pick { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
 .show .pick select { min-width: 0; }
 .mapwrap { margin: 0 0 10px; }
@@ -119,7 +124,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .show .lab { color: var(--ink-2); }
 /* The Show picker: a button that opens the issues in short columns under their group headings. */
 .show .pick { position: relative; }
-#show { font: inherit; padding: 6px 30px 6px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink);
+#show { font: inherit; min-width: 13em; padding: 6px 30px 6px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); color: var(--ink);
   cursor: pointer; text-align: left; position: relative; }
 #show::after { content: ""; position: absolute; right: 11px; top: 50%; width: 6px; height: 6px; margin-top: -5px;
   border: solid var(--ink-2); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
@@ -144,9 +149,11 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .tiles a.h1 { background: var(--heat-1); color: var(--heat-ink-1); box-shadow: none; }
 .tiles a.h2 { background: var(--heat-2); color: var(--heat-ink-2); box-shadow: none; }
 .tiles a.h3 { background: var(--heat-3); color: var(--heat-ink-3); box-shadow: none; }
-/* The number of bills on the issue that became law that year: a gold badge under the state's letters. */
-.lawn { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6em; height: 1.6em; padding: 0 .3em;
-  border-radius: 999px; background: var(--law-mark); color: #14213d; font: 700 clamp(9px, 2vw, 12px)/1 var(--body); }
+/* The number of bills on the issue that became law that year: a green badge under the state's letters (green as the
+   "Law" label; gold is kept for the visitor's own stars and what's new). In "Your bills", .newn: the new ones, in gold. */
+.lawn, .newn { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6em; height: 1.6em; padding: 0 .3em;
+  border-radius: 999px; background: var(--lawn); color: var(--lawn-ink); font: 700 clamp(9px, 2vw, 12px)/1 var(--body); }
+.newn { background: var(--law-mark); color: #14213d; }
 .legend .sq.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
 .legend .sq.h1 { background: var(--heat-1); } .legend .sq.h2 { background: var(--heat-2); } .legend .sq.h3 { background: var(--heat-3); }
 .legend .sq.h0 { background: var(--tile-off); }
@@ -232,7 +239,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .mine .tt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mine .where { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; }
 .mine .stg { white-space: normal; }
-.mine .new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #14213d;
+.new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #14213d;
   font: 700 11px/1.6 var(--body); }
 /* A star beside each bill (in "Your bills" and the map's panel): filled when it's on the state's watchlist. */
 .star { position: absolute; right: 6px; top: 50%; margin-top: -16px; width: 32px; height: 32px; border: 0; background: none; cursor: pointer;
@@ -256,7 +263,8 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 /* "Find a bill": one box on the controls' row (its own line on a phone); results open in a box over the map, so the map
    doesn't move. */
 .show { position: relative; }
-.find { flex: 1 1 200px; min-width: 0; position: relative; display: flex; }
+.find { flex: 0 1 300px; margin-left: auto; min-width: 0; position: relative; display: flex; }
+@media (max-width: 760px) { .find { flex: 1 1 100%; margin-left: 0; } }
 .find svg { position: absolute; left: 10px; top: 50%; width: 15px; height: 15px; margin-top: -7.5px; fill: none; stroke: var(--ink-2);
   stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
 #q { width: 100%; min-width: 0; font: inherit; font-size: 15px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule);
@@ -269,6 +277,19 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
   font-size: 14px; color: var(--ink-2); }
 .found .fhead .cnt { flex: 1 1 auto; min-width: 0; }
 .found .fhead b { color: var(--ink); }
+.found .onmap { font: inherit; font-size: 14px; font-weight: 600; color: var(--navy); background: var(--sheet); border: 1px solid var(--navy);
+  border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+.found .onmap:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
+/* Party control's panel with no state pointed at: how many states each party holds. */
+.panel .tally { border: 0; margin: 0 0 10px; max-height: none; overflow: visible; }
+.panel .tally li { display: flex; justify-content: space-between; padding: 3px 0; font-size: 15px; }
+.panel .tally li.sub { padding-left: 20px; font-size: 14px; color: var(--ink-2); }
+.panel .tally li .sum { display: inline-flex; gap: 8px; align-items: center; }
+.panel .tally .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+.panel .tally .sq.c-R1 { background: var(--ctl-r1); } .panel .tally .sq.c-R2 { background: var(--ctl-r2); }
+.panel .tally .sq.c-D1 { background: var(--ctl-d1); } .panel .tally .sq.c-D2 { background: var(--ctl-d2); }
+.panel .tally .sq.c-X { background: var(--ctl-x); } .panel .tally .sq.c-N { background: var(--ctl-n); }
+
 .found select { font: inherit; font-size: 14px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px;
   padding: 2px 4px; max-width: 100%; }
 .found select:focus-visible, .found .more:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
@@ -298,10 +319,10 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
     <div id="mineList" hidden></div>
   </section>
   <div class="show" id="controls" hidden>
-    <div class="when" id="years" role="group" aria-label="Year"></div>
     <span class="pick"><span class="lab" id="showLab">Show</span>
     <button type="button" id="show" aria-haspopup="true" aria-expanded="false" aria-labelledby="showLab show">Party control</button>
     <div class="menu" id="showMenu" hidden></div></span>
+    <div class="when" id="years" role="group" aria-label="Year"></div>
     <span class="find"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input type="search" id="q" placeholder="Find a bill: HB 1234, or words" aria-label="Find a bill by its number or words in its title, in any state or Congress" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-controls="found" aria-expanded="false"></span>
     <div class="found" id="found" role="region" aria-label="Bills found" hidden></div>
   </div>
@@ -309,15 +330,15 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
   <div class="mapcol">
     <div class="tiles" id="tiles" aria-hidden="true"></div>
   <p class="legend" id="legend" hidden>
-    <span class="key"><i class="sq c-R1"></i>Republican governor and legislature</span>
-    <span class="key"><i class="sq c-R2"></i>with a supermajority</span>
-    <span class="key"><i class="sq c-D1"></i>Democratic governor and legislature</span>
-    <span class="key"><i class="sq c-D2"></i>with a supermajority</span>
+    <span class="key"><i class="sq c-R1"></i><i class="sq c-R2"></i>Republican</span>
+    <span class="key"><i class="sq c-D1"></i><i class="sq c-D2"></i>Democratic</span>
     <span class="key"><i class="sq c-X"></i>Split</span>
-    <span class="key"><i class="sq c-N"></i>Nonpartisan legislature</span>
+    <span class="key"><i class="sq c-N"></i>Nonpartisan</span>
     <span class="key"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
+    <span class="key full">One party holds the governor's office and both houses; darker: a supermajority in both houses.</span>
     <span class="key" id="changedKey" hidden><i class="sq" style="background:var(--sheet);box-shadow:0 0 0 2px var(--hover)"></i>Changes in January</span>
   </p>
+  <p class="legend" id="customLegend" hidden></p>
   <p class="legend" id="issueLegend" hidden>
     <span class="key"><i class="sq h0"></i>None</span>
     <span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>
@@ -375,6 +396,10 @@ let issues = { issues: [] };
 try { const raw = JSON.parse(document.getElementById("issues").textContent); if (raw && raw.issues) issues = raw; } catch (e) {}
 let STARS = {};  // starred bills by state (drawMine(), markStars())
 let issue = null;  // the national issue shown on the map, or null for party control
+// Or a view of the visitor's own: "Your bills" (each state shaded by its starred bills, the new ones in gold) or a word
+// search's matches ("Show on the map" in the results): {kind: "mine" | "search", name, by: {st: [count, badge]}, rows:
+// {st: [panel rows]}, ...}. issue is null while one is shown.
+let CUSTOM = null;
 let year = issues.default;  // the calendar year shown for it
 const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n >= 1 ? 1 : 0);
 // "Sponsor's party" (the panel's menu): "" all, or "D", "R", "B", "-" (committee or none). The map, the panel's counts and
@@ -442,6 +467,7 @@ function panelData() {
 }
 function showPanel(st) {
   const panel = document.getElementById("panel"), body = document.getElementById("pbody");
+  if (CUSTOM) return customPanel(st);
   if (!issue) { panel.hidden = true; return; }
   panel.hidden = false;
   const sel = document.getElementById("pparty");
@@ -499,6 +525,8 @@ document.getElementById("pparty").addEventListener("change", (e) => {
 });
 document.getElementById("panel").addEventListener("click", (e) => {
   if (starClick(e)) return;
+  if (markSeen(e)) return;
+  if (e.target.closest("[data-endview]")) { e.preventDefault(); CUSTOM = null; render(); remember(); return; }
   if (!e.target.closest("[data-unpin]")) return;
   e.preventDefault();
   pinned = null;
@@ -523,7 +551,20 @@ function partyPanel(a) {
   panel.hidden = false;
   document.getElementById("pparty").hidden = true;  // "Sponsor's party" is for an issue's bills
   if (!a) {
-    body.innerHTML = `<h3>Party control, ${year}</h3><p>Point at a state to see the governor's party and each house's seats. Click it to open its bills.</p>`;
+    // How many states each party controls, as the map's colors show them.
+    const n = {};
+    for (const t of tiles.querySelectorAll("a[data-st]")) {
+      if (t.dataset.st === "us") continue;
+      const c = (t.className.match(/\bc-(\w+)/) || [])[1];
+      if (c) n[c] = (n[c] || 0) + 1;
+    }
+    const line = (cls, words, k, sub) => (k ? `<li${sub ? ' class="sub"' : ""}><span class="sum"><i class="sq ${cls}"></i>${words}</span><b>${k}</b></li>` : "");
+    const R = (n.R1 || 0) + (n.R2 || 0), D = (n.D1 || 0) + (n.D2 || 0);
+    body.innerHTML = `<h3>Party control${view === "after" ? ", from January" : ""}</h3>`
+      + `<ul class="tally">${line("c-R1", "Republican", R)}${line("c-R2", "with a supermajority", n.R2, 1)}`
+      + `${line("c-D1", "Democratic", D)}${line("c-D2", "with a supermajority", n.D2, 1)}`
+      + `${line("c-X", "Split", n.X)}${line("c-N", "Nonpartisan", n.N)}</ul>`
+      + `<p>Of the ${R + D + (n.X || 0) + (n.N || 0)} states on the site. Point at a state to see the governor's party and each house's seats; click it to open its bills.</p>`;
     return;
   }
   const [name, ...rest] = (a.getAttribute("title") || "").split("\n");
@@ -531,16 +572,17 @@ function partyPanel(a) {
     + `<p><a href="${esc(a.getAttribute("href"))}">Open ${esc(name.replace(/^U\.S\. /, ""))}'s bills</a></p>`;
 }
 tiles.addEventListener("pointerover", (e) => {
-  if (issue) return;
+  if (issue || CUSTOM) return;
   const a = e.target.closest("a[href]");
   if (a) partyPanel(a);
 });
 function drawMap(view) {
-  const on = !!issue;
+  const on = !!issue || !!CUSTOM;
   document.body.classList.toggle("issue-on", on);
-  if (!on) partyPanel(null);
   document.getElementById("legend").hidden = on;
-  document.getElementById("issueLegend").hidden = !on;
+  document.getElementById("issueLegend").hidden = !issue;
+  document.getElementById("customLegend").hidden = !CUSTOM;
+  if (CUSTOM) return drawCustom();
   if (on) return drawIssue();
   tiles.classList.remove("issue");
   tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
@@ -561,6 +603,7 @@ function drawMap(view) {
     return `<a href="${built[code]}" data-st="${code.toLowerCase()}" class="${ctl}${changed ? " changed" : ""}" style="${style}" title="${esc(lines)}" aria-label="${esc(`${code}, ${label}`)}">${code}</a>`;
   }).join("") + fedParty(view);
   markStars();
+  partyPanel(null);
   document.getElementById("changedKey").hidden = view !== "after";
 }
 // Congress (/us/): one wide tile in the map's empty top row, built only when its pages are, colored like a state from the
@@ -591,6 +634,82 @@ function fedIssue(y, open, upcoming) {
   return `<button type="button" class="tile fed h${step(n)}${pinned === "us" ? " sel" : ""}" data-st="us" style="${FED}" title="${esc(["U.S. Congress", n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : [])].join("\n"))}" aria-label="${esc(label)}" aria-pressed="${pinned === "us"}" aria-controls="panel">${FED_LABEL}${mark}</button>`;
 }
 const nameOf = (st) => (st === "us" ? "Congress" : NAMES[st.toUpperCase()]);
+// The visitor's own views on the map: "Your bills" and a search's matches. Each built state is a tile shaded by its
+// count, with a badge (the new bills, in gold; or how many of the matches became law, in green), and the panel lists the
+// state's bills.
+const mineStep = (n) => (n >= 5 ? 3 : n >= 2 ? 2 : n >= 1 ? 1 : 0);
+function mineView() {
+  const by = {}, rows = {};
+  let n = 0, fresh = 0, states = 0;
+  for (const [st, xs] of Object.entries(MINE_ROWS)) {
+    if (!xs.length) continue;
+    const f = xs.filter((x) => x.fresh).length;
+    by[st] = [xs.length, f]; n += xs.length; fresh += f; states++;
+    rows[st] = xs.map((x) => ({ href: x.href, num: spaced(x.full), title: x.title, stage: x.stage, stg: x.label, fresh: x.fresh, seen: x.seen,
+      star: starBtn(x.st, x.session, x.full, x.last, spaced(x.full)) }));
+  }
+  return { kind: "mine", label: "★ Your bills", by, rows, step: mineStep, badge: "newn",
+    head: `${n} starred bill${n === 1 ? "" : "s"} in ${states} place${states === 1 ? "" : "s"}${fresh ? `; ${fresh} with news since you last looked` : ""}.`,
+    none: (st) => `No starred bills in ${nameOf(st)}. Star a bill on its page, or in an issue's list, to follow it here.`,
+    some: (st, k, f) => `${k} starred bill${k === 1 ? "" : "s"}${f ? `, ${f} new` : ""}.`,
+    legend: `<span class="key"><i class="sq h1"></i>1 starred bill</span><span class="key"><i class="sq h2"></i>2&ndash;4</span>`
+      + `<span class="key"><i class="sq h3"></i>5 or more</span><span class="key"><span class="newn">1</span>New since you last looked</span>` };
+}
+function mineChanged() {
+  const any = Object.values(MINE_ROWS).some((x) => x.length), b = document.getElementById("showMine");
+  if (b) b.hidden = !any;
+  if (WANT_MINE && any) { WANT_MINE = false; issue = null; CUSTOM = mineView(); render(); return; }
+  if (CUSTOM && CUSTOM.kind === "mine") { CUSTOM = any ? mineView() : null; if (CUSTOM) drawMap(view); else { render(); remember(); } }
+}
+// A search's matches on the map (search's "Show on the map"): hits are [{st, num, title, stage, label, href, star}].
+function searchView(words, hits) {
+  const by = {}, rows = {};
+  for (const h of hits) {
+    (rows[h.st] ||= []).push(h);
+    const c = (by[h.st] ||= [0, 0]); c[0]++; if (h.stage === 5) c[1]++;
+  }
+  const states = Object.keys(by).filter((x) => x !== "us").length;
+  return { kind: "search", label: `“${words}”`, by, rows, step, badge: "lawn",
+    head: `${hits.length.toLocaleString()} bill${hits.length === 1 ? "" : "s"} with “${esc(words)}” in the title, in ${states} state${states === 1 ? "" : "s"}${by.us ? " and Congress" : ""}: this session's bills and next year's prefiled ones.`,
+    none: (st) => `No bills with “${esc(words)}” in ${nameOf(st)}.`,
+    some: (st, k, l) => `${k} bill${k === 1 ? "" : "s"} with “${esc(words)}”${l ? `, ${l} became law` : ""}.`,
+    legend: `<span class="key"><i class="sq h0"></i>None</span><span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>`
+      + `<span class="key"><i class="sq h2"></i>5&ndash;14</span><span class="key"><i class="sq h3"></i>15 or more</span>`
+      + `<span class="key"><span class="lawn">3</span>Number that became law</span>` };
+}
+function drawCustom() {
+  tiles.classList.add("issue");
+  const v = CUSTOM;
+  document.getElementById("customLegend").innerHTML = v.legend;
+  const tile = (code, style, extra, labelHtml) => {
+    const st = code.toLowerCase(), [n, b] = v.by[st] || [0, 0], name = st === "us" ? "U.S. Congress" : NAMES[code];
+    const words = n ? v.some(st, n, b).replace(/<[^>]+>/g, "").replace(/&ldquo;|&rdquo;/g, '"') : "none";
+    return `<button type="button" class="tile${extra} h${v.step(n)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc(`${name}\n${words}`)}" aria-label="${esc(`${name}: ${words}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${labelHtml}${b ? `<span class="${v.badge}" aria-hidden="true">${b}</span>` : ""}</button>`;
+  };
+  tiles.innerHTML = Object.entries(GRID).map(([code, [r, c]]) => {
+    const style = `grid-row:${r + 1};grid-column:${c + 1}`;
+    if (!built[code]) return `<span class="off" style="${style}" title="${NAMES[code]}: coming soon">${code}</span>`;
+    return tile(code, style, "", code);
+  }).join("") + (built.US ? tile("US", FED, " fed", FED_LABEL) : "");
+  markStars();
+  showPanel(pinned);
+}
+function customPanel(st) {
+  const v = CUSTOM, panel = document.getElementById("panel"), body = document.getElementById("pbody");
+  panel.hidden = false;
+  document.getElementById("pparty").hidden = true;
+  const end = v.kind === "search" ? ` <a href="#" data-endview>Back to the map's views</a>` : "";
+  if (!st) {
+    body.innerHTML = `<h3>${v.kind === "mine" ? "Your bills" : esc(v.label)}</h3><p>${v.head}</p>`
+      + `<p>${canHover ? "Point at a state to see its bills; click it to keep the list open." : "Tap a state to see its bills."}${end}</p>`;
+    return;
+  }
+  const rows = v.rows[st] || [], [n, b] = v.by[st] || [0, 0];
+  body.innerHTML = `<h3>${esc(nameOf(st))}</h3><p>${n ? v.some(st, n, b) : v.none(st)} <a href="${esc(built[st.toUpperCase()] || `${st}/`)}">Open ${esc(nameOf(st))}'s bills</a>`
+    + `${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`
+    + (rows.length ? `<ul>${rows.slice(0, 200).map((x) => `<li><a href="${esc(x.href)}" title="${esc(x.title)}"${x.seen ? ` data-seen="${esc(x.seen)}"` : ""}><b>${esc(x.num)}</b>`
+      + `<span class="tt">${esc(x.title)}</span><span class="tags">${x.fresh ? '<span class="new">New</span>' : ""}<span class="stg s${x.stage}">${esc(x.stg)}</span></span></a>${x.star}</li>`).join("")}</ul>` : "");
+}
 // The controls: year buttons, then "Show" (party control or a national issue). For party control, this year is now and
 // next year is after the November 2026 election (reported results, until the new sessions begin); last year has no party
 // view. For an issue, the years the issue pages have (last year, this year, next year's prefiled bills). Remembered in the
@@ -606,15 +725,18 @@ const label = (i) => (i ? i.short.charAt(0).toUpperCase() + i.short.slice(1) : "
 const usable = (y) => (issue ? (issues.years || []).includes(y) : y === NOW || (y === NOW + 1 && AFTER_OK));
 function render() {
   if (!usable(year)) year = NOW;
+  yearsEl.hidden = !!CUSTOM || (YEARS.length < 2 && !issues.issues.length);
   view = !issue && year === NOW + 1 ? "after" : "now";
   // Party control has only this year and next (today's member lists, and the election's results), so its past years
   // aren't shown; an issue shows every year.
   yearsEl.innerHTML = YEARS.filter((y) => issue || usable(y)).map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === year}"${usable(y) ? "" : ` disabled title="Party control is shown for ${NOW}${AFTER_OK ? ` and from January ${NOW + 1}` : ""}; pick an issue for other years"`}>${y}</button>`).join("");
-  show.textContent = label(issue);
-  for (const b of menu.querySelectorAll("button")) b.setAttribute("aria-current", String(b.dataset.id === (issue ? issue.id : "")));
+  show.textContent = CUSTOM ? CUSTOM.label : label(issue);
+  const cur = CUSTOM ? CUSTOM.kind : issue ? issue.id : "";
+  for (const b of menu.querySelectorAll("button")) b.setAttribute("aria-current", String(b.dataset.id === cur));
   drawMap(view);
 }
 function remember() {
+  if (CUSTOM) { try { history.replaceState(null, "", CUSTOM.kind === "mine" ? "#mine" : location.pathname); } catch (e) {} return; }
   const parts = [issue ? `issue=${issue.id}` : "", year !== NOW ? `year=${year}` : "", issue && PARTY ? `party=${PARTY === "-" ? "none" : PARTY}` : ""].filter(Boolean);
   try { history.replaceState(null, "", parts.length ? `#${parts.join("&")}` : location.pathname); } catch (e) {}
 }
@@ -623,7 +745,7 @@ function remember() {
   const opt = (i) => `<button type="button" data-id="${esc(i.id)}">${esc(label(i))}</button>`;
   const groups = issues.groups || [];
   const extra = issues.issues.filter((i) => !groups.includes(i.group));
-  menu.innerHTML = `<div class="party"><button type="button" data-id="">Party control</button></div><div class="grp">`
+  menu.innerHTML = `<div class="party"><button type="button" data-id="">Party control</button><button type="button" data-id="mine" id="showMine" hidden>★ Your bills</button></div><div class="grp">`
     + groups.map((g) => {
       const xs = issues.issues.filter((i) => i.group === g);
       return xs.length ? `<div><h4>${esc(g)}</h4>${xs.map(opt).join("")}</div>` : "";
@@ -640,6 +762,7 @@ menu.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-id]");
   if (!b) return;
   issue = issues.issues.find((i) => i.id === b.dataset.id) || null;
+  CUSTOM = b.dataset.id === "mine" ? mineView() : null;
   openMenu(false);
   show.focus();
   render();
@@ -651,9 +774,11 @@ yearsEl.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-year]");
   if (!b || b.disabled) return;
   year = +b.dataset.year;
+  CUSTOM = null;
   render();
   remember();
 });
+let WANT_MINE = location.hash === "#mine";  // shown once "Your bills" has loaded (drawMine())
 {
   const m = location.hash.match(/^#(?:issue=([a-z]+))?&?(?:year=(\d{4}))?&?(?:party=(D|R|B|none))?$/);
   if (m) {
@@ -664,7 +789,7 @@ yearsEl.addEventListener("click", (e) => {
 }
 // The controls' row always shows (it holds "Find a bill"); the year buttons and Show picker only when there's a choice.
 document.getElementById("controls").hidden = false;
-yearsEl.hidden = document.querySelector(".show .pick").hidden = YEARS.length < 2 && !issues.issues.length;
+document.querySelector(".show .pick").hidden = YEARS.length < 2 && !issues.issues.length;
 render();
 tiles.removeAttribute("aria-hidden");
 if (!issue) document.getElementById("legend").hidden = false;
@@ -719,8 +844,10 @@ function markStars() {
     else if (!n && m) m.remove();
   }
 }
+const MINE_ROWS = {};
 async function drawMine() {
   const lists = [];
+  for (const k of Object.keys(MINE_ROWS)) delete MINE_ROWS[k];
   for (let i = 0; i < localStorage.length; i++) {
     const m = (localStorage.key(i) || "").match(/^abt:(?:([a-z]{2}):)?watch$/);
     if (!m) continue;
@@ -728,7 +855,7 @@ async function drawMine() {
     if (keys.length && (NAMES[st.toUpperCase()] || st === "us")) lists.push([st, w, keys]);
   }
   const sec = document.getElementById("mine");
-  if (!lists.length) { sec.hidden = true; mineDrawn = ""; STARS = {}; markStars(); return; }
+  if (!lists.length) { sec.hidden = true; mineDrawn = ""; STARS = {}; markStars(); mineChanged(); return; }
   const blocks = await Promise.all(lists.map(async ([st, w, keys]) => {
     const rows = await Promise.all(keys.map(async (k) => {
       const [session, num] = k.split(":"), s = await statusOf(st, session), seen = typeof w[k] === "string" ? w[k] : (w[k] || {}).seen || "";
@@ -737,7 +864,8 @@ async function drawMine() {
       if (!b && st === "ny") return null;
       if (!b) return { last: "", html: `<li><a href="${st}/"><span class="num">${esc(spaced(num))}</span><span class="tt">${session} session</span></a>${starBtn(st, +session, num, "", spaced(num))}</li>` };
       const [full, title, stage, last, action, comm, kind] = b, fresh = last && last > seen;
-      return { last, fresh, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
+      return { last, fresh, st, session: +session, full, title, stage, label: whereText(stage, comm, kind, s.live !== false),
+        href: `${st}/${page}#${full}`, seen: `${st}|${k}|${last}`, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
         + `<span class="num">${esc(spaced(full))}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh ? '<span class="new">New</span>' : ""}</span>`
         + `<span class="where"><span class="stg s${stage}">${esc(whereText(stage, comm, kind, s.live !== false))}</span>${last ? ` · ${fmtDay(last)}` : ""}</span></a>`
         + `${starBtn(st, +session, full, last, spaced(full))}</li>` };
@@ -745,11 +873,13 @@ async function drawMine() {
     const kept = rows.filter(Boolean).sort((a, b) => (b.last > a.last ? 1 : b.last < a.last ? -1 : 0));
     if (!kept.length) return null;
     const name = st === "us" ? "Congress" : NAMES[st.toUpperCase()];
+    MINE_ROWS[st] = kept.filter((x) => x.st);
     return [name, st, `<div class="mst"><h3><a href="${st}/">${esc(name)}</a></h3><ol>${kept.map((x) => x.html).join("")}</ol></div>`, kept.length, kept.filter((x) => x.fresh).length];
   }));
   const shown = blocks.filter(Boolean);
   STARS = Object.fromEntries(shown.map((x) => [x[1], x[3]]));  // [name, st, html, count, new]
   markStars();
+  mineChanged();
   if (!shown.length) { sec.hidden = true; mineDrawn = ""; return; }
   const n = shown.reduce((t, x) => t + x[3], 0), fresh = shown.reduce((t, x) => t + x[4], 0);
   document.getElementById("mineCount").innerHTML = `· ${n} bill${n === 1 ? "" : "s"}${fresh ? ` <b>${fresh} new</b>` : ""}`;
@@ -765,14 +895,15 @@ async function drawMine() {
   setOpen(was);
   bar.addEventListener("click", () => setOpen(list.hidden));
 }
-document.getElementById("mine").addEventListener("click", (e) => {
-  if (starClick(e)) return;
-  // Opening a bill marks it seen, as opening it on the state's page does.
+// Opening a bill marks it seen, as opening it on the state's page does.
+function markSeen(e) {
   const a = e.target.closest("a[data-seen]");
-  if (!a) return;
+  if (!a) return false;
   const [st, k, last] = a.dataset.seen.split("|"), w = readWatch(st);
   if (w[k]) { w[k] = { ...(typeof w[k] === "string" ? { stance: "support" } : w[k]), seen: last }; writeWatch(st, w); }
-});
+  return true;
+}
+document.getElementById("mine").addEventListener("click", (e) => { if (!starClick(e)) markSeen(e); });
 // Back from a state's page, or a change in another tab: redraw.
 addEventListener("storage", (e) => { if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) drawMine(); });
 addEventListener("pageshow", () => drawMine());
@@ -784,7 +915,7 @@ drawMine();
 {
   const q = document.getElementById("q"), found = document.getElementById("found");
   const PAGE = 50, SEARCH = {}, ready = {};
-  let limit = PAGE, only = "", timer = 0, lastKey = "", quiet = false;
+  let limit = PAGE, only = "", timer = 0, lastKey = "", quiet = false, lastHits = null;
   const fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const STOP = new Set("a an the of to and or for in on by with at from as is be into its it this that act bill relating relates concerning regarding".split(" "));
   // Two-letter codes that are also everyday words count as a state only when typed in capitals ("IN", "OR").
@@ -918,7 +1049,10 @@ drawMine();
         + `<span class="stg s${s.up ? 0 : stage}">${esc(label)}</span><span class="tt">${esc(title)}</span></a>${starBtn(st, s.session, num, "", `${name} ${spaced(num)}`)}</li>`;
     }).join("");
     const more = hits.length > limit ? `<li><button type="button" class="more">Show ${Math.min(PAGE, hits.length - limit)} more</button></li>` : "";
-    found.innerHTML = `<div class="fhead"><span class="cnt" aria-live="polite">${count}</span>${pick}</div>` + (rows ? `<ul>${rows}${more}</ul>` : "");
+    // Words found in several places: "Show on the map" shades each state by its matches (searchView()).
+    const mapIt = !p.st && !only && p.words.length && hits.length > 1 && !most && hits.some((h) => h.tier === 5) && new Set(hits.map((h) => h.st)).size > 1;
+    lastHits = mapIt ? [p.words.join(" "), hits.filter((h) => h.tier === 5)] : null;
+    found.innerHTML = `<div class="fhead"><span class="cnt" aria-live="polite">${count}</span>${mapIt && !loading ? '<button type="button" class="onmap">Show on the map</button>' : ""}${pick}</div>` + (rows ? `<ul>${rows}${more}</ul>` : "");
     found.hidden = false;
     q.setAttribute("aria-expanded", "true");
   }
@@ -929,6 +1063,7 @@ drawMine();
     timer = setTimeout(() => { timer = 0; run(); }, wait ?? 150);
   }
   q.addEventListener("input", () => {
+    if (!q.value.trim() && CUSTOM && CUSTOM.kind === "search") { CUSTOM = null; render(); remember(); }
     if (q.value.trim() !== lastKey) { lastKey = q.value.trim(); limit = PAGE; }
     schedule(180);
   });
@@ -956,6 +1091,18 @@ drawMine();
     run();
   });
   found.addEventListener("click", (e) => {
+    if (e.target.closest(".onmap") && lastHits) {
+      const [words, hits] = lastHits;
+      CUSTOM = searchView(words, hits.map(({ st, s, r }) => {
+        const [num, title, stage, kind] = r;
+        return { st, num: spaced(num), title, stage: s.up ? 0 : stage, href: `${st}/${s.page || ""}#${num}`,
+          stg: s.up ? `Prefiled for ${s.session}` : whereText(stage, "", kind === "c" ? "const" : "", s.live !== false),
+          star: starBtn(st, s.session, num, "", `${stateName(st)} ${spaced(num)}`) };
+      }));
+      issue = null; pinned = null;
+      close(); render(); remember();
+      return;
+    }
     const more = e.target.closest(".more");
     if (more) {
       const i = links().indexOf(more);
