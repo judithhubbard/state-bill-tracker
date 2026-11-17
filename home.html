@@ -167,8 +167,10 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .showside .sidelist { position: relative; overflow-y: auto; flex: 1 1 auto; min-height: 0; padding: 0 8px 8px; }
 .showside h4 { margin: 10px 0 2px; padding: 0 4px 3px; border-bottom: 1px solid var(--rule); font: 700 11px/1.3 var(--body); letter-spacing: .06em;
   text-transform: uppercase; color: var(--ink-2); }
-.showside button { display: block; width: 100%; text-align: left; font: inherit; font-size: 14px; line-height: 1.3; color: var(--ink); background: none;
-  border: 0; border-radius: 5px; padding: 4px 6px; cursor: pointer; }
+/* One line per topic: a slightly smaller size fits the longest names; anything longer still is cut with "…" (the full
+   name is in its tooltip). */
+.showside button { display: block; width: 100%; text-align: left; font: inherit; font-size: 13.5px; line-height: 1.3; color: var(--ink); background: none;
+  border: 0; border-radius: 5px; padding: 4px 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .showside button:hover { background: var(--paper); }
 .showside button:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
 .showside button[aria-current="true"] { background: var(--navy); color: var(--sheet); font-weight: 600; }
@@ -847,7 +849,7 @@ function remember() {
 }
 // The issues under their group headings (issues.py's GROUPS), in columns, so twenty-odd issues stay easy to scan.
 {
-  const opt = (i) => `<button type="button" data-id="${esc(i.id)}">${esc(label(i))}</button>`;
+  const opt = (i) => `<button type="button" data-id="${esc(i.id)}" title="${esc(i.name)}">${esc(label(i))}</button>`;
   const groups = issues.groups || [];
   const extra = issues.issues.filter((i) => !groups.includes(i.group)).sort((x, y) => label(x).localeCompare(label(y)));
   menu.innerHTML = `<div class="party"><button type="button" data-id="">Party control</button><button type="button" data-id="mine" hidden>★ Your bills</button></div><div class="grp">`

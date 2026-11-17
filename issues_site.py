@@ -337,10 +337,10 @@ SHORT = {"datacenters": "data centers", "pfas": "PFAS", "ai": "artificial intell
          "redistricting": "redistricting", "paidleave": "paid leave", "childcare": "child care", "ivf": "IVF and fertility",
          "fluoride": "fluoride", "nuclear": "nuclear energy", "wildfire": "wildfire", "noncompete": "noncompetes",
          "strentals": "short-term rentals", "water": "water rights", "psychedelics": "psychedelics", "cryptoatm": "crypto ATMs",
-         "medicaidwork": "Medicaid work requirements", "dst": "daylight saving time", "books": "book removals",
+         "medicaidwork": "Medicaid work requirements", "dst": "daylight saving time", "books": "book bans",
          "medicaldebt": "medical debt", "police": "police accountability", "deathpenalty": "death penalty",
          "vaccines": "vaccines", "unions": "unions", "initiatives": "ballot initiative rules", "rcv": "ranked-choice voting",
-         "utilityrates": "utility rates", "climate": "climate and clean energy", "esg": "state investing and boycott rules",
+         "utilityrates": "utility rates", "climate": "climate and clean energy", "esg": "investing and boycotts",
          "religion": "religion in schools", "childlabor": "child labor", "protest": "protest laws", "kratom": "kratom"}
 
 

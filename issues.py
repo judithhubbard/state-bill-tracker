@@ -426,7 +426,7 @@ ISSUES = [
     {"id": "dst", "group": "", "name": "Daylight saving time", "words": ["daylight saving", "daylight savings", "standard time", "clock change", "time change"],
      "rules": [[r"\bdaylight sav(?:ing|ings)\b"], [r"\bstandard time\b", r"\b(?:year[- ]round|permanent\w*|observ\w*|exempt\w*|daylight)\b"],
                [r"\b(?:Atlantic|Central|Eastern|Mountain|Pacific) (?:standard )?time\b", r"\b(?:year[- ]round|permanent\w*|observ\w*|time zones?)\b"]]},
-    {"id": "books", "group": "Schools", "name": "Book removals in schools and libraries", "words": ["book bans", "banned books", "library books", "obscenity"],
+    {"id": "books", "group": "Schools", "name": "Book bans in schools and libraries", "words": ["book bans", "banned books", "library books", "obscenity"],
      # Challenges to and removal of books and materials, "harmful to minors" rules for libraries, librarians' liability.
      # Not library funding alone.
      "rules": [[r"\bbook (?:bans?|banning|removals?|challenges?)\b"], [r"\bfreedom to read\b"], [r"\bchallenged (?:books?|materials?)\b"],
