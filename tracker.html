@@ -1492,8 +1492,10 @@ function syncViewHash() {
 }
 function clearHash() { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
 
-// A link to one bill (#S4574) shows just that bill, whatever the other filters.
-let ONE = null;
+// A link to one bill (#S4574) shows just that bill, with no other filters (their chips would only confuse). The
+// filters in effect before it (saved from an earlier visit, or set on this one) are kept in ONE_SAVED, left unsaved
+// while the bill is shown, and put back when "Showing one bill" is cleared (leaveOne()).
+let ONE = null, ONE_SAVED = null;
 // A past session opened from a legislator's page: ?who=Name&h=A&slug=kelles shows only their bills.
 const PAST_WHO = (() => {
   const q = new URLSearchParams(location.search), name = q.get("who"), house = q.get("h");
@@ -1520,8 +1522,15 @@ function openNum(num_) {
   const want = num_.toUpperCase();
   const b = BILLS.find((x) => x.nums.some((n) => baseNum(n) === want));
   if (!b) return false;
+  if (ONE == null) ONE_SAVED = { ...state, topics: new Set(state.topics) };
   ONE = b.idx;
+  Object.assign(state, blank(), { sort: state.sort }, PRESET?.who ? { who: PRESET.who, whoCos: state.whoCos } : {});
+  syncControls();
   return true;
+}
+function leaveOne() {
+  ONE = null;
+  if (ONE_SAVED) { Object.assign(state, ONE_SAVED, { shown: PAGE }); ONE_SAVED = null; syncControls(); }
 }
 
 // The search box: every word must appear (AND, which can also be typed); OR between words or groups gives
@@ -1726,8 +1735,10 @@ function statusText(b) {
   const latest = all.filter(([d]) => d === b.last).map(([, t]) => t).find((t) => !/^PRINT NUMBER/.test(t));
   const what = latest ? plainAction(latest, b.last, all, true).replace(/; back to .*$/, "").replace(/ \(calendar \d+\)$/, "") : "Last action";
   let t = TEXT.long[b.stage], small = `${what} · ${fmtDate(b.last)}`;
+  // A bill that died with the session reads as one in a finished session's page.
+  const alive = live && !billsDied();
   if (b.stage === 0) {
-    t = `${live ? "In" : "Died in"} ${b.comm ? `the ${commPlain(b.comm)} Committee` : "committee"}`;
+    t = `${alive ? "In" : "Died in"} ${b.comm ? `the ${commPlain(b.comm)} Committee` : "committee"}`;
     const passed = D.passS ? HOUSE.S : D.passA ? HOUSE[LOW] : null;
     if (passed && D.died) small = `Passed ${passed} ${fmtDate((D.passSAll[0] || D.passAAll[0]))}; sent back to committee ${fmtMonth(D.died)}`;
     // Illinois: back in Rules or Assignments after a committee approved it means it missed a deadline.
@@ -1736,16 +1747,16 @@ function statusText(b) {
     const back = acts.map(([, x]) => x).lastIndexOf(`REFERRED TO ${(b.comm || "").toUpperCase()}`);
     const ok = acts.slice(0, Math.max(back, 0)).filter(([, x]) => x === "REPORTED").pop();
     if (ok) {
-      t = live ? `Sent back to ${b.comm}` : `Died in the ${b.comm} Committee`;
+      t = alive ? `Sent back to ${b.comm}` : `Died in the ${b.comm} Committee`;
       small = `Approved by committee ${fmtDate(ok[0])}; missed a deadline ${fmtDate(acts[back][0])}`;
     }
     // Massachusetts: a study order ends a bill in its committee (New Hampshire's heldAction is a pattern: the house's vote).
     if (STATE.heldAction && b.vers.some((v) => v.actions.some(([, x]) => (STATE.heldAction instanceof RegExp ? STATE.heldAction.test(x) : x === STATE.heldAction))))
       t = `${STATE.heldLabel}${b.comm ? ` by the ${commPlain(b.comm)} Committee` : ""}`;
     // A bill kept over to the next session (Virginia's continued bills, New Hampshire's retained ones) didn't die.
-    if (!live && continuedTo(b)) t = `Carried over to ${continuedTo(b)}${b.comm ? ` in the ${commPlain(b.comm)} Committee` : ""}`;
+    if (!alive && continuedTo(b)) t = `Carried over to ${continuedTo(b)}${b.comm ? ` in the ${commPlain(b.comm)} Committee` : ""}`;
   } else if (b.stage === 2 && b.passedIn) {
-    t = `Passed one house${live ? "" : " only"} (${b.passedIn})`;
+    t = `Passed one house${alive || continuedTo(b) ? "" : " only"} (${b.passedIn})`;
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
   } else if (b.stage === 3) {
     t = PASSED_BOTH;
@@ -2296,11 +2307,19 @@ function planFor(b, stance = "support") {
   const missed = origin && today > origin ? origin : null;
   // A bill that ended before the session did, where a floor defeat or a withdrawal ends it (North Dakota: STATE.endedNote).
   const ended = b.stage <= 2 && STATE.endedNote?.(b);
+  // When the session is over (STATE.floorVotesEnd === false: its last day has passed), say when it ended.
+  const overAt = STATE.floorVotesEnd === false ? `The session ended ${fmtDate(STATE.sessionEnds(DATA.session))}.` : "Floor votes are over for this session.";
   const stalled = ended && !adjourned ? ended.tail : missed ? `It missed ${STATE.originWord || "the deadline"} on ${fmtDate(missed)}, the last day to pass its own house, so it can't pass this ${YEARS > 1 ? "session" : "year"}.`
     : adjourned
-    ? `Floor votes are over for this session. ${DIES(y2, b)}`
+    ? `${overAt} ${DIES(y2, b)}`
     : recess ? `${BODY_CAP} is out until ${STATE.opens ? fmtDate(STATE.opens(y2)) : `January ${y2}`}.` : "";
   const live = !stalled || recess; // can anything move before the session ends?
+  // Once the session is over and its bills have died (not New York's, which can move until December 31), a bill
+  // still at stage 0-2 has no next step: say where it stopped instead.
+  const other_ = b.passedIn === HOUSE.S ? HOUSE[LOW] : HOUSE.S;
+  const dead = adjourned && (STATE.floorVotesEnd === false || STATE.diesAfterFloor || today > `${y2}-12-31`);
+  const stopped = dead && !ended && b.stage <= 2 ? (b.stage === 2 ? `It passed the ${b.passedIn} but not the ${other_}.`
+    : b.stage === 1 ? `It never passed the ${HOUSE[b.vers[0].p[0]] || "full house"}.` : "It never got out of committee.") : "";
   const book = contactBook(b, live || b.stage >= 3, opp);
   const inComm = b.vers.filter((v) => v.committee && /committee/i.test(v.statusDesc || ""));
   let what = "", gov = null, due = null, govAlso = null;
@@ -2327,14 +2346,14 @@ function planFor(b, stance = "support") {
   if (b.stage === 0) {
     // A state can word the next step for committees that schedule floor votes (Texas's House Calendars Committee).
     const nextText = inComm.map((v) => STATE.committeeNext?.[v.committee]).find(Boolean) || "a committee vote.";
-    what = `<p class="when">${ended ? ended.when : `Next: ${nextText}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
+    what = `<p class="when">${ended ? ended.when : stopped || `Next: ${nextText}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     inComm.forEach((v) => book.chair(v.p[0], v.committee, L(A(...agendaAsk(v.committee))), live));
     inComm.forEach(stuck);
     if (!live && !continuedTo(b)) b.vers.forEach((v) => book.sponsor(v, A("reintroduce it next session", "")));
     book.reps(BOTH, L(A("", "oppose it")));
   } else if (b.stage === 1) {
     const houses = b.vers.filter((v) => /floor/i.test(v.statusDesc || "")).map((v) => v.p[0]);
-    what = `<p class="when">${ended ? ended.when : `Next: a vote of the full ${houses.map((h) => HOUSE[h]).join(" and ") || "house"}.`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
+    what = `<p class="when">${ended ? ended.when : stopped || `Next: a vote of the full ${houses.map((h) => HOUSE[h]).join(" and ") || "house"}.`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     houses.forEach((h) => floorLeader(h));
     // Its version in the other house still has to get out of committee there.
     if (live) inComm.filter((v) => !houses.includes(v.p[0])).forEach((v) => book.chair(v.p[0], v.committee, A(...agendaAsk(v.committee)), true));
@@ -2347,7 +2366,7 @@ function planFor(b, stance = "support") {
     const twin = STATE.oneNumber ? { ...b.vers[0], p: other + b.vers[0].p.slice(1) } : b.vers.find((v) => v.p[0] === other);
     // Back in the first house to agree to the second house's amendments (New Jersey's "2RSC").
     const agree = twin && /to agree to the/.test(twin.statusDesc || "");
-    what = `<p class="when">${ended ? ended.when : `Next: ${agree ? `the ${HOUSE[other]} votes on the ${b.passedIn}'s changes.` : `the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}`}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
+    what = `<p class="when">${ended ? ended.when : stopped || `Next: ${agree ? `the ${HOUSE[other]} votes on the ${b.passedIn}'s changes.` : `the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}`}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     if (twin && twin.committee) book.chair(other, twin.committee, L(A(...agendaAsk(twin.committee))), live);
     if (twin && twin.committee) stuck(twin);
     else floorLeader(other);
@@ -2399,9 +2418,10 @@ function planFor(b, stance = "support") {
   else if (b.stage === 6) reason = `Vetoed${b.veto ? ` (veto memo ${b.veto})` : ""}. To revive it, the sponsors would ${live ? "file it again as a new bill" : "reintroduce it next session"}.`;
   else if (!actionable && adjourned) {
     const other = b.passedIn === HOUSE.S ? HOUSE[LOW] : HOUSE.S;
-    const where = b.stage === 2 ? `It passed the ${b.passedIn} but not the ${other}.`
-      : b.stage === 1 ? "It never got a floor vote." : "It never got out of committee.";
-    reason = today > `${y2}-12-31`
+    const where = ended ? ended.when : stopped || (b.stage === 2 ? `It passed the ${b.passedIn} but not the ${other}.`
+      : b.stage === 1 ? "It never got a floor vote." : "It never got out of committee.");
+    reason = STATE.floorVotesEnd === false ? `${overAt} ${where} ${DIES(y2, b)}`
+      : today > `${y2}-12-31`
       ? `The session ended December 31, ${y2}. ${where} It would have to be reintroduced.`
       : `Floor votes for this session ended ${fmtDate(lv)}. ${where} ${STATE.diesAfterFloor ? DIES(y2, b) : `It can move only if lawmakers return for a special session; otherwise it dies December 31, ${y2}.`}`;
   } else if (notes.length) reason = notes.join(" ");  // shown when there's no one to ask (the decider sponsors it)
@@ -3841,7 +3861,7 @@ function renderActive() {
 }
 
 function clearFilter(k, v) {
-  if (k === "one") { ONE = null; clearHash(location.pathname + location.search); render(); return; }
+  if (k === "one") { leaveOne(); clearHash(location.pathname + location.search); render(); return; }
   if (k === "topics") state.topics.delete(v);
   else state[k] = blank()[k];
   if (k === "who") state.whoCos = false;
@@ -4460,7 +4480,7 @@ function render() {
   renderStats();
   const saved = {};
   for (const k of FILTER_KEYS) saved[k] = k === "topics" ? [...state.topics] : state[k];
-  store("filters", saved);
+  if (ONE == null) store("filters", saved);  // a one-bill link leaves the visitor's saved filters as they were
 }
 
 function fillDetail(el) {
@@ -4666,7 +4686,7 @@ function wire() {
     const h = location.hash.slice(1);
     if (openFromHash()) { showView("bills", false); render(); openOne(); return; }
     if (VIEWS.includes(h) || !h) {
-      if (ONE != null) { ONE = null; render(); }
+      if (ONE != null) { leaveOne(); render(); }
       showView(h || "bills", false);
     }
   };
@@ -5073,11 +5093,17 @@ function decode(raw) {
 // so it stays accurate as the year goes on. Returns "" while the Legislature is actively voting.
 // True once the current session's second year has had no floor votes for three weeks.
 function floorVotesOver() {
-  // States whose Legislature meets until the session's last day turn this off.
-  if (!DATA.current || STATE.floorVotesEnd === false) return false;
+  // States whose Legislature meets until the session's last day: over once that day has passed (Texas, Montana,
+  // Nevada and North Dakota between their odd-year sessions; California after August 31 of its second year).
+  if (!DATA.current) return false;
+  if (STATE.floorVotesEnd === false) return !DATA.upcoming && isoToday() > STATE.sessionEnds(DATA.session);
   const lv = DATA.lastVote || "", today = isoToday();
   return lv.startsWith(String(lastYear(DATA.session))) && (new Date(today) - new Date(lv)) / 864e5 > 21;
 }
+
+// True once the current session is over and its unpassed bills have died with it (Texas between its odd-year
+// sessions, Virginia after its spring session); not New York's, which can still move until December 31.
+const billsDied = () => floorVotesOver() && (STATE.floorVotesEnd === false || !!STATE.diesAfterFloor);
 
 function sessionNotice(raw) {
   if (raw.upcoming) {

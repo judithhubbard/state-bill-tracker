@@ -71,7 +71,7 @@ const STATE = {
   addressLookup: true,
   findReps: "https://wrm.capitol.texas.gov/home",
   oneNumber: true,
-  diesAfterFloor: () => "The session is over, so it died with it.",
+  diesAfterFloor: () => "Bills that didn't pass died with it.",
   outOfTimeLine: "Died when the session ended",
 
   // A committee that hears a bill and doesn't vote on it "leaves it pending".
@@ -114,12 +114,19 @@ const STATE = {
   partySource: "Party from the Legislative Reference Library's list of members",
   openUntil: (s) => `the session ends ${fmtDate(STATE.sessionEnds(s))}`,
 
+  // The current Legislature's page between sessions (most of its two years) reads like a finished session's, as North
+  // Dakota's, Montana's and Nevada's do.
+  between() {
+    const t = new Date().toISOString().slice(0, 10), y = +t.slice(0, 4), s = y % 2 ? y : y - 1;
+    return t > STATE.sessionEnds(s) && t < STATE.opens(s + 2);
+  },
+  stageWords: {
+    pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
+    long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
+    chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Signed", "Vetoed"],
+  },
   stageText: {
-    live: {
-      pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-      long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-      chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Signed", "Vetoed"],
-    },
+    get live() { return STATE.between() ? STATE.stageText.final : STATE.stageWords; },
     prefiled: {
       pipe: ["Filed", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
       long: ["Filed", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
