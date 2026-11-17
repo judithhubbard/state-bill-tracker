@@ -128,6 +128,8 @@ def session_bills(year):
     folder = os.path.join(DATA, str(year))
     os.makedirs(os.path.join(folder, "bills"), exist_ok=True)
     listing = api(f"bills/{sid}/billlist")
+    if isinstance(listing, dict) and isinstance(listing.get("bills"), list):
+        listing = listing["bills"]  # 2023's list is wrapped: {"bills": [{"number", "updatetime"}, ...]}
     if not isinstance(listing, list):
         if year == YEAR and listing is None:
             print(f"{sid}: no bill list yet", flush=True)

@@ -277,7 +277,9 @@ def people(year):
                 failed.append(m.get("link") or "?")
         save(os.path.join(folder, "legislators.json"), out)
         print(f"{year}: {len(out)} legislators" + (f"; no detail for {', '.join(failed)}" if failed else ""), flush=True)
-        if len(failed) > 2:  # one or two records the server always fails on don't hold the copy incomplete
+        # A few records the server always fails on don't hold the copy incomplete: 2024's Mark Messmer, and 2023's five
+        # members who left mid-term (Vermilion, Frye, Perfect, Sandlin, Ford; their replacements are listed and read).
+        if len(failed) > max(2, len(out) // 20):
             ok = False
     else:
         ok = False
