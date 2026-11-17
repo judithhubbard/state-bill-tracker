@@ -3,7 +3,8 @@ reads: House and Senate bills (HR, S) and joint resolutions (HJRES, SJRES) of ea
 Joint resolutions proposing an amendment to the Constitution of the United States are tagged "const"; other joint
 resolutions (continuing appropriations, disapprovals of agency rules under the Congressional Review Act, ...) go to
 the President like bills. Simple and concurrent resolutions (H.Res., S.Con.Res. ...) aren't downloaded. Companion
-bills (the same bill introduced in each house) stay separate records; the page's similar bills show them together.
+bills (the same bill introduced in each house, marked "Identical bill" by the Congressional Research Service) are one
+record with both numbers, as New York's identical bills are (pair_identical()).
 
 Each bill's actions come three times over: the House's own lines (sourceSystem "House floor actions" / "House committee
 actions", with codes like H11100 and times), the Senate's (no codes), and the Library of Congress's summary lines (codes
@@ -827,7 +828,7 @@ def record(congress, p, b):
         "vers": [{"p": p, "sponsor": sponsor, "district": district, "cosponsors": cos, "primes": 1, "cosp": len(cos),
                   "statusDesc": desc, "committee": comm_now, "link": url,
                   "actions": [[s[0], s[2]] for s in steps]}],
-        "_sponsor": sp_id, "_official": official, "_into": into,
+        "_sponsor": sp_id, "_official": official, "_into": into, "_ident": identical(congress, b),
     }
     if law_kind == "Private" and not narrow:
         rec["narrow"] = "person"
@@ -890,9 +891,11 @@ def load_session(session):
     recs.sort(key=lambda r: (ORDER[re.match(r"[A-Z]+", r["nums"][0]).group()], int(re.sub(r"\D", "", r["nums"][0]))))
     index = {r["nums"][0]: i for i, r in enumerate(recs)}
     link_into(recs, index)
+    recs, texts = pair_identical(recs, texts)
+    index = {n: i for i, r in enumerate(recs) for n in r["nums"]}
     link_earlier(session, recs)
     for r in recs:
-        for k in ("_sponsor", "_official", "_into"):
+        for k in ("_sponsor", "_official", "_into", "_ident"):
             r.pop(k, None)
     json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     paths = glob.glob(os.path.join(folder(congress), "*.zip")) + glob.glob(os.path.join(folder(congress), "updates", "*.xml"))
@@ -901,6 +904,76 @@ def load_session(session):
     out = (recs, index, fetched, {"SENATE": [], "ASSEMBLY": []})
     _CACHE[session] = out
     return out
+
+
+def identical(congress, b):
+    """The bills in the other house that the Congressional Research Service marks as identical to this one (relatedBills,
+    relationshipDetails "Identical bill"), in the same Congress. (Identical bills in the same house, mostly a bill
+    introduced again, aren't companions: left out.)"""
+    mine = "S" if b.findtext("type") in ("S", "SJRES") else "H"
+    out = []
+    for it in b.findall("relatedBills/item"):
+        if "Identical bill" not in {x.findtext("type") for x in it.findall("relationshipDetails/item")}:
+            continue
+        t = it.findtext("type") or ""
+        if it.findtext("congress") != str(congress) or t not in PREFIX:
+            continue
+        if ("S" if t in ("S", "SJRES") else "H") != mine:
+            out.append(PREFIX[t] + (it.findtext("number") or ""))
+    return out
+
+
+RANK = {5: 7, 6: 6}  # (a law beats a veto)
+
+
+def pair_identical(recs, texts):
+    """Companion bills, the same bill introduced in each house, as one record, as New York's identical Senate and
+    Assembly bills are: those the Congressional Research Service marks "Identical bill" (in either bill's file: about one
+    pair in fifteen is marked on one side only). The lead is the number that got further (stage, then the latest
+    action); each number keeps its own sponsor, history and status as a version, and its floor votes say which number
+    they were on. A group with more than one bill that reached the President stays apart (none in 2021-26), so no law
+    or veto is lost."""
+    by = {r["nums"][0]: r for r in recs}
+    parent = {}
+
+    def find(x):
+        while parent.setdefault(x, x) != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for r in recs:
+        for o in r["_ident"]:
+            if o in by and o != r["nums"][0]:
+                parent[find(r["nums"][0])] = find(o)
+    groups = defaultdict(list)
+    for n in parent:
+        groups[find(n)].append(by[n])
+    merged = {}
+    for g in groups.values():
+        if len(g) < 2 or sum(1 for r in g if r["stage"] >= 4) > 1:
+            continue
+        g.sort(key=lambda r: (RANK.get(r["stage"], r["stage"]), r["last"]), reverse=True)
+        lead, rest = g[0], g[1:]
+        for r in rest:
+            p = r["nums"][0]
+            for v in r["votes"]:
+                if v[1] == "F":
+                    v[2] = f"{v[2]} of {p}"
+            lead["votes"] += r["votes"]
+            lead["vers"] += r["vers"]
+            lead["nums"].append(p)
+            lead["comms"] = sorted(set(lead["comms"]) | set(r["comms"]))
+            lead["topics"] += [t for t in r["topics"] if t not in lead["topics"]]
+            lead["first"] = min(lead["first"], r["first"])
+            lead["last"] = max(lead["last"], r["last"])
+            lead["cosp"] = max(lead["cosp"], r["cosp"])
+            if lead["nums"][0] not in texts and p in texts:
+                texts[lead["nums"][0]] = texts[p]
+            texts.pop(p, None)
+            merged[p] = lead
+        lead["base"] = lead["nums"]
+    return [r for r in recs if r["nums"][0] not in merged], texts
 
 
 def link_into(recs, index):
@@ -944,7 +1017,8 @@ def link_earlier(session, recs):
         if len(k.split()) < 4 or k not in by:
             continue
         hits = by[k]
-        same = [o for o in hits if o["vers"][0]["sponsor"] == r["vers"][0]["sponsor"]]
+        mine = {v["sponsor"] for v in r["vers"]}  # (companions: either number's sponsor)
+        same = [o for o in hits if mine & {v["sponsor"] for v in o["vers"]}]
         if same:
             r["prev"].add((prev, same[0]["nums"][0]))
         elif len(hits) == 1 and count[k] == 1:
