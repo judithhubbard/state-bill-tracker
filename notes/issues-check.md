@@ -259,6 +259,8 @@ Questions for the owner:
 3. Redistricting includes statewide laws on how counties and cities redraw their own districts. Keep, or legislative and
    congressional maps only?
 4. Nuclear energy includes nuclear plants' security, emergency planning and decommissioning. Keep?
+**Answered 2026-11-17 (owner, agreeing with the drafts):** 1, no: data privacy stays without surveillance and breach laws;
+2, keep both; 3, keep; 4, keep. No rule changes.
 
 # National issues: the fourth ten (2026-11-17)
 
@@ -328,3 +330,4 @@ Questions for the owner:
    lawns). Keep?
 3. Medical debt includes hospital price transparency laws when they bar collecting from patients of noncompliant
    hospitals. Keep?
+**Answered 2026-11-17 (owner, agreeing with the drafts):** keep all three. No rule changes.
