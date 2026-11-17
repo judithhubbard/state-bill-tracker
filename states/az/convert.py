@@ -146,16 +146,25 @@ def roster(session):
     try:
         everyone = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "people.json"), encoding="utf-8"))
     except (OSError, ValueError):
-        return lambda houses, name, day=None: None
+        none = lambda houses, name, day=None: None
+        none.by_id = lambda pid, day=None: None
+        return none
     # A role ending in a session's first two weeks is the term before it (the old terms end on the opening day: Mitzi
     # Epstein's House seat, Alma Hernández's old district).
     first, last = f"{session}-01-15", f"{session + P.YEARS - 1}-12-31"
     cands = defaultdict(list)  # house -> [(person, role, keys)]
+    ids = defaultdict(list)  # person id -> [(person, role)]
+    # Roles that ended in the three months before: a member named on that session's bills though Open States ends the
+    # term on January 1 (Amish Shah, Jennifer Longdon, Leezah Sun on 2024's prefiled bills). Used only for full names.
+    recent = defaultdict(list)
     for p in everyone:
         keys = [n.split() for n in {_key(n) for n in [p["name"]] + p.get("other_names", []) if "," not in n}]
         for r in p["roles"] + ROLE_FIX.get(p["id"], []):
             if (not r["start"] or r["start"] <= last) and (not r["end"] or r["end"] > first):
                 cands[r["house"]].append((p, r, keys))
+                ids[p["id"]].append((p, r))
+            elif r["end"] and f"{session - 1}-10-01" <= r["end"] <= f"{session}-01-01":
+                recent[r["house"]].append((p, r, keys))
     cache = {}
 
     def party_of(p, day):
@@ -174,12 +183,13 @@ def roster(session):
                  lambda w: w[-1:] == words[-1:])
         hits = []
         for test in tests if words else ():
-            for h in houses:
-                seated = [c for c in cands.get(h, []) if (not c[1]["start"] or c[1]["start"] <= day) and (not c[1]["end"] or c[1]["end"] > day)]
-                for pool in (seated, cands.get(h, [])):
-                    hits = list({p["id"]: (p, r) for p, r, keys in pool if any(test(w) for w in keys)}.values())
-                    if hits:
-                        break
+            # Each house's members seated that day, then that session; only then (full names only) recent ones.
+            pools = [p_ for h in houses for p_ in (
+                [c for c in cands.get(h, []) if (not c[1]["start"] or c[1]["start"] <= day) and (not c[1]["end"] or c[1]["end"] > day)],
+                cands.get(h, []))]
+            pools += [recent.get(h, []) for h in houses] if test in tests[:2] else []
+            for pool in pools:
+                hits = list({p["id"]: (p, r) for p, r, keys in pool if any(test(w) for w in keys)}.values())
                 if hits:
                     break
             if hits:
@@ -190,6 +200,17 @@ def roster(session):
             out = {"id": p["id"], "name": p["name"], "party": party_of(p, day), "district": r["district"], "house": r["house"]}
         cache[k] = out
         return out
+
+    def by_id(pid, day=None):
+        """The same answer for a person id (the API's years): their seat that day, else their last one that session."""
+        day = day or f"{session}-03-01"
+        rs = sorted(ids.get(pid, []),
+                    key=lambda x: ((not x[1]["start"] or x[1]["start"] <= day) and (not x[1]["end"] or x[1]["end"] > day), x[1]["end"] or "9999"))
+        if not rs:
+            return None
+        p, r = rs[-1]
+        return {"id": p["id"], "name": p["name"], "party": party_of(p, day), "district": r["district"], "house": r["house"]}
+    resolve.by_id = by_id
     return resolve
 
 
@@ -298,13 +319,15 @@ def load_session(session):
         day0 = min((s[0] for s in steps if s[0]), default=None)
         for s in spons:
             person = s.get("person") or {}
-            if not person.get("id") and b.get("bulk"):
-                # The bulk file names sponsors without ids: tie the name to who held a seat that session, in the bill's
-                # house first.
-                hit = resolve(origin + other, text(s.get("name")), day0)
-                if hit:
-                    person = {"id": hit["id"], "party": hit["party"], "current_role": {"org_classification": "upper" if hit["house"] == "S" else "lower"}}
-                    district = district or (hit["district"] if not names else 0)
+            # The bulk file (2023), and some of the API's sponsorships (239 in 2024: members who had left), name sponsors
+            # without ids: tie the name to who held a seat that session, in the bill's house first. With an id, the same
+            # people data gives the session's district (and the party of a member the API no longer describes).
+            hit = resolve.by_id(person.get("id"), day0) if person.get("id") else resolve(origin + other, text(s.get("name")), day0)
+            if hit:
+                role = {"org_classification": "upper" if hit["house"] == "S" else "lower"}
+                person = dict(person, id=hit["id"], party=person.get("party") or hit["party"], current_role=role)
+                district = district or (hit["district"] if not names else 0)
+                if not seat_of.get(hit["id"]):
                     s = dict(s, name=hit["name"])
             sid = seat_of.get(person.get("id"))
             name = people[sid]["name"] if sid else text(s.get("name"))

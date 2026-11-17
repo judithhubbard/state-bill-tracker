@@ -337,7 +337,12 @@ from that repo. **Nothing here may change it.**
   missing from his file. Every 2023 sponsor name (6,384 on 1,562 bills) gets a party, and the
   prime sponsor's 2023 district goes on the bill; every roll-call name resolves to a 2023 member, but, as in the API's
   years, a vote is tied to a seat only when the voter holds one now (their current seat) (62% of 2023's not-yes names; the rest are
-  members who have since left, kept as names: "S?Juan Mendez"). `states/az/azleg.py` reads www.azleg.gov at its 120-second crawl delay (member rosters for phones and
+  members who have since left, kept as names: "S?Juan Mendez"). The API's years use the same people data: a sponsorship
+  without an id (239 in 2024, members who had left) is matched by name the same way, also against roles that ended in the
+  three months before the session for full names (Open States ends Amish Shah's, Jennifer Longdon's and Leezah Sun's terms
+  on January 1, 2024, though they're named on 2024's bills), and one with an id gets that session's district and house
+  (`by_id()`), not the person's current ones. Joseph Chaplik and David Marshall, Sr. left the House mid-2026 (Open States
+  ends their terms March 25 and April 22; their last votes are February 26 and April 16), so their 2026 votes are names. `states/az/azleg.py` reads www.azleg.gov at its 120-second crawl delay (member rosters for phones and
   rooms; the committee pages list meetings only, so there are no chairs yet; resolutions' official titles to tell
   constitutional amendments from referred measures). `states/az/convert.py` uses Open States' action classifications;
   some committee reports don't name their committee. Open States has no chapter numbers, and about 10 bills a year stop
