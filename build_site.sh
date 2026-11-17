@@ -16,41 +16,61 @@ rm -rf "$OUT" && mkdir -p "$OUT"
 # Each state's pages from earlier builds, with the fingerprint they were built from.
 BUILT=${BUILT:-built}
 mkdir -p "$BUILT"
-REBUILT=""
-for s in $STATES; do
+# Each state is built on its own (build_one), several at a time (JOBS, default 4: GitHub's runners have 4 cores), the
+# biggest first, so a change to the shared code rebuilds all states in about a quarter of the time. Each leaves its
+# outcome in $BUILT/<state>.result (rebuilt, failed, kept, copy or skip); the pages are copied into $OUT afterwards, in order.
+build_one() {
+  s=$1
+  rm -f "$BUILT/$s.result"
   # A state whose first full download is still building up over several runs (data/<state>/incomplete, written by
   # its fetch.py) waits: a partial copy would make a misleading site, or fail the build for every state.
   # A state already on the site whose latest run was cut off mid-refresh (many downloads mark every run until it
   # finishes) keeps its last build's pages until a run finishes.
   if [ -f "data/$s/incomplete" ]; then
-    if [ -f "$BUILT/$s/index.html" ]; then echo "$s: download not finished; keeping the last build's pages"; cp -R "$BUILT/$s" "$OUT/$s"
-    else echo "$s: download not complete yet; not built"; fi
-    continue
+    if [ -f "$BUILT/$s/index.html" ]; then echo "$s: download not finished; keeping the last build's pages"; echo copy > "$BUILT/$s.result"
+    else echo "$s: download not complete yet; not built"; echo skip > "$BUILT/$s.result"; fi
+    return
   fi
   # No data yet (a new state whose first download on GitHub hasn't run, so its cache is empty): nothing to build. Files
   # kept in git (data/la/district_towns.json) and the "last checked" mark don't count.
-  if [ "$s" != "ny" ] && [ -z "$(ls -A "data/$s" 2>/dev/null | grep -v '^last_checked$' | while read -r f; do git ls-files --error-unmatch "data/$s/$f" >/dev/null 2>&1 || echo "$f"; done)" ]; then echo "$s: no data yet; not built"; continue; fi
+  if [ "$s" != "ny" ] && [ -z "$(ls -A "data/$s" 2>/dev/null | grep -v '^last_checked$' | while read -r f; do git ls-files --error-unmatch "data/$s/$f" >/dev/null 2>&1 || echo "$f"; done)" ]; then
+    echo "$s: no data yet; not built"; echo skip > "$BUILT/$s.result"; return
+  fi
   # SITE_BASE (the preview's address) gives each state its own: SITE_BASE/nj/, SITE_BASE/va/.
   if [ -n "$SITE_BASE" ]; then export SITE_URL="${SITE_BASE}$s/"; fi
   # A state whose data, code and settings haven't changed since the last build (state_hash.py; publish.yml keeps
   # $BUILT between runs) is copied from it rather than rebuilt; every state is rebuilt at least once a day.
   hash=$(python3 state_hash.py "$s")
   if [ -f "$BUILT/$s.hash" ] && [ "$(cat "$BUILT/$s.hash")" = "$hash" ] && [ -f "$BUILT/$s/index.html" ]; then
-    echo "$s: unchanged; pages from the last build"
-  else
-    # One state's failure mustn't stop the site: it's built into a new folder, and if the build fails the state keeps
-    # the last build's pages (or is left out if it has none); the failures are listed at the end.
-    rm -rf "$BUILT/$s.new"
-    if python3 build_data.py --state "$s" --github "$BUILT/$s.new"; then
-      rm -rf "$BUILT/$s" && mv "$BUILT/$s.new" "$BUILT/$s"
-      echo "$hash" > "$BUILT/$s.hash"
-      REBUILT="$REBUILT $s"
-    else
-      rm -rf "$BUILT/$s.new"
-      FAILED="$FAILED $s"
-      if [ -f "$BUILT/$s/index.html" ]; then echo "$s: BUILD FAILED; keeping the last build's pages"; else echo "$s: BUILD FAILED; left out"; continue; fi
-    fi
+    echo "$s: unchanged; pages from the last build"; echo copy > "$BUILT/$s.result"; return
   fi
+  # One state's failure mustn't stop the site: it's built into a new folder, and if the build fails the state keeps
+  # the last build's pages (or is left out if it has none); the failures are listed at the end.
+  rm -rf "$BUILT/$s.new"
+  if python3 build_data.py --state "$s" --github "$BUILT/$s.new" > "$BUILT/$s.log" 2>&1; then
+    rm -rf "$BUILT/$s" && mv "$BUILT/$s.new" "$BUILT/$s"
+    echo "$hash" > "$BUILT/$s.hash"
+    echo "$s: rebuilt"; echo rebuilt > "$BUILT/$s.result"
+  else
+    rm -rf "$BUILT/$s.new"
+    echo "$s: BUILD FAILED"; sed 's/^/  /' "$BUILT/$s.log" | tail -40
+    echo failed > "$BUILT/$s.result"
+  fi
+}
+export -f build_one
+export BUILT SITE_BASE
+# Biggest data first, so the long builds start early.
+ORDER=$(for s in $STATES; do if [ "$s" = ny ]; then echo "999999999 ny"; else echo "$(du -sk "data/$s" 2>/dev/null | cut -f1 || echo 0) $s"; fi; done | sort -rn | cut -d' ' -f2)
+printf '%s\n' $ORDER | xargs -P "${JOBS:-4}" -I{} bash -c 'build_one {}'
+REBUILT=""; FAILED=""
+for s in $STATES; do
+  r=$(cat "$BUILT/$s.result" 2>/dev/null || echo failed)
+  case "$r" in
+    rebuilt) REBUILT="$REBUILT $s" ;;
+    failed) FAILED="$FAILED $s"
+      if [ -f "$BUILT/$s/index.html" ]; then echo "$s: build failed; keeping the last build's pages"; else echo "$s: build failed; left out"; continue; fi ;;
+    skip) continue ;;
+  esac
   cp -R "$BUILT/$s" "$OUT/$s"
 done
 echo "rebuilt:${REBUILT:- none}"
