@@ -4723,7 +4723,7 @@ function renderWatchView() {
   if (SHARED && SHARED_META?.error) {
     card.innerHTML = `<h2>Published list</h2><p>${esc(SHARED_META.error)}${back}</p><p><button class="act-btn" type="button" data-wl="mine">Show my own watchlist</button></p>`;
   } else if (SHARED && SHARED_META) {
-    card.innerHTML = `<h2>${esc(SHARED_META.title)}</h2><p>Maintained by <b>${esc(SHARED_META.group)}</b> · ${num(list.length)} bill${list.length === 1 ? "" : "s"} · updated ${fmtDate(SHARED_META.updated.slice(0, 10))}.${back}</p>
+    card.innerHTML = `<h2>${esc(SHARED_META.title)}</h2><p>${SHARED_META.group ? `Maintained by <b>${esc(SHARED_META.group)}</b> · ` : ""}${num(list.length)} bill${list.length === 1 ? "" : "s"} · updated ${fmtDate(SHARED_META.updated.slice(0, 10))}.${back}</p>
       ${SHARED_META.intro ? `<div class="pubintro">${esc(SHARED_META.intro)}</div>` : ""}
       ${SHARED_META.other ? `<p class="muted">This list is for the ${span(SHARED_META.other)} session.</p>` : ""}
       <p><button class="act-btn" type="button" data-wl="import">Add all to my watchlist</button> <button class="act-btn" type="button" data-wl="mine">Show my own watchlist</button></p>`;
