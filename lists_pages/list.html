@@ -82,10 +82,12 @@ async function load() {
   $("bills").innerHTML = sts.map((st) => `<div class="mst">${one ? "" : `<h3><a href="/${st}/">${esc(stName(st))}</a></h3>`}<ol>`
     + by[st].map((x) => billRow({ ...x, stance: x.shown ? x.stance : "" })).join("") + "</ol></div>").join("") || '<p class="muted">No bills on this list yet.</p>';
   $("acts").hidden = false;
-  // A list made here with the list editor: a way back to editing it.
-  const named = readNamed()[LIST.slug];
-  $("edit").hidden = !named;
-  if (named) $("edit").href = `/lists/edit/#${encodeURIComponent(LIST.slug)}`;
+  // A list made in this browser (it holds the list's key): Edit instead of Follow, and never in the lists it follows.
+  const own = !!editKeyFor(LIST.slug);
+  if (own) { const f = readFollows(); if (LIST.slug in f) { delete f[LIST.slug]; writeFollows(f); } }
+  $("follow").hidden = own;
+  $("edit").hidden = !own;
+  if (own) $("edit").href = readNamed()[LIST.slug] ? `/lists/edit/#${encodeURIComponent(LIST.slug)}` : "/your-bills/#starred";
   drawButtons();
 }
 function drawButtons() {
@@ -102,7 +104,7 @@ $("follow").addEventListener("click", () => {
   if (LIST.slug in f) { delete f[LIST.slug]; $("msg").innerHTML = ""; countUse("list/unfollowed"); }
   else {
     f[LIST.slug] = { title: LIST.title, known: ROWS.map((x) => x.key), since: today() };
-    $("msg").innerHTML = 'It&rsquo;s in <a href="/your-bills/">Your bills</a>.';
+    $("msg").innerHTML = `It&rsquo;s in <a href="/your-bills/#tab=${esc(encodeURIComponent(LIST.slug))}">Your bills</a>.`;
     countUse("list/followed");
   }
   writeFollows(f);
