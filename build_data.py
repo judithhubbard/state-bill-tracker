@@ -1250,23 +1250,49 @@ def write_status(session, recs, page, live):
         json.dump({"session": session, "page": page, "live": live, "bills": bills, "alias": alias}, f, separators=(",", ":"), ensure_ascii=False)
 
 
-# On the public site each session's data is three files, so a phone can draw the bill list before the rest arrives,
-# each loaded as soon as the one before it has downloaded (data/v/, named by a hash of the contents, so browsers can keep
-# them for good: build_site.sh's _headers):
-#   <session>.<hash>.list.json: what the first view needs: every bill's stage, topics, committees, sponsors, dates,
-#     places and parties (the filters, their counts, "Where it is now", the header and notice), and the title and
-#     history of the bills the list shows first (FIRST_ROWS, in its usual order: latest action first);
-#   <session>.<hash>.rows.json: every bill's title and history, for any other list of bills;
-#   <session>.<hash>.details.json: what only an opened bill, a text search, the vote and other-session filters,
-#     Statistics, the watchlist's cards and Weigh in use. Per-bill columns (index in the record row, as decode() reads
-#     them), and the session-wide parts:
-DETAIL_COLS = {1: "summary", 14: "lawCode", 19: "hist", 22: "votes", 26: "similar", 28: "vetoNote"}
-DETAIL_EMPTY = {"summary": "", "lawCode": "", "hist": [], "votes": [], "similar": [], "vetoNote": 0}
-DETAIL_TOP = ("insights", "network", "networkSince")
-# A towns list this big (Congress's 35,000 places) waits too; small ones are needed for the sidebar's town picker.
+# On the public site each session's data is split so that a visitor downloads only what they look at (data/v/, each
+# file named by a hash of its contents, so browsers keep them for good: build_site.sh's _headers):
+#   <session>.<hash>.list.json: what the first view and the filters need: every bill's numbers, stage, topics,
+#     committees, sponsors, dates, places, parties and agendas, the titles and histories of the bills the list shows
+#     first (FIRST_ROWS); legislators, contacts.
+#   .rows.json: every bill's title, history and what else only its row, its panel and some filters read (ROW_COLS: the
+#     committees, laws and parties filters, the sort by co-sponsors, How's committees), for any other list of bills and a
+#     search of the titles; fetched when something needs it, or a few seconds after the list is drawn.
+#   .s<k>.json, the shards: everything an opened bill shows (summary, history, co-sponsors, votes, its versions in other
+#     sessions, similar bills, the governor's veto message), with the titles and histories of the similar bills it
+#     names. A bill's shard is shard_of() its number, so opening a bill (or the watchlist) fetches a few small files.
+#   .stats.json (statistics and legislators' profiles: an opened bill's odds line and votes, the Statistics tab),
+#     .net.json (networks, and how far each bill's versions in other sessions got: the history filter, the sort by
+#     sessions, the Statistics tab), .search.json (summaries, for a text search),
+#     .votes.json (the vote filter, a legislator's numbers), .hist.json (other sessions' bill numbers), .cos.json
+#     (co-sponsors: legislators' pages, networks), .towns.json (Congress's 35,000 places): each fetched when needed.
+# The page's data tag names every file (data-parts, data-shards), so a page that outlives a deploy finds the new names.
+# Per-bill columns (index in the record row, as decode() reads them) that the list part leaves empty, for all but the
+# bills the list shows first: in the rows part and the shards (laws, committees, co-sponsors' count, program, law,
+# parties, the main topic, the governor's signing memo, the committee it's in; and each version's co-sponsors' count,
+# status and committee)...
+ROW_COLS = {2: [], 3: [], 10: -1, 12: 0, 15: -1, 16: -1, 21: "", 25: "", 27: ""}
+# ... and in the shards only:
+DETAIL_COLS = {1: "summary", 14: "lawCode", 22: "votes", 26: "similar", 28: "vetoNote"}
+DETAIL_EMPTY = {"summary": "", "lawCode": "", "votes": [], "similar": [], "vetoNote": 0}
+STATS_TOP = ("insights", "profiles", "peers")
+NET_TOP = ("network", "networkSince")
+# A towns list this big (Congress's 35,000 places) waits; small ones are needed for the sidebar's town picker.
 BIG_TOWNS = 500_000
 # The list shows 100 bills at first (tracker.html's PAGE); a few more in case its order differs at the edge.
 FIRST_ROWS = 150
+# About how big (gzipped) a shard is: small on the current session's page, where bills are opened most and a watchlist
+# may need ten; larger on past sessions' pages, to keep the number of files down.
+SHARD_GZ = {"current": 22_000, "past": 120_000}
+
+
+def shard_of(num, n):
+    """Which of n shards holds a bill: FNV-1a of its first number without the version letter (tracker.html's
+    shardOf() is the same)."""
+    h = 0x811C9DC5
+    for c in re.sub(r"[A-Z]$", "", num).encode():
+        h = ((h ^ c) * 0x01000193) & 0xFFFFFFFF
+    return h % n
 
 
 def _keep_none(f):
@@ -1299,24 +1325,67 @@ def _map_veto(v, f):
     return v[:2] + [_keep_none(f)(v[2])] + v[3:] if v else v
 
 
-def split_payload(data):
-    """The public site's three files (above): (list part, rows part, details part). Constitutional amendments keep every
-    field in the list part (whether one is a second passage, shown in its row, can read its summary or its votes), as
-    do lawCodes naming the bills a chapter amendment changes (its row's tag). The strings table is renumbered so each
-    part carries only the strings the parts before it don't."""
+def _own_strings(T, walk):
+    """A part with its own strings table: walk(f) builds the part with every string index passed through f. Returns
+    (the part, its table), the table in the old table's order (so repeated wording stays together)."""
+    seen = set()
+
+    def collect(i):
+        seen.add(i)
+        return i
+    walk(_keep_none(collect))
+    order = sorted(seen)
+    at = {old: k for k, old in enumerate(order)}
+    return walk(_keep_none(at.__getitem__)), [T[i] for i in order]
+
+
+def _gz(obj):
+    return len(gzip.compress(json.dumps(obj, separators=(",", ":"), ensure_ascii=False).encode("utf-8"), 6))
+
+
+def _last_name(n):
+    """tracker.html's lastName(): the last word of a name, without accents, punctuation or "Jr.", in lower case."""
+    import unicodedata
+    n = re.sub("[\u0300-\u036f]", "", unicodedata.normalize("NFD", n or "")).lower()
+    words = [w for w in re.split(r"\s+", re.sub(r"[^a-z\s-]", "", n)) if w not in ("jr", "sr", "ii", "iii")]
+    return (words or [""])[-1]
+
+
+def api_names(legislators, cols, T):
+    """The legislators, each with apiName: the name the bill data uses for them, as tracker.html's setupLegislators()
+    works it out (the sponsor name most often on bills from their seat that shares their last name, else their name)."""
+    named = defaultdict(dict)
+    for vers in cols[17]:
+        for v in vers:
+            sponsor = T[v[1]] if v[1] is not None and v[1] >= 0 else None
+            if sponsor and v[7]:
+                k = f"{v[0][0]}:{v[7]}"
+                named[k][sponsor] = named[k].get(sponsor, 0) + 1
+    out = []
+    for L in legislators:
+        names = sorted(((n, c) for n, c in named.get(L["id"], {}).items() if _last_name(n) == _last_name(L["name"])),
+                       key=lambda x: -x[1])
+        out.append({**L, "apiName": names[0][0] if names else L["name"]})
+    return out
+
+
+def split_payload(data, current=True, hooks=None):
+    """The public site's files (above): (list part, {kind: part}, [shard, ...]). Constitutional amendments keep every
+    field in the list part (whether one is a second passage, shown in its row, can read its summary, votes or other
+    sessions), as do lawCodes naming the bills a chapter amendment changes (its row's tag). hooks: which of the state's
+    settings read a bill's history to word how far it got ({"endedNote": True, "heldAction": False})."""
+    hooks = hooks or {}
     cols, T = data["cols"], data["strings"]
-    lst = {k: v for k, v in data.items() if k not in DETAIL_TOP and k not in ("cols", "strings")}
-    rows = {}
-    det = {"cols": {}, "cos": [], "top": {k: data[k] for k in DETAIL_TOP if k in data}}
+    lst = {k: v for k, v in data.items() if k not in STATS_TOP + NET_TOP and k not in ("cols", "strings")}
+    parts = {"stats": {k: data[k] for k in STATS_TOP if k in data}, "net": {k: data[k] for k in NET_TOP if k in data}}
     if data.get("towns") and len(json.dumps(data["towns"], separators=(",", ":"))) > BIG_TOWNS:
-        det["top"]["towns"] = lst.pop("towns")
+        parts["towns"] = {"towns": lst.pop("towns")}
         lst["townsLater"] = True
-    lst["details"] = True
+    lst["split"] = True
     if not cols:
         lst.update(cols=[], strings=T, rowsIn=[])
-        rows.update(title=[], acts=[], strings=[])
-        det["strings"] = []
-        return lst, rows, det
+        parts["rows"] = {"title": [], "acts": [], "strings": []}
+        return lst, parts, []
     n = len(cols[0])
     keep = {j for j, t in enumerate(cols[4]) if "const" in (t or [])}
     # The list's first page as the page orders it (sortBills()'s "recent": latest action, then furthest along; the
@@ -1327,49 +1396,92 @@ def split_payload(data):
     out[0] = [v if j in shown else "" for j, v in enumerate(cols[0])]
     for i, name in DETAIL_COLS.items():
         col = cols[i]
-        det["cols"][name] = col
         if name == "lawCode":
+            # (A law code is read only to find the bills a chapter amendment changes.)
             out[i] = [v if j in keep or (v and re.search(r"as proposed in", v, re.I)) else "" for j, v in enumerate(col)]
         else:
             out[i] = [v if j in keep else DETAIL_EMPTY[name] for j, v in enumerate(col)]
-    # Each version's history (a version row's 6th field) and co-sponsors (7th).
-    out[17] = [vers if j in keep else [v[:5] + [v[5] if j in shown else [], []] + v[7:] for v in vers]
+    # Other sessions: in the net part, each one's year and how far the bill got there (the history filter, the sort by
+    # sessions, the statistics); with their numbers in the shards and the hist part.
+    out[19] = [h if j in keep else [] for j, h in enumerate(cols[19])]
+    parts["net"]["hist"] = [[[e[0], e[2]] for e in h] for h in cols[19]]
+    for i, empty in ROW_COLS.items():
+        out[i] = [v if j in shown else empty for j, v in enumerate(cols[i])]
+    # Each version's co-sponsors' count (its 3rd field), status (4th), committee (5th), history (6th), co-sponsors (7th)
+    # and, where the legislators are known (the name each goes by in the bill data is worked out here: api_names()), its
+    # sponsor's district (8th).
+    if lst.get("legislators"):
+        lst["legislators"] = api_names(lst["legislators"], cols, T)
+    out[17] = [vers if j in keep else [v[:2] + ([v[2], v[3], v[4], v[5]] if j in shown else [0, -1, -1, []]) + [[]]
+                                       + [0 if lst.get("legislators") else v[7]] + v[8:]
+                                       for v in vers]
                for j, vers in enumerate(cols[17])]
-    rows["title"] = cols[0]
-    acts = [[v[5] for v in vers] for vers in cols[17]]
-    cos = [[v[6] for v in vers] for vers in cols[17]]
-    # Strings: the list part's first, then the rows part's, then the details part's (each in their old order).
-    order, seen = [], set()
-
-    @_keep_none
-    def collect(i):
-        if i not in seen:
-            seen.add(i)
-            order.append(i)
-        return i
-
-    def take(walk):
-        before = len(order)
-        walk()
-        order[before:] = sorted(order[before:])
-        return len(order) - before
-
-    a = take(lambda: _map_strings(out, collect))
-    b = take(lambda: [collect(x[1]) for bill in acts for ver in bill for x in ver])
-    take(lambda: ([collect(x) for bill in cos for ver in bill for x in ver],
-                  [_map_votes(v, collect) for v in det["cols"]["votes"]],
-                  [_map_veto(v, collect) for v in det["cols"]["vetoNote"]]))
-    f = _keep_none({old: i for i, old in enumerate(order)}.__getitem__)
-    lst["cols"] = _map_strings(out, f)
-    lst["strings"] = [T[i] for i in order[:a]]
+    lst["cols"], lst["strings"] = _own_strings(T, lambda f: _map_strings(out, f))
     lst["rowsIn"] = sorted(shown)
-    rows["acts"] = [[[[x[0], f(x[1])] for x in ver] for ver in bill] for bill in acts]
-    rows["strings"] = [T[i] for i in order[a:a + b]]
-    det["cos"] = [[[f(x) for x in ver] for ver in bill] for bill in cos]
-    det["cols"]["votes"] = [_map_votes(v, f) for v in det["cols"]["votes"]]
-    det["cols"]["vetoNote"] = [_map_veto(v, f) for v in det["cols"]["vetoNote"]]
-    det["strings"] = [T[i] for i in order[a + b:]]
-    return lst, rows, det
+    acts = lambda j, f: [[[a[0], f(a[1])] for a in v[5]] for v in cols[17][j]]
+    cos = lambda j, f: [[f(x) for x in v[6]] for v in cols[17][j]]
+    # A bill's ROW_COLS: [laws, committees, co-sponsors, program, law, parties, main topic, [[co-sponsors, status,
+    # committee] for each version], signing memo, committee].
+    g = _keep_none
+    more = lambda j, f: [[g(f)(x) for x in cols[2][j]], [g(f)(x) for x in cols[3][j]], cols[12][j], g(f)(cols[15][j]),
+                         g(f)(cols[16][j]), cols[21][j], cols[25][j], [[v[2], g(f)(v[3]), g(f)(v[4])] for v in cols[17][j]],
+                         cols[27][j], g(f)(cols[10][j])]
+    # A chapter amendment's panel shows the memo of the law it changes (tracker.html's amendedBills(), chapterAmendment():
+    # the first bill with either number): that bill comes with its shard too.
+    first_with = {}
+    for j in range(n):
+        for v in cols[17][j]:
+            first_with.setdefault(re.sub(r"[A-Z]$", "", v[0]), j)
+
+    def changes(j):
+        m = re.search(r"as proposed in (?:legislative bills? (?:numbers? )?)?S\.?\s?(\d+)[-A-Z]*\s*(?:&|and)\s*A\.?\s?(\d+)",
+                      cols[14][j] or "", re.I)
+        found = [first_with[k] for k in (f"S{m[1]}", f"A{m[2]}") if k in first_with] if m else []
+        return {min(found)} if found else set()
+    rows, rs = _own_strings(T, lambda f: [[acts(j, f), more(j, f)] for j in range(n)])
+    parts["rows"] = {"title": cols[0], "acts": [x[0] for x in rows], "more": [x[1] for x in rows], "strings": rs}
+    parts["search"] = {"summary": cols[1]}
+    votes, vs = _own_strings(T, lambda f: [_map_votes(v, f) for v in cols[22]])
+    parts["votes"] = {"votes": votes, "strings": vs}
+    parts["hist"] = {"hist": cols[19]}
+    c, cs = _own_strings(T, lambda f: [cos(j, f) for j in range(n)])
+    parts["cos"] = {"cos": c, "strings": cs}
+    # The shards. Each bill: [index, number, title, history, summary, other sessions, votes, similar bills, veto
+    # message, co-sponsors, ROW_COLS]; then the similar bills they name that are in neither the shard nor the list part:
+    # [index, number, title], with its history and ROW_COLS where the panel's word for how far it got can depend on the
+    # history (tracker.html's endedOf(): a state's endedNote for bills that haven't passed both houses, its heldAction for
+    # bills in committee).
+    num = lambda j: cols[17][j][0][0]
+    entry = lambda j, f: [j, num(j), cols[0][j], acts(j, f), cols[1][j], cols[19][j], _map_votes(cols[22][j], f),
+                          cols[26][j], _map_veto(cols[28][j], f), cos(j, f), more(j, f)]
+    with_acts = lambda j: (hooks.get("endedNote") and cols[6][j] <= 2) or (hooks.get("heldAction") and cols[6][j] == 0)
+    target = SHARD_GZ["current" if current else "past"]
+
+    def make(count):
+        members = defaultdict(list)
+        for j in range(n):
+            members[shard_of(num(j), count)].append(j)
+        out = []
+        for k in range(count):
+            mine = members.get(k, [])
+            whole = set().union(*[changes(j) for j in mine]) - set(mine) - shown
+            extra = sorted(({x[0] for j in mine for x in cols[26][j]} | whole) - set(mine) - shown)
+            part, strings = _own_strings(T, lambda f: {"b": [entry(j, f) for j in mine],
+                                                       "x": [[j, num(j), cols[0][j]] + ([acts(j, f), more(j, f)] if with_acts(j) or j in whole else [])
+                                                             for j in extra]})
+            part["strings"] = strings
+            out.append(part)
+        return out
+    # As many as make them about the target size: a first guess from the bills' own data, then once more from the
+    # shards' real size (each carries its own strings and its similar bills' titles).
+    count = max(1, -(-_gz(_own_strings(T, lambda f: [entry(j, f) for j in range(n)])) // target))
+    shards = make(count)
+    size = sum(_gz(x) for x in shards)
+    if count > 1 or size > target * 1.5:
+        again = max(1, round(size / target))
+        if again != count:
+            shards = make(again)
+    return lst, parts, shards
 
 
 def frame_tabs(page, kind):
@@ -1643,21 +1755,28 @@ def main():
             for name in os.listdir(os.path.join(HERE, "static")):
                 with open(os.path.join(HERE, "static", name), "rb") as src, open(os.path.join(GITHUB, name), "wb") as dst:
                     dst.write(src.read())
-            # In three parts (split_payload()), under names that change with their contents (data/v/), so they can be
-            # cached for good; a rebuild replaces the state's whole folder, so old ones don't pile up.
-            lst, rws, det = split_payload(data)
-            parts_ = {kind: json.dumps(part_, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
-                      for kind, part_ in (("list", lst), ("rows", rws), ("details", det))}
-            names_ = {kind: hashed_name(session, kind, text) for kind, text in parts_.items()}
+            # In parts and shards (split_payload()), under names that change with their contents (data/v/), so they can
+            # be cached for good; a rebuild replaces the state's whole folder, so old ones don't pile up.
+            profile_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
+            lst, parts_, shards_ = split_payload(data, session >= current,
+                                                 {k: re.search(rf"\b{k}\b", profile_js) is not None for k in ("endedNote", "heldAction")})
+            dump = lambda part_: json.dumps(part_, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
+            texts_ = {"list": dump(lst), **{kind: dump(part_) for kind, part_ in parts_.items()},
+                      **{f"s{k}": dump(part_) for k, part_ in enumerate(shards_)}}
+            names_ = {kind: hashed_name(session, kind, text) for kind, text in texts_.items()}
             os.makedirs(os.path.join(GITHUB, "data", "v"), exist_ok=True)
-            for kind, text in parts_.items():
+            for kind, text in texts_.items():
                 with open(os.path.join(GITHUB, "data", "v", names_[kind]), "w", encoding="utf-8") as f:
                     f.write(text)
-            # The page's data tag, from a page in the state's folder (prefix "") or one level down ("../"); and a
-            # preload hint, so the list part starts downloading while the page's script is still being read.
+            # The page's data tag, from a page in the state's folder (prefix "") or one level down ("../"): the list
+            # part's address, and the other files' hashes (<session>.<hash>.<kind>.json in data-v: tracker.html's
+            # partUrl()); and a preload hint, so the list part starts downloading while the page's script is read.
+            hash_of = lambda kind: names_[kind].split(".")[1]
+            part_list = " ".join(f"{kind}:{hash_of(kind)}" for kind in parts_)
+            shard_list = " ".join(hash_of(f"s{k}") for k in range(len(shards_)))
             def data_tag(prefix, base=""):
                 return (f'<script type="application/json" id="bill-data" data-src="{prefix}data/v/{names_["list"]}" '
-                        f'data-rows="{prefix}data/v/{names_["rows"]}" data-details="{prefix}data/v/{names_["details"]}" '
+                        f'data-v="{prefix}data/v/" data-session="{session}" data-parts="{part_list}" data-shards="{shard_list}" '
                         f'data-texts="{prefix}data/{session}-text/"'
                         f'{base} data-root="{P.SITE_URL}"></script>')
             def preload(prefix):

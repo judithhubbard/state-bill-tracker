@@ -2073,7 +2073,7 @@ function renderMyReps() {
     el.textContent = chosen.length ? `Yours: ${andList(chosen.map((r) => `${r.title} ${r.name}`))}.` : el.dataset.orig;
   }
   if (!DATA.current || !LEGS.length || PRESET?.who) { box.hidden = true; return; }
-  if (later("act", "myReps", renderMyReps)) return;
+  if (later("act", "myReps", renderMyReps, "myReps", () => ({ parts: DATA.townsLater ? ["towns"] : [] }))) return;
   if (DATA.towns) return renderTownReps(box);
   const reps = myReps(), c = chosenReps();
   const d = countyDistricts(HOME);
@@ -2336,6 +2336,8 @@ function walkCommittees(v, step) {
 let MEETINGS = null;
 function meetings() {
   if (MEETINGS) return MEETINGS;
+  // (Every bill's history: until the rows part is in, the drawing that asked is drawn again once it is.)
+  if (!partReady("rows")) { MISSING.add("rows"); return new Map(); }
   const days = new Map();
   for (const b of BILLS) for (const v of b.vers) walkCommittees(v, (kind, house, comm, d) => {
     if (kind !== "met" || comm === "rules") return;
@@ -2388,8 +2390,8 @@ function holdUp(b, v, oppose) {
   if (toRules && lead) return { leader: true, chairBacks: true,
     note: `It got as far as the Rules Committee in ${toRules[0].slice(0, 4)} but didn't get a vote there. ${runsRules}` };
   if (oppose) return null;
-  // Waiting in committee is normal at first.
-  const skipped = meetingsSkipped(v) >= SKIPPED_ENOUGH;
+  // Waiting in committee is normal at first. (Worked out only when it matters.)
+  const skipped = () => meetingsSkipped(v) >= SKIPPED_ENOUGH;
   const chairName = `${TITLE[house]} ${c.chair}`;
   const sponsors = new Set(b.vers.filter((x) => x.p[0] === house).flatMap((x) => [x.sponsor, ...x.cosponsors]).map(lastName));
   const chairBacks = !!c.chair && sponsors.has(lastName(c.chair));
@@ -2399,9 +2401,9 @@ function holdUp(b, v, oppose) {
   const skipChair = chairBacks ? ` The chair, ${chairName}, is a sponsor but hasn't brought it up for a vote.` : "";
   if (money && most && !budgetPassed()) return { leader: true, gov: true, chairBacks, ask: "include it in the budget",
     note: `Bills that cost money often wait for the budget, which ${EXEC.the} and the ${lead ? leadTitle : "leaders"} negotiate until about April. Ask them to include it.${skipChair}` };
-  if (money && most && skipped) return { leader: true, gov: true, chairBacks,
+  if (money && most && skipped()) return { leader: true, gov: true, chairBacks,
     note: `Most of the committee's members sponsor this bill, but it's stuck in ${commPlain(c.name)}, where bills that cost money often wait on the budget. ${lead ? `The ${leadTitle} and ${EXEC.the} have` : `${EXEC.The} has`} a big say in that.${skipChair}` };
-  if (chairBacks && most && skipped) return { leader: true, chairBacks,
+  if (chairBacks && most && skipped()) return { leader: true, chairBacks,
     note: `The chair, ${chairName}, and most of the committee's members sponsor this bill, but it hasn't had a vote. That might mean the decision is being made higher up${lead ? `, by the ${leadTitle}` : ""}.` };
   if (chairBacks) return { chairBacks, note: skipChair.trim() };
   return null;
@@ -2645,7 +2647,7 @@ function renderOpenNow() {
     $("openNow").innerHTML = `<h2>This session is over</h2><p>Every bill in the ${span(DATA.session)} session has been decided or has died.</p>`;
     return;
   }
-  if (later("act", "openNow", renderOpenNow, "openNow")) return;
+  if (later("act", "openNow", renderOpenNow, "openNow", () => ({ parts: PRESET?.who ? ["rows", "cos"] : ["rows"] }))) return;
   // On a legislator's page, only bills they sponsor or co-sponsor.
   const L = PRESET?.who && LEG_BY_ID[PRESET.who];
   const mine = (b) => !L || sponsoredBy(b, L, true);
@@ -2693,6 +2695,7 @@ function comingUp(mine) {
 
 // Bills from the last session's watchlist that are back this session under new numbers.
 const CARRY_STORE = () => `${STORE}carried:${DATA.session}`;
+const carryWanted = () => DATA.current && !SHARED && !PRESET && [...WATCH.keys()].some((k) => k.startsWith(`${DATA.session - YEARS}:`));
 function carryCandidates() {
   if (!DATA.current || SHARED || PRESET) return [];
   const prev = DATA.session - YEARS, handled = new Set(recallCarry());
@@ -2879,7 +2882,7 @@ function showStatSec(id) {
   for (const b of document.querySelectorAll("#statTabs button")) b.setAttribute("aria-pressed", b.dataset.sec === id);
   try { localStorage.setItem(STORE + "statsec", id); } catch (e) {}
   // (The network and "Who works on what" are drawn only once "Explore more" is open: they measure the space they have.)
-  const shown = $("statMore").open && DETAILS_READY;
+  const shown = $("statMore").open;
   if (id === "statNet" && shown) renderNet();
   // The topic choice and the "leave out" box don't apply to these two sections.
   document.querySelector(".stattopic").hidden = $("statMore").open && ["statWho", "statTrend"].includes(id);
@@ -3013,6 +3016,7 @@ function whoPanel() {
   return `<p class="muted">Click a dot to see where that legislator's bills go, or a topic to see who leads on it. Drag a topic around the ring to rearrange it; the dots follow.</p>`;
 }
 function renderWho() {
+  if (waitParts(["stats"], "statWho", renderWho)) return;
   const box = $("statWho");
   if (!DATA.current || !LEGS.length) { box.innerHTML = ""; return; }
   if (!WHO || WHO.house !== whoHouse) WHO = whoData();
@@ -3084,6 +3088,7 @@ function spark(series, cls, w = 170, h = 44, max = null) {
   }).join("")}</svg>`;
 }
 function renderTrends() {
+  if (waitParts(["stats"], "statTrend", renderTrends)) return;
   const T = DATA.insights?.trends;
   const box = $("statTrend");
   if (!T) { box.innerHTML = ""; return; }
@@ -3194,6 +3199,8 @@ function savedNet(v) {
 function renderNet() {
   const box = $("statNet");
   const live = DATA.current && LEGS.length && netPeriod === "now";
+  // (Drawn live from the co-sponsors; the build's networks come in the net part.)
+  if (waitParts(live ? ["stats", "net", "cos"] : ["stats", "net"], "statNet", renderNet)) return;
   const saved = DATA.current ? DATA.networkSince : DATA.network;
   if (!live && !saved) { box.innerHTML = ""; return; }
   const t = $("statTopic").value || "all";
@@ -3316,7 +3323,7 @@ function persCard(n, title) {
   const entries = new Map();
   // With two versions in one session, show the one that got furthest (vetoed ranks below signed).
   const rank = (st) => (st === 6 ? 4.5 : st);
-  for (const e of b ? b.hist : []) if (e[0] < DATA.session && (!entries.has(e[0]) || rank(e[2]) > rank(entries.get(e[0])))) entries.set(e[0], e[2]);
+  for (const e of b ? b.earlier : []) if (e[0] < DATA.session && (!entries.has(e[0]) || rank(e[2]) > rank(entries.get(e[0])))) entries.set(e[0], e[2]);
   if (b) entries.set(DATA.session, b.stage);
   const first = Math.min(...entries.keys());
   const dots = [];
@@ -3504,7 +3511,8 @@ function statView() {
     committees: { current: pick(I.committees.current), past: pick(I.committees.past) }, commFate: pick(I.commFate) };
 }
 function renderStats() {
-  if (later("stats", "stats", renderStats, "statFunnel")) return;
+  if (later("stats", "stats", renderStats, "statFunnel", () => ({ parts: ["stats", "net"] }))) return;
+  setupStats();
   const I = statView();
   if (!I) return;
   const t = $("statTopic").value || "all";
@@ -3676,7 +3684,7 @@ function legLink(house, name) {
 
 // A legislator's own numbers, next to the typical (median) member of their party in their house.
 function renderPersonStats(L) {
-  if (later("person", "stats", () => renderPersonStats(L), "personStats")) return;
+  if (later("person", "stats", () => renderPersonStats(L), "personStats", () => ({ parts: ["cos", "votes", "stats"] }))) return;
   const me = DATA.profiles?.[L.id];
   if (!me) { $("personStats").innerHTML = `<p class="muted">No numbers for this legislator.</p>`; return; }
   const party = /Democrat/.test(L.party || "") ? "D" : /Republican/.test(L.party || "") ? "R" : null;
@@ -3979,13 +3987,17 @@ function renderList() {
       ? `<button class="act-btn" type="button" data-starall="add" title="Star every bill shown">☆ Add ${toAdd.length === rows.length ? `all ${num(rows.length)}` : `${num(toAdd.length)} more`} to watchlist</button>`
       : "";
   const slice = rows.slice(0, state.shown);
-  // Bills whose titles and histories haven't come yet (the rows part): the ones before them, then "Loading…", and
-  // the whole list once they're in.
+  // Bills whose titles and histories haven't come yet (the rows part, or a bill's shard): the ones before them, then
+  // "Loading…", and the whole list once they're in.
   const wait = slice.findIndex((b) => !b.rowIn);
   if (wait >= 0) {
-    $("list").innerHTML = slice.slice(0, wait).map(billRow).join("") + (DETAILS_FAILED ? DETAILS_ERROR : LOADING_HTML);
+    $("list").innerHTML = slice.slice(0, wait).map(billRow).join("") + (LOAD_FAILED ? DETAILS_ERROR : LOADING_HTML);
     $("more").hidden = true;
-    if (!LIST_LATER) { LIST_LATER = true; whenRows(() => { LIST_LATER = false; if (!needsDetails()) renderList(); }); }
+    if (!LIST_LATER) {
+      LIST_LATER = true;
+      const out = slice.filter((b) => !b.rowIn);
+      (out.length <= 3 ? needBills(out) : need("rows")).then(() => { LIST_LATER = false; if (!listNeeds().length) renderList(); }, () => { LIST_LATER = false; });
+    }
     return;
   }
   if (!slice.length) {
@@ -4251,8 +4263,14 @@ function markSeen(b) { const e = watchEntry(b); if (e && e.seen !== (b.last || "
 // The Watchlist tab: how many bills, and a badge for how many have news.
 let TAB_LATER = false;
 function updateWatchTab() {
-  // (What's new needs the bills' histories: the badge waits for the rows part.)
-  if (!ROWS_READY) { const n = WATCH_COUNT(); $("watchTabCount").innerHTML = n ? ` (${num(n)})` : ""; if (!TAB_LATER) { TAB_LATER = true; whenRows(updateWatchTab); } return; }
+  // (What's new needs the watched bills' histories: the badge waits for them, from their shards, or the rows part for a
+  // long watchlist.)
+  const waiting = BILLS.filter((b) => !b.rowIn && isWatched(b));
+  if (waiting.length) {
+    const n = WATCH_COUNT(); $("watchTabCount").innerHTML = n ? ` (${num(n)})` : "";
+    if (!TAB_LATER) { TAB_LATER = true; (waiting.length <= 20 ? needBills(waiting) : need("rows")).then(() => { TAB_LATER = false; updateWatchTab(); }, () => { TAB_LATER = false; }); }
+    return;
+  }
   const n = WATCH_COUNT(), newsBills = BILLS.filter((b) => isWatched(b) && hasNews(b)), news = newsBills.length;
   const what = newsBills.map((b) => `${b.nums[0]}: ${newsWhat(newActions(b)[0][1], newActions(b)[0][0], b)}`).join("\n");
   $("watchTabCount").innerHTML = (n ? ` (${num(n)})` : "") + (news ? ` <span class="tabnew" title="New since you last looked:\n${esc(what)}">${num(news)} new</span>` : "");
@@ -4645,9 +4663,21 @@ let W_SHARE_OPEN = null;
 function renderWatchView() {
   updateWatchTab();
   if ($("view-watch").hidden) return;
-  if (later("watch", "watch", renderWatchView, "wlList")) return;
+  // (Its bills' shards; the statistics, for deadlines and odds; the other sessions' numbers, for bills from last
+  // session's watchlist that are back.)
+  if (later("watch", "watch", renderWatchView, "wlList", () => ({ bills: SHARED ? BILLS.filter(sharedStance) : BILLS.filter(isWatched),
+    parts: ["stats", ...(carryWanted() ? ["hist"] : [])] }))) return;
   const list = SHARED ? BILLS.filter((b) => sharedStance(b)) : BILLS.filter(isWatched);
   const stanceOf = (b) => (SHARED ? sharedStance(b) : watchStance(b)) || "support";
+  // (Who decides can depend on every bill's history, meetings(): then it's drawn again once the rows part is in.)
+  MISSING.clear();
+  const items = watchItems(list, stanceOf, SHARED ? sharedRank : myRank);
+  if (MISSING.size) {
+    STALE.watch.set("watch", renderWatchView);
+    if (!$("wlList").innerHTML.trim()) $("wlList").innerHTML = LOADING_HTML;
+    Promise.all([...MISSING].map((k) => need(k))).then(() => drawStale("watch"), () => {});
+    return;
+  }
   const back = PRESET?.watch ? ` <a href="${esc(BASE || "./")}">All bills</a>` : "";
   const card = $("wl");
   if (SHARED && SHARED_META?.error) {
@@ -4675,7 +4705,7 @@ function renderWatchView() {
   }
 
   if (!SHARED) showPubViews();
-  const { active, idle, decided } = watchItems(list, stanceOf, SHARED ? sharedRank : myRank);
+  const { active, idle, decided } = items;
   $("wlActions")._items = active;
 
   // Grouped by deadline; each group offers one email per person covering several of its bills.
@@ -4834,8 +4864,11 @@ function fillStaleSelects() {
   if (!DATA || !SELECTS_STALE.size) return;
   const open = $("side").open && $("moreFilters").open;
   for (const [id, [any, opts]] of Object.entries(selectOptions())) {
-    // (The vote and history filters' counts need the votes and other sessions, in the details part.)
-    if (!SELECTS_STALE.has(id) || !(open || state[id]) || ((id === "voted" || id === "hist") && !DETAILS_READY)) continue;
+    if (!SELECTS_STALE.has(id) || !(open || state[id])) continue;
+    // (The vote filter's counts need the votes, the history filter's the other sessions: fetched when the filter can be
+    // seen.)
+    const parts = { voted: ["votes", "stats"], hist: ["net"], comm: ["rows"], party: ["rows"] }[id];
+    if (parts && !partsReady(parts)) { if (opts.length) Promise.all(parts.map((k) => need(k))).then(fillStaleSelects, () => {}); continue; }
     SELECTS_STALE.delete(id);
     const base = BILLS.filter((b) => matches(b, id));
     let counts;
@@ -4851,14 +4884,21 @@ function fillStaleSelects() {
   }
 }
 
-let RENDER_LATER = false;
+let RENDER_LATER = false, SEARCH_LATER = false;
 function render() {
-  // A filter that reads the details part (a text search ...) waits for it: the list says "Loading…" until then.
-  if (needsDetails()) {
-    if (!RENDER_LATER) { RENDER_LATER = true; whenDetails(() => { RENDER_LATER = false; render(); }); }
-    $("list").innerHTML = DETAILS_FAILED ? DETAILS_ERROR : LOADING_HTML;
+  // A filter that reads a part not in yet (a text search, the vote filter ...) waits for it: the list says "Loading…"
+  // until then.
+  const missing = listNeeds();
+  if (missing.length) {
+    if (!RENDER_LATER) { RENDER_LATER = true; Promise.all(missing.map((k) => need(k))).then(() => { RENDER_LATER = false; render(); }, () => { RENDER_LATER = false; }); }
+    $("list").innerHTML = LOAD_FAILED ? DETAILS_ERROR : LOADING_HTML;
     $("more").hidden = true;
     return;
+  }
+  // A text search looks in the summaries too: matches in the titles first, then all of them once they're in.
+  if (state.q && !partReady("search") && !SEARCH_LATER) {
+    SEARCH_LATER = true;
+    need("search").then(() => { SEARCH_LATER = false; if (state.q) render(); }, () => { SEARCH_LATER = false; });
   }
   STAR_UNDO = null; // any change to the view ends the chance to undo "Add all"
   fillSelects();
@@ -4877,20 +4917,23 @@ function render() {
 function fillDetail(el) {
   const d = el.querySelector(".detail");
   if (d.dataset.done) return;
-  // Before the details part is in: "Loading…", then the panel once it arrives (if the bill is still open).
-  if (!DETAILS_READY) {
-    d.innerHTML = DETAILS_FAILED ? DETAILS_ERROR : LOADING_HTML;
-    if (!d.dataset.wait) { d.dataset.wait = "1"; whenDetails(() => { delete d.dataset.wait; if (el.open && el.isConnected) fillDetail(el); }); }
-    return;
-  }
-  d.dataset.done = "1";
   const b = BILLS[+el.dataset.idx];
-  markSeen(b);
-  countUse(`opened/${baseNum(b.nums[0])}`);
-  step("opened a bill");
+  const again = () => { if (el.open && el.isConnected) fillDetail(el); };
+  // Until the bill's shard (and the statistics, for its odds) is in: "Loading…", then the panel (if it's still open).
+  if (!b.full || !partReady("stats")) {
+    if (DATA.hasText) loadBillText(b);  // ("What it does", fetched alongside)
+    return waitIn(d, Promise.all([needBills([b]), need("stats")]), again);
+  }
+  if (!d._counted) {
+    d._counted = true;
+    markSeen(b);
+    countUse(`opened/${baseNum(b.nums[0])}`);
+    step("opened a bill");
+  }
   // On a watchlist card the summary and the key action are already shown above.
   const inCard = el.classList.contains("morebill");
-  d.innerHTML = `${b.summary && !inCard ? `<p>${esc(b.summary)}</p>` : ""}
+  MISSING.clear();
+  const html = `${b.summary && !inCard ? `<p>${esc(b.summary)}</p>` : ""}
     ${panelTags(b, inCard)}
     <p class="textlink">${STATE.textLinks(b)}</p>
     ${chapterAmendment(b)}
@@ -4906,6 +4949,10 @@ function fillDetail(el) {
     ${inCard ? "" : twinLine(b)}
     ${similarBlock(b)}
     <div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>`;
+  // (Who decides can depend on every bill's history: meetings().)
+  if (MISSING.size) return waitIn(d, Promise.all([...MISSING].map((k) => need(k))), again);
+  d.dataset.done = "1";
+  d.innerHTML = html;
 }
 
 const VIEWS = ["bills", "watch", "stats", "how", "act", "person"];
@@ -4927,8 +4974,8 @@ function showView(v, push = true) {
   for (const id of ["bills", "watch", "stats", "how", "act", "person"]) $("view-" + id).hidden = id !== v;
   if (v === "watch") renderWatchView();
   // What wasn't drawn while the tab was hidden (later()); the statistics draw the network themselves.
-  if (STALE[v]?.size) { if (DETAILS_READY) drawStale(v); else for (const fn of [...STALE[v].values()]) fn(); }
-  else if (v === "stats" && statSec === "statNet" && $("statMore").open && DETAILS_READY) renderNet();
+  if (STALE[v]?.size) drawStale(v);
+  else if (v === "stats" && statSec === "statNet" && $("statMore").open) renderNet();
   $("filtered").hidden = v !== "bills";
   // "New here?" belongs with the bill list.
   $("howto").hidden = v !== "bills" || !INTRO_OPEN;
@@ -4942,6 +4989,15 @@ function syncControls() {
 }
 
 function wire() {
+  // A bill pointed at, touched or reached with the keyboard: its shard starts downloading before it's opened.
+  const pre = (e) => { const el = e.target.closest?.(".bill[data-idx], .wcard[data-idx]"); if (el && SPLIT) prefetchBill(BILLS[+el.dataset.idx]); };
+  document.addEventListener("pointerover", pre, { passive: true });
+  document.addEventListener("touchstart", pre, { passive: true });
+  document.addEventListener("focusin", pre);
+  // The watchlist tab, pointed at: its bills' shards.
+  document.addEventListener("pointerover", (e) => {
+    if (SPLIT && DATA && e.target.closest?.('.view-tab[data-view="watch"]')) BILLS.filter(isWatched).forEach(prefetchBill);
+  }, { passive: true });
   $("pipeline").addEventListener("keydown", (e) => { const g = e.target.closest("[data-g]"); if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); g.click(); } });
   $("pipeline").addEventListener("click", (e) => {
     if (e.target.closest(".tip")) return;
@@ -4959,12 +5015,12 @@ function wire() {
   $("q").addEventListener("input", (e) => { clearTimeout(timer); timer = setTimeout(() => {
     state.q = e.target.value.trim(); state.shown = PAGE; render();
     const q = state.q;
-    if (q.length >= 3) { countOnce("search/used"); whenDetails(() => { if (state.q === q && !BILLS.some((b) => matches(b))) countOnce("search/found nothing"); }); }
+    if (q.length >= 3) { countOnce("search/used"); Promise.all([need("rows"), need("search")]).then(() => { if (state.q === q && !BILLS.some((b) => matches(b))) countOnce("search/found nothing"); }, () => {}); }
   }, 180); });
   for (const id of ["comm", "progress", "house", "hist", "intro", "sort", "party", "voted", "changed"]) $(id).addEventListener("change", (e) => { state[id] = e.target.value; state.shown = PAGE; render(); });
   // Opening the filters (or "More filters") counts the lists inside.
   for (const id of ["side", "moreFilters"]) $(id).addEventListener("toggle", fillStaleSelects);
-  $("csv").addEventListener("click", () => { countUse("download"); whenRows(downloadCsv); });
+  $("csv").addEventListener("click", () => { countUse("download"); need("rows").then(downloadCsv, () => {}); });
   $("viewLinkBtn").addEventListener("click", async (e) => {
     const btn = e.currentTarget, link = viewLink();
     countUse("view-link-copied");
@@ -5408,7 +5464,7 @@ function commCounts(keys) {
     <p class="note">${span(DATA.session)} session${DATA.current ? " so far" : ""}. ${S.passedRules || A.passedRules ? "Committee counts leave out Rules. " : ""}${Math.max(S.passedMore, A.passedMore) >= 20 ? "Most bills never leave their first committee, so few are sent to a second; among bills that passed, needing more than one is common." : "Nearly every bill goes to just one committee."}</p>`;
 }
 function renderHowComm() {
-  if (later("how", "comm", renderHowComm, "howComm")) return;
+  if (later("how", "comm", renderHowComm, "howComm", () => ({ parts: ["stats", "rows"] }))) return;
   const I = DATA.insights || {};
   const past = I.committees?.past?.all || {};
   const counts = Object.fromEntries(DATA.commList || []);
@@ -5497,85 +5553,242 @@ function renderHowCal() {
   <p class="note tl-note">${cal.note}</p>`;
 }
 
-// The data's table of repeated strings, kept for the details part (mergeDetails()), which points into it too.
+// The data's table of repeated strings (on the public site, the list part's: each later part brings its own).
 let STRINGS = [];
 const strAt = (i) => (i < 0 ? null : STRINGS[i]);
 const dayOf = (d) => `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
-// The parts of a bill's record that the public site sends in the details part (build_data.py's split_payload()).
+// The parts of a bill's record that the public site sends later (build_data.py's split_payload()), each read with the
+// strings table it came with.
 const decodeSummary = (summary, title) => (summary && summary[0] === "\x01" ? title + summary.slice(1) : summary);
 const decodeSimilar = (similar) => (similar || []).map(([j, s]) => ({ j, s }));
-const decodeVotes = (votes) => (votes || []).map(([house, kind, cm, date, yes, no, ny]) => ({
-  house, kind, committee: strAt(cm), date: dayOf(date), yes, no, notYes: new Map(ny.map(([m, code]) => [STRINGS[m], code])),
+const decodeVotes = (votes, T = STRINGS) => (votes || []).map(([house, kind, cm, date, yes, no, ny]) => ({
+  house, kind, committee: cm < 0 ? null : T[cm], date: dayOf(date), yes, no, notYes: new Map(ny.map(([m, code]) => [T[m], code])),
 }));
 // The governor's veto message: this bill's own, or an earlier version's.
-const decodeVeto = (vetoNote) => (vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: strAt(vetoNote[2]), nums: vetoNote[3], own: !!vetoNote[4], kind: vetoNote[5] || "absolute" } : null);
+const decodeVeto = (vetoNote, T = STRINGS) => (vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: vetoNote[2] < 0 ? null : T[vetoNote[2]], nums: vetoNote[3], own: !!vetoNote[4], kind: vetoNote[5] || "absolute" } : null);
+// Its versions in other sessions: [session, numbers, stage, chapter, veto]. The net part carries only each one's
+// session and stage ([session, stage]); the numbers come with the bill's shard (or the hist part).
+function setHist(b, hist, session = DATA.session) {
+  b.hist = (hist || []).map((e) => (e.length > 2 ? e : [e[0], "", e[1], 0, 0]));
+  b.earlier = b.hist.filter((e) => e[0] < session);
+  b.later = b.hist.filter((e) => e[0] > session);
+}
+// Sponsors' and co-sponsors' parties: [Democrats, Republicans] counts (or, in older data, "D", "R", "DR").
+const partiesOf = (p) => (Array.isArray(p) ? (p[0] && p[1] ? "DR" : p[0] ? "D" : p[1] ? "R" : "") : p || "");
+// A bill's title, history and what only its row, panel and some filters read (from the rows part, or its shard: build_data.py's
+// ROW_COLS): [laws, committees, co-sponsors, program, law, parties, main topic, [[co-sponsors, status, committee] per version],
+// the governor's signing memo, the committee it's in].
+function setRow(b, title, acts, T, more) {
+  const s = (i) => (i < 0 ? null : T[i]);
+  b.title = title;
+  b.vers.forEach((v, k) => { v.actions = ((acts || [])[k] || []).map(([dt, t]) => [dayOf(dt), T[t]]); });
+  if (more) {
+    const [laws, comms, cosp, program, law, parties, mainTopic, vers, memo, comm] = more;
+    Object.assign(b, { laws: laws.map(s), comms: comms.map(s), cosp, program: s(program), law: s(law), memo: memo || "", comm: s(comm),
+      partyCount: Array.isArray(parties) ? parties : [0, 0], parties: partiesOf(parties), mainTopic: mainTopic || (b.topics || [])[0] || "" });
+    b.vers.forEach((v, k) => { const x = vers[k]; if (x) Object.assign(v, { cosp: x[0], statusDesc: s(x[1]), committee: s(x[2]) }); });
+  }
+  b.rowIn = true; b._hay = null;
+  monthsOf(b);
+}
+const setCos = (b, cos, T) => b.vers.forEach((v, k) => { v.cosponsors = ((cos || [])[k] || []).map((i) => (i < 0 ? null : T[i])); });
 
-// The public site sends each session's data in three parts (build_data.py's split_payload()), each fetched as soon as
-// the one before it has downloaded: the list part, drawn first (every bill's stage, topics, sponsors, dates ..., and
-// the titles and histories of the bills the list shows first: b.rowIn); the rows part (every bill's title and
-// history); the details part (summaries, co-sponsors, votes, other sessions, similar bills, statistics). Claude copies
-// carry everything in one. Whatever needs a later part waits for it (whenRows(), whenDetails()), with "Loading…" in
-// its place meanwhile: a list of other bills, an opened bill, a search.
-let ROWS_READY = true, DETAILS_READY = true, DETAILS_FAILED = false;
-const ROWS_WAITING = [], DETAILS_WAITING = [];
-function whenRows(fn) { if (ROWS_READY) fn(); else ROWS_WAITING.push(fn); }
-function whenDetails(fn) { if (DETAILS_READY) fn(); else DETAILS_WAITING.push(fn); }
+// ---- The public site's data, in parts (build_data.py's split_payload()) ----
+// The list part comes first and draws the page; the rows part (every bill's title, history and ROW_COLS) follows at low
+// priority, for other lists of bills; everything else is fetched when something on the page needs it:
+//   - a bill's shard (its summary, history, co-sponsors, votes, other sessions, similar bills, veto message), when the
+//     bill is opened (or pointed at: prefetchBill()), shown on the watchlist, or named in the address (#S1234);
+//   - "stats" (the statistics and legislators' profiles: the Statistics tab, an opened bill's odds line and votes, the
+//     watchlist's deadlines); "net" (the networks, and each bill's other sessions' outcomes: the history filter);
+//   - "search" (the summaries: a text search), "votes" (the vote filter, a legislator's numbers), "hist" (the numbers
+//     of a bill's versions in other sessions: the watchlist's "back this session" box), "cos" (co-sponsors: a
+//     legislator's page, the network), "towns" (Congress's long list of places: "Where you live").
+// What needs a part waits for it with "Loading…" in its place (later(), waitIn()). Claude copies carry everything in
+// one: SPLIT stays null, and every part and bill is ready.
+let SPLIT = null; // { v, session, hashes: {kind: hash}, shards: [hash, ...] }
+let LOAD_FAILED = false, LIST_IN = null;
+const LIST_READY = new Promise((ok) => (LIST_IN = ok));
+const PART_GOT = {}, PART_GETTING = {}, SHARD_GETTING = {};
+const partReady = (k) => !SPLIT || !!PART_GOT[k] || !SPLIT.hashes[k];
+const partsReady = (ks) => ks.every(partReady);
+const partUrl = (kind, hash) => `${SPLIT.v}${SPLIT.session}.${hash}.${kind}.json`;
 const LOADING_HTML = `<p class="muted dload">Loading…</p>`;
-function mergeRows(part) {
-  for (const s of part.strings || []) STRINGS.push(s);
-  BILLS.forEach((b, i) => {
-    if (b.rowIn) return;
-    b.title = part.title[i];
-    const acts = part.acts[i] || [];
-    b.vers.forEach((v, k) => { v.actions = (acts[k] || []).map(([dt, t]) => [dayOf(dt), STRINGS[t]]); });
-    b.rowIn = true; b._hay = null;
-    monthsOf(b);
-  });
-  ROWS_READY = true;
-  for (const fn of ROWS_WAITING.splice(0)) try { fn(); } catch (e) { console.error(e); }
+const DETAILS_ERROR = `<p class="muted dload">This part of the data couldn't be loaded. Reload the page to try again.</p>`;
+function readParts(at) {
+  return { v: at("v"), session: at("session"), src: at("src"),
+    hashes: Object.fromEntries((at("parts") || "").split(" ").filter(Boolean).map((x) => x.split(":"))),
+    shards: (at("shards") || "").split(" ").filter(Boolean) };
 }
-function mergeDetails(det) {
-  for (const s of det.strings || []) STRINGS.push(s);
-  const c = det.cols || {};
-  BILLS.forEach((b, i) => {
-    if (c.summary) b.summary = decodeSummary(c.summary[i], b.title);
-    if (c.lawCode) b.lawCode = c.lawCode[i];
-    if (c.votes) b.votes = decodeVotes(c.votes[i]);
-    if (c.similar) b.similar = decodeSimilar(c.similar[i]);
-    if (c.vetoNote) b.vetoNote = decodeVeto(c.vetoNote[i]);
-    if (c.hist) { b.hist = c.hist[i]; b.earlier = b.hist.filter((e) => e[0] < DATA.session); b.later = b.hist.filter((e) => e[0] > DATA.session); }
-    const cos = det.cos?.[i];
-    if (cos) b.vers.forEach((v, k) => { v.cosponsors = (cos[k] || []).map(strAt); });
-    b._hay = null;
-  });
-  Object.assign(DATA, det.top || {});
-  FOLLOW_UPS = null;
-  DETAILS_READY = true;
-  for (const fn of DETAILS_WAITING.splice(0)) try { fn(); } catch (e) { console.error(e); }
+// A deploy between loading this page and its data replaces the files (their names follow their contents): a missing one
+// sends for the page's new names, once.
+let RENAMED = null;
+function rename() {
+  return (RENAMED ||= (async () => {
+    const page = await (await fetch(location.pathname + location.search, { cache: "no-store" })).text();
+    const tag = page.match(/<script[^>]*id="bill-data"[^>]*>/)?.[0] || "";
+    const at = (k) => tag.match(new RegExp(`data-${k}="([^"]*)"`))?.[1];
+    if (at("parts") != null) Object.assign(SPLIT, readParts(at), { v: SPLIT.v });
+  })());
 }
-// Filters that read the details part: a text search (it looks in summaries), how your legislators voted, co-sponsors,
-// other sessions (and sorting by them); and a legislator's page, whose rows say who co-sponsors.
-const needsDetails = () => !DETAILS_READY && (!!state.q || !!state.voted || (!!state.who && !!state.whoCos) || !!PRESET?.who
-  || !!state.hist || state.sort === "sessions");
+// One file, as JSON. A request that fails on the way (a dropped connection) is tried twice more before the page gives
+// up. (url is a function: a rename changes it.)
+async function getJson(url, priority = "high", tries = 3) {
+  try {
+    const r = await fetch(url(), { priority });
+    if (r.status === 404 && !RENAMED) { await rename(); return getJson(url, priority, tries); }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch (e) { if (tries <= 1) throw e; await new Promise((ok) => setTimeout(ok, 1500)); return getJson(url, priority, tries - 1); }
+}
+function loadFailed(e) {
+  console.error(e);
+  LOAD_FAILED = true;
+  for (const x of document.querySelectorAll(".dload")) x.outerHTML = DETAILS_ERROR;
+}
+// After the list has been painted (a page shown in the background doesn't paint: at most a second's wait).
+const painted = () => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 1000); });
+const MERGE = {
+  rows(p) { BILLS.forEach((b, i) => { if (!b.rowIn) setRow(b, p.title[i], p.acts[i], p.strings, p.more?.[i]); }); },
+  search(p) { BILLS.forEach((b, i) => { if (!b.full) { b.summary = decodeSummary(p.summary[i], b.title); b._hay = null; } }); },
+  votes(p) { BILLS.forEach((b, i) => { if (!b.full) b.votes = decodeVotes(p.votes[i], p.strings); }); },
+  hist(p) { BILLS.forEach((b, i) => { if (!b.full) setHist(b, p.hist[i]); b.histIn = true; }); },
+  cos(p) { BILLS.forEach((b, i) => { if (!b.full) setCos(b, p.cos[i], p.strings); }); },
+  // (With each bill's versions in other sessions as [session, stage]: their numbers come with its shard.)
+  // (And the legislators' profiles: a legislator's page shows only the sessions they served in.)
+  stats(p) { Object.assign(DATA, p); if (PRESET?.who) renderSessions(DATA); },
+  // The networks, and each bill's versions in other sessions as [session, stage] (their numbers come with its shard).
+  net(p) {
+    const { hist, ...rest } = p;
+    Object.assign(DATA, rest);
+    if (hist) BILLS.forEach((b, i) => { if (!b.histIn) setHist(b, hist[i]); });
+  },
+  towns(p) { Object.assign(DATA, p); townPicker(); },
+};
+// A part, fetched once and merged into the bills once the list is in.
+function need(k, priority = k === "rows" ? "low" : "high") {
+  if (partReady(k)) return Promise.resolve();
+  return (PART_GETTING[k] ||= (async () => {
+    const p = await getJson(() => partUrl(k, SPLIT.hashes[k]), priority);
+    await LIST_READY;
+    if (k === "search") await need("rows");  // (a summary is stored after its title)
+    if (k === "rows") await painted();
+    MERGE[k](p);
+    PART_GOT[k] = true;
+  })().catch((e) => { loadFailed(e); throw e; }));
+}
+// Which shard holds a bill: FNV-1a of its first number without the version letter (build_data.py's shard_of()).
+function shardOf(num) {
+  let h = 0x811c9dc5;
+  for (const c of baseNum(num)) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193) >>> 0;
+  return h % SPLIT.shards.length;
+}
+function mergeShard(p) {
+  const T = p.strings;
+  // (Bills are found by index, or by number when the shard comes from a newer build than the list.)
+  const find = (j, num) => (BILLS[j]?.nums[0] === num ? BILLS[j] : BILLS.find((x) => x.nums[0] === num));
+  for (const [j, num, title, acts, summary, hist, votes, similar, veto, cos, more] of p.b) {
+    const b = find(j, num);
+    if (!b) continue;
+    if (!b.rowIn) setRow(b, title, acts, T, more);
+    b.summary = decodeSummary(summary, b.title);
+    setHist(b, hist);
+    b.histIn = true;
+    b.votes = decodeVotes(votes, T);
+    b.similar = b.idx === j ? decodeSimilar(similar) : [];
+    b.vetoNote = decodeVeto(veto, T);
+    setCos(b, cos, T);
+    b._hay = null; b.full = true;
+  }
+  // The similar bills they name: titles, and histories where the panel's word for how far one got reads it (endedOf()).
+  for (const [j, num, title, acts, more] of p.x) {
+    const b = find(j, num);
+    if (!b || b.rowIn) continue;
+    if (acts) setRow(b, title, acts, T, more); else b.title = title;
+  }
+}
+function needShard(k) {
+  const hash = SPLIT.shards[k];
+  return (SHARD_GETTING[hash] ||= (async () => {
+    const p = await getJson(() => partUrl(`s${k}`, SPLIT.shards[k]));
+    await LIST_READY;
+    mergeShard(p);
+    SHARD_GETTING[hash].done = true;
+  })().catch((e) => { delete SHARD_GETTING[hash]; loadFailed(e); throw e; }));
+}
+// Everything these bills' panels and cards show.
+async function needBills(bills) {
+  if (!SPLIT || !SPLIT.shards.length) return;
+  for (let pass = 0; pass < 2; pass++) {
+    const want = [...new Set(bills.filter((b) => !b.full).map((b) => shardOf(b.nums[0])))];
+    if (!want.length) return;
+    await Promise.all(want.map(needShard));
+  }
+  // (A page older than the data, whose bill moved to another shard: what's missing stays empty.)
+  for (const b of bills) if (!b.full) { b.full = true; b.rowIn = true; }
+}
+const billsReady = (bills) => bills.every((b) => b.full);
+// Starts fetching what an opened bill shows, when it's pointed at or touched.
+function prefetchBill(b) {
+  if (!SPLIT || !b || b.full) return;
+  needBills([b]).catch(() => {});
+  need("stats").catch(() => {});
+  if (DATA.hasText) loadBillText(b);
+}
+// What a drawing needs: { parts: [...], bills: [...] }.
+const needsReady = (n) => partsReady(n.parts || []) && billsReady(n.bills || []);
+const fetchNeeds = (n) => Promise.all([...(n.parts || []).map((k) => need(k)), needBills(n.bills || [])]);
+// "Loading…" in a box until a promise settles, then fn().
+function waitIn(box, promise, fn) {
+  box.innerHTML = LOAD_FAILED ? DETAILS_ERROR : LOADING_HTML;
+  if (box.dataset.wait) return;
+  box.dataset.wait = "1";
+  promise.then(() => { delete box.dataset.wait; fn(); }, () => { delete box.dataset.wait; box.innerHTML = DETAILS_ERROR; });
+}
+// A drawing that needs parts: false when they're in; else "Loading…" in its box (when it has none) and true, and fn()
+// once they arrive.
+function waitParts(parts, boxId, fn) {
+  if (partsReady(parts)) return false;
+  const box = $(boxId);
+  if (box) waitIn(box, Promise.all(parts.map((k) => need(k))), fn);
+  else Promise.all(parts.map((k) => need(k))).then(fn, () => {});
+  return true;
+}
+// Parts a drawing turned out to need while it ran (meetings() reads every bill's history): it's drawn again once they're in.
+const MISSING = new Set();
+// The bill list's filters that need a part before anything can be shown: a text search (the titles; the summaries
+// follow), the committee, law and party filters and the sort by co-sponsors (the rows part), how your legislators voted
+// (and the day each joined: the stats part's profiles), co-sponsors (and a legislator's page, whose rows say who
+// co-sponsors, and whose card lists the sessions they served in), other sessions (the history filter, the sort by
+// sessions: the net part).
+function listNeeds() {
+  const n = [];
+  if (state.q || PRESET?.who || state.comm || state.law || state.party || state.sort === "cosp") n.push("rows");
+  if (state.voted) n.push("votes");
+  if (state.voted || PRESET?.who) n.push("stats");
+  if (state.hist || state.sort === "sessions") n.push("net");
+  if ((state.who && state.whoCos) || PRESET?.who) n.push("cos");
+  return n.filter((k) => !partReady(k));
+}
 // Parts of tabs that aren't showing are drawn when the tab is opened, not at every change of the filters: later()
-// keeps what to draw (STALE) and says not to draw now; they also wait for the details part, with "Loading…" meanwhile.
+// keeps what to draw (STALE) and says not to draw now; a drawing that needs data (needs(): { parts, bills }) waits for
+// it, with "Loading…" meanwhile.
 const STALE = { stats: new Map(), act: new Map(), how: new Map(), person: new Map(), watch: new Map() };
-function later(view, key, fn, box) {
-  if (!$("view-" + view).hidden && DETAILS_READY) { STALE[view].delete(key); return false; }
+function later(view, key, fn, box, needs) {
+  const n = needs ? needs() : {};
+  if (!$("view-" + view).hidden && needsReady(n)) { STALE[view].delete(key); return false; }
   STALE[view].set(key, fn);
   if (!$("view-" + view).hidden) {
-    if (box && $(box) && !$(box).innerHTML.trim()) $(box).innerHTML = DETAILS_FAILED ? DETAILS_ERROR : LOADING_HTML;
-    whenDetails(() => drawStale(view));
+    if (box && $(box) && !$(box).innerHTML.trim()) $(box).innerHTML = LOAD_FAILED ? DETAILS_ERROR : LOADING_HTML;
+    fetchNeeds(n).then(() => drawStale(view), () => {});
   }
   return true;
 }
 function drawStale(view) {
-  if ($("view-" + view).hidden || !DETAILS_READY) return;
+  if ($("view-" + view).hidden) return;
   const fns = [...STALE[view].values()];
   STALE[view].clear();
   for (const fn of fns) try { fn(); } catch (e) { console.error(e); }
 }
-const DETAILS_ERROR = `<p class="muted dload">This part of the data couldn't be loaded. Reload the page to try again.</p>`;
 
 // Unpack the compact embedded data (see build_data.py) into one object per bill.
 function decode(raw) {
@@ -5599,17 +5812,16 @@ function decode(raw) {
       link: link == null ? "" : str(link),
       actions: acts.map(([dt, t]) => [day(dt), T[t]]),
     }));
-    return {
-      title, summary, act, lawCode, topics, stage, chapter, veto, cosp, intro, hist, dates,
+    const b = {
+      title, summary, act, lawCode, topics, stage, chapter, veto, cosp, intro, dates,
       partyCount: Array.isArray(parties) ? parties : [0, 0],
-      parties: Array.isArray(parties) ? (parties[0] && parties[1] ? "DR" : parties[0] ? "D" : parties[1] ? "R" : "") : parties || "",
+      parties: partiesOf(parties),
       agenda: (agenda || []).map(([c, when]) => ({ committee: str(c), when })),
       places: (places || []).map((i) => (raw.counties || [])[i] || "?"),
       mainTopic: mainTopic || (topics || [])[0] || "",
       similar: decodeSimilar(similar),
       votes: decodeVotes(votes),
       due: raw.current && stage === 4 ? STATE.govDeadline(dates.deliv, raw.session) : null,
-      earlier: hist.filter((e) => e[0] < raw.session), later: hist.filter((e) => e[0] > raw.session),
       laws: laws.map(str), comms: comms.map(str), law: str(law), program: str(program), comm: str(comm),
       passedIn: passedIn || null, last: day(last),
       sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: flags & 512 ? "place" : ["", "person", "org", "naming"][(flags >> 6) & 3], shell: !!(flags & 256), ballot: !!(flags & 1024),
@@ -5617,7 +5829,14 @@ function decode(raw) {
       vetoNote: decodeVeto(vetoNote),
       nums: v.map((x) => x.p), sponsors: v.map((x) => x.sponsor).filter(Boolean), vers: v,
       rowIn: !rowsIn || rowsIn.has(i),
+      // (On the public site, a bill's panel waits for its shard: needBills().)
+      full: !raw.split,
     };
+    setHist(b, hist, raw.session);
+    // (On the public site the list part has other sessions only for constitutional amendments; the rest come with the
+    // stats part, their numbers with each bill's shard.)
+    b.histIn = !raw.split || topics.includes("const");
+    return b;
   });
   delete raw.rows; delete raw.cols; delete raw.strings;
   return raw;
@@ -5747,7 +5966,8 @@ function setupLegislators(raw) {
   if (raw.legislators && raw.legislators.length) {
     LEGS = raw.legislators.map((L) => {
       const names = Object.entries(named[L.id] || {}).filter(([n]) => lastName(n) === lastName(L.name)).sort((a, b) => b[1] - a[1]);
-      return { ...L, apiName: names.length ? names[0][0] : L.name, label: `${L.title} ${L.name}` };
+      // (On the public site the build has worked it out: its list part leaves out the sponsors' districts.)
+      return { ...L, apiName: L.apiName ?? (names.length ? names[0][0] : L.name), label: `${L.title} ${L.name}` };
     });
   } else {
     const seen = {};
@@ -5764,8 +5984,12 @@ function setupLegislators(raw) {
 
 function openOne() {
   const el = document.querySelector(`#list .bill[data-idx="${ONE}"]`);
-  // (Its row may wait for the rows part.)
-  if (!el && ONE != null && !DETAILS_READY) { const one = ONE; (ROWS_READY ? whenDetails : whenRows)(() => { if (ONE === one) openOne(); }); return; }
+  // (Its row waits for its title and history: its shard.)
+  if (!el && ONE != null && !BILLS[ONE].rowIn) {
+    const one = ONE;
+    needBills([BILLS[one]]).then(() => { if (ONE === one) { if (!document.querySelector(`#list .bill[data-idx="${ONE}"]`)) renderList(); openOne(); } }, () => {});
+    return;
+  }
   if (el) { el.open = true; fillDetail(el); el.scrollIntoView({ block: "start" }); }
 }
 
@@ -5827,6 +6051,17 @@ function monthsOf(b) {
   }
   b.firstMonth = first.slice(0, 7); b.signedMonth = signed ? signed.slice(0, 7) : null;
 }
+// States that find legislators by town (New Jersey) pick the town in the sidebar instead of a county.
+function townPicker() {
+  const you = document.querySelector(".field.you");
+  if (!(DATA.towns && DATA.current && !STATE.townRegions && !you.querySelector("#homeTown"))) return;
+  you.hidden = false;
+  you.querySelector(".hidebox").hidden = $("homeCounty").hidden = true;
+  const label = you.querySelector("label");
+  label.textContent = `Your ${TOWN_WORD.toLowerCase()}`; label.htmlFor = "homeTown";
+  $("homeCounty").insertAdjacentHTML("afterend", `<select id="homeTown">${townOptions(DATA.towns.find((t) => townKey(t) === chosenReps()?.town))}</select>`);
+  $("homeTown").addEventListener("change", (e) => setTown(e.target.value));
+}
 function hydrate(raw) {
   DATA = raw; TOPICS = raw.topics;
   // The session under way: an upcoming session's prefiled bills don't count.
@@ -5875,17 +6110,8 @@ function hydrate(raw) {
   const you = document.querySelector(".field.you");
   you.hidden = !raw.bills.some((b) => b.places.length);
   if (PLACE_WORD !== "county") you.querySelector("label").textContent = `Your ${PLACE_WORD}`;
-  const townPicker = () => {
-    if (!(DATA.towns && raw.current && !STATE.townRegions && !you.querySelector("#homeTown"))) return;
-    you.hidden = false;
-    you.querySelector(".hidebox").hidden = $("homeCounty").hidden = true;
-    const label = you.querySelector("label");
-    label.textContent = `Your ${TOWN_WORD.toLowerCase()}`; label.htmlFor = "homeTown";
-    $("homeCounty").insertAdjacentHTML("afterend", `<select id="homeTown">${townOptions(DATA.towns.find((t) => townKey(t) === chosenReps()?.town))}</select>`);
-    $("homeTown").addEventListener("change", (e) => setTown(e.target.value));
-  };
-  // (A long towns list, Congress's, comes with the details part.)
-  if (raw.townsLater) whenDetails(townPicker); else townPicker();
+  // (A long towns list, Congress's, comes later: the towns part.)
+  townPicker();
   $("law").closest(".field").hidden = !raw.lawList.length;
   // One house: no "has a version in" choice; no parties: no party filter.
   if (UNI) $("house").closest(".field").hidden = true;
@@ -5954,29 +6180,50 @@ function hydrate(raw) {
   renderOpenNow();
   // Claude artifact pages can't hand visitors a file; the download works on GitHub Pages.
   $("csv").hidden = !ROOT;
-  // The Statistics tab's sections, once the statistics (in the details part) are in.
-  whenDetails(() => {
-    // The current page draws its network live; past pages carry one worked out by the build.
-    $("statNetBtn").hidden = !((DATA.current && LEGS.length) || DATA.network);
-    $("statWhoBtn").hidden = !(DATA.current && LEGS.length);
-    try { const s = localStorage.getItem(STORE + "statsec"); if (s && $(s) && !(s === "statNet" && $("statNetBtn").hidden) && !(s === "statWho" && $("statWhoBtn").hidden)) statSec = s; } catch (e) {}
-    // "Repeat tries" needs bills linked across sessions, and two past sessions (a bill and the session before it).
-    if (!linkedSessions() || (DATA.insights?.pastSessions || []).length < 2) { document.querySelector('[data-sec="statPersist"]').hidden = true; if (statSec === "statPersist") statSec = "statOdds"; }
-    // "What's changing" needs subjects picked by hand (TRENDS in the state's profile.py).
-    if (NOPARTY) document.querySelector('[data-sec="statCosp"]').textContent = "Co-sponsors";
-    if (!DATA.insights?.trends?.subjects?.length) { document.querySelector('[data-sec="statTrend"]').hidden = true; if (statSec === "statTrend") statSec = "statOdds"; }
-    try { if (localStorage.getItem(STORE + "statmore")) $("statMore").open = true; } catch (e) {}
-    showStatSec(statSec);
-  });
   const one = openFromHash();
   if (one) showView("bills");
   render();
   if (one) openOne();
-  // The vote filter's counts, once the votes are in.
-  whenDetails(fillStaleSelects);
+}
+// The Statistics tab's sections, set up the first time it's drawn (on the public site the statistics come later).
+let STATS_SET = false;
+function setupStats() {
+  if (STATS_SET) return;
+  STATS_SET = true;
+  // The current page draws its network live; past pages carry one worked out by the build.
+  $("statNetBtn").hidden = !((DATA.current && LEGS.length) || DATA.network);
+  $("statWhoBtn").hidden = !(DATA.current && LEGS.length);
+  try { const s = localStorage.getItem(STORE + "statsec"); if (s && $(s) && !(s === "statNet" && $("statNetBtn").hidden) && !(s === "statWho" && $("statWhoBtn").hidden)) statSec = s; } catch (e) {}
+  // "Repeat tries" needs bills linked across sessions, and two past sessions (a bill and the session before it).
+  if (!linkedSessions() || (DATA.insights?.pastSessions || []).length < 2) { document.querySelector('[data-sec="statPersist"]').hidden = true; if (statSec === "statPersist") statSec = "statOdds"; }
+  // "What's changing" needs subjects picked by hand (TRENDS in the state's profile.py).
+  if (NOPARTY) document.querySelector('[data-sec="statCosp"]').textContent = "Co-sponsors";
+  if (!DATA.insights?.trends?.subjects?.length) { document.querySelector('[data-sec="statTrend"]').hidden = true; if (statSec === "statTrend") statSec = "statOdds"; }
+  try { if (localStorage.getItem(STORE + "statmore")) $("statMore").open = true; } catch (e) {}
+  showStatSec(statSec);
 }
 
 wire();
+// What the address asks for (a bill, a shared or the visitor's watchlist, a search, a legislator's page) starts
+// downloading at once, while the list part is still on its way.
+function prefetchFromAddress() {
+  const h = location.hash, nums = [];
+  const one = h.match(/^#([A-Z]{1,3}\d{1,5})$/i);
+  if (one) nums.push(one[1].toUpperCase());
+  const w = h.match(/^#w=(\d{4})\.([A-Z0-9.-]+)$/);
+  if (w && w[1] === SPLIT.session) nums.push(...w[2].split(".").filter(Boolean).map((n) => n.replace(/^-/, "")));
+  if (h === "#watch" || PRESET?.watch) {
+    try { for (const k of Object.keys(JSON.parse(localStorage.getItem(WATCH_STORE) || "{}"))) if (k.startsWith(`${SPLIT.session}:`)) nums.push(k.slice(k.indexOf(":") + 1)); } catch (e) {}
+  }
+  const v = h.startsWith("#v&") ? new URLSearchParams(h.slice(3)) : null;
+  const early = (k) => need(k, "high").catch(() => {});
+  if (PRESET?.who || v?.get("q")) early("rows");
+  if (PRESET?.who || v?.get("whoCos")) early("cos");
+  if (v?.get("voted")) early("votes");
+  if (!nums.length || !SPLIT.shards.length) return;
+  for (const k of new Set(nums.slice(0, 60).map(shardOf))) needShard(k).catch(() => {});
+  early("stats");
+}
 // Embedded data on the Claude copies is gzipped and base64-encoded; the browser unpacks it.
 async function unpack(b64) {
   const bytes = Uint8Array.from(atob(b64.trim()), (c) => c.charCodeAt(0));
@@ -6002,47 +6249,29 @@ async function unpack(b64) {
     }
     const meta = document.querySelector('meta[name="abt-preset"]');
     if (meta) PRESET = JSON.parse(meta.content);
-    // On the public site the data comes in two files (the list part, then the details part: see whenDetails()), named
-    // by their contents. A deploy between loading this page and its data replaces them: a missing one sends for the
-    // page's new names, once.
-    const urls = { src: el.dataset.src, rows: el.dataset.rows, details: el.dataset.details };
-    let renamed = false;
-    const rename = async () => {
-      renamed = true;
-      const page = await (await fetch(location.pathname + location.search, { cache: "no-store" })).text();
-      for (const k of Object.keys(urls)) { const m = page.match(new RegExp(`data-${k}="([^"]+)"`)); if (m) urls[k] = m[1]; }
-    };
-    // A request that fails on the way (a dropped connection) is tried twice more before the page gives up: without
-    // data, every tab and filter would fail.
-    const get = async (k, tries = 3) => {
-      try {
-        const r = await fetch(urls[k]);
-        if (r.status === 404 && !renamed) { await rename(); return get(k, tries); }
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return await r.text();
-      } catch (e) { if (tries <= 1) throw e; await new Promise((ok) => setTimeout(ok, 1500)); return get(k, tries - 1); }
-    };
-    let raw, rows = null, details = null;
-    if (urls.src) {
-      const text = await get("src");
-      // The rows part downloads while the list is drawn, then the details part (one at a time, so each comes as soon
-      // as it can).
-      if (urls.rows && urls.details) { rows = get("rows"); details = rows.then(() => get("details")); details.catch(() => {}); }
-      raw = JSON.parse(text);
+    // On the public site the data comes in parts (SPLIT: need(), needBills()), named by their contents: the list part
+    // first (already on its way: the page's preload hint), then whatever the page needs.
+    let raw;
+    if (el.dataset.src) {
+      SPLIT = readParts((k) => el.dataset[k]);
+      prefetchFromAddress();
+      raw = await getJson(() => SPLIT.src);
     } else raw = el.dataset.enc === "gzip64" ? JSON.parse(await unpack(el.textContent)) : JSON.parse(el.textContent);
-    if (raw.details && details) ROWS_READY = DETAILS_READY = false;
     hydrate(decode(raw));
-    if (!DETAILS_READY) {
-      // Each after the list has been painted (a page shown in the background doesn't paint: at most a second's wait).
-      const painted = () => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 1000); });
-      const done = rows.then(async (t) => { await painted(); mergeRows(JSON.parse(t)); })
-        .then(() => details).then(async (t) => { await painted(); mergeDetails(JSON.parse(t)); }).catch((e) => {
-        console.error(e);
-        DETAILS_FAILED = true;
-        for (const x of document.querySelectorAll(".dload")) x.outerHTML = DETAILS_ERROR;
-      });
-      // A page with nothing to show until they're in (a legislator's page, a search in a link) keeps its frame till then.
-      if (needsDetails()) await done;
+    LIST_IN();
+    if (SPLIT) {
+      // Every bill's title and history, for any other list of bills: as soon as the visitor reaches for the filters,
+      // the search box, the sort or "Show more", else a few seconds after the list is drawn, when nothing else is
+      // downloading (so a bill opened at once doesn't share the connection with them).
+      const rows = () => need("rows").catch(() => {});
+      for (const id of ["side", "q", "sort", "more", "csv"]) for (const ev of ["pointerover", "focusin", "touchstart"]) $(id)?.addEventListener(ev, rows, { once: true, passive: true });
+      const idle = () => (Object.values(SHARD_GETTING).some((x) => !x.done) ? setTimeout(idle, 1000) : rows());
+      setTimeout(idle, 4000);
+      // A page with nothing to show until a part is in (a legislator's page, a search in a link, a bill named in the
+      // address) keeps its frame till then.
+      const wait = listNeeds().map((k) => need(k));
+      if (ONE != null) wait.push(needBills([BILLS[ONE]]), need("stats"));
+      if (wait.length) await Promise.all(wait).catch(() => {});
     }
   } catch (err) {
     $("list").innerHTML = `<div class="empty">The bill data couldn't be read (${esc(err.message)}). Reload the page to try again.</div>`;

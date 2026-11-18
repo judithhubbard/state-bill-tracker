@@ -2246,9 +2246,10 @@ from that repo. **Nothing here may change it.**
   open over the map). `search_site.py`, run by build_site.sh after issues_site.py, writes search/<st>.json for each
   built state and Congress from its live data/status_<session>.json (the current session and next year's prefiled
   bills; past sessions left out, as they'd more than double the download): number, title cut at 110 characters, stage,
-  "c" for an amendment, the record's other numbers. home.html loads nothing until the first search, then every state's
-  file, or only the state the query names ("texas data center", "NY A5663"; two-letter codes that are words, "in",
-  "or", "me", count only in capitals) or picked in the results. Numbers in any form ("H.B. 1234", "hb1234"; "HB" also
+  "c" for an amendment, the record's other numbers. home.html loads nothing until the search box is focused, then
+  every state's file, the most populous first (`BY_PEOPLE`: Congress, California, Texas ...), four at a time (2026-11-18);
+  a query naming a state ("texas data center", "NY A5663"; two-letter codes that are words, "in", "or", "me", count
+  only in capitals) or one picked in the results loads that one at once. Results update as each file arrives. Numbers in any form ("H.B. 1234", "hb1234"; "HB" also
   finds "H", "LD" Maine's "HLD"; aliases such as NY's other house's number) come first, then bills whose title has
   every word (a word matches the start of a title word; three letters or fewer only whole); bills with most of the
   words show only when none has them all ("No bill has all those words; these have most of them"), rarer words
@@ -2333,19 +2334,47 @@ Read README.md for what each script downloads. This file covers how to change th
     browser by `unpack()`). These are the Claude copies. They have no ROOT, so public-only features are off.
   - with `--github DIR`: the public site. `index.html` is the current session and `<year>.html` the
     past ones; legislator pages go at `/<slug>/` and the watchlist at `/watchlist/`. `github_page()` adds the
-    document head, icons and the analytics tags. Each session's data is three files named by a hash of their contents
-    (`split_payload()`, 2026-11-18), `data/v/<session>.<hash>.list.json`, `.rows.json` and `.details.json`, which
-    build_site.sh's `_headers` lets browsers keep for a year; the page names them (`data-src`, `data-rows`,
-    `data-details`; `data-texts` for the `data/<session>-text/` pieces), preloads the list and fetches each part as
-    soon as the one before it has downloaded. The list part is what the first view needs: every bill's stage, topics,
-    committees, sponsors, dates, places and parties (filters and their counts, "Where it is now", header, notice), and
-    the titles and histories of the first 150 bills in the list's usual order (`FIRST_ROWS`, `rowsIn`); the rows part
-    is every bill's title and history (`b.rowIn`; the watchlist badge's "N new" waits for it); the details part is each
-    bill's summary, co-sponsors, versions in other sessions, votes, similar bills, veto message and full law code
-    (`DETAIL_COLS`), the statistics and networks (`DETAIL_TOP`), and a towns list over 500 KB (Congress's). The strings
-    table is renumbered so each part carries only the strings the parts before it don't. Constitutional amendments keep
-    every field in the list part (`STATE.amendmentFinal` can read a summary or votes, for the row). A new field the first
-    view reads belongs in the list part; test/issues/get.py puts the three back together.
+    document head, icons and the analytics tags. Each session's data is split so a visitor downloads only what they
+    look at (`split_payload()`, 2026-11-18), in files named by a hash of their contents, `data/v/<session>.<hash>.<part>.json`,
+    which build_site.sh's `_headers` lets browsers keep for a year. The page's data tag names them: `data-src` (the list
+    part, preloaded), `data-parts` ("rows:<hash> stats:<hash> ..."), `data-shards` (one hash per shard) and `data-v`,
+    `data-session` (tracker.html's `readParts()`, `partUrl()`); `data-texts` for the `data/<session>-text/` pieces.
+    - The **list part** is what the first view needs: every bill's numbers, stage, topics, sponsors, dates, places,
+      agendas, flags and current committee (the pipeline, the topic counts, the sort, stars, the notice), and
+      everything else about the first 150 bills in the list's usual order (`FIRST_ROWS`, `rowsIn`): titles, histories
+      and `ROW_COLS`. Constitutional amendments keep every field there (`STATE.amendmentFinal` can read a summary,
+      votes or other sessions, for the row), as do law codes naming the bills a chapter amendment changes (other law
+      codes aren't published: nothing shows them). Each legislator carries `apiName`, the name the bill data uses for
+      them, worked out by the build (`api_names()`, as `setupLegislators()` does), so the sponsors' districts it's read
+      from aren't published.
+    - The **rows part** is every bill's title, history and `ROW_COLS` (laws, committees, co-sponsor count, program,
+      law, parties, main topic; each version's co-sponsor count, status and committee): `b.rowIn`. Any other list of
+      bills reads it, and so do a search (titles), the committee, law and party filters and the sort by co-sponsors
+      (`listNeeds()`), their counts (`fillStaleSelects()`) and How's committees. It's fetched (at low priority) when the
+      visitor reaches for the filters, the search box, the sort or "Show more", or when something needs it, else 4
+      seconds after the list is drawn once no shard is downloading.
+    - The **shards** (`.s<k>.json`) hold everything an opened bill shows: summary, history, co-sponsors, votes, its
+      versions in other sessions with their numbers, similar bills, the governor's veto message, and the titles of the
+      similar bills it names (with their histories where the state's `endedNote`/`heldAction` reads them: the build
+      checks profile.js for those names). A bill's shard is FNV-1a of its first number without the version letter,
+      modulo the number of shards (`shard_of()` = tracker.html's `shardOf()`), so a page can fetch it before the list
+      arrives (`#S1234`, a shared `#w=` list, the visitor's own watchlist on `#watch` or /watchlist/:
+      `prefetchFromAddress()`). Each is about 22 KB gzipped on the current session's page and 120 KB on past ones
+      (`SHARD_GZ`): opening a bill fetches one (`needBills()`, `b.full`), and pointing at, touching or tabbing to a
+      row starts it (`prefetchBill()`, which also fetches the bill's text piece). The watchlist tab's "N new" reads
+      the watched bills' shards (the rows part for more than 20).
+    - The other parts are fetched when something needs them (`need(part)`): `stats` (statistics and legislators'
+      profiles: the Statistics tab, an opened bill's odds line and votes, the watchlist's deadlines, How's committees,
+      the vote filter, a legislator's page), `net` (networks, and each bill's versions in other sessions as [session,
+      stage]: the Statistics tab, the history filter, the sort by sessions, `b.earlier`/`b.later`, `b.histIn`),
+      `search` (summaries: a text search shows title matches first, then all once it's in), `votes` (the vote filter, a legislator's
+      numbers), `hist` (other sessions' bill numbers: the watchlist's "back this session" box), `cos` (co-sponsors:
+      legislators' pages, the live network, "Their numbers"), `towns` (a towns list over 500 KB, Congress's: "Where
+      you live").
+    Each part has its own strings table. A new field the first view reads belongs in the list part; one an opened bill
+    reads belongs in the shards. test/issues/get.py puts them back together. Each session is about 7 files plus its
+    shards (NY's 2025-26 about 200, a past NY session about 27): mind Cloudflare Pages' 20,000 files a deployment
+    (build_site.sh warns at 18,000).
 - **.github/workflows/update.yml** downloads, builds and deploys every morning, hourly on weekdays
   January through June (agendas, floor votes), every two hours on weekdays July through December
   (the governor's requests and actions), and on every push to main. Contacts refresh once a day.
@@ -2493,14 +2522,21 @@ Read README.md for what each script downloads. This file covers how to change th
   county, and `LINK_COUNTY` offers to switch back. "Add all to watchlist" is the `#starAllBox` code
   in `renderList()`.
 - **Startup:** `hydrate(raw)` sets `DATA` and `BILLS`, then `wire()` attaches event handlers and
-  `render()` draws the Bills tab. On the public site the rows and details parts follow (`mergeRows()`,
-  `mergeDetails()`); a list of bills not in yet shows "Loading…" until the rows part is in (`renderList()`,
-  `whenRows(fn)`), and anything that needs the details waits with `whenDetails(fn)`: an opened bill (`fillDetail()` shows "Loading…" until then), a search, the vote and
-  co-sponsor and other-session filters (`needsDetails()`: `render()` shows "Loading…" in the list), and legislators' pages (their frame
-  stays until both parts are in). Hidden tabs (Statistics, Watchlist, Weigh in, How, Their numbers) are drawn when
-  opened: their render functions start with `later(view, key, fn, box)`, which keeps them in `STALE` and says "not
-  now"; `showView()` draws what's stale. The "More filters" lists are counted only while the panel is open
-  (`fillStaleSelects()`, on its `toggle`), or when one has a choice made.
+  `render()` draws the Bills tab. On the public site everything else arrives in parts (`need(part)`, merged by
+  `MERGE`) and shards (`needBills(bills)`, `mergeShard()`), each fetched once; on Claude copies `SPLIT` is null and
+  every part and bill is ready (`partReady()`, `b.full`). What needs data waits for exactly that, with "Loading…" in
+  place: a list of bills not in yet (`renderList()`: their shards for up to 3, else the rows part), an opened bill
+  (`fillDetail()`: its shard and the stats part), the list under a search, the vote or co-sponsor filter or on a
+  legislator's page (`listNeeds()`: `render()` shows "Loading…" in the list; the page's frame stays until they're in,
+  as it does for a bill named in the address). Hidden tabs (Statistics, Watchlist, Weigh in, How, Their numbers) are
+  drawn when opened: their render functions start with `later(view, key, fn, box, needs)`, which keeps them in `STALE`
+  and says "not now"; `needs()` returns the parts and bills the drawing reads (the watchlist: its bills, the stats
+  part); `showView()` draws what's stale. A drawing that finds it needs a part only while it runs (`meetings()` reads
+  every bill's history, for "who decides") adds it to `MISSING` and is drawn again once it's in (`fillDetail()`,
+  `renderWatchView()`). `renderNet()`, `renderWho()` and `renderTrends()` wait with `waitParts()`. The "More filters"
+  lists are counted only while the panel is open (`fillStaleSelects()`, on its `toggle`), or when one has a choice made
+  (the vote filter's counts fetch the votes part). The Statistics tab's buttons are set up the first time it's drawn
+  (`setupStats()`).
 
 ## Rules and traps
 
@@ -2511,7 +2547,7 @@ Read README.md for what each script downloads. This file covers how to change th
 - **Only the frame shows until the list is drawn.** CSS (`html:not(.ready)`) shows the title, the tabs (not
   clickable: `pointer-events: none`) and `#frameLoad`, a screen-tall box saying "Loading 13,864 bills…" (the build
   writes the count), and hides everything else until the loader adds `ready` after `hydrate()` (on the public site,
-  once the list part is drawn, before the other two). This stops layout jumps, which Cloudflare scores as CLS, and
+  once the list part is drawn, and what `listNeeds()` or a bill in the address needs). This stops layout jumps, which Cloudflare scores as CLS, and
   early taps that ran code before `DATA` existed. The build writes the header line (`#sessionLabel`), the session
   buttons (`sessions_nav()`), the front page link (`github_page()`) and the tabs the page will have (`frame_tabs()`:
   past sessions, prefiled bills, legislators' pages, /watchlist/) into the page so they don't change on load. Anything added later above the tabs, like a banner that appears after loading, makes

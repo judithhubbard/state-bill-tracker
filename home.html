@@ -1348,8 +1348,9 @@ try { for (let i = 0; i < localStorage.length; i++) if (/^abt:(?:[a-z]{2}:)?watc
 drawMine();
 // "Find a bill": bills by number ("HB 1234", "hb1234", "H.B. 1234", "A5663") or words in the title, in every built state's
 // and Congress's live sessions (current, and next year's prefiled bills), from search/<st>.json (search_site.py). Nothing
-// loads until the first search; a query naming a state ("texas data center", "NY A5663") loads only that state. Best
-// matches first: the number, then every word in the title, then most of the words.
+// loads until the box is focused; then every state, the most populous first (a query naming a state, "texas data
+// center", "NY A5663", loads that one at once). Best matches first: the number, then every word in the title, then most
+// of the words.
 {
   const q = document.getElementById("q"), found = document.getElementById("found");
   const PAGE = 50, SEARCH = {}, ready = {};
@@ -1552,6 +1553,18 @@ drawMine();
   });
   // Back in the box (not from Escape), the last results open again.
   q.addEventListener("focus", () => { if (!quiet && q.value.trim() && found.hidden) run(); });
+  // Going into the box starts loading every state's file, the most populous first (Congress, then California ...), four
+  // at a time, so most are in by the time the words are typed; results update as each arrives.
+  const BY_PEOPLE = "us ca tx fl ny pa il oh ga nc mi nj va wa az tn ma in md mo wi co mn sc al la ky or ok ct ut ia nv ar ms ks nm ne id wv hi nh me mt ri de sd nd ak vt wy".split(" ");
+  let warmed = false;
+  q.addEventListener("focus", () => {
+    if (warmed) return;
+    warmed = true;
+    loadTopics();
+    const all = codes(), queue = [...BY_PEOPLE.filter((c) => all.includes(c)), ...all.filter((c) => !BY_PEOPLE.includes(c))];
+    const next = () => { const st = queue.shift(); if (st) load(st).then(next); };
+    for (let i = 0; i < 4; i++) next();
+  });
   const links = () => [...found.querySelectorAll("li a, li .more")];
   q.addEventListener("keydown", (e) => {
     if (e.key === "ArrowDown" && !found.hidden) { e.preventDefault(); links()[0]?.focus(); }
