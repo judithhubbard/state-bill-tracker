@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Welcome · State Bill Tracker</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<style>
+:root { --paper: #f6f8fb; --ink: #14213d; --navy: #1d3b78; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --paper: #0f1626; --ink: #e6ebf5; --navy: #8fb0f0; color-scheme: dark; } }
+:root[data-theme="dark"] { --paper: #0f1626; --ink: #e6ebf5; --navy: #8fb0f0; color-scheme: dark; }
+body { margin: 0; padding: 40px 16px; background: var(--paper); color: var(--ink); font: 17px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; }
+a { color: var(--navy); }
+</style>
+</head>
+<body>
+<p id="msg">Bringing over your saved bills from Albany Bill Tracker…</p>
+<script>
+// albanybilltracker.org's forwarding pages send visitors here with their saved settings in the address:
+// /welcome/ny/#d=<"g." gzipped or "j." plain JSON, base64url>&to=<a path on this site>. The settings are every
+// localStorage name starting "abt:" there; New York's pages here use the same names (STORE is plain "abt:" for New
+// York in tracker.html), so they're saved as they are, merged with anything this browser already has here:
+// watchlists joined (the newer "last seen" kept), action logs joined by entry id, stances and other lists joined,
+// and any other setting saved only where this browser has none. Then on to the page the visitor asked for.
+(function () {
+  "use strict";
+  var params = new URLSearchParams(location.hash.slice(1));
+  var d = params.get("d") || "", to = params.get("to") || "/ny/";
+  // The data leaves the address straight away (it isn't kept in history or shared by a copied link).
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+
+  // Only a path on this site: "/ny/kelles/#S1234", never "//elsewhere" or "https://...".
+  function safe(path) {
+    try {
+      if (typeof path !== "string" || path.charAt(0) !== "/" || /^\/[\/\\]/.test(path) || /[\u0000-\u001f]/.test(path)) return "/ny/";
+      var u = new URL(path, location.origin);
+      return u.origin === location.origin ? u.pathname + u.search + u.hash : "/ny/";
+    } catch (e) { return "/ny/"; }
+  }
+  var dest = safe(to);
+  var finished = false;
+  function finish(text) {
+    if (finished) return;
+    finished = true;
+    if (text) document.getElementById("msg").textContent = text;
+    location.replace(dest);
+  }
+  setTimeout(function () { finish(); }, 6000);
+
+  function unb64(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function unpack(s) {
+    if (s.indexOf("j.") === 0) return Promise.resolve(new TextDecoder().decode(unb64(s.slice(2))));
+    if (s.indexOf("g.") === 0 && typeof DecompressionStream !== "undefined") {
+      var stream = new Blob([unb64(s.slice(2))]).stream().pipeThrough(new DecompressionStream("gzip"));
+      return new Response(stream).text();
+    }
+    return Promise.reject(new Error("unknown packing"));
+  }
+
+  var parse = function (s) { try { return JSON.parse(s); } catch (e) { return undefined; } };
+  var isObj = function (v) { return !!v && typeof v === "object" && !Array.isArray(v); };
+  // A watchlist entry: { seen, stance }; older pages saved just the date.
+  var entry = function (v) { return typeof v === "string" ? { seen: v, stance: "support" } : v; };
+
+  // The merged value for one name, or null to leave this browser's value alone.
+  function merge(name, mine, theirs) {
+    if (mine === null) return theirs;
+    var a = parse(mine), b = parse(theirs);
+    if (name === "abt:watch" && isObj(a) && isObj(b)) {
+      Object.keys(b).forEach(function (k) {
+        var x = a[k] && entry(a[k]), y = entry(b[k]);
+        if (!x) a[k] = y;
+        else if (y && String(y.seen || "") > String(x.seen || "")) a[k] = y;
+      });
+      return JSON.stringify(a);
+    }
+    if (name === "abt:log" && isObj(a) && isObj(b)) {
+      Object.keys(b).forEach(function (k) {
+        if (!Array.isArray(b[k])) return;
+        var list = Array.isArray(a[k]) ? a[k] : (a[k] = []);
+        var ids = {};
+        list.forEach(function (e) { if (e) ids[e.id] = 1; });
+        b[k].forEach(function (e) { if (e && !ids[e.id]) { list.push(e); ids[e.id] = 1; } });
+      });
+      return JSON.stringify(a);
+    }
+    // Stances on bills not starred, and a group list's notes: theirs added where this browser has none.
+    if ((name === "abt:stance" || /^abt:pubtext:/.test(name)) && isObj(a) && isObj(b)) {
+      Object.keys(b).forEach(function (k) {
+        if (k === "notes" && isObj(a.notes) && isObj(b.notes)) Object.keys(b.notes).forEach(function (n) { if (!(n in a.notes)) a.notes[n] = b.notes[n]; });
+        else if (!(k in a) || a[k] === "" || a[k] === null) a[k] = b[k];
+      });
+      return JSON.stringify(a);
+    }
+    // The watchlist's order and bills already carried into a new session: this browser's first, then theirs.
+    if ((name === "abt:worder" || /^abt:carried:/.test(name)) && Array.isArray(a) && Array.isArray(b)) {
+      b.forEach(function (x) { if (a.indexOf(x) < 0) a.push(x); });
+      return JSON.stringify(a);
+    }
+    return null;
+  }
+
+  if (!d) return finish();
+  unpack(d).then(function (text) {
+    var got = parse(text);
+    if (!got || got.v !== 1 || !isObj(got.keys)) throw new Error("not settings");
+    Object.keys(got.keys).forEach(function (name) {
+      var theirs = got.keys[name];
+      if (name.indexOf("abt:") !== 0 || typeof theirs !== "string") return;
+      try {
+        var v = merge(name, localStorage.getItem(name), theirs);
+        if (v !== null) localStorage.setItem(name, v);
+      } catch (e) {}
+    });
+    finish();
+  }).catch(function () {
+    finish("Your saved bills couldn't be brought over. Taking you to New York's page…");
+  });
+})();
+</script>
+</body>
+</html>

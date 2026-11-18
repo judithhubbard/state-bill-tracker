@@ -168,6 +168,9 @@ for src, path, title, desc in (("yourbills.html", "your-bills", "Your bills · S
     os.makedirs(os.path.join(sys.argv[1], path), exist_ok=True)
     open(os.path.join(sys.argv[1], path, "index.html"), "w").write(page)
 PY
+# Where albanybilltracker.org's forwarding pages send New York's visitors, with their saved settings in the address
+# (/welcome/ny/#d=...&to=/ny/...): lists_pages/welcome-ny.html saves them here and goes on to the page.
+mkdir -p "$OUT/welcome/ny" && cp lists_pages/welcome-ny.html "$OUT/welcome/ny/index.html"
 # Each state's bill data (data/v/<session>.<hash>.list.json, .rows.json and .details.json: build_data.py) is named by its contents,
 # so a browser can keep it for good; a new build gives the page new names. Everything else is checked on each visit.
 printf '/:state/data/v/*\n  Cache-Control: public, max-age=31536000, immutable\n' > "$OUT/_headers"
