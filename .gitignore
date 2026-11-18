@@ -181,3 +181,4 @@ Bulk_files_OpenStates/
 data/us/*
 !data/us/district_towns.json
 !data/us/district_names.json
+.claude/
