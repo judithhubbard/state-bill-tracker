@@ -21,6 +21,11 @@ from that repo. **Nothing here may change it.**
   3. Move New York here last. albanybilltracker.org must keep serving small pages that read each
      visitor's saved watchlist and pass it along while redirecting (a plain Porkbun forward would lose
      them). Map /kelles/ to /ny/kelles/, and so on. Interim forwards must be 302, never 301.
+     **Approved by the owner 2026-11-18:** do it right after statebilltracker.org launches, before the January 2027
+     sessions. albanybilltracker.org's pages become forwarding pages that pass each browser's saved data (watchlist,
+     stances, action log, county; NY's names are the same here: "abt:...") to the matching statebilltracker.org/ny/ page,
+     which saves it and clears it from the address; its published lists are copied from the albany-lists KV (LISTS) to
+     state-lists (state "ny"), keeping their addresses. This is the one change allowed to the AlbanyBillTracker repo.
 - **Decided 2026-10-28:** no new features on albanybilltracker.org (the ny-bill-tracker repo); only fixes and the
   January chores, made there and carried here by hand. New work happens here. **Decided 2026-10-29: leave
   albanybilltracker.org on its own code** (an interim switch of its build to this repo was planned, dry-run on
