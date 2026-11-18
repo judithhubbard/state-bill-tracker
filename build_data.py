@@ -112,6 +112,9 @@ def github_page(html, meta=""):
     # The link to the front page shows from the start (the page would set it once loaded: it mustn't push the title down).
     html = html.replace('<a class="home-link" id="siteHome" href="../" hidden>',
                         f'<a class="home-link" id="siteHome" href="{html_escape(urljoin(P.SITE_URL, "../"))}">', 1)
+    # The named lists' button and menu (lists_pages/named.js), on the public site only: tracker.html's listButton().
+    named = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lists_pages", "named.js")).read()
+    html = html.replace('<script id="state-profile">', f'<script>\n{named}</script>\n<script id="state-profile">', 1)
     split = html.index('<div class="wrap">')
     return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'

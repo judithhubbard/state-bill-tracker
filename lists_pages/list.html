@@ -25,6 +25,20 @@
 .intro p { margin: 0 0 10px; }
 .acts { margin: 0 0 20px; }
 .acts .btn[aria-pressed="true"] { background: var(--navy); color: var(--sheet); }
+/* A bill opens in place: its row is a button, and below it the same card its state's watchlist shows (the state's page
+   in a frame, at #embed=: tracker.html's EMBED). */
+.mst li > .rowbtn { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; width: 100%; padding: 8px 12px; margin: 0;
+  border: 0; background: none; color: var(--ink); font: inherit; font-size: 14.5px; text-align: left; cursor: pointer; }
+.mst li > .rowbtn:hover, .mst li > .rowbtn:focus-visible { background: var(--paper); }
+.mst li > .rowbtn:focus-visible { outline-offset: -3px; }
+.rowbtn .todo::after { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 2px 2px 7px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform .15s; }
+.rowbtn[aria-expanded="true"] .todo::after { transform: rotate(-135deg); margin-bottom: -1px; }
+.rowbtn:hover .todo { color: var(--hover); }
+.emb { border-top: 1px dashed var(--rule); }
+.emb iframe { display: block; width: 100%; height: 0; border: 0; background: var(--sheet); }
+.emb .eload { margin: 0; padding: 10px 12px; color: var(--ink-2); font-size: 14px; }
+.emb .efoot { margin: 0; padding: 4px 12px 10px; font-size: 13.5px; }
+@media (prefers-reduced-motion: reduce) { .rowbtn .todo::after { transition: none; } }
 </style>
 </head>
 <body>
@@ -79,8 +93,10 @@ async function load() {
   const by = {};
   for (const x of ROWS) (by[x.st] ||= []).push(x);
   const sts = Object.keys(by).sort((a, b) => stName(a).localeCompare(stName(b)));
+  // Each bill found in its state's data opens in place (openBill()); one that isn't links to the state's page.
+  ROWS.forEach((x, i) => { x.i = i; });
   $("bills").innerHTML = sts.map((st) => `<div class="mst">${one ? "" : `<h3><a href="/${st}/">${esc(stName(st))}</a></h3>`}<ol>`
-    + by[st].map((x) => billRow({ ...x, stance: x.shown ? x.stance : "" })).join("") + "</ol></div>").join("") || '<p class="muted">No bills on this list yet.</p>';
+    + by[st].map((x) => billRow({ ...x, stance: x.shown ? x.stance : "", open: x.found ? `emb${x.i}` : "" })).join("") + "</ol></div>").join("") || '<p class="muted">No bills on this list yet.</p>';
   $("acts").hidden = false;
   // A list made in this browser (it holds the list's key): Edit instead of Follow, and never in the lists it follows.
   const own = !!editKeyFor(LIST.slug);
@@ -123,7 +139,34 @@ $("addAll").addEventListener("click", () => {
   countUse("list/added all");
   drawButtons();
 });
-$("bills").addEventListener("click", (e) => { if (e.target.closest("li > a")) countUse("list/opened a bill"); });
+// A bill opened in place: its card from the state's watchlist (what's next, who decides and how to reach them, the email to
+// copy, what it does, its history and votes), drawn by the state's own page in a frame (#embed=<session>.<number>, "-"
+// before an opposed bill's number), which downloads only that page's bill list, the bill's details and the statistics.
+// The frame says how tall it is (postMessage) and is sized to fit.
+function openBill(btn) {
+  const box = $(btn.getAttribute("aria-controls")), x = ROWS[+box.id.slice(3)], open = btn.getAttribute("aria-expanded") !== "true";
+  btn.setAttribute("aria-expanded", String(open));
+  box.hidden = !open;
+  if (!open || box.firstChild) return;
+  const name = `${stName(x.st)} ${numText(x.st, x.full)}`;
+  const src = `${x.page}#embed=${x.session}.${x.stance === "oppose" ? "-" : ""}${baseNum(x.full)}`;
+  box.innerHTML = `<p class="eload">Loading…</p><iframe title="${esc(`${name}: what to do, and more about it`)}" src="${esc(src)}"></iframe>`
+    + `<p class="efoot"><a href="${esc(x.href)}">Open ${esc(numText(x.st, x.full))} on ${x.st === "us" ? "the Congress page" : `${esc(stName(x.st))}'s page`}</a></p>`;
+  countUse("list/opened a bill");
+}
+addEventListener("message", (e) => {
+  if (e.origin !== location.origin || typeof e.data?.sbtEmbed !== "number") return;
+  for (const f of $("bills").querySelectorAll(".emb iframe")) {
+    if (f.contentWindow !== e.source) continue;
+    f.style.height = `${Math.max(40, Math.min(e.data.sbtEmbed, 20000))}px`;
+    f.previousElementSibling?.classList.contains("eload") && f.previousElementSibling.remove();
+  }
+});
+$("bills").addEventListener("click", (e) => {
+  const btn = e.target.closest("button.rowbtn");
+  if (btn) return openBill(btn);
+  if (e.target.closest("li > a")) countUse("list/opened a bill");
+});
 addEventListener("hashchange", load);
 load();
 </script>

@@ -100,6 +100,7 @@ select { font: inherit; font-size: 15px; color: var(--ink); background: var(--sh
 </main>
 <script>
 /*common.js*/
+/*named.js*/
 </script>
 <script>
 const MAX = 500;
@@ -111,14 +112,9 @@ const info = (b) => (INFO[b.key] ||= lookUp(b.st, b.session, b.num));
 const say = (t, bad) => { $("saved").textContent = t; $("saved").classList.toggle("err", !!bad); };
 const slugNow = () => decodeURIComponent(location.hash.replace(/^#/, "")).trim();
 
-// ---- Saving: the list as the Worker keeps it, sent a few seconds after the last change ----
-function payload(l) {
-  const bills = l.bills.filter((c) => CROSS_RE.test(c)).slice(0, MAX);
-  const keep = new Set(bills.map((c) => c.replace(/^-/, ""))), notes = {};
-  if (l.group) for (const [k, v] of Object.entries(l.notes || {})) if (keep.has(k) && String(v).trim()) notes[k] = String(v).trim();
-  return { state: "all", title: (l.title || "").trim(), bills, intro: l.group ? (l.intro || "").trim() : "", notes };
-}
-const sig = (p) => JSON.stringify([p.title, p.bills, p.intro, p.notes]);
+// ---- Saving: the list as the Worker keeps it, sent a few seconds after the last change (the format and its signature
+// are named.js's, which the list button beside each bill's star uses too) ----
+const payload = (l) => NamedLists.payload(l), sig = (p) => NamedLists.sig(p);
 // Kept in this browser at once, so a reload or another tab sees it before the Worker does.
 function keep() {
   if (!L.slug) return;
@@ -157,13 +153,13 @@ async function save() {
       await api(`/lists/${encodeURIComponent(L.slug)}`, { method: "PUT", headers: { "X-Edit-Key": L.editKey }, body: JSON.stringify(p) });
       L.saved = s;
     }
-    LAST_SAVE = Date.now();
+    LAST_SAVE = L.savedAt = Date.now();
     keep();
     SAVING = false;
     schedule();
   } catch (e) {
     SAVING = false;
-    if (e.status === 429 && L.slug) { LAST_SAVE = Date.now(); return schedule(); }
+    if (e.status === 429 && L.slug) { LAST_SAVE = L.savedAt = Date.now(); return schedule(); }
     if (e.status === 404 && L.slug) { forget(L.slug); return gone("This list isn't online any more."); }
     say(e.message, true);
   }
@@ -194,13 +190,20 @@ async function openList() {
   // Another list: the search and paste boxes start empty.
   $("q").value = ""; $("paste").value = ""; $("pasteMsg").textContent = ""; $("pasteBox").open = false;
   HITS = []; PARSED = null; LIMIT = PAGE; drawResults();
-  if (!slug || slug === "new") {
+  const fresh = /^new(?:&add=(.*))?$/.exec(slug);
+  if (!slug || fresh) {
     L = { slug: "", editKey: "", title: "", group: "", intro: "", notes: {}, bills: [], saved: "" };
-    return start();
+    const add = parseCross(fresh?.[1] || "");
+    if (add) { L.bills.push(add.key); history.replaceState(null, "", "#new"); countUse("list-editor/new list from a bill"); }
+    start();
+    if (add) schedule();
+    return;
   }
   const mine = readNamed()[slug];
   if (!mine) return gone("This browser can't edit that list. To edit it here, paste its key into Your lists on this device.");
   L = { notes: {}, intro: "", group: "", ...mine, bills: Array.isArray(mine.bills) ? mine.bills : [] };
+  // (A save made from a bill's list button counts toward the Worker's 10 seconds between saves.)
+  LAST_SAVE = L.savedAt || 0;
   start();
   // Unsaved changes here go first; otherwise the Worker's copy is the list.
   if (sig(payload(L)) !== L.saved) return schedule();

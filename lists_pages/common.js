@@ -99,26 +99,30 @@ function plainAct(a) {
 }
 // The status files cut long titles short (about 140 characters): mark the cut.
 const cut = (t) => (t.length >= 120 && !/[.!?)"”']$/.test(t) ? t.replace(/[\s,;:]+$/, "") + "…" : t);
-// One bill's status: {found, full, title, stage, last, action, label, href} (href: its card on the state's page).
+// One bill's status: {found, full, title, stage, last, action, label, href, page} (href: its card on the state's page;
+// page: the session's page, where /list/ opens a bill's card from).
 async function lookUp(st, session, num) {
   const s = await statusOf(st, session);
   const lead = s ? (s.bills[num] ? num : s.alias?.[num]) : null, b = lead && s.bills[lead];
   if (!b) return { found: false, full: num, title: `${session} session`, href: `/${st}/` };
   const [full, title, stage, last, action, comm, kind] = b, page = s.page && s.page !== "./" ? s.page : "";
-  return { found: true, full, title: cut(title), stage, last, action, label: whereText(st, stage, comm, kind, s.live !== false), href: `/${st}/${page}#${full}` };
+  return { found: true, full, title: cut(title), stage, last, action, label: whereText(st, stage, comm, kind, s.live !== false), href: `/${st}/${page}#${full}`, page: `/${st}/${page}` };
 }
 const THIS_YEAR = new Date().getFullYear();
 // A bill's row: number, title, what's new, where it is and when, the list's note and stance, "What to do".
-// x: lookUp()'s answer plus {st, session, fresh, newLine, stance, note, star (the star's HTML), seen (data-seen value)}.
+// x: lookUp()'s answer plus {st, session, fresh, newLine, stance, note, star (the star's HTML), seen (data-seen value),
+// open (on /list/: the id of the box the row opens and closes below it; the row is then a button, not a link)}.
 function billRow(x) {
   const yr = x.session < THIS_YEAR - 1 || x.session > THIS_YEAR ? ` <small>(${x.session})</small>` : "";
-  return `<li${x.star ? "" : ' class="nostar"'}><a href="${esc(x.href)}"${x.seen ? ` data-seen="${esc(x.seen)}"` : ""}>`
+  const tag = x.open ? "button" : "a";
+  return `<li${x.star ? "" : ' class="nostar"'}><${tag} ${x.open ? `type="button" class="rowbtn" aria-expanded="false" aria-controls="${esc(x.open)}"` : `href="${esc(x.href)}"`}${x.seen ? ` data-seen="${esc(x.seen)}"` : ""}>`
     + `<span class="num">${esc(numText(x.st, x.full))}${yr}</span><span class="tt">${esc(x.title)}${x.fresh && !x.newLine ? '<span class="new">New</span>' : ""}</span>`
     + (x.newLine ? `<span class="what"><b>New:</b> ${esc(x.newLine)}</span>` : "")
     + (x.note ? `<span class="note">${esc(x.note)}</span>` : "")
     + `<span class="where">${x.stance ? `<span class="stance ${x.stance}">${x.stance === "oppose" ? "Oppose" : "Support"}</span>` : ""}`
     + (x.found ? `<span class="stg s${x.stage}">${esc(x.label)}</span>${x.last ? `<span>${fmtDay(x.last)}</span>` : ""}` : "")
-    + `<span class="todo">${x.found ? "What to do ›" : "Open ›"}</span></span></a>${x.star || ""}</li>`;
+    + `<span class="todo">${x.open ? "What to do" : x.found ? "What to do ›" : "Open ›"}</span></span></${tag}>${x.star || ""}`
+    + `${x.open ? `<div class="emb" id="${esc(x.open)}" hidden></div>` : ""}</li>`;
 }
 
 // ---- The lists Worker ----

@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>State Bill Tracker</title>
 <meta name="description" content="Follow bills in your state legislature: where each one is, who decides next, and what to ask them.">
+<meta name="lists-api" content="LISTS_API_URL">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -399,6 +400,9 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .star:focus-visible { outline: 3px solid var(--hover); outline-offset: 0; }
 .panel li { position: relative; }
 .panel li a { padding-right: 44px; text-decoration: none; }
+/* The list button (named.js), just left of the star. */
+.panel li > .nlbtn, .found li > .nlbtn { position: absolute; right: 40px; top: 50%; margin-top: -13px; width: 28px; height: 28px; }
+.panel li:has(> .nlbtn) > a, .found li:has(> .nlbtn) > a { padding-right: 74px; }
 /* Congress: one wide tile in the map's empty top row, colored and shaded like a state's, with "U.S." above its name and
    a faint inner ring so it doesn't read as a state. */
 .tiles a.fed, .tiles button.tile.fed, .tiles span.off.fed { aspect-ratio: auto; flex-direction: row; gap: 8px; }
@@ -528,6 +532,9 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
 <script type="application/json" id="after">{}</script>
 <script type="application/json" id="past">{}</script>
 <script type="application/json" id="issues">[]</script>
+<script>
+/*named.js*/
+</script>
 <script>
 // Grid positions (row, column) of a common tile-map layout.
 const GRID = { AK: [0, 0], ME: [0, 10], VT: [1, 9], NH: [1, 10],
@@ -785,7 +792,7 @@ function showPanel(st) {
         || title.toLowerCase().includes(why.toLowerCase()))) why = "";
       if (why) title = title.replace(/[.\s]+$/, "");
       const full = why ? `${title}: ${why}` : title;
-      return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="tags">${partyTag(pc)}<span class="stg s${stage}">${stg}</span></span></a>${raw ? starBtn(st, session, raw, last, num) : ""}</li>`;
+      return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="tags">${partyTag(pc)}<span class="stg s${stage}">${stg}</span></span></a>${raw ? starBtn(st, session, raw, last, num) + listBtn(st, session, raw, `${nameOf(st)} ${num}`) : ""}</li>`;
     }).join("")}</ul>` : "");
     ppFocus(body);
   });
@@ -994,7 +1001,7 @@ function mineView() {
     const f = xs.filter((x) => x.fresh).length;
     by[st] = [xs.length, f]; n += xs.length; fresh += f; states++;
     rows[st] = xs.map((x) => ({ href: x.href, num: numText(st, x.full), title: x.title, stage: x.stage, stg: x.label, fresh: x.fresh, seen: x.seen,
-      star: starBtn(x.st, x.session, x.full, x.last, numText(st, x.full)) }));
+      star: starBtn(x.st, x.session, x.full, x.last, numText(st, x.full)) + listBtn(x.st, x.session, x.full, `${nameOf(st)} ${numText(st, x.full)}`) }));
   }
   return { kind: "mine", label: "★ Your bills", by, rows, step: mineStep, badge: "newn",
     head: `${n} starred bill${n === 1 ? "" : "s"} in ${states} place${states === 1 ? "" : "s"}${fresh ? `; ${fresh} with news since you last looked` : ""}.`,
@@ -1207,6 +1214,10 @@ function starBtn(st, session, num, last, label) {
   return `<button type="button" class="star" data-star="${esc(st)}|${session}|${esc(num)}|${esc(last || "")}" aria-pressed="${on}"`
     + ` aria-label="${esc(`${on ? "Remove" : "Star"} ${label || spaced(num)}${on ? " from your bills" : ": follow it in Your bills"}`)}" title="${on ? "Remove from your bills" : "Star: follow it in Your bills"}">${on ? "★" : "☆"}</button>`;
 }
+// Beside the star, when this browser has lists made with the list editor: a button that adds the bill to them (named.js's
+// menu, which saves the lists to the Worker). The star stays "Your bills".
+function listBtn(st, session, num, name) { return window.NamedLists?.ready() ? NamedLists.button(NamedLists.code(st, session, num), name) : ""; }
+if (window.NamedLists) { NamedLists.setApi(document.querySelector('meta[name="lists-api"]')?.content || ""); NamedLists.wire(); }
 function starClick(e) {
   const b = e.target.closest("button[data-star]");
   if (!b) return false;
@@ -1522,7 +1533,7 @@ drawMine();
       // The session, when the state has two in the search (this one and next year's prefiled bills).
       const sess = (ready[st] || { s: [] }).s.length > 1 ? ` <small>${esc(s.label || String(s.session))}</small>` : "";
       return `<li><a href="${st}/${page}#${esc(num)}" title="${esc(title)}"><span class="fn">${esc(name)} <b>${esc(numText(st, shown))}</b>${sess}${same}</span>`
-        + `<span class="stg s${s.up ? 0 : stage}">${esc(label)}</span><span class="tt">${esc(title)}</span></a>${starBtn(st, s.session, num, "", `${name} ${numText(st, num)}`)}</li>`;
+        + `<span class="stg s${s.up ? 0 : stage}">${esc(label)}</span><span class="tt">${esc(title)}</span></a>${starBtn(st, s.session, num, "", `${name} ${numText(st, num)}`)}${listBtn(st, s.session, num, `${name} ${numText(st, num)}`)}</li>`;
     }).join("");
     const more = hits.length > limit ? `<li><button type="button" class="more">Show ${Math.min(PAGE, hits.length - limit)} more</button></li>` : "";
     // Words found in several places: "Show on the map" shades each state by its matches (searchView()).
@@ -1593,7 +1604,7 @@ drawMine();
         const [num, title, stage, kind] = r;
         return { st, num: numText(st, num), title, stage: s.up ? 0 : stage, href: `${st}/${s.page || ""}#${num}`,
           stg: s.up ? `Prefiled for ${s.session}` : whereText(stage, "", kind === "c" ? "const" : "", s.live !== false),
-          star: starBtn(st, s.session, num, "", `${stateName(st)} ${numText(st, num)}`) };
+          star: starBtn(st, s.session, num, "", `${stateName(st)} ${numText(st, num)}`) + listBtn(st, s.session, num, `${stateName(st)} ${numText(st, num)}`) };
       }));
       issue = null; pinned = null;
       countUse("home/search/shown on the map");

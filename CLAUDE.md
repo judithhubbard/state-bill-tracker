@@ -2506,6 +2506,21 @@ Read README.md for what each script downloads. This file covers how to change th
     saved}); a group code adds the introduction and per-bill notes (`pubText()`). `followedHere()` lists followed lists
     with this state's bills. Old addresses, `watchlist/#list=<slug>`, redirect to /list/ before the data loads; snapshot
     links, `#w=<session>.S1234.-A5678` ("-" means oppose), still open here with "Add all to my watchlist".
+  - A shared list's bills open in place on /list/ (2026-11-18): each row is a button that opens, below it, the bill's
+    state page in a frame at `#embed=<session>.<number>` ("-" before an opposed bill's number). tracker.html's `EMBED`
+    mode shows only that bill's watchlist card body (`embedCard()`, the "More about this bill" panel open), with the
+    header, tabs, list header and footer hidden (`html.embed`), draws nothing else (`drawAll()` returns after the card),
+    sends its height to the list page (`embedSize()`, postMessage `{sbtEmbed}`), and opens links it doesn't handle in the
+    whole window. So the panel is the state page's own code, for any state and for cross-state lists; a bill costs that
+    page's list part, the bill's shard, the stats part (and the rows part when "who decides" reads every history), all
+    cached for the next bill of that state.
+  - Named lists from any bill row: `lists_pages/named.js` (one global, `NamedLists`; put in every public state page by
+    `github_page()`, in home.html and the list editor by build_site.sh) draws a list button beside the star (state rows
+    and watchlist cards: `listButton()`; the front page's search results and panel rows: `listBtn()`) when this browser
+    has lists from the editor (common.js's NAMED), and its menu (checkboxes for the lists, "New list…" to
+    `/lists/edit/#new&add=<code>`). Changes are kept in localStorage at once and PUT to the Worker 2.5 s later, at least
+    10 s after the list's last save (`savedAt`, which the editor also writes and respects); unsent saves go out when the
+    next page with named.js opens. The editor's payload and signature are named.js's.
 - **Analytics:**
   - `countUse(name)` sends an anonymous GoatCounter event, but only on the public site.
   - `countError()` and `countVisit()` are built on it. `staleNotice()` warns visitors when data is

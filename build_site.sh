@@ -91,6 +91,9 @@ page = open("home.html").read()
 desc = re.search(r'<meta name="description" content="([^"]*)">\n', page)
 page = page.replace(desc.group(0), desc.group(0) + site_meta.tags("State Bill Tracker", html.unescape(desc.group(1)), site_meta.root()) + site_meta.analytics(), 1)
 page = page.replace("SUPPORT_URL", site_meta.SUPPORT)
+# The named lists' button and menu beside each star (lists_pages/named.js), saving to the lists Worker (LISTS_API).
+page = page.replace("/*named.js*/", open("lists_pages/named.js").read(), 1)
+page = page.replace("LISTS_API_URL", os.environ.get("LISTS_API", "https://state-lists.lists-worker.workers.dev"), 1)
 items, power, after = [], {}, {}
 for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
@@ -158,7 +161,7 @@ PY
 # states with "Find a bill" data (search/<st>.json, written above).
 python3 - "$OUT" <<'PY'
 import os, sys, site_meta
-css, js = open("lists_pages/common.css").read(), open("lists_pages/common.js").read()
+css, js, named = open("lists_pages/common.css").read(), open("lists_pages/common.js").read(), open("lists_pages/named.js").read()
 api = os.environ.get("LISTS_API", "https://state-lists.lists-worker.workers.dev")
 searchable = " ".join(sorted(f[:-5] for f in os.listdir(os.path.join(sys.argv[1], "search")) if len(f) == 7 and f.endswith(".json"))) if os.path.isdir(os.path.join(sys.argv[1], "search")) else ""
 for src, path, title, desc in (("yourbills.html", "your-bills", "Your bills · State Bill Tracker", "The bills you follow in every state and Congress."),
@@ -166,7 +169,7 @@ for src, path, title, desc in (("yourbills.html", "your-bills", "Your bills · S
                                ("edit.html", "lists/edit", "Edit a list · State Bill Tracker", "Make a list of bills from any state or Congress and share it.")):
     page = open(os.path.join("lists_pages", src)).read()
     meta = site_meta.tags(title, desc, site_meta.root() + path + "/", canonical=False) + site_meta.analytics()
-    page = (page.replace("<!--meta-->\n", meta, 1).replace("/*common.css*/", css, 1).replace("/*common.js*/", js, 1)
+    page = (page.replace("<!--meta-->\n", meta, 1).replace("/*common.css*/", css, 1).replace("/*common.js*/", js, 1).replace("/*named.js*/", named, 1)
             .replace("LISTS_API_URL", api).replace("SUPPORT_URL", site_meta.SUPPORT).replace("SEARCH_STATES", searchable))
     os.makedirs(os.path.join(sys.argv[1], path), exist_ok=True)
     open(os.path.join(sys.argv[1], path, "index.html"), "w").write(page)
