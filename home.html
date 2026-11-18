@@ -95,7 +95,11 @@ h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: u
   .dots { gap: 3px; }
   .tiles .dot.sm { box-shadow: inset 0 0 0 1px currentColor; }
 }
-.when { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 0 0 10px; font-size: 14px; }
+.when { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 0 0 10px; font-size: 14px; }
+/* Read aloud, not shown: the search's result count (#foundStatus). The "Skip to the map" link shows only when focused. */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip { position: absolute; left: 16px; top: 8px; z-index: 20; padding: 6px 10px; border-radius: 6px; background: var(--sheet); color: var(--navy); font-weight: 600; transform: translateY(-200%); }
+.skip:focus { transform: none; }
 .when button { font: inherit; border: 0; background: var(--sheet); color: var(--ink-2); padding: 6px 12px; cursor: pointer; }
 .when button[aria-pressed="true"] { background: var(--navy); color: var(--sheet); font-weight: 600; }
 .when button:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
@@ -465,13 +469,14 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
   </div>
   <p class="tagline">Follow bills in every state legislature and Congress.</p>
   <div class="show" id="controls" hidden>
+    <a class="skip" href="#" data-skip>Skip to the map</a>
     <span class="pick"><span class="lab" id="showLab">Show</span>
     <button type="button" id="show" aria-haspopup="true" aria-expanded="false" aria-labelledby="showLab show">Party control</button>
     <div class="menu" id="showMenu" hidden></div></span>
     <a class="allis" href="issues/">All issues</a>
     <div class="when" id="years" role="group" aria-label="Year"></div>
     <div class="when" id="vsw" role="group" aria-label="Show as" hidden><button type="button" data-v="map" aria-pressed="true">Map</button><button type="button" data-v="chart" aria-pressed="false">Chart</button></div>
-    <span class="find"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><input type="search" id="q" placeholder="Find a bill: HB 1234, or words" aria-label="Find a bill by its number or words in its title, in any state or Congress" autocomplete="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-controls="found" aria-expanded="false"></span>
+    <span class="find"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><span class="sr" id="foundStatus" role="status"></span><input type="search" id="q" placeholder="Find a bill: HB 1234, or words" aria-label="Find a bill by its number or words in its title, in any state or Congress" autocomplete="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-controls="found" aria-expanded="false"></span>
     <div class="found" id="found" role="region" aria-label="Bills found" hidden></div>
   </div>
   <div class="mapwrap">
@@ -510,7 +515,7 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
       <select id="pparty" aria-label="Sponsor's party" title="The party of each bill's main sponsors, not what the bill does. Both parties: main sponsors from both, or at least one in five sponsors and co-sponsors from the other party. Committee bills and Nebraska's have none.">
         <option value="">Sponsor&rsquo;s party: all</option><option value="D">Democrats</option><option value="R">Republicans</option><option value="B">Both parties</option><option value="-">Committee or none</option>
       </select>
-      <div id="pbody" aria-live="polite"></div>
+      <div id="pbody"></div>
     </aside>
   </div>
   <nav class="allst" aria-label="All states"><details><summary>All states</summary>
@@ -903,6 +908,17 @@ tiles.addEventListener("pointerover", (e) => {
   const a = e.target.closest("a[href]");
   if (a) partyPanel(a);
 });
+// From the keyboard too: a focused state's lines show in the panel.
+tiles.addEventListener("focusin", (e) => {
+  if (issue || CUSTOM) return;
+  const a = e.target.closest("a[data-st]");
+  if (a) partyPanel(a);
+});
+// "Skip to the map": past the topic list, to the first state.
+document.querySelector("[data-skip]").addEventListener("click", (e) => {
+  e.preventDefault();
+  tiles.querySelector("a[data-st], button[data-st]")?.focus();
+});
 function drawMap(view) {
   const on = !!issue || !!CUSTOM;
   document.body.classList.toggle("issue-on", on);
@@ -1148,6 +1164,7 @@ yearsEl.addEventListener("click", (e) => {
   CUSTOM = null;
   render();
   remember();
+  yearsEl.querySelector(`[data-year="${b.dataset.year}"]`)?.focus();  // render() rebuilt the buttons
 });
 document.addEventListener("click", (e) => {
   const a = e.target.closest("a[href]");
@@ -1511,7 +1528,8 @@ drawMine();
     const mapIt = !p.st && !only && p.words.length && hits.length > 1 && !most && hits.some((h) => h.tier === 5 || h.tier === 6) && new Set(hits.map((h) => h.st)).size > 1;
     lastHits = mapIt ? [p.words.join(" "), hits.filter((h) => h.tier === 5 || h.tier === 6)] : null;
     const goHtml = go.length ? `<ul class="goto">${go.map((c) => `<li><a href="${esc(built[c.toUpperCase()])}" data-goto="${c}">${esc(stateName(c))}&rsquo;s bills &rarr;</a></li>`).join("")}</ul>` : "";
-    found.innerHTML = `<div class="fhead"><span class="cnt" aria-live="polite">${count}</span>${mapIt && !loading ? '<button type="button" class="onmap">Show on the map</button>' : ""}${pick}</div>` + goHtml + (rows ? `<ul>${rows}${more}</ul>` : "");
+    if (!loading) document.getElementById("foundStatus").textContent = count.replace(/<[^>]+>/g, "").replace(/&rsquo;/g, "’");
+    found.innerHTML = `<div class="fhead"><span class="cnt">${count}</span>${mapIt && !loading ? '<button type="button" class="onmap">Show on the map</button>' : ""}${pick}</div>` + goHtml + (rows ? `<ul>${rows}${more}</ul>` : "");
     found.hidden = false;
     q.setAttribute("aria-expanded", "true");
     if (!loading) {

@@ -162,7 +162,7 @@ ul.bills a:hover { text-decoration: underline; }
 .hidden, [hidden] { display: none !important; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 /* The year buttons (links here), as on the front page. */
-.when { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 0 0 16px; font-size: 14px; max-width: 100%; }
+.when { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 0 0 16px; font-size: 14px; max-width: 100%; }
 .when a { color: var(--ink-2); background: var(--sheet); padding: 6px 12px; text-decoration: none; }
 .when a + a { border-left: 1px solid var(--rule); }
 .when a[aria-current="page"] { background: var(--navy); color: var(--sheet); font-weight: 600; }
@@ -531,7 +531,7 @@ def tile_map(iid, by, names, open_, year, upcoming, nodata=()):
         sp = split(by[st][2]) if st in by else [0, 0, 0, 0]
         said = f"; sponsors: {split_words(sp)}" if n else ""
         href = f"#{st}" if st in by else "#bills"
-        out.append(f'<a href="{href}" data-st="{st}" data-name="{e(names[st])}" class="h{step(n)}" style="{style}" title="{e(label + said)}" aria-label="{e(code + ", " + label + said)}" aria-controls="panel">{code}{badge(laws)}{pbar(sp)}</a>')
+        out.append(f'<a href="{href}" data-st="{st}" data-name="{e(names[st])}" class="h{step(n)}" style="{style}" title="{e(label + said)}" aria-label="{e(code + ", " + label + said)}" role="button" aria-pressed="false" aria-controls="panel">{code}{badge(laws)}{pbar(sp)}</a>')
     return ('<div class="mapbox" id="mapbox"><div class="tiles">' + "".join(out) + "</div>"
             '<div class="chart" id="chart" role="group" aria-label="States by number of bills"></div></div>')
 
@@ -822,7 +822,7 @@ function showState(st) {{
 }}
 function pin(st) {{
   pinned = st;
-  for (const t of tiles.querySelectorAll("a[data-st]")) t.classList.toggle("sel", t.dataset.st === pinned);
+  for (const t of tiles.querySelectorAll("a[data-st]")) {{ t.classList.toggle("sel", t.dataset.st === pinned); t.setAttribute("aria-pressed", String(t.dataset.st === pinned)); }}
   for (const t of chartEl.querySelectorAll("button.crow")) {{ t.classList.toggle("sel", t.dataset.st === pinned); t.setAttribute("aria-pressed", String(t.dataset.st === pinned)); }}
   showState(pinned);
 }}
@@ -899,6 +899,8 @@ tiles.addEventListener("pointerover", (e) => {{
 tiles.addEventListener("mouseleave", () => {{ if (!pinned && canHover) showState(null); }});
 tiles.addEventListener("focusin", (e) => {{ const a = e.target.closest("a[data-st]"); if (a && !pinned) showState(a.dataset.st); }});
 tiles.addEventListener("focusout", (e) => {{ if (!pinned && !tiles.contains(e.relatedTarget)) showState(null); }});
+// The tiles act as buttons (role="button"): Space presses them too.
+tiles.addEventListener("keydown", (e) => {{ const a = e.target.closest("a[data-st]"); if (a && e.key === " ") {{ e.preventDefault(); a.click(); }} }});
 tiles.addEventListener("click", (e) => {{
   const a = e.target.closest("a[data-st]");
   if (!a) return;
