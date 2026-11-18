@@ -142,6 +142,15 @@ cp static/favicon.ico static/favicon-32.png static/apple-touch-icon.png "$OUT/"
 # there (Cloudflare Pages serves 404.html with status 404, instead of the front page).
 cp tools/og-image.png "$OUT/og-image.png"
 cp notfound.html "$OUT/404.html"
+# The About page, with its link preview tags and the visit counter (after launch).
+mkdir -p "$OUT/about"
+python3 - "$OUT/about/index.html" <<'PY'
+import sys, site_meta
+page = open("about.html").read()
+meta = site_meta.tags("About · State Bill Tracker", "Why State Bill Tracker was built, where its data comes from, and how to reach it.",
+                      site_meta.root() + "about/") + site_meta.analytics()
+open(sys.argv[1], "w").write(page.replace("<!--meta-->\n", meta, 1))
+PY
 if [ "${LAUNCHED:-0}" = 1 ]; then
   printf 'User-agent: *\nAllow: /\n' > "$OUT/robots.txt"
 else

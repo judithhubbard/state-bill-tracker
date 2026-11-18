@@ -672,7 +672,7 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
 <p class="note hidden" id="partyNote">{PARTY_NOTE}</p>
 <p class="note" id="count" aria-live="polite"></p>
 {"".join(blocks)}{fed_block}
-<footer>Bills are found by the words in their titles and summaries, so a few are missed and a few are only partly about the issue. Bills for one city or county are left out. Open a bill for its status, votes and who to contact.</footer>
+<footer>Bills are found by the words in their titles and summaries, so a few are missed and a few are only partly about the issue. Bills for one city or county are left out. Open a bill for its status, votes and who to contact. &middot; <a href="/about/">About</a></footer>
 </main>
 <script>
 // Both menus filter the bills, and the map, the counts line and the table follow them (counted from the list's own
@@ -1012,7 +1012,7 @@ def main(site):
 <h1>Issues across the states</h1>
 <p class="lede">The same subjects in every state legislature: how many bills, where, and which became law.</p>
 {cards}
-<footer>Counts are for {default} ({len(states)} states; Congress is on each issue&rsquo;s page, apart from the states). Bills are found by the words in their titles and summaries; see each issue's page for what counts.</footer>
+<footer>Counts are for {default} ({len(states)} states; Congress is on each issue&rsquo;s page, apart from the states). Bills are found by the words in their titles and summaries; see each issue's page for what counts. &middot; <a href="/about/">About</a></footer>
 </main>
 </body>
 </html>

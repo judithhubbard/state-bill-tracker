@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!-- The About page: build_site.sh copies it to about/index.html, putting the link preview tags and the visit counter
+     (site_meta.py) in place of the meta comment. The color tokens are home.html's (light and dark). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About · State Bill Tracker</title>
+<meta name="description" content="Why State Bill Tracker was built, where its data comes from, and how to reach it.">
+<!--meta-->
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+:root {
+  --paper: #f6f8fb; --ink: #14213d; --ink-2: #4a5878; --navy: #1d3b78; --hover: #9a6a0e;
+  --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --paper: #0f1626; --ink: #e6ebf5; --ink-2: #a3b0c9; --navy: #8fb0f0; --hover: #e0b04e; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --paper: #0f1626; --ink: #e6ebf5; --ink-2: #a3b0c9; --navy: #8fb0f0; --hover: #e0b04e; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.6 var(--body); padding: 40px 16px 64px; }
+main { max-width: 680px; margin: 0 auto; }
+.site { font: 800 clamp(30px, 7vw, 42px)/1.05 var(--display); font-stretch: 85%; margin: 0 0 28px; }
+.site a { color: inherit; text-decoration: none; }
+h1 { font: 600 22px/1.3 var(--body); margin: 0 0 14px; }
+h2 { font: 700 17px/1.3 var(--body); margin: 32px 0 8px; }
+p { margin: 0 0 12px; }
+ul { margin: 0 0 12px; padding-left: 20px; }
+li { margin-bottom: 4px; }
+.lede { font-size: 18px; }
+a { color: var(--navy); }
+a:hover { color: var(--hover); }
+a:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; border-radius: 2px; }
+.note { color: var(--ink-2); }
+</style>
+</head>
+<body>
+<main>
+  <p class="site"><a href="/">State Bill Tracker</a></p>
+  <h1>About</h1>
+  <p class="lede">Every year, state legislatures and Congress consider well over 100,000 bills. Most people never hear about a bill until it has passed or failed, and by then it&rsquo;s too late to weigh in.</p>
+  <p>State Bill Tracker makes the process visible: you can follow the bills being considered, see what step comes next, and reach the person who makes that next decision. It covers all 50 state legislatures and Congress.</p>
+
+  <h2>Why I built it</h2>
+  <p>I&rsquo;m Judith Hubbard. I&rsquo;m an earthquake scientist, and I serve as a county legislator. From both, I know that good decisions depend on good information, and that the legislative process is much easier to influence when you can see it. This site is meant to make legislation more transparent, and to give anyone a way to follow the bills they care about and speak up while it still matters. The power of government lies with the governed &ndash; or at least, it should.</p>
+
+  <h2>Data sources</h2>
+  <ul>
+    <li>Bills, votes and summaries: legislatures&rsquo; own public records wherever possible, supplemented with data from <a href="https://openstates.org/">Open States</a> and from <a href="https://legiscan.com/">LegiScan</a> (used under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution license</a>).</li>
+    <li>Congress: the Government Publishing Office, the House Clerk and the Senate.</li>
+    <li>Past party control: the National Conference of State Legislatures.</li>
+    <li>District maps: the U.S. Census Bureau.</li>
+  </ul>
+  <p>Each state&rsquo;s page lists its own sources.</p>
+  <p class="note">Legislatures&rsquo; records have errors and gaps, and so may this site. If something looks wrong, please let me know.</p>
+
+  <h2>Your privacy</h2>
+  <p>Your watchlist and settings stay in your own browser. The site doesn&rsquo;t ask for your name or email, and doesn&rsquo;t sell or share anything about you. It counts visits with <a href="https://www.goatcounter.com/">GoatCounter</a>, which doesn&rsquo;t track individuals.</p>
+
+  <h2>Contact</h2>
+  <p><a href="mailto:statebilltracker@gmail.com">statebilltracker@gmail.com</a></p>
+</main>
+</body>
+</html>
