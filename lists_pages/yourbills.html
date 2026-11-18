@@ -34,6 +34,14 @@
     <h2>Share these</h2>
     <div class="panel" id="share"></div>
   </section>
+  <section id="listsSec">
+    <h2>Your lists</h2>
+    <div id="lists"></div>
+    <p class="row"><a class="btn primary" href="/lists/edit/#new">Make a new list</a></p>
+    <details id="connectList"><summary>Made a list on another device?</summary>
+      <div class="row"><input type="text" id="listKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key">
+      <button type="button" class="btn" id="listConnect">Connect</button></div><p class="muted err" id="listMsg"></p></details>
+  </section>
   <section id="followSec" hidden>
     <h2>Lists you follow</h2>
     <div id="follows"></div>
@@ -45,7 +53,6 @@
 </script>
 <script>
 const DEFAULT_TITLE = "Bills I'm following";
-const PHONE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const today = () => new Date().toISOString().slice(0, 10);
 let ITEMS = [];               // the starred bills as drawn: lookUp() plus {st, session, num, entry, key}
 const REMOVED = new Map();    // bills unstarred on this page, kept in view (with an empty star) until it's reloaded
@@ -151,22 +158,6 @@ addEventListener("pagehide", () => {
     setMyList({ ...mine, saved: sig(p) });
   } catch (e) {}
 });
-const ICONS = {
-  email: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm1 2.4V17h16V7.4l-8 5.3-8-5.3ZM5.6 7 12 11.2 18.4 7H5.6Z"/></svg>',
-  text: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 2v11h2v2l2.5-2H20V5H4Zm3 4h10v2H7V9Z"/></svg>',
-  facebook: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.5c-1.5 0-1.96.93-1.96 1.89v2.26h3.32l-.53 3.5h-2.8V24C19.62 23.1 24 18.1 24 12.07Z"/></svg>',
-  x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.24 2.25h3.31l-7.23 8.26 8.5 11.24h-6.65l-5.21-6.82-5.97 6.82H1.68l7.73-8.84L1.25 2.25h6.83l4.71 6.23 5.45-6.23Zm-1.16 17.52h1.83L7.08 4.13H5.12l11.96 15.64Z"/></svg>',
-  bluesky: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 10.8C10.9 8.7 7.95 4.75 5.2 2.8 2.57.95 1.56 1.27.9 1.57.14 1.9 0 3.08 0 3.77c0 .69.38 5.65.62 6.48.82 2.74 3.71 3.66 6.38 3.36-3.91.58-7.39 2-2.83 7.08 5.01 5.19 6.87-1.11 7.83-4.31.95 3.2 2.05 9.27 7.73 4.31 4.27-4.31 1.17-6.5-2.74-7.08 2.67.3 5.57-.62 6.38-3.36.25-.83.63-5.79.63-6.48 0-.69-.14-1.86-.9-2.2-.66-.3-1.67-.62-4.3 1.24C16.05 4.75 13.09 8.69 12 10.8Z"/></svg>',
-};
-function shareIcons(url, title) {
-  const u = encodeURIComponent(url), t = encodeURIComponent(title), both = encodeURIComponent(`${title}\n${url}`);
-  const links = [["Email", `mailto:?subject=${t}&body=${both}`, "email"]];
-  if (PHONE) links.push(["Text message", `sms:?&body=${both}`, "text"]);
-  links.push(["Facebook", `https://www.facebook.com/sharer/sharer.php?u=${u}`, "facebook"],
-    ["X", `https://x.com/intent/post?text=${t}&url=${u}`, "x"],
-    ["Bluesky", `https://bsky.app/intent/compose?text=${encodeURIComponent(`${title} ${url}`)}`, "bluesky"]);
-  return `<div class="icons">${links.map(([name, href, icon]) => `<a href="${esc(href)}"${/^https/.test(href) ? ' target="_blank" rel="noopener"' : ""} data-share="${icon}" title="${name}" aria-label="Share by ${name}">${ICONS[icon]}</a>`).join("")}</div>`;
-}
 const CODE_LINE = `<p class="muted">Sharing for an organization? <a href="mailto:statebilltracker@gmail.com?subject=${encodeURIComponent("Group code for State Bill Tracker")}">Ask for a group code</a>`
   + ` &middot; <button type="button" class="linkish" data-act="havecode">I have one</button></p>`
   + `<div class="row" id="codeRow" hidden><input type="text" id="codeName" maxlength="120" placeholder="List name" aria-label="List name">`
@@ -204,19 +195,6 @@ function drawNotes(mine) {
   if (!el) return;
   el.innerHTML = ITEMS.filter((x) => x.on).map((x) => `<label>${esc(stName(x.st))} ${esc(numText(x.st, x.full))}: ${esc(x.title)}`
     + `<textarea rows="2" maxlength="1000" data-note="${esc(x.key)}">${esc((mine.notes || {})[x.key] || "")}</textarea></label>`).join("");
-}
-// A contribution line after the first share, at most once in 90 days in this browser (the state pages' note shares the date).
-function thanksOnce() {
-  if (!/^https?:/.test(SUPPORT)) return "";
-  try {
-    const last = localStorage.getItem("abt:supportnote");
-    if (last && Date.now() - +last < 90 * 864e5) return "";
-    localStorage.setItem("abt:supportnote", String(Date.now()));
-  } catch (e) { return ""; }
-  return `Thanks for sharing. State Bill Tracker is free and run by one person; if you can, please consider <a href="${esc(SUPPORT)}" target="_blank" rel="noopener">supporting the site</a>.`;
-}
-async function copy(btn, text) {
-  try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; } catch (e) { btn.previousElementSibling?.select?.(); btn.textContent = "Select and copy it"; }
 }
 // Adds a shared list's bills to this browser's watchlists (connecting another device).
 function adopt(l) {
@@ -330,9 +308,67 @@ $("follows").addEventListener("click", (e) => {
   countUse("your-bills/unfollowed");
 });
 
-// A change in another tab (a star on a state's page): redraw, and keep the shared list in step.
-addEventListener("storage", (e) => { if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) draw(); });
+// ---- Lists made with the list editor (/lists/edit/), each with its own link ----
+const GONE = new Set();     // lists the Worker no longer has
+function drawLists() {
+  const all = Object.values(readNamed()).sort((a, b) => (b.updated || "").localeCompare(a.updated || ""));
+  $("lists").innerHTML = all.map((l) => {
+    const n = (l.bills || []).length, gone = GONE.has(l.slug);
+    const meta = gone ? "This list isn't online any more."
+      : [l.group, `${n} bill${n === 1 ? "" : "s"}`, l.updated ? `changed ${fmtDay(l.updated.slice(0, 10))}` : ""].filter(Boolean).join(" · ");
+    return `<div class="lcard"><div class="lname">${gone ? esc(l.title || "Untitled list") : `<a href="/list/#${esc(l.slug)}">${esc(l.title || "Untitled list")}</a>`}`
+      + `<span class="muted">${esc(meta)}</span></div><div class="lact">`
+      + (gone ? `<button type="button" class="btn quiet" data-forget="${esc(l.slug)}">Remove</button>`
+        : `<a class="btn" href="/lists/edit/#${esc(l.slug)}">Edit</a><button type="button" class="btn" data-copylist="${esc(l.slug)}">Copy link</button>`)
+      + "</div></div>";
+  }).join("");
+}
+// The Worker's copy may be newer (changed on another device): take its bills and name, unless this browser has changes
+// still to save (the editor sends them next time it's opened).
+async function refreshLists() {
+  const sigOf = (p) => JSON.stringify([p.title, p.bills, p.intro, p.notes]);
+  await Promise.all(Object.values(readNamed()).map(async (l) => {
+    try {
+      const w = await api(`/lists/${encodeURIComponent(l.slug)}`, { headers: { "X-Edit-Key": l.editKey } });
+      const now = readNamed(), mine = now[l.slug];
+      if (!mine || w.state !== "all") return;
+      const p = { title: w.title || "", bills: w.bills, intro: w.intro || "", notes: w.notes || {} };
+      if (sigOf(p) === mine.saved) return;
+      const local = { title: (mine.title || "").trim(), bills: mine.bills || [], intro: mine.group ? (mine.intro || "").trim() : "", notes: mine.notes || {} };
+      if (mine.saved && sigOf(local) !== mine.saved) return;
+      now[l.slug] = { ...mine, ...p, group: w.group || "", saved: sigOf(p), updated: w.updated || mine.updated };
+      writeNamed(now);
+    } catch (e) { if (e.status === 404) GONE.add(l.slug); }
+  }));
+  drawLists();
+}
+$("listsSec").addEventListener("click", async (e) => {
+  const c = e.target.closest("button[data-copylist]");
+  if (c) { countUse("your-bills/list link copied"); return copy(c, listLink(c.dataset.copylist)); }
+  const f = e.target.closest("button[data-forget]");
+  if (f) { const all = readNamed(); delete all[f.dataset.forget]; writeNamed(all); return drawLists(); }
+  if (e.target.id !== "listConnect") return;
+  const [slug, key] = $("listKey").value.trim().split(/\s+/), msg = $("listMsg");
+  if (!slug || !key) return (msg.textContent = "Paste the key exactly as it was copied: a name, a space and a code.");
+  try {
+    await api(`/lists/${encodeURIComponent(slug)}/views`, { headers: { "X-Edit-Key": key } });
+    const w = await api(`/lists/${encodeURIComponent(slug)}`, { headers: { "X-Edit-Key": key } });
+    if (w.state !== "all") return (msg.textContent = `That key is for a list shared from ${stName(w.state)}'s watchlist; use it there.`);
+    const p = { title: w.title || "", bills: w.bills, intro: w.intro || "", notes: w.notes || {} };
+    const all = readNamed();
+    all[slug] = { slug, editKey: key, ...p, group: w.group || "", saved: JSON.stringify([p.title, p.bills, p.intro, p.notes]), updated: w.updated };
+    writeNamed(all);
+    $("listKey").value = ""; msg.textContent = ""; $("connectList").open = false;
+    countUse("your-bills/connected a list");
+    drawLists();
+  } catch (err) { msg.textContent = err.message; }
+});
+
+// A change in another tab (a star on a state's page, or a list edited): redraw, and keep the shared list in step.
+addEventListener("storage", (e) => { if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) draw(); if (e.key === NAMED) drawLists(); });
 draw();
+drawLists();
+refreshLists();
 drawFollows();
 countOnce("your-bills/opened");
 </script>

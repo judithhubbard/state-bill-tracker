@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<!-- The list editor (/lists/edit/#<slug>, "#new" for a new list): a named list of bills from any states and Congress, apart
+     from the visitor's own stars ("Your bills"). Each list is a live shared list across states (lists_worker/: state "all",
+     bills "nj:2026:A1234", "-" in front to oppose), created in the Worker on its first save and saved a few seconds after
+     each change (the Worker refuses saves of one list under 10 seconds apart). The browser keeps each list's slug and edit
+     key (common.js's NAMED). Bills are added by searching the front page's "Find a bill" data (search/<st>.json,
+     search_site.py: the live sessions only), loaded state by state as needed, or by pasting several numbers. Bills already
+     on a list from past sessions stay. build_site.sh writes it to lists/edit/index.html, as yourbills.html, and puts the
+     states that have search data in place of SEARCH_STATES. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edit a list · State Bill Tracker</title>
+<meta name="description" content="Make a list of bills from any state or Congress and share it.">
+<meta name="robots" content="noindex">
+<!--meta-->
+<meta name="lists-api" content="LISTS_API_URL">
+<meta name="support" content="SUPPORT_URL">
+<meta name="search-states" content="SEARCH_STATES">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+/*common.css*/
+.grp { font-weight: 600; color: var(--ink); }
+select { font: inherit; font-size: 15px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 8px; max-width: 100%; }
+#saved { min-height: 1.5em; margin: 0 0 6px; }
+/* The list's bills, in order: number and title, where it is, and the controls. */
+.ed { list-style: none; margin: 0; padding: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; }
+.ed > li { border-bottom: 1px solid var(--rule); padding: 9px 12px; }
+.ed > li:last-child { border-bottom: 0; }
+.ed .head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; font-size: 14.5px; }
+.ed .head a { text-decoration: none; }
+.ed .head a:hover { text-decoration: underline; }
+.ed .st { color: var(--ink-2); font-weight: 400; }
+.ed .where { margin-top: 2px; }
+.ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.ctl .mv { margin-left: auto; display: flex; gap: 6px; }
+.sm { font: 600 13px/1.2 var(--body); color: var(--ink-2); background: var(--sheet); border: 1px solid var(--rule); border-radius: 999px; padding: 5px 11px; cursor: pointer; }
+.sm:hover { border-color: var(--navy); color: var(--navy); }
+.sm:disabled { opacity: .4; cursor: default; border-color: var(--rule); color: var(--ink-2); }
+.sm.sq { border-radius: 8px; padding: 5px 9px; min-width: 34px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; overflow: hidden; }
+.seg button { font: 600 13px/1.2 var(--body); border: 0; background: var(--sheet); color: var(--ink-2); padding: 5px 11px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--navy); color: var(--sheet); }
+.seg button.op[aria-pressed="true"] { background: var(--veto-ink); color: var(--sheet); }
+.ed textarea { margin-top: 6px; font-size: 14px; }
+/* Search results, each with its Add button. */
+.res { list-style: none; margin: 0 0 10px; padding: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; }
+.res:empty { display: none; }
+.res > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--rule); font-size: 14.5px; }
+.res > li:last-child { border-bottom: 0; }
+.res .fn { color: var(--ink-2); }
+.res .fn b { color: var(--navy); }
+.res .tt { display: block; }
+.res .btn { padding: 5px 12px; }
+.res .btn[disabled] { opacity: 1; border-color: var(--rule); color: var(--ink-2); font-weight: 400; }
+.res .more { grid-column: 1 / -1; justify-self: start; }
+#cnt { margin: 0 0 8px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="back"><a href="/your-bills/">&larr; Your bills</a></p>
+  <h1 id="h">&nbsp;</h1>
+  <p class="sub" id="by">&nbsp;</p>
+  <div id="app" hidden>
+    <div class="panel">
+      <label>Name<input type="text" id="title" maxlength="60" placeholder="Name this list" autocomplete="off"></label>
+      <div id="groupBox" hidden><label>Introduction<textarea id="intro" rows="3" maxlength="3000" placeholder="Why these bills matter"></textarea></label></div>
+      <p class="muted" id="saved"></p>
+    </div>
+
+    <h2>Add bills</h2>
+    <div class="row">
+      <select id="fstate" aria-label="Which state"></select>
+      <input type="text" id="q" autocomplete="off" spellcheck="false" placeholder="Bill number or words in its title" aria-label="Find a bill">
+    </div>
+    <p class="muted" id="cnt" aria-live="polite"></p>
+    <ul class="res" id="res"></ul>
+    <details id="pasteBox"><summary>Paste several numbers</summary>
+      <textarea id="paste" rows="3" placeholder="NY A7620, S3425; NJ A1234" aria-label="Bill numbers"></textarea>
+      <div class="row" style="margin-top: 8px"><button type="button" class="btn" id="pasteGo">Add them</button><span class="muted" id="pasteMsg"></span></div>
+    </details>
+
+    <h2 id="billsHead">Bills</h2>
+    <ol class="ed" id="bills"></ol>
+    <p class="muted" id="noBills">No bills yet.</p>
+
+    <section id="shareSec" hidden>
+      <h2>Share</h2>
+      <div class="panel" id="share"></div>
+    </section>
+  </div>
+  <footer><a href="/about/">About</a> &middot; <a href="SUPPORT_URL">Support this site</a></footer>
+</main>
+<script>
+/*common.js*/
+</script>
+<script>
+const MAX = 500;
+const AVAIL = (document.querySelector('meta[name="search-states"]')?.content || "").split(/[\s,]+/).filter((c) => NAMES[c]);
+let L = null;            // the list being edited: {slug, editKey, title, group, intro, notes, bills, saved}
+let TIMER = null, LAST_SAVE = 0, SAVING = false;
+const INFO = {};         // bill key -> lookUp() promise
+const info = (b) => (INFO[b.key] ||= lookUp(b.st, b.session, b.num));
+const say = (t, bad) => { $("saved").textContent = t; $("saved").classList.toggle("err", !!bad); };
+const slugNow = () => decodeURIComponent(location.hash.replace(/^#/, "")).trim();
+
+// ---- Saving: the list as the Worker keeps it, sent a few seconds after the last change ----
+function payload(l) {
+  const bills = l.bills.filter((c) => CROSS_RE.test(c)).slice(0, MAX);
+  const keep = new Set(bills.map((c) => c.replace(/^-/, ""))), notes = {};
+  if (l.group) for (const [k, v] of Object.entries(l.notes || {})) if (keep.has(k) && String(v).trim()) notes[k] = String(v).trim();
+  return { state: "all", title: (l.title || "").trim(), bills, intro: l.group ? (l.intro || "").trim() : "", notes };
+}
+const sig = (p) => JSON.stringify([p.title, p.bills, p.intro, p.notes]);
+// Kept in this browser at once, so a reload or another tab sees it before the Worker does.
+function keep() {
+  if (!L.slug) return;
+  const all = readNamed();
+  all[L.slug] = { ...L, updated: new Date().toISOString() };
+  writeNamed(all);
+}
+function changed() {
+  keep();
+  schedule();
+}
+function schedule() {
+  clearTimeout(TIMER); TIMER = null;
+  if (L.slug && sig(payload(L)) === L.saved) return say("Saved.");
+  if (!L.slug && !L.title.trim() && !L.bills.length) return say("");
+  // At least 10 seconds between saves of one list (the Worker's rule).
+  const wait = Math.max(L.slug ? 2500 : 1200, LAST_SAVE + 10500 - Date.now());
+  TIMER = setTimeout(save, wait);
+  say("Saving…");
+}
+async function save() {
+  TIMER = null;
+  if (SAVING) return schedule();
+  const p = payload(L), s = sig(p);
+  if (L.slug && s === L.saved) return say("Saved.");
+  SAVING = true;
+  try {
+    if (!L.slug) {
+      const r = await api("/lists", { method: "POST", body: JSON.stringify(p) });
+      Object.assign(L, { slug: r.slug, editKey: r.editKey, group: r.group || "", saved: s });
+      history.replaceState(null, "", `#${r.slug}`);
+      countUse("list-editor/made a list");
+      drawShare();
+    } else {
+      await api(`/lists/${encodeURIComponent(L.slug)}`, { method: "PUT", headers: { "X-Edit-Key": L.editKey }, body: JSON.stringify(p) });
+      L.saved = s;
+    }
+    LAST_SAVE = Date.now();
+    keep();
+    SAVING = false;
+    schedule();
+  } catch (e) {
+    SAVING = false;
+    if (e.status === 429 && L.slug) { LAST_SAVE = Date.now(); return schedule(); }
+    if (e.status === 404 && L.slug) { forget(L.slug); return gone("This list isn't online any more."); }
+    say(e.message, true);
+  }
+}
+// Leaving with a save still waiting: send it now.
+addEventListener("pagehide", () => {
+  if (!TIMER || !L?.slug || !LISTS_API) return;
+  clearTimeout(TIMER); TIMER = null;
+  const p = payload(L);
+  try {
+    fetch(`${LISTS_API}/lists/${encodeURIComponent(L.slug)}`, { method: "PUT", keepalive: true, headers: { "Content-Type": "application/json", "X-Edit-Key": L.editKey }, body: JSON.stringify(p) });
+    L.saved = sig(p); keep();
+  } catch (e) {}
+});
+function forget(slug) { const all = readNamed(); delete all[slug]; writeNamed(all); }
+function gone(text) {
+  $("app").hidden = true;
+  $("h").textContent = "List not found";
+  $("by").innerHTML = `${esc(text)} <a href="/your-bills/">Your bills</a>`;
+}
+
+// ---- Opening: a new list, or one this browser keeps (with the Worker's copy, which another device may have changed) ----
+async function openList() {
+  clearTimeout(TIMER); TIMER = null;
+  // Changes not yet sent stay in this browser (keep()) and go out when that list is opened again.
+  const slug = slugNow();
+  if (L && L.slug === slug && slug) return;
+  // Another list: the search and paste boxes start empty.
+  $("q").value = ""; $("paste").value = ""; $("pasteMsg").textContent = ""; $("pasteBox").open = false;
+  HITS = []; PARSED = null; LIMIT = PAGE; drawResults();
+  if (!slug || slug === "new") {
+    L = { slug: "", editKey: "", title: "", group: "", intro: "", notes: {}, bills: [], saved: "" };
+    return start();
+  }
+  const mine = readNamed()[slug];
+  if (!mine) return gone("This browser can't edit that list. To edit it here, paste its key into Your lists on this device.");
+  L = { notes: {}, intro: "", group: "", ...mine, bills: Array.isArray(mine.bills) ? mine.bills : [] };
+  start();
+  // Unsaved changes here go first; otherwise the Worker's copy is the list.
+  if (sig(payload(L)) !== L.saved) return schedule();
+  try {
+    const l = await api(`/lists/${encodeURIComponent(slug)}`, { headers: { "X-Edit-Key": L.editKey } });
+    if (l.state !== "all") return;
+    const p = { title: l.title || "", bills: l.bills, intro: l.intro || "", notes: l.notes || {} };
+    if (sig(p) !== L.saved && sig(payload(L)) === L.saved) {
+      Object.assign(L, p, { group: l.group || "", saved: sig(p) });
+      keep();
+      start();
+    }
+  } catch (e) {
+    if (e.status === 404) { forget(slug); gone("This list isn't online any more."); }
+  }
+}
+function start() {
+  $("app").hidden = false;
+  $("title").value = L.title;
+  $("title").maxLength = L.group ? 120 : 60;
+  $("intro").value = L.intro || "";
+  $("groupBox").hidden = !L.group;
+  drawHead();
+  drawBills();
+  drawShare();
+  say(L.slug ? "Saved." : "");
+  if (!L.slug) $("title").focus();
+}
+function drawHead() {
+  const t = L.title.trim();
+  $("h").textContent = t || (L.slug ? "Untitled list" : "New list");
+  document.title = `${t || "New list"} · State Bill Tracker`;
+  const n = L.bills.length;
+  $("by").innerHTML = [L.group ? `<span class="grp">${esc(L.group)}</span>` : "", `${n} bill${n === 1 ? "" : "s"}`].filter(Boolean).join(" · ");
+  $("billsHead").textContent = n ? `Bills (${n})` : "Bills";
+}
+
+// ---- The list's bills ----
+const bills = () => L.bills.map(parseCross).filter(Boolean);
+async function drawBills() {
+  const bs = bills(), token = (drawBills.n = (drawBills.n || 0) + 1);
+  $("noBills").hidden = bs.length > 0;
+  // Draw at once from what's known, then again when every bill's status has arrived.
+  const paint = (xs) => {
+    $("bills").innerHTML = xs.map((x, i) => {
+      const yr = x.session < THIS_YEAR - 1 || x.session > THIS_YEAR ? ` <small>(${x.session})</small>` : "", name = `${stName(x.st)} ${numText(x.st, x.full || x.num)}`;
+      return `<li data-key="${esc(x.key)}"><div class="head"><a class="num" href="${esc(x.href || `/${x.st}/`)}">${esc(numText(x.st, x.full || x.num))}${yr}</a>`
+        + `<span class="tt"><span class="st">${esc(stName(x.st))}:</span> ${esc(x.title || "")}</span></div>`
+        + (x.found ? `<div class="where"><span class="stg s${x.stage}">${esc(x.label)}</span>${x.last ? `<span>${fmtDay(x.last)}</span>` : ""}</div>` : "")
+        + `<div class="ctl"><span class="seg" role="group" aria-label="Your position on ${esc(name)}">`
+        + `<button type="button" data-act="support" aria-pressed="${x.stance !== "oppose"}">Support</button>`
+        + `<button type="button" class="op" data-act="oppose" aria-pressed="${x.stance === "oppose"}">Oppose</button></span>`
+        + `<span class="mv"><button type="button" class="sm sq" data-act="up" aria-label="Move ${esc(name)} up"${i ? "" : " disabled"}>&uarr;</button>`
+        + `<button type="button" class="sm sq" data-act="down" aria-label="Move ${esc(name)} down"${i < xs.length - 1 ? "" : " disabled"}>&darr;</button>`
+        + `<button type="button" class="sm" data-act="remove" aria-label="Remove ${esc(name)}">Remove</button></span></div>`
+        + (L.group ? `<textarea rows="2" maxlength="1000" data-note="${esc(x.key)}" placeholder="A note on this bill" aria-label="Note on ${esc(name)}">${esc((L.notes || {})[x.key] || "")}</textarea>` : "")
+        + "</li>";
+    }).join("");
+  };
+  const known = {};
+  for (const b of bs) if (INFO[b.key]?.done) known[b.key] = INFO[b.key].done;
+  paint(bs.map((b) => ({ ...b, ...(known[b.key] || { title: "" }) })));
+  if (bs.every((b) => known[b.key])) return;
+  const xs = await Promise.all(bs.map(async (b) => { const s = await info(b); INFO[b.key].done = s; return { ...b, ...s }; }));
+  if (token !== drawBills.n) return;
+  // Keep a note being typed (and the focus) when the statuses arrive.
+  const f = document.activeElement, at = f?.dataset?.note, pos = at ? f.selectionStart : 0;
+  paint(xs);
+  if (at) { const t = $("bills").querySelector(`textarea[data-note="${CSS.escape(at)}"]`); if (t) { t.focus(); t.selectionStart = t.selectionEnd = pos; } }
+}
+$("bills").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+  const key = btn.closest("li").dataset.key, i = L.bills.findIndex((c) => c.replace(/^-/, "") === key);
+  if (i < 0) return;
+  const act = btn.dataset.act, c = L.bills[i];
+  if (act === "support") L.bills[i] = c.replace(/^-/, "");
+  else if (act === "oppose") L.bills[i] = "-" + c.replace(/^-/, "");
+  else if (act === "up" && i > 0) [L.bills[i - 1], L.bills[i]] = [L.bills[i], L.bills[i - 1]];
+  else if (act === "down" && i < L.bills.length - 1) [L.bills[i + 1], L.bills[i]] = [L.bills[i], L.bills[i + 1]];
+  else if (act === "remove") L.bills.splice(i, 1);
+  else return;
+  changed();
+  drawHead();
+  drawBills().then(() => {
+    // Keep the focus on the moved bill's button.
+    if (act === "up" || act === "down") $("bills").querySelector(`li[data-key="${CSS.escape(key)}"] button[data-act="${act}"]:not(:disabled)`)?.focus();
+  });
+  if (act === "remove") drawResults();
+});
+$("bills").addEventListener("input", (e) => {
+  const k = e.target.dataset.note;
+  if (!k) return;
+  L.notes = { ...(L.notes || {}), [k]: e.target.value };
+  changed();
+});
+$("title").addEventListener("input", () => { L.title = $("title").value; drawHead(); changed(); });
+$("intro").addEventListener("input", () => { L.intro = $("intro").value; changed(); });
+// Adds a bill at the end of the list; false when it's already there or the list is full.
+function addBill(st, session, num) {
+  const key = crossKey(st, session, num);
+  if (!CROSS_RE.test(key) || L.bills.some((c) => c.replace(/^-/, "") === key)) return false;
+  if (L.bills.length >= MAX) { say(`A list can have at most ${MAX} bills.`, true); return false; }
+  L.bills.push(key);
+  return true;
+}
+const onList = (st, session, num) => L.bills.some((c) => c.replace(/^-/, "") === crossKey(st, session, num));
+
+// ---- Finding bills: the front page's search data (search/<st>.json), one state at a time as needed ----
+const SEARCH = {}, READY = {};
+const fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const STOP = new Set("a an the of to and or for in on by with at from as is be into its it this that act bill relating relates concerning regarding".split(" "));
+const WORDY = new Set(["in", "or", "me", "hi", "ok", "de", "la", "pa", "ma", "co", "al", "id", "oh", "us", "ga", "mo", "ne", "nd", "md"]);
+const numParts = (n) => { const m = String(n).toUpperCase().replace(/[^A-Z0-9]/g, "").match(/^([A-Z]*)0*(\d+)[A-Z]?$/); return m ? [m[1], m[2]] : null; };
+const stem = (w) => (w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
+function prep(d) {
+  for (const s of d.s || []) for (const r of s.b || []) {
+    r.low = " " + fold(String(r[1] || "")).replace(/[^a-z0-9]+/g, " ") + " ";
+    r.np = [r[0], ...(Array.isArray(r[4]) ? r[4] : [])].map((n) => [n, numParts(n)]).filter((x) => x[1]);
+  }
+  return d;
+}
+function loadSt(st) {
+  return (SEARCH[st] ||= fetch(`/search/${st}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+    .then((d) => { READY[st] = d && Array.isArray(d.s) ? prep(d) : { st, s: [] }; rerun(); return READY[st]; }));
+}
+const fstate = $("fstate");
+fstate.innerHTML = `<option value="">Any state</option>` + [...AVAIL].sort((a, b) => (a === "us" ? -1 : b === "us" ? 1 : stName(a).localeCompare(stName(b))))
+  .map((c) => `<option value="${c}">${esc(stName(c))}</option>`).join("");
+// A state named at the start of a query or a pasted line: its name, or its two-letter code (in capitals when it's also a
+// word: "IN", "OR"), not when the code is a bill's letters ("SC 12"). Returns [code, the rest].
+const NAME_LIST = () => [...AVAIL.map((c) => [c, fold(stName(c))]), ["us", "us congress"], ["us", "u.s. congress"], ["us", "federal"]]
+  .sort((a, b) => b[1].length - a[1].length);
+function stateIn(text) {
+  const t = " " + text.replace(/\s+/g, " ") + " ", low = fold(t);
+  for (const [c, name] of NAME_LIST()) {
+    const i = low.indexOf(` ${name} `);
+    if (i >= 0) return [c, t.slice(0, i) + " " + t.slice(i + name.length + 1)];
+  }
+  for (const m of t.matchAll(/ ([A-Za-z]{2})(?=[ .:])/g)) {
+    const c = m[1], lc = c.toLowerCase();
+    if (!AVAIL.includes(lc) || (WORDY.has(lc) && c !== c.toUpperCase())) continue;
+    if (/^\.?\s?\d/.test(t.slice(m.index + 3))) continue;
+    return [lc, t.slice(0, m.index) + " " + t.slice(m.index + 3).replace(/^[.:]/, "")];
+  }
+  return ["", t];
+}
+// Bill numbers in text: letters (dots and spaces allowed) followed by digits.
+function numbersIn(text) {
+  const nums = [];
+  const rest = text.replace(/\b((?:[A-Za-z]\.?\s?){0,6}?)\s*(\d{1,5}[A-Za-z]?)\b/g, (all, letters, digits) => {
+    const p = numParts(letters.replace(/[.\s]/g, "") + digits);
+    if (p) nums.push(p);
+    return " ";
+  });
+  return [nums, rest];
+}
+// How well a bill's numbers match: 3 exactly, 2 the letters written another way ("HB" for "H"), 1 the number alone.
+function numScore(r, nums) {
+  let best = 0, which = null;
+  for (const [n, [P, D]] of r.np) for (const [qp, qd] of nums) {
+    if (D !== qd) continue;
+    const s = !qp ? 1 : P === qp ? 3 : P.replace(/B$/, "") === qp.replace(/B$/, "") || (qp.length >= 2 && P.endsWith(qp)) ? 2 : 0;
+    if (s > best) { best = s; which = n; }
+  }
+  return [best, which];
+}
+const PAGE = 30;
+let HITS = [], LIMIT = PAGE, LOADING = 0, PARSED = null;
+function search() {
+  const raw = $("q").value.trim();
+  if (!raw) { HITS = []; PARSED = null; return drawResults(); }
+  // A state named in the query wins over the one chosen.
+  let [st, text] = stateIn(raw);
+  if (!st) { st = fstate.value; text = " " + raw + " "; }
+  const want = st ? [st] : AVAIL;
+  for (const c of want) if (!READY[c]) loadSt(c);
+  LOADING = want.filter((c) => !READY[c]).length;
+  const [nums, rest] = numbersIn(text);
+  const onlyNums = nums.length && !rest.trim();
+  let hits = [];
+  if (nums.length) for (const c of want) for (const s of READY[c]?.s || []) for (const r of s.b) {
+    const [n, which] = numScore(r, nums);
+    if (n) hits.push({ st: c, s, r, tier: 10 + n, score: 0, shown: which });
+  }
+  const words = onlyNums && hits.length ? [] : [...new Set(fold(text).replace(/[^a-z0-9]+/g, " ").split(" ").filter((w) => w && !STOP.has(w)))].map(stem);
+  const keys = words.map((w) => (w.length <= 3 ? ` ${w} ` : ` ${w}`)), need = words.length >= 2 ? Math.ceil(words.length / 2) : 1;
+  const byNum = new Set(hits.map((h) => h.r)), df = keys.map(() => 0), part = [];
+  let total = 0;
+  for (const c of words.length ? want : []) for (const s of READY[c]?.s || []) for (const r of s.b) {
+    total++;
+    if (byNum.has(r)) continue;
+    const has = keys.map((w) => r.low.includes(w)), k = has.filter(Boolean).length;
+    has.forEach((x, i) => { if (x) df[i]++; });
+    if (k < need) continue;
+    const h = { st: c, s, r, tier: k === words.length ? 5 : 1, score: 0, shown: r[0], has };
+    hits.push(h); part.push(h);
+  }
+  const idf = df.map((n) => Math.log((total + 1) / (n + 1)));
+  for (const h of part) if (h.tier === 1) h.score = h.has.reduce((t, x, i) => t + (x ? idf[i] : 0), 0);
+  if (hits.some((h) => h.tier >= 5)) hits = hits.filter((h) => h.tier >= 5);
+  const rank = (r) => (r[2] === 5 ? 9 : r[2] === 6 ? 8 : r[2]);
+  hits.sort((a, b) => b.tier - a.tier || b.score - a.score || (a.s.up - b.s.up) || rank(b.r) - rank(a.r) || stName(a.st).localeCompare(stName(b.st)));
+  HITS = hits; PARSED = { st, nums, words };
+  drawResults();
+}
+function drawResults() {
+  const p = PARSED, where = p?.st ? ` in ${stName(p.st)}` : "";
+  if (!p) { $("cnt").textContent = ""; $("res").innerHTML = ""; return; }
+  const most = HITS.length && HITS.every((h) => h.tier === 1);
+  $("cnt").textContent = !HITS.length ? (LOADING ? "Searching…" : `No bills found${where}.`)
+    : most ? `No bill${where} has all those words; these have most of them`
+    : `${HITS.length.toLocaleString()} bill${HITS.length === 1 ? "" : "s"} found${where}${LOADING ? " · still loading some states…" : ""}`;
+  $("res").innerHTML = HITS.slice(0, LIMIT).map(({ st, s, r, shown }) => {
+    const [num, title, stage, kind] = r, on = onList(st, s.session, num);
+    const label = s.up ? `Prefiled for ${s.session}` : whereText(st, stage, "", kind === "c" ? "const" : "", s.live !== false);
+    const same = shown && shown !== num ? ` (same bill as ${esc(numText(st, num))})` : "";
+    return `<li><span><span class="fn">${esc(stName(st))} <b>${esc(numText(st, shown || num))}</b>${same}</span> <span class="stg s${s.up ? 0 : stage}">${esc(label)}</span>`
+      + `<span class="tt">${esc(title)}</span></span><button type="button" class="btn" data-add="${esc(`${st}|${s.session}|${num}`)}"${on ? " disabled" : ""}`
+      + ` aria-label="${on ? "On the list" : `Add ${esc(stName(st))} ${esc(numText(st, num))}`}">${on ? "Added" : "Add"}</button></li>`;
+  }).join("") + (HITS.length > LIMIT ? `<li><button type="button" class="btn quiet more">Show ${Math.min(PAGE, HITS.length - LIMIT)} more</button></li>` : "");
+}
+let SEARCH_TIMER = 0;
+function rerun() { clearTimeout(SEARCH_TIMER); SEARCH_TIMER = setTimeout(search, 120); }
+$("q").addEventListener("input", () => { LIMIT = PAGE; clearTimeout(SEARCH_TIMER); SEARCH_TIMER = setTimeout(search, 180); });
+// Start loading the chosen state's bills as soon as the box is used.
+$("q").addEventListener("focus", () => { if (fstate.value) loadSt(fstate.value); }, { passive: true });
+fstate.addEventListener("change", () => { if (fstate.value) loadSt(fstate.value); LIMIT = PAGE; search(); });
+$("q").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); search(); } });
+$("res").addEventListener("click", (e) => {
+  if (e.target.closest(".more")) { LIMIT += PAGE; return drawResults(); }
+  const b = e.target.closest("button[data-add]");
+  if (!b) return;
+  const [st, session, num] = b.dataset.add.split("|");
+  if (addBill(st, +session, num)) {
+    countUse("list-editor/added a bill");
+    b.textContent = "Added"; b.disabled = true;
+    changed(); drawHead(); drawBills();
+  }
+});
+
+// ---- Pasting several numbers: "NY A7620, S3425; NJ A1234" (a state named before its numbers, else the chosen one) ----
+$("pasteGo").addEventListener("click", async () => {
+  const text = $("paste").value.trim();
+  if (!text) return;
+  const asks = [], unknown = [];
+  let st = fstate.value;
+  for (const chunk of text.split(/[,;\n]+/)) {
+    let rest = chunk;
+    const [c, r] = stateIn(chunk);
+    if (c) { st = c; rest = r; }
+    const [nums] = numbersIn(" " + rest + " ");
+    for (const n of nums) (st ? asks.push([st, n]) : unknown.push(n.join("")));
+  }
+  if (!asks.length) return ($("pasteMsg").textContent = unknown.length ? "Name the state, or choose it above." : "No bill numbers found.");
+  $("pasteMsg").textContent = "Looking them up…";
+  await Promise.all([...new Set(asks.map((a) => a[0]))].map(loadSt));
+  let added = 0, had = 0;
+  const missing = [];
+  for (const [c, n] of asks) {
+    // The best match in the state's live sessions, the current one before next year's prefiled bills.
+    let best = null;
+    for (const s of READY[c]?.s || []) for (const r of s.b) {
+      const [score] = numScore(r, [n]);
+      if (score > 1 && (!best || score > best.score || (score === best.score && best.s.up && !s.up))) best = { s, r, score };
+    }
+    if (!best) { missing.push(`${c.toUpperCase()} ${n.join(" ")}`); continue; }
+    if (addBill(c, best.s.session, best.r[0])) added++; else had++;
+  }
+  if (added) { changed(); drawHead(); drawBills(); drawResults(); countUse("list-editor/pasted bills"); }
+  $("pasteMsg").textContent = [added ? `Added ${added}.` : "", had ? `${had} already on the list.` : "",
+    missing.length ? `Not found: ${missing.join(", ")}.` : "", unknown.length ? `No state for ${unknown.join(", ")}.` : ""].filter(Boolean).join(" ");
+  if (added && !missing.length && !unknown.length) $("paste").value = "";
+});
+
+// ---- Sharing: the link, the group code, another device, stopping ----
+let THANKS = "";
+const CODE_LINE = `<p class="muted">Sharing for an organization? <a href="mailto:statebilltracker@gmail.com?subject=${encodeURIComponent("Group code for State Bill Tracker")}">Ask for a group code</a>`
+  + ` &middot; <button type="button" class="linkish" data-act="havecode">I have one</button></p>`
+  + `<div class="row" id="codeRow" hidden><input type="text" id="code" autocomplete="off" placeholder="Group code" aria-label="Group code"><button type="button" class="btn" data-act="code">Use it</button></div>`
+  + `<p class="muted err" id="codeMsg"></p>`;
+function drawShare() {
+  $("shareSec").hidden = !L.slug;
+  if (!L.slug) return;
+  const url = listLink(L.slug), title = L.title.trim() || "A list of bills";
+  $("share").innerHTML = `<div class="row"><input type="text" readonly value="${esc(url)}" aria-label="Link to the list" id="link"><button type="button" class="btn" data-act="copy">Copy link</button></div>`
+    + `<div class="row">${shareIcons(url, title)}<a class="muted" href="/list/#${esc(L.slug)}">See it as others do</a></div>`
+    + (THANKS ? `<p class="thanks">${THANKS}</p>` : "")
+    + (L.group ? "" : CODE_LINE)
+    + `<details><summary>Use this list on another device</summary><p class="muted">Paste this key into Your lists on the other device. Anyone with it can change the list.</p>`
+    + `<div class="row"><input type="text" readonly id="key" value="${esc(`${L.slug} ${L.editKey}`)}" aria-label="The list's key"><button type="button" class="btn" data-act="copykey">Copy</button></div></details>`
+    + `<p class="row"><button type="button" class="btn quiet" data-act="stop">Stop sharing and delete</button></p>`;
+}
+// The contribution line, the first time a list's link is copied or shared (at most once in 90 days: thanksOnce()).
+function thank() {
+  if (THANKS) return;
+  THANKS = thanksOnce();
+  if (THANKS) $("share").querySelector(".icons")?.parentElement.insertAdjacentHTML("afterend", `<p class="thanks">${THANKS}</p>`);
+}
+$("share").addEventListener("click", async (e) => {
+  const a = e.target.closest("a[data-share]");
+  if (a) { thank(); return countUse(`list-editor/share by ${a.dataset.share}`); }
+  const b = e.target.closest("[data-act]");
+  if (!b) return;
+  const act = b.dataset.act;
+  try {
+    if (act === "copy") { thank(); countUse("list-editor/link copied"); return copy(b, listLink(L.slug)); }
+    if (act === "copykey") return copy(b, `${L.slug} ${L.editKey}`);
+    if (act === "havecode") { $("codeRow").hidden = false; $("code").focus(); return; }
+    if (act === "code") {
+      // A group's list is made anew with the code (its address comes from the name), and the old one deleted.
+      const code = $("code").value.trim();
+      if (!code) return ($("codeMsg").textContent = "Enter the group code.");
+      if (!L.title.trim()) { $("codeMsg").textContent = "Give the list a name first; it becomes part of its address."; return $("title").focus(); }
+      b.disabled = true;
+      clearTimeout(TIMER); TIMER = null;
+      const p = payload({ ...L, group: "x" }), r = await api("/lists", { method: "POST", body: JSON.stringify({ ...p, code }) });
+      const old = L.slug, oldKey = L.editKey;
+      await api(`/lists/${encodeURIComponent(old)}`, { method: "DELETE", headers: { "X-Edit-Key": oldKey } }).catch(() => {});
+      forget(old);
+      Object.assign(L, { slug: r.slug, editKey: r.editKey, group: r.group, saved: sig(p) });
+      LAST_SAVE = Date.now();
+      keep();
+      history.replaceState(null, "", `#${r.slug}`);
+      countUse("list-editor/shared for a group");
+      return start();
+    }
+    if (act === "stop") {
+      if (!confirm(`Stop sharing “${L.title.trim() || "this list"}”? The list and its link will be deleted for everyone.`)) return;
+      clearTimeout(TIMER); TIMER = null;
+      await api(`/lists/${encodeURIComponent(L.slug)}`, { method: "DELETE", headers: { "X-Edit-Key": L.editKey } }).catch((err) => { if (err.status !== 404) throw err; });
+      forget(L.slug);
+      countUse("list-editor/deleted a list");
+      location.href = "/your-bills/";
+    }
+  } catch (err) {
+    b.disabled = false;
+    if (act === "code") $("codeMsg").textContent = err.message; else say(err.message, true);
+  }
+});
+
+addEventListener("hashchange", openList);
+openList();
+countOnce("list-editor/opened");
+</script>
+</body>
+</html>
