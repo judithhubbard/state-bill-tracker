@@ -4,7 +4,8 @@
      starred bills as one live list (lists_worker/, a list across states) that this page keeps in step with the stars.
      build_site.sh writes it to your-bills/index.html, putting common.css and common.js in place of their comments, the link
      preview tags and visit counter in place of the meta comment, and the addresses of the lists Worker (LISTS_API_URL) and
-     the contributions page (SUPPORT_URL). -->
+     the contributions page (SUPPORT_URL). Each state's bills are shown by the state's own page, its watchlist view in a
+     frame (embed.js). -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -33,6 +34,9 @@
   <h1>Your bills</h1>
   <div class="tabbar">
     <div role="tablist" id="tablist" aria-label="Your lists"></div>
+    <div class="morewrap" id="moreWrap" hidden><button type="button" class="tab" id="moreBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="lmenu">More lists ▾</button>
+      <div class="lmenu" id="lmenu" hidden><label hidden><input type="search" id="lmenuQ" placeholder="Find a list" aria-label="Find a list" autocomplete="off"></label>
+      <div id="lmenuList" role="listbox" aria-label="Every list"></div></div></div>
     <a class="tab add" href="/lists/edit/#new">+ New list</a>
   </div>
   <div id="panels">
@@ -53,26 +57,32 @@
 </main>
 <script>
 /*common.js*/
+/*embed.js*/
 </script>
 <script>
 const DEFAULT_TITLE = "Bills I'm following";
 const today = () => new Date().toISOString().slice(0, 10);
-let ITEMS = [];               // the starred bills as drawn: lookUp() plus {st, session, num, entry, key}
-const REMOVED = new Map();    // bills unstarred on this page, kept in view (with an empty star) until it's reloaded
+let ITEMS = [];               // the starred bills: lookUp() plus {st, session, num, entry, key, on}
+const REMOVED = new Map();    // bills unstarred on this page (in the rows below the frames), kept in view until it's reloaded
 const MAX = 500;              // the most bills a shared list holds
 
 // ---- Tabs: Starred, each list made here (list editor), each list followed (not one made here) ----
 // Tab ids: "starred", "list:<slug>", "follow:<slug>". What each tab showed when last viewed in this browser is kept in
 // abt:tabseen ({tab id: {bill key: its last action's date then}}): a bill added since, or with a newer action, is new.
-const TAB_KEY = "abt:yourbills:tab", TSEEN = "abt:tabseen";
+// When a tab was last opened is kept in abt:yourbills:recent ({tab id: time}): with more than five lists, the strip shows
+// the four opened most recently and a "More lists" menu of all of them.
+const TAB_KEY = "abt:yourbills:tab", TSEEN = "abt:tabseen", RECENT = "abt:yourbills:recent";
 function readSeen() { try { const o = JSON.parse(localStorage.getItem(TSEEN) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } }
 function writeSeen(o) { try { localStorage.setItem(TSEEN, JSON.stringify(o)); } catch (e) {} }
-const TABS = new Map();       // id -> {label, count, fresh (how many new), rows ([{key, last}] once drawn), newKeys}
-const SHOWN = {};             // id -> bill keys that were new when the tab was viewed on this page (they stay marked New)
+function readRecent() { try { const o = JSON.parse(localStorage.getItem(RECENT) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } }
+const TABS = new Map();       // id -> {label, maker (a followed list's), count, fresh (how many new), rows ([{key, last}] once drawn), newKeys}
 let CUR = "starred";
 const domId = (id) => id.replace(/[^\w-]/g, "_");
 const slugOf = (id) => id.replace(/^(?:list|follow):/, "");
 const panelOf = (id) => $(`p-${domId(id)}`);
+const SHOW_TABS = 4, MANY = 5, NAME_MAX = 40;
+// A tab's name, cut only when it's longer than 40 characters.
+const tabName = (t) => (t.length > NAME_MAX ? t.slice(0, NAME_MAX - 1).replace(/\s+\S*$/, "") + "…" : t);
 // The lists this browser made never also show as followed.
 function dropOwnFollows() {
   const f = readFollows();
@@ -84,6 +94,9 @@ function tabOrder() {
   const named = Object.values(readNamed()).sort((a, b) => (b.updated || "").localeCompare(a.updated || "")).map((l) => `list:${l.slug}`);
   return ["starred", ...named, ...Object.keys(readFollows()).filter((s) => !editKeyFor(s)).map((s) => `follow:${s}`)];
 }
+// A list tab's panel: its summary line, its introduction, its bills (each state's card, drawn by the state's page:
+// embed.js) and, for a list made here, the key for another device.
+const LIST_PANEL = '<p class="sub lmeta">Loading…</p><div class="lintro"></div><div class="sbills"></div><div class="lfoot"></div>';
 // Makes a tab and an empty panel for each list, and drops those no longer kept.
 function syncTabs() {
   dropOwnFollows();
@@ -92,12 +105,12 @@ function syncTabs() {
     const t = TABS.get(id) || { fresh: 0 };
     if (id === "starred") t.label = "Starred";
     else if (id.startsWith("list:")) { const l = named[slugOf(id)]; t.label = l.title || "Untitled list"; t.count = (l.bills || []).length; }
-    else { const w = f[slugOf(id)] || {}; t.label = w.title || "A shared list"; if (t.count == null && w.known) t.count = w.known.length; }
+    else { const w = f[slugOf(id)] || {}; t.label = w.title || "A shared list"; t.maker ??= w.group || ""; if (t.count == null && w.known) t.count = w.known.length; }
     TABS.set(id, t);
     if (!panelOf(id)) {
       const p = document.createElement("section");
       p.setAttribute("role", "tabpanel"); p.id = `p-${domId(id)}`; p.dataset.tab = id; p.setAttribute("aria-labelledby", `t-${domId(id)}`);
-      p.innerHTML = '<p class="muted">Loading…</p>';
+      p.innerHTML = LIST_PANEL;
       $("panels").append(p);
     }
   }
@@ -106,21 +119,42 @@ function syncTabs() {
   const kept = new Map(TABS);
   TABS.clear();
   for (const id of ids) TABS.set(id, kept.get(id));
-  // Panels in the tabs' order (for anyone reading the page without styles).
-  for (const id of ids) $("panels").append(panelOf(id));
+  // Panels in the tabs' order (for anyone reading the page without styles); only when they're out of order, since moving
+  // a panel loads its frames again (moveBefore keeps them loaded).
+  const order = ids.map(panelOf), box = $("panels");
+  if (order.some((p, k) => box.children[k] !== p)) for (const p of order) (box.moveBefore ? box.moveBefore(p, null) : box.append(p));
   if (!TABS.has(CUR)) CUR = "starred";
   drawStrip();
 }
+// The tabs in the strip: all of them, or (more than five lists) Starred, the four lists opened most recently and the one in
+// view, in the tabs' order.
+function stripIds() {
+  const ids = [...TABS.keys()], lists = ids.filter((id) => id !== "starred");
+  if (lists.length <= MANY) return ids;
+  const rec = readRecent(), recent = [...lists].sort((a, b) => (rec[b] || 0) - (rec[a] || 0) || lists.indexOf(a) - lists.indexOf(b)).slice(0, SHOW_TABS);
+  if (CUR !== "starred" && !recent.includes(CUR)) recent[SHOW_TABS - 1] = CUR;
+  return ids.filter((id) => id === "starred" || recent.includes(id));
+}
+const makerText = (t) => `Followed list${t.maker ? ` from ${t.maker}` : ""}`;
+function tabHtml(id) {
+  const t = TABS.get(id), on = id === CUR, follow = id.startsWith("follow:");
+  const full = follow ? `${t.label}, ${makerText(t).toLowerCase()}` : t.label;
+  return `<button type="button" class="tab" role="tab" id="t-${domId(id)}" data-tab="${esc(id)}" aria-controls="p-${domId(id)}" aria-selected="${on}" tabindex="${on ? 0 : -1}"`
+    + ` aria-label="${esc(full)}${t.count != null ? ` (${t.count})` : ""}${t.fresh ? `, ${t.fresh} new` : ""}" title="${esc(follow ? `${t.label}\n${makerText(t)}` : t.label)}">`
+    + (id === "starred" ? '<span aria-hidden="true">★</span> ' : "") + (follow ? '<span class="fmark" aria-hidden="true">↗</span> ' : "")
+    + `<span class="tl">${esc(tabName(t.label))}</span>`
+    + (t.count != null ? ` <span class="tc">(${t.count})</span>` : "") + (t.fresh ? `<span class="new">${t.fresh} new</span>` : "") + "</button>";
+}
 function drawStrip() {
-  const ids = [...TABS.keys()], had = document.activeElement?.closest?.('[role="tab"]')?.dataset.tab;
-  $("tablist").innerHTML = ids.map((id) => {
-    const t = TABS.get(id), on = id === CUR;
-    return `<button type="button" class="tab" role="tab" id="t-${domId(id)}" data-tab="${esc(id)}" aria-controls="p-${domId(id)}" aria-selected="${on}" tabindex="${on ? 0 : -1}">`
-      + (id === "starred" ? '<span aria-hidden="true">★</span> ' : "") + `<span class="tl">${esc(t.label)}</span>`
-      + (t.count != null ? ` <span class="tc">(${t.count})</span>` : "") + (t.fresh ? `<span class="new">${t.fresh} new</span>` : "") + "</button>";
-  }).join("");
+  const ids = stripIds(), all = [...TABS.keys()], had = document.activeElement?.closest?.('[role="tab"]')?.dataset.tab;
+  $("tablist").innerHTML = ids.map(tabHtml).join("");
+  const hidden = all.length - ids.length, fresh = all.filter((id) => !ids.includes(id)).reduce((n, id) => n + (TABS.get(id).fresh || 0), 0);
+  $("moreWrap").hidden = !hidden;
+  $("moreBtn").innerHTML = `More lists (${all.length - 1}) ▾${fresh ? `<span class="new">${fresh} new</span>` : ""}`;
+  if (!hidden) closeMenu();
+  else if (!$("lmenu").hidden) drawMenu();
   for (const p of $("panels").children) p.hidden = p.dataset.tab !== CUR;
-  if (had && TABS.has(had)) $(`t-${domId(had)}`)?.focus();
+  if (had && ids.includes(had)) $(`t-${domId(had)}`)?.focus();
   edges();
 }
 // Fades the strip's edges where tabs are out of sight.
@@ -134,7 +168,10 @@ addEventListener("resize", edges);
 function select(id, how = {}) {
   if (!TABS.has(id)) id = "starred";
   CUR = id;
-  try { localStorage.setItem(TAB_KEY, id); } catch (e) {}
+  try {
+    localStorage.setItem(TAB_KEY, id);
+    if (id !== "starred") localStorage.setItem(RECENT, JSON.stringify({ ...readRecent(), [id]: Date.now() }));
+  } catch (e) {}
   if (how.user) history.replaceState(null, "", id === "starred" ? "#starred" : `#tab=${encodeURIComponent(slugOf(id))}`);
   drawStrip();
   const tab = $(`t-${domId(id)}`);
@@ -153,7 +190,6 @@ function loaded(id, rows, newKeys) {
 function markSeen(id) {
   const t = TABS.get(id);
   if (!t || !t.rows || document.visibilityState === "hidden") return drawStrip();
-  for (const k of t.newKeys) (SHOWN[id] ||= new Set()).add(k);
   const s = readSeen();
   s[id] = Object.fromEntries(t.rows.map((r) => [r.key, r.last || today()]));
   writeSeen(s);
@@ -168,13 +204,62 @@ function markSeen(id) {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") markSeen(CUR); });
 $("tablist").addEventListener("click", (e) => { const b = e.target.closest('[role="tab"]'); if (b) select(b.dataset.tab, { user: true }); });
 $("tablist").addEventListener("keydown", (e) => {
-  const ids = [...TABS.keys()], i = ids.indexOf(document.activeElement?.dataset?.tab);
+  const ids = stripIds(), i = ids.indexOf(document.activeElement?.dataset?.tab);
   if (i < 0) return;
+  if (e.key === "ArrowRight" && i === ids.length - 1 && !$("moreWrap").hidden) { e.preventDefault(); return $("moreBtn").focus(); }
   const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: ids.length - 1 }[e.key];
   if (to == null) return;
   e.preventDefault();
   select(ids[(to + ids.length) % ids.length], { user: true, focus: true });
 });
+// ---- "More lists": every list, in two groups, each with its new count; a search box when there are more than ten ----
+function drawMenu() {
+  const q = ($("lmenuQ")?.value || "").trim().toLowerCase(), all = [...TABS.keys()].filter((id) => id !== "starred");
+  const hit = (id) => !q || TABS.get(id).label.toLowerCase().includes(q) || (TABS.get(id).maker || "").toLowerCase().includes(q);
+  const item = (id) => { const t = TABS.get(id); return `<button type="button" role="option" tabindex="-1" data-pick="${esc(id)}" aria-selected="${id === CUR}">`
+    + `<span class="ln">${id.startsWith("follow:") ? '<span class="fmark" aria-hidden="true">↗</span> ' : ""}${esc(t.label)}${id.startsWith("follow:") && t.maker ? ` <span class="muted">(${esc(t.maker)})</span>` : ""}</span>`
+    + `${t.count != null ? `<span class="tc">${t.count}</span>` : ""}${t.fresh ? `<span class="new">${t.fresh} new</span>` : ""}</button>`; };
+  const group = (name, ids) => (ids.length ? `<h4 id="lm-${name.replace(/\W/g, "")}">${name}</h4><div role="group" aria-labelledby="lm-${name.replace(/\W/g, "")}">${ids.map(item).join("")}</div>` : "");
+  const mine = all.filter((id) => id.startsWith("list:") && hit(id)), fol = all.filter((id) => id.startsWith("follow:") && hit(id));
+  $("lmenuList").innerHTML = group("Your lists", mine) + group("Lists you follow", fol) || '<p class="none">No list has that name.</p>';
+  $("lmenuQ").parentElement.hidden = all.length <= 10;
+}
+function openMenu() {
+  $("lmenu").hidden = false;
+  $("moreBtn").setAttribute("aria-expanded", "true");
+  drawMenu();
+  ($("lmenuQ").parentElement.hidden ? $("lmenuList").querySelector('[role="option"]') : $("lmenuQ"))?.focus();
+}
+function closeMenu(refocus) {
+  if ($("lmenu").hidden) return;
+  $("lmenu").hidden = true;
+  $("moreBtn").setAttribute("aria-expanded", "false");
+  if ($("lmenuQ")) $("lmenuQ").value = "";
+  if (refocus) $("moreBtn").focus();
+}
+$("moreBtn").addEventListener("click", () => ($("lmenu").hidden ? openMenu() : closeMenu()));
+$("lmenuQ").addEventListener("input", drawMenu);
+$("lmenu").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-pick]");
+  if (!b) return;
+  closeMenu();
+  select(b.dataset.pick, { user: true, focus: true });
+});
+$("moreWrap").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { e.preventDefault(); return closeMenu(true); }
+  if (e.target === $("moreBtn")) {
+    if (e.key === "ArrowLeft") { e.preventDefault(); const ids = stripIds(); return $(`t-${domId(ids[ids.length - 1])}`)?.focus(); }
+    if (e.key === "ArrowDown") { e.preventDefault(); return openMenu(); }
+    return;
+  }
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+  const opts = [...$("lmenuList").querySelectorAll('[role="option"]')], i = opts.indexOf(document.activeElement);
+  e.preventDefault();
+  const to = e.key === "Home" ? 0 : e.key === "End" ? opts.length - 1 : e.key === "ArrowDown" ? i + 1 : i - 1;
+  if (to < 0 && !$("lmenuQ").parentElement.hidden) return $("lmenuQ").focus();
+  opts[Math.max(0, Math.min(opts.length - 1, to))]?.focus();
+});
+document.addEventListener("click", (e) => { if (!e.target.closest("#moreWrap")) closeMenu(); });
 // The tab a link names (#starred, #tab=<slug>), else the last one viewed here.
 function tabFromHash() {
   const h = decodeURIComponent(location.hash.replace(/^#/, ""));
@@ -185,47 +270,40 @@ function tabFromHash() {
   return TABS.has(`list:${slug}`) ? `list:${slug}` : TABS.has(`follow:${slug}`) ? `follow:${slug}` : "starred";
 }
 addEventListener("hashchange", () => { const id = tabFromHash(); if (id && id !== CUR) select(id); });
-
-// A state's bills: a card for each state, newest changes first.
-function byState(rows, wl, row) {
-  const by = {};
-  for (const x of rows) (by[x.st] ||= []).push(x);
-  return Object.keys(by).sort((a, b) => stName(a).localeCompare(stName(b))).map((st) => {
-    const rs = by[st].sort((a, b) => (b.fresh - a.fresh) || (b.last || "").localeCompare(a.last || ""));
-    return `<div class="mst"><h3><a href="/${st}/">${esc(stName(st))}</a>${wl ? `<a class="wl" href="/${st}/watchlist/">Watchlist ›</a>` : ""}</h3><ol>`
-      + rs.map(row).join("") + "</ol></div>";
-  }).join("");
-}
 const NO_BILLS = '<p class="muted">No bills on it yet.</p>';
 
-// ---- Starred bills ----
+// ---- Starred bills: each state's own watchlist (its Watchlist tab, as it shows it), in a frame per state's session ----
+// Bills the state's data doesn't have are listed below its card, each with its star.
 const starBtn = (x, on) => `<button type="button" class="star" data-star="${esc(x.key)}" aria-pressed="${on}" aria-label="${on ? "Remove" : "Star"} ${esc(numText(x.st, x.full))}" title="${on ? "Remove from your bills" : "Star it again"}">${on ? "★" : "☆"}</button>`;
 function starSum() {
-  const on = ITEMS.filter((x) => x.on), n = on.length, sts = new Set(on.map((x) => x.st)), fresh = on.filter((x) => x.fresh).length;
-  $("sum").innerHTML = n ? `${n} bill${n === 1 ? "" : "s"}${sts.size > 1 ? ` in ${sts.size} ${sts.has("us") ? "places" : "states"}` : ""}${fresh ? ` · <b>${fresh} new</b>` : ""}` : "&nbsp;";
+  const on = ITEMS.filter((x) => x.on), n = on.length, sts = new Set(on.map((x) => x.st));
+  $("sum").innerHTML = n ? `${n} bill${n === 1 ? "" : "s"}${sts.size > 1 ? ` in ${sts.size} ${sts.has("us") ? "places" : "states"}` : ""}` : "&nbsp;";
   $("sum").hidden = !n;
   const t = TABS.get("starred");
   if (t) { t.count = n; drawStrip(); }
 }
+async function starGroups(starred, rows) {
+  return listGroups("starred", starred, rows, { heads: true, wl: true, code: (g) => `${g.session}.mine`,
+    row: (x) => ({ star: starBtn(x, x.on), stance: x.entry?.stance === "oppose" ? "oppose" : "" }) });
+}
 async function draw() {
   syncTabs();
-  const starred = allStarred().map((b) => ({ ...b, key: crossKey(b.st, b.session, b.num) }));
+  const starred = allStarred().map((b) => ({ ...b, key: crossKey(b.st, b.session, b.num), stance: b.entry.stance }));
+  // The frames start loading at once; the bills' statuses (for the count, what's new and bills not in the data) after.
+  if (starred.length) Frames.show($("bills"), await starGroups(starred, null));
   const keys = new Set(starred.map((b) => b.key));
   for (const [k, b] of REMOVED) if (!keys.has(k)) starred.push(b); else REMOVED.delete(k);
-  ITEMS = await Promise.all(starred.map(async (b) => {
-    const s = await lookUp(b.st, b.session, b.num), on = !REMOVED.has(b.key), seen = b.entry.seen || "";
-    const fresh = on && s.found && s.last && s.last > seen;
-    return { ...b, ...s, on, fresh, newLine: fresh && s.action ? plainAct(s.action) : "", stance: b.entry.stance === "oppose" ? "oppose" : "",
-      seen: s.found ? `${b.st}|${b.session}:${b.num}|${s.last || ""}` : "" };
-  }));
-  $("bills").innerHTML = byState(ITEMS, true, (x) => billRow({ ...x, star: starBtn(x, x.on) }));
+  ITEMS = await Promise.all(starred.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)), on: !REMOVED.has(b.key),
+    stance: b.entry.stance === "oppose" ? "oppose" : "", seen: "" })));
+  Frames.show($("bills"), await starGroups(ITEMS.filter((x) => x.on || !x.found), ITEMS));
   $("none").hidden = ITEMS.length > 0;
   $("shareSec").hidden = !ITEMS.length && !myList();
   starSum();
   drawShare();
   // New on the tab: a bill whose newest action came after it was last opened, and after this tab was last viewed.
   const rec = readSeen().starred, on = ITEMS.filter((x) => x.on);
-  loaded("starred", on.map((x) => ({ key: x.key, last: x.last })), on.filter((x) => x.fresh && !(rec && rec[x.key] && rec[x.key] >= x.last)).map((x) => x.key));
+  const fresh = (x) => x.found && x.last && x.last > (x.entry.seen || "") && !(rec && rec[x.key] && rec[x.key] >= x.last);
+  loaded("starred", on.map((x) => ({ key: x.key, last: x.last })), on.filter(fresh).map((x) => x.key));
 }
 $("bills").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-star]");
@@ -242,14 +320,7 @@ $("bills").addEventListener("click", (e) => {
   starSum();
   schedule();
 });
-// Opening a bill marks it seen, as opening it on the state's page does.
-$("panels").addEventListener("click", (e) => {
-  const a = e.target.closest("a[data-seen]");
-  if (!a) return;
-  const [st, k, last] = a.dataset.seen.split("|"), w = readWatch(st);
-  if (w[k]) { w[k] = { ...entryOf(w[k]), seen: last }; writeWatch(st, w); }
-  countUse("your-bills/opened a bill");
-});
+$("panels").addEventListener("click", (e) => { if (e.target.closest("li > a")) countUse("your-bills/opened a bill"); });
 
 // ---- Sharing: one live list across states, saved a minute after the stars change ----
 // What the shared list should hold now.
@@ -406,7 +477,20 @@ $("share").addEventListener("input", (e) => {
 });
 $("share").addEventListener("click", (e) => { const a = e.target.closest("a[data-share]"); if (a) countUse(`your-bills/share by ${a.dataset.share}`); });
 
+// ---- A list's tab (lists made here and lists followed): its summary line, its bills shown by each state's page ----
+// A group list's notes on its bills, by bill key ("nj:2026:A1234"), for each state's frame: {notes: {A1234: text}, group}.
+function notesFor(l, g) {
+  if (!l.group || !l.notes) return null;
+  const notes = {};
+  for (const b of g.bills) { const t = noteOf(l, b); if (t) notes[baseNum(b.num)] = t; }
+  return Object.keys(notes).length ? { notes, group: l.group } : null;
+}
+// The bills' statuses: what's new on the tab (bills added since, or with a newer action) and bills not in the data.
+async function statuses(bills) { return Promise.all(bills.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)) }))); }
+const billsText = (n) => `${n} bill${n === 1 ? "" : "s"}`;
+
 // ---- Lists made with the list editor (/lists/edit/), each with its own link ----
+// Its cards set the list's side on each bill and take bills off it (tracker.html's embedListEdit(), through named.js).
 // New on its tab: a bill with an action since the tab was last viewed (bills added here aren't news to their maker).
 const GONE = new Set();     // lists the Worker no longer has
 async function drawList(l) {
@@ -414,35 +498,30 @@ async function drawList(l) {
   if (!p) return;
   const title = l.title || "Untitled list";
   if (GONE.has(l.slug)) {
-    p.innerHTML = `<p class="sub">This list isn&rsquo;t online any more.</p><p class="row"><button type="button" class="btn quiet" data-forget="${esc(l.slug)}">Remove it</button></p>`;
+    p.querySelector(".lmeta").innerHTML = `<span>This list isn&rsquo;t online any more.</span><button type="button" class="linkish" data-forget="${esc(l.slug)}">Remove it</button>`;
+    Frames.show(p.querySelector(".sbills"), []);
     return loaded(id, [], []);
   }
-  const bills = (l.bills || []).map(parseCross).filter(Boolean), stance = !!l.group || (l.bills || []).some((c) => c.startsWith("-"));
-  const s = readSeen(), rec = s[id] || {};
-  const rows = await Promise.all(bills.map(async (b) => {
-    const x = await lookUp(b.st, b.session, b.num), was = rec[b.key];
-    const isNew = !!(was && x.last && x.last > was);
-    return { ...b, ...x, isNew, stance: stance ? b.stance : "", note: (l.notes || {})[b.key] || "" };
-  }));
+  const bills = (l.bills || []).map(parseCross).filter(Boolean);
+  const meta = () => [l.group ? `<span class="grp">${esc(l.group)}</span>` : "", `<span>${billsText(bills.length)}</span>`,
+    l.updated ? `<span>changed ${fmtDay(l.updated.slice(0, 10))}</span>` : "", `<a href="/lists/edit/#${esc(l.slug)}">Edit</a>`, sharePop(l.slug, title)].filter(Boolean).join("");
+  const box = p.querySelector(".lmeta");
+  if (!box.querySelector('[aria-expanded="true"]')) box.innerHTML = meta();
+  p.querySelector(".lfoot").innerHTML = `<details class="quietbox"><summary>Use this list on another device</summary><p class="muted">Paste this key into Your bills on the other device. Anyone with it can change the list.</p>`
+    + `<div class="row"><input type="text" readonly value="${esc(`${l.slug} ${l.editKey}`)}" aria-label="The list's key"><button type="button" class="btn" data-copykey="${esc(l.slug)}">Copy</button></div></details>`;
+  const extra = (g) => ({ own: l.slug, ...(notesFor(l, g) || {}) });
+  const sb = p.querySelector(".sbills");
+  if (!bills.length) { Frames.show(sb, []); sb.innerHTML = NO_BILLS; return loaded(id, [], []); }
+  Frames.show(sb, await listGroups(id, bills, null, { extra }));
+  const rows = await statuses(bills), rec = readSeen()[id] || {};
+  Frames.show(sb, await listGroups(id, bills, rows, { extra, row: (x) => ({ note: noteOf(l, x) }) }));
   // Bills not seen on this tab before start from where they are now.
   if (rows.some((x) => !(x.key in rec))) {
     const now = readSeen();
     now[id] = { ...(now[id] || {}), ...Object.fromEntries(rows.filter((x) => !(x.key in rec)).map((x) => [x.key, x.last || today()])) };
     writeSeen(now);
   }
-  const n = rows.length, url = listLink(l.slug);
-  const meta = [l.group, `${n} bill${n === 1 ? "" : "s"}`, l.updated ? `changed ${fmtDay(l.updated.slice(0, 10))}` : ""].filter(Boolean).join(" · ");
-  p.innerHTML = `<p class="sub">${esc(meta)} · <a href="/list/#${esc(l.slug)}">Preview</a></p>`
-    + `<div class="row"><a class="btn" href="/lists/edit/#${esc(l.slug)}">Edit</a><button type="button" class="btn" data-copylist="${esc(l.slug)}">Copy link</button>${shareIcons(url, title)}</div>`
-    + (rows.length ? byState(rows.map((x) => listRow(id, x)), false, billRow) : NO_BILLS)
-    + `<details class="quietbox"><summary>Use this list on another device</summary><p class="muted">Paste this key into Your bills on the other device. Anyone with it can change the list.</p>`
-    + `<div class="row"><input type="text" readonly value="${esc(`${l.slug} ${l.editKey}`)}" aria-label="The list's key"><button type="button" class="btn" data-copykey="${esc(l.slug)}">Copy</button></div></details>`;
-  loaded(id, rows.map((x) => ({ key: x.key, last: x.last })), rows.filter((x) => x.isNew).map((x) => x.key));
-}
-// A list's row: marked New when it was new on this tab when the tab was viewed here.
-function listRow(id, x) {
-  const fresh = x.isNew || x.added || !!SHOWN[id]?.has(x.key);
-  return { ...x, fresh, newLine: fresh && !x.added && x.action ? plainAct(x.action) : "" };
+  loaded(id, rows.map((x) => ({ key: x.key, last: x.last })), rows.filter((x) => rec[x.key] && x.last && x.last > rec[x.key]).map((x) => x.key));
 }
 function drawLists() { return Promise.all(Object.values(readNamed()).map(drawList)); }
 // The Worker's copy may be newer (changed on another device): take its bills and name, unless this browser has changes
@@ -466,9 +545,10 @@ async function refreshLists() {
   await drawLists();
 }
 
-// ---- Lists this browser follows (Follow on /list/) ----
+// ---- Lists this browser follows (Follow on /list/): read-only, with the stances of whoever made them ----
 // New on its tab: a bill added to the list, or with an action, since the tab was last viewed (before this page kept
 // that: a bill added since it was followed).
+const FOLLOWED = {};        // slug -> the followed list's rows as drawn
 async function drawFollow(slug) {
   const id = `follow:${slug}`, p = panelOf(id);
   if (!p) return;
@@ -476,38 +556,34 @@ async function drawFollow(slug) {
   let l;
   try { l = await api(`/lists/${encodeURIComponent(slug)}`); }
   catch (e) {
-    p.innerHTML = (e.status === 404 ? `<p class="sub">This list isn&rsquo;t online any more.</p>` : `<p class="sub">Couldn&rsquo;t load it just now.</p>`)
-      + `<p class="row"><button type="button" class="btn quiet" data-unfollow="${esc(slug)}">Unfollow</button></p>`;
+    p.querySelector(".lmeta").innerHTML = `<span>${e.status === 404 ? "This list isn&rsquo;t online any more." : "Couldn&rsquo;t load it just now."}</span><button type="button" class="linkish" data-unfollow="${esc(slug)}">Unfollow</button>`;
     return;
   }
   if (!panelOf(id)) return;
-  const known = new Set(was.known || []), rec = readSeen()[id], bills = listBills(l);
-  const rows = await Promise.all(bills.map(async (b) => {
-    const s = await lookUp(b.st, b.session, b.num);
-    const added = rec ? !(b.key in rec) : !known.has(b.key), isNew = !added && !!(rec && s.last && rec[b.key] && s.last > rec[b.key]);
-    return { ...b, ...s, added, isNew, stance: showStance(l) ? b.stance : "", note: noteOf(l, b) };
-  }));
-  const f = readFollows();
-  if (f[slug] && f[slug].title !== l.title) { f[slug] = { ...f[slug], title: l.title }; writeFollows(f); }
+  const bills = listBills(l), f = readFollows();
+  if (f[slug] && (f[slug].title !== l.title || f[slug].group !== (l.group || ""))) { f[slug] = { ...f[slug], title: l.title, group: l.group || "" }; writeFollows(f); }
   const t = TABS.get(id);
-  if (t) { t.label = l.title || "A shared list"; t.count = rows.length; }
-  const n = rows.length, missing = rows.filter((x) => !(`${x.session}:${x.num}` in readWatch(x.st))).length;
-  const meta = [l.group ? `<span class="grp">${esc(l.group)}</span>` : "", `${n} bill${n === 1 ? "" : "s"}`, l.updated ? `updated ${fmtDay(l.updated.slice(0, 10))}` : ""].filter(Boolean).join(" · ");
-  p.innerHTML = `<p class="sub">${meta} · <a href="/list/#${esc(slug)}">Its page</a></p>`
-    + (l.intro ? `<details class="quietbox intro"><summary>About this list</summary>${paras(l.intro)}</details>` : "")
-    + `<div class="row">${n ? `<button type="button" class="btn" data-addall="${esc(slug)}"${missing ? "" : " disabled"}>${missing ? "Add all to my watchlist" : "All on your watchlist"}</button>` : ""}`
-    + `<button type="button" class="btn quiet" data-unfollow="${esc(slug)}">Unfollow</button><span class="muted" data-msg="${esc(slug)}"></span></div>`
-    + (rows.length ? byState(rows.map((x) => listRow(id, x)), false, billRow) : NO_BILLS);
+  if (t) { t.label = l.title || "A shared list"; t.maker = l.group || ""; t.count = bills.length; drawStrip(); }
+  const meta = (missing) => [l.group ? `<span class="grp">${esc(l.group)}</span>` : "", `<span>${billsText(bills.length)}</span>`,
+    l.updated ? `<span>updated ${fmtDay(l.updated.slice(0, 10))}</span>` : "", `<button type="button" class="linkish" data-unfollow="${esc(slug)}">Unfollow</button>`,
+    bills.length ? `<button type="button" class="linkish" data-addall="${esc(slug)}"${missing ? "" : " disabled"}>${missing ? "Add all to my watchlist" : "All on your watchlist"}</button>` : "",
+    `<span class="lmsg muted" data-msg="${esc(slug)}"></span>`].filter(Boolean).join("");
+  const missing = () => bills.filter((x) => !(`${x.session}:${x.num}` in readWatch(x.st))).length;
+  p.querySelector(".lmeta").innerHTML = meta(missing());
+  p.querySelector(".lintro").innerHTML = l.intro ? `<details class="quietbox intro"><summary>About this list</summary>${paras(l.intro)}</details>` : "";
+  const sb = p.querySelector(".sbills"), extra = (g) => notesFor(l, g);
+  if (!bills.length) { Frames.show(sb, []); sb.innerHTML = NO_BILLS; return; }
+  Frames.show(sb, await listGroups(id, bills, null, { extra }));
+  const known = new Set(was.known || []), rec = readSeen()[id], rows = await statuses(bills);
+  Frames.show(sb, await listGroups(id, bills, rows, { extra, row: (x) => ({ stance: showStance(l) ? x.stance : "", note: noteOf(l, x) }) }));
   FOLLOWED[slug] = rows;
-  loaded(id, rows.map((x) => ({ key: x.key, last: x.last })), rows.filter((x) => x.added || x.isNew).map((x) => x.key));
+  const added = (x) => (rec ? !(x.key in rec) : !known.has(x.key)), isNew = (x) => !added(x) && !!(rec && x.last && rec[x.key] && x.last > rec[x.key]);
+  loaded(id, rows.map((x) => ({ key: x.key, last: x.last })), rows.filter((x) => added(x) || isNew(x)).map((x) => x.key));
 }
-const FOLLOWED = {};        // slug -> the followed list's rows as drawn
 function drawFollows() { return Promise.all(Object.keys(readFollows()).filter((s) => !editKeyFor(s)).map(drawFollow)); }
 
-// ---- The lists' buttons ----
+// ---- The lists' links and buttons ----
 $("panels").addEventListener("click", (e) => {
-  const c = e.target.closest("button[data-copylist]");
-  if (c) { countUse("your-bills/list link copied"); return copy(c, listLink(c.dataset.copylist)); }
   const k = e.target.closest("button[data-copykey]");
   if (k) { const l = readNamed()[k.dataset.copykey]; return l && copy(k, `${l.slug} ${l.editKey}`); }
   const g = e.target.closest("button[data-forget]");
@@ -565,7 +641,7 @@ $("listConnect").addEventListener("click", async () => {
 
 // A change in another tab (a star on a state's page, a list edited or followed): redraw, and keep the shared list in step.
 addEventListener("storage", (e) => {
-  if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) draw();
+  if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) { draw(); Frames.refresh(); }
   if (e.key === NAMED || e.key === PUB) { syncTabs(); drawLists(); }
   if (e.key === FOLLOWS) {
     const had = new Set([...TABS.keys()]);

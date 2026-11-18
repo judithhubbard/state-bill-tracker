@@ -119,15 +119,47 @@ a.btn { display: inline-block; text-decoration: none; }
 .tab:hover { color: var(--hover); }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--navy); }
 .tab:focus-visible { outline-offset: -3px; }
-.tab .tl { display: inline-block; max-width: 14em; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+.tab .tl { display: inline-block; vertical-align: bottom; }
+.tab .fmark { color: var(--ink-2); font-weight: 400; }
+/* More than five lists: "More lists (N) ▾" and its menu of every list. */
+.morewrap { position: relative; flex: 0 0 auto; display: flex; }
+.lmenu { position: absolute; z-index: 6; right: 0; top: 100%; width: min(340px, calc(100vw - 32px)); max-height: 60vh; overflow: auto;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 6px 0; box-shadow: 0 6px 20px rgba(0, 0, 0, .15); }
+.lmenu input { display: block; width: calc(100% - 20px); margin: 4px 10px 6px; }
+.lmenu h4 { margin: 8px 12px 2px; font: 700 12px/1.3 var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.lmenu [role="option"] { display: flex; gap: 8px; align-items: baseline; width: 100%; padding: 7px 12px; border: 0; background: none; color: var(--ink);
+  font: inherit; font-size: 14.5px; text-align: left; cursor: pointer; }
+.lmenu [role="option"]:hover, .lmenu [role="option"]:focus-visible, .lmenu [role="option"].act { background: var(--paper); outline: none; }
+.lmenu [role="option"][aria-selected="true"] { font-weight: 600; }
+.lmenu .ln { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.lmenu .none { margin: 6px 12px; color: var(--ink-2); font-size: 14px; }
 .tab .tc { color: var(--ink-2); font-weight: 400; }
 .tab .new { margin-left: 2px; }
 .tab.add { color: var(--navy); font-weight: 600; margin-left: auto; padding-left: 8px; padding-right: 4px; }
 [role="tabpanel"] .icons { margin-left: 4px; }
 .quietbox { margin: 16px 0 10px; }
 .quietbox .muted, .quietbox p { margin: 0 0 8px; }
+/* A list's bills, shown by each state's page in a frame (embed.js): its watchlist view, inside the state's card. */
+.sgrp { overflow: hidden; }
+.sgrp .ghead h3 { border-bottom: 1px solid var(--rule); }
+.sgrp .fwrap { min-height: 0; }
+.sframe { display: block; width: 100%; height: 0; border: 0; background: var(--sheet); }
+.sframe.stale { visibility: hidden; height: 0 !important; }
+.sgrp .eload { margin: 0; padding: 10px 12px; color: var(--ink-2); font-size: 14px; }
+.sgrp .rest { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.sgrp .fwrap[hidden] + .rest { border-top: 0; }
+/* A list's summary line: its facts, then its controls as small links (Edit · Share ▾, or Unfollow · Add all). */
+.lmeta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 0; }
+.lmeta > * + *::before { content: "·"; display: inline-block; margin: 0 7px; color: var(--ink-2); text-decoration: none; }
+.lmeta .linkish, .lmeta a { font-size: inherit; }
+.lmeta .lmsg::before { content: none; }
+.lmeta .lmsg { margin-left: 8px; }
+.spop { position: relative; }
+.spopbox { position: absolute; z-index: 5; left: 0; top: calc(100% + 6px); display: grid; gap: 8px; width: max-content; max-width: calc(100vw - 32px);
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, .15); color: var(--ink); }
+.spopbox .row { margin: 0; }
+@media (max-width: 480px) { .spopbox { left: auto; right: -60px; } }
 footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-2); }
 @media (max-width: 480px) {
   .where .todo { margin-left: 0; }
-  .tab .tl { max-width: 10em; }
 }
