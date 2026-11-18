@@ -333,6 +333,10 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 /* The status label and, before it, the sponsors' party: D, R or Both (none for committee bills), in the map's muted
    party colors. */
 .panel .tags { grid-row: 1; grid-column: 2; justify-self: end; display: inline-flex; gap: 4px; align-items: center; }
+/* A long label ("In committee (Science, Innovation and Technology)") is cut short rather than pushed over the number. */
+.panel .tags { min-width: 0; max-width: 100%; }
+.panel .tags > * { flex: none; }
+.panel .tags > .stg { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .pty { display: inline-block; font: 700 11px/1.6 var(--body); padding: 0 5px; border-radius: 4px; white-space: nowrap; }
 .pty.D { background: var(--ctl-d1); color: var(--ctl-d1-ink); }
 .pty.R { background: var(--ctl-r1); color: var(--ctl-r1-ink); }
@@ -1011,7 +1015,7 @@ function customPanel(st) {
   body.innerHTML = `<h3>${esc(nameOf(st))}</h3><p>${n ? v.some(st, n, b) : v.none(st)} <a href="${esc(built[st.toUpperCase()] || `${st}/`)}">Open ${esc(nameOf(st))}'s bills</a>`
     + `${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`
     + (rows.length ? `<ul>${rows.slice(0, 200).map((x) => `<li><a href="${esc(x.href)}" title="${esc(x.title)}"${x.seen ? ` data-seen="${esc(x.seen)}"` : ""}><b>${esc(x.num)}</b>`
-      + `<span class="tt">${esc(x.title)}</span><span class="tags">${x.fresh ? '<span class="new">New</span>' : ""}<span class="stg s${x.stage}">${esc(x.stg)}</span></span></a>${x.star}</li>`).join("")}</ul>` : "");
+      + `<span class="tt">${esc(x.title)}</span><span class="tags">${x.fresh ? '<span class="new">New</span>' : ""}<span class="stg s${x.stage}" title="${esc(x.stg)}">${esc(x.stg)}</span></span></a>${x.star}</li>`).join("")}</ul>` : "");
 }
 // The controls: year buttons, then "Show" (party control or a national issue). For party control, this year is now and
 // next year is after the November 2026 election (reported results, until the new sessions begin); last year has no party

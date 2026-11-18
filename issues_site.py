@@ -197,7 +197,9 @@ ul.bills a:hover { text-decoration: underline; }
 .panel li b { font: 600 14px/1.3 var(--body); color: var(--navy); white-space: nowrap; }
 .panel .tt { grid-row: 2; grid-column: 1 / -1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .panel .tt .why { color: var(--ink-2); }
-.panel .tags { grid-row: 1; grid-column: 2; }
+.panel .tags { grid-row: 1; grid-column: 2; min-width: 0; max-width: 100%; }
+.panel .tags > * { flex: none; }
+.panel .tags > .stg { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .star { position: absolute; right: 6px; top: 50%; margin-top: -16px; width: 32px; height: 32px; border: 0; background: none; cursor: pointer;
   font-size: 19px; line-height: 1; color: var(--ink-2); border-radius: 6px; padding: 0; }
 .star[aria-pressed="true"] { color: var(--law-mark); }
