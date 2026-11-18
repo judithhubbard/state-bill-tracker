@@ -84,10 +84,12 @@ def write(session):
         if c and c["digest"]:
             # What the bill would do first: the digest opens with existing law, so its first "This bill would"
             # paragraph moves to the top.
-            # (Texts read before line breaks were handled have paragraphs split mid-sentence: join them back.)
+            # (Texts read before line breaks were handled have paragraphs split mid-sentence: join them back. Some digests
+            # also break a sentence after a list number or a name in parentheses, "... to (1)" or "... Act (CEQA)":
+            # a closing parenthesis ends a paragraph only after a sentence's end, "(... as specified.)".)
             paras = []
             for x in c["digest"].split("\n"):
-                if paras and not re.search(r"[.:;?!)\"”]$", paras[-1]):
+                if paras and not re.search(r"(?:[.:;?!\"”]|[.?!]\))$", paras[-1]):
                     paras[-1] += " " + x
                 else:
                     paras.append(x)
