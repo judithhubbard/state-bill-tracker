@@ -700,8 +700,7 @@ details.actrec[open] > summary { margin-bottom: 8px; }
 .wlhead h2 { margin: 0; }
 .wlhead .muted { font-size: 13.5px; }
 .wlhead [data-wl="share"] { margin-left: auto; align-self: center; }
-.sharebox { margin-top: 10px; border-top: 1px solid var(--rule); padding-top: 8px; }
-.sharebox .pubbox { margin-top: 8px; }
+.sharebox { display: grid; gap: 8px; margin-top: 10px; border-top: 1px solid var(--rule); padding-top: 8px; }
 .wcard .sum { margin: 0; color: var(--ink-2); font-size: 13.5px; max-width: 85ch; }
 .wcard .do { border-left: 3px solid var(--gold); padding: 4px 0 4px 12px; display: grid; gap: 3px; }
 .wcard .do p { margin: 0; font-size: 14px; }
@@ -829,13 +828,23 @@ table.commcounts td { font-variant-numeric: tabular-nums; font-weight: 600; }
 .wcard .do .decider + .decider { border-top: 1px solid var(--rule); padding-top: 9px; margin-top: 4px; }
 .act-btn.primary { background: var(--navy); color: var(--sheet); border-color: var(--navy); }
 .wcard .odds { font-size: 12.5px; }
-.pubbox { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); }
-.pubbox > summary { cursor: pointer; font-weight: 600; color: var(--navy); }
-.pubbox p { margin: 6px 0 0; }
-.pubform { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: end; }
-.pubform label { display: grid; gap: 3px; font-size: 12.5px; color: var(--ink-2); }
-.pubform input { font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 5px; background: var(--sheet); color: var(--ink); min-width: 220px; }
-.pubmore > summary { cursor: pointer; font-size: 13px; color: var(--navy); margin-top: 6px; }
+/* The share options under "My watchlist" (shareBox()). */
+.sharebox .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sharebox input[type="text"] { flex: 1 1 220px; min-width: 0; max-width: 100%; font: inherit; font-size: 14px; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 5px; background: var(--sheet); color: var(--ink); }
+.sharebox input[readonly] { font: 12.5px var(--mono); background: var(--paper); }
+.sharebox .pubname { display: grid; gap: 3px; font-size: 12.5px; color: var(--ink-2); max-width: 420px; }
+.sharebox details > summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+.sharebox details[open] > summary { margin-bottom: 6px; }
+.sharebox details > p { margin-bottom: 6px; }
+.sharebox .seeit { font-size: 13px; }
+.sharebox .thanks { color: var(--ink-2); }
+.sharebox .err { color: var(--veto); }
+.sharebox .act-btn:disabled { opacity: .5; cursor: default; }
+.shareicons { display: flex; flex-wrap: wrap; gap: 6px; }
+.shareicons a { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--rule); border-radius: 6px; color: var(--ink-2); background: var(--sheet); }
+.shareicons a:hover { color: var(--navy); border-color: var(--navy); }
+.shareicons svg { width: 17px; height: 17px; fill: currentColor; }
+.wl .wfollow { border-top: 1px solid var(--rule); padding-top: 8px; margin-top: 2px; }
 .intro { display: grid; grid-template-columns: 1fr auto auto; grid-template-areas: "h tips x" "ol ol ol"; align-items: center; gap: 4px 14px; background: var(--chip); border-left: 3px solid var(--navy); border-radius: 8px; padding: 8px 12px; margin: 10px 0 2px; font-size: 13.5px; }
 .intro .intro-h { grid-area: h; font-weight: 700; }
 .intro [data-impact] { grid-area: tips; }
@@ -4110,7 +4119,7 @@ function loadWatch() {
     WATCH = new Map(Object.entries(raw).map(([k, v]) => [k, typeof v === "string" ? { seen: v, stance: "support" } : v]));
   } catch (e) { WATCH = new Map(); }
 }
-function saveWatch() { try { localStorage.setItem(WATCH_STORE, JSON.stringify(Object.fromEntries(WATCH))); } catch (e) {} }
+function saveWatch() { try { localStorage.setItem(WATCH_STORE, JSON.stringify(Object.fromEntries(WATCH))); } catch (e) {} schedulePub(); }
 const watchEntry = (b) => { for (const k of keysOf(b)) if (WATCH.has(k)) return WATCH.get(k); return null; };
 const isWatched = (b) => !!watchEntry(b);
 const watchStance = (b) => watchEntry(b)?.stance || null;
@@ -4159,7 +4168,7 @@ function setWatch(b, entry) { keysOf(b).forEach((k) => WATCH.delete(k)); if (ent
 const ORDER_STORE = STORE + "worder";
 let ORDER = [];
 try { ORDER = JSON.parse(localStorage.getItem(ORDER_STORE) || "[]"); } catch (e) { ORDER = []; }
-function saveOrder() { try { localStorage.setItem(ORDER_STORE, JSON.stringify(ORDER)); } catch (e) {} }
+function saveOrder() { try { localStorage.setItem(ORDER_STORE, JSON.stringify(ORDER)); } catch (e) {} schedulePub(); }
 const myRank = (b) => Math.min(...keysOf(b).map((k) => ORDER.indexOf(k)).filter((i) => i >= 0));
 const sharedRank = (b) => { const ks = [...SHARED.keys()]; return Math.min(...b.nums.map((n) => ks.indexOf(baseNum(n))).filter((i) => i >= 0)); };
 // Watched bills split into those needing action now and the rest; a set order comes first, then soonest deadline.
@@ -4262,19 +4271,26 @@ function watchButton(b, withStance = true) {
   return `<button class="watchbtn" type="button" data-watch="${b.idx}" aria-pressed="${!!e}" title="${e ? "Remove from" : "Add to"} my watchlist">${e ? "★" : "☆"}</button>`
     + (withStance && showStance(b, e) ? `<button class="stance ${e.stance || "unset"}" type="button" data-stance="${b.idx}" title="${e.stance ? "Switch between support and oppose" : "Do you support or oppose this bill?"}">${stanceWord(e.stance)}</button>` : "");
 }
-// ---- Published lists: kept online, updated by whoever holds the edit key, readable by anyone with the link.
-// Creating one needs an invite code from the site's owner (one per group).
-const LISTS_API = STATE.listsApi;
-let SHARED_META = null;   // a published list being viewed: { slug, title, group, updated } or { error }
+// ---- Shared lists (public site only): one link, /list/#<slug>, that shows this watchlist. The lists Worker
+// (lists_worker/) keeps it; this page keeps it in step with the stars and stances, a minute after they change. Anyone
+// can share; a group code from the site's owner adds an introduction and notes on each bill.
+const LISTS_API = (STATE.listsApi || "").replace(/\/$/, "");
+let SHARED_META = null;   // a published list viewed here (copies without the /list/ page): { slug, title, group, updated } or { error }
 const PUB_STORE = () => `${STORE}published:${DATA.session}`;
+// My shared list: { slug, editKey, title, group, saved (what was last saved: pubSig()) }.
 function myPublished() { try { return JSON.parse(localStorage.getItem(PUB_STORE()) || "null"); } catch (e) { return null; } }
 function setMyPublished(v) { try { v ? localStorage.setItem(PUB_STORE(), JSON.stringify(v)) : localStorage.removeItem(PUB_STORE()); } catch (e) {} }
-// The introduction and per-bill notes for my published list, kept in this browser until I update the list.
+// A group list's introduction and per-bill notes, kept in this browser and saved with the list.
 const PUBTEXT_STORE = () => `${STORE}pubtext:${DATA.session}`;
 function pubText() { try { return JSON.parse(localStorage.getItem(PUBTEXT_STORE()) || "null") || { intro: "", notes: {} }; } catch (e) { return { intro: "", notes: {} }; } }
 function setPubText(v) { try { localStorage.setItem(PUBTEXT_STORE(), JSON.stringify(v)); } catch (e) {} }
-const watchCodes = () => myOrdered().map((b) => (watchStance(b) === "oppose" ? "-" : "") + baseNum(b.nums[0]));
-const listUrl = (slug) => `${ROOT || new URL(BASE || "./", location.href).href.replace(/[^/]*$/, "")}watchlist/#list=${slug}`;
+// The watched bills as the list writes them ("A1234", "-S55" to oppose), in the order the person set, then by number:
+// a steady order, so the list is saved only when the bills or stances change.
+const watchCodes = () => BILLS.filter(isWatched).map((b) => [myRank(b), b.sortKey, (watchStance(b) === "oppose" ? "-" : "") + baseNum(b.nums[0])])
+  .sort((x, y) => x[0] - y[0] || x[1] - y[1]).map((x) => x[2]).filter((c) => /^-?[A-Z]{1,7}\d{1,6}$/.test(c)).slice(0, 500);
+// The site's top (the folder above the state's), where /list/ and /your-bills/ are.
+const siteTop = () => (ROOT ? new URL("../", ROOT).href : "");
+const listUrl = (slug) => `${siteTop()}list/#${slug}`;
 // Counts a use of a feature ("copied an email", "starred S1234") on the public site, when its
 // counter is loaded. Only totals are kept; nothing identifies who did it.
 // On the public site, a warning when the daily update has fallen behind.
@@ -4329,9 +4345,10 @@ function countVisit() {
   countUse(`watchlist/${n === 0 ? "none" : n <= 5 ? "1-5 bills" : n <= 20 ? "6-20 bills" : "21+ bills"}`);
 }
 async function listsApi(path, opts = {}) {
+  if (!LISTS_API) throw new Error("Sharing isn't available here.");
   const r = await fetch(LISTS_API + path, { ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) } });
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(body.error || `The list service answered ${r.status}.`);
+  if (!r.ok) { const e = new Error(body.error || `The list service answered ${r.status}.`); e.status = r.status; throw e; }
   return body;
 }
 async function loadPublishedList(slug) {
@@ -4347,73 +4364,193 @@ async function loadPublishedList(slug) {
   }
   render();
 }
-async function publishAction(btn) {
-  const msg = (t) => { if ($("pubMsg")) $("pubMsg").textContent = t; };
-  const what = btn.dataset.pub, mine = myPublished();
-  const copy = async (text) => { try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; } catch (e) { btn.textContent = "Select and copy it"; } };
-  try {
-    if (what === "copy") { countUse("list-link-copied"); return copy(listUrl(mine.slug)); }
-    if (what === "copykey") return copy(`${mine.slug} ${mine.editKey}`);
-    if (what === "forget") { if (confirm("Disconnect this browser from the published list? The list stays online; you'll need the edit key to update it again.")) { setMyPublished(null); renderWatchView(); } return; }
-    if (what === "publish") {
-      const title = $("pubTitle").value.trim(), code = $("pubCode").value.trim();
-      if (!title || !code) return msg("Give the list a name and enter your invite code.");
-      msg("Publishing…");
-      const r = await listsApi("/lists", { method: "POST", body: JSON.stringify({ code, title, session: DATA.session, bills: watchCodes(), ...pubText() }) });
-      setMyPublished({ slug: r.slug, editKey: r.editKey, title, group: r.group });
-      countUse("list-published");
-      return renderWatchView();
-    }
-    if (what === "connect") {
-      const [slug, editKey] = $("pubKey").value.trim().split(/\s+/);
-      if (!slug || !editKey) return msg("Paste the edit key exactly as it was copied (a name and a key).");
-      const l = await listsApi(`/lists/${encodeURIComponent(slug)}`, { headers: { "X-Edit-Key": editKey } });
-      setMyPublished({ slug, editKey, title: l.title, group: l.group });
-      setPubText({ intro: l.intro || "", notes: l.notes || {} });
-      return renderWatchView();
-    }
-    if (what === "update") {
-      msg("Updating…");
-      const l = await listsApi(`/lists/${encodeURIComponent(mine.slug)}`, { method: "PUT", headers: { "X-Edit-Key": mine.editKey }, body: JSON.stringify({ title: mine.title, session: DATA.session, bills: watchCodes(), ...pubText() }) });
-      countUse("list-updated");
-      return msg(`Published: ${num(l.bills.length)} bills.`);
-    }
-  } catch (e) { msg(e.message); }
+// What my shared list should hold now.
+const PUB_DEFAULT = "Bills I'm following";
+function pubPayload(mine) {
+  const group = !!mine?.group, t = pubText(), bills = watchCodes(), keep = new Set(bills.map((c) => c.replace(/^-/, "")));
+  const notes = {};
+  if (group) for (const [k, v] of Object.entries(t.notes || {})) if (keep.has(k) && String(v).trim()) notes[k] = String(v).trim();
+  return { state: STATE.code, session: DATA.session, title: (mine?.title || "").trim() || PUB_DEFAULT, bills, intro: group ? (t.intro || "").trim() : "", notes };
 }
-// How often my published list has been opened, fetched once per visit.
+const pubSig = (p) => JSON.stringify([p.title, p.bills, p.intro, p.notes]);
+let PUB_TIMER = null;
+const pubSay = (t, bad) => { const el = $("pubMsg"); if (el) { el.textContent = t; el.classList.toggle("err", !!bad); } };
+// After any change to the stars, stances, order, name or notes: saved a minute later, so a run of changes is one save
+// (the Worker refuses saves less than 10 seconds apart).
+function schedulePub(ms = 60e3) {
+  if (!ROOT || !LISTS_API || !DATA) return;
+  const mine = myPublished();
+  if (!mine) return;
+  clearTimeout(PUB_TIMER); PUB_TIMER = null;
+  if (pubSig(pubPayload(mine)) === mine.saved) return pubSay("The shared list is up to date.");
+  PUB_TIMER = setTimeout(savePub, ms);
+  pubSay(ms > 5e3 ? "Your changes will show on the shared list in a minute." : "Saving…");
+}
+async function savePub() {
+  PUB_TIMER = null;
+  const mine = myPublished();
+  if (!mine) return;
+  const p = pubPayload(mine), s = pubSig(p);
+  if (s === mine.saved) return pubSay("The shared list is up to date.");
+  pubSay("Saving…");
+  try {
+    await listsApi(`/lists/${encodeURIComponent(mine.slug)}`, { method: "PUT", headers: { "X-Edit-Key": mine.editKey }, body: JSON.stringify(p) });
+    setMyPublished({ ...myPublished(), saved: s });
+    pubSay("The shared list is up to date.");
+  } catch (e) {
+    if (e.status === 429 || !e.status) { PUB_TIMER = setTimeout(savePub, 15e3); return pubSay("Couldn't save just now; trying again shortly.", !e.status); }
+    if (e.status === 404) { setMyPublished(null); renderWatchView(); return pubSay("That shared list isn't online any more.", true); }
+    pubSay(e.message, true);
+  }
+}
+// Leaving the page with a save still waiting: send it now.
+function flushPub() {
+  const mine = PUB_TIMER && myPublished();
+  if (!mine) return;
+  clearTimeout(PUB_TIMER); PUB_TIMER = null;
+  const p = pubPayload(mine);
+  try {
+    fetch(`${LISTS_API}/lists/${encodeURIComponent(mine.slug)}`, { method: "PUT", keepalive: true, headers: { "Content-Type": "application/json", "X-Edit-Key": mine.editKey }, body: JSON.stringify(p) });
+    setMyPublished({ ...mine, saved: pubSig(p) });
+  } catch (e) {}
+}
+// How often a group's list has been opened, fetched once per visit.
 let PUB_VIEWS = null;
 async function showPubViews() {
   const mine = myPublished(), el = $("pubViews");
-  if (!mine || !el) return;
+  if (!mine?.group || !el) return;
   const say = (v) => { el.textContent = v.total ? `Opened ${num(v.total)} time${v.total === 1 ? "" : "s"} (${num(v.week)} in the past week), not counting you.` : "No one has opened it yet."; };
   if (PUB_VIEWS?.slug === mine.slug) return say(PUB_VIEWS);
   try { PUB_VIEWS = { slug: mine.slug, ...(await listsApi(`/lists/${encodeURIComponent(mine.slug)}/views`, { headers: { "X-Edit-Key": mine.editKey } })) }; say(PUB_VIEWS); } catch (e) {}
 }
-// The publish box under "My watchlist" (public site only).
-function publishBox() {
-  if (!ROOT || !LISTS_API) return "";  // a state without a lists Worker yet has no published lists
+// Share by email, text (phones only), Facebook, X or Bluesky: plain links, as on Your bills (lists_pages/yourbills.html).
+const SHARE_ICONS = {
+  email: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm1 2.4V17h16V7.4l-8 5.3-8-5.3ZM5.6 7 12 11.2 18.4 7H5.6Z"/></svg>',
+  text: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 2v11h2v2l2.5-2H20V5H4Zm3 4h10v2H7V9Z"/></svg>',
+  facebook: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.5c-1.5 0-1.96.93-1.96 1.89v2.26h3.32l-.53 3.5h-2.8V24C19.62 23.1 24 18.1 24 12.07Z"/></svg>',
+  x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.24 2.25h3.31l-7.23 8.26 8.5 11.24h-6.65l-5.21-6.82-5.97 6.82H1.68l7.73-8.84L1.25 2.25h6.83l4.71 6.23 5.45-6.23Zm-1.16 17.52h1.83L7.08 4.13H5.12l11.96 15.64Z"/></svg>',
+  bluesky: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 10.8C10.9 8.7 7.95 4.75 5.2 2.8 2.57.95 1.56 1.27.9 1.57.14 1.9 0 3.08 0 3.77c0 .69.38 5.65.62 6.48.82 2.74 3.71 3.66 6.38 3.36-3.91.58-7.39 2-2.83 7.08 5.01 5.19 6.87-1.11 7.83-4.31.95 3.2 2.05 9.27 7.73 4.31 4.27-4.31 1.17-6.5-2.74-7.08 2.67.3 5.57-.62 6.38-3.36.25-.83.63-5.79.63-6.48 0-.69-.14-1.86-.9-2.2-.66-.3-1.67-.62-4.3 1.24C16.05 4.75 13.09 8.69 12 10.8Z"/></svg>',
+};
+function shareIconLinks(url, title) {
+  const u = encodeURIComponent(url), t = encodeURIComponent(title), both = encodeURIComponent(`${title}\n${url}`);
+  const links = [["Email", `mailto:?subject=${t}&body=${both}`, "email"]];
+  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) links.push(["Text message", `sms:?&body=${both}`, "text"]);
+  links.push(["Facebook", `https://www.facebook.com/sharer/sharer.php?u=${u}`, "facebook"],
+    ["X", `https://x.com/intent/post?text=${t}&url=${u}`, "x"],
+    ["Bluesky", `https://bsky.app/intent/compose?text=${encodeURIComponent(`${title} ${url}`)}`, "bluesky"]);
+  return `<span class="shareicons">${links.map(([name, href, icon]) => `<a href="${esc(href)}"${/^https/.test(href) ? ' target="_blank" rel="noopener"' : ""} data-shareby="${icon}" title="${name}" aria-label="Share by ${name}">${SHARE_ICONS[icon]}</a>`).join("")}</span>`;
+}
+// A contribution line after the first share, at most once in 90 days in this browser (shared with supportNote() and
+// Your bills: "abt:supportnote").
+let PUB_THANKS = "";
+function thanksOnce() {
+  const url = document.querySelector('meta[name="support"]')?.content || "";
+  if (!/^https?:/.test(url)) return "";
+  try {
+    const last = localStorage.getItem("abt:supportnote");
+    if (last && Date.now() - +last < 90 * 864e5) return "";
+    localStorage.setItem("abt:supportnote", String(Date.now()));
+  } catch (e) { return ""; }
+  return `Thanks for sharing. State Bill Tracker is free and run by one person; if you can, please consider <a href="${esc(url)}" target="_blank" rel="noopener" data-support="give">supporting the site</a>.`;
+}
+const codeLine = () => `<p class="muted">Sharing for an organization? <a href="mailto:statebilltracker@gmail.com?subject=${encodeURIComponent("Group code for State Bill Tracker")}">Ask for a group code</a>`
+  + ` &middot; <button type="button" class="linkish" data-pub="havecode">I have one</button></p>`
+  + `<div class="row" id="codeRow" hidden><input type="text" id="codeName" maxlength="120" placeholder="List name" aria-label="List name">`
+  + `<input type="text" id="pubCode" autocomplete="off" placeholder="Group code" aria-label="Group code"><button type="button" class="act-btn" data-pub="code">Use it</button></div>`;
+// The share options under "My watchlist": Share, or, once shared, the link and what goes with it.
+function shareBox(n) {
   const mine = myPublished();
-  if (mine) return `<div class="pubbox"><p>Your published list, <b>“${esc(mine.title)}”</b>${mine.group ? ` (${esc(mine.group)})` : ""}. Share this link:</p>
-    <p class="sharerow"><input type="text" readonly value="${esc(listUrl(mine.slug))}" aria-label="Published list link"> <button class="act-btn" type="button" data-pub="copy">Copy link</button></p>
-    <label class="pubintro-edit">Introduction (optional) <textarea id="pubIntro" rows="3" maxlength="3000" placeholder="Why these bills matter and what you'd like people to do">${esc(pubText().intro)}</textarea></label>
-    <p class="muted">You can also add a note to each bill below.</p>
-    <p class="muted" id="pubViews"></p>
-    <p><button class="act-btn primary" type="button" data-pub="update">Update</button> <span class="muted" id="pubMsg">Others see your changes once you click Update.</span></p>
-    <details class="pubmore"><summary>Edit key (for updating from another computer)${TIPI("A private code that lets you update this list. Anyone who has it can change the list, so share it only with people who keep the list with you.")}</summary><p class="muted">Keep it private. Anyone with it can change your list.</p>
-      <p class="sharerow"><input type="text" readonly value="${esc(`${mine.slug} ${mine.editKey}`)}" aria-label="Edit key"> <button class="act-btn" type="button" data-pub="copykey">Copy</button> <button class="act-btn" type="button" data-pub="forget">Disconnect</button></p></details></div>`;
-  return `<details class="pubbox"><summary>Publish a list others can follow</summary>
-    <p class="muted">Share one link that always shows your latest list. Requires an invite code.</p>
-    <p class="pubform"><label>List name <input type="text" id="pubTitle" maxlength="120" placeholder="e.g. Our priority bills"></label>
-      <label>Invite code <input type="text" id="pubCode" autocomplete="off"></label> <button class="act-btn" type="button" data-pub="publish">Publish</button></p>
-    <p class="pubform"><label>Updating your list from another computer? Paste your edit key <input type="text" id="pubKey" autocomplete="off"></label> <button class="act-btn" type="button" data-pub="connect">Connect</button></p>
-    <p class="muted" id="pubMsg"></p></details>`;
+  if (!mine) return `<p>One link that always shows these bills, kept up to date as you star and unstar them.</p>
+    <p class="row"><button type="button" class="act-btn primary" data-pub="share"${n ? "" : " disabled"}>Share it</button> <span class="muted" id="pubMsg"></span></p>
+    ${codeLine()}
+    <details><summary>Shared this list from another device?</summary><div class="row"><input type="text" id="pubKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key"><button type="button" class="act-btn" data-pub="connect">Connect</button></div></details>`;
+  const url = listUrl(mine.slug), group = !!mine.group;
+  return `${group ? `<p class="muted">${esc(mine.group)}&rsquo;s list</p>` : ""}
+    <label class="pubname">Name <input type="text" id="pubTitle" maxlength="${group ? 120 : 60}" value="${esc(mine.title || "")}" placeholder="${esc(PUB_DEFAULT)}"></label>
+    ${group ? `<label class="pubintro-edit">Introduction <textarea id="pubIntro" rows="3" maxlength="3000" placeholder="Why these bills matter">${esc(pubText().intro)}</textarea></label>
+    <p class="muted">Add a note to any bill on its card below.</p>` : ""}
+    <div class="row"><input type="text" readonly value="${esc(url)}" aria-label="Link to the shared list"><button type="button" class="act-btn" data-pub="copy">Copy link</button></div>
+    <div class="row">${shareIconLinks(url, mine.title || PUB_DEFAULT)}<a class="seeit" href="${esc(url)}">See it as others do</a></div>
+    <p class="muted" id="pubMsg"></p>
+    ${group ? `<p class="muted" id="pubViews"></p>` : ""}
+    ${PUB_THANKS ? `<p class="thanks">${PUB_THANKS}</p>` : ""}
+    ${group ? "" : codeLine()}
+    <details><summary>Use this list on another device</summary><p class="muted">Paste this key under &ldquo;Shared this list from another device?&rdquo; there. Anyone with it can change the list.</p>
+      <div class="row"><input type="text" readonly value="${esc(`${mine.slug} ${mine.editKey}`)}" aria-label="The list's key"><button type="button" class="act-btn" data-pub="copykey">Copy</button></div></details>
+    <p><button type="button" class="act-btn ghost" data-pub="stop">Stop sharing</button></p>`;
+}
+async function publishAction(btn) {
+  const act = btn.dataset.pub, mine = myPublished();
+  const copy = async (text) => { try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; } catch (e) { btn.previousElementSibling?.select?.(); btn.textContent = "Select and copy it"; } };
+  try {
+    if (act === "copy") { countUse("list-link-copied"); return copy(listUrl(mine.slug)); }
+    if (act === "copykey") return copy(`${mine.slug} ${mine.editKey}`);
+    if (act === "havecode") { $("codeRow").hidden = false; $("codeName").value = mine?.title || ""; $("codeName").focus(); return; }
+    if (act === "share") {
+      btn.disabled = true; pubSay("Sharing…");
+      const p = pubPayload(null), r = await listsApi("/lists", { method: "POST", body: JSON.stringify(p) });
+      setMyPublished({ slug: r.slug, editKey: r.editKey, title: "", group: "", saved: pubSig(p) });
+      countUse("list-shared");
+      PUB_THANKS = thanksOnce();
+      return renderWatchView();
+    }
+    if (act === "code") {
+      const code = $("pubCode").value.trim(), title = $("codeName").value.trim();
+      if (!code) return pubSay("Enter the group code.", true);
+      if (!title) return pubSay("Give the list a name; it becomes part of its address.", true);
+      btn.disabled = true; pubSay("Sharing…");
+      const p = pubPayload({ title, group: "x" }), r = await listsApi("/lists", { method: "POST", body: JSON.stringify({ ...p, code }) });
+      // The group's list takes the place of the plain one.
+      if (mine) await listsApi(`/lists/${encodeURIComponent(mine.slug)}`, { method: "DELETE", headers: { "X-Edit-Key": mine.editKey } }).catch(() => {});
+      setMyPublished({ slug: r.slug, editKey: r.editKey, title, group: r.group, saved: pubSig(p) });
+      countUse("list-published");
+      if (!mine) PUB_THANKS = thanksOnce();
+      return renderWatchView();
+    }
+    if (act === "connect") {
+      const [slug, key] = $("pubKey").value.trim().split(/\s+/);
+      if (!slug || !key) return pubSay("Paste the key exactly as it was copied: a name, a space and a code.", true);
+      const opts = { headers: { "X-Edit-Key": key } };
+      await listsApi(`/lists/${encodeURIComponent(slug)}/views`, opts);  // checks the key
+      const l = await listsApi(`/lists/${encodeURIComponent(slug)}`, opts);
+      if (l.state === "all") return pubSay("That key is for a list shared from Your bills; use it there.", true);
+      if (l.state !== STATE.code || l.session !== DATA.session) return pubSay("That key is for another state's or session's list.", true);
+      // Its bills join this browser's watchlist, in the list's order.
+      const want = new Map(l.bills.map((n) => (n.startsWith("-") ? [n.slice(1), "oppose"] : [n, "support"]))), order = [...want.keys()];
+      const rank = (b) => Math.min(...b.nums.map((n) => order.indexOf(baseNum(n))).filter((i) => i >= 0));
+      for (const b of BILLS.filter((b) => b.nums.some((n) => want.has(baseNum(n)))).sort((x, y) => rank(x) - rank(y))) {
+        if (!isWatched(b)) WATCH.set(billKey(b), { seen: b.last || "", stance: want.get(b.nums.map(baseNum).find((n) => want.has(n))) });
+        if (!keysOf(b).some((k) => ORDER.includes(k))) ORDER.push(billKey(b));
+      }
+      setPubText({ intro: l.intro || "", notes: l.notes || {} });
+      setMyPublished({ slug, editKey: key, title: l.title === PUB_DEFAULT ? "" : l.title, group: l.group, saved: pubSig({ title: l.title, bills: l.bills, intro: l.intro || "", notes: l.notes || {} }) });
+      saveOrder(); saveWatch();
+      countUse("list-connected");
+      return render();
+    }
+    if (act === "stop") {
+      if (!confirm("Stop sharing? The link will stop working for everyone.")) return;
+      clearTimeout(PUB_TIMER); PUB_TIMER = null;
+      await listsApi(`/lists/${encodeURIComponent(mine.slug)}`, { method: "DELETE", headers: { "X-Edit-Key": mine.editKey } }).catch((e) => { if (e.status !== 404) throw e; });
+      setMyPublished(null); PUB_THANKS = ""; PUB_VIEWS = null;
+      countUse("list-stopped");
+      return renderWatchView();
+    }
+  } catch (e) { btn.disabled = false; pubSay(e.message, true); }
+}
+// Lists this browser follows (Follow on /list/; lists_pages/common.js keeps them under "abt:follows": {slug: {title,
+// known: ["nj:2026:A1234", ...]}}) that have this state's bills: one line, linking to each and to Your bills.
+function followedHere() {
+  if (!ROOT) return "";
+  let f = {};
+  try { f = JSON.parse(localStorage.getItem("abt:follows") || "{}") || {}; } catch (e) {}
+  const pre = `${STATE.code}:`;
+  const here = Object.entries(f).map(([slug, v]) => [slug, v?.title, (v?.known || []).filter((k) => String(k).startsWith(pre)).length]).filter((x) => x[2]);
+  if (!here.length) return "";
+  return `<p class="muted wfollow">Lists you follow: ${here.map(([slug, title, n]) => `<a href="${esc(listUrl(slug))}">${esc(title || "A shared list")}</a> (${num(n)} bill${n === 1 ? "" : "s"} here)`).join(" · ")}`
+    + ` · <a href="${esc(siteTop())}your-bills/">Your bills ›</a></p>`;
 }
 
-function shareLink() {
-  const nums = myOrdered().map((b) => (watchStance(b) === "oppose" ? "-" : "") + baseNum(b.nums[0]));
-  const root = ROOT || new URL(BASE || "./", location.href).href.replace(/[^/]*$/, "");
-  return `${root}watchlist/#w=${DATA.session}.${nums.join(".")}`;
-}
 const sharedStance = (b) => { for (const n of b.nums) if (SHARED.has(baseNum(n))) return SHARED.get(baseNum(n)); return null; };
 
 // ---- Personal log of actions taken (kept in this browser, never shared) ----
@@ -4524,19 +4661,17 @@ function renderWatchView() {
     card.innerHTML = `<h2>Shared watchlist</h2><p>${num(list.length)} bill${list.length === 1 ? "" : "s"} someone shared with you.${back}</p>
       <p><button class="act-btn" type="button" data-wl="import">Add all to my watchlist</button> <button class="act-btn" type="button" data-wl="mine">Show my own watchlist</button></p>`;
   } else {
-    const onClaude = /^https:\/\/claude\.ai/.test(DATA.sessions.find((s) => s.session === DATA.session)?.url || "");
-    // One line: the count, and Share on the right; the share options open below it.
-    const canShare = list.length && (!onClaude || ROOT), logged = list.reduce((s, b) => s + logOf(b).length, 0);
-    W_SHARE_OPEN ??= !!myPublished();
+    // One line: the count, and Share on the right; the share options open below it (with an empty list too, to connect
+    // another device's list). Sharing is on the public site only.
+    const mine = myPublished(), canShare = !!(ROOT && LISTS_API), logged = list.reduce((s, b) => s + logOf(b).length, 0);
+    W_SHARE_OPEN ??= !!mine;
     card.innerHTML = `<div class="wlhead"><h2>My watchlist</h2>
-      <span class="muted">${list.length ? `${num(list.length)} bill${list.length === 1 ? "" : "s"}` : "No bills yet"}${logged ? ` · ${num(logged)} action${logged === 1 ? "" : "s"} logged` : ""} · saved in this browser only${back}</span>
-      ${canShare ? `<button class="act-btn${W_SHARE_OPEN ? "" : " primary"}" type="button" data-wl="share" aria-expanded="${W_SHARE_OPEN}">${W_SHARE_OPEN ? "Hide sharing" : "Share this list"}</button>` : ""}</div>
+      <span class="muted">${list.length ? `${num(list.length)} bill${list.length === 1 ? "" : "s"}` : "No bills yet"}${logged ? ` · ${num(logged)} action${logged === 1 ? "" : "s"} logged` : ""} · ${mine ? "shared" : "saved in this browser only"}${back}</span>
+      ${canShare ? `<button class="act-btn${W_SHARE_OPEN || mine ? "" : " primary"}" type="button" data-wl="share" aria-expanded="${W_SHARE_OPEN}">${W_SHARE_OPEN ? "Hide sharing" : mine ? "Sharing" : "Share this list"}</button>` : ""}</div>
       ${list.length ? "" : `<p>Click ☆ next to any bill to add it.</p>`}${carryBox()}
-      ${canShare ? `<div class="sharebox"${W_SHARE_OPEN ? "" : " hidden"}>` : ""}
-      ${list.length && !onClaude ? `<p class="sharerow"><input type="text" id="shareLink" readonly value="${esc(shareLink())}" aria-label="Share link"> <button class="act-btn" type="button" data-wl="copy">Copy share link</button></p>
-      <p class="muted sharenote">This link is a snapshot. To share later changes, send a new link.</p>` : ""}
-      ${list.length ? publishBox() : ""}
-      ${canShare ? `</div>` : ""}`;
+      ${canShare ? `<div class="sharebox"${W_SHARE_OPEN ? "" : " hidden"}>${shareBox(list.length)}</div>` : ""}
+      ${followedHere()}`;
+    if (mine) schedulePub(PUB_TIMER ? 60e3 : 2e3);
   }
 
   if (!SHARED) showPubViews();
@@ -4592,7 +4727,7 @@ function renderWatchView() {
       ${x.key && oddsLine(b) ? `<p class="odds">${oddsLine(b)}</p>` : ""}
       ${!x.key && x.plan?.reason ? `<p class="why">${esc(x.plan.reason)}</p>` : ""}
       ${!x.key ? reintroAsk(b, x.stance) : ""}
-      ${!SHARED && myPublished() ? `<details class="noteedit"${pubText().notes[baseNum(b.nums[0])] ? " open" : ""}><summary>Add a note</summary><textarea data-pubnote="${esc(baseNum(b.nums[0]))}" rows="2" maxlength="1000" placeholder="Why this bill matters or what to say about it">${esc(pubText().notes[baseNum(b.nums[0])] || "")}</textarea></details>` : ""}
+      ${!SHARED && myPublished()?.group ? `<details class="noteedit"${pubText().notes[baseNum(b.nums[0])] ? " open" : ""}><summary>Add a note</summary><textarea data-pubnote="${esc(baseNum(b.nums[0]))}" rows="2" maxlength="1000" placeholder="Why this bill matters or what to say about it">${esc(pubText().notes[baseNum(b.nums[0])] || "")}</textarea></details>` : ""}
       ${SHARED ? "" : logBlock(x)}
       <details class="bill morebill" data-idx="${b.idx}"><summary>More about this bill</summary><div class="detail"></div></details>
       </div>
@@ -4990,11 +5125,9 @@ function wire() {
       countUse(`support/${b.dataset.support}`);
       if (b.dataset.support === "close") { box.remove(); return; }
       if (b.dataset.support !== "share") return;
+      // The site's address, copied (or shown, where the browser won't copy).
       const site = new URL("../", ROOT).href;
-      try {
-        if (navigator.share) await navigator.share({ title: "State Bill Tracker", text: "Follow bills in every state legislature and Congress.", url: site });
-        else { await navigator.clipboard.writeText(site); b.textContent = "link copied"; }
-      } catch (err) {}
+      try { await navigator.clipboard.writeText(site); b.textContent = "link copied"; } catch (err) { b.textContent = site; }
     });
     (near.closest("form, .act, .wcard .wbody, li, p, div") || near).after(box);
     countUse("support/shown");
@@ -5027,7 +5160,6 @@ function wire() {
     const shownKeys = new Set(shown.flatMap(keysOf));
     ORDER = [...shown.map(billKey), ...ORDER.filter((k) => !shownKeys.has(k))];
     saveOrder();
-    if ($("shareLink")) $("shareLink").value = shareLink();
   };
   $("wlList").addEventListener("pointerdown", (e) => {
     const h = e.target.closest("[data-whandle]"); if (!h) return;
@@ -5095,13 +5227,11 @@ function wire() {
   $("wl").addEventListener("click", async (e) => {
     const pb = e.target.closest("[data-pub]");
     if (pb) { publishAction(pb); return; }
+    const sb = e.target.closest("a[data-shareby]");
+    if (sb) { countUse(`list-shared-by/${sb.dataset.shareby}`); return; }
     const btn = e.target.closest("[data-wl]"); if (!btn) return;
     if (btn.dataset.wl === "share") { W_SHARE_OPEN = !W_SHARE_OPEN; renderWatchView(); return; }
-    if (btn.dataset.wl === "copy") {
-      countUse("share-link-copied");
-      const input = $("shareLink");
-      try { await navigator.clipboard.writeText(input.value); btn.textContent = "Copied"; } catch (err) { input.select(); btn.textContent = "Press Ctrl/Cmd+C"; }
-    } else if (btn.dataset.wl === "import") {
+    if (btn.dataset.wl === "import") {
       countUse("shared-list-added");
       for (const b of BILLS.filter(sharedStance).sort((x, y) => sharedRank(x) - sharedRank(y))) {
         const st = sharedStance(b);
@@ -5122,15 +5252,18 @@ function wire() {
       SHARED = null; SHARED_META = null; clearHash(location.pathname); render();
     }
   });
-  // Typing an introduction or a note saves it in this browser; Update sends it.
+  // Typing the shared list's name, a group's introduction or a note: kept in this browser, saved to the list a minute later.
   $("view-watch").addEventListener("input", (e) => {
+    if (e.target.id === "pubTitle") { const mine = myPublished(); if (!mine) return; setMyPublished({ ...mine, title: e.target.value }); return schedulePub(); }
     const t = pubText();
     if (e.target.id === "pubIntro") t.intro = e.target.value;
     else if (e.target.dataset.pubnote) { const k = e.target.dataset.pubnote; if (e.target.value.trim()) t.notes[k] = e.target.value; else delete t.notes[k]; }
     else return;
     setPubText(t);
-    if ($("pubMsg")) $("pubMsg").textContent = "Not published yet. Click Update.";
+    schedulePub();
   });
+  // Leaving with a save of the shared list still waiting sends it now.
+  window.addEventListener("pagehide", flushPub);
   for (const id of ["list", "openNow", "wlList"]) $(id).addEventListener("toggle", (e) => { if (e.target.open && e.target.matches(".bill")) fillDetail(e.target); }, true);
   $("wlList").addEventListener("toggle", (e) => {
     if (e.target.matches(".wgroup")) W_GROUP_OPEN.set(e.target.dataset.wgroup, e.target.open);
@@ -5855,6 +5988,9 @@ async function unpack(b64) {
     const el = $("bill-data");
     BASE = el.dataset.base || "";
     ROOT = el.dataset.root || "";
+    // A list's old address (watchlist/#list=<slug>) goes to its page, /list/#<slug>.
+    const oldList = ROOT && location.hash.match(/^#list=([a-z0-9-]{1,61})$/);
+    if (oldList) { location.replace(listUrl(oldList[1])); return; }
     // The public site's pages link back to the front page, the folder above the state's.
     if (ROOT) { try { $("siteHome").href = new URL("../", ROOT).href; $("siteHome").hidden = false; } catch (e) {} }
     // And to the About page and the contribution link (site_meta.SUPPORT, in the page's head).

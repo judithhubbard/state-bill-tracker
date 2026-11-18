@@ -35,7 +35,7 @@ const STATE = {
     return null;
   },
   publicSite: "https://statebilltracker.org/us/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "senator", H: "representative" },

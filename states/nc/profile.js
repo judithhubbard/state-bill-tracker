@@ -8,7 +8,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Filed|Passed 1st Reading|Withdrawn From Com|Withdrawn From Cal|Regular Message|Special Message|Engrossed|Ordered Engrossed|Cal Pursuant|Serial Referral|Amend Tabled|Amend Failed|Added to Calendar|Placed On Cal|Placed on Today)/i,
   publicSite: "https://statebilltracker.org/nc/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

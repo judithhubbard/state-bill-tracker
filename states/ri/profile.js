@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Scheduled for|Meeting postponed|Committee postponed|Proposed Substitute|Substitute [A-Z]$|Committee heard|Committee continued|Committee voted to reconsider|Removed from|Senate held on desk|Scheduled to be heard)/i,
   publicSite: "https://statebilltracker.org/ri/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

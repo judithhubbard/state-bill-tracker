@@ -336,7 +336,7 @@ async function load() {
   document.getElementById("rows").innerHTML = lists.length ? lists.map((l) => '<tr class="' + (l.hidden ? "hid" : "") + '"><td><b>' + esc(l.title || "(no title)") + "</b>"
     + (l.group ? '<br><span class="muted">' + esc(l.group) + "</span>" : "") + (l.views ? '<br><span class="muted">opened ' + l.views.total + " times, " + l.views.week + " this week</span>" : "")
     + (l.hidden ? '<br><span class="muted">Hidden</span>' : "") + "</td><td>" + (l.state === "all" ? "Several" : esc((l.state || "").toUpperCase())) + "</td><td>" + l.bills + "</td><td>" + esc((l.updated || "").slice(0, 10)) + '</td><td class="acts">'
-    + '<a href="' + SITE + (l.state === "all" ? "list/#" : esc(l.state) + "/watchlist/#list=") + esc(l.slug) + '" target="_blank" rel="noopener">View</a> '
+    + '<a href="' + SITE + "list/#" + esc(l.slug) + '" target="_blank" rel="noopener">View</a> '
     + '<button type="button" data-hide="' + esc(l.slug) + '" data-to="' + (l.hidden ? "0" : "1") + '">' + (l.hidden ? "Show" : "Hide") + "</button>"
     + '<button type="button" class="del" data-del="' + esc(l.slug) + '" data-title="' + esc(l.title) + '">Delete</button></td></tr>').join("")
     : '<tr><td colspan="5" class="muted">No shared lists yet.</td></tr>';

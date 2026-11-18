@@ -10,7 +10,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Filed$|REPORTED CORRECTLY ENGROSSED|RULES SUSPENDED|Rules suspended|Received from the (?:House|Senate)|RECEIVED FROM THE SENATE|EMERGENCY CLAUSE ADOPTED|Ordered immediately|Placed on second reading for (?:the )?purpose of amendment|Returned (?:from|to|From|To)\s+(?:the )?(?:House|Senate) as (?:passed|adopted|concurred)|Sine Die adjournment$|Roll call (?:was )?requested|Sounding of the Ballot requested)/i,
   publicSite: "https://statebilltracker.org/ar/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

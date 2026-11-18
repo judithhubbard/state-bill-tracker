@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(INTRODUCED|Prefiled|Placed on .*Agenda|Assigned .*sub|(Fiscal )?Impact [Ss]tatement|Bill text|Printed as|Committee substitute printed|Title replaced|Engrossed|Read (first|second) time|Constitutional reading|Enrolled$|Signed by (Speaker|President)|Governor's Action Deadline|Acts of Assembly Chapter text|Conference report released|Conference substitute printed|Taken up|Passed by for the day|Rules suspended|VOTE:)/,
   publicSite: "https://statebilltracker.org/va/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   // The House of Delegates ("H") is the lower house; its members are delegates.
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Del." },

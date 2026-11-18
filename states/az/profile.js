@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Prefiled|House First Reading|House Second Reading|Senate First Reading|Senate Second Reading|Transmit to (?:House|Senate)|Referred to committee|House Placed on Consent Calendar|Senate Consent Calendar)/i,
   publicSite: "https://statebilltracker.org/az/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

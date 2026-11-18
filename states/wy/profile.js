@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Bill Number Assigned|[HS] Received for (?:Introduction|Concurrence)|[HS] Placed on General File|[HS] COW:Passed|[HS] 2nd Reading:Passed|[HS] (?:Speaker|President) Signed|Assigned Number|Assigned Chapter Number|[HS] Appointed JCC|[HS] (?:2nd|3rd) Reading:Laid Back|PLACED ON FLOOR|ENROLLED)/i,
   publicSite: "https://statebilltracker.org/wy/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

@@ -9,7 +9,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(==\w+== |(?:Public )?Hearing|Executive Session|(?:Full Committee|Subcommittee|Division \w*) Work Session|Minority Committee Report|Speaker Appoints|President Appoints|Conferee Change|Conference Committee Meeting|Committee of Conference Meeting|Without Objection|Special Order|Pending Motion|Referral Waived|Sen\. \w+ Moved Laid on Table|Enrolled Bill Amendment|ENROLLED)/i,
   publicSite: "https://statebilltracker.org/nh/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

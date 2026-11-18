@@ -10,7 +10,7 @@ const STATE = {
   // reported or spoke, amendments offered.
   routine: /^(Notice Calendar|Action Calendar|Entered on Notice Calendar|Pending entry on Notice|On Notice Calendar|Read second time|Second Reading|Read 2nd time|New Business\/|Unfinished Business\/|Consideration (?:postponed|resumed|interrupted)|Senate Message|House message|Rules suspended|Rule \d+ suspended|Roll Call|Which was (?:agreed|disagreed)|Division|Reps?\. |Senators? |Sen\. |Senator\(s\)|Motion|Proposal of amendment|Recommendation of amendment|House proposal of amendment(?:; text| to Senate proposal of amendment, text)?$|Title amended|Title revised|As passed by Senate and House|Called up|Point of order|Committee of Conference (?:appointed|report submitted|report; text)|Speaker appointed|Pending third reading|Pending action|Addendum|First division|Second division|Amendment as offered|Delivered to Secretary of State)/i,
   publicSite: "https://statebilltracker.org/vt/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

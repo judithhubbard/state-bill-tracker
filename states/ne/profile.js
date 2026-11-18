@@ -9,7 +9,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Introduced$|Public hearing set|Carried over to the second session|Amendment |Sen\. .* moved |Speaker .* moved |The .* (?:Committee|Board) moved |A senator moved |The motion .* failed|Signed by the Speaker and the presiding officer|Includes provisions of|Placed on Select File|Placed on Final Reading|Passed on Final Reading)/,
   publicSite: "https://statebilltracker.org/ne/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { L: "Legislature" },
   titles: { L: "Sen." },
   memberWords: { L: "state senator" },

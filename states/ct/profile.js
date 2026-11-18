@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Filed with lco|Rptd\. out of lco|File no\.|Referred to olr|House calendar number|Senate calendar number|Vote to draft|Drafted by committee|Transmitted to secretary of the state|Transmitted pursuant|Reserved for subject matter|Immediate transmittal|Rules suspended|Public hearing|House adopted|Sen\. adopted|House rejected|Sen\. rej\.|Amendment withdrawn|Public act|Special act|In concurrence|On consent calendar)/i,
   publicSite: "https://statebilltracker.org/ct/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

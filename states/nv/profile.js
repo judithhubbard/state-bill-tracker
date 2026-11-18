@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Prefiled$|Introduced$|Read the (first|second) time|The (Assembly|Senate) vote:|The .* Committee recommended|Amended in the|Placed on the (Chief Clerk|Secretary)'s desk|Exempt from the session's deadlines|Granted a waiver|Declared an emergency|Set as a special order|A conference committee was requested|File No\. |Action of |SIGNED CHAPTER)/,
   publicSite: "https://statebilltracker.org/nv/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", A: "Assembly" },
   titles: { S: "Sen.", A: "Asm." },
   memberWords: { S: "state senator", A: "Assembly member" },

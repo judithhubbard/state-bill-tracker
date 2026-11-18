@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Prefiled for introduction|First reading|INTRODUCED|.*Executive action taken|Minority;|Rules suspended|\d\w+ substitute bill substituted|Floor amendment|Committee amendment|Amendment ruled|Speaker signed|President signed|Effective date|By resolution, reintroduced|Public hearing|Scheduled for|Held on calendar|Placed on second reading consent|.*Majority; .*proposed by)/i,
   publicSite: "https://statebilltracker.org/wa/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

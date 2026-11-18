@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Read the second time|The (?:House|Senate) vote:|The (?:House|Senate) adopted a budget isolation resolution|Read the third time|Engrossed|Enrolled$|Sent for the presiding officer's signature|Local bill: notice certified|Carried over|The .* Committee reported it favorably|Reported favorably by the committee|.* (?:\d+(?:st|nd|rd|th) )?(?:Amendment|Substitute)(?: Offered)?$|.*motion to (?:Adopt|Table)|.*Add Cosponsor|.*Petition to (?:Cease|Close) Debate|.*Previous Question)/i,
   publicSite: "https://statebilltracker.org/al/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

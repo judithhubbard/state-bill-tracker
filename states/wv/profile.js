@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Read the (?:first|second|third) time|The (?:House|Senate) vote:|On \d\w+ reading|On second reading|Placed on House Calendar|From House\w? Calendar|Received in the (?:House|Senate)$|The .* Committee discussed it|Sent to the .* Subcommittee|Acts chapter|.*\(voted\)$|(?:Committee |Floor |Title )?amendments? .*(?:adopted|rejected|withdrawn|reported)|.*\bamend\w*\.? .*(?:adopted|rejected|withdrawn|reported)|Amendment reported by the Clerk|Laid over|Postponed on \d|Deferred|Immediate consideration|Constitutional Rule|Dispensed with Constitutional Rule|Motion for previous question)/i,
   publicSite: "https://statebilltracker.org/wv/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House of Delegates" },
   titles: { S: "Sen.", H: "Del." },
   memberWords: { S: "state senator", H: "delegate" },

@@ -56,15 +56,16 @@ the current page. The Webb and Kelles checkboxes carry forward for Senate Distri
 Assembly District 125, and drop out on their own if someone else holds either seat
 (`DELEGATION` in `states/ny/profile.py`).
 
-## Published watchlists
+## Shared watchlists
 
-Groups with an invite code can publish a watchlist with its own link (`/watchlist/#list=<name>`). It updates
-for everyone when they click "Update the published list". The lists live in a small Cloudflare Worker
-(`lists_worker/`, deployed with `npx wrangler deploy` from that folder) that stores them in Workers KV. The site
-itself stays on GitHub Pages.
+Anyone can share a watchlist: "Share this list" on a state's Watchlist tab gives one link (`/list/#<name>`) that
+the page keeps in step with the stars, saving a minute after they change. The lists live in a small Cloudflare Worker
+(`lists_worker/`, deployed with `npx wrangler deploy` from that folder) that stores them in Workers KV. Old links
+(`<state>/watchlist/#list=<name>`) redirect to `/list/`.
 
-- Anyone can read a published list. Creating one needs an invite code; there is one code per group.
-- Whoever creates a list gets a private edit key, kept in their browser. They can copy it to use on another computer.
+- Anyone can read a shared list. A group with a code (one per group, from the site's owner) also gets a name in the
+  address, an introduction and notes on each bill.
+- Whoever creates a list gets a private edit key, kept in their browser. They can copy it to use on another device.
 - Revoking a group's code hides all of that group's lists.
 
 `lists_admin.py` manages codes and lists (`code-new "Group name"`, `codes`, `code-revoke CODE`, `lists`,
