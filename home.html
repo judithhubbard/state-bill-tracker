@@ -382,6 +382,9 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .mine .tt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mine .where { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; }
 .mine .stg { white-space: normal; }
+/* "Open as a page" (/your-bills/) at the bottom of the "Your bills" list. */
+.mine .mpage { margin: 0 0 10px; padding: 0 2px; font-size: 13.5px; text-align: right; }
+.mine .mpage a { color: var(--navy); font-weight: 600; }
 .new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #14213d;
   font: 700 11px/1.6 var(--body); }
 /* A star beside each bill (in "Your bills" and the map's panel): filled when it's on the state's watchlist. */
@@ -1298,7 +1301,8 @@ async function drawMine() {
   if (!shown.length) { sec.hidden = true; mineDrawn = ""; return; }
   const n = shown.reduce((t, x) => t + x[3], 0), fresh = shown.reduce((t, x) => t + x[4], 0);
   document.getElementById("mineCount").innerHTML = `· ${n} bill${n === 1 ? "" : "s"}${fresh ? ` <b>${fresh} new</b>` : ""}`;
-  const html = shown.sort((a, b) => a[0].localeCompare(b[0])).map((x) => x[2]).join("");
+  const html = shown.sort((a, b) => a[0].localeCompare(b[0])).map((x) => x[2]).join("")
+    + '<p class="mpage"><a href="your-bills/">Open as a page</a></p>';  // /your-bills/ (lists_pages/yourbills.html)
   if (html !== mineDrawn) { document.getElementById("mineList").innerHTML = html; mineDrawn = html; }
   sec.hidden = false;
 }

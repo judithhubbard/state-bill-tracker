@@ -152,6 +152,22 @@ meta = site_meta.tags("About · State Bill Tracker", "Why State Bill Tracker was
                       site_meta.root() + "about/") + site_meta.analytics()
 open(sys.argv[1], "w").write(page.replace("<!--meta-->\n", meta, 1).replace("SUPPORT_URL", site_meta.SUPPORT))
 PY
+# "Your bills" across states (/your-bills/) and a shared list's page (/list/#<slug>), from lists_pages/: the shared styles
+# and script put inside each, the link preview tags, the visit counter, the lists Worker's address (LISTS_API, default the
+# state-lists Worker) and the contributions link.
+python3 - "$OUT" <<'PY'
+import os, sys, site_meta
+css, js = open("lists_pages/common.css").read(), open("lists_pages/common.js").read()
+api = os.environ.get("LISTS_API", "https://state-lists.lists-worker.workers.dev")
+for src, path, title, desc in (("yourbills.html", "your-bills", "Your bills · State Bill Tracker", "The bills you follow in every state and Congress."),
+                               ("list.html", "list", "Shared list · State Bill Tracker", "A list of bills shared on State Bill Tracker.")):
+    page = open(os.path.join("lists_pages", src)).read()
+    meta = site_meta.tags(title, desc, site_meta.root() + path + "/", canonical=False) + site_meta.analytics()
+    page = (page.replace("<!--meta-->\n", meta, 1).replace("/*common.css*/", css, 1).replace("/*common.js*/", js, 1)
+            .replace("LISTS_API_URL", api).replace("SUPPORT_URL", site_meta.SUPPORT))
+    os.makedirs(os.path.join(sys.argv[1], path), exist_ok=True)
+    open(os.path.join(sys.argv[1], path, "index.html"), "w").write(page)
+PY
 if [ "${LAUNCHED:-0}" = 1 ]; then
   printf 'User-agent: *\nAllow: /\n' > "$OUT/robots.txt"
 else

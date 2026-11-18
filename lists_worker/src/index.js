@@ -7,6 +7,9 @@
 //
 // KV keys:  code:<code>    -> { group, active, created }
 //           list:<slug>    -> { slug, state, session, title, bills, intro, notes, group, code, hidden, editHash, created, updated }
+//           A list holds one state's bills of one session ("A1234", "-S55" to oppose), or, with state "all" (session 0),
+//           bills from any states and sessions, each written "<state>:<session>:<number>": "nj:2026:A1234", "-ny:2025:S55",
+//           "us:2025:HR1" (Congress). Notes are keyed by the bill without its "-".
 //           views:<slug>   -> { total, days: { "2026-10-23": n, ... last 30 days } }  (group lists only: KV allows few writes)
 //           rate:<ip>:<day> -> lists created from one address that day (expires after two days)
 
@@ -15,6 +18,11 @@ const allowed = (o) => !!o && (ALLOWED_ORIGINS.includes(o) || /^https:\/\/[a-z0-
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,60}$/;
 const STATE_RE = /^[a-z]{2}$/;
 const BILL_RE = /^-?[A-Z]{1,7}\d{1,6}$/; // a bill number without spaces or amendment letter; "-" in front means oppose
+// A bill in a list across states: state code, session (its first year), number; "-" in front means oppose.
+const CROSS_RE = /^(-?)([a-z]{2}):(\d{4}):([A-Z]{1,7}\d{1,6})$/;
+const ALL = "all";
+const STATES = new Set(("al ak az ar ca co ct de fl ga hi id il in ia ks ky la me md ma mi mn ms mo mt ne nv nh nj nm ny nc nd oh ok or pa "
+  + "ri sc sd tn tx ut vt va wa wv wi wy us").split(" "));
 const MAX_BILLS = 500;
 const MAX_TITLE = 60;        // anyone's list
 const MAX_GROUP_TITLE = 120; // a group's
@@ -58,25 +66,41 @@ const fail = (req, status, message) => reply(req, { error: message }, status);
 // The list fields a client may set, checked. Introductions and notes only for a group's list (group true).
 function cleanList(body, group) {
   const title = String(body?.title || "").trim().replace(/\s+/g, " ").slice(0, group ? MAX_GROUP_TITLE : MAX_TITLE);
-  const bills = Array.isArray(body?.bills) ? body.bills.map((b) => String(b).toUpperCase().replace(/\s+/g, "")) : [];
-  if (bills.length > MAX_BILLS) return { error: `A list can have at most ${MAX_BILLS} bills.` };
-  if (bills.some((b) => !BILL_RE.test(b))) return { error: "Bills must look like HB1234 or S1234." };
   const state = String(body?.state || "").toLowerCase();
-  if (!STATE_RE.test(state)) return { error: "Unknown state." };
-  const session = Number(body?.session);
-  if (!Number.isInteger(session) || session < 2009 || session > 2099) return { error: "Unknown session." };
+  const cross = state === ALL;
+  if (!cross && !STATE_RE.test(state)) return { error: "Unknown state." };
+  const raw = Array.isArray(body?.bills) ? body.bills.map((b) => String(b).replace(/\s+/g, "")) : [];
+  if (raw.length > MAX_BILLS) return { error: `A list can have at most ${MAX_BILLS} bills.` };
+  let bills;
+  if (cross) {
+    // "NJ:2026:a1234" is written "nj:2026:A1234"; a state not on the site, or a session out of range, is refused.
+    bills = [];
+    for (const b of raw) {
+      const m = CROSS_RE.exec(b.replace(/^(-?)([^:]*):([^:]*):(.*)$/, (_, o, st, y, n) => `${o}${st.toLowerCase()}:${y}:${n.toUpperCase()}`));
+      if (!m || !STATES.has(m[2]) || +m[3] < 2009 || +m[3] > 2099) return { error: "Bills must look like nj:2026:A1234." };
+      bills.push(`${m[1]}${m[2]}:${m[3]}:${m[4]}`);
+    }
+  } else {
+    bills = raw.map((b) => b.toUpperCase());
+    if (bills.some((b) => !BILL_RE.test(b))) return { error: "Bills must look like HB1234 or S1234." };
+  }
+  // One entry per bill (the first, if a bill came both supported and opposed).
+  const seen = new Set();
+  bills = bills.filter((b) => { const k = b.replace(/^-/, ""); if (seen.has(k)) return false; seen.add(k); return true; });
+  const session = cross ? 0 : Number(body?.session);
+  if (!cross && (!Number.isInteger(session) || session < 2009 || session > 2099)) return { error: "Unknown session." };
   // Plain text only; the site escapes it when showing it.
   const intro = group ? String(body?.intro || "").trim().slice(0, MAX_INTRO) : "";
   const notes = {};
   if (group) {
     const plain = new Set(bills.map((b) => b.replace(/^-/, "")));
     for (const [k, v] of Object.entries(body?.notes && typeof body.notes === "object" ? body.notes : {})) {
-      const key = String(k).toUpperCase();
+      const key = cross ? String(k).replace(/^([^:]*):([^:]*):(.*)$/, (_, st, y, n) => `${st.toLowerCase()}:${y}:${n.toUpperCase()}`) : String(k).toUpperCase();
       const text = String(v || "").trim().slice(0, MAX_NOTE);
       if (plain.has(key) && text) notes[key] = text;
     }
   }
-  return { title, bills: [...new Set(bills)], state, session, intro, notes };
+  return { title, bills, state, session, intro, notes };
 }
 function slugify(title) {
   return title.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50) || "list";
@@ -295,8 +319,8 @@ async function load() {
   lists.sort((a, b) => (b.updated || "").localeCompare(a.updated || ""));
   document.getElementById("rows").innerHTML = lists.length ? lists.map((l) => '<tr class="' + (l.hidden ? "hid" : "") + '"><td><b>' + esc(l.title || "(no title)") + "</b>"
     + (l.group ? '<br><span class="muted">' + esc(l.group) + "</span>" : "") + (l.views ? '<br><span class="muted">opened ' + l.views.total + " times, " + l.views.week + " this week</span>" : "")
-    + (l.hidden ? '<br><span class="muted">Hidden</span>' : "") + "</td><td>" + esc((l.state || "").toUpperCase()) + "</td><td>" + l.bills + "</td><td>" + esc((l.updated || "").slice(0, 10)) + '</td><td class="acts">'
-    + '<a href="' + SITE + esc(l.state) + "/watchlist/#list=" + esc(l.slug) + '" target="_blank" rel="noopener">View</a> '
+    + (l.hidden ? '<br><span class="muted">Hidden</span>' : "") + "</td><td>" + (l.state === "all" ? "Several" : esc((l.state || "").toUpperCase())) + "</td><td>" + l.bills + "</td><td>" + esc((l.updated || "").slice(0, 10)) + '</td><td class="acts">'
+    + '<a href="' + SITE + (l.state === "all" ? "list/#" : esc(l.state) + "/watchlist/#list=") + esc(l.slug) + '" target="_blank" rel="noopener">View</a> '
     + '<button type="button" data-hide="' + esc(l.slug) + '" data-to="' + (l.hidden ? "0" : "1") + '">' + (l.hidden ? "Show" : "Hide") + "</button>"
     + '<button type="button" class="del" data-del="' + esc(l.slug) + '" data-title="' + esc(l.title) + '">Delete</button></td></tr>').join("")
     : '<tr><td colspan="5" class="muted">No shared lists yet.</td></tr>';

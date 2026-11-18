@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!-- A shared list (/list/#<slug>): the page share links lead to, for lists from one state's watchlist and lists across
+     states (lists_worker/). Shows each bill's status, the group's introduction and notes, and lets a visitor follow the list
+     (it then shows in Your bills) or add its bills to their own watchlists. build_site.sh writes it to list/index.html, as
+     yourbills.html. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shared list · State Bill Tracker</title>
+<meta name="description" content="A list of bills shared on State Bill Tracker: where each one is and what's next.">
+<meta name="robots" content="noindex">
+<!--meta-->
+<meta name="lists-api" content="LISTS_API_URL">
+<meta name="support" content="SUPPORT_URL">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;600;700&display=swap">
+<style>
+/*common.css*/
+.grp { font-weight: 600; color: var(--ink); }
+.intro { margin: 0 0 16px; overflow-wrap: anywhere; }
+.intro p { margin: 0 0 10px; }
+.acts { margin: 0 0 20px; }
+.acts .btn[aria-pressed="true"] { background: var(--navy); color: var(--sheet); }
+</style>
+</head>
+<body>
+<main>
+  <p class="back"><a href="/">&larr; State Bill Tracker</a><span id="stLink"></span></p>
+  <h1 id="title">&nbsp;</h1>
+  <p class="sub" id="by">&nbsp;</p>
+  <div class="intro" id="intro"></div>
+  <div class="row acts" id="acts" hidden>
+    <button type="button" class="btn" id="follow" aria-pressed="false">Follow</button>
+    <button type="button" class="btn" id="addAll">Add all to my watchlist</button>
+    <span class="muted" id="msg"></span>
+  </div>
+  <div id="bills"></div>
+  <footer><a href="/about/">About</a> &middot; <a href="SUPPORT_URL">Support this site</a></footer>
+</main>
+<script>
+/*common.js*/
+</script>
+<script>
+const today = () => new Date().toISOString().slice(0, 10);
+let LIST = null, ROWS = [];
+const slugNow = () => decodeURIComponent(location.hash.replace(/^#(?:list=)?/, "")).trim();
+function gone(text) {
+  document.title = "Shared list · State Bill Tracker";
+  $("title").textContent = "List not found";
+  $("by").textContent = text;
+  $("intro").innerHTML = ""; $("bills").innerHTML = ""; $("acts").hidden = true; $("stLink").innerHTML = "";
+}
+async function load() {
+  const slug = slugNow();
+  if (!slug) return gone("This link is missing the list's name.");
+  const mine = myList();
+  try {
+    LIST = await api(`/lists/${encodeURIComponent(slug)}`, mine?.slug === slug ? { headers: { "X-Edit-Key": mine.editKey } } : {});
+  } catch (e) {
+    return gone(e.status === 404 ? "This list isn't available. Its owner may have stopped sharing it." : "The list couldn't be loaded just now. Try again in a moment.");
+  }
+  countOnce("list/opened");
+  const one = LIST.state !== "all";
+  document.title = `${LIST.title || "Shared list"} · State Bill Tracker`;
+  $("title").textContent = LIST.title || "Shared list";
+  $("stLink").innerHTML = one ? ` &middot; <a href="/${esc(LIST.state)}/">${esc(stName(LIST.state))}</a>` : "";
+  const bills = listBills(LIST);
+  $("by").innerHTML = [LIST.group ? `<span class="grp">${esc(LIST.group)}</span>` : "",
+    `${bills.length} bill${bills.length === 1 ? "" : "s"}`, LIST.updated ? `updated ${fmtDay(LIST.updated.slice(0, 10))}` : ""].filter(Boolean).join(" · ");
+  $("intro").innerHTML = paras(LIST.intro);
+  const stance = showStance(LIST);
+  ROWS = await Promise.all(bills.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)), note: noteOf(LIST, b), shown: stance })));
+  const by = {};
+  for (const x of ROWS) (by[x.st] ||= []).push(x);
+  const sts = Object.keys(by).sort((a, b) => stName(a).localeCompare(stName(b)));
+  $("bills").innerHTML = sts.map((st) => `<div class="mst">${one ? "" : `<h3><a href="/${st}/">${esc(stName(st))}</a></h3>`}<ol>`
+    + by[st].map((x) => billRow({ ...x, stance: x.shown ? x.stance : "" })).join("") + "</ol></div>").join("") || '<p class="muted">No bills on this list yet.</p>';
+  $("acts").hidden = false;
+  drawButtons();
+}
+function drawButtons() {
+  const on = LIST && LIST.slug in readFollows();
+  $("follow").setAttribute("aria-pressed", String(on));
+  $("follow").textContent = on ? "Following ✓" : "Follow";
+  const missing = ROWS.filter((x) => !(`${x.session}:${x.num}` in readWatch(x.st)));
+  $("addAll").hidden = !ROWS.length;
+  $("addAll").disabled = !missing.length;
+  $("addAll").textContent = missing.length ? "Add all to my watchlist" : "All on your watchlist";
+}
+$("follow").addEventListener("click", () => {
+  const f = readFollows();
+  if (LIST.slug in f) { delete f[LIST.slug]; $("msg").innerHTML = ""; countUse("list/unfollowed"); }
+  else {
+    f[LIST.slug] = { title: LIST.title, known: ROWS.map((x) => x.key), since: today() };
+    $("msg").innerHTML = 'It&rsquo;s in <a href="/your-bills/">Your bills</a>.';
+    countUse("list/followed");
+  }
+  writeFollows(f);
+  drawButtons();
+});
+$("addAll").addEventListener("click", () => {
+  let n = 0;
+  for (const x of ROWS) {
+    const w = readWatch(x.st), k = `${x.session}:${x.num}`;
+    if (k in w) continue;
+    w[k] = { seen: x.last || today(), stance: x.stance };
+    writeWatch(x.st, w);
+    n++;
+  }
+  $("msg").innerHTML = `Added ${n} bill${n === 1 ? "" : "s"} to <a href="/your-bills/">Your bills</a>.`;
+  countUse("list/added all");
+  drawButtons();
+});
+$("bills").addEventListener("click", (e) => { if (e.target.closest("li > a")) countUse("list/opened a bill"); });
+addEventListener("hashchange", load);
+load();
+</script>
+</body>
+</html>
