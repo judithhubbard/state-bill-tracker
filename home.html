@@ -420,6 +420,11 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
   font-size: 14px; color: var(--ink-2); }
 .found .fhead .cnt { flex: 1 1 auto; min-width: 0; }
 .found .fhead b { color: var(--ink); }
+.found .goto { list-style: none; margin: 0; padding: 6px 12px; border-bottom: 1px solid var(--rule); display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.found ul.goto { flex: none; overflow: visible; }
+.found .goto li { border: 0; }
+.found .goto li a { display: inline; padding: 4px 0; font-weight: 600; color: var(--navy); }
+.found .goto li a:hover { background: none; color: var(--hover); }
 .found .onmap { font: inherit; font-size: 14px; font-weight: 600; color: var(--navy); background: var(--sheet); border: 1px solid var(--navy);
   border-radius: 6px; padding: 2px 10px; cursor: pointer; }
 .found .onmap:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
@@ -1144,7 +1149,7 @@ yearsEl.addEventListener("click", (e) => {
 document.addEventListener("click", (e) => {
   const a = e.target.closest("a[href]");
   if (!a || e.defaultPrevented) return;
-  const from = a.closest("#panel") ? "panel" : a.closest("#tiles") ? "map" : a.closest("#mine") ? "your bills" : a.closest(".allst") ? "states list" : "";
+  const from = a.closest("#panel") ? "panel" : a.closest("#tiles") ? "map" : a.closest("#mine") ? "your bills" : a.closest(".allst") ? "states list" : a.closest(".goto") ? "search" : "";
   if (from) countUse(`home/to a state/${from}${issue ? " (topic)" : ""}`);
 });
 let WANT_MINE = location.hash === "#mine";  // shown once "Your bills" has loaded (drawMine())
@@ -1467,11 +1472,20 @@ drawMine();
     hits.sort((a, b) => b.tier - a.tier || b.score - a.score || (a.s.up - b.s.up) || rank(b.r) - rank(a.r) || a.name.localeCompare(b.name));
     draw(hits, p, want.filter((st) => !ready[st]).length);
   }
+  // States whose name the query is (or starts: "new", "caro"), offered as links to their pages above the bills.
+  function goTo(p) {
+    const qf = fold(q.value.trim()).replace(/[^a-z. ]+/g, " ").replace(/\s+/g, " ").trim();
+    const out = new Set(p.st && !p.nums.length && !p.words.length ? [p.st] : []);
+    if (qf.length >= 3) for (const c of codes()) if (fold(stateName(c)).startsWith(qf) || (c === "us" && "u.s. congress".startsWith(qf))) out.add(c);
+    return [...out].filter((c) => built[c.toUpperCase()]).sort((a, b) => stateName(a).localeCompare(stateName(b)));
+  }
   function draw(hits, p, loading) {
     const most = hits.length && hits.every((h) => h.tier === 1);
     const where = p.st ? ` in ${esc(stateName(p.st))}` : "";
+    const go = goTo(p);
     let count;
-    if (!hits.length) count = loading ? "Searching…" : `No bills found${where}. Try other words, or a number such as HB 1234.`;
+    if (!hits.length && go.length && !p.words.length && !p.nums.length) count = `Type a bill number or words to search ${esc(stateName(go[0]))}&rsquo;s bills`;
+    else if (!hits.length) count = loading ? "Searching…" : `No bills found${where}. Try other words, or a number such as HB 1234.`;
     else if (p.nums.length && hits.every((h) => h.tier > 5)) count = `<b>${hits.length.toLocaleString()}</b> bill${hits.length === 1 ? "" : "s"} with that number${where}`;
     else if (most) count = `No bill${where} has all those words; these ${hits.length === 1 ? "has" : `<b>${hits.length.toLocaleString()}</b> have`} most of them`;
     else count = `<b>${hits.length.toLocaleString()}</b> bill${hits.length === 1 ? "" : "s"} found${where}`;
@@ -1492,7 +1506,8 @@ drawMine();
     // Words found in several places: "Show on the map" shades each state by its matches (searchView()).
     const mapIt = !p.st && !only && p.words.length && hits.length > 1 && !most && hits.some((h) => h.tier === 5 || h.tier === 6) && new Set(hits.map((h) => h.st)).size > 1;
     lastHits = mapIt ? [p.words.join(" "), hits.filter((h) => h.tier === 5 || h.tier === 6)] : null;
-    found.innerHTML = `<div class="fhead"><span class="cnt" aria-live="polite">${count}</span>${mapIt && !loading ? '<button type="button" class="onmap">Show on the map</button>' : ""}${pick}</div>` + (rows ? `<ul>${rows}${more}</ul>` : "");
+    const goHtml = go.length ? `<ul class="goto">${go.map((c) => `<li><a href="${esc(built[c.toUpperCase()])}" data-goto="${c}">${esc(stateName(c))}&rsquo;s bills &rarr;</a></li>`).join("")}</ul>` : "";
+    found.innerHTML = `<div class="fhead"><span class="cnt" aria-live="polite">${count}</span>${mapIt && !loading ? '<button type="button" class="onmap">Show on the map</button>' : ""}${pick}</div>` + goHtml + (rows ? `<ul>${rows}${more}</ul>` : "");
     found.hidden = false;
     q.setAttribute("aria-expanded", "true");
     if (!loading) {

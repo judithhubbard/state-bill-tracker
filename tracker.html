@@ -652,6 +652,7 @@ table.st col.c-m { width: 80px; }
 .spill.p5 { background: var(--signed-soft); color: var(--signed); }
 .spill.p6 { background: var(--veto-soft); color: var(--veto); }
 .wsec { border-radius: 12px; padding: 14px 16px 16px; margin-top: 14px; }
+.sitefoot { margin: 40px 0 8px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-2); }
 /* "Glad this helped": after an email is copied or an action logged, once a quarter (supportNote()). */
 .supportnote { position: relative; margin: 10px 0; padding: 10px 36px 10px 12px; border-radius: 10px; background: var(--gold-soft, rgba(201, 151, 47, .12)); font-size: 14px; line-height: 1.45; }
 .supportnote .linkish { font: inherit; }
@@ -1310,6 +1311,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     </div>
   </section>
   </main>
+  <footer class="sitefoot" id="siteFoot" hidden><a id="siteAbout" href="../about/">About</a></footer>
 </div>
 
 <script type="application/json" id="bill-data"></script>
@@ -5694,6 +5696,13 @@ async function unpack(b64) {
     ROOT = el.dataset.root || "";
     // The public site's pages link back to the front page, the folder above the state's.
     if (ROOT) { try { $("siteHome").href = new URL("../", ROOT).href; $("siteHome").hidden = false; } catch (e) {} }
+    // And to the About page and the contribution link (site_meta.SUPPORT, in the page's head).
+    if (ROOT) {
+      try { $("siteAbout").href = new URL("../about/", ROOT).href; } catch (e) {}
+      const give = document.querySelector('meta[name="support"]')?.content;
+      if (give) $("siteAbout").insertAdjacentHTML("afterend", ` &middot; <a href="${esc(give)}">Support this site</a>`);
+      $("siteFoot").hidden = false;
+    }
     const meta = document.querySelector('meta[name="abt-preset"]');
     if (meta) PRESET = JSON.parse(meta.content);
     // A request that fails on the way (a dropped connection; Congress's file is 14 MB) is tried twice more before the
