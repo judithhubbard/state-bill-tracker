@@ -111,7 +111,7 @@ const THIS_YEAR = new Date().getFullYear();
 // A bill's row: number, title, what's new, where it is and when, the list's note and stance, "What to do".
 // x: lookUp()'s answer plus {st, session, fresh, newLine, stance, note, star (the star's HTML), seen (data-seen value)}.
 function billRow(x) {
-  const yr = x.session < THIS_YEAR - 1 ? ` <small>(${x.session})</small>` : "";
+  const yr = x.session < THIS_YEAR - 1 || x.session > THIS_YEAR ? ` <small>(${x.session})</small>` : "";
   return `<li${x.star ? "" : ' class="nostar"'}><a href="${esc(x.href)}"${x.seen ? ` data-seen="${esc(x.seen)}"` : ""}>`
     + `<span class="num">${esc(numText(x.st, x.full))}${yr}</span><span class="tt">${esc(x.title)}${x.fresh && !x.newLine ? '<span class="new">New</span>' : ""}</span>`
     + (x.newLine ? `<span class="what"><b>New:</b> ${esc(x.newLine)}</span>` : "")
@@ -140,3 +140,43 @@ function writeFollows(o) { try { localStorage.setItem(FOLLOWS, JSON.stringify(o)
 const listLink = (slug) => `${location.origin}/list/#${slug}`;
 // Paragraphs from plain text (a group's introduction).
 const paras = (t) => String(t || "").split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).map((p) => `<p>${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
+
+// ---- Sharing a list: the icons and the copy button (/your-bills/ and the list editor) ----
+const PHONE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const ICONS = {
+  email: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm1 2.4V17h16V7.4l-8 5.3-8-5.3ZM5.6 7 12 11.2 18.4 7H5.6Z"/></svg>',
+  text: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 2v11h2v2l2.5-2H20V5H4Zm3 4h10v2H7V9Z"/></svg>',
+  facebook: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.5c-1.5 0-1.96.93-1.96 1.89v2.26h3.32l-.53 3.5h-2.8V24C19.62 23.1 24 18.1 24 12.07Z"/></svg>',
+  x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.24 2.25h3.31l-7.23 8.26 8.5 11.24h-6.65l-5.21-6.82-5.97 6.82H1.68l7.73-8.84L1.25 2.25h6.83l4.71 6.23 5.45-6.23Zm-1.16 17.52h1.83L7.08 4.13H5.12l11.96 15.64Z"/></svg>',
+  bluesky: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 10.8C10.9 8.7 7.95 4.75 5.2 2.8 2.57.95 1.56 1.27.9 1.57.14 1.9 0 3.08 0 3.77c0 .69.38 5.65.62 6.48.82 2.74 3.71 3.66 6.38 3.36-3.91.58-7.39 2-2.83 7.08 5.01 5.19 6.87-1.11 7.83-4.31.95 3.2 2.05 9.27 7.73 4.31 4.27-4.31 1.17-6.5-2.74-7.08 2.67.3 5.57-.62 6.38-3.36.25-.83.63-5.79.63-6.48 0-.69-.14-1.86-.9-2.2-.66-.3-1.67-.62-4.3 1.24C16.05 4.75 13.09 8.69 12 10.8Z"/></svg>',
+};
+function shareIcons(url, title) {
+  const u = encodeURIComponent(url), t = encodeURIComponent(title), both = encodeURIComponent(`${title}\n${url}`);
+  const links = [["Email", `mailto:?subject=${t}&body=${both}`, "email"]];
+  if (PHONE) links.push(["Text message", `sms:?&body=${both}`, "text"]);
+  links.push(["Facebook", `https://www.facebook.com/sharer/sharer.php?u=${u}`, "facebook"],
+    ["X", `https://x.com/intent/post?text=${t}&url=${u}`, "x"],
+    ["Bluesky", `https://bsky.app/intent/compose?text=${encodeURIComponent(`${title} ${url}`)}`, "bluesky"]);
+  return `<div class="icons">${links.map(([name, href, icon]) => `<a href="${esc(href)}"${/^https/.test(href) ? ' target="_blank" rel="noopener"' : ""} data-share="${icon}" title="${name}" aria-label="Share by ${name}">${ICONS[icon]}</a>`).join("")}</div>`;
+}
+// A contribution line after the first share, at most once in 90 days in this browser (the state pages' note shares the date).
+function thanksOnce() {
+  if (!/^https?:/.test(SUPPORT)) return "";
+  try {
+    const last = localStorage.getItem("abt:supportnote");
+    if (last && Date.now() - +last < 90 * 864e5) return "";
+    localStorage.setItem("abt:supportnote", String(Date.now()));
+  } catch (e) { return ""; }
+  return `Thanks for sharing. State Bill Tracker is free and run by one person; if you can, please consider <a href="${esc(SUPPORT)}" target="_blank" rel="noopener">supporting the site</a>.`;
+}
+async function copy(btn, text) {
+  try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; } catch (e) { btn.previousElementSibling?.select?.(); btn.textContent = "Select and copy it"; }
+}
+
+// Lists made in this browser with the list editor (/lists/edit/#<slug>), apart from the one "Your bills" shares:
+// {slug: {slug, editKey, title, group, intro, notes, bills (codes in the list's order), saved (what was last saved), updated}}.
+const NAMED = "abt:lists";
+function readNamed() { try { const o = JSON.parse(localStorage.getItem(NAMED) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } }
+function writeNamed(o) { try { localStorage.setItem(NAMED, JSON.stringify(o)); } catch (e) {} }
+// The edit key this browser holds for a list, if any.
+const editKeyFor = (slug) => (myList()?.slug === slug ? myList().editKey : readNamed()[slug]?.editKey || "");

@@ -36,6 +36,7 @@
   <div class="row acts" id="acts" hidden>
     <button type="button" class="btn" id="follow" aria-pressed="false">Follow</button>
     <button type="button" class="btn" id="addAll">Add all to my watchlist</button>
+    <a class="btn" id="edit" hidden>Edit</a>
     <span class="muted" id="msg"></span>
   </div>
   <div id="bills"></div>
@@ -57,9 +58,10 @@ function gone(text) {
 async function load() {
   const slug = slugNow();
   if (!slug) return gone("This link is missing the list's name.");
-  const mine = myList();
+  // This browser's own lists are read with their edit key, so its openings aren't counted as views.
+  const key = editKeyFor(slug);
   try {
-    LIST = await api(`/lists/${encodeURIComponent(slug)}`, mine?.slug === slug ? { headers: { "X-Edit-Key": mine.editKey } } : {});
+    LIST = await api(`/lists/${encodeURIComponent(slug)}`, key ? { headers: { "X-Edit-Key": key } } : {});
   } catch (e) {
     return gone(e.status === 404 ? "This list isn't available. Its owner may have stopped sharing it." : "The list couldn't be loaded just now. Try again in a moment.");
   }
@@ -80,6 +82,10 @@ async function load() {
   $("bills").innerHTML = sts.map((st) => `<div class="mst">${one ? "" : `<h3><a href="/${st}/">${esc(stName(st))}</a></h3>`}<ol>`
     + by[st].map((x) => billRow({ ...x, stance: x.shown ? x.stance : "" })).join("") + "</ol></div>").join("") || '<p class="muted">No bills on this list yet.</p>';
   $("acts").hidden = false;
+  // A list made here with the list editor: a way back to editing it.
+  const named = readNamed()[LIST.slug];
+  $("edit").hidden = !named;
+  if (named) $("edit").href = `/lists/edit/#${encodeURIComponent(LIST.slug)}`;
   drawButtons();
 }
 function drawButtons() {

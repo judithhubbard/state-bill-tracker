@@ -152,19 +152,22 @@ meta = site_meta.tags("About · State Bill Tracker", "Why State Bill Tracker was
                       site_meta.root() + "about/") + site_meta.analytics()
 open(sys.argv[1], "w").write(page.replace("<!--meta-->\n", meta, 1).replace("SUPPORT_URL", site_meta.SUPPORT))
 PY
-# "Your bills" across states (/your-bills/) and a shared list's page (/list/#<slug>), from lists_pages/: the shared styles
-# and script put inside each, the link preview tags, the visit counter, the lists Worker's address (LISTS_API, default the
-# state-lists Worker) and the contributions link.
+# "Your bills" across states (/your-bills/), a shared list's page (/list/#<slug>) and the list editor (/lists/edit/#<slug>),
+# from lists_pages/: the shared styles and script put inside each, the link preview tags, the visit counter, the lists
+# Worker's address (LISTS_API, default the state-lists Worker), the contributions link and, for the editor's search, the
+# states with "Find a bill" data (search/<st>.json, written above).
 python3 - "$OUT" <<'PY'
 import os, sys, site_meta
 css, js = open("lists_pages/common.css").read(), open("lists_pages/common.js").read()
 api = os.environ.get("LISTS_API", "https://state-lists.lists-worker.workers.dev")
+searchable = " ".join(sorted(f[:-5] for f in os.listdir(os.path.join(sys.argv[1], "search")) if len(f) == 7 and f.endswith(".json"))) if os.path.isdir(os.path.join(sys.argv[1], "search")) else ""
 for src, path, title, desc in (("yourbills.html", "your-bills", "Your bills · State Bill Tracker", "The bills you follow in every state and Congress."),
-                               ("list.html", "list", "Shared list · State Bill Tracker", "A list of bills shared on State Bill Tracker.")):
+                               ("list.html", "list", "Shared list · State Bill Tracker", "A list of bills shared on State Bill Tracker."),
+                               ("edit.html", "lists/edit", "Edit a list · State Bill Tracker", "Make a list of bills from any state or Congress and share it.")):
     page = open(os.path.join("lists_pages", src)).read()
     meta = site_meta.tags(title, desc, site_meta.root() + path + "/", canonical=False) + site_meta.analytics()
     page = (page.replace("<!--meta-->\n", meta, 1).replace("/*common.css*/", css, 1).replace("/*common.js*/", js, 1)
-            .replace("LISTS_API_URL", api).replace("SUPPORT_URL", site_meta.SUPPORT))
+            .replace("LISTS_API_URL", api).replace("SUPPORT_URL", site_meta.SUPPORT).replace("SEARCH_STATES", searchable))
     os.makedirs(os.path.join(sys.argv[1], path), exist_ok=True)
     open(os.path.join(sys.argv[1], path, "index.html"), "w").write(page)
 PY
