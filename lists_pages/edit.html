@@ -65,7 +65,7 @@ select { font: inherit; font-size: 15px; color: var(--ink); background: var(--sh
 </head>
 <body>
 <main>
-  <p class="back"><a href="/your-bills/">&larr; Your bills</a></p>
+  <p class="back"><a href="/your-bills/" id="backLink">&larr; Your bills</a></p>
   <h1 id="h">&nbsp;</h1>
   <p class="sub" id="by">&nbsp;</p>
   <div id="app" hidden>
@@ -151,6 +151,7 @@ async function save() {
       Object.assign(L, { slug: r.slug, editKey: r.editKey, group: r.group || "", saved: s });
       history.replaceState(null, "", `#${r.slug}`);
       countUse("list-editor/made a list");
+      drawHead();
       drawShare();
     } else {
       await api(`/lists/${encodeURIComponent(L.slug)}`, { method: "PUT", headers: { "X-Edit-Key": L.editKey }, body: JSON.stringify(p) });
@@ -230,6 +231,8 @@ function start() {
 }
 function drawHead() {
   const t = L.title.trim();
+  // Back to this list's tab on Your bills.
+  $("backLink").href = L.slug ? `/your-bills/#tab=${encodeURIComponent(L.slug)}` : "/your-bills/";
   $("h").textContent = t || (L.slug ? "Untitled list" : "New list");
   document.title = `${t || "New list"} · State Bill Tracker`;
   const n = L.bills.length;
