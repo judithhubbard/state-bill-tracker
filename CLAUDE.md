@@ -2294,6 +2294,8 @@ from that repo. **Nothing here may change it.**
      a custom domain), point every `listsApi` there, and tell the owner the admin page's new address,
      statebilltracker.org/manage (until then https://state-lists.lists-worker.workers.dev/manage).
   6. Check every state's pages once more (test/crawl.js) and republish the private NJ Claude copy.
+  8. Uptime alerts (the owner sets them up with Claude's help, not before launch): UptimeRobot (free) with
+     statebilltracker@gmail.com, monitoring https://statebilltracker.org/ and the lists Worker's /health address.
   7. Contributions: in the State Bill Tracker Stripe account (a separate account, not the Substack one), Settings →
      Business details: change the website from https://statebilltracker.pages.dev/ to https://statebilltracker.org/.
 - Fixes made in ny-bill-tracker still get carried over here by hand (compare against `git log` there since
