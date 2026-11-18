@@ -107,10 +107,11 @@ def state_words():
 
 def github_page(html, meta=""):
     """Claude artifacts get a document skeleton added when published; GitHub Pages doesn't. meta: page_meta()'s tags."""
+    import site_meta
     split = html.index('<div class="wrap">')
     return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-            + ROBOTS_META + meta +
+            + ROBOTS_META + meta + site_meta.support_meta() +
             '<style>body { margin: 0; } [hidden] { display: none !important; }</style>\n'
             + analytics_tags() + html[:split] + '\n</head>\n<body>\n' + html[split:] + '\n</body>\n</html>\n')
 

@@ -2280,6 +2280,9 @@ from that repo. **Nothing here may change it.**
      with LAUNCHED=1). The front page and issue pages count anonymous events too ("home/...", "issue/...": topics, Map or
      Chart, party filter, search found / found nothing / opened, stars, Your bills, links into states; never typed words).
      Cloudflare Web Analytics: none yet.
+     Contributions: site_meta.SUPPORT (a Stripe Payment Link; the About page, the footers, and the state pages' "Glad this
+     helped" note, `supportNote()` in tracker.html: after an email is copied or an action logged, once per 90 days per
+     browser; events support/shown, give, share, close).
   5. Published lists: a KV namespace for the `state-lists` Worker and each state's `listsApi`.
   6. Check every state's pages once more (test/crawl.js) and republish the private NJ Claude copy.
   7. Contributions: in the State Bill Tracker Stripe account (a separate account, not the Substack one), Settings →

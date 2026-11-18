@@ -652,6 +652,10 @@ table.st col.c-m { width: 80px; }
 .spill.p5 { background: var(--signed-soft); color: var(--signed); }
 .spill.p6 { background: var(--veto-soft); color: var(--veto); }
 .wsec { border-radius: 12px; padding: 14px 16px 16px; margin-top: 14px; }
+/* "Glad this helped": after an email is copied or an action logged, once a quarter (supportNote()). */
+.supportnote { position: relative; margin: 10px 0; padding: 10px 36px 10px 12px; border-radius: 10px; background: var(--gold-soft, rgba(201, 151, 47, .12)); font-size: 14px; line-height: 1.45; }
+.supportnote .linkish { font: inherit; }
+.supportnote .x { position: absolute; right: 4px; top: 4px; width: 28px; height: 28px; border: 0; background: none; color: var(--ink-2); font-size: 18px; cursor: pointer; }
 .wsec + .wsec { margin-top: 28px; }
 .wsec h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
 .wsec h2 .n { font: 700 13px var(--body); border-radius: 999px; padding: 2px 9px; }
@@ -4863,7 +4867,7 @@ function wire() {
     if (dr) {
       const b = BILLS[+dr.dataset.draft], h = dr.dataset.house;
       countUse(`email-copied/${baseNum(b.nums[0])}`); step("contacted");
-      copyText(dr, draftFor(h === "G" ? { gov: true } : { house: h, name: dr.dataset.name }, [{ b, ask: dr.dataset.ask }]));
+      copyText(dr, draftFor(h === "G" ? { gov: true } : { house: h, name: dr.dataset.name }, [{ b, ask: dr.dataset.ask }]), true);
       return;
     }
     const lin = e.target.closest("[data-lineage]");
@@ -4894,9 +4898,39 @@ function wire() {
   // Browsers fire popstate for Back, Forward and any change to the #part of the address.
   window.addEventListener("popstate", syncFromUrl);
   // Copy an email: one bill (button on its card) or several bills for the same person.
-  const copyText = async (btn, text) => {
+  const copyText = async (btn, text, helped = false) => {
     try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; }
-    catch (err) { btn.insertAdjacentHTML("afterend", `<textarea class="draft" rows="9" readonly>${esc(text)}</textarea>`); btn.remove(); }
+    catch (err) { const t = document.createElement("textarea"); t.className = "draft"; t.rows = 9; t.readOnly = true; t.value = text; btn.replaceWith(t); btn = t; }
+    if (helped) supportNote(btn);
+  };
+  // After the site has just helped (an email copied, an action logged), a short note under it asking for a contribution
+  // or a share: on the public site, once, then not again for 90 days in this browser (any state's pages); the × hides it.
+  const supportNote = (near) => {
+    const url = document.querySelector('meta[name="support"]')?.content;
+    if (!ROOT || !url || !near || !near.isConnected) return;
+    try {
+      const last = localStorage.getItem("abt:supportnote");
+      if (last && Date.now() - +last < 90 * 864e5) return;
+      localStorage.setItem("abt:supportnote", String(Date.now()));
+    } catch (e) { return; }
+    const box = document.createElement("p");
+    box.className = "supportnote";
+    box.innerHTML = `<b>Glad this helped.</b> State Bill Tracker is free and run by one person. If you can, <a href="${esc(url)}" target="_blank" rel="noopener" data-support="give">chip in</a> to keep it going, or <button type="button" class="linkish" data-support="share">share it</button> with someone who&rsquo;d use it.`
+      + `<button type="button" class="x" data-support="close" aria-label="Close">&times;</button>`;
+    box.addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-support]");
+      if (!b) return;
+      countUse(`support/${b.dataset.support}`);
+      if (b.dataset.support === "close") { box.remove(); return; }
+      if (b.dataset.support !== "share") return;
+      const site = new URL("../", ROOT).href;
+      try {
+        if (navigator.share) await navigator.share({ title: "State Bill Tracker", text: "Follow bills in every state legislature and Congress.", url: site });
+        else { await navigator.clipboard.writeText(site); b.textContent = "link copied"; }
+      } catch (err) {}
+    });
+    (near.closest("form, .act, .wcard .wbody, li, p, div") || near).after(box);
+    countUse("support/shown");
   };
   $("wlList").addEventListener("submit", (e) => {
     const f = e.target.closest("[data-logform]"); if (!f) return;
@@ -4906,12 +4940,13 @@ function wire() {
     step("logged an action");
     addLog(BILLS[+f.dataset.logform], { d: data.get("d") || isoToday(), who: data.get("who"), how: data.get("how"), note: (data.get("note") || "").trim() });
     renderWatchView();
+    supportNote($("wlList").querySelector(`[data-logform="${f.dataset.logform}"]`));
   });
   $("wlList").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-multi]"); if (!btn) return;
     const xs = $("wlList")._multi[btn.dataset.multi];
     countUse("email-copied-several"); step("contacted");
-    copyText(btn, draftFor(xs[0].key, xs.map((x) => ({ b: x.b, ask: x.key.ask }))));
+    copyText(btn, draftFor(xs[0].key, xs.map((x) => ({ b: x.b, ask: x.key.ask }))), true);
   });
   const toggleCard = (head) => {
     const card = head.closest(".wcard"), k = billKey(BILLS[+head.dataset.wtoggle]);
@@ -4988,7 +5023,7 @@ function wire() {
     const btn = e.target.closest("[data-email]"); if (!btn) return;
     const x = $("wlActions")._items.find((i) => i.b.idx === +btn.dataset.email);
     const p = x && ([x.key, ...(x.more || [])][+(btn.dataset.who || 0)] || x.key);
-    if (x) { countUse(`email-copied/${baseNum(x.b.nums[0])}`); step("contacted"); copyText(btn, draftFor(p, [{ b: x.b, ask: p.ask }])); }
+    if (x) { countUse(`email-copied/${baseNum(x.b.nums[0])}`); step("contacted"); copyText(btn, draftFor(p, [{ b: x.b, ask: p.ask }]), true); }
   });
   $("wl").addEventListener("click", async (e) => {
     const pb = e.target.closest("[data-pub]");

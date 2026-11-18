@@ -90,6 +90,7 @@ page = open("home.html").read()
 # Link previews and the canonical link (site_meta.py: the public address once LAUNCHED=1, else the preview's).
 desc = re.search(r'<meta name="description" content="([^"]*)">\n', page)
 page = page.replace(desc.group(0), desc.group(0) + site_meta.tags("State Bill Tracker", html.unescape(desc.group(1)), site_meta.root()) + site_meta.analytics(), 1)
+page = page.replace("SUPPORT_URL", site_meta.SUPPORT)
 items, power, after = [], {}, {}
 for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):
@@ -149,7 +150,7 @@ import sys, site_meta
 page = open("about.html").read()
 meta = site_meta.tags("About · State Bill Tracker", "Why State Bill Tracker was built, where its data comes from, and how to reach it.",
                       site_meta.root() + "about/") + site_meta.analytics()
-open(sys.argv[1], "w").write(page.replace("<!--meta-->\n", meta, 1))
+open(sys.argv[1], "w").write(page.replace("<!--meta-->\n", meta, 1).replace("SUPPORT_URL", site_meta.SUPPORT))
 PY
 if [ "${LAUNCHED:-0}" = 1 ]; then
   printf 'User-agent: *\nAllow: /\n' > "$OUT/robots.txt"

@@ -16,6 +16,9 @@ SITE_NAME = "State Bill Tracker"
 # GoatCounter's site code for the whole site (<code>.goatcounter.com); counted only once launched. A state's own
 # profile.py GOATCOUNTER_CODE, if set, takes its place on that state's pages.
 GOATCOUNTER = "statebilltracker"
+# Contributions: the State Bill Tracker Stripe account's Payment Link (visitors choose the amount). Linked from the About
+# page and the footers, and from the state pages' "Glad this helped" note (support_meta()).
+SUPPORT = "https://buy.stripe.com/00w6oGfNWcyx4DI9R49EI00"
 
 
 def launched():
@@ -28,6 +31,11 @@ def root():
         return PUBLIC
     base = os.environ.get("SITE_BASE") or PREVIEW
     return base if base.endswith("/") else base + "/"
+
+
+def support_meta():
+    """The contribution link for a state's pages (tracker.html's supportNote() reads it)."""
+    return f'<meta name="support" content="{attr(SUPPORT)}">\n' if SUPPORT else ""
 
 
 def analytics(code=None):
