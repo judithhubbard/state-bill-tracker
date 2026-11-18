@@ -4405,8 +4405,17 @@ async function loadPublishedList(slug) {
     const mine = myPublished();
     const l = await listsApi(`/lists/${encodeURIComponent(slug)}`, mine?.slug === slug ? { headers: { "X-Edit-Key": mine.editKey } } : {});
     countUse("list-viewed");
-    SHARED = new Map(l.session === DATA.session ? l.bills.map((n) => (n.startsWith("-") ? [n.slice(1), "oppose"] : [n, "support"])) : []);
-    SHARED_META = { slug: l.slug, title: l.title, group: l.group, updated: l.updated, intro: l.intro || "", notes: l.notes || {}, other: l.session !== DATA.session ? l.session : null };
+    // A list of several states' bills ("ny:2025:A10424", "-nj:2026:S55"): this state's bills of this session. Its notes are
+    // keyed the same way, without the "-".
+    let bills = l.bills, notes = l.notes || {}, other = l.session !== DATA.session ? l.session : null;
+    if (l.state === "all") {
+      const pre = `${STATE.code}:${DATA.session}:`;
+      bills = l.bills.filter((c) => c.replace(/^-/, "").startsWith(pre)).map((c) => (c.startsWith("-") ? "-" : "") + c.replace(/^-/, "").slice(pre.length));
+      notes = Object.fromEntries(Object.entries(notes).filter(([k]) => k.startsWith(pre)).map(([k, v]) => [k.slice(pre.length), v]));
+      other = null;
+    }
+    SHARED = new Map(other ? [] : bills.map((n) => (n.startsWith("-") ? [n.slice(1), "oppose"] : [n, "support"])));
+    SHARED_META = { slug: l.slug, title: l.title, group: l.group, updated: l.updated, intro: l.intro || "", notes, other };
   } catch (e) {
     SHARED = new Map(); SHARED_META = { error: e.message };
   }
@@ -6387,9 +6396,6 @@ async function unpack(b64) {
     if (/^#embed=/.test(location.hash)) document.documentElement.classList.add("embed");
     BASE = el.dataset.base || "";
     ROOT = el.dataset.root || "";
-    // A list's old address (watchlist/#list=<slug>) goes to its page, /list/#<slug>.
-    const oldList = ROOT && location.hash.match(/^#list=([a-z0-9-]{1,61})$/);
-    if (oldList) { location.replace(listUrl(oldList[1])); return; }
     // The public site's pages link back to the front page, the folder above the state's.
     if (ROOT) { try { $("siteHome").href = new URL("../", ROOT).href; $("siteHome").hidden = false; } catch (e) {} }
     // And to the About page and the contribution link (site_meta.SUPPORT, in the page's head).
