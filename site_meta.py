@@ -15,7 +15,7 @@ PREVIEW = "https://statebilltracker.pages.dev/"
 SITE_NAME = "State Bill Tracker"
 # GoatCounter's site code for the whole site (<code>.goatcounter.com); counted only once launched. A state's own
 # profile.py GOATCOUNTER_CODE, if set, takes its place on that state's pages.
-GOATCOUNTER = ""
+GOATCOUNTER = "statebilltracker"
 
 
 def launched():
