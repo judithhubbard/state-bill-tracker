@@ -1373,6 +1373,35 @@ def api_names(legislators, cols, T):
     return out
 
 
+# tracker.html's walkCommittees() and meetings(), worked out here for the public site: the days each committee approved a
+# bill ("S:education": [...]), which "who decides" counts (meetingsSkipped()). In the stats part, so an opened bill doesn't
+# need every bill's history (the rows part) for it. Keep the two in step.
+_SENT_TO = re.compile(r"^(?:REPORTED (?:AND )?|COMMITTEE DISCHARGED AND )?(?:REFERRED|COMMITTED|RECOMMITTED|AMEND(?: \(T\))? AND RECOMMIT) TO (.+?)(?: \d+[A-Z]?)?$")
+_comm_key = lambda n: re.sub(r"[^a-z]", "", (n or "").lower().replace("and", ""))
+
+
+def meeting_days(cols, T):
+    days = defaultdict(set)
+    for vers in cols[17]:
+        for v in vers:
+            house, comm = v[0][:1], None
+            for d, t in v[5]:
+                t = T[t] if isinstance(t, int) and t >= 0 else (t if isinstance(t, str) else "")
+                day = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+                moved = re.match(r"^(?:DELIVERED|RETURNED) TO (SENATE|ASSEMBLY)$", t)
+                if moved:
+                    house, comm = moved.group(1)[0], None
+                    continue
+                if re.match(r"^(REPORTED|1ST REPORT CAL)", t) and comm and comm != "rules":
+                    days[f"{house}:{comm}"].add(day)
+                m = _SENT_TO.match(t)
+                if m:
+                    comm = _comm_key(m.group(1))
+                elif re.match(r"^(REPORTED|1ST REPORT CAL|ADVANCED|ORDERED|PASSED|REPASSED)", t):
+                    comm = None
+    return {k: sorted(v) for k, v in days.items()}
+
+
 def split_payload(data, current=True, hooks=None):
     """The public site's files (above): (list part, {kind: part}, [shard, ...]). Constitutional amendments keep every
     field in the list part (whether one is a second passage, shown in its row, can read its summary, votes or other
@@ -1391,6 +1420,8 @@ def split_payload(data, current=True, hooks=None):
         parts["rows"] = {"title": [], "acts": [], "strings": []}
         return lst, parts, []
     n = len(cols[0])
+    if current:
+        parts["stats"]["meetingDays"] = meeting_days(cols, T)
     keep = {j for j, t in enumerate(cols[4]) if "const" in (t or [])}
     # The list's first page as the page orders it (sortBills()'s "recent": latest action, then furthest along; the
     # sort keeps the records' order among equals, as Python's does).

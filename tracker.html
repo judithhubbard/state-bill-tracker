@@ -2349,6 +2349,9 @@ function walkCommittees(v, step) {
 let MEETINGS = null;
 function meetings() {
   if (MEETINGS) return MEETINGS;
+  // On the public site the build works them out (build_data.py's meeting_days(), in the stats part), so an opened bill
+  // doesn't wait for every bill's history.
+  if (DATA.meetingDays) return (MEETINGS = new Map(Object.entries(DATA.meetingDays).map(([k, ds]) => [k, new Set(ds)])));
   // (Every bill's history: until the rows part is in, the drawing that asked is drawn again once it is.)
   if (!partReady("rows")) { MISSING.add("rows"); return new Map(); }
   const days = new Map();
@@ -4127,9 +4130,11 @@ function clearFilter(k, v) {
 const WATCH_STORE = STORE + "watch";
 let WATCH = new Map(); // "2025:S1234" -> { seen: date of the last action seen, stance: "support" | "oppose" }
 let SHARED = null;      // a watchlist opened from a share link: base number -> stance
-// One bill of a shared list, shown inside the list's page (/list/#<slug> puts this page in a frame at #embed=2026.-A1234,
-// "-" for oppose): only its watchlist card's body, with the page's header, tabs and footer hidden. {num, stance}.
-let EMBED = null;
+// A shared list's bills, shown inside the list's page (/list/#<slug>): one frame per state at #embed=2026, which loads
+// only the list part, then shows whichever bill the list page asks for (postMessage {sbtShow: "2026.-A1234"}, "-" for
+// oppose; #embed=2026.A1234 shows one from the start): only its watchlist card's body, with the page's header, tabs and
+// footer hidden. {num (null until a bill is asked for), stance}.
+let EMBED = null, EMBED_ASK = null;
 const baseNum = (n) => n.replace(/[A-Z]$/, "");
 const billKey = (b) => `${DATA.session}:${baseNum(b.nums[0])}`;
 const keysOf = (b) => b.nums.map((n) => `${DATA.session}:${baseNum(n)}`);
@@ -4686,8 +4691,9 @@ function reachOf(p) {
 const W_OPEN = new Set();
 let W_SHARE_OPEN = null;
 function renderWatchView() {
-  updateWatchTab();
+  if (!EMBED) updateWatchTab();
   if ($("view-watch").hidden) return;
+  if (EMBED && !EMBED.num) { $("wlList").innerHTML = ""; return; }
   // (Its bills' shards; the statistics, for deadlines and odds; the other sessions' numbers, for bills from last
   // session's watchlist that are back.)
   if (later("watch", "watch", renderWatchView, "wlList", () => ({ bills: SHARED ? BILLS.filter(sharedStance) : BILLS.filter(isWatched),
@@ -4814,13 +4820,38 @@ function embedCard(x, cardFor) {
   if (d) fillDetail(d);
   embedSize();
 }
+// The page's height, and which bill it shows, to the list page (so the frame fits, and isn't shown with another bill).
 let EMBED_SIZE = null;
+function embedSend() {
+  const done = !!$("wlList").querySelector(".wcard") && !$("wlList").querySelector(".dload");
+  try { parent.postMessage({ sbtEmbed: Math.ceil(document.documentElement.getBoundingClientRect().height), bill: EMBED?.num || "", done }, location.origin); } catch (e) {}
+}
 function embedSize() {
-  if (EMBED_SIZE || !window.ResizeObserver || parent === window) return;
-  const send = () => { try { parent.postMessage({ sbtEmbed: Math.ceil(document.documentElement.getBoundingClientRect().height) }, location.origin); } catch (e) {} };
-  EMBED_SIZE = new ResizeObserver(send);
-  EMBED_SIZE.observe(document.documentElement);
-  send();
+  if (parent === window) return;
+  if (!EMBED_SIZE && window.ResizeObserver) { EMBED_SIZE = new ResizeObserver(embedSend); EMBED_SIZE.observe(document.documentElement); }
+  embedSend();
+}
+// The list page asks for a bill ("2026.-A1234"): drawn as soon as the page's bills are in (EMBED_ASK keeps it till then).
+function embedShow(code) {
+  const m = /^(\d{4})\.(-?)([A-Z]{1,7}\d{1,6}[A-Z]?)$/.exec(code);
+  if (!m) return;
+  if (!DATA) { EMBED_ASK = code; return; }
+  if (+m[1] !== DATA.session) return;
+  EMBED = { num: baseNum(m[3]), stance: m[2] ? "oppose" : "support" };
+  SHARED = new Map([[EMBED.num, EMBED.stance]]);
+  W_OPEN.clear(); W_OPEN.add(`${DATA.session}:${EMBED.num}`);
+  $("wlList").innerHTML = "";
+  renderWatchView();
+  embedSize();
+}
+// A row pointed at on the list page: that bill's details and the statistics start downloading.
+function embedWarm(num) {
+  if (!SPLIT || !/^[A-Z]{1,7}\d{1,6}[A-Z]?$/.test(num)) return;
+  const b = DATA && BILLS.find((x) => x.nums.some((n) => baseNum(n) === baseNum(num)));
+  if (b) return prefetchBill(b);
+  if (SPLIT.hashes.more) return void needMore().catch(() => {});
+  if (SPLIT.shards.length) needShard(shardOf(num)).catch(() => {});
+  need("stats").catch(() => {});
 }
 
 // Every action logged on the watched bills, newest first.
@@ -5467,10 +5498,18 @@ function wire() {
     renderStats();
   });
   // Inside a shared list's page (#embed=), a link the page doesn't handle itself opens in the whole window, not the frame.
-  if (/^#embed=/.test(location.hash)) document.addEventListener("click", (e) => {
-    const a = e.target.closest?.("a[href]");
-    if (a && !a.target && !e.defaultPrevented) a.target = "_top";
-  });
+  if (/^#embed=/.test(location.hash)) {
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest?.("a[href]");
+      if (a && !a.target && !e.defaultPrevented) a.target = "_top";
+    });
+    addEventListener("message", (e) => {
+      if (e.origin !== location.origin || e.source !== parent) return;
+      if (typeof e.data?.sbtShow === "string") embedShow(e.data.sbtShow);
+      if (typeof e.data?.sbtWarm === "string") embedWarm(e.data.sbtWarm);
+    });
+    try { parent.postMessage({ sbtReady: true }, location.origin); } catch (e) {}
+  }
   // Named lists (public site): the list button beside each star, and its menu (lists_pages/named.js).
   if (window.NamedLists) { NamedLists.setApi(LISTS_API); NamedLists.wire(); }
 }
@@ -6226,11 +6265,14 @@ function hydrate(raw) {
   const pub = location.hash.match(/^#list=([a-z0-9-]{1,61})$/);
   if (pub) { SHARED = new Map(); SHARED_META = { title: "Loading the list…", group: "", updated: new Date().toISOString() }; loadPublishedList(pub[1]); }
   if (m && +m[1] === raw.session) SHARED = new Map(m[2].split(".").filter(Boolean).map((n) => (n.startsWith("-") ? [n.slice(1), "oppose"] : [n, "support"])));
-  const em = location.hash.match(/^#embed=(\d{4})\.(-?)([A-Z]{1,7}\d{1,6}[A-Z]?)$/);
+  const em = location.hash.match(/^#embed=(\d{4})(?:\.(-?)([A-Z]{1,7}\d{1,6}[A-Z]?))?$/);
+  // (A list page that hasn't read which page has that session starts at the state's main page: on to the right one.)
+  const other = em && +em[1] !== raw.session && raw.sessions.find((x) => x.session === +em[1])?.url;
+  if (other) { location.replace(new URL(other, location.href).href.split("#")[0] + location.hash); return; }
   if (em && +em[1] === raw.session) {
-    EMBED = { num: baseNum(em[3]), stance: em[2] ? "oppose" : "support" };
-    SHARED = new Map([[EMBED.num, EMBED.stance]]);
-    W_OPEN.add(`${raw.session}:${EMBED.num}`);
+    EMBED = { num: em[3] ? baseNum(em[3]) : null, stance: em[2] ? "oppose" : "support" };
+    SHARED = new Map(EMBED.num ? [[EMBED.num, EMBED.stance]] : []);
+    if (EMBED.num) W_OPEN.add(`${raw.session}:${EMBED.num}`);
   }
   const saved = recall("filters");
   if (saved) {
@@ -6288,6 +6330,10 @@ function hydrate(raw) {
   if (one) showView("bills");
   render();
   if (one) openOne();
+  if (EMBED) {
+    try { parent.postMessage({ sbtLoaded: true }, location.origin); } catch (e) {}
+    if (EMBED_ASK) { const c = EMBED_ASK; EMBED_ASK = null; embedShow(c); }
+  }
 }
 // The Statistics tab's sections, set up the first time it's drawn (on the public site the statistics come later).
 let STATS_SET = false;
@@ -6365,7 +6411,7 @@ async function unpack(b64) {
     } else raw = el.dataset.enc === "gzip64" ? JSON.parse(await unpack(el.textContent)) : JSON.parse(el.textContent);
     hydrate(decode(raw));
     LIST_IN();
-    if (SPLIT) {
+    if (SPLIT && !document.documentElement.classList.contains("embed")) {
       // Every bill's title and history, for any other list of bills: as soon as the visitor reaches for the filters,
       // the search box, the sort or "Show more", else a few seconds after the list is drawn, when nothing else is
       // downloading (so a bill opened at once doesn't share the connection with them).

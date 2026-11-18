@@ -25,8 +25,15 @@
 .intro p { margin: 0 0 10px; }
 .acts { margin: 0 0 20px; }
 .acts .btn[aria-pressed="true"] { background: var(--navy); color: var(--sheet); }
-/* A bill opens in place: its row is a button, and below it the same card its state's watchlist shows (the state's page
-   in a frame, at #embed=: tracker.html's EMBED). */
+/* A bill opens in place: its row is a button, and below it the same card its state's watchlist shows, drawn by the state's
+   page in a frame (#embed=: tracker.html's EMBED). One frame per state's session, loaded in the background, moved under
+   whichever of its bills is open (moveBefore keeps it loaded; without it, the frame is laid over the row's slot). */
+main { position: relative; }
+#frames { position: absolute; left: 0; top: 0; width: 100%; height: 0; }
+.sframe { display: block; width: 100%; height: 0; border: 0; background: var(--sheet); }
+#frames > .sframe { position: absolute; left: 0; top: 0; visibility: hidden; }
+#frames > .sframe.over { visibility: visible; }
+.sframe.stale, #frames > .sframe.over.stale { visibility: hidden; }
 .mst li > .rowbtn { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; width: 100%; padding: 8px 12px; margin: 0;
   border: 0; background: none; color: var(--ink); font: inherit; font-size: 14.5px; text-align: left; cursor: pointer; }
 .mst li > .rowbtn:hover, .mst li > .rowbtn:focus-visible { background: var(--paper); }
@@ -35,7 +42,6 @@
 .rowbtn[aria-expanded="true"] .todo::after { transform: rotate(-135deg); margin-bottom: -1px; }
 .rowbtn:hover .todo { color: var(--hover); }
 .emb { border-top: 1px dashed var(--rule); }
-.emb iframe { display: block; width: 100%; height: 0; border: 0; background: var(--sheet); }
 .emb .eload { margin: 0; padding: 10px 12px; color: var(--ink-2); font-size: 14px; }
 .emb .efoot { margin: 0; padding: 4px 12px 10px; font-size: 13.5px; }
 @media (prefers-reduced-motion: reduce) { .rowbtn .todo::after { transition: none; } }
@@ -54,6 +60,7 @@
     <span class="muted" id="msg"></span>
   </div>
   <div id="bills"></div>
+  <div id="frames"></div>
   <footer><a href="/about/">About</a> &middot; <a href="SUPPORT_URL">Support this site</a></footer>
 </main>
 <script>
@@ -85,6 +92,7 @@ async function load() {
   $("title").textContent = LIST.title || "Shared list";
   $("stLink").innerHTML = one ? ` &middot; <a href="/${esc(LIST.state)}/">${esc(stName(LIST.state))}</a>` : "";
   const bills = listBills(LIST);
+  earlyFrame(bills);
   $("by").innerHTML = [LIST.group ? `<span class="grp">${esc(LIST.group)}</span>` : "",
     `${bills.length} bill${bills.length === 1 ? "" : "s"}`, LIST.updated ? `updated ${fmtDay(LIST.updated.slice(0, 10))}` : ""].filter(Boolean).join(" · ");
   $("intro").innerHTML = paras(LIST.intro);
@@ -95,9 +103,12 @@ async function load() {
   const sts = Object.keys(by).sort((a, b) => stName(a).localeCompare(stName(b)));
   // Each bill found in its state's data opens in place (openBill()); one that isn't links to the state's page.
   ROWS.forEach((x, i) => { x.i = i; });
+  for (const F of Object.values(FRAMES)) park(F);
+  WARMED.clear();
   $("bills").innerHTML = sts.map((st) => `<div class="mst">${one ? "" : `<h3><a href="/${st}/">${esc(stName(st))}</a></h3>`}<ol>`
     + by[st].map((x) => billRow({ ...x, stance: x.shown ? x.stance : "", open: x.found ? `emb${x.i}` : "" })).join("") + "</ol></div>").join("") || '<p class="muted">No bills on this list yet.</p>';
   $("acts").hidden = false;
+  warmFrames();
   // A list made in this browser (it holds the list's key): Edit instead of Follow, and never in the lists it follows.
   const own = !!editKeyFor(LIST.slug);
   if (own) { const f = readFollows(); if (LIST.slug in f) { delete f[LIST.slug]; writeFollows(f); } }
@@ -140,27 +151,124 @@ $("addAll").addEventListener("click", () => {
   drawButtons();
 });
 // A bill opened in place: its card from the state's watchlist (what's next, who decides and how to reach them, the email to
-// copy, what it does, its history and votes), drawn by the state's own page in a frame (#embed=<session>.<number>, "-"
-// before an opposed bill's number), which downloads only that page's bill list, the bill's details and the statistics.
-// The frame says how tall it is (postMessage) and is sized to fit.
+// copy, what it does, its history and votes), drawn by the state's own page in a frame. One frame per state's session
+// (FRAMES), loaded at #embed=<session> in the background once the list is drawn (the first three states; others when one
+// of their rows is pointed at, touched or reached with the keyboard): it reads only that page's bill list. Opening a bill
+// tells the frame which to show ({sbtShow: "2026.-A1234"}, "-" before an opposed bill's number), and pointing at a row
+// starts its details downloading ({sbtWarm}). The frame says how tall it is and which bill it shows ({sbtEmbed, bill});
+// it's shown once it shows the bill asked for. One bill of a state is open at a time.
+const FRAMES = {};   // a session's page ("/nj/") -> {f (the frame), ready, q (messages until it's ready), row, bill, h}
+const MOVES = !!Element.prototype.moveBefore;   // (a frame moved with appendChild would load again)
+function frameFor(x) {
+  if (FRAMES[x.page]) return FRAMES[x.page];
+  const f = document.createElement("iframe");
+  f.className = "sframe stale";
+  f.id = `frame${Object.keys(FRAMES).length}`;
+  f.title = `${stName(x.st)}: a bill from this list`;
+  f.src = `${x.page}#embed=${x.session}`;
+  $("frames").appendChild(f);
+  return (FRAMES[x.page] = { f, ready: false, q: [], row: null, bill: "", h: 0 });
+}
+function tell(F, msg) {
+  if (F.ready) F.f.contentWindow?.postMessage(msg, location.origin); else F.q.push(msg);
+}
+const rowBtn = (i) => $("bills").querySelector(`button.rowbtn[aria-controls="emb${i}"]`);
+// The first state shown starts loading as soon as the list's bills are known (its main page; a frame asked for another
+// session moves itself to that session's page), so it shares the connection with the bills' statuses; the next two
+// once the list is drawn, one after another (each once the one before has its bills, or after 4 seconds), in the order
+// the list shows them.
+function earlyFrame(bills) {
+  const st = [...new Set(bills.map((b) => b.st))].sort((a, b) => stName(a).localeCompare(stName(b)))[0];
+  if (st) frameFor({ st, page: `/${st}/`, session: Math.max(...bills.filter((b) => b.st === st).map((b) => b.session)) });
+}
+function warmFrames() {
+  const pages = [];
+  for (const b of $("bills").querySelectorAll("button.rowbtn")) { const x = ROWS[+b.getAttribute("aria-controls").slice(3)]; if (!pages.some((y) => y.page === x.page)) pages.push(x); }
+  const next = (k) => {
+    if (k >= Math.min(3, pages.length)) return;
+    const F = frameFor(pages[k]);
+    if (F.loaded) return next(k + 1);
+    F.then = () => next(k + 1);
+    setTimeout(() => { const then = F.then; F.then = null; then?.(); }, 4000);
+  };
+  next(0);
+}
+const WARMED = new Set();
+function warmRow(e) {
+  const btn = e.target.closest?.("button.rowbtn");
+  if (!btn) return;
+  const i = +btn.getAttribute("aria-controls").slice(3), x = ROWS[i];
+  if (!x || WARMED.has(i)) return;
+  WARMED.add(i);
+  tell(frameFor(x), { sbtWarm: baseNum(x.full) });
+}
+for (const ev of ["pointerover", "focusin", "touchstart"]) $("bills").addEventListener(ev, warmRow, { passive: true });
+// A frame back in its hiding place (moved without reloading, or no longer laid over a row).
+function park(F) {
+  F.row = null;
+  F.f.classList.remove("over");
+  F.f.classList.add("stale");
+  if (F.f.parentElement !== $("frames")) $("frames").moveBefore(F.f, null);
+}
+function closeRow(i) {
+  rowBtn(i)?.setAttribute("aria-expanded", "false");
+  const box = $(`emb${i}`);
+  if (box) box.hidden = true;
+  for (const F of Object.values(FRAMES)) if (F.row === i) park(F);
+  place();
+}
 function openBill(btn) {
-  const box = $(btn.getAttribute("aria-controls")), x = ROWS[+box.id.slice(3)], open = btn.getAttribute("aria-expanded") !== "true";
-  btn.setAttribute("aria-expanded", String(open));
-  box.hidden = !open;
-  if (!open || box.firstChild) return;
+  const i = +btn.getAttribute("aria-controls").slice(3), x = ROWS[i], box = $(`emb${i}`);
+  if (btn.getAttribute("aria-expanded") === "true") return closeRow(i);
+  const F = frameFor(x);
+  if (F.row != null && F.row !== i) closeRow(F.row);
+  btn.setAttribute("aria-expanded", "true");
+  box.hidden = false;
   const name = `${stName(x.st)} ${numText(x.st, x.full)}`;
-  const src = `${x.page}#embed=${x.session}.${x.stance === "oppose" ? "-" : ""}${baseNum(x.full)}`;
-  box.innerHTML = `<p class="eload">Loading…</p><iframe title="${esc(`${name}: what to do, and more about it`)}" src="${esc(src)}"></iframe>`
-    + `<p class="efoot"><a href="${esc(x.href)}">Open ${esc(numText(x.st, x.full))} on ${x.st === "us" ? "the Congress page" : `${esc(stName(x.st))}'s page`}</a></p>`;
+  if (!box.firstChild) {
+    box.innerHTML = `<p class="eload">Loading…</p><div class="slot"></div>`
+      + `<p class="efoot"><a href="${esc(x.href)}">Open ${esc(numText(x.st, x.full))} on ${x.st === "us" ? "the Congress page" : `${esc(stName(x.st))}'s page`}</a></p>`;
+  }
+  box.querySelector(".eload").hidden = false;
+  const slot = box.querySelector(".slot");
+  F.row = i; F.bill = baseNum(x.full); F.h = 0;
+  F.f.title = `${name}: what to do, and more about it`;
+  F.f.classList.add("stale");
+  F.f.style.height = "0px"; slot.style.height = "";
+  if (MOVES) slot.moveBefore(F.f, null);
+  else { slot.setAttribute("aria-owns", F.f.id); F.f.classList.add("over"); }
+  tell(F, { sbtShow: `${x.session}.${x.stance === "oppose" ? "-" : ""}${F.bill}` });
+  place();
   countUse("list/opened a bill");
 }
-addEventListener("message", (e) => {
-  if (e.origin !== location.origin || typeof e.data?.sbtEmbed !== "number") return;
-  for (const f of $("bills").querySelectorAll(".emb iframe")) {
-    if (f.contentWindow !== e.source) continue;
-    f.style.height = `${Math.max(40, Math.min(e.data.sbtEmbed, 20000))}px`;
-    f.previousElementSibling?.classList.contains("eload") && f.previousElementSibling.remove();
+// Without moveBefore the frames stay in #frames, laid over their row's slot.
+function place() {
+  if (MOVES) return;
+  const m = document.querySelector("main").getBoundingClientRect();
+  for (const F of Object.values(FRAMES)) {
+    if (F.row == null) continue;
+    const slot = $(`emb${F.row}`)?.querySelector(".slot");
+    if (!slot) continue;
+    slot.style.height = `${F.h}px`;
+    const r = slot.getBoundingClientRect();
+    Object.assign(F.f.style, { top: `${r.top - m.top}px`, left: `${r.left - m.left}px`, width: `${r.width}px` });
   }
+}
+if (!MOVES && window.ResizeObserver) new ResizeObserver(place).observe(document.querySelector("main"));
+addEventListener("resize", place);
+addEventListener("message", (e) => {
+  if (e.origin !== location.origin) return;
+  const F = Object.values(FRAMES).find((x) => x.f.contentWindow === e.source);
+  if (!F) return;
+  if (e.data?.sbtReady) { F.ready = true; for (const m of F.q.splice(0)) tell(F, m); return; }
+  if (e.data?.sbtLoaded) { F.loaded = true; const then = F.then; F.then = null; then?.(); return; }
+  if (typeof e.data?.sbtEmbed !== "number" || F.row == null || e.data.bill !== F.bill) return;
+  F.h = Math.max(40, Math.min(e.data.sbtEmbed, 20000));
+  F.f.style.height = `${F.h}px`;
+  F.f.classList.remove("stale");
+  const wait = $(`emb${F.row}`)?.querySelector(".eload");
+  if (wait) wait.hidden = true;
+  place();
 });
 $("bills").addEventListener("click", (e) => {
   const btn = e.target.closest("button.rowbtn");

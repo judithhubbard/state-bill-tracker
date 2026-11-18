@@ -2507,13 +2507,20 @@ Read README.md for what each script downloads. This file covers how to change th
     with this state's bills. Old addresses, `watchlist/#list=<slug>`, redirect to /list/ before the data loads; snapshot
     links, `#w=<session>.S1234.-A5678` ("-" means oppose), still open here with "Add all to my watchlist".
   - A shared list's bills open in place on /list/ (2026-11-18): each row is a button that opens, below it, the bill's
-    state page in a frame at `#embed=<session>.<number>` ("-" before an opposed bill's number). tracker.html's `EMBED`
-    mode shows only that bill's watchlist card body (`embedCard()`, the "More about this bill" panel open), with the
-    header, tabs, list header and footer hidden (`html.embed`), draws nothing else (`drawAll()` returns after the card),
-    sends its height to the list page (`embedSize()`, postMessage `{sbtEmbed}`), and opens links it doesn't handle in the
-    whole window. So the panel is the state page's own code, for any state and for cross-state lists; a bill costs that
-    page's list part, the bill's shard, the stats part (and the rows part when "who decides" reads every history), all
-    cached for the next bill of that state.
+    watchlist card drawn by its state's page in a frame. One frame per state's session (list.html's `FRAMES`), loaded at
+    `#embed=<session>` (only the list part): the first state shown as soon as the list's bills are known (at the state's
+    main page; tracker.html moves a frame asked for another session to that session's page), the next two once the list
+    is drawn, one after another; others when a row is pointed at. Opening a bill posts `{sbtShow: "2026.-A1234"}` ("-"
+    for oppose) and pointing at a row `{sbtWarm}` (its shard and the stats part); the frame answers `{sbtReady}`,
+    `{sbtLoaded}` and `{sbtEmbed: height, bill}` and is shown once it shows the bill asked for. The frame is moved under
+    the open row with `moveBefore()` (which keeps it loaded); without it, it's laid over the row's slot (`place()`,
+    `aria-owns`). One bill per state is open at a time. tracker.html's `EMBED` mode shows only the card body
+    (`embedCard()`, "More about this bill" open), hides the header, tabs and footer (`html.embed`), draws nothing else
+    (`drawAll()`), doesn't fetch the rows part on its own, and opens links it doesn't handle in the whole window. "Who
+    decides" counts committee meetings from `meetingDays` in the stats part (build_data.py's `meeting_days()`, a port of
+    `walkCommittees()`/`meetings()`: keep them in step), so an opened bill never needs the rows part. Measured 2026-11-18
+    (slow 4G, 4x CPU, phone, cold cache): first bill 1.3-1.7 s after the list shows, another of the same state 0.1-0.8 s;
+    the list itself shows after 6-7 s, almost all of it the states' whole status files (NY's is 517 KB).
   - Named lists from any bill row: `lists_pages/named.js` (one global, `NamedLists`; put in every public state page by
     `github_page()`, in home.html and the list editor by build_site.sh) draws a list button beside the star (state rows
     and watchlist cards: `listButton()`; the front page's search results and panel rows: `listBtn()`) when this browser
