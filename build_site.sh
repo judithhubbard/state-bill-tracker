@@ -174,8 +174,9 @@ PY
 # Where albanybilltracker.org's forwarding pages send New York's visitors, with their saved settings in the address
 # (/welcome/ny/#d=...&to=/ny/...): lists_pages/welcome-ny.html saves them here and goes on to the page.
 mkdir -p "$OUT/welcome/ny" && cp lists_pages/welcome-ny.html "$OUT/welcome/ny/index.html"
-# Each state's bill data (data/v/<session>.<hash>.list.json, .rows.json and .details.json: build_data.py) is named by its contents,
-# so a browser can keep it for good; a new build gives the page new names. Everything else is checked on each visit.
+# Each state's bill data (data/v/<session>.<hash>.<part>.json: the list, rows, stats ... parts and the bills' shards,
+# build_data.py's split_payload()) is named by its contents, so a browser can keep it for good; a new build gives the page
+# new names, and the old files go (each state's folder is replaced whole). Everything else is checked on each visit.
 printf '/:state/data/v/*\n  Cache-Control: public, max-age=31536000, immutable\n' > "$OUT/_headers"
 if [ "${LAUNCHED:-0}" = 1 ]; then
   printf 'User-agent: *\nAllow: /\n' > "$OUT/robots.txt"
@@ -183,4 +184,9 @@ else
   printf 'User-agent: *\nDisallow: /\n' > "$OUT/robots.txt"
   printf '/*\n  X-Robots-Tag: noindex\n' >> "$OUT/_headers"
 fi
-echo "Built $OUT/ ($(find "$OUT" -type f | wc -l | tr -d ' ') files)"
+N=$(find "$OUT" -type f | wc -l | tr -d ' ')
+echo "Built $OUT/ ($N files)"
+# Cloudflare Pages takes at most 20,000 files a deployment (free plan): a warning from 18,000, and the build fails from
+# 19,500, so a deploy never breaks unnoticed.
+if [ "$N" -gt 19500 ]; then echo "ERROR: $N files, too close to Cloudflare Pages' limit of 20,000 a deployment"; exit 1; fi
+if [ "$N" -gt 18000 ]; then echo "WARNING: $N files, near Cloudflare Pages' limit of 20,000 a deployment"; fi

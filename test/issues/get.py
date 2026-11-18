@@ -16,24 +16,79 @@ def get(url):
 def base_num(p): return re.sub(r"[A-Z]$", "", p)
 def part(p):
     k = base_num(p); return f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}"
-DETAIL_COLS = {"summary": 1, "lawCode": 14, "hist": 19, "votes": 22, "similar": 26, "vetoNote": 28}
 def page_data(url):
-    """A session page's whole data: its list part with the rows and details parts put back (build_data.py's
-    split_payload(): their strings tables follow the list part's), or None."""
+    """A session page's whole data, put back together from its parts (build_data.py's split_payload(): the list part,
+    then the rows, search, votes, hist and cos parts and the bills' shards, or a past session's "more" file, each with its
+    own strings table) into one
+    record table with one strings table, or None. (Law codes other than chapter amendments' aren't published.)"""
     page = (get(url) or b"").decode("utf-8", "replace")
-    found = {k: re.search(rf'data-{k}="(data/[^"]+\.json)"', page) for k in ("src", "rows", "details")}
-    if not found["src"]: return None
+    tag = re.search(r'<script[^>]*id="bill-data"[^>]*>', page)
+    at = lambda k: (re.search(rf'data-{k}="([^"]*)"', tag.group(0)) or [None, None])[1] if tag else None
+    if not at("src"):
+        return None
     base = url.rsplit("/", 1)[0] + "/"
-    d, rows, det = (json.loads(get(base + m.group(1)) or b"null") if m else None for m in found.values())
-    if d and rows and det and d.get("cols"):
-        d["strings"] = d["strings"] + rows["strings"] + det["strings"]
-        d["cols"][0] = rows["title"]
-        for name, i in DETAIL_COLS.items():
-            if name in det["cols"]:
-                d["cols"][i] = det["cols"][name]
-        for vers, acts, cos in zip(d["cols"][17], rows["acts"], det["cos"]):
-            for v, a, c in zip(vers, acts, cos):
-                v[5], v[6] = a, c
+    load = lambda path: json.loads(get(base + path) or b"null")
+    d = load(at("src"))
+    if not d or not d.get("cols"):
+        return d
+    v, session = at("v"), at("session")
+    hashes = dict(x.split(":") for x in (at("parts") or "").split())
+    piece = lambda kind: load(f"{v}{session}.{hashes[kind]}.{kind}.json") if kind in hashes else None
+    T = d["strings"]
+    index = {t: i for i, t in enumerate(T)}
+
+    def add(t):
+        if t is None:
+            return -1
+        if t not in index:
+            index[t] = len(T)
+            T.append(t)
+        return index[t]
+    own = lambda table: (lambda i: -1 if i is None or i < 0 else add(table[i]))
+    cols = d["cols"]
+    rows, search, votes, hist, cos = (piece(k) for k in ("rows", "search", "votes", "hist", "cos"))
+    if rows:
+        cols[0] = rows["title"]
+        f = own(rows["strings"])
+        for vers, acts in zip(cols[17], rows["acts"]):
+            for ver, a in zip(vers, acts):
+                ver[5] = [[x[0], f(x[1])] for x in a]
+        # Laws, committees, co-sponsors, program, law, parties, main topic; each version's co-sponsors, status, committee;
+        # the signing memo, the committee it's in. (Sponsors' districts aren't published where legislators are known.)
+        for j, (laws, comms, cosp, program, law, parties, main, vm, memo, comm) in enumerate(rows.get("more") or []):
+            cols[2][j], cols[3][j], cols[27][j], cols[10][j] = [f(x) for x in laws], [f(x) for x in comms], memo, f(comm)
+            cols[12][j], cols[15][j], cols[16][j], cols[21][j], cols[25][j] = cosp, f(program), f(law), parties, main
+            for ver, (c, sd, cm) in zip(cols[17][j], vm):
+                ver[2], ver[3], ver[4] = c, f(sd), f(cm)
+    if search:
+        cols[1] = search["summary"]
+    if votes:
+        f = own(votes["strings"])
+        cols[22] = [[[x[0], x[1], f(x[2])] + x[3:6] + [[[f(m), c] for m, c in x[6]]] for x in vs] for vs in votes["votes"]]
+    if hist:
+        cols[19] = hist["hist"]
+    if cos:
+        f = own(cos["strings"])
+        for vers, cs in zip(cols[17], cos["cos"]):
+            for ver, c in zip(vers, cs):
+                ver[6] = [f(x) for x in c]
+    shards = [load(f"{v}{session}.{h}.s{k}.json") for k, h in enumerate((at("shards") or "").split())]
+    # A past session's page has no shards: one file, "more", holds every bill's details as one shard.
+    more = piece("more")
+    if more:
+        shards.append(more["shard"])
+    for sh in shards:
+        if not sh:
+            continue
+        f = own(sh["strings"])
+        for j, num, title, acts, summ, hst, vts, similar, veto, cs, *rest in sh["b"]:
+            cols[26][j] = similar
+            cols[28][j] = veto[:2] + [f(veto[2])] + veto[3:] if veto else veto
+            if more:
+                cols[1][j], cols[19][j] = summ, hst
+                cols[22][j] = [[x[0], x[1], f(x[2])] + x[3:6] + [[[f(m), c] for m, c in x[6]]] for x in vts]
+                for ver, c in zip(cols[17][j], cs):
+                    ver[6] = [f(x) for x in c]
     return d
 def state(st):
     cur = page_data(BASE + st + "/")
