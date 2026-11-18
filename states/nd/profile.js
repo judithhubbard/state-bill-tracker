@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Hearing in the|Introduced|Received from the|Amendments adopted|An amendment|The (?:House|Senate) vote:|The .* Committee (?:recommended|reported|was divided)|Laid over|Conference committee appointed|Signed by the (?:President|Speaker)|The emergency clause|Part [A-Z] |The question was divided|The amendment was divided|The (?:House|Senate) took (?:it back|up the governor's veto)|A motion to reconsider failed|Placed on the calendar|Read the first time|Filed with the Secretary of State)/,
   publicSite: "https://statebilltracker.org/nd/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

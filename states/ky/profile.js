@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Read the (?:second|third) time|Read and placed on the calendar|The (?:House|Senate) vote:|Posted for passage|Passed over and retained|Placed in the Orders of the Day|Taken from the Rules Committee|Sent to the Rules Committee|Sent to the Enrollment Committee|Received in the (?:House|Senate)$|Signed by the (?:Speaker|Senate President)|The .* Committee reported it favorably|.*\b(?:floor|committee) amendments? .*(?:filed|withdrawn|defeated|ruled|adopted)|Floor Amendments? .*(?:filed|withdrawn|defeated|ruled|adopted)|Committee Substitute .*(?:withdrawn|adopted|ruled))/i,
   publicSite: "https://statebilltracker.org/ky/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(The (?:House|Senate) vote:|Prefiled before the session|Its committees, in order:|Placed on the (?:House|Senate) calendar|Amended on the floor|The .* Committee reported it|Introduced, but not printed|Withdrawn, printed and sent to a committee|Sent to a different committee|The Committees' Committee found it germane)/i,
   publicSite: "https://statebilltracker.org/nm/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

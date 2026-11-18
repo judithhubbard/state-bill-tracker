@@ -2452,9 +2452,15 @@ Read README.md for what each script downloads. This file covers how to change th
   bill rows, and `comingUp()` (Weigh in: the next two weeks' meetings, each folding open to its bills).
   `CHANGED` also has "Introduced since your last visit" and "in the last 7 days" (`b.dates.intro`).
     `markSeen()` runs when a bill's details or its watchlist card are opened.
-  - Sharing: share links are `#w=<session>.S1234.-A5678`, where "-" means oppose. Published lists use
-    `publishBox()`, `publishAction()`, `listsApi()` and `loadPublishedList()`. A published list is
-    viewed at `watchlist/#list=<slug>`.
+  - Sharing (2026-11-18; public site only): "Share this list" makes one live list in the state-lists Worker (every
+    profile's `listsApi`), viewed at /list/#<slug> (lists_pages/list.html); no code needed. `shareBox()` draws the
+    options (Copy link, share icons, "Use this list on another device", "Stop sharing", the group-code line, the
+    contribution line once in 90 days: `thanksOnce()`, shared with `supportNote()` and Your bills), `publishAction()`
+    handles them. `saveWatch()`/`saveOrder()` call `schedulePub()`, which saves (`savePub()`, `pubPayload()`) a minute
+    after the last change, and `flushPub()` on pagehide. My list is `myPublished()` ({slug, editKey, title, group,
+    saved}); a group code adds the introduction and per-bill notes (`pubText()`). `followedHere()` lists followed lists
+    with this state's bills. Old addresses, `watchlist/#list=<slug>`, redirect to /list/ before the data loads; snapshot
+    links, `#w=<session>.S1234.-A5678` ("-" means oppose), still open here with "Add all to my watchlist".
 - **Analytics:**
   - `countUse(name)` sends an anonymous GoatCounter event, but only on the public site.
   - `countError()` and `countVisit()` are built on it. `staleNotice()` warns visitors when data is

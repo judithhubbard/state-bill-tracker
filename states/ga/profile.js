@@ -9,7 +9,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(House Hopper|Senate Hopper|House Second Readers|House Prefiled|Effective Date|Numbered Act \d+|Senate Engrossed|House Immediately Transmitted|Senate Transmitted|Act \d+)/i,
   publicSite: "https://statebilltracker.org/ga/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

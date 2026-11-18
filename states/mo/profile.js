@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Prefiled$|Public hearing held|The (?:House|Senate) vote:|Placed on the (?:informal )?calendar|Placed (?:back )?on |Dropped from calendar|Received in the (?:House|Senate)$|Signed by the (?:Speaker|President Pro Tem)|Delivered to the Secretary of State$|(?:H|S)CS(?:#\d+)? |HS |SS(?:#\d+)? |(?:House|Senate) conferees|The (?:House|Senate)'s conferees|The governor sent a letter of approval|Emergency clause|Objection filed)/i,
   publicSite: "https://statebilltracker.org/mo/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

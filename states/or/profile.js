@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(First reading|Introduction and first reading|Referred to (?:Speaker|President).s desk|Public Hearing (?:held|cancelled|Cancelled)|Work Session (?:held|cancelled)|Informational Meeting|Second reading|Carried over|Rules suspended\. Carried over|Vote explanation|Assigned to|Returned to|Effective date|Public Hearing and Work Session|Speaker signed|President signed|ENROLLED)/i,
   publicSite: "https://statebilltracker.org/or/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Prefiled$|The (?:House|Senate) vote|Received in the (?:House|Senate)$|Back from the (?:House|Senate) without changes|Signed by the (?:Speaker|President)|Sent to the Legislative Bureau|The Legislative Bureau reviewed|Read by title|Rules suspended|Called from the calendar|Scheduled for |First appeared in the Interim Calendar|Made Special Order|Read by title; made Special Order|Notice|Effective date|Senate (?:floor|Committee) amendments read and adopted|.*conferees|.*Conference Committee (?:members|membership)|Conference Committee report received|Lies over|By a vote of|Motion to reconsider|The (?:House|Senate) received the governor's veto message)/i,
   publicSite: "https://statebilltracker.org/la/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

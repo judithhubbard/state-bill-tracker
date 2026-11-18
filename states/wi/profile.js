@@ -8,7 +8,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Introduced by|Representatives? |Senators? |Fiscal estimate received|Received from (?:Assembly|Senate)$|Ordered immediately messaged|Rules suspended|LRB correction|Published|Made a special order|Laid on the table|Ordered to a third reading|Report correctly enrolled|(?:Assembly|Senate) (?:Substitute )?Amendment \d+ offered)/i,
   publicSite: "https://statebilltracker.org/wi/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", A: "Assembly" },
   titles: { S: "Sen.", A: "Rep." },
   memberWords: { S: "state senator", A: "state representative" },

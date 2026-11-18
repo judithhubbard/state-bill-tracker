@@ -4,7 +4,7 @@ const STATE = {
   code: "nj",
   // The public site, and the Worker that keeps published watchlists (none yet for New Jersey).
   publicSite: "https://statebilltracker.org/nj/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", A: "Assembly" },
   // How a session is written: 2026–27.
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,

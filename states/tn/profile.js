@@ -9,7 +9,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Filed for introduction|Intro\.,|Introduced, Passed on First Consideration|P\dC|PNC held|Sponsor\(s\)|Sponsor change|Placed on (?:s\/c )?cal\.? |Placed on Senate .*Committee calendar|Action def|Reset on|Meeting Canceled|No Action Taken|Engrossed|Received from House|Rcvd\. from S|Am\. withdrawn|Amendment withdrawn|H\. adopted am|Senate adopted Amendment|Signed by (?:Senate|H\.) Speaker|Effective date|Subst\. for comp|Senate substituted|Replaced by its companion|Rule #|Approved by Delayed Bills)/i,
   publicSite: "https://statebilltracker.org/tn/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

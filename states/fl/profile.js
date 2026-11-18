@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Filed in the|Now in the|Then to:|On the .* Committee's agenda|Placed on (?:Calendar|Special Order Calendar|Local Calendar|3rd reading)|Bill (?:released|referred) to House Calendar|Added to (?:Second|Third) Reading Calendar|Bill added to Special Order Calendar|Retained on|Removed from Special Order|The (?:House|Senate) vote:|Received in the (?:House|Senate)$|Took the place of its companion|Back in the (?:House|Senate)$|The .* Committee (?:approved it|recommended it|introduced it)|Amendment.*(?:adopted|failed|withdrawn|filed|ruled|superseded|engrossed|pending|not allowed)|Temporarily postponed|Reported out of|Requests? that the|The (?:House|Senate) received the veto message|Bill placed in Conference|Conference Committee (?:appointed|Report received|Report considered))/i,
   publicSite: "https://statebilltracker.org/fl/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

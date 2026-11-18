@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(Heard and held|Read the first time|Read the second time|Advanced to third reading|The (?:House|Senate) vote:|\S+ gave notice of reconsideration|.* Committee report: |The Rules Committee put it on the calendar)/,
   publicSite: "https://statebilltracker.org/ak/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^((?:House|Senate) (?:Second|Third) Reading (?:Special Order - )?Laid Over|(?:House|Senate) Committee of the Whole Amendment|PLACED ON FLOOR|ENROLLED)/i,
   publicSite: "https://statebilltracker.org/co/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },

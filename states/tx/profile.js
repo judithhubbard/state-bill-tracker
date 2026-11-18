@@ -7,7 +7,7 @@ const STATE = {
   // Steps that aren't news on a watchlist card.
   routine: /^(INTRODUCED|Filed$|Read first time|Received from the (House|Senate)|Scheduled for public hearing|Testimony taken|Committee substitute considered|Comte report filed|Committee report (distributed|printed)|Considered in (Calendars|Local)|Reported engrossed|Reported enrolled|Signed in the (House|Senate)|Co-?author authorized|Co-?sponsor authorized|Statement\(s\) of vote|Vote recorded|Record vote|Nonrecord vote|Rules suspended|Three day rule|Amendment|Point of order|Text of|Senate Amendments (distributed|Analysis)|Corrected|Effective|See remarks|Sent to the Comptroller|Laid out|Not again placed)/i,
   publicSite: "https://statebilltracker.org/tx/",
-  listsApi: "",
+  listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
