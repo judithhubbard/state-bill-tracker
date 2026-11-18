@@ -112,7 +112,13 @@ ISSUES = [
                 r"\b(?:schools?|students?|classrooms?|instructional (?:time|day))\b",
                 r"\b(?:use|uses|using|possess\w*|prohibit\w*|ban|bans|banned|polic(?:y|ies)|restrict\w*|free|limit\w*|access)\b",
                 r"!\b(?:recycl\w*|e-?waste|audits?)\b"]],
-     "none": [r"\b(?:stopped|passing a) school bus", r"\bdistrict[- ]owned\b", r"\bwhile driving\b", r"\boperat\w* a (?:motor )?vehicle\b", r"\bbus drivers?\b", r"\bschool zones?\b"]},
+     "none": [r"\b(?:stopped|passing a) school bus", r"\bdistrict[- ]owned\b", r"\bwhile driving\b", r"\boperat\w* a (?:motor )?vehicle\b", r"\bbus drivers?\b", r"\bschool zones?\b",
+              # School-issued devices and lessons about device use, unless the same passage restricts phones (2026-11-18:
+              # California SB 1128 of 2025-26, kindergartners taking school devices home; Virginia HB 1486 and SB 568 of
+              # 2026, teaching about the addictive potential of screen time).
+              r"(?s)^(?!.*(?:\b(?:prohibit\w*|ban|bans|banned|restrict\w*|limit\w*)\W+(?:\w+\W+){0,5}?(?:use|uses|using|possession|access|cell|phones?|smart ?phones?|devices?)\b"
+              r"|\bbell[- ]to[- ]bell\b|\bphone[- ]free\b|\bdistraction[- ]free\b))"
+              r"(?=.*\b(?:school[- ](?:issued|provided)|addictive potential|instruction (?:concerning|on|about|regarding) (?:the )?(?:time spent|safe use|use of)|technology-based (?:instructional )?materials)\b)"]},
     {"id": "housing", "group": "Housing and taxes", "name": "Housing supply and zoning", "words": ["zoning", "adu", "accessory dwelling", "missing middle", "housing supply"],
      "rules": [[r"\baccessory dwelling"], [r"(?-i)\bADUs?\b"], [r"\bmissing[- ]middle\b"], [r"\bsingle[- ]family zon"],
                [r"\b(?:duplex|triplex|fourplex|quadplex)(?:es)?\b"], [r"\bminimum lot sizes?\b"],
