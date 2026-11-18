@@ -509,7 +509,7 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
   <ul id="states">
     <li><a href="ca/"><b>California</b></a></li>
   </ul></details></nav>
-  <footer>Party control: today&rsquo;s member lists; 2023&ndash;2025 from the National Conference of State Legislatures; 2027 from reported November 2026 results. &middot; <a href="about/">About</a></footer>
+  <footer><a href="about/">About</a></footer>
 </main>
 <script type="application/json" id="power">{}</script>
 <script type="application/json" id="after">{}</script>
@@ -602,11 +602,29 @@ function ppFocus(body) {
   body.querySelector(`.pkey button[data-pp="${PP_FOCUS}"]`)?.focus();
   PP_FOCUS = null;
 }
+// "All years" (year "all"): every year the issue pages cover, each bill once. summary.json has its counts; its rows are
+// bills.json's years merged (a bill alive in several years is one row, counted and a law if it is in any of them).
+const YT = () => (year === "all" ? `${issues.years[0]}–${issues.years[issues.years.length - 1]}` : year);
+function yearRows(all) {
+  if (year !== "all") return all[year] || {};
+  const out = {};
+  for (const y of issues.years) {
+    for (const [st, rows] of Object.entries(all[y] || {})) {
+      const mine = (out[st] ||= new Map());
+      for (const r of rows) {
+        const k = `${r[7]}|${r[6] || r[0]}`, had = mine.get(k);
+        if (!had) mine.set(k, [...r]);
+        else { had[10] = had[10] || r[10]; had[11] = had[11] || r[11]; }
+      }
+    }
+  }
+  return Object.fromEntries(Object.entries(out).map(([st, m]) => [st, [...m.values()].sort((a, b) => (a[3] !== 5) - (b[3] !== 5) || b[3] - a[3] || (b[8] || "").localeCompare(a[8] || ""))]));
+}
 function yView() {
   const base = issue.y[year] || { by: {}, bills: 0, states: 0, laws: 0 };
   if (!PARTY) return base;
   const out = { by: {}, bills: 0, states: 0, laws: 0 };
-  for (const [st, rows] of Object.entries((LOADED[issue.id] || {})[year] || {})) {
+  for (const [st, rows] of Object.entries(yearRows(LOADED[issue.id] || {}))) {
     let n = 0, l = 0;
     for (const r of rows) if (partyOk(r)) { n += r[10] ? 1 : 0; l += r[11] ? 1 : 0; }
     if (!n && !l) continue;
@@ -623,7 +641,7 @@ function drawIssue() {
     return;
   }
   const y = yView(), open = new Set((issues.open || {})[year] || []);
-  const upcoming = year > issues.default;
+  const upcoming = year !== "all" && year > issues.default;
   // Legislatures that met that year but whose data for it isn't on the site (issues_site.py's "nodata": no session file
   // covers the year), apart from those that didn't meet (Texas in even years).
   const nodata = new Set(upcoming ? [] : (issues.nodata || {})[year] || []);
@@ -640,16 +658,16 @@ function drawIssue() {
     const [n, laws] = y.by[code.toLowerCase()] || [0, 0];
     if (!n && !laws && !open.has(code.toLowerCase())) {
       const gap = nodata.has(code.toLowerCase());
-      const w = upcoming ? `${NAMES[code]}: no bills filed yet for ${year}` : gap ? `${NAMES[code]}: no data on this site for ${year}` : `${NAMES[code]}: no regular session in ${year}`;
+      const w = upcoming ? `${NAMES[code]}: no bills filed yet for ${YT()}` : gap ? `${NAMES[code]}: no data on this site for ${YT()}` : `${NAMES[code]}: no regular session in ${YT()}`;
       return `<span class="off ${gap ? "nodata" : "wait"}" data-st="${code.toLowerCase()}" style="${style}" title="${esc(w)}" aria-label="${esc(`${code}, ${w}`)}">${code}</span>`;
     }
-    const label = `${NAMES[code]}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${upcoming ? " prefiled" : ""} in ${year}` : `no bills on ${issue.short} in ${year}`}`
+    const label = `${NAMES[code]}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${upcoming ? " prefiled" : ""} in ${YT()}` : `no bills on ${issue.short} in ${YT()}`}`
       + (laws ? `, ${laws} became law` : "");
     const mark = laws ? `<span class="lawn" aria-hidden="true">${laws}</span>` : "";
     const st = code.toLowerCase();
     // The party bar shows all the state's bills; with one party chosen, the shading already counts only its bills.
     const sp = PARTY ? null : splitOf((issue.y[year] || { by: {} }).by[st]);
-    return `<button type="button" class="tile h${step(n)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc([NAMES[code], n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : []), ...(sp ? [`Sponsors: ${splitWords(sp)}`] : [])].join("\n"))}" aria-label="${esc(`${code}, ${label}${sp ? `; sponsors: ${splitWords(sp)}` : ""}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${code}${mark}${pbar(sp)}</button>`;
+    return `<button type="button" class="tile h${step(n)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc([NAMES[code], n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${YT()}` : `No bills in ${YT()}`, ...(laws ? [`${laws} became law`] : []), ...(sp ? [`Sponsors: ${splitWords(sp)}`] : [])].join("\n"))}" aria-label="${esc(`${code}, ${label}${sp ? `; sponsors: ${splitWords(sp)}` : ""}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${code}${mark}${pbar(sp)}</button>`;
   }).join("") + fedIssue(y, open, upcoming);
   drawChart(y, open, upcoming);
   markStars();
@@ -664,7 +682,7 @@ function chartRow(st, name, n, laws, sp, max, upcoming) {
   const cut = n > max, frac = Math.min(n, max) / (max || 1);
   const parts = PARTY ? `<i class="${PCLASS[PARTY]}" style="flex-grow:1"></i>`
     : sp ? PARTS.map(([c], i) => (sp[i] ? `<i class="${PCLASS[c]}" style="flex-grow:${sp[i]}"></i>` : "")).join("") : `<i class="pN" style="flex-grow:1"></i>`;
-  const words = `${name}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${PARTY ? ` ${PARTY_WORDS[PARTY]}` : ""}${upcoming ? " prefiled" : ""} in ${year}` : `no bills on ${issue.short} in ${year}`}`
+  const words = `${name}: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${PARTY ? ` ${PARTY_WORDS[PARTY]}` : ""}${upcoming ? " prefiled" : ""} in ${YT()}` : `no bills on ${issue.short} in ${YT()}`}`
     + (laws ? `, ${laws} became law` : "") + (sp && !PARTY ? `; sponsors: ${splitWords(sp)}` : "");
   return `<button type="button" class="crow${st === pinned ? " sel" : ""}" data-st="${st}" title="${esc(words.replace(": ", "\n").replace("; ", "\n"))}" aria-label="${esc(words)}" aria-pressed="${st === pinned}" aria-controls="panel">`
     + `<span class="cn"><span class="full">${esc(name)}</span><span class="ab">${st === "us" ? "U.S." : st.toUpperCase()}</span></span>`
@@ -678,7 +696,7 @@ function drawChart(y, open, upcoming) {
     .sort((a, b) => b[1] - a[1] || b[2] - a[2] || NAMES[a[0].toUpperCase()].localeCompare(NAMES[b[0].toUpperCase()]));
   const max = Math.max(1, ...rows.map((r) => r[1]));
   let html = rows.map(([st, n, l]) => chartRow(st, NAMES[st.toUpperCase()], n, l, PARTY ? null : splitOf(full.by[st]), max, upcoming)).join("");
-  if (!rows.length) html += `<p class="cnote">No state has bills on ${esc(issue.short)}${PARTY ? ` ${PARTY_WORDS[PARTY]}` : ""} in ${year}.</p>`;
+  if (!rows.length) html += `<p class="cnote">No state has bills on ${esc(issue.short)}${PARTY ? ` ${PARTY_WORDS[PARTY]}` : ""} in ${YT()}.</p>`;
   // States that met that year with none (not those with no session or no data here): named only when it's a short list.
   const none = Object.keys(GRID).filter((c) => built[c] && open.has(c.toLowerCase()) && !rows.some((r) => r[0] === c.toLowerCase())).map((c) => NAMES[c]);
   if (rows.length && none.length && none.length <= 6) html += `<p class="cnote">None: ${esc(none.join(", "))}.</p>`;
@@ -729,8 +747,8 @@ function showPanel(st) {
   const pw = PARTY ? ` ${PARTY_WORDS[PARTY]}` : "";
   const page = year === issues.default ? "" : `${year}.html`;
   if (!st) {
-    const y = yView(), upcoming = year > issues.default;
-    body.innerHTML = `<h3>${esc(issue.name)}, ${year}</h3>`
+    const y = yView(), upcoming = year !== "all" && year > issues.default;
+    body.innerHTML = `<h3>${esc(issue.name)}, ${YT()}</h3>`
       + `<p>${y.bills.toLocaleString()} bill${y.bills === 1 ? "" : "s"}${pw} ${upcoming ? "prefiled" : "with action"} in ${y.states} state${y.states === 1 ? "" : "s"}`
       + (upcoming ? ". Most legislatures start taking bills in January." : `; ${y.laws.toLocaleString()} became law.`) + "</p>"
       + pbig(allSplit())
@@ -742,10 +760,10 @@ function showPanel(st) {
   panel.dataset.want = want;
   panelData().then((all) => {
     if (panel.dataset.want !== want) return;  // the pointer has moved on
-    const rows = (((all[year] || {})[st]) || []).filter((r) => !PARTY || partyOk(r));
+    const rows = (yearRows(all)[st] || []).filter((r) => !PARTY || partyOk(r));
     const [n, laws] = yView().by[st] || [0, 0];
     // (The issue pages list the states only: Congress's bills are here and on its own page.)
-    const head = `<h3>${esc(nameOf(st))}</h3><p>${n ? `${n} bill${n === 1 ? "" : "s"} on ${esc(issue.short)}${pw} in ${year}` : `No bills on ${esc(issue.short)}${pw} in ${year}`}`
+    const head = `<h3>${esc(nameOf(st))}</h3><p>${n ? `${n} bill${n === 1 ? "" : "s"} on ${esc(issue.short)}${pw} in ${YT()}` : `No bills on ${esc(issue.short)}${pw} in ${YT()}`}`
       + `${laws ? `, ${laws} became law` : ""}.${n && st !== "us" ? ` <a href="issues/${issue.id}/${page}#${st}">See them on the issue page</a>` : ""}${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`;
     body.innerHTML = head + pbig(splitOf((issue.y[year] || { by: {} }).by[st])) + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last, pc, , lawHere]) => {
       // A law from a later (or earlier) year than the one shown says when: the map counts laws by year.
@@ -930,14 +948,14 @@ function fedIssue(y, open, upcoming) {
   if (!built.US) return "";
   const [n, laws] = y.by.us || [0, 0];
   if (!n && !laws && !open.has("us")) {
-    const w = upcoming ? `U.S. Congress: no bills filed yet for ${year}` : `U.S. Congress: no bills in ${year}`;
+    const w = upcoming ? `U.S. Congress: no bills filed yet for ${YT()}` : `U.S. Congress: no bills in ${YT()}`;
     return `<span class="off wait fed" data-st="us" style="${FED}" title="${esc(w)}" aria-label="${esc(w)}">${FED_LABEL}</span>`;
   }
-  const label = `U.S. Congress: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${upcoming ? " prefiled" : ""} in ${year}` : `no bills on ${issue.short} in ${year}`}`
+  const label = `U.S. Congress: ${n ? `${n} bill${n === 1 ? "" : "s"} on ${issue.short}${upcoming ? " prefiled" : ""} in ${YT()}` : `no bills on ${issue.short} in ${YT()}`}`
     + (laws ? `, ${laws} became law` : "");
   const mark = laws ? `<span class="lawn" aria-hidden="true">${laws}</span>` : "";
   const sp = PARTY ? null : splitOf((issue.y[year] || { by: {} }).by.us);
-  return `<button type="button" class="tile fed h${step(n)}${pinned === "us" ? " sel" : ""}" data-st="us" style="${FED}" title="${esc(["U.S. Congress", n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${year}` : `No bills in ${year}`, ...(laws ? [`${laws} became law`] : []), ...(sp ? [`Sponsors: ${splitWords(sp)}`] : [])].join("\n"))}" aria-label="${esc(label + (sp ? `; sponsors: ${splitWords(sp)}` : ""))}" aria-pressed="${pinned === "us"}" aria-controls="panel">${FED_LABEL}${mark}${pbar(sp)}</button>`;
+  return `<button type="button" class="tile fed h${step(n)}${pinned === "us" ? " sel" : ""}" data-st="us" style="${FED}" title="${esc(["U.S. Congress", n ? `${n} bill${n === 1 ? "" : "s"}${upcoming ? " prefiled" : ""} in ${YT()}` : `No bills in ${YT()}`, ...(laws ? [`${laws} became law`] : []), ...(sp ? [`Sponsors: ${splitWords(sp)}`] : [])].join("\n"))}" aria-label="${esc(label + (sp ? `; sponsors: ${splitWords(sp)}` : ""))}" aria-pressed="${pinned === "us"}" aria-controls="panel">${FED_LABEL}${mark}${pbar(sp)}</button>`;
 }
 const nameOf = (st) => (st === "us" ? "Congress" : NAMES[st.toUpperCase()]);
 // The visitor's own views on the map: "Your bills" and a search's matches. Each built state is a tile shaded by its
@@ -1029,7 +1047,7 @@ let view = "now";
 const yearsEl = document.getElementById("years"), show = document.getElementById("show"), menu = document.getElementById("showMenu");
 // The picker shows short names ("Drug costs"); the panel and issue pages keep the full ones.
 const label = (i) => (i ? i.short.charAt(0).toUpperCase() + i.short.slice(1) : "Party control");
-const usable = (y) => (issue ? (issues.years || []).includes(y) : y === NOW || (y === NOW + 1 && AFTER_OK) || (y < NOW && PAST_YEARS.includes(y)));
+const usable = (y) => (y === "all" ? !!issue && !!issue.y.all : issue ? (issues.years || []).includes(y) : y === NOW || (y === NOW + 1 && AFTER_OK) || (y < NOW && PAST_YEARS.includes(y)));
 function render() {
   if (!usable(year)) year = NOW;
   yearsEl.hidden = !!CUSTOM || (YEARS.length < 2 && !issues.issues.length);
@@ -1039,7 +1057,9 @@ function render() {
   // with a year the view lacks greyed out.
   const lacks = issue ? `${label(issue)} is shown for ${(issues.years || []).join(", ")}`
     : `Party control is shown for ${YEARS.filter(usable).join(", ")}`;
-  yearsEl.innerHTML = YEARS.map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === year}"${usable(y) ? "" : ` disabled title="${esc(lacks)}"`}>${y}</button>`).join("");
+  yearsEl.innerHTML = YEARS.map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === year}"${usable(y) ? "" : ` disabled title="${esc(lacks)}"`}>${y}</button>`).join("")
+    // "All years": an issue's bills over every year its pages cover, each bill once (not for party control).
+    + (issues.years && issues.years.length > 1 ? `<button type="button" data-year="all" aria-pressed="${year === "all"}"${usable("all") ? ` title="${issues.years[0]}–${issues.years[issues.years.length - 1]}, each bill once"` : ` disabled title="Party control is shown one year at a time"`}>All years</button>` : "");
   show.textContent = CUSTOM ? CUSTOM.label : label(issue);
   const cur = CUSTOM ? CUSTOM.kind : issue ? issue.id : "";
   for (const b of document.querySelectorAll("#showMenu button, #showSide button")) b.setAttribute("aria-current", String(b.dataset.id === cur));
@@ -1116,7 +1136,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !menu.hi
 yearsEl.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-year]");
   if (!b || b.disabled) return;
-  year = +b.dataset.year;
+  year = b.dataset.year === "all" ? "all" : +b.dataset.year;
   CUSTOM = null;
   render();
   remember();
@@ -1129,10 +1149,10 @@ document.addEventListener("click", (e) => {
 });
 let WANT_MINE = location.hash === "#mine";  // shown once "Your bills" has loaded (drawMine())
 {
-  const m = location.hash.match(/^#(?:issue=([a-z]+))?&?(?:year=(\d{4}))?&?(?:party=(D|R|B|none))?&?(?:view=(chart|map))?$/);
+  const m = location.hash.match(/^#(?:issue=([a-z]+))?&?(?:year=(\d{4}|all))?&?(?:party=(D|R|B|none))?&?(?:view=(chart|map))?$/);
   if (m) {
     issue = issues.issues.find((i) => i.id === m[1]) || null;
-    if (m[2]) year = +m[2];
+    if (m[2]) year = m[2] === "all" ? "all" : +m[2];
     if (m[3] && issue) PARTY = m[3] === "none" ? "-" : m[3];
     if (m[4] && issue) CHART = m[4] === "chart";
   }
@@ -1200,11 +1220,29 @@ function plainAct(a) {
 // The map's star marks: a small gold star in the corner of each tile (Congress's too) whose watchlist in this browser has
 // starred bills ({st: count}, the bills "Your bills" lists, so New York's old list counts only New York's bills), with
 // "N starred bills" in its hover text and spoken label. Redrawn with the map and with "Your bills".
+// With an issue shown, only the starred bills on that issue in the year (or years) shown count, once its bills.json has
+// loaded.
+function issueStars() {
+  const all = LOADED[issue.id];
+  if (!all) {
+    const id = issue.id;
+    panelData().then((d) => { LOADED[id] = d; if (issue && issue.id === id) markStars(); });
+    return {};
+  }
+  const out = {};
+  for (const [st, rows] of Object.entries(yearRows(all))) {
+    const w = readWatch(st);
+    const n = rows.filter((r) => r[6] && `${r[7]}:${baseNum(r[6])}` in w).length;
+    if (n) out[st] = n;
+  }
+  return out;
+}
 function markStars() {
+  const counts = CUSTOM ? (CUSTOM.kind === "mine" ? {} : STARS) : issue ? issueStars() : STARS, on = issue && !CUSTOM ? " on this issue" : "";
   for (const t of tiles.querySelectorAll("[data-st]")) {
     if (t.dataset.baseTitle === undefined) { t.dataset.baseTitle = t.getAttribute("title") || ""; t.dataset.baseLabel = t.getAttribute("aria-label") || ""; }
     // ("Your bills" on the map already counts them on each tile.)
-    const n = CUSTOM && CUSTOM.kind === "mine" ? 0 : STARS[t.dataset.st] || 0, words = `${n} starred bill${n === 1 ? "" : "s"}`;
+    const n = counts[t.dataset.st] || 0, words = `${n} starred bill${n === 1 ? "" : "s"}${on}`;
     t.setAttribute("title", n ? `${t.dataset.baseTitle}\n${words}` : t.dataset.baseTitle);
     if (t.dataset.baseLabel) t.setAttribute("aria-label", n ? `${t.dataset.baseLabel.replace(/\.$/, "")}. ${words}` : t.dataset.baseLabel);
     const m = t.querySelector(".smark");

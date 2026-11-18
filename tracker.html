@@ -663,6 +663,12 @@ table.st col.c-m { width: 80px; }
 .wsec.idle { background: none; border: 1px dashed var(--rule); }
 .wsec.idle h2 { color: var(--ink-2); font-size: 18px; }
 .wsec.idle h2 .n { background: var(--pip-off); color: var(--ink-2); }
+details.wsec > summary { cursor: pointer; list-style: none; }
+details.wsec > summary::-webkit-details-marker { display: none; }
+details.wsec > summary h2::before { content: "▸"; font-size: 13px; width: 10px; }
+details.wsec[open] > summary h2::before { content: "▾"; }
+details.wsec > summary .wsub { padding-left: 18px; }
+details.wsec:not([open]) > summary .wsub { margin-bottom: 0; }
 .wcards.idle { gap: 6px; }
 .wcards.idle .wcard { box-shadow: none; border-left-width: 3px; background: var(--paper); }
 .wcards.idle .wcard:not(.open) .wtop { background: none; border-bottom: 0; padding-bottom: 0; }
@@ -4183,6 +4189,8 @@ const W_GROUPS = {
   later: ["No deadline yet", () => "Nothing is due soon on these."],
 };
 const W_GROUP_OPEN = new Map();
+// "Can't move right now" and "Decided" fold up too; whether each is open is kept in this browser ({idle, decided}).
+const W_SEC_OPEN = () => recall("wsec") || {};
 // The main thing that happened to a watched bill since it was last opened ("Signed into law").
 const newsWhat = (t, d, b) => plainAction(t, d, b ? b.vers.flatMap((v) => v.actions) : [], true).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, "");
 // Top of the watchlist: every bill with news, the biggest news first.
@@ -4564,10 +4572,10 @@ function renderWatchView() {
       ${groups.map(([g, xs], i) => `<details class="wgroup" data-wgroup="${g}"${W_GROUP_OPEN.get(g) ?? i === 0 ? " open" : ""}>
         <summary><span class="wgtitle">${W_GROUPS[g][0]} <span class="n">${num(xs.length)}</span></span><span class="wgsub">${esc(W_GROUPS[g][1]())}</span></summary>
         ${multiFor(g, xs)}<div class="wcards needs">${xs.map(cardFor).join("")}</div></details>`).join("")}</section>` : ""}
-    ${idle.length ? `<section class="wsec idle"><h2>Can't move right now <span class="n">${num(idle.length)}</span></h2>
-      <p class="wsub">Nothing to ask for until they move again. They'll be marked “New” when something changes.</p><div class="wcards idle">${idle.map(cardFor).join("")}</div></section>` : ""}
-    ${decided.length ? `<section class="wsec idle decided"><h2>Decided <span class="n">${num(decided.length)}</span></h2>
-      <p class="wsub">Signed into law or vetoed, most recent first.</p><div class="wcards idle">${decided.map(cardFor).join("")}</div></section>` : ""}
+    ${idle.length ? `<details class="wsec idle" data-wsec="idle"${W_SEC_OPEN().idle === false ? "" : " open"}><summary><h2>Can't move right now <span class="n">${num(idle.length)}</span></h2>
+      <p class="wsub">Nothing to ask for until they move again. They'll be marked “New” when something changes.</p></summary><div class="wcards idle">${idle.map(cardFor).join("")}</div></details>` : ""}
+    ${decided.length ? `<details class="wsec idle decided" data-wsec="decided"${W_SEC_OPEN().decided === false ? "" : " open"}><summary><h2>Decided <span class="n">${num(decided.length)}</span></h2>
+      <p class="wsub">Signed into law or vetoed, most recent first.</p></summary><div class="wcards idle">${decided.map(cardFor).join("")}</div></details>` : ""}
     ${SHARED ? "" : actionRecord(list)}`;
   $("wlList")._multi = multiAll;
 }
@@ -4951,7 +4959,7 @@ function wire() {
     if (nw) {
       const card = $("wlList").querySelector(`.wcard[data-idx="${nw.dataset.wnews}"]`);
       if (!card) return;
-      const grp = card.closest(".wgroup"); if (grp) grp.open = true;
+      const grp = card.closest(".wgroup, details.wsec"); if (grp) grp.open = true;
       const head = card.querySelector("[data-wtoggle]");
       if (!card.classList.contains("open")) toggleCard(head); else markSeen(BILLS[+nw.dataset.wnews]);
       nw.classList.add("read");
@@ -4961,6 +4969,7 @@ function wire() {
     const fold = e.target.closest("[data-wfold]");
     if (fold) {
       for (const g of $("wlList").querySelectorAll(".wgroup")) { g.open = fold.dataset.wfold === "open"; W_GROUP_OPEN.set(g.dataset.wgroup, g.open); }
+      if (fold.dataset.wfold === "open") for (const g of $("wlList").querySelectorAll("details.wsec")) g.open = true;
       for (const head of $("wlList").querySelectorAll("[data-wtoggle]")) {
         if (head.closest(".wcard").classList.contains("open") !== (fold.dataset.wfold === "open")) toggleCard(head);
       }
@@ -5021,7 +5030,10 @@ function wire() {
     if ($("pubMsg")) $("pubMsg").textContent = "Not published yet. Click Update.";
   });
   for (const id of ["list", "openNow", "wlList"]) $(id).addEventListener("toggle", (e) => { if (e.target.open && e.target.matches(".bill")) fillDetail(e.target); }, true);
-  $("wlList").addEventListener("toggle", (e) => { if (e.target.matches(".wgroup")) W_GROUP_OPEN.set(e.target.dataset.wgroup, e.target.open); }, true);
+  $("wlList").addEventListener("toggle", (e) => {
+    if (e.target.matches(".wgroup")) W_GROUP_OPEN.set(e.target.dataset.wgroup, e.target.open);
+    if (e.target.matches("details.wsec")) store("wsec", { ...W_SEC_OPEN(), [e.target.dataset.wsec]: e.target.open });
+  }, true);
   $("openNow").addEventListener("click", (e) => {
     if (e.target.closest("[data-showagenda]")) { Object.assign(state, blank()); setAgenda(true); showView("bills"); return; }
     const btn = e.target.closest("[data-more]"); if (!btn) return;

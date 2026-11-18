@@ -445,17 +445,20 @@ def met(f, year):
     return n > 0 if f.get("upcoming") else n >= max(5, 0.02 * (f.get("total") or 0))
 
 
-def year_view(iid, states, year):
+def year_view(iid, states, year, hi=None):
     """For one issue and calendar year: {state: (bills alive that year, became law that year, rows)}, the states with a
     session that year, and each state's session label and bill total. A bill is alive from the year it was introduced
-    through the year of its last action."""
+    through the year of its last action. With hi, the years from year through hi ("All years"): each bill once, alive in
+    any of them, a law if it became one in any of them; the sessions' labels joined and their totals added."""
+    lo, hi = year, hi or year
     by, open_, info = {}, set(), {}
     for st, d in states.items():
-        rows, seen = [], set()
+        rows, seen, labels, total = [], set(), [], 0
         for f in d["files"]:
-            if covers(f, year):
-                info[st] = (f["label"], f.get("total") or 0)
-            if met(f, year):
+            if any(covers(f, y) for y in range(lo, hi + 1)):
+                labels.append(f["label"])
+                total += f.get("total") or 0
+            if any(met(f, y) for y in range(lo, hi + 1)):
                 open_.add(st)
             for b in f["bills"]:
                 if iid not in b[0]:
@@ -464,11 +467,13 @@ def year_view(iid, states, year):
                 # Alive through its last action, but not past its session's end: Illinois and New Jersey close a General
                 # Assembly with a line on every pending bill in the next January, which isn't the bill moving then.
                 last = min(int((b[5] or "0")[:4] or 0), f["session"] + (f.get("years") or 1) - 1)
-                new, passed = intro <= year <= max(intro, last), law[:4] == str(year)
+                new, passed = intro <= hi and lo <= max(intro, last), lo <= int(law[:4] or 0) <= hi
                 key = (f["session"], b[2])
                 if (new or passed) and key not in seen:
                     seen.add(key)
                     rows.append((f, b, new, passed))
+        if labels:
+            info[st] = (", ".join(labels), total)
         if rows:
             by[st] = (sum(1 for r in rows if r[2]), sum(1 for r in rows if r[3]), rows)
     return by, open_, info
@@ -562,8 +567,11 @@ STAR_TIP = "The legislature publishes only bill titles, so some of its bills on 
 def issue_page(issue, states, year, years, default, upcoming, congress=None):
     iid = issue["id"]
     names = {st: d["name"] for st, d in states.items()}
-    by, open_, info = year_view(iid, states, year)
-    nodata = set() if upcoming else no_data(states, year)
+    # year "all": every year the pages cover, each bill once ("All years", all.html).
+    span = (years[0], years[-1]) if year == "all" else (year, year)
+    ytext = f"{span[0]}–{span[1]}" if year == "all" else str(year)
+    by, open_, info = year_view(iid, states, *span)
+    nodata = set() if upcoming or year == "all" else no_data(states, year)
     rows, blocks, intro_n, laws_n, moving = [], [], 0, 0, 0
     for st in sorted(by, key=lambda s: names[s]):
         n, laws, mine = by[st]
@@ -580,12 +588,12 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
     us_n = us_l = 0
     fed_line = fed_block = ""
     if congress:
-        us_by, _, _ = year_view(iid, congress, year)
+        us_by, _, _ = year_view(iid, congress, *span)
         if "us" in us_by:
             us_n, us_l, mine = us_by["us"]
             fed_block = (f'<section class="st fed" data-name="congress"><h3 id="us">Congress <small>(not in the states&rsquo; counts)</small> '
                          f'<span class="note">(<span class="cnt">{us_n}</span>)</span></h3><ul class="bills">{bill_items(iid, "us", mine)}</ul></section>')
-        fed_line = (f'<p class="note" id="fedLine">Congress, not counted above: <b id="usN">{us_n}</b> bill{"" if us_n == 1 else "s"}{" prefiled" if upcoming else ""} in {year}'
+        fed_line = (f'<p class="note" id="fedLine">Congress, not counted above: <b id="usN">{us_n}</b> bill{"" if us_n == 1 else "s"}{" prefiled" if upcoming else ""} in {ytext}'
                     + ("" if upcoming else f', <b id="usL">{us_l}</b> became law')
                     + (f'. <a href="#us">See Congress&rsquo;s bills</a>.' if fed_block else ".") + "</p>")
     in_states = len([1 for st in by if by[st][0]])
@@ -597,12 +605,12 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
     unbuilt = any(code.lower() not in names for code in GRID)
     cur, pre = ' aria-current="page"', ' title="Prefiled so far"'
     year_links = "".join(f'<a href="{page_name(y, default)}"{cur if y == year else ""}{pre if y > default else ""}>{y}</a>'
-                         for y in years)
+                         for y in years) + f'<a href="all.html"{cur if year == "all" else ""} title="{years[0]}–{years[-1]}, each bill once">All years</a>'
     fopts = "".join(f'<option value="f:{e(re.sub(r"[^a-z]+", "-", k.lower()))}">{e(k)}</option>' for k in issue.get("filters", {}))
     verb = "prefiled" if upcoming else "with action"
     up = "../../"
-    lede_counts = (f'<b id="nBills">{intro_n:,}</b> bills {verb} in <b id="nStates">{in_states}</b> states in {year}'
-                   + ("" if upcoming else f'; <b id="nLaws">{laws_n:,}</b> became law in {year}') + ".")
+    lede_counts = (f'<b id="nBills">{intro_n:,}</b> bills {verb} in <b id="nStates">{in_states}</b> states in {ytext}'
+                   + ("" if upcoming else f'; <b id="nLaws">{laws_n:,}</b> became law' + ("" if year == "all" else f" in {ytext}")) + ".")
     keys = ['<span class="key"><i class="sq h0"></i>None</span>', '<span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>',
             '<span class="key"><i class="sq h2"></i>5&ndash;14</span>', '<span class="key"><i class="sq h3"></i>15 or more</span>']
     # The chart view's keys (the party colors and the law badge), in the same place as the map's.
@@ -623,19 +631,19 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
     if upcoming:
         notes.append("Most legislatures start taking bills in January; these are the bills prefiled so far.")
     if none:
-        notes.append(f"None in {year}: {e(', '.join(none))}.")
+        notes.append(f"None in {ytext}: {e(', '.join(none))}.")
     if upcoming and quiet:
-        notes.append(f"No bills filed yet for {year}: {e(', '.join(sorted(names[st] for st in quiet)))}.")
+        notes.append(f"No bills filed yet for {ytext}: {e(', '.join(sorted(names[st] for st in quiet)))}.")
     if not upcoming and nosession:
-        notes.append(f"No regular session in {year} (these legislatures meet every other year): {e(', '.join(nosession))}.")
+        notes.append(f"No regular session in {ytext} (these legislatures meet every other year): {e(', '.join(nosession))}.")
     if gaps:
-        notes.append(f"No data on this site for {year} (the legislature met; this site&rsquo;s data for it begins later): {e(', '.join(gaps))}.")
+        notes.append(f"No data on this site for {ytext} (the legislature met; this site&rsquo;s data for it begins later): {e(', '.join(gaps))}.")
     note_html = "".join(f'<p class="note">{x}</p>' for x in notes)
     star_note = (f'<p class="note">* {STAR_TIP}</p>' if any(st in TITLES_ONLY for st in by) else "")
     # Link previews and the canonical link (site_meta.py): the default year's page is the issue's folder.
-    meta = site_meta.tags(f"{issue['name']}: bills in every state, {year} · State Bill Tracker", DESC.get(iid, ""),
+    meta = site_meta.tags(f"{issue['name']}: bills in every state, {ytext} · State Bill Tracker", DESC.get(iid, ""),
                           site_meta.root() + f"issues/{iid}/" + ("" if year == default else f"{year}.html")) + site_meta.analytics()
-    body = HEAD.format(title=f"{issue['name']}: bills in every state, {year}", desc=e(DESC.get(iid, "")), meta=meta, css=css()) + f"""
+    body = HEAD.format(title=f"{issue['name']}: bills in every state, {ytext}", desc=e(DESC.get(iid, "")), meta=meta, css=css()) + f"""
 <p class="crumbs"><a href="{up}">State Bill Tracker</a> / <a href="../">Issues</a></p>
 <h1>{e(issue['name'])}</h1>
 <p class="lede">{e(DESC.get(iid, ""))}</p>
@@ -643,7 +651,7 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
 <div class="when" id="vsw" role="group" aria-label="Show as"><button type="button" data-v="map" aria-pressed="true">Map</button><button type="button" data-v="chart" aria-pressed="false">Chart</button></div></div>
 <div class="mapwrap">
 <div class="mapcol">
-{tile_map(iid, by, names, open_, year, upcoming, nodata)}
+{tile_map(iid, by, names, open_, ytext, upcoming, nodata)}
 <p class="legend" id="legend"><span class="kset mk">{"".join(keys)}</span><span class="kset ck">{"".join(ckeys)}</span></p>
 </div>
 <aside class="panel" id="panel">
@@ -660,7 +668,7 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
 <div class="tablewrap"><table>
 <thead><tr><th scope="col">State</th><th scope="col" class="n">{"Prefiled" if upcoming else "Bills"}</th><th scope="col" class="n">Became law</th><th scope="col" class="n">Moving</th><th scope="col" class="n">All bills</th><th scope="col">Session</th></tr></thead>
 <tbody>{"".join(r for _, r in rows)}</tbody></table></div>
-<p class="note">A bill counts in each year from its introduction to its last action in its session (in a two-year legislature, most are filed in the first year and keep moving in the second); &ldquo;Became law&rdquo; counts the year it did. &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's session, for scale.</p>
+<p class="note">{"Each bill counts once, whichever years it was active in." if year == "all" else "A bill counts in each year from its introduction to its last action in its session (in a two-year legislature, most are filed in the first year and keep moving in the second); &ldquo;Became law&rdquo; counts the year it did."} &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's {"sessions" if year == "all" else "session"}, for scale.</p>
 {star_note}
 </details>
 <h2 id="bills">The bills</h2>
@@ -680,7 +688,7 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
 // Both menus filter the bills, and the map, the counts line and the table follow them (counted from the list's own
 // items: data-n, alive that year; data-l, became law that year; data-p, the sponsors' party). "Find a state" only
 // hides states' lists. Congress's list (section.fed) is filtered too, and counted on its own line.
-const UPCOMING = {"true" if upcoming else "false"}, YEAR = {year};
+const UPCOMING = {"true" if upcoming else "false"}, YEAR = "{ytext}";
 const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n ? 1 : 0);
 // Sponsors' party: each state's bills that year (as the Show menu filters them) split D, B, R and none, drawn as a thin
 // bar on its tile (hidden when one party is chosen) and a bigger one in the panel, whose parts set the party menu.
@@ -992,6 +1000,14 @@ def main(site):
                 info["by"]["us"] = by_entry(us_by["us"])
             per_year[str(y)] = info
             opened[str(y)] = sorted(open_ | us_open)
+        # "All years": every year above, each bill once (the front page merges bills.json's years for its panel).
+        page, info, open_ = issue_page(issue, states, "all", years, default, False, congress)
+        open(os.path.join(site, "issues", issue["id"], "all.html"), "w", encoding="utf-8").write(page)
+        us_by = year_view(issue["id"], congress, years[0], years[-1])[0] if congress else {}
+        if us_by:
+            info["by"]["us"] = by_entry(us_by["us"])
+        per_year["all"] = info
+        opened["all"] = sorted(open_ | set(us_by))
         json.dump(panel, open(os.path.join(site, "issues", issue["id"], "bills.json"), "w"), ensure_ascii=False,
                   separators=(",", ":"))
         summary.append({"id": issue["id"], "name": issue["name"], "group": issue.get("group", ""),
