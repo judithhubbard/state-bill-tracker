@@ -430,7 +430,7 @@ async function drawList(l) {
   }
   const n = rows.length, url = listLink(l.slug);
   const meta = [l.group, `${n} bill${n === 1 ? "" : "s"}`, l.updated ? `changed ${fmtDay(l.updated.slice(0, 10))}` : ""].filter(Boolean).join(" · ");
-  p.innerHTML = `<p class="sub">${esc(meta)} · <a href="/list/#${esc(l.slug)}">See it as others do</a></p>`
+  p.innerHTML = `<p class="sub">${esc(meta)} · <a href="/list/#${esc(l.slug)}">Preview</a></p>`
     + `<div class="row"><a class="btn" href="/lists/edit/#${esc(l.slug)}">Edit</a><button type="button" class="btn" data-copylist="${esc(l.slug)}">Copy link</button>${shareIcons(url, title)}</div>`
     + (rows.length ? byState(rows.map((x) => listRow(id, x)), false, billRow) : NO_BILLS)
     + `<details class="quietbox"><summary>Use this list on another device</summary><p class="muted">Paste this key into Your bills on the other device. Anyone with it can change the list.</p>`
