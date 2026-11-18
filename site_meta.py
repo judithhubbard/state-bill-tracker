@@ -13,6 +13,9 @@ def attr(s):
 PUBLIC = "https://statebilltracker.org/"
 PREVIEW = "https://statebilltracker.pages.dev/"
 SITE_NAME = "State Bill Tracker"
+# GoatCounter's site code for the whole site (<code>.goatcounter.com); counted only once launched. A state's own
+# profile.py GOATCOUNTER_CODE, if set, takes its place on that state's pages.
+GOATCOUNTER = ""
 
 
 def launched():
@@ -25,6 +28,15 @@ def root():
         return PUBLIC
     base = os.environ.get("SITE_BASE") or PREVIEW
     return base if base.endswith("/") else base + "/"
+
+
+def analytics(code=None):
+    """The visit counter's tag, once launched; "" before (the preview isn't counted)."""
+    code = GOATCOUNTER if code is None else code
+    if not (launched() and code):
+        return ""
+    return (f'<script data-goatcounter="https://{code}.goatcounter.com/count" '
+            'async src="https://gc.zgo.at/count.js"></script>\n')
 
 
 def state_root(public_url, site_url):

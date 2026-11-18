@@ -89,7 +89,7 @@ out = sys.argv[1]
 page = open("home.html").read()
 # Link previews and the canonical link (site_meta.py: the public address once LAUNCHED=1, else the preview's).
 desc = re.search(r'<meta name="description" content="([^"]*)">\n', page)
-page = page.replace(desc.group(0), desc.group(0) + site_meta.tags("State Bill Tracker", html.unescape(desc.group(1)), site_meta.root()), 1)
+page = page.replace(desc.group(0), desc.group(0) + site_meta.tags("State Bill Tracker", html.unescape(desc.group(1)), site_meta.root()) + site_meta.analytics(), 1)
 items, power, after = [], {}, {}
 for s in sorted(os.listdir(out)):
     if len(s) == 2 and os.path.exists(os.path.join(out, s, "index.html")):

@@ -80,8 +80,10 @@ def analytics_tags():
     if P.CF_ANALYTICS_TOKEN:
         tags += ('<script defer src="https://static.cloudflareinsights.com/beacon.min.js" '
                  f'data-cf-beacon=\'{{"token": "{P.CF_ANALYTICS_TOKEN}"}}\'></script>\n')
-    if P.GOATCOUNTER_CODE:
-        tags += (f'<script data-goatcounter="https://{P.GOATCOUNTER_CODE}.goatcounter.com/count" '
+    import site_meta
+    code = P.GOATCOUNTER_CODE or site_meta.GOATCOUNTER
+    if code:
+        tags += (f'<script data-goatcounter="https://{code}.goatcounter.com/count" '
                  'async src="https://gc.zgo.at/count.js"></script>\n')
     return tags
 

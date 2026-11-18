@@ -632,7 +632,7 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
     star_note = (f'<p class="note">* {STAR_TIP}</p>' if any(st in TITLES_ONLY for st in by) else "")
     # Link previews and the canonical link (site_meta.py): the default year's page is the issue's folder.
     meta = site_meta.tags(f"{issue['name']}: bills in every state, {year} · State Bill Tracker", DESC.get(iid, ""),
-                          site_meta.root() + f"issues/{iid}/" + ("" if year == default else f"{year}.html"))
+                          site_meta.root() + f"issues/{iid}/" + ("" if year == default else f"{year}.html")) + site_meta.analytics()
     body = HEAD.format(title=f"{issue['name']}: bills in every state, {year}", desc=e(DESC.get(iid, "")), meta=meta, css=css()) + f"""
 <p class="crumbs"><a href="{up}">State Bill Tracker</a> / <a href="../">Issues</a></p>
 <h1>{e(issue['name'])}</h1>
@@ -990,7 +990,7 @@ def main(site):
         f'<h2>Other</h2><ul class="cards">{"".join(card(s) for s in abc if s["group"] not in issues.GROUPS)}</ul>'
     lede = "The same subjects in every state legislature: how many bills, where, and which became law."
     index = HEAD.format(title="Issues across the states", desc=lede, css=css(),
-                        meta=site_meta.tags("Issues across the states · State Bill Tracker", lede, site_meta.root() + "issues/")) + f"""
+                        meta=site_meta.tags("Issues across the states · State Bill Tracker", lede, site_meta.root() + "issues/") + site_meta.analytics()) + f"""
 <p class="crumbs"><a href="../">State Bill Tracker</a></p>
 <h1>Issues across the states</h1>
 <p class="lede">The same subjects in every state legislature: how many bills, where, and which became law.</p>
