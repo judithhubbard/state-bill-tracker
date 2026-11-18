@@ -5603,13 +5603,15 @@ const setCos = (b, cos, T) => b.vers.forEach((v, k) => { v.cosponsors = ((cos ||
 //   - "search" (the summaries: a text search), "votes" (the vote filter, a legislator's numbers), "hist" (the numbers
 //     of a bill's versions in other sessions: the watchlist's "back this session" box), "cos" (co-sponsors: a
 //     legislator's page, the network), "towns" (Congress's long list of places: "Where you live").
+// A past session's page has no shards: everything after the list and rows parts is one file, "more" (SPLIT.bundle names
+// the parts it holds), fetched the first time any of them is needed (needMore()).
 // What needs a part waits for it with "Loading…" in its place (later(), waitIn()). Claude copies carry everything in
 // one: SPLIT stays null, and every part and bill is ready.
-let SPLIT = null; // { v, session, hashes: {kind: hash}, shards: [hash, ...] }
+let SPLIT = null; // { v, session, hashes: {kind: hash}, shards: [hash, ...], bundle: Set of kinds in "more" }
 let LOAD_FAILED = false, LIST_IN = null;
 const LIST_READY = new Promise((ok) => (LIST_IN = ok));
 const PART_GOT = {}, PART_GETTING = {}, SHARD_GETTING = {};
-const partReady = (k) => !SPLIT || !!PART_GOT[k] || !SPLIT.hashes[k];
+const partReady = (k) => !SPLIT || !!PART_GOT[k] || !(SPLIT.hashes[k] || SPLIT.bundle.has(k));
 const partsReady = (ks) => ks.every(partReady);
 const partUrl = (kind, hash) => `${SPLIT.v}${SPLIT.session}.${hash}.${kind}.json`;
 const LOADING_HTML = `<p class="muted dload">Loading…</p>`;
@@ -5617,7 +5619,7 @@ const DETAILS_ERROR = `<p class="muted dload">This part of the data couldn't be 
 function readParts(at) {
   return { v: at("v"), session: at("session"), src: at("src"),
     hashes: Object.fromEntries((at("parts") || "").split(" ").filter(Boolean).map((x) => x.split(":"))),
-    shards: (at("shards") || "").split(" ").filter(Boolean) };
+    shards: (at("shards") || "").split(" ").filter(Boolean), bundle: new Set((at("bundle") || "").split(" ").filter(Boolean)) };
 }
 // A deploy between loading this page and its data replaces the files (their names follow their contents): a missing one
 // sends for the page's new names, once.
@@ -5667,6 +5669,7 @@ const MERGE = {
 // A part, fetched once and merged into the bills once the list is in.
 function need(k, priority = k === "rows" ? "low" : "high") {
   if (partReady(k)) return Promise.resolve();
+  if (!SPLIT.hashes[k]) return needMore();
   return (PART_GETTING[k] ||= (async () => {
     const p = await getJson(() => partUrl(k, SPLIT.hashes[k]), priority);
     await LIST_READY;
@@ -5675,6 +5678,19 @@ function need(k, priority = k === "rows" ? "low" : "high") {
     MERGE[k](p);
     PART_GOT[k] = true;
   })().catch((e) => { loadFailed(e); throw e; }));
+}
+// A past session's "more" file: its parts, and every bill's details as one shard (without the titles and histories: the
+// rows part has them).
+let MORE = null;
+function needMore() {
+  return (MORE ||= (async () => {
+    const p = await getJson(() => partUrl("more", SPLIT.hashes.more));
+    await LIST_READY;
+    await need("rows");
+    for (const [k, part] of Object.entries(p.parts || {})) MERGE[k](part);
+    mergeShard(p.shard);
+    for (const k of SPLIT.bundle) PART_GOT[k] = true;
+  })().catch((e) => { MORE = null; loadFailed(e); throw e; }));
 }
 // Which shard holds a bill: FNV-1a of its first number without the version letter (build_data.py's shard_of()).
 function shardOf(num) {
@@ -5717,7 +5733,9 @@ function needShard(k) {
 }
 // Everything these bills' panels and cards show.
 async function needBills(bills) {
-  if (!SPLIT || !SPLIT.shards.length) return;
+  if (!SPLIT || !bills.some((b) => !b.full)) return;
+  if (SPLIT.hashes.more) return needMore();
+  if (!SPLIT.shards.length) return;
   for (let pass = 0; pass < 2; pass++) {
     const want = [...new Set(bills.filter((b) => !b.full).map((b) => shardOf(b.nums[0])))];
     if (!want.length) return;
@@ -6220,6 +6238,7 @@ function prefetchFromAddress() {
   if (PRESET?.who || v?.get("q")) early("rows");
   if (PRESET?.who || v?.get("whoCos")) early("cos");
   if (v?.get("voted")) early("votes");
+  if (nums.length && SPLIT.hashes.more) { needMore().catch(() => {}); return; }
   if (!nums.length || !SPLIT.shards.length) return;
   for (const k of new Set(nums.slice(0, 60).map(shardOf))) needShard(k).catch(() => {});
   early("stats");

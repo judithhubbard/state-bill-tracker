@@ -18,7 +18,8 @@ def part(p):
     k = base_num(p); return f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}"
 def page_data(url):
     """A session page's whole data, put back together from its parts (build_data.py's split_payload(): the list part,
-    then the rows, search, votes, hist and cos parts and the bills' shards, each with its own strings table) into one
+    then the rows, search, votes, hist and cos parts and the bills' shards, or a past session's "more" file, each with its
+    own strings table) into one
     record table with one strings table, or None. (Law codes other than chapter amendments' aren't published.)"""
     page = (get(url) or b"").decode("utf-8", "replace")
     tag = re.search(r'<script[^>]*id="bill-data"[^>]*>', page)
@@ -71,14 +72,23 @@ def page_data(url):
         for vers, cs in zip(cols[17], cos["cos"]):
             for ver, c in zip(vers, cs):
                 ver[6] = [f(x) for x in c]
-    for k, h in enumerate((at("shards") or "").split()):
-        sh = load(f"{v}{session}.{h}.s{k}.json")
+    shards = [load(f"{v}{session}.{h}.s{k}.json") for k, h in enumerate((at("shards") or "").split())]
+    # A past session's page has no shards: one file, "more", holds every bill's details as one shard.
+    more = piece("more")
+    if more:
+        shards.append(more["shard"])
+    for sh in shards:
         if not sh:
             continue
         f = own(sh["strings"])
-        for j, num, title, acts, summ, hst, vts, similar, veto, cs, *more in sh["b"]:
+        for j, num, title, acts, summ, hst, vts, similar, veto, cs, *rest in sh["b"]:
             cols[26][j] = similar
             cols[28][j] = veto[:2] + [f(veto[2])] + veto[3:] if veto else veto
+            if more:
+                cols[1][j], cols[19][j] = summ, hst
+                cols[22][j] = [[x[0], x[1], f(x[2])] + x[3:6] + [[[f(m), c] for m, c in x[6]]] for x in vts]
+                for ver, c in zip(cols[17][j], cs):
+                    ver[6] = [f(x) for x in c]
     return d
 def state(st):
     cur = page_data(BASE + st + "/")

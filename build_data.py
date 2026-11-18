@@ -1281,9 +1281,10 @@ NET_TOP = ("network", "networkSince")
 BIG_TOWNS = 500_000
 # The list shows 100 bills at first (tracker.html's PAGE); a few more in case its order differs at the edge.
 FIRST_ROWS = 150
-# About how big (gzipped) a shard is: small on the current session's page, where bills are opened most and a watchlist
-# may need ten; larger on past sessions' pages, to keep the number of files down.
-SHARD_GZ = {"current": 22_000, "past": 120_000}
+# About how big (gzipped) a shard is on a current (or upcoming) session's page: small enough that an opened bill, or a
+# watchlist of ten, comes quickly (NY, slow 4G: a bill 0.7 s, ten 1.3 s), large enough to keep the site's files well
+# under Cloudflare Pages' 20,000 (22 KB doubled NY's shards for 0.6 s less on the watchlist). Past sessions have none.
+SHARD_GZ = {"current": 40_000}
 
 
 def shard_of(num, n):
@@ -1454,8 +1455,21 @@ def split_payload(data, current=True, hooks=None):
     num = lambda j: cols[17][j][0][0]
     entry = lambda j, f: [j, num(j), cols[0][j], acts(j, f), cols[1][j], cols[19][j], _map_votes(cols[22][j], f),
                           cols[26][j], _map_veto(cols[28][j], f), cos(j, f), more(j, f)]
+    if not current:
+        # A past session's page, rarely visited, has no shards: its parts and every bill's details (without the titles,
+        # histories and ROW_COLS, which the rows part has) are one file, "more", and "bundle" names the parts in it.
+        lite = lambda j, f: [j, num(j), None, None, cols[1][j], cols[19][j], _map_votes(cols[22][j], f), cols[26][j],
+                             _map_veto(cols[28][j], f), cos(j, f), None]
+        shard, strings = _own_strings(T, lambda f: {"b": [lite(j, f) for j in range(n)], "x": []})
+        shard["strings"] = strings
+        inside = {k: parts.pop(k) for k in ("stats", "net", "towns") if k in parts}
+        for k in ("search", "votes", "hist", "cos"):
+            parts.pop(k)
+        parts["more"] = {"parts": inside, "shard": shard}
+        lst["bundle"] = list(inside) + ["search", "votes", "hist", "cos"]
+        return lst, parts, []
     with_acts = lambda j: (hooks.get("endedNote") and cols[6][j] <= 2) or (hooks.get("heldAction") and cols[6][j] == 0)
-    target = SHARD_GZ["current" if current else "past"]
+    target = SHARD_GZ["current"]
 
     def make(count):
         members = defaultdict(list)
@@ -1774,9 +1788,10 @@ def main():
             hash_of = lambda kind: names_[kind].split(".")[1]
             part_list = " ".join(f"{kind}:{hash_of(kind)}" for kind in parts_)
             shard_list = " ".join(hash_of(f"s{k}") for k in range(len(shards_)))
+            bundle = " ".join(lst.get("bundle") or [])
             def data_tag(prefix, base=""):
                 return (f'<script type="application/json" id="bill-data" data-src="{prefix}data/v/{names_["list"]}" '
-                        f'data-v="{prefix}data/v/" data-session="{session}" data-parts="{part_list}" data-shards="{shard_list}" '
+                        f'data-v="{prefix}data/v/" data-session="{session}" data-parts="{part_list}" data-shards="{shard_list}" data-bundle="{bundle}" '
                         f'data-texts="{prefix}data/{session}-text/"'
                         f'{base} data-root="{P.SITE_URL}"></script>')
             def preload(prefix):

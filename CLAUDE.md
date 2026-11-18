@@ -2359,8 +2359,8 @@ Read README.md for what each script downloads. This file covers how to change th
       checks profile.js for those names). A bill's shard is FNV-1a of its first number without the version letter,
       modulo the number of shards (`shard_of()` = tracker.html's `shardOf()`), so a page can fetch it before the list
       arrives (`#S1234`, a shared `#w=` list, the visitor's own watchlist on `#watch` or /watchlist/:
-      `prefetchFromAddress()`). Each is about 22 KB gzipped on the current session's page and 120 KB on past ones
-      (`SHARD_GZ`): opening a bill fetches one (`needBills()`, `b.full`), and pointing at, touching or tabbing to a
+      `prefetchFromAddress()`). Only a current or upcoming session's page has shards, each about 40 KB gzipped
+      (`SHARD_GZ`; 22 KB made NY's watchlist of ten 0.6 s faster but doubled the files): opening a bill fetches one (`needBills()`, `b.full`), and pointing at, touching or tabbing to a
       row starts it (`prefetchBill()`, which also fetches the bill's text piece). The watchlist tab's "N new" reads
       the watched bills' shards (the rows part for more than 20).
     - The other parts are fetched when something needs them (`need(part)`): `stats` (statistics and legislators'
@@ -2371,10 +2371,15 @@ Read README.md for what each script downloads. This file covers how to change th
       numbers), `hist` (other sessions' bill numbers: the watchlist's "back this session" box), `cos` (co-sponsors:
       legislators' pages, the live network, "Their numbers"), `towns` (a towns list over 500 KB, Congress's: "Where
       you live").
+    - A **past session's page** (rarely visited) has no shards and no separate parts: after the list and rows parts,
+      everything is one file, `more` (its parts, and every bill's details as one shard without titles and histories),
+      fetched the first time anything needs it (`needMore()`; `data-bundle` names the parts it holds). So a past session
+      is 3 files, as before 2026-11-18.
     Each part has its own strings table. A new field the first view reads belongs in the list part; one an opened bill
-    reads belongs in the shards. test/issues/get.py puts them back together. Each session is about 7 files plus its
-    shards (NY's 2025-26 about 200, a past NY session about 27): mind Cloudflare Pages' 20,000 files a deployment
-    (build_site.sh warns at 18,000).
+    reads belongs in the shards. test/issues/get.py puts them back together. A current session is 8 files plus about 7
+    shards per 1,000 bills (3 to 9 by state; NY 2025-26: 101): mind Cloudflare Pages' 20,000 files a deployment (build_site.sh warns
+    at 18,000 and fails the build at 19,500). The site was 10,761 files before shards, and about 12,100 with them (measured on eight states and extrapolated by bills, 2026-11-18) (each
+    state's legislator pages are most of it).
 - **.github/workflows/update.yml** downloads, builds and deploys every morning, hourly on weekdays
   January through June (agendas, floor votes), every two hours on weekdays July through December
   (the governor's requests and actions), and on every push to main. Contacts refresh once a day.

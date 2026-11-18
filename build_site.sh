@@ -180,5 +180,7 @@ else
 fi
 N=$(find "$OUT" -type f | wc -l | tr -d ' ')
 echo "Built $OUT/ ($N files)"
-# Cloudflare Pages takes at most 20,000 files a deployment (free plan).
+# Cloudflare Pages takes at most 20,000 files a deployment (free plan): a warning from 18,000, and the build fails from
+# 19,500, so a deploy never breaks unnoticed.
+if [ "$N" -gt 19500 ]; then echo "ERROR: $N files, too close to Cloudflare Pages' limit of 20,000 a deployment"; exit 1; fi
 if [ "$N" -gt 18000 ]; then echo "WARNING: $N files, near Cloudflare Pages' limit of 20,000 a deployment"; fi
