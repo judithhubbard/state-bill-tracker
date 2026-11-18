@@ -178,6 +178,7 @@ function select(id, how = {}) {
   if (how.focus) tab?.focus();
   tab?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   markSeen(id);
+  Frames.pump();
   if (how.user) countUse(`your-bills/tab ${id === "starred" ? "starred" : id.split(":")[0]}`);
 }
 // A tab's bills, once drawn: which are new, and seen now if it's the tab in view.

@@ -142,7 +142,6 @@ a.btn { display: inline-block; text-decoration: none; }
 /* A list's bills, shown by each state's page in a frame (embed.js): its watchlist view, inside the state's card. */
 .sgrp { overflow: hidden; }
 .sgrp .ghead h3 { border-bottom: 1px solid var(--rule); }
-.sgrp .fwrap { min-height: 0; }
 .sframe { display: block; width: 100%; height: 0; border: 0; background: var(--sheet); }
 .sframe.stale { visibility: hidden; height: 0 !important; }
 .sgrp .eload { margin: 0; padding: 10px 12px; color: var(--ink-2); font-size: 14px; }
@@ -150,15 +149,18 @@ a.btn { display: inline-block; text-decoration: none; }
 .sgrp .fwrap[hidden] + .rest { border-top: 0; }
 /* A list's summary line: its facts, then its controls as small links (Edit · Share ▾, or Unfollow · Add all). */
 .lmeta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 0; }
-.lmeta > * + *::before { content: "·"; display: inline-block; margin: 0 7px; color: var(--ink-2); text-decoration: none; }
+/* (The dot ends the item before it, so a line that wraps never starts with one.) */
+.lmeta > :not(.lmsg):has(+ :not(.lmsg))::after { content: "·"; display: inline-block; margin: 0 7px; color: var(--ink-2); text-decoration: none; }
+.lmeta > * { white-space: nowrap; }
 .lmeta .linkish, .lmeta a { font-size: inherit; }
-.lmeta .lmsg::before { content: none; }
-.lmeta .lmsg { margin-left: 8px; }
+.lmeta .lmsg { margin-left: 8px; white-space: normal; }
 .spop { position: relative; }
 .spopbox { position: absolute; z-index: 5; left: 0; top: calc(100% + 6px); display: grid; gap: 8px; width: max-content; max-width: calc(100vw - 32px);
   background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 10px; box-shadow: 0 6px 20px rgba(0, 0, 0, .15); color: var(--ink); }
 .spopbox .row { margin: 0; }
-@media (max-width: 480px) { .spopbox { left: auto; right: -60px; } }
+.lmeta { position: relative; }
+/* (On a phone the menu opens under the line, from its left edge.) */
+@media (max-width: 480px) { .spop { position: static; } .spopbox { left: 0; } }
 footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-2); }
 @media (max-width: 480px) {
   .where .todo { margin-left: 0; }

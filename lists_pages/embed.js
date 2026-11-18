@@ -38,13 +38,27 @@ const Frames = (() => {
     const f = document.createElement("iframe");
     f.className = "sframe stale";
     f.title = g.title || "Bills";
-    f.loading = "lazy";
-    f.src = `${g.page}#embed=${g.code}`;
-    // (What it shows is in its address; a group list's notes and a list's maker go with the first message.)
-    Object.assign(el, { _f: f, _q: g.extra ? [ask(g)] : [], _ready: false, _page: g.page, _sig: sig(g), _code: g.code, _ask: ask(g) });
+    // (What it shows is in its address, set when its turn comes: pump(); a group list's notes and a list's maker go with
+    // the first message.)
+    Object.assign(el, { _f: f, _q: g.extra ? [ask(g)] : [], _ready: false, _page: g.page, _sig: sig(g), _code: g.code, _ask: ask(g), _src: `${g.page}#embed=${g.code}`, _on: false });
     wrap.querySelector(".eload").hidden = false;
     wrap.appendChild(f);
     ALL.add(el);
+  }
+  // Frames from this site share one thread with the page, so two states' pages starting at once both take twice as long:
+  // one frame starts at a time, the first card on the page first, each once the one before shows its bills (or after 20
+  // seconds), and only frames in view (a tab not shown waits until it's shown: pump() again).
+  let BUSY = null, TIMER = 0;
+  function pump() {
+    if (BUSY && (!BUSY.isConnected || !BUSY._f || BUSY._done)) BUSY = null;
+    if (BUSY) return;
+    const next = [...document.querySelectorAll(".sgrp")].find((el) => el._f && !el._on && el.offsetParent !== null);
+    if (!next) return;
+    next._on = true;
+    next._f.src = next._src;
+    BUSY = next;
+    clearTimeout(TIMER);
+    TIMER = setTimeout(() => { if (BUSY === next) { BUSY = null; pump(); } }, 20000);
   }
   function show(box, groups) {
     const have = new Map([...box.querySelectorAll(":scope > .sgrp")].map((el) => [el.dataset.key, el]));
@@ -63,6 +77,7 @@ const Frames = (() => {
       head.hidden = !g.head; rest.hidden = !g.rest;
       frameIn(el, g);
     }
+    pump();
   }
   addEventListener("message", (e) => {
     if (e.origin !== location.origin) return;
@@ -78,7 +93,7 @@ const Frames = (() => {
     }
     if (typeof e.data?.sbtEmbed !== "number" || e.data.bill !== el._code) return;
     el._f.style.height = `${Math.max(0, Math.min(e.data.sbtEmbed, 50000))}px`;
-    if (e.data.done) { el._f.classList.remove("stale"); el.querySelector(".eload").hidden = true; }
+    if (e.data.done) { el._f.classList.remove("stale"); el.querySelector(".eload").hidden = true; if (!el._done) { el._done = true; pump(); } }
   });
   // The watchlists changed (a star in another frame or page): every frame shows its bills again, but the one in use.
   function refresh() { for (const el of ALL) if (el._ready && el._f !== document.activeElement) tell(el, el._ask); }
@@ -87,7 +102,7 @@ const Frames = (() => {
     const ix = (await statusIndex())?.[st]?.[session];
     return ix ? `/${st}/${ix.p && ix.p !== "./" ? ix.p : ""}` : null;
   }
-  return { show, pageOf, refresh };
+  return { show, pageOf, refresh, pump };
 })();
 // A list's bills ([{st, session, num, stance}], in the list's order) as one #embed= code per state's session:
 // [{st, session, code, bills}] ("-": opposed), each state's sessions newest first, states by name.
