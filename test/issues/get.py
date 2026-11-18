@@ -16,17 +16,34 @@ def get(url):
 def base_num(p): return re.sub(r"[A-Z]$", "", p)
 def part(p):
     k = base_num(p); return f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}"
+DETAIL_COLS = {"summary": 1, "lawCode": 14, "hist": 19, "votes": 22, "similar": 26, "vetoNote": 28}
+def page_data(url):
+    """A session page's whole data: its list part with the rows and details parts put back (build_data.py's
+    split_payload(): their strings tables follow the list part's), or None."""
+    page = (get(url) or b"").decode("utf-8", "replace")
+    found = {k: re.search(rf'data-{k}="(data/[^"]+\.json)"', page) for k in ("src", "rows", "details")}
+    if not found["src"]: return None
+    base = url.rsplit("/", 1)[0] + "/"
+    d, rows, det = (json.loads(get(base + m.group(1)) or b"null") if m else None for m in found.values())
+    if d and rows and det and d.get("cols"):
+        d["strings"] = d["strings"] + rows["strings"] + det["strings"]
+        d["cols"][0] = rows["title"]
+        for name, i in DETAIL_COLS.items():
+            if name in det["cols"]:
+                d["cols"][i] = det["cols"][name]
+        for vers, acts, cos in zip(d["cols"][17], rows["acts"], det["cos"]):
+            for v, a, c in zip(vers, acts, cos):
+                v[5], v[6] = a, c
+    return d
 def state(st):
-    page = (get(BASE + st + "/") or b"").decode("utf-8", "replace")
-    m = re.search(r'data-src="(data/[^"]+\.json)"', page)
-    if not m: return st, "no data-src"
-    cur = json.loads(get(BASE + st + "/" + m.group(1)))
+    cur = page_data(BASE + st + "/")
+    if not cur: return st, "no data-src"
     sessions = [s["session"] for s in cur.get("sessions", []) if not s.get("upcoming")]
     done = []
     for s in sessions:
         path = os.path.join(OUT, f"{st}_{s}.json")
         if not os.path.exists(path):
-            d = cur if cur["session"] == s else json.loads(get(BASE + st + f"/data/{s}.json") or b"null")
+            d = cur if cur["session"] == s else page_data(BASE + st + f"/{s}.html")
             if not d: continue
             texts = {}
             if d.get("hasText"):

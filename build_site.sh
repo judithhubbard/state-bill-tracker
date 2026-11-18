@@ -152,10 +152,13 @@ meta = site_meta.tags("About · State Bill Tracker", "Why State Bill Tracker was
                       site_meta.root() + "about/") + site_meta.analytics()
 open(sys.argv[1], "w").write(page.replace("<!--meta-->\n", meta, 1).replace("SUPPORT_URL", site_meta.SUPPORT))
 PY
+# Each state's bill data (data/v/<session>.<hash>.list.json, .rows.json and .details.json: build_data.py) is named by its contents,
+# so a browser can keep it for good; a new build gives the page new names. Everything else is checked on each visit.
+printf '/:state/data/v/*\n  Cache-Control: public, max-age=31536000, immutable\n' > "$OUT/_headers"
 if [ "${LAUNCHED:-0}" = 1 ]; then
   printf 'User-agent: *\nAllow: /\n' > "$OUT/robots.txt"
 else
   printf 'User-agent: *\nDisallow: /\n' > "$OUT/robots.txt"
-  printf '/*\n  X-Robots-Tag: noindex\n' > "$OUT/_headers"
+  printf '/*\n  X-Robots-Tag: noindex\n' >> "$OUT/_headers"
 fi
 echo "Built $OUT/ ($(find "$OUT" -type f | wc -l | tr -d ' ') files)"
