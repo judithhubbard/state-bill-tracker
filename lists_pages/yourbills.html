@@ -180,7 +180,7 @@ function drawShare(keepMsg) {
     + (group ? `<label>Introduction<textarea id="intro" rows="3" maxlength="3000" placeholder="Why these bills matter">${esc(mine.intro || "")}</textarea></label>`
       + `<details id="notesBox"><summary>Notes on each bill</summary><div id="notes"></div></details>` : "")
     + `<div class="row"><input type="text" readonly value="${esc(url)}" aria-label="Link to the shared list" id="link"><button type="button" class="btn" data-act="copy">Copy link</button></div>`
-    + `<div class="row">${shareIcons(url, mine.title || DEFAULT_TITLE)}<a class="muted" href="/list/#${esc(mine.slug)}">See it as others do</a></div>`
+    + `<div class="row">${shareIcons(url, mine.title || DEFAULT_TITLE)}<a class="muted" href="/list/#${esc(mine.slug)}">Preview</a></div>`
     + `<p class="muted" id="saved"></p>`
     + (THANKS ? `<p class="thanks">${THANKS}</p>` : "")
     + (group ? "" : CODE_LINE)

@@ -4451,7 +4451,7 @@ function thanksOnce() {
     if (last && Date.now() - +last < 90 * 864e5) return "";
     localStorage.setItem("abt:supportnote", String(Date.now()));
   } catch (e) { return ""; }
-  return `Thanks for sharing. State Bill Tracker is free and run by one person; if you can, please consider <a href="${esc(url)}" target="_blank" rel="noopener" data-support="give">supporting the site</a>.`;
+  return `Thanks for sharing! State Bill Tracker is free and run by one person. If you can, please <a href="${esc(url)}" target="_blank" rel="noopener" data-support="give">chip in</a>.`;
 }
 const codeLine = () => `<p class="muted">Sharing for an organization? <a href="mailto:statebilltracker@gmail.com?subject=${encodeURIComponent("Group code for State Bill Tracker")}">Ask for a group code</a>`
   + ` &middot; <button type="button" class="linkish" data-pub="havecode">I have one</button></p>`
@@ -4470,7 +4470,7 @@ function shareBox(n) {
     ${group ? `<label class="pubintro-edit">Introduction <textarea id="pubIntro" rows="3" maxlength="3000" placeholder="Why these bills matter">${esc(pubText().intro)}</textarea></label>
     <p class="muted">Add a note to any bill on its card below.</p>` : ""}
     <div class="row"><input type="text" readonly value="${esc(url)}" aria-label="Link to the shared list"><button type="button" class="act-btn" data-pub="copy">Copy link</button></div>
-    <div class="row">${shareIconLinks(url, mine.title || PUB_DEFAULT)}<a class="seeit" href="${esc(url)}">See it as others do</a></div>
+    <div class="row">${shareIconLinks(url, mine.title || PUB_DEFAULT)}<a class="seeit" href="${esc(url)}">Preview</a></div>
     <p class="muted" id="pubMsg"></p>
     ${group ? `<p class="muted" id="pubViews"></p>` : ""}
     ${PUB_THANKS ? `<p class="thanks">${PUB_THANKS}</p>` : ""}

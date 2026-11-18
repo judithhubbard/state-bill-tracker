@@ -167,7 +167,7 @@ function thanksOnce() {
     if (last && Date.now() - +last < 90 * 864e5) return "";
     localStorage.setItem("abt:supportnote", String(Date.now()));
   } catch (e) { return ""; }
-  return `Thanks for sharing. State Bill Tracker is free and run by one person; if you can, please consider <a href="${esc(SUPPORT)}" target="_blank" rel="noopener">supporting the site</a>.`;
+  return `Thanks for sharing! State Bill Tracker is free and run by one person. If you can, please <a href="${esc(SUPPORT)}" target="_blank" rel="noopener">chip in</a>.`;
 }
 async function copy(btn, text) {
   try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; } catch (e) { btn.previousElementSibling?.select?.(); btn.textContent = "Select and copy it"; }

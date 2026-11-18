@@ -1025,12 +1025,12 @@ def main(site):
                     for g in issues.GROUPS if any(s["group"] == g for s in summary))
     cards += "".join(card(s) for s in abc if s["group"] not in issues.GROUPS) and \
         f'<h2>Other</h2><ul class="cards">{"".join(card(s) for s in abc if s["group"] not in issues.GROUPS)}</ul>'
-    lede = "The same subjects in every state legislature: how many bills, where, and which became law."
+    lede = "Bills on the same subjects across all 50 legislatures, and which ones became law."
     index = HEAD.format(title="Issues across the states", desc=lede, css=css(),
                         meta=site_meta.tags("Issues across the states · State Bill Tracker", lede, site_meta.root() + "issues/") + site_meta.analytics()) + f"""
 <p class="crumbs"><a href="../">State Bill Tracker</a></p>
 <h1>Issues across the states</h1>
-<p class="lede">The same subjects in every state legislature: how many bills, where, and which became law.</p>
+<p class="lede">Bills on the same subjects across all 50 legislatures, and which ones became law.</p>
 {cards}
 <footer>Counts are for {default} ({len(states)} states; Congress is on each issue&rsquo;s page, apart from the states). Bills are found by the words in their titles and summaries; see each issue's page for what counts. &middot; <a href="/about/">About</a> &middot; <a href="{site_meta.SUPPORT}">Support this site</a></footer>
 </main>
