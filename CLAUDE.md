@@ -2285,6 +2285,9 @@ from that repo. **Nothing here may change it.**
      browser; events support/shown, give, share, close).
   5. Shared lists: the `state-lists` Worker is deployed with its own KV (2026-11-18); check each state's `listsApi`
      points at it (not albany-lists).
+     Once the domain is on Cloudflare, route statebilltracker.org/lists/*, /admin/* and /manage to the Worker (or give it
+     a custom domain), point every `listsApi` there, and tell the owner the admin page's new address,
+     statebilltracker.org/manage (until then https://state-lists.lists-worker.workers.dev/manage).
   6. Check every state's pages once more (test/crawl.js) and republish the private NJ Claude copy.
   7. Contributions: in the State Bill Tracker Stripe account (a separate account, not the Substack one), Settings →
      Business details: change the website from https://statebilltracker.pages.dev/ to https://statebilltracker.org/.
