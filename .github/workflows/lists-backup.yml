@@ -1,0 +1,32 @@
+# A weekly copy of the shared watchlists (the state-lists Worker's storage), kept as an encrypted download on this run
+# for 90 days. The repository is public, so the copy is encrypted (AES-256, key in the LISTS_BACKUP_KEY secret and the
+# owner's ~/.state_lists_backup_key). To read one: download the artifact, then
+#   openssl enc -d -aes-256-cbc -pbkdf2 -in lists.json.enc -out lists.json -pass file:$HOME/.state_lists_backup_key
+name: Back up shared lists
+on:
+  schedule:
+    - cron: "17 7 * * 1"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Export and encrypt
+        env:
+          LISTS_ADMIN_TOKEN: ${{ secrets.LISTS_ADMIN_TOKEN }}
+          LISTS_BACKUP_KEY: ${{ secrets.LISTS_BACKUP_KEY }}
+        run: |
+          set -euo pipefail
+          curl -sSf -H "Authorization: Bearer $LISTS_ADMIN_TOKEN" https://state-lists.lists-worker.workers.dev/admin/export -o lists.json
+          python3 -c "import json; d = json.load(open('lists.json')); print(len(d['keys']), 'keys exported')"
+          printf '%s' "$LISTS_BACKUP_KEY" > key.txt
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in lists.json -out lists.json.enc -pass file:key.txt
+          rm -f lists.json key.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shared-lists-${{ github.run_id }}
+          path: lists.json.enc
+          retention-days: 90

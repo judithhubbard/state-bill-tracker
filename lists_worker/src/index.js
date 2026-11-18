@@ -142,6 +142,17 @@ export default {
       if (parts[0] === "admin") {
         const token = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
         if (!env.ADMIN_TOKEN || !same(token, env.ADMIN_TOKEN)) return fail(req, 401, "Not authorized.");
+        // Everything kept (lists, codes, view counts; not the daily rate counters), for the weekly backup.
+        if (parts[1] === "export" && req.method === "GET") {
+          const out = {};
+          let cursor;
+          do {
+            const page = await env.LISTS.list({ cursor });
+            for (const k of page.keys) if (!k.name.startsWith("rate:")) out[k.name] = await getJSON(env, k.name);
+            cursor = page.list_complete ? null : page.cursor;
+          } while (cursor);
+          return reply(req, { exported: new Date().toISOString(), keys: out });
+        }
         if (parts[1] === "codes" && req.method === "POST") {
           const body = await req.json().catch(() => ({}));
           const group = String(body.group || "").trim().slice(0, 100);
@@ -192,6 +203,11 @@ export default {
         return fail(req, 404, "Unknown admin request.");
       }
 
+      // For an uptime checker: the Worker answers and can read its storage.
+      if (parts[0] === "health" && req.method === "GET") {
+        await env.LISTS.get("health");
+        return reply(req, { ok: true });
+      }
       if (parts[0] !== "lists") return fail(req, 404, "Not found.");
       const slug = parts[1];
 
