@@ -24,7 +24,7 @@ const STATE = {
   ballotLine(b) {
     const d = [b.dates.passS, b.dates.passA].sort().pop() || "";
     return d && d.slice(0, 4) < isoToday().slice(0, 4)
-      ? "It went to the voters at the election the measure named; the records here don't show the result."
+      ? "It went to the voters at the election the measure named; the result isn't shown here."
       : "Next: the voters, at the election the measure names (usually the next November general election).";
   },
   ballotEvenYears: true,
@@ -87,7 +87,7 @@ const STATE = {
   findReps: "https://www.assembly.ca.gov/assemblymembers/find-my-rep",
   // A bill keeps its number through both houses (AB 1 goes to the Senate as AB 1).
   oneNumber: true,
-  diesAfterFloor: () => "The session is over, so it died with it.",
+  diesAfterFloor: () => "It died when the session ended.",
   outOfTimeLine: "Died when the session ended",
 
   // Most bills that cost money are decided on the Appropriations committees' suspense file; the ones a committee
@@ -108,7 +108,7 @@ const STATE = {
     const gov = t <= `${y + 1}-09-30` ? ` The governor has until ${fmtDate(`${y + 1}-09-30`)} to act on the last bills.` : "";
     return `Floor votes for the ${STATE.sessionLabel(y)} session ended ${fmtDate(end)}.${gov} The ${STATE.sessionLabel(next)} session begins ${fmtDate(opens)}, when new legislators take office and bills can be introduced. Now is the time to ask your legislators to introduce a bill: most are introduced by late February.`;
   },
-  upcomingNotice: (raw, cur) => `The ${STATE.sessionLabel(raw.session)} session began ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced; committees start hearing them in the spring. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${STATE.sessionLabel(raw.session)} session began ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced; committees start hearing them in the spring. Bills you star now stay on your watchlist.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar: the Legislature's and the governor's bars ([class, from, to, text]), the events marked on
   // it ([date, "up"/"down", row, when, text]; rows are LEG = 112, GOV = 150) and a note.
@@ -167,8 +167,8 @@ const STATE = {
     "Never got out of committee before the session ended.",
     "A committee approved it, but it never got a vote of the full house.",
     "Passed the Assembly or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This two-year session is over. Bills that didn't become law have to be introduced again in the next session.",
 

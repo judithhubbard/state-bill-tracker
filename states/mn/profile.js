@@ -109,7 +109,7 @@ const STATE = {
   // Committees don't vote bills down: a bill a committee doesn't act on stays there. Many are laid over for possible
   // inclusion in an omnibus bill, which the records don't show.
   heldLabel: "Held in committee",
-  heldTip: "The committee never acted on it. Minnesota committees often lay a bill over for possible inclusion in an omnibus bill; the records don't show that.",
+  heldTip: "The committee never acted on it. Minnesota committees often lay a bill over for possible inclusion in an omnibus bill; the Legislature's records don't show that.",
   heldNote: "the committee never acted on it; Minnesota committees often lay bills over for possible inclusion in an omnibus bill.",
   // A bill its author withdrew, or one voted down on the floor, ends there.
   endedNote(b) {
@@ -136,7 +136,7 @@ const STATE = {
       return `The ${STATE.ls(y)} Legislature's last session ended ${fmtDate(STATE.adjourns(y + 1))}. Bills that didn't pass both houses died; the next Legislature opens in January ${y + 2}.${sp}`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${STATE.ls(raw.session)} Legislature opens in January ${raw.session}. Bills appear here as they're introduced. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${STATE.ls(raw.session)} Legislature opens in January ${raw.session}. Bills appear here as they're introduced. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar: two sessions, each from January or February to May.
   calendarDays: 14,
@@ -191,8 +191,8 @@ const STATE = {
     "Never got out of committee before the Legislature ended.",
     "Approved by its committees, but never passed by the full house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This Legislature is over. Bills that didn't become law have to be introduced again in the next one.",
 

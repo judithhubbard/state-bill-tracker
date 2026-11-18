@@ -94,7 +94,7 @@ const STATE = {
       return `The ${y + 1} session ended ${fmtDate(end)}. Bills that didn't pass both houses died; the next General Assembly opens in January ${y + 2}.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${span(raw.session)} General Assembly opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${span(raw.session)} General Assembly opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar.
   calendarDays: 14,
@@ -148,8 +148,8 @@ const STATE = {
     "Never got out of committee before the General Assembly ended.",
     "A committee reported it, but it never got a vote of the full house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This General Assembly is over. Bills that didn't become law have to be introduced again in the next one.",
 

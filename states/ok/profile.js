@@ -30,7 +30,7 @@ const STATE = {
     let y = +d.slice(0, 4); if (y % 2) y++;
     const t = new Date(y, 10, 1); t.setDate(2 + ((1 - t.getDay() + 7) % 7));  // election day: the Tuesday after the first Monday
     const vote = `${y}-11-${String(t.getDate()).padStart(2, "0")}`;
-    return isoToday() > vote ? `It went to the voters (in November ${y}, unless the Legislature set a special election); the records here don't show the result.`
+    return isoToday() > vote ? `It went to the voters (in November ${y}, unless the Legislature set a special election); the result isn't shown here.`
       : `Next: the voters, in November ${y}, unless the Legislature sets a special election.`;
   },
   // The governor's office (not checked by the owner yet).
@@ -107,7 +107,7 @@ const STATE = {
       return `The Legislature finished its second session ${fmtDate(STATE.adjourns(y + 1))}. Bills that didn't pass both houses died; the next Legislature's first session starts ${fmtDate(STATE.opens(y + 2))}.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${span(raw.session)} Legislature's first session starts ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're filed. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${span(raw.session)} Legislature's first session starts ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're filed. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar.
   calendarDays: 14,
@@ -161,8 +161,8 @@ const STATE = {
     "Never got out of committee before the Legislature ended.",
     "A committee approved it, but it never got through the full house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This Legislature is over. Bills that didn't become law have to be filed again in the next one.",
 

@@ -104,7 +104,7 @@ const STATE = {
     return cont ? +(cont[1] || DATA.session + 1) : null;
   },
   diesAfterFloor: (y2, b) => (b && STATE.continuedTo(b) ? `It was continued to the ${STATE.continuedTo(b)} session, where it can be taken up again.`
-    : "The session is over, so it died with it."),
+    : "It died when the session ended."),
   outOfTimeLine: "Died when the session ended",
 
   // A committee that "passes a bill by indefinitely" sets it aside; it's dead for the year.
@@ -171,7 +171,7 @@ const STATE = {
   },
   // The next session's page before it opens: bills continued from this year pick up where they stopped (one that
   // passed its own house doesn't pass it again), and bills filed early for it go to committees as they're filed.
-  upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. This page has bills continued from ${raw.session - 1}, which pick up where they stopped (a bill that passed one house doesn't have to pass it again), and bills filed early for ${raw.session}. Stars you add here carry over when the session starts.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. This page has bills continued from ${raw.session - 1}, which pick up where they stopped (a bill that passed one house doesn't have to pass it again), and bills filed early for ${raw.session}. Bills you star now stay on your watchlist when the session starts.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
   stageTips: [
     "Waiting in a committee or subcommittee. Most bills never get out of committee.",
     "A committee approved it, and it's waiting for a vote of the full House or Senate.",
@@ -185,8 +185,8 @@ const STATE = {
     "Never got out of committee before the session ended.",
     "A committee approved it, but it never got a vote of the full house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "The session is over. Bills that didn't become law have to be introduced again next year.",
 

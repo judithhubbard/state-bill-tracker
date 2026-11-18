@@ -93,7 +93,7 @@ const STATE = {
     const y = line ? +line.match(/(\d{4}) session/)[1] : 0;
     if (!y) return null;
     if (isoToday() > STATE.adjourns(y))
-      return { live: false, short: `went back to the ${y} session`, what: `Vetoed after the session ended, so it went back to the Legislature's ${y} session, which could have overridden the veto; the records here don't show an override.`, reason: `Vetoed after the session ended. The ${y} session could have overridden the veto.` };
+      return { live: false, short: `went back to the ${y} session`, what: `Vetoed after the session ended, so it went back to the Legislature's ${y} session, which could have overridden the veto; no override is recorded.`, reason: `Vetoed after the session ended. The ${y} session could have overridden the veto.` };
     return {
       live: true, short: `goes back to the Legislature in ${y}`,
       what: `Vetoed after the session ended, so it goes back to the Legislature when the ${y} session opens (${fmtDate(STATE.opens(y))}). The Legislature can override the veto there: it takes two-thirds of each house, 28 Assembly members and 14 senators. If it doesn't, the veto stands.`,
@@ -138,7 +138,7 @@ const STATE = {
       return `The ${y} session ended ${fmtDate(end)}. Bills that didn't pass both houses died. Bills the governor vetoed after it ended go back to the Legislature when the ${y + 2} session opens ${fmtDate(STATE.opens(y + 2))}, which can override them by two-thirds of each house. Bills for ${y + 2} are prefiled from the fall before.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The Legislature's ${STATE.nth(raw.session)} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The Legislature's ${STATE.nth(raw.session)} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar: one regular session, in the first year.
   calendarDays: 20,
@@ -201,8 +201,8 @@ const STATE = {
     "Never approved by a committee before the deadline.",
     "Approved by a committee, but never passed by the full house.",
     "Passed the Assembly or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Delivered to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Delivered to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This session is over. Bills that didn't become law have to be introduced again in a later session.",
 

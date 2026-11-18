@@ -28,7 +28,7 @@ const STATE = {
   ballotEvenYears: true,
   ballotLine(b) {
     const y = DATA.session + 1;
-    return isoToday() > `${y}-11-10` ? `It went to the voters in November ${y}; the records here don't show the result.` : `Next: the voters, at the November ${y} general election.`;
+    return isoToday() > `${y}-11-10` ? `It went to the voters in November ${y}; the result isn't shown here.` : `Next: the voters, at the November ${y} general election.`;
   },
 
   // The Legislature's Bill Explorer, by the bill's draft (LC) number: each version's `link`, from convert.py.
@@ -118,7 +118,7 @@ const STATE = {
       return `The ${y} session adjourned ${fmtDate(end)}. Bills that didn't pass both houses died. The Legislature meets again on ${fmtDate(STATE.opens(y + 2))}; bills are drafted and prefiled from the fall before.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar: one regular session, in the first year.
   calendarDays: 20,
@@ -179,8 +179,8 @@ const STATE = {
     "Tabled or left in committee, or it missed the deadline to pass its first house.",
     "Voted down or killed on the floor, or it missed the deadline to pass its first house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This session is over. Bills that didn't become law have to be introduced again in a later session.",
 

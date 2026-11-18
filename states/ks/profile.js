@@ -34,7 +34,7 @@ const STATE = {
     if (y % 2) y++;
     const when = named || STATE.election(y);
     const label = named ? `the ${new Date(`${named}T12:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} primary election` : `November ${y}`;
-    return isoToday() > when ? `It went to the voters in ${label}; the records here don't show the result.` : `Next: the voters, in ${label}.`;
+    return isoToday() > when ? `It went to the voters in ${label}; the result isn't shown here.` : `Next: the voters, in ${label}.`;
   },
 
   // The bill's page on kslegislature.gov (its history, versions, supplemental notes and votes).
@@ -99,7 +99,7 @@ const STATE = {
   addressLookup: true,
   findReps: "https://kslegislature.gov/b2025_26/legislators/",
   oneNumber: true,
-  diesAfterFloor: () => "The biennium has ended, so it died with it.",
+  diesAfterFloor: () => "It died when the two-year session ended.",
   outOfTimeLine: "Died when the biennium ended",
 
   // Kansas committees don't vote bills down: a bill the committee doesn't report stays there, and dies at the end
@@ -134,7 +134,7 @@ const STATE = {
     if (t > end2) return `The ${y}–${String(y + 1).slice(2)} Legislature's last session adjourned ${fmtDate(end2)}. Bills that didn't pass both houses died. The next Legislature opens ${fmtDate(STATE.opens(y + 2))}.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${raw.session}–${String(raw.session + 1).slice(2)} Legislature opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${raw.session}–${String(raw.session + 1).slice(2)} Legislature opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar: two sessions, each with its veto session.
   calendarDays: 14,
@@ -191,7 +191,7 @@ const STATE = {
     "Reported by its committee, but never passed by the full house.",
     "Passed the House or the Senate, but not both.",
     "Passed both houses, but never presented to the governor.",
-    "Presented to the governor, but the records show no signature or veto.",
+    "Presented to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This biennium is over. Bills that didn't become law have to be introduced again in the next one.",
 

@@ -75,7 +75,7 @@ const STATE = {
   passedBothNote: (live) => live ? "Not yet acted on by the governor" : "No action by the governor recorded",
   passedBothGroup: ["Waiting for the governor", () => "The General Assembly sends bills to the governor when it chooses, often weeks or months after they pass; the governor then has 10 days (Sundays excepted). After the General Assembly's term ends, a bill not signed within 30 days doesn't become law."],
   passedBothNext: () => ({
-    what: "it goes to the governor, who has 10 days (Sundays excepted) once it's presented to sign it or veto it; the records don't show when a bill is presented, often weeks or months after it passes. A bill the governor doesn't act on becomes law, except after the General Assembly's term ends, when it has to be signed within 30 days. The governor can veto items in an appropriation bill.",
+    what: "it goes to the governor, who has 10 days (Sundays excepted) once it's presented to sign it or veto it; the Legislature's records don't show when a bill is presented, often weeks or months after it passes. A bill the governor doesn't act on becomes law, except after the General Assembly's term ends, when it has to be signed within 30 days. The governor can veto items in an appropriation bill.",
     gov: ["sign it", "veto it"],
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
@@ -83,7 +83,7 @@ const STATE = {
   addressLookup: true,
   findReps: "https://legis.delaware.gov/",
   oneNumber: true,
-  diesAfterFloor: () => "The General Assembly has ended, so it died with it.",
+  diesAfterFloor: () => "It died when the General Assembly ended.",
   outOfTimeLine: "Died when the General Assembly ended",
 
   // Committees hold a bill by tabling it (it can be lifted from the table later).
@@ -117,7 +117,7 @@ const STATE = {
     if (t.startsWith(String(y + 1)) && md > "07-01" || t > `${y + 1}-12-31`) return `The ${STATE.ga(y)} General Assembly's last session ended June 30, ${y + 1}. Bills that didn't pass both houses died; the governor acts on the rest. The next General Assembly opens ${fmtDate(STATE.opens(y + 2))}.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${STATE.ga(raw.session)} General Assembly opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${STATE.ga(raw.session)} General Assembly opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar: two sessions, each from January to June 30.
   calendarDays: 14,
@@ -171,8 +171,8 @@ const STATE = {
     "Never released by its committee before the General Assembly ended.",
     "Released by its committee, but never passed by the full house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show no action by the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses; no action by the governor is recorded.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This General Assembly is over. Bills that didn't become law have to be filed again in the next one.",
 

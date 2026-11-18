@@ -148,7 +148,7 @@ const STATE = {
       return `The ${STATE.ls(y)} Legislature's last session ended ${fmtDate(STATE.adjourns(y + 1))}. Bills that didn't pass died; the ${STATE.ls(y + 2)} Legislature opens ${fmtDate(STATE.opens(y + 2))}.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${STATE.ls(raw.session)} Legislature opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${STATE.ls(raw.session)} Legislature opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar: two sessions, 90 and 60 legislative days.
   calendarDays: 14,
@@ -206,8 +206,8 @@ const STATE = {
     "Never advanced from committee before the Legislature ended.",
     "Advanced to the floor, but never passed on Final Reading.",
     "",
-    "Passed the Legislature, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed the Legislature but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This Legislature is over. Bills that didn't become law have to be introduced again in the next one.",
   oddsExits: ["Died in committee", "Died on the floor"],

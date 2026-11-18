@@ -106,7 +106,7 @@ const STATE = {
   sessionNotice(raw) {
     const t = isoToday(), md = t.slice(5), y = raw.session;
     if (t.startsWith(String(y)) && md >= "07-01" && md < "09-01")
-      return "The Legislature is on its summer break; committees usually start meeting again in September. It's a good time to meet your legislators at their district offices.";
+      return "The Legislature is on its summer break; committees usually start meeting again in September. Legislators are often in their district offices.";
     if (t.startsWith(String(y + 1)) && md >= "07-01" && md < "11-10")
       return "Legislators are campaigning for the November election, so committees rarely meet before it. It's a good time to ask your legislators where they stand; the session's busiest weeks come in December and January.";
     return "";
@@ -141,8 +141,8 @@ const STATE = {
     "Never got out of committee before the session ended.",
     "A committee approved it, but it never got a vote of the full house.",
     "Passed the Senate or the Assembly, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This two-year session is over. Bills that didn't become law have to be reintroduced in the next session.",
 

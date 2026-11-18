@@ -34,7 +34,7 @@ const STATE = {
     const d = [b.dates.passS, b.dates.passA].sort().pop() || "";
     let y = +d.slice(0, 4) + (d.slice(5, 7) > "07" ? 1 : 0);
     if (y % 2) y++;
-    return (isoToday() > `${y}-11-10` ? `It went to the voters in November ${y}; the records here don't show the result.` : `Next: the voters, in November ${y}.`)
+    return (isoToday() > `${y}-11-10` ? `It went to the voters in November ${y}; the result isn't shown here.` : `Next: the voters, in November ${y}.`)
       + " If they approve it, the next General Assembly ratifies it, and then it's part of the constitution.";
   },
 
@@ -97,7 +97,7 @@ const STATE = {
   addressLookup: true,
   findReps: "https://www.scstatehouse.gov/legislatorssearch.php",
   oneNumber: true,
-  diesAfterFloor: () => "The General Assembly has ended, so it died with it.",
+  diesAfterFloor: () => "It died when the General Assembly ended.",
   outOfTimeLine: "Died when the General Assembly ended",
 
   // South Carolina's committees don't table bills: a bill they don't take up stays there.
@@ -127,7 +127,7 @@ const STATE = {
     if (t > end2) return `The ${STATE.ga(y)} General Assembly's last session adjourned ${fmtDate(end2)} (it came back later only for vetoes, conference reports and the budget). Bills that didn't pass both houses died. The next General Assembly opens ${fmtDate(STATE.opens(y + 2))}.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${STATE.ga(raw.session)} General Assembly opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled in December. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${STATE.ga(raw.session)} General Assembly opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled in December. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar: two sessions, each from January to the second Thursday of May.
   calendarDays: 14,
@@ -182,7 +182,7 @@ const STATE = {
     "Reported by its committee, but never passed by the full house.",
     "Passed the House or the Senate, but not both.",
     "Passed both houses, but never ratified.",
-    "Ratified and sent to the governor, but the records show no signature or veto.",
+    "Ratified and sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This General Assembly is over. Bills that didn't become law have to be filed again in the next one.",
 

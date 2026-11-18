@@ -63,7 +63,7 @@ const STATE = {
   // Art. 44). The records show when both houses adopted the enrolled bill, not when it was presented, which can be weeks
   // later, so this is the earliest the deadline could be.
   govDeadline: (iso) => (iso ? STATE.plusDays(iso, 5, false) : null),
-  dueLabel: () => "Governor's decision due (5 days, Sundays excepted, after it's presented; the earliest it could be)",
+  dueLabel: () => "Governor's decision due (earliest possible date: 5 days after it's presented, not counting Sundays)",
 
   passedBothBy: (session) => STATE.govDeadline(STATE.sessionEnds(session)),
   passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
@@ -97,7 +97,7 @@ const STATE = {
         : `The ${y} session ended ${fmtDate(end)}, and with it this General Court. Bills that didn't pass died; the new General Court meets in early January.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${raw.session} session opens in early January. Bills appear here as they're filed. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${raw.session} session opens in early January. Bills appear here as they're filed. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   calendarDays: 0,
   calendar(Y, end1, end2, MD) {
@@ -148,8 +148,8 @@ const STATE = {
     "Voted down, kept in committee, or never reported before the session ended.",
     "A committee reported it, but the full house never voted on the report (often left on the table).",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This session is over. Bills that didn't become law have to be introduced again in a later session, unless a committee kept them over to the next year.",
 

@@ -130,7 +130,7 @@ const STATE = {
     if (t > end2) return `The ${y}–${String(y + 1).slice(2)} General Assembly's last session ended ${fmtDate(end2)}${t <= STATE.plusDays(end2, 30) ? `; the governor has until ${fmtDate(STATE.plusDays(end2, 30))} to act on the bills it passed` : ""}. Bills that didn't pass both houses died. The next General Assembly opens ${fmtDate(STATE.opens(y + 2))}.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${raw.session}–${String(raw.session + 1).slice(2)} General Assembly opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${raw.session}–${String(raw.session + 1).slice(2)} General Assembly opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar: two sessions, each followed by the governor's 30 days.
   calendarDays: 14,
@@ -189,8 +189,8 @@ const STATE = {
     "Never got out of committee before the General Assembly's two years ended.",
     "Reported by its committee, but never passed by the full house (or its companion passed instead).",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This General Assembly is over. Bills that didn't become law have to be introduced again in a later one.",
 

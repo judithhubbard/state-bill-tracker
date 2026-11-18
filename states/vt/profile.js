@@ -89,7 +89,7 @@ const STATE = {
       return `The General Assembly finished its second-year session ${fmtDate(STATE.adjourns(y + 1))}. Bills that didn't pass both houses died; the next General Assembly convenes ${fmtDate(STATE.opens(y + 2))}.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${span(raw.session)} General Assembly convenes ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${span(raw.session)} General Assembly convenes ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar.
   calendarDays: 14,
@@ -143,8 +143,8 @@ const STATE = {
     "Never got out of committee before the biennium ended.",
     "A committee reported it, but it never got through the full house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Delivered to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Delivered to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This biennium is over. Bills that didn't become law have to be introduced again in the next one.",
 

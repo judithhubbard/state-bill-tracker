@@ -89,7 +89,7 @@ const STATE = {
   addressLookup: true,
   findReps: "https://www.elections.il.gov/ElectionOperations/DistrictLocator.aspx",
   oneNumber: true,
-  diesAfterFloor: () => "The General Assembly has ended, so it died with it.",
+  diesAfterFloor: () => "It died when the General Assembly ended.",
   outOfTimeLine: "Died when the General Assembly ended",
 
   // Bills that miss a deadline go back to the House Rules Committee or the Senate Assignments Committee.
@@ -117,7 +117,7 @@ const STATE = {
       return `The ${(y - 1817) / 2}th General Assembly ends ${fmtDate(end)}; bills that haven't passed both houses by then die. Bills for the next one can be filed from December.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${(raw.session - 1817) / 2}th General Assembly is sworn in ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're filed. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${(raw.session - 1817) / 2}th General Assembly is sworn in ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're filed. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar.
   calendarDays: 14,
@@ -168,8 +168,8 @@ const STATE = {
     "Never got out of committee before the General Assembly ended.",
     "A committee approved it, but it never got a vote of the full house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This General Assembly is over. Bills that didn't become law have to be filed again in the next one.",
 

@@ -134,7 +134,7 @@ const STATE = {
     "A committee approved it, but it never got a vote of the full house.",
     "Passed the Senate or the Assembly, but not both.",
     "Passed both houses, but the governor's office never requested it, so it never reached her.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "Floor votes for this session are over. A bill that hasn't passed both houses can move only if lawmakers return for a special session; otherwise it dies December 31 and has to be reintroduced.",
 

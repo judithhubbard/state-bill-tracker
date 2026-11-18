@@ -123,7 +123,7 @@ const STATE = {
     reps: ["urge the President to sign it", "urge the President to veto it"],
   }),
   oneNumber: true,
-  diesAfterFloor: () => "This Congress has ended, so it died with it.",
+  diesAfterFloor: () => "It died when this Congress ended.",
   outOfTimeLine: "Died when the Congress ended",
 
   // Committees in Congress rarely vote a bill down: most bills are never taken up.
@@ -158,7 +158,7 @@ const STATE = {
     const t = isoToday(), y = raw.session, end = `${y + 2}-01-03`, el = STATE.election(y + 1);
     const n = (y - 1789) / 2 + 1;
     if (t >= el && t < end) return `The ${n}th Congress ends ${fmtDate(end)}. Bills that haven't become law by then die; the ${n + 1}th Congress, elected ${fmtDate(el)}, starts over with new bills.`;
-    if (t >= end) return `The ${n}th Congress ended ${fmtDate(end)}. Bills that didn't become law died with it.`;
+    if (t >= end) return `The ${n}th Congress ended ${fmtDate(end)}. Bills that didn't become law died then.`;
     return "";
   },
   upcomingNotice: (raw, cur) => `The ${(raw.session - 1789) / 2 + 1}th Congress convenes ${fmtDate(`${raw.session}-01-03`)}.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} Congress</a>` : ""}`,
@@ -185,7 +185,7 @@ const STATE = {
   },
   waitingHead: "Waiting for the President",
   govYearsNote: "",
-  partySource: "Party from the congress-legislators member data",
+  partySource: "Party from public records of members of Congress",
   openUntil: (s) => `the ${(s - 1789) / 2 + 1}th Congress ends on January 3, ${s + 2}`,
 
   commIntro: [
@@ -218,7 +218,7 @@ const STATE = {
     "Reported by its committee, but never passed by the full house.",
     "Passed the House or the Senate, but not both.",
     "Passed both houses, but never presented to the President.",
-    "Presented to the President, but the records show no signature or veto.",
+    "Presented to the President; no signature or veto is recorded.",
   ],
   outOfTime: "This Congress is over. Bills that didn't become law have to be introduced again in the next one, with new numbers.",
 

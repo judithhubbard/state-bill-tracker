@@ -24,7 +24,7 @@ const STATE = {
   amendmentVote: "two-thirds of each house's members (26 senators, 70 representatives)",
   ballotLine: (b) => (DATA.current && isoToday() <= STATE.sessionEnds(DATA.session)
     ? "Next: the voters, at the statewide election the amendment names."
-    : "It went to the voters at the statewide election it names; the records here don't show the result."),
+    : "It went to the voters at the statewide election it names; the result isn't shown here."),
   // From gov.louisiana.gov/contact-the-governors-office (read by program 2026-11-14, not checked by the owner).
   govReach: `<a href="https://gov.louisiana.gov/contact-the-governors-office" target="_blank" rel="noopener" data-contact="online|governor">Contact the governor</a> · Constituent Services <a class="phone" href="tel:+12253420991" data-contact="call|governor">(225) 342-0991</a>`,
 
@@ -124,7 +124,7 @@ const STATE = {
       return `${y} is a fiscal session: 45 legislative days for the budget and taxes; each member may introduce only five other bills.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   calendarDays: 0,
   calendar(Y, end1, end2, MD) {
@@ -179,8 +179,8 @@ const STATE = {
     "Never got out of committee before the session ended.",
     "Reported by its committee, but never passed by its house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This session is over. Bills that didn't become law have to be introduced again in a later session.",
 

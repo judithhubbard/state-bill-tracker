@@ -73,7 +73,7 @@ const STATE = {
   addressLookup: true,
   findReps: "https://wrm.capitol.texas.gov/home",
   oneNumber: true,
-  diesAfterFloor: () => `The session ended ${fmtDate(STATE.sessionEnds(DATA.session))}, so it died with it.`,
+  diesAfterFloor: () => `It died when the session ended, ${fmtDate(STATE.sessionEnds(DATA.session))}.`,
   outOfTimeLine: "Died when the session ended",
 
   // A committee that hears a bill and doesn't vote on it "leaves it pending".
@@ -91,7 +91,7 @@ const STATE = {
     if (t <= due) return `The regular session ended ${fmtDate(end)}. The governor has until ${fmtDate(due)} to act on the bills it passed.`;
     return `The ${y} regular session ended ${fmtDate(end)}. The next one opens ${fmtDate(STATE.opens(next))}, and bills for it can be filed from ${fmtDate(filing)}. Now is the time to ask your legislators to file a bill. (Special sessions the governor calls aren't shown here.)`;
   },
-  upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're filed; committees start hearing them after the session opens. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're filed; committees start hearing them after the session opens. Bills you star now stay on your watchlist.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The calendar: the session's 140 days in the first year; nothing in the second.
   calendarDays: 0,
@@ -153,8 +153,8 @@ const STATE = {
     "Never got out of committee before the session ended.",
     "A committee approved it, but it never got a vote of the full house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "The regular session is over. Bills that didn't become law have to be filed again for the next session.",
 

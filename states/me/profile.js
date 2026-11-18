@@ -98,7 +98,7 @@ const STATE = {
       return `The Legislature finished its second session ${fmtDate(STATE.adjourns(y + 1))}. Bills that weren't enacted died; the next Legislature convenes ${fmtDate(STATE.convenes(y + 1))}.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${span(raw.session)} Legislature convenes ${fmtDate(STATE.convenes(raw.session - 1))}. Bills appear here as they're printed. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${span(raw.session)} Legislature convenes ${fmtDate(STATE.convenes(raw.session - 1))}. Bills appear here as they're printed. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar.
   calendarDays: 14,
@@ -151,8 +151,8 @@ const STATE = {
     "Never got out of committee before the Legislature ended.",
     "The committee reported it, but it never got through the full house.",
     "Passed one house, but not both; many died on the Special Appropriations Table.",
-    "Enacted by both houses, but the records show no governor's action.",
-    "Held by the governor, but the records show no signature or veto.",
+    "Enacted by both houses; no action by the governor is recorded.",
+    "Held by the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This Legislature is over. Bills that didn't become law have to be filed again in the next one.",
 

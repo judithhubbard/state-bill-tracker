@@ -24,7 +24,7 @@ const STATE = {
   ballotLine(b) {
     const d = [b.dates.passS, b.dates.passA].sort().pop() || "";
     return d && d.slice(0, 4) < isoToday().slice(0, 4)
-      ? "It went to the voters at the election the resolution named; the records here don't show the result."
+      ? "It went to the voters at the election the resolution named; the result isn't shown here."
       : "Next: the voters, at the election the resolution names (in May, August or November).";
   },
   govReach: `<a href="https://governor.ohio.gov/" target="_blank" rel="noopener" data-contact="online|governor">Governor's website</a> · Columbus <a class="phone" href="tel:+16146444357" data-contact="call|governor">(614) 644-4357</a>`,
@@ -68,7 +68,7 @@ const STATE = {
   addressLookup: true,
   findReps: "https://www.legislature.ohio.gov/legislators/find-my-legislators",
   oneNumber: true,
-  diesAfterFloor: () => "The General Assembly has ended, so it died with it.",
+  diesAfterFloor: () => "It died when the General Assembly ended.",
   outOfTimeLine: "Died when the General Assembly ended",
 
   // Each house's Rules and Reference Committee, chaired by the presiding officer, schedules floor votes.
@@ -86,7 +86,7 @@ const STATE = {
       return `The ${(y - 1753) / 2}th General Assembly ends December 31, ${y + 1}; bills that haven't passed both houses by then die. The next one convenes in January.`;
     return "";
   },
-  upcomingNotice: (raw, cur) => `The ${(raw.session - 1753) / 2}th General Assembly convenes ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Stars you add here carry over.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
+  upcomingNotice: (raw, cur) => `The ${(raw.session - 1753) / 2}th General Assembly convenes ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,
 
   // The two-year calendar.
   calendarDays: 0,
@@ -135,8 +135,8 @@ const STATE = {
     "Never got out of committee before the General Assembly ended.",
     "A committee reported it, but it never got a vote of the full house.",
     "Passed the House or the Senate, but not both.",
-    "Passed both houses, but the records show it never went to the governor.",
-    "Sent to the governor, but the records show no signature or veto.",
+    "Passed both houses but was never sent to the governor.",
+    "Sent to the governor; no signature or veto is recorded.",
   ],
   outOfTime: "This General Assembly is over. Bills that didn't become law have to be introduced again in the next one.",
 
