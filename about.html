@@ -38,10 +38,15 @@ a { color: var(--navy); }
 a:hover { color: var(--hover); }
 a:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; border-radius: 2px; }
 .note { color: var(--ink-2); }
+.back { margin: 0 0 18px; font: 600 14px/1.2 var(--body); }
+.back a { text-decoration: none; }
+.back a:hover { text-decoration: underline; }
+footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--ink-2); border-top-color: color-mix(in srgb, var(--ink-2) 30%, transparent); font-size: 14px; color: var(--ink-2); }
 </style>
 </head>
 <body>
 <main>
+  <p class="back"><a href="/">&larr; State Bill Tracker</a></p>
   <p class="site"><a href="/">State Bill Tracker</a></p>
   <h1>About</h1>
   <p class="lede">Every year, state legislatures and Congress consider well over 100,000 bills. Most people never hear about a bill until it has passed or failed, and by then it&rsquo;s too late to weigh in.</p>
@@ -64,6 +69,7 @@ a:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; border-r
 
   <h2>Contact</h2>
   <p><a href="mailto:statebilltracker@gmail.com">statebilltracker@gmail.com</a></p>
+  <footer><a href="/">Front page</a> &middot; <a href="/issues/">Issues across the states</a> &middot; <a href="SUPPORT_URL">Support this site</a></footer>
 </main>
 </body>
 </html>
