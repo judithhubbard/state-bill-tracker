@@ -1198,7 +1198,7 @@ if (!issue) document.getElementById("legend").hidden = false;
 // Starred bills. Each state's page keeps its watchlist in this browser under "abt:<st>:watch" (New York's under
 // "abt:watch"): {"2025:SB12": {seen: the date of the last action seen, stance}}, keyed by session and the number without
 // its amendment letter. The front page reads and writes the same lists, so a star here shows on the state's page and
-// the other way around. Where each bill is comes from the state's data/status_<session>.json (build_data.py).
+// the other way around. Where each bill is comes from the state's data/status_<session>.json (build_data.py), in pieces (statusOf()).
 const WKEY = (st) => (st === "ny" ? "abt:watch" : `abt:${st}:watch`);
 const baseNum = (n) => n.replace(/[A-Z]$/, "");
 const spaced = (n) => n.replace(/^([A-Z]+)(\d)/, "$1 $2");
@@ -1229,8 +1229,31 @@ function starClick(e) {
   drawMine();
   return true;
 }
-const STATUS = {};
-const statusOf = (st, session) => (STATUS[`${st}/${session}`] ||= fetch(`${st}/data/status_${session}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+// The status file in pieces, as lists_pages/common.js reads it (build_data.py's write_status_shards()): status.json names
+// each state's sessions' pieces, a bill is in piece pieceOf(number) (an alias's record may be in another); the whole
+// file is the fallback. statusOf(st, session, num): {page, live, bills, alias} holding at least that bill, or null.
+const STATUS = {}, PIECES = {};
+let STATUS_INDEX;
+const statusIndex = () => (STATUS_INDEX ||= fetch("status.json").then((r) => (r.ok ? r.json() : null)).catch(() => null));
+const wholeStatus = (st, session) => (STATUS[`${st}/${session}`] ||= fetch(`${st}/data/status_${session}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+const pieceOf = (num, n) => { let h = 0x811c9dc5; for (const c of baseNum(num)) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193) >>> 0; return h % n; };
+async function statusOf(st, session, num) {
+  const index = await statusIndex();
+  if (!index || !index[st]) return wholeStatus(st, session);
+  const ix = index[st][session];
+  if (!ix) return null;
+  const n = ix.h.length / 8;
+  const piece = (k) => (PIECES[`${st}/${session}/${k}`] ||= fetch(`${st}/data/v/${session}.${ix.h.slice(8 * k, 8 * k + 8)}.t${k}.json`)
+    .then((r) => (r.ok ? r.json() : null)).catch(() => null));
+  const p = await piece(pieceOf(num, n));
+  if (!p) return wholeStatus(st, session);
+  const out = { session: +session, page: ix.p, live: ix.l, bills: p.bills, alias: p.alias };
+  const lead = !p.bills[num] && p.alias[num];
+  if (!lead || p.bills[lead]) return out;
+  const q = await piece(pieceOf(lead, n));
+  if (!q) return wholeStatus(st, session);
+  return { ...out, bills: q.bills[lead] ? { [lead]: q.bills[lead] } : {} };
+}
 const fmtDay = (d) => (d ? new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
 function whereText(stage, comm, kind, live) {
   if (stage === 0) return `${live ? "In" : "Died in"} committee${comm ? ` (${comm})` : ""}`;
@@ -1303,7 +1326,7 @@ async function drawMine() {
   if (!lists.length) { sec.hidden = true; mineDrawn = ""; STARS = {}; markStars(); mineChanged(); return; }
   const blocks = await Promise.all(lists.map(async ([st, w, keys]) => {
     const rows = await Promise.all(keys.map(async (k) => {
-      const [session, num] = k.split(":"), s = await statusOf(st, session), seen = typeof w[k] === "string" ? w[k] : (w[k] || {}).seen || "";
+      const [session, num] = k.split(":"), s = await statusOf(st, session, num), seen = typeof w[k] === "string" ? w[k] : (w[k] || {}).seen || "";
       const lead = s ? (s.bills[num] ? num : s.alias[num]) : null, b = lead && s.bills[lead];
       const page = s && s.page && s.page !== "./" ? s.page : "";
       if (!b && st === "ny") return null;
@@ -1627,7 +1650,7 @@ drawMine();
     const li = b.closest("li"), [st, session, num] = b.dataset.star.split("|");
     const done = () => { starClick({ target: b, preventDefault() {} }); li.querySelector("button[data-star]")?.focus(); };
     if (`${session}:${baseNum(num)}` in readWatch(st)) return done();
-    statusOf(st, session).then((s) => {
+    statusOf(st, session, baseNum(num)).then((s) => {
       const k = baseNum(num), lead = s ? (s.bills[k] ? k : s.alias[k]) : null;
       b.dataset.star = `${st}|${session}|${num}|${lead ? s.bills[lead][3] || "" : ""}`;
       done();

@@ -2521,6 +2521,20 @@ Read README.md for what each script downloads. This file covers how to change th
     `walkCommittees()`/`meetings()`: keep them in step), so an opened bill never needs the rows part. Measured 2026-11-18
     (slow 4G, 4x CPU, phone, cold cache): first bill 1.3-1.7 s after the list shows, another of the same state 0.1-0.8 s;
     the list itself shows after 6-7 s, almost all of it the states' whole status files (NY's is 517 KB).
+  - Status pieces (2026-11-18): the pages that show a few bills from a state's status file (/list/, /your-bills/, the
+    list editor: common.js's `statusOf(st, session, num)`; the front page's "Your bills" and search stars: home.html's
+    copy of it) read it in pieces. build_data.py's `write_status_shards()` writes, beside status_<session>.json (still
+    written: search_site.py reads it, and it's the fallback), data/v/<session>.<8-hex hash>.t<k>.json, {bills, alias},
+    a bill or other number in piece `shard_of(number, n)` (FNV-1a, as the bill shards); an alias's record can be in
+    another piece, fetched next. Pieces are about 12 KB gzipped for a live session, 40 KB for a past one
+    (`STATUS_GZ`); each state's data/status.json lists its sessions' {"p": page, "l": live, "h": the hashes}, and
+    build_site.sh gathers them into /status.json (about 1 KB per big state; revalidated on each visit, preloaded by the
+    three lists pages; the pieces are immutable under _headers' data/v rule). A state or session /status.json doesn't
+    name reads the whole file; a session missing from a named state is "not found" at once (it would have 404'd), and a
+    piece that fails (a deploy mid-visit) falls back to the whole file. About 800 files across the site (12 KB / 40 KB;
+    1,450 if past sessions were 12 KB too). Measured 2026-11-18 (slow 4G, 4x CPU, phone, cold cache, HTTP/2): /list/
+    with 10 NY bills 6.1 s -> 1.6 s (517 KB -> 124 KB); NJ+NY 6.8 -> 1.4 s; /your-bills/ with 10 bills in 3 states
+    5.5 -> 1.5 s; the front page's Your bills 5.4 -> 1.6 s.
   - Named lists from any bill row: `lists_pages/named.js` (one global, `NamedLists`; put in every public state page by
     `github_page()`, in home.html and the list editor by build_site.sh) draws a list button beside the star (state rows
     and watchlist cards: `listButton()`; the front page's search results and panel rows: `listBtn()`) when this browser

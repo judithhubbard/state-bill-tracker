@@ -1251,6 +1251,50 @@ def write_status(session, recs, page, live):
             alias[base(n)] = lead
     with open(os.path.join(GITHUB, "data", f"status_{session}.json"), "w", encoding="utf-8") as f:
         json.dump({"session": session, "page": page, "live": live, "bills": bills, "alias": alias}, f, separators=(",", ":"), ensure_ascii=False)
+    write_status_shards(session, bills, alias, page, live)
+
+
+# The status file in pieces, for the pages that show a few bills from it (/list/, /your-bills/, the list editor, the
+# front page's "Your bills"): data/v/<session>.<hash>.t<k>.json, {"bills": {number: row}, "alias": {other number: its
+# record's number}}, a bill (or an other number) in piece shard_of(number, n). The rows are write_status()'s; an alias's
+# record can be in another piece, which the reader then fetches too. Pieces of a current or upcoming session are about
+# STATUS_GZ["current"] gzipped, so a list of ten bills fetches about ten small files; a past session's are bigger, to
+# keep the site's file count down (each piece is a file). data/status.json lists each session's {"p": page, "l": live,
+# "h": the pieces' hashes, 8 characters each, in order}; build_site.sh gathers every state's into /status.json, which
+# the pages fetch (checked on each visit; the pieces are kept for good).
+STATUS_GZ = {"current": 12_000, "past": 40_000}
+
+
+def write_status_shards(session, bills, alias, page, live):
+    import hashlib
+    target = STATUS_GZ["current" if live else "past"]
+    def make(n):
+        out = [{"bills": {}, "alias": {}} for _ in range(n)]
+        for k, row in bills.items():
+            out[shard_of(k, n)]["bills"][k] = row
+        for k, lead in alias.items():
+            out[shard_of(k, n)]["alias"][k] = lead
+        return [json.dumps(x, separators=(",", ":"), ensure_ascii=False) for x in out]
+    # The count from the whole file's size, then once more from the pieces' (each piece compresses less well).
+    n = max(1, -(-len(gzip.compress(json.dumps({"b": bills, "a": alias}, ensure_ascii=False).encode(), 6)) // target))
+    texts = make(n)
+    if n > 1:
+        again = max(1, round(sum(len(gzip.compress(t.encode(), 6)) for t in texts) / target))
+        if again != n:
+            n, texts = again, make(again)
+    hashes = [hashlib.sha256(t.encode("utf-8")).hexdigest()[:8] for t in texts]
+    os.makedirs(os.path.join(GITHUB, "data", "v"), exist_ok=True)
+    for k, (h, t) in enumerate(zip(hashes, texts)):
+        with open(os.path.join(GITHUB, "data", "v", f"{session}.{h}.t{k}.json"), "w", encoding="utf-8") as f:
+            f.write(t)
+    path = os.path.join(GITHUB, "data", "status.json")
+    try:
+        index = json.load(open(path))
+    except (OSError, ValueError):
+        index = {}
+    index[str(session)] = {"p": page, "l": live, "h": "".join(hashes)}
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(dict(sorted(index.items())), f, separators=(",", ":"), ensure_ascii=False)
 
 
 # On the public site each session's data is split so that a visitor downloads only what they look at (data/v/, each

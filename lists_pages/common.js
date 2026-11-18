@@ -3,6 +3,7 @@
 // {"2025:SB12": {seen: the date of the last action seen, stance}}, keyed by session and the number without its amendment
 // letter. Where each bill is comes from the state's data/status_<session>.json (build_data.py): {page, live, bills:
 // {number: [full number, title, stage, last action's date, last action, committee, kind]}, alias: {other number: number}}.
+// It's read in pieces (statusOf(), below).
 // Shared lists live in the lists Worker (lists_worker/): a list across states writes each bill "nj:2026:A1234" ("-" in
 // front: opposed).
 const LISTS_API = (document.querySelector('meta[name="lists-api"]')?.content || "").replace(/\/$/, "");
@@ -74,8 +75,34 @@ const showStance = (l) => !!l.group || l.bills.some((b) => b.startsWith("-"));
 const noteOf = (l, b) => (l.notes || {})[l.state === "all" ? b.key : b.num] || "";
 
 // ---- Where each bill is ----
-const STATUS = {};
-const statusOf = (st, session) => (STATUS[`${st}/${session}`] ||= fetch(`/${st}/data/status_${session}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+// The pages read the status file in pieces (build_data.py's write_status_shards()): /status.json names each state's
+// sessions' pieces ({st: {session: {p: page, l: live, h: an 8-character hash per piece}}}), and a bill is in piece
+// shardOf(number) of data/v/<session>.<hash>.t<k>.json ({bills, alias}); an alias's record may be in another piece. The
+// whole file is the fallback (a state or session /status.json doesn't name, or a piece gone after a deploy).
+// statusOf(st, session, num) answers {page, live, bills, alias} holding at least that bill, or null.
+const STATUS = {}, PIECES = {};
+let STATUS_INDEX;
+const statusIndex = () => (STATUS_INDEX ||= fetch("/status.json").then((r) => (r.ok ? r.json() : null)).catch(() => null));
+statusIndex();  // at once: the pages preload it
+const wholeStatus = (st, session) => (STATUS[`${st}/${session}`] ||= fetch(`/${st}/data/status_${session}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
+const pieceOf = (num, n) => { let h = 0x811c9dc5; for (const c of baseNum(num)) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193) >>> 0; return h % n; };
+async function statusOf(st, session, num) {
+  const index = await statusIndex();
+  if (!index || !index[st]) return wholeStatus(st, session);
+  const ix = index[st][session];
+  if (!ix) return null;
+  const n = ix.h.length / 8;
+  const piece = (k) => (PIECES[`${st}/${session}/${k}`] ||= fetch(`/${st}/data/v/${session}.${ix.h.slice(8 * k, 8 * k + 8)}.t${k}.json`)
+    .then((r) => (r.ok ? r.json() : null)).catch(() => null));
+  const p = await piece(pieceOf(num, n));
+  if (!p) return wholeStatus(st, session);
+  const out = { session: +session, page: ix.p, live: ix.l, bills: p.bills, alias: p.alias };
+  const lead = !p.bills[num] && p.alias[num];
+  if (!lead || p.bills[lead]) return out;
+  const q = await piece(pieceOf(lead, n));
+  if (!q) return wholeStatus(st, session);
+  return { ...out, bills: q.bills[lead] ? { [lead]: q.bills[lead] } : {} };
+}
 const fmtDay = (d) => (d ? new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
 function whereText(st, stage, comm, kind, live) {
   if (stage === 0) return `${live ? "In" : "Died in"} committee${comm ? ` (${comm})` : ""}`;
@@ -102,7 +129,7 @@ const cut = (t) => (t.length >= 120 && !/[.!?)"”']$/.test(t) ? t.replace(/[\s,
 // One bill's status: {found, full, title, stage, last, action, label, href, page} (href: its card on the state's page;
 // page: the session's page, where /list/ opens a bill's card from).
 async function lookUp(st, session, num) {
-  const s = await statusOf(st, session);
+  const s = await statusOf(st, session, num);
   const lead = s ? (s.bills[num] ? num : s.alias?.[num]) : null, b = lead && s.bills[lead];
   if (!b) return { found: false, full: num, title: `${session} session`, href: `/${st}/` };
   const [full, title, stage, last, action, comm, kind] = b, page = s.page && s.page !== "./" ? s.page : "";

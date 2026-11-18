@@ -78,6 +78,20 @@ echo "rebuilt:${REBUILT:- none}"
 python3 issues_site.py "$OUT" || echo "issue pages: BUILD FAILED"
 # The front page's "Find a bill" data (search/<st>.json), from each built state's live status_<session>.json.
 python3 search_site.py "$OUT" || echo "search data: BUILD FAILED"
+# Where each bill is, for /list/, /your-bills/, the list editor and the front page's "Your bills": /status.json names every
+# state's status pieces (each state's data/status.json, from build_data.py's write_status_shards()); checked on each visit
+# (the pieces it names, in data/v/, are kept for good). A state built before the pieces existed isn't in it: its pages read
+# the whole status file.
+python3 - "$OUT" <<'PY'
+import json, os, sys
+out, index = sys.argv[1], {}
+for s in sorted(os.listdir(out)):
+    try:
+        index[s] = json.load(open(os.path.join(out, s, "data", "status.json")))
+    except (OSError, ValueError):
+        pass
+json.dump(index, open(os.path.join(out, "status.json"), "w"), separators=(",", ":"), ensure_ascii=False)
+PY
 if [ -n "$FAILED" ]; then echo "build failed for:$FAILED"; fi
 # The front page lists exactly the states built in this run (home.html's own list is replaced), so a state appears there
 # as soon as its pages are published (New York's too, at /ny/).
