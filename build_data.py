@@ -108,6 +108,10 @@ def state_words():
 def github_page(html, meta=""):
     """Claude artifacts get a document skeleton added when published; GitHub Pages doesn't. meta: page_meta()'s tags."""
     import site_meta
+    from urllib.parse import urljoin
+    # The link to the front page shows from the start (the page would set it once loaded: it mustn't push the title down).
+    html = html.replace('<a class="home-link" id="siteHome" href="../" hidden>',
+                        f'<a class="home-link" id="siteHome" href="{html_escape(urljoin(P.SITE_URL, "../"))}">', 1)
     split = html.index('<div class="wrap">')
     return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
@@ -1246,6 +1250,150 @@ def write_status(session, recs, page, live):
         json.dump({"session": session, "page": page, "live": live, "bills": bills, "alias": alias}, f, separators=(",", ":"), ensure_ascii=False)
 
 
+# On the public site each session's data is three files, so a phone can draw the bill list before the rest arrives,
+# each loaded as soon as the one before it has downloaded (data/v/, named by a hash of the contents, so browsers can keep
+# them for good: build_site.sh's _headers):
+#   <session>.<hash>.list.json: what the first view needs: every bill's stage, topics, committees, sponsors, dates,
+#     places and parties (the filters, their counts, "Where it is now", the header and notice), and the title and
+#     history of the bills the list shows first (FIRST_ROWS, in its usual order: latest action first);
+#   <session>.<hash>.rows.json: every bill's title and history, for any other list of bills;
+#   <session>.<hash>.details.json: what only an opened bill, a text search, the vote and other-session filters,
+#     Statistics, the watchlist's cards and Weigh in use. Per-bill columns (index in the record row, as decode() reads
+#     them), and the session-wide parts:
+DETAIL_COLS = {1: "summary", 14: "lawCode", 19: "hist", 22: "votes", 26: "similar", 28: "vetoNote"}
+DETAIL_EMPTY = {"summary": "", "lawCode": "", "hist": [], "votes": [], "similar": [], "vetoNote": 0}
+DETAIL_TOP = ("insights", "network", "networkSince")
+# A towns list this big (Congress's 35,000 places) waits too; small ones are needed for the sidebar's town picker.
+BIG_TOWNS = 500_000
+# The list shows 100 bills at first (tracker.html's PAGE); a few more in case its order differs at the edge.
+FIRST_ROWS = 150
+
+
+def _keep_none(f):
+    """f for indexes into the strings table, leaving -1 (no string) as it is."""
+    return lambda i: i if i is None or i < 0 else f(i)
+
+
+def _map_strings(cols, f):
+    """The record columns with every index into the strings table passed through f (-1, no string, stays -1)."""
+    g = _keep_none(f)
+    out = list(cols)
+    out[2] = [[g(x) for x in v] for v in cols[2]]
+    out[3] = [[g(x) for x in v] for v in cols[3]]
+    for i in (10, 15, 16):
+        out[i] = [g(x) for x in cols[i]]
+    out[17] = [[[v[0], g(v[1]), v[2], g(v[3]), g(v[4]), [[a[0], g(a[1])] for a in v[5]], [g(x) for x in v[6]]] + v[7:9]
+                + [g(x) for x in v[9:]] for v in vers] for vers in cols[17]]
+    out[22] = [_map_votes(v, g) for v in cols[22]]
+    out[23] = [[[g(a[0])] + a[1:] for a in v] for v in cols[23]]
+    out[28] = [_map_veto(v, g) for v in cols[28]]
+    return out
+
+
+def _map_votes(votes, f):
+    g = _keep_none(f)
+    return [[x[0], x[1], g(x[2])] + x[3:6] + [[[g(m), code] for m, code in x[6]]] for x in votes or []]
+
+
+def _map_veto(v, f):
+    return v[:2] + [_keep_none(f)(v[2])] + v[3:] if v else v
+
+
+def split_payload(data):
+    """The public site's three files (above): (list part, rows part, details part). Constitutional amendments keep every
+    field in the list part (whether one is a second passage, shown in its row, can read its summary or its votes), as
+    do lawCodes naming the bills a chapter amendment changes (its row's tag). The strings table is renumbered so each
+    part carries only the strings the parts before it don't."""
+    cols, T = data["cols"], data["strings"]
+    lst = {k: v for k, v in data.items() if k not in DETAIL_TOP and k not in ("cols", "strings")}
+    rows = {}
+    det = {"cols": {}, "cos": [], "top": {k: data[k] for k in DETAIL_TOP if k in data}}
+    if data.get("towns") and len(json.dumps(data["towns"], separators=(",", ":"))) > BIG_TOWNS:
+        det["top"]["towns"] = lst.pop("towns")
+        lst["townsLater"] = True
+    lst["details"] = True
+    if not cols:
+        lst.update(cols=[], strings=T, rowsIn=[])
+        rows.update(title=[], acts=[], strings=[])
+        det["strings"] = []
+        return lst, rows, det
+    n = len(cols[0])
+    keep = {j for j, t in enumerate(cols[4]) if "const" in (t or [])}
+    # The list's first page as the page orders it (sortBills()'s "recent": latest action, then furthest along; the
+    # sort keeps the records' order among equals, as Python's does).
+    first = set(sorted(range(n), key=lambda j: (cols[11][j], cols[6][j]), reverse=True)[:FIRST_ROWS])
+    shown = keep | first
+    out = list(cols)
+    out[0] = [v if j in shown else "" for j, v in enumerate(cols[0])]
+    for i, name in DETAIL_COLS.items():
+        col = cols[i]
+        det["cols"][name] = col
+        if name == "lawCode":
+            out[i] = [v if j in keep or (v and re.search(r"as proposed in", v, re.I)) else "" for j, v in enumerate(col)]
+        else:
+            out[i] = [v if j in keep else DETAIL_EMPTY[name] for j, v in enumerate(col)]
+    # Each version's history (a version row's 6th field) and co-sponsors (7th).
+    out[17] = [vers if j in keep else [v[:5] + [v[5] if j in shown else [], []] + v[7:] for v in vers]
+               for j, vers in enumerate(cols[17])]
+    rows["title"] = cols[0]
+    acts = [[v[5] for v in vers] for vers in cols[17]]
+    cos = [[v[6] for v in vers] for vers in cols[17]]
+    # Strings: the list part's first, then the rows part's, then the details part's (each in their old order).
+    order, seen = [], set()
+
+    @_keep_none
+    def collect(i):
+        if i not in seen:
+            seen.add(i)
+            order.append(i)
+        return i
+
+    def take(walk):
+        before = len(order)
+        walk()
+        order[before:] = sorted(order[before:])
+        return len(order) - before
+
+    a = take(lambda: _map_strings(out, collect))
+    b = take(lambda: [collect(x[1]) for bill in acts for ver in bill for x in ver])
+    take(lambda: ([collect(x) for bill in cos for ver in bill for x in ver],
+                  [_map_votes(v, collect) for v in det["cols"]["votes"]],
+                  [_map_veto(v, collect) for v in det["cols"]["vetoNote"]]))
+    f = _keep_none({old: i for i, old in enumerate(order)}.__getitem__)
+    lst["cols"] = _map_strings(out, f)
+    lst["strings"] = [T[i] for i in order[:a]]
+    lst["rowsIn"] = sorted(shown)
+    rows["acts"] = [[[[x[0], f(x[1])] for x in ver] for ver in bill] for bill in acts]
+    rows["strings"] = [T[i] for i in order[a:a + b]]
+    det["cos"] = [[[f(x) for x in ver] for ver in bill] for bill in cos]
+    det["cols"]["votes"] = [_map_votes(v, f) for v in det["cols"]["votes"]]
+    det["cols"]["vetoNote"] = [_map_veto(v, f) for v in det["cols"]["vetoNote"]]
+    det["strings"] = [T[i] for i in order[a + b:]]
+    return lst, rows, det
+
+
+def frame_tabs(page, kind):
+    """The tabs as the page will show them once its data is drawn (hydrate() sets the same), so the page's frame, shown
+    while the data loads, doesn't change when it arrives. kind: "past", "upcoming", "person" (a legislator's page) or
+    "watch" (/watchlist/: no tabs)."""
+    tab = lambda v: f'<button class="view-tab" type="button" data-view="{v}">'
+    hide = {"past": ["watch", "act"], "upcoming": ["act", "stats"], "person": ["watch", "stats"]}.get(kind, [])
+    for v in hide:
+        page = page.replace(tab(v), tab(v)[:-1] + " hidden>", 1)
+    if kind == "person":
+        page = page.replace('data-view="how"><span', 'data-view="how" hidden><span', 1)
+        page = page.replace(tab("person")[:-1] + " hidden>", tab("person"), 1)
+        page = page.replace(tab("act") + "Weigh in<", tab("act") + "Open for comment<", 1)
+    if kind == "watch":
+        page = page.replace('<nav class="views" aria-label="Page sections">', '<nav class="views" aria-label="Page sections" hidden>', 1)
+    return page
+
+
+def hashed_name(session, kind, text):
+    import hashlib
+    return f"{session}.{hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}.{kind}.json"
+
+
 def last_checked():
     """When the state's download last succeeded (data/<state>/last_checked), in the state's time zone, or None."""
     from datetime import datetime
@@ -1495,8 +1643,25 @@ def main():
             for name in os.listdir(os.path.join(HERE, "static")):
                 with open(os.path.join(HERE, "static", name), "rb") as src, open(os.path.join(GITHUB, name), "wb") as dst:
                     dst.write(src.read())
-            with open(os.path.join(GITHUB, "data", f"{session}.json"), "w", encoding="utf-8") as f:
-                f.write(payload)
+            # In three parts (split_payload()), under names that change with their contents (data/v/), so they can be
+            # cached for good; a rebuild replaces the state's whole folder, so old ones don't pile up.
+            lst, rws, det = split_payload(data)
+            parts_ = {kind: json.dumps(part_, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
+                      for kind, part_ in (("list", lst), ("rows", rws), ("details", det))}
+            names_ = {kind: hashed_name(session, kind, text) for kind, text in parts_.items()}
+            os.makedirs(os.path.join(GITHUB, "data", "v"), exist_ok=True)
+            for kind, text in parts_.items():
+                with open(os.path.join(GITHUB, "data", "v", names_[kind]), "w", encoding="utf-8") as f:
+                    f.write(text)
+            # The page's data tag, from a page in the state's folder (prefix "") or one level down ("../"); and a
+            # preload hint, so the list part starts downloading while the page's script is still being read.
+            def data_tag(prefix, base=""):
+                return (f'<script type="application/json" id="bill-data" data-src="{prefix}data/v/{names_["list"]}" '
+                        f'data-rows="{prefix}data/v/{names_["rows"]}" data-details="{prefix}data/v/{names_["details"]}" '
+                        f'data-texts="{prefix}data/{session}-text/"'
+                        f'{base} data-root="{P.SITE_URL}"></script>')
+            def preload(prefix):
+                return f'<link rel="preload" href="{prefix}data/v/{names_["list"]}" as="fetch" crossorigin="anonymous">\n'
             if texts:
                 # In pieces of 500 bill numbers (data/<session>-text/A10.json holds A5000-A5499), so opening
                 # a bill loads only its piece.
@@ -1548,6 +1713,31 @@ def main():
             if power:
                 template = template.replace('<p class="power" id="power"></p>',
                                             f'<p class="power" id="power">{power}<span class="bp-why">{html_escape(balance.meaning(STATE, lower))}</span></p>', 1)
+        # The frame shown while the data loads: the tabs this page will have, and how many bills are coming.
+        template = frame_tabs(template, "past" if session < current else "upcoming" if session > current else "")
+        template = template.replace('id="frameLoad">Loading bills…<', f'id="frameLoad">Loading {len(recs):,} bills…<', 1)
+        # And the session buttons beside the title (renderSessions() draws the same), so the title's block is already
+        # as tall as it will be. (A legislator's page moves them into their card: not there.)
+        latest = max(s for s in SESSIONS if s <= current)
+
+        def sessions_nav(base):
+            out = []
+            for s in SESSIONS:
+                label = html_escape(f"{P.session_label(s)}{' (current)' if s == latest else ' (prefiled)' if s > latest else ''}")
+                url = urls.get(str(s))
+                if s == session:
+                    out.append(f'<span class="here" aria-current="page">{label}</span>')
+                elif not url:
+                    out.append(f'<span class="off">{label}</span>')
+                elif re.match(r"https?:", url):
+                    out.append(f'<a href="{html_escape(url)}" target="_blank" rel="noopener">{label}</a>')
+                else:
+                    out.append(f'<a href="{html_escape(base + url)}">{label}</a>')
+            return "".join(out)
+        nav_marker = '<nav class="sessions" id="sessions" aria-label="Legislative sessions"></nav>'
+        with_nav = lambda page, base="": page.replace(nav_marker, nav_marker.replace("></nav>", f">{sessions_nav(base)}</nav>"), 1)
+        person_template = template
+        template = with_nav(template)
         marker = '<script type="application/json" id="bill-data"></script>'
         assert marker in template, "template is missing the data marker"
         # The Claude copies carry the data gzipped and base64-encoded (about a third the size), unpacked in the
@@ -1568,25 +1758,25 @@ def main():
                                  (f"Bills prefiled so far for the {P.LEGISLATURE}'s {P.session_label(session)} session." if session > current
                                   else f"Every bill in the {P.LEGISLATURE}'s {P.session_label(session)} session, and where it ended up."),
                                  f"{session}.html")
-            html = github_page(template.replace(marker, f'<script type="application/json" id="bill-data" data-src="data/{session}.json" data-root="{P.SITE_URL}"></script>'), meta)
+            html = github_page(template.replace(marker, data_tag("")), preload("") + meta)
             if session == current:
                 for leg in data.get("legislators", []):
-                    page = template.replace(marker, f'<script type="application/json" id="bill-data" data-src="../data/{session}.json" data-base="../" data-root="{P.SITE_URL}"></script>')
+                    page = frame_tabs(person_template, "person").replace(marker, data_tag("../", ' data-base="../"'))
                     preset = json.dumps({"who": leg["id"]}).replace('"', "&quot;")
                     page = page.replace(f"<title>{P.SITE_NAME}</title>",
                                         f'<title>{leg["title"]} {leg["name"]} · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{preset}">', 1)
                     os.makedirs(os.path.join(GITHUB, leg["slug"]), exist_ok=True)
                     with open(os.path.join(GITHUB, leg["slug"], "index.html"), "w") as f:
-                        f.write(github_page(page, page_meta(f'{leg["title"]} {leg["name"]} · {state_words()} · State Bill Tracker',
+                        f.write(github_page(page, preload("../") + page_meta(f'{leg["title"]} {leg["name"]} · {state_words()} · State Bill Tracker',
                                                             f'{leg["title"]} {leg["name"]} in the {P.LEGISLATURE}: bills, committees and how to get in touch.',
                                                             f'{leg["slug"]}/')))
                 # /watchlist/: the same page, opened to the visitor's own watchlist.
-                page = template.replace(marker, f'<script type="application/json" id="bill-data" data-src="../data/{session}.json" data-base="../" data-root="{P.SITE_URL}"></script>')
+                page = frame_tabs(with_nav(person_template, "../"), "watch").replace(marker, data_tag("../", ' data-base="../"'))
                 page = page.replace(f"<title>{P.SITE_NAME}</title>",
                                     f'<title>Watchlist · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{{&quot;watch&quot;: true}}">', 1)
                 os.makedirs(os.path.join(GITHUB, "watchlist"), exist_ok=True)
                 with open(os.path.join(GITHUB, "watchlist", "index.html"), "w") as f:
-                    f.write(github_page(page, page_meta(f"Watchlist · {state_words()} · State Bill Tracker",
+                    f.write(github_page(page, preload("../") + page_meta(f"Watchlist · {state_words()} · State Bill Tracker",
                                                         f"Your own list of {P.LEGISLATURE} bills to follow.", "watchlist/")))
                 # A shared last name gets a page for picking the right person, e.g. /ramos/.
                 by_last = defaultdict(list)

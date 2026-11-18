@@ -2327,8 +2327,20 @@ Read README.md for what each script downloads. This file covers how to change th
   - `site/<session>.html`, with the data embedded (gzip+base64, `data-enc="gzip64"`, unpacked in the
     browser by `unpack()`). These are the Claude copies. They have no ROOT, so public-only features are off.
   - with `--github DIR`: the public site. `index.html` is the current session and `<year>.html` the
-    past ones; data goes in `data/<session>.json`; legislator pages go at `/<slug>/` and the watchlist
-    at `/watchlist/`. `github_page()` adds the document head, icons and the analytics tags.
+    past ones; legislator pages go at `/<slug>/` and the watchlist at `/watchlist/`. `github_page()` adds the
+    document head, icons and the analytics tags. Each session's data is three files named by a hash of their contents
+    (`split_payload()`, 2026-11-18), `data/v/<session>.<hash>.list.json`, `.rows.json` and `.details.json`, which
+    build_site.sh's `_headers` lets browsers keep for a year; the page names them (`data-src`, `data-rows`,
+    `data-details`; `data-texts` for the `data/<session>-text/` pieces), preloads the list and fetches each part as
+    soon as the one before it has downloaded. The list part is what the first view needs: every bill's stage, topics,
+    committees, sponsors, dates, places and parties (filters and their counts, "Where it is now", header, notice), and
+    the titles and histories of the first 150 bills in the list's usual order (`FIRST_ROWS`, `rowsIn`); the rows part
+    is every bill's title and history (`b.rowIn`; the watchlist badge's "N new" waits for it); the details part is each
+    bill's summary, co-sponsors, versions in other sessions, votes, similar bills, veto message and full law code
+    (`DETAIL_COLS`), the statistics and networks (`DETAIL_TOP`), and a towns list over 500 KB (Congress's). The strings
+    table is renumbered so each part carries only the strings the parts before it don't. Constitutional amendments keep
+    every field in the list part (`STATE.amendmentFinal` can read a summary or votes, for the row). A new field the first
+    view reads belongs in the list part; test/issues/get.py puts the three back together.
 - **.github/workflows/update.yml** downloads, builds and deploys every morning, hourly on weekdays
   January through June (agendas, floor votes), every two hours on weekdays July through December
   (the governor's requests and actions), and on every push to main. Contacts refresh once a day.
@@ -2470,7 +2482,14 @@ Read README.md for what each script downloads. This file covers how to change th
   county, and `LINK_COUNTY` offers to switch back. "Add all to watchlist" is the `#starAllBox` code
   in `renderList()`.
 - **Startup:** `hydrate(raw)` sets `DATA` and `BILLS`, then `wire()` attaches event handlers and
-  `render()` draws everything.
+  `render()` draws the Bills tab. On the public site the rows and details parts follow (`mergeRows()`,
+  `mergeDetails()`); a list of bills not in yet shows "Loading…" until the rows part is in (`renderList()`,
+  `whenRows(fn)`), and anything that needs the details waits with `whenDetails(fn)`: an opened bill (`fillDetail()` shows "Loading…" until then), a search, the vote and
+  co-sponsor and other-session filters (`needsDetails()`: `render()` shows "Loading…" in the list), and legislators' pages (their frame
+  stays until both parts are in). Hidden tabs (Statistics, Watchlist, Weigh in, How, Their numbers) are drawn when
+  opened: their render functions start with `later(view, key, fn, box)`, which keeps them in `STALE` and says "not
+  now"; `showView()` draws what's stale. The "More filters" lists are counted only while the panel is open
+  (`fillStaleSelects()`, on its `toggle`), or when one has a choice made.
 
 ## Rules and traps
 
@@ -2478,11 +2497,14 @@ Read README.md for what each script downloads. This file covers how to change th
   That happened with `track()`, and the progress bars vanished with no error. A duplicate `const`
   breaks the whole page. Before adding a top-level name, grep for it. `test/check.sh` catches
   duplicate functions.
-- **Nothing shows until the data is drawn.** CSS hides everything but the title (`html:not(.ready)`)
-  until the loader adds `ready` after `hydrate()`. This stops layout jumps, which Cloudflare scores
-  as CLS, and early taps that ran code before `DATA` existed. The build writes the header line
-  (`#sessionLabel`) into the page so it doesn't change length on load. Anything added later above
-  the tabs, like a banner that appears after loading, makes the page jump again.
+- **Only the frame shows until the list is drawn.** CSS (`html:not(.ready)`) shows the title, the tabs (not
+  clickable: `pointer-events: none`) and `#frameLoad`, a screen-tall box saying "Loading 13,864 bills…" (the build
+  writes the count), and hides everything else until the loader adds `ready` after `hydrate()` (on the public site,
+  once the list part is drawn, before the other two). This stops layout jumps, which Cloudflare scores as CLS, and
+  early taps that ran code before `DATA` existed. The build writes the header line (`#sessionLabel`), the session
+  buttons (`sessions_nav()`), the front page link (`github_page()`) and the tabs the page will have (`frame_tabs()`:
+  past sessions, prefiled bills, legislators' pages, /watchlist/) into the page so they don't change on load. Anything added later above the tabs, like a banner that appears after loading, makes
+  the tabs jump: the notice (`#notice`) still does, when there is one.
 - **Public-only features check `ROOT`:** the publish box, analytics, the stale notice and the
   legislator page links. ROOT is empty on Claude copies.
 - **Every event handler is in `wire()`**, mostly delegated from `#list`, `#openNow`, `#wlList` and
