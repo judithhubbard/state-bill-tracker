@@ -351,7 +351,9 @@ def party_tag(c):
     return f'<span class="pty {c}" role="img" title="{words}" aria-label="{words}">{short}</span>'
 
 
-def stage_text(state, stage, kind):
+def stage_text(state, stage, kind, upcoming=False):
+    if upcoming and stage == 0:
+        return "Prefiled"
     if kind == "const" and stage == 3:
         return "Sent to the voters"
     if state == "ne" and stage == 3:
@@ -448,7 +450,7 @@ def met(f, year):
 def year_view(iid, states, year, hi=None):
     """For one issue and calendar year: {state: (bills alive that year, became law that year, rows)}, the states with a
     session that year, and each state's session label and bill total. A bill is alive from the year it was introduced
-    through the year of its last action. With hi, the years from year through hi ("All years"): each bill once, alive in
+    through the year of its last action, and in the year it became law. With hi, the years from year through hi ("All years"): each bill once, alive in
     any of them, a law if it became one in any of them; the sessions' labels joined and their totals added."""
     lo, hi = year, hi or year
     by, open_, info = {}, set(), {}
@@ -467,7 +469,10 @@ def year_view(iid, states, year, hi=None):
                 # Alive through its last action, but not past its session's end: Illinois and New Jersey close a General
                 # Assembly with a line on every pending bill in the next January, which isn't the bill moving then.
                 last = min(int((b[5] or "0")[:4] or 0), f["session"] + (f.get("years") or 1) - 1)
-                new, passed = intro <= hi and lo <= max(intro, last), lo <= int(law[:4] or 0) <= hi
+                # A bill that became law in a year counts among that year's bills too (New Jersey's governor signs bills
+                # in the January after its session ends: a law, with no bills, in that year's column otherwise).
+                passed = lo <= int(law[:4] or 0) <= hi
+                new = passed or (intro <= hi and lo <= max(intro, last))
                 key = (f["session"], b[2])
                 if (new or passed) and key not in seen:
                     seen.add(key)
@@ -485,7 +490,7 @@ def badge(laws):
 
 # Sponsors' party on the maps: each state's bills that year split D, B (both), R, and none (committee or unknown), left
 # to right like the political spectrum (home.html draws the same bar from summary.json's counts).
-PARTS = (("D", "Democratic"), ("B", "both"), ("R", "Republican"), ("-", "committee"))
+PARTS = (("D", "Democrats"), ("B", "both parties"), ("R", "Republicans"), ("-", "committee or none"))
 
 
 def split(rows):
@@ -554,7 +559,7 @@ def bill_items(iid, st, mine):
         fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
         why = (b[9].get(iid) if len(b) > 9 else "") or ""
         items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}" data-k="{f["session"]}|{e(b[2])}|{e(b[5] or "")}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else (), st))}</a>'
-                     f'<span class="tags">{party_tag(party(b))}<span class="stg s{b[4]}">{e(stage_text(st, b[4], b[6]) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span></span>'
+                     f'<span class="tags">{party_tag(party(b))}<span class="stg s{b[4]}">{e(stage_text(st, b[4], b[6], f.get("upcoming")) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span></span>'
                      f'<span class="t">{e(b[3])}</span>'
                      + (f'<span class="why">{e(why)}</span>' if why and why.lower() not in b[3].lower() else "")
                      + '</li>')
@@ -614,8 +619,8 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
     keys = ['<span class="key"><i class="sq h0"></i>None</span>', '<span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>',
             '<span class="key"><i class="sq h2"></i>5&ndash;14</span>', '<span class="key"><i class="sq h3"></i>15 or more</span>']
     # The chart view's keys (the party colors and the law badge), in the same place as the map's.
-    ckeys = ['<span class="key"><i class="pD"></i>Democratic sponsors</span>', '<span class="key"><i class="pB"></i>Both parties</span>',
-             '<span class="key"><i class="pR"></i>Republican</span>', '<span class="key"><i class="pN"></i>Committee or none</span>']
+    ckeys = ['<span class="key"><i class="pD"></i>Democrats</span>', '<span class="key"><i class="pB"></i>Both parties</span>',
+             '<span class="key"><i class="pR"></i>Republicans</span>', '<span class="key"><i class="pN"></i>Committee or none</span>']
     if not upcoming:
         keys.append('<span class="key"><span class="lawn">3</span>Number that became law</span>')
         ckeys.append(keys[-1])
@@ -668,7 +673,7 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
 <div class="tablewrap"><table>
 <thead><tr><th scope="col">State</th><th scope="col" class="n">{"Prefiled" if upcoming else "Bills"}</th><th scope="col" class="n">Became law</th><th scope="col" class="n">Moving</th><th scope="col" class="n">All bills</th><th scope="col">Session</th></tr></thead>
 <tbody>{"".join(r for _, r in rows)}</tbody></table></div>
-<p class="note">{"Each bill counts once, whichever years it was active in." if year == "all" else "A bill counts in each year from its introduction to its last action in its session (in a two-year legislature, most are filed in the first year and keep moving in the second); &ldquo;Became law&rdquo; counts the year it did."} &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's {"sessions" if year == "all" else "session"}, for scale.</p>
+<p class="note">{"Each bill counts once, whichever years it was active in." if year == "all" else "A bill counts in each year from its introduction to its last action in its session (in a two-year legislature, most are filed in the first year and keep moving in the second); &ldquo;Became law&rdquo; counts the year it did, and the bill counts that year too."} &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's {"sessions" if year == "all" else "session"}, for scale.</p>
 {star_note}
 </details>
 <h2 id="bills">The bills</h2>
@@ -676,12 +681,12 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
 <label for="filter" class="vh">Show</label>
 <select id="filter"><option value="">All bills</option><option value="law">Became law</option><option value="moving">Still moving</option>{fopts}</select>
 <label for="party" class="vh">Sponsor's party</label>
-<select id="party"><option value="">Sponsor&rsquo;s party: all</option><option value="D">Democrats</option><option value="R">Republicans</option><option value="B">Both parties</option><option value="-">Committee or none</option></select><button type="button" class="info" id="partyInfo" aria-expanded="false" aria-controls="partyNote" aria-label="About sponsor&rsquo;s party">&#9432;</button>
+<select id="party"><option value="">Sponsor&rsquo;s party: all</option><option value="D">Democrats</option><option value="B">Both parties</option><option value="R">Republicans</option><option value="-">Committee or none</option></select><button type="button" class="info" id="partyInfo" aria-expanded="false" aria-controls="partyNote" aria-label="About sponsor&rsquo;s party">&#9432;</button>
 <input type="search" id="find" placeholder="Find a state" aria-label="Find a state">
 </div>
 <p class="note hidden" id="partyNote">{PARTY_NOTE}</p>
 <p class="note" id="count" aria-live="polite"></p>
-{"".join(blocks)}{fed_block}
+{star_note}{"".join(blocks)}{fed_block}
 <footer>Bills are found by the words in their titles and summaries, so a few are missed and a few are only partly about the issue. Bills for one city or county are left out. Open a bill for its status, votes and who to contact. &middot; <a href="/about/">About</a> &middot; <a href="{site_meta.SUPPORT}">Support this site</a></footer>
 </main>
 <script>
@@ -692,11 +697,11 @@ const UPCOMING = {"true" if upcoming else "false"}, YEAR = "{ytext}";
 const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n ? 1 : 0);
 // Sponsors' party: each state's bills that year (as the Show menu filters them) split D, B, R and none, drawn as a thin
 // bar on its tile (hidden when one party is chosen) and a bigger one in the panel, whose parts set the party menu.
-const PARTS = [["D", "Democratic"], ["B", "both"], ["R", "Republican"], ["-", "committee"]];
+const PARTS = [["D", "Democrats"], ["B", "Both parties"], ["R", "Republicans"], ["-", "Committee or none"]];
 const PCLASS = {{ D: "pD", B: "pB", R: "pR", "-": "pN" }};
 const PWORDS = {{ D: "Democratic sponsors", B: "sponsors from both parties", R: "Republican sponsors", "-": "no party sponsor (committee bills)" }};
 let SPLIT = {{}}, PP_FOCUS = null;
-const splitWords = (sp) => PARTS.map(([, w], i) => (sp[i] ? `${{sp[i]}} ${{w}}` : "")).filter(Boolean).join(", ");
+const splitWords = (sp) => PARTS.map(([, w], i) => (sp[i] ? `${{sp[i]}} ${{w.replace(/^(?:Both|Committee)/, (x) => x.toLowerCase())}}` : "")).filter(Boolean).join(", ");
 const pbar = (sp) => (false && sp && sp.some(Boolean) ? `<span class="pbar" aria-hidden="true">${{PARTS.map(([c], i) => (sp[i] ? `<i class="${{PCLASS[c]}}" style="flex-grow:${{sp[i]}}"></i>` : "")).join("")}}</span>` : "");
 function pbig(sp) {{
   if (!sp || !sp.some(Boolean)) return "";
