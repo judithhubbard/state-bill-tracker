@@ -26,6 +26,10 @@ from that repo. **Nothing here may change it.**
      stances, action log, county; NY's names are the same here: "abt:...") to the matching statebilltracker.org/ny/ page,
      which saves it and clears it from the address; its published lists are copied from the albany-lists KV (LISTS) to
      state-lists (state "ny"), keeping their addresses. This is the one change allowed to the AlbanyBillTracker repo.
+     Prepared 2026-11-18 (not switched): the forwarding pages and a publish-only workflow are on the local, unpushed
+     branch `move-to-statebilltracker` in /Users/jk/Dropbox/Claude/AlbanyBillTracker (commit d34f749; steps in its
+     SWITCH.md); this repo's side is lists_pages/welcome-ny.html (/welcome/ny/) and tools/copy_albany_lists.py.
+     Albany had no published lists on 2026-11-18 (4 invite codes, 0 lists).
 - **Decided 2026-10-28:** no new features on albanybilltracker.org (the ny-bill-tracker repo); only fixes and the
   January chores, made there and carried here by hand. New work happens here. **Decided 2026-10-29: leave
   albanybilltracker.org on its own code** (an interim switch of its build to this repo was planned, dry-run on
