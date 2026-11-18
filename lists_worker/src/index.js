@@ -108,6 +108,12 @@ export default {
     const url = new URL(req.url);
     const parts = url.pathname.split("/").filter(Boolean);
     try {
+      // ---- The owner's admin page (/manage): plain HTML; it asks for the admin key, keeps it in that browser, and calls
+      // the admin requests below with it. The page itself holds nothing private. ----
+      if (parts[0] === "manage" && req.method === "GET") {
+        return new Response(ADMIN_PAGE, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store",
+          "X-Robots-Tag": "noindex", "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-ancestors 'none'" } });
+      }
       // ---- Admin: the site's owner, with the admin token. ----
       if (parts[0] === "admin") {
         const token = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
@@ -232,3 +238,93 @@ export default {
     }
   },
 };
+
+// The admin page: shared lists (newest change first) with View, Hide/Show and Delete, and invite codes for groups.
+const ADMIN_PAGE = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>Shared lists · State Bill Tracker</title>
+<style>
+:root { --paper: #f6f8fb; --sheet: #fff; --ink: #14213d; --ink-2: #4a5878; --rule: #d9dfe9; --navy: #1d3b78; --red: #a3302a; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --paper: #0f1626; --sheet: #172036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2c3852; --navy: #8fb0f0; --red: #ef8a80; color-scheme: dark; } }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px 16px 60px; }
+main { max-width: 900px; margin: 0 auto; }
+h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 18px; margin: 28px 0 8px; }
+.muted { color: var(--ink-2); font-size: 13px; }
+input { font: inherit; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--sheet); color: var(--ink); }
+button { font: inherit; font-size: 14px; padding: 5px 10px; border: 1px solid var(--navy); border-radius: 6px; background: var(--sheet); color: var(--navy); cursor: pointer; }
+button.del { border-color: var(--red); color: var(--red); }
+table { width: 100%; border-collapse: collapse; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+tr.hid td { opacity: .55; }
+td.acts { white-space: nowrap; } td.acts button { margin: 0 4px 4px 0; }
+a { color: var(--navy); }
+.wrap { overflow-x: auto; }
+#msg { min-height: 1.5em; }
+</style></head><body><main>
+<h1>Shared lists</h1>
+<p class="muted">Watchlists people have shared from State Bill Tracker. Hide a list to take it off the site (you can show it again); Delete removes it for good.</p>
+<form id="login" hidden><p><label>Admin password <input type="password" id="key" autocomplete="current-password" size="40"></label> <button>Open</button></p></form>
+<p id="msg" class="muted"></p>
+<div id="app" hidden>
+  <div class="wrap"><table><thead><tr><th>List</th><th>State</th><th>Bills</th><th>Changed</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+  <h2>Invite codes for groups</h2>
+  <p class="muted">A group with a code can give its list a name in the address, an introduction and notes on each bill. Revoking a code hides the group's lists.</p>
+  <form id="newcode"><p><label>Group name <input id="group" size="36" placeholder="e.g. League of Women Voters of Ohio"></label> <button>Make a code</button></p></form>
+  <div class="wrap"><table><thead><tr><th>Code</th><th>Group</th><th>Made</th><th></th></tr></thead><tbody id="codes"></tbody></table></div>
+  <p class="muted"><button type="button" id="logout">Forget the password on this computer</button></p>
+</div>
+<script>
+const SITE = "https://statebilltracker.org/";
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let KEY = "";
+try { KEY = localStorage.getItem("adminKey") || ""; } catch (e) {}
+const msg = (t) => { document.getElementById("msg").textContent = t; };
+async function call(method, path, body) {
+  const r = await fetch(path, { method, headers: { Authorization: "Bearer " + KEY, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401) { showLogin("That password didn't work."); throw new Error("401"); }
+  if (!r.ok) throw new Error(d.error || "Something went wrong.");
+  return d;
+}
+function showLogin(t) { document.getElementById("login").hidden = false; document.getElementById("app").hidden = true; msg(t || ""); }
+async function load() {
+  msg("Loading…");
+  const [lists, codes] = await Promise.all([call("GET", "/admin/lists"), call("GET", "/admin/codes")]);
+  document.getElementById("login").hidden = true; document.getElementById("app").hidden = false;
+  lists.sort((a, b) => (b.updated || "").localeCompare(a.updated || ""));
+  document.getElementById("rows").innerHTML = lists.length ? lists.map((l) => '<tr class="' + (l.hidden ? "hid" : "") + '"><td><b>' + esc(l.title || "(no title)") + "</b>"
+    + (l.group ? '<br><span class="muted">' + esc(l.group) + "</span>" : "") + (l.views ? '<br><span class="muted">opened ' + l.views.total + " times, " + l.views.week + " this week</span>" : "")
+    + (l.hidden ? '<br><span class="muted">Hidden</span>' : "") + "</td><td>" + esc((l.state || "").toUpperCase()) + "</td><td>" + l.bills + "</td><td>" + esc((l.updated || "").slice(0, 10)) + '</td><td class="acts">'
+    + '<a href="' + SITE + esc(l.state) + "/watchlist/#list=" + esc(l.slug) + '" target="_blank" rel="noopener">View</a> '
+    + '<button type="button" data-hide="' + esc(l.slug) + '" data-to="' + (l.hidden ? "0" : "1") + '">' + (l.hidden ? "Show" : "Hide") + "</button>"
+    + '<button type="button" class="del" data-del="' + esc(l.slug) + '" data-title="' + esc(l.title) + '">Delete</button></td></tr>').join("")
+    : '<tr><td colspan="5" class="muted">No shared lists yet.</td></tr>';
+  codes.sort((a, b) => (b.created || "").localeCompare(a.created || ""));
+  document.getElementById("codes").innerHTML = codes.length ? codes.map((c) => "<tr><td><code>" + esc(c.code) + "</code></td><td>" + esc(c.group) + (c.active ? "" : ' <span class="muted">(revoked)</span>') + "</td><td>"
+    + esc((c.created || "").slice(0, 10)) + '</td><td class="acts">' + (c.active ? '<button type="button" class="del" data-revoke="' + esc(c.code) + '" data-group="' + esc(c.group) + '">Revoke</button>' : "") + "</td></tr>").join("")
+    : '<tr><td colspan="4" class="muted">No codes yet.</td></tr>';
+  msg(lists.length + " shared list" + (lists.length === 1 ? "" : "s") + ".");
+}
+document.getElementById("login").addEventListener("submit", (e) => {
+  e.preventDefault(); KEY = document.getElementById("key").value.trim();
+  try { localStorage.setItem("adminKey", KEY); } catch (err) {}
+  load().catch((err) => { if (err.message !== "401") msg(err.message); });
+});
+document.getElementById("logout").addEventListener("click", () => { try { localStorage.removeItem("adminKey"); } catch (e) {} KEY = ""; showLogin("Forgotten on this computer."); });
+document.getElementById("newcode").addEventListener("submit", async (e) => {
+  e.preventDefault(); const g = document.getElementById("group").value.trim(); if (!g) return;
+  try { const r = await call("POST", "/admin/codes", { group: g }); document.getElementById("group").value = ""; await load(); msg("Code for " + r.group + ": " + r.code + ". Send it to them; they enter it when they share their list."); } catch (err) { if (err.message !== "401") msg(err.message); }
+});
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-hide], button[data-del], button[data-revoke]");
+  if (!b) return;
+  try {
+    if (b.dataset.hide) await call("PUT", "/admin/lists/" + b.dataset.hide, { hidden: b.dataset.to === "1" });
+    if (b.dataset.del) { if (!confirm("Delete “" + b.dataset.title + "” for good? This can't be undone.")) return; await call("DELETE", "/admin/lists/" + b.dataset.del); }
+    if (b.dataset.revoke) { if (!confirm("Revoke the code for " + b.dataset.group + "? Their lists will be hidden.")) return; await call("DELETE", "/admin/codes/" + b.dataset.revoke); }
+    await load();
+  } catch (err) { if (err.message !== "401") msg(err.message); }
+});
+if (KEY) load().catch((err) => { if (err.message !== "401") msg(err.message); }); else showLogin();
+</script></main></body></html>`;
