@@ -38,6 +38,10 @@ a { color: var(--navy); }
 a:hover { color: var(--hover); }
 a:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; border-radius: 2px; }
 .note { color: var(--ink-2); }
+/* Data sources: smaller, in the narrow heading face, set apart from the page's own voice. */
+.sources { margin-top: 32px; padding: 4px 16px 6px; border-left: 3px solid color-mix(in srgb, var(--ink-2) 35%, transparent);
+  font: 14.5px/1.5 var(--display); font-stretch: 92%; color: var(--ink-2); }
+.sources h2 { margin-top: 10px; font: 700 15px/1.3 var(--display); font-stretch: 92%; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
 .back { margin: 0 0 18px; font: 600 14px/1.2 var(--body); }
 .back a { text-decoration: none; }
 .back a:hover { text-decoration: underline; }
@@ -54,11 +58,14 @@ footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--ink-2)
   <h2>How can you use this tracker to make a difference?</h2>
   <p>There are a lot of steps between a bill being proposed and becoming law. A bill may need to pass several committees, and each committee chair has to bring it up for a vote. A bill that has passed committee may still need a vote by the full legislature. And then the governor has to sign it.</p>
   <p>Here, we make each step visible, and tell you who to contact, and when. Ask your legislators to support a bill (or oppose it). Ask a committee chair to call the bill up. Ask the governor to sign. At each of these steps, your voice has an impact.</p>
-  <p>One message isn&rsquo;t enough. It is through the combined voices of engaged citizens that we can effect change, and through continued vigilance that we can keep a bill from stalling deep in the legislative machinery. So star the bills you care about to build your watchlist, check back as they move, and share your list with friends, neighbors and groups who care about the same issues.</p>
+  <p>It is through the combined voices of engaged citizens that we can effect change, and through continued vigilance that we can keep a bill from stalling deep in the legislative machinery. So star the bills you care about to build your watchlist, check back as they move, and share your list with friends, neighbors and groups who care about the same issues.</p>
 
-  <p>Built by Dr. Judith Hubbard, earthquake scientist, mother of three, engaged citizen, and NY county legislator. Building and running this site isn&rsquo;t free &ndash; please consider <a href="SUPPORT_URL">contributing here</a>.</p>
-  <p>Want to learn more about earthquakes? Read my newsletter, <a href="https://earthquakeinsights.substack.com/">Earthquake Insights</a>! We make cutting-edge science digestible and fun.</p>
+  <h2>Who am I?</h2>
+  <p>Built by Dr. Judith Hubbard, earthquake scientist, mother of three, engaged citizen, and NY county legislator. Through my work on the Tompkins County Legislature, I have been on the receiving end of messages from engaged residents. I have learned that one email can be enough to get someone&rsquo;s attention &ndash; and a dozen can start a conversation among legislators.</p>
+  <p>Building and running this site isn&rsquo;t free &ndash; please consider <a href="SUPPORT_URL">contributing here</a>.</p>
+  <p>(Want to learn more about earthquakes? Read my newsletter, <a href="https://earthquakeinsights.substack.com/">Earthquake Insights</a>! We make cutting-edge science digestible and fun.)</p>
 
+  <section class="sources">
   <h2>Data sources</h2>
   <ul>
     <li>Bills, votes and summaries: legislatures&rsquo; own public records wherever possible, supplemented with data from <a href="https://openstates.org/">Open States</a> and from <a href="https://legiscan.com/">LegiScan</a> (used under a <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution license</a>).</li>
@@ -68,6 +75,7 @@ footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--ink-2)
   </ul>
   <p>Each state&rsquo;s page lists its own sources.</p>
   <p class="note">Legislatures&rsquo; records have errors and gaps, and so may this site. If something looks wrong, please let me know.</p>
+  </section>
 
   <h2>Your privacy</h2>
   <p>Your watchlist and settings stay in your own browser. If you share a list, its bills, its title and any notes you add are stored so others can see them; nothing else about you is. The site doesn&rsquo;t ask for your name or email, and doesn&rsquo;t sell or share anything about you. It counts visits with <a href="https://www.goatcounter.com/">GoatCounter</a>, which doesn&rsquo;t track individuals.</p>
