@@ -699,6 +699,7 @@ function ppClick(e) {{
   if (!b) return false;
   const sel = document.getElementById("party");
   sel.value = sel.value === b.dataset.pp ? "" : b.dataset.pp;
+  countOnce(`issue/party filter/${{sel.value || "all"}}`);
   PP_FOCUS = b.closest(".pkey") ? b.dataset.pp : null;
   const box = b.closest("#pall") ? document.getElementById("pall") : pst;
   apply();
@@ -852,10 +853,18 @@ function setChart() {{
   document.getElementById("legend").classList.toggle("charted", CHART);
   tiles.inert = CHART;
 }}
+// Visit counting (GoatCounter, added by the build once launched): anonymous events, never what anyone typed.
+function countUse(name, tries = 0) {{
+  if (window.goatcounter?.count) {{ try {{ window.goatcounter.count({{ path: name, title: name, event: true }}); }} catch (e) {{}} return; }}
+  if (document.querySelector("script[data-goatcounter]") && tries < 6) setTimeout(() => countUse(name, tries + 1), 2000);
+}}
+const COUNTED = new Set();
+function countOnce(name) {{ if (!COUNTED.has(name)) {{ COUNTED.add(name); countUse(name); }} }}
 vsw.addEventListener("click", (e) => {{
   const b = e.target.closest("button[data-v]");
   if (!b || (b.dataset.v === "chart") === CHART) return;
   CHART = b.dataset.v === "chart";
+  countOnce(`issue/view/${{CHART ? "chart" : "map"}}`);
   try {{ localStorage.setItem("abt:issueview", CHART ? "chart" : "map"); }} catch (e) {{}}
   try {{ history.replaceState(null, "", (CHART ? "?view=chart" : location.pathname) + location.hash); }} catch (e) {{}}
   setChart();
@@ -894,15 +903,23 @@ pst.addEventListener("click", (e) => {{
   const b = e.target.closest("button.star");
   if (!b) return;
   const [session, num, last] = b.dataset.k.split("|"), w = readWatch(b.dataset.st), k = `${{session}}:${{baseNum(num)}}`;
-  if (k in w) delete w[k]; else w[k] = {{ seen: last, stance: "support" }};
+  if (k in w) delete w[k]; else {{ w[k] = {{ seen: last, stance: "support" }}; countUse("issue/starred"); }}
   writeWatch(b.dataset.st, w);
   const label = b.getAttribute("aria-label").replace(/^(Star|Remove) /, "").replace(/(: follow it in Your bills| from your bills)$/, "");
   b.outerHTML = starBtn(b.dataset.st, b.dataset.k, label);
   pst.querySelector(`button.star[data-k="${{CSS.escape(b.dataset.k)}}"]`)?.focus();
 }});
-document.getElementById("filter").addEventListener("change", apply);
-document.getElementById("party").addEventListener("change", apply);
-document.getElementById("find").addEventListener("input", apply);
+document.getElementById("filter").addEventListener("change", (e) => {{ countOnce(`issue/filter/${{e.target.value || "all"}}`); apply(); }});
+document.getElementById("party").addEventListener("change", (e) => {{ countOnce(`issue/party filter/${{e.target.value || "all"}}`); apply(); }});
+document.getElementById("find").addEventListener("input", (e) => {{ countOnce("issue/table search"); apply(); }});
+document.querySelector("details.table")?.addEventListener("toggle", (e) => {{ if (e.target.open) countOnce("issue/table opened"); }});
+// Links into a state's pages: from the panel beside the map, or the table.
+document.addEventListener("click", (e) => {{
+  const a = e.target.closest("a[href]");
+  if (!a || e.defaultPrevented) return;
+  const from = a.closest("#pstate") ? "panel" : a.closest("details.table") ? "table" : "";
+  if (from) countUse(`issue/to a state/${{from}}`);
+}});
 document.getElementById("partyInfo").addEventListener("click", (ev) => {{
   const note = document.getElementById("partyNote"), open = note.classList.toggle("hidden") === false;
   ev.currentTarget.setAttribute("aria-expanded", String(open));

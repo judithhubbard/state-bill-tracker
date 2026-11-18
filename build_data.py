@@ -73,14 +73,14 @@ def narrow_bill(r):
 
 
 def analytics_tags():
-    """Visit counters for the public site; none for local test builds."""
-    if not P.SITE_URL.startswith(P.PUBLIC_URL.rstrip("/")):
+    """Visit counters for the public site once launched; none for the preview or local test builds."""
+    import site_meta
+    if not (site_meta.launched() and P.SITE_URL.startswith(P.PUBLIC_URL.rstrip("/"))):
         return ""
     tags = ""
     if P.CF_ANALYTICS_TOKEN:
         tags += ('<script defer src="https://static.cloudflareinsights.com/beacon.min.js" '
                  f'data-cf-beacon=\'{{"token": "{P.CF_ANALYTICS_TOKEN}"}}\'></script>\n')
-    import site_meta
     code = P.GOATCOUNTER_CODE or site_meta.GOATCOUNTER
     if code:
         tags += (f'<script data-goatcounter="https://{code}.goatcounter.com/count" '

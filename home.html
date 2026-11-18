@@ -541,6 +541,14 @@ let past = {};
 try { past = JSON.parse(document.getElementById("past").textContent); } catch (e) {}
 const PAST_YEARS = Object.keys(past).filter((y) => Object.keys(past[y]).some((k) => k !== "_asOf")).map(Number);
 const asOfText = (y) => new Date(past[y]._asOf + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+// Visit counting (GoatCounter, whose tag the build adds once the site is launched): anonymous events by name, never
+// what anyone typed or which bills they follow. countOnce() counts a name at most once per page view.
+function countUse(name, tries = 0) {
+  if (window.goatcounter?.count) { try { window.goatcounter.count({ path: name, title: name, event: true }); } catch (e) {} return; }
+  if (document.querySelector("script[data-goatcounter]") && tries < 6) setTimeout(() => countUse(name, tries + 1), 2000);
+}
+const COUNTED = new Set();
+function countOnce(name) { if (!COUNTED.has(name)) { COUNTED.add(name); countUse(name); } }
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const tiles = document.getElementById("tiles");
 const same = (a, b) => JSON.stringify(a?.dots) === JSON.stringify(b?.dots);
@@ -690,6 +698,7 @@ vsw.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-v]");
   if (!b || (b.dataset.v === "chart") === CHART) return;
   CHART = b.dataset.v === "chart";
+  countOnce(`home/view/${CHART ? "chart" : "map"}`);
   try { localStorage.setItem("abt:issueview", CHART ? "chart" : "map"); } catch (e) {}
   setChart();
   remember();
@@ -775,6 +784,7 @@ for (const [el, sel] of [[tiles, "button.tile"], [chartEl, "button.crow"]]) {
 }
 document.getElementById("pparty").addEventListener("change", (e) => {
   PARTY = e.target.value;
+  countOnce(`home/party filter/${PARTY || "all"}`);
   drawIssue();
   remember();
 });
@@ -782,6 +792,7 @@ document.getElementById("panel").addEventListener("click", (e) => {
   const pp = e.target.closest("[data-pp]");
   if (pp && issue) {
     PARTY = PARTY === pp.dataset.pp ? "" : pp.dataset.pp;
+    countOnce(`home/party filter/${PARTY || "all"}`);
     PP_FOCUS = pp.closest(".pkey") ? pp.dataset.pp : null;
     drawIssue();
     remember();
@@ -1064,6 +1075,7 @@ function remember() {
       if (!b) return;
       issue = issues.issues.find((i) => i.id === b.dataset.id) || null;
       CUSTOM = b.dataset.id === "mine" ? mineView() : null;
+      countOnce(`home/topic/${b.dataset.id || "party control"}`);
       render();
       remember();
     });
@@ -1089,6 +1101,7 @@ menu.addEventListener("click", (e) => {
   if (!b) return;
   issue = issues.issues.find((i) => i.id === b.dataset.id) || null;
   CUSTOM = b.dataset.id === "mine" ? mineView() : null;
+  countOnce(`home/topic/${b.dataset.id || "party control"}`);
   openMenu(false);
   show.focus();
   render();
@@ -1103,6 +1116,12 @@ yearsEl.addEventListener("click", (e) => {
   CUSTOM = null;
   render();
   remember();
+});
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("a[href]");
+  if (!a || e.defaultPrevented) return;
+  const from = a.closest("#panel") ? "panel" : a.closest("#tiles") ? "map" : a.closest("#mine") ? "your bills" : a.closest(".allst") ? "states list" : "";
+  if (from) countUse(`home/to a state/${from}${issue ? " (topic)" : ""}`);
 });
 let WANT_MINE = location.hash === "#mine";  // shown once "Your bills" has loaded (drawMine())
 {
@@ -1144,7 +1163,7 @@ function starClick(e) {
   if (!b) return false;
   e.preventDefault();
   const [st, session, num, last] = b.dataset.star.split("|"), w = readWatch(st), k = `${session}:${baseNum(num)}`;
-  if (k in w) delete w[k]; else w[k] = { seen: last, stance: "support" };
+  if (k in w) delete w[k]; else { w[k] = { seen: last, stance: "support" }; countUse(`home/starred/${b.closest(".found") ? "search" : b.closest("#mine") ? "your bills" : "panel"}`); }
   writeWatch(st, w);
   b.outerHTML = starBtn(st, +session, num, last, b.getAttribute("aria-label").replace(/^(Star|Remove) /, "").replace(/(: follow it in Your bills| from your bills)$/, ""));
   drawMine();
@@ -1240,7 +1259,7 @@ async function drawMine() {
   const bar = document.getElementById("mineBar"), list = document.getElementById("mineList");
   const setOpen = (on) => { bar.setAttribute("aria-expanded", String(on)); list.hidden = !on; };
   setOpen(false);
-  bar.addEventListener("click", () => setOpen(list.hidden));
+  bar.addEventListener("click", () => { if (list.hidden) countOnce("home/your bills/opened"); setOpen(list.hidden); });
   document.addEventListener("click", (e) => { if (!list.hidden && !e.target.closest("#mine")) setOpen(false); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !list.hidden) { setOpen(false); bar.focus(); } });
 }
@@ -1434,7 +1453,13 @@ drawMine();
     found.innerHTML = `<div class="fhead"><span class="cnt" aria-live="polite">${count}</span>${mapIt && !loading ? '<button type="button" class="onmap">Show on the map</button>' : ""}${pick}</div>` + (rows ? `<ul>${rows}${more}</ul>` : "");
     found.hidden = false;
     q.setAttribute("aria-expanded", "true");
+    if (!loading) {
+      clearTimeout(countTimer);
+      const key = q.value.trim().toLowerCase();
+      countTimer = setTimeout(() => { if (key !== countedKey) { countedKey = key; countUse(hits.length ? "home/search/found bills" : "home/search/found nothing"); } }, 1500);
+    }
   }
+  let countTimer = 0, countedKey = "";
   function close() { found.hidden = true; q.setAttribute("aria-expanded", "false"); }
   // Re-run as typing pauses, and as each state's file arrives (at most a few times a second).
   function schedule(wait) {
@@ -1479,6 +1504,7 @@ drawMine();
           star: starBtn(st, s.session, num, "", `${stateName(st)} ${numText(st, num)}`) };
       }));
       issue = null; pinned = null;
+      countUse("home/search/shown on the map");
       close(); render(); remember();
       return;
     }
@@ -1489,6 +1515,7 @@ drawMine();
       links()[i]?.focus();
       return;
     }
+    if (e.target.closest("li a")) { countUse("home/search/opened a bill"); return; }
     const b = e.target.closest("button[data-star]");
     if (!b) return;
     e.preventDefault();

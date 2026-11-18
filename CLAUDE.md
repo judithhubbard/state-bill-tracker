@@ -2276,7 +2276,10 @@ from that repo. **Nothing here may change it.**
      `LAUNCHED=1` so `build_site.sh` stops telling search engines to stay away.
   3. Point statebilltracker.org (and .com, forwarding with 302) at the Pages project: add it as a custom domain
      in Cloudflare Pages and change the DNS at Porkbun.
-  4. Analytics: GoatCounter and Cloudflare Web Analytics codes in each state's profile.py (none yet).
+  4. Analytics: GoatCounter's code is `statebilltracker` (site_meta.GOATCOUNTER, one for the whole site; counted only
+     with LAUNCHED=1). The front page and issue pages count anonymous events too ("home/...", "issue/...": topics, Map or
+     Chart, party filter, search found / found nothing / opened, stars, Your bills, links into states; never typed words).
+     Cloudflare Web Analytics: none yet.
   5. Published lists: a KV namespace for the `state-lists` Worker and each state's `listsApi`.
   6. Check every state's pages once more (test/crawl.js) and republish the private NJ Claude copy.
 - Fixes made in ny-bill-tracker still get carried over here by hand (compare against `git log` there since
