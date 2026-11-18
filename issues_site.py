@@ -915,7 +915,7 @@ pst.addEventListener("click", (e) => {{
   const b = e.target.closest("button.star");
   if (!b) return;
   const [session, num, last] = b.dataset.k.split("|"), w = readWatch(b.dataset.st), k = `${{session}}:${{baseNum(num)}}`;
-  if (k in w) delete w[k]; else {{ w[k] = {{ seen: last, stance: "support" }}; countUse("issue/starred"); }}
+  if (k in w) delete w[k]; else {{ w[k] = {{ seen: last, stance: null }}; countUse("issue/starred"); }}
   writeWatch(b.dataset.st, w);
   const label = b.getAttribute("aria-label").replace(/^(Star|Remove) /, "").replace(/(: follow it in Your bills| from your bills)$/, "");
   b.outerHTML = starBtn(b.dataset.st, b.dataset.k, label);

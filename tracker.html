@@ -1369,8 +1369,9 @@ const blank = () => ({ agenda: "", stage: null, topics: new Set(), q: "", law: "
 
 // "Places": leave out bills only about other counties, or keep only bills about yours.
 // A bill's places are the counties it's only about ([] for bills not about specific places).
-// New York's default county (Tompkins: Sen. Webb, Asm. Kelles); other states start with none chosen.
-let HOME = STATE.code === "ny" ? "Tompkins" : "";
+// No county until the visitor picks one (the Albany site started New York in Tompkins County; this site doesn't). A county
+// saved on albanybilltracker.org comes along with the move (/welcome/ny/).
+let HOME = "";
 try { HOME = localStorage.getItem(STORE + "county") || HOME; } catch (e) {}
 // The two "hide" checkboxes. A bill's places are the counties it's only about ([] if it isn't about specific places).
 // "Only bills that could affect your county": statewide bills plus bills about your county; hides bills only
@@ -2031,7 +2032,7 @@ const shortName = (n) => (n || "").replace(/,?\s+(Jr\.?|Sr\.?|II|III|IV)$/, "").
 const lastName = (n) => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\s-]/g, "").split(/\s+/).filter((w) => !["jr", "sr", "ii", "iii"].includes(w)).pop() || "";
 
 // ---- Your legislators: chosen by address or from a list, kept in this browser; otherwise
-// the defaults the site was built with (Tompkins County: Sen. Webb, Asm. Kelles). ----
+// none. ----
 const REPS_STORE = STORE + "reps";
 // New York keeps the plain "abt:reps", which New Jersey and Virginia also wrote before each state had its own
 // (2026-10-29): a choice with a town is theirs (New Jersey's District 16 read as Sen. Liu and Asm. Norber), so it's dropped.

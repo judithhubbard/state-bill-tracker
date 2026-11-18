@@ -1223,7 +1223,7 @@ function starClick(e) {
   if (!b) return false;
   e.preventDefault();
   const [st, session, num, last] = b.dataset.star.split("|"), w = readWatch(st), k = `${session}:${baseNum(num)}`;
-  if (k in w) delete w[k]; else { w[k] = { seen: last, stance: "support" }; countUse(`home/starred/${b.closest(".found") ? "search" : b.closest("#mine") ? "your bills" : "panel"}`); }
+  if (k in w) delete w[k]; else { w[k] = { seen: last, stance: null }; countUse(`home/starred/${b.closest(".found") ? "search" : b.closest("#mine") ? "your bills" : "panel"}`); }
   writeWatch(st, w);
   b.outerHTML = starBtn(st, +session, num, last, b.getAttribute("aria-label").replace(/^(Star|Remove) /, "").replace(/(: follow it in Your bills| from your bills)$/, ""));
   drawMine();
