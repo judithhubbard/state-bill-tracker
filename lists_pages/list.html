@@ -25,59 +25,33 @@
 .grp { font-weight: 600; color: var(--ink); }
 .intro { margin: 0 0 16px; overflow-wrap: anywhere; }
 .intro p { margin: 0 0 10px; }
-.acts { margin: 0 0 20px; }
-.acts .btn[aria-pressed="true"] { background: var(--navy); color: var(--sheet); }
-/* A bill opens in place: its row is a button, and below it the same card its state's watchlist shows, drawn by the state's
-   page in a frame (#embed=: tracker.html's EMBED). One frame per state's session, loaded in the background, moved under
-   whichever of its bills is open (moveBefore keeps it loaded; without it, the frame is laid over the row's slot). */
-main { position: relative; }
-#frames { position: absolute; left: 0; top: 0; width: 100%; height: 0; }
-.sframe { display: block; width: 100%; height: 0; border: 0; background: var(--sheet); }
-#frames > .sframe { position: absolute; left: 0; top: 0; visibility: hidden; }
-#frames > .sframe.over { visibility: visible; }
-.sframe.stale, #frames > .sframe.over.stale { visibility: hidden; }
-.mst li > .rowbtn { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; width: 100%; padding: 8px 12px; margin: 0;
-  border: 0; background: none; color: var(--ink); font: inherit; font-size: 14.5px; text-align: left; cursor: pointer; }
-.mst li > .rowbtn:hover, .mst li > .rowbtn:focus-visible { background: var(--paper); }
-.mst li > .rowbtn:focus-visible { outline-offset: -3px; }
-.rowbtn .todo::after { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 2px 2px 7px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform .15s; }
-.rowbtn[aria-expanded="true"] .todo::after { transform: rotate(-135deg); margin-bottom: -1px; }
-.rowbtn:hover .todo { color: var(--hover); }
-.emb { border-top: 1px dashed var(--rule); }
-.emb .eload { margin: 0; padding: 10px 12px; color: var(--ink-2); font-size: 14px; }
-.emb .efoot { margin: 0; padding: 4px 12px 10px; font-size: 13.5px; }
-@media (prefers-reduced-motion: reduce) { .rowbtn .todo::after { transition: none; } }
 </style>
 </head>
 <body>
 <main>
   <p class="back"><a href="/">&larr; State Bill Tracker</a><span id="stLink"></span></p>
   <h1 id="title">&nbsp;</h1>
-  <p class="sub" id="by">&nbsp;</p>
+  <p class="sub lmeta" id="by">&nbsp;</p>
   <div class="intro" id="intro"></div>
-  <div class="row acts" id="acts" hidden>
-    <button type="button" class="btn" id="follow" aria-pressed="false">Follow</button>
-    <button type="button" class="btn" id="addAll">Add all to my watchlist</button>
-    <a class="btn" id="edit" hidden>Edit</a>
-    <span class="muted" id="msg"></span>
-  </div>
   <div id="bills"></div>
-  <div id="frames"></div>
   <footer><a href="/about/">About</a> &middot; <a href="SUPPORT_URL">Support this site</a></footer>
 </main>
 <script>
 /*common.js*/
+/*embed.js*/
 </script>
 <script>
 const today = () => new Date().toISOString().slice(0, 10);
-let LIST = null, ROWS = [];
+let LIST = null, ROWS = [];   // ROWS: the list's bills, with lookUp()'s answers once known
 const slugNow = () => decodeURIComponent(location.hash.replace(/^#(?:list=)?/, "")).trim();
 function gone(text) {
   document.title = "Shared list · State Bill Tracker";
   $("title").textContent = "List not found";
   $("by").textContent = text;
-  $("intro").innerHTML = ""; $("bills").innerHTML = ""; $("acts").hidden = true; $("stLink").innerHTML = "";
+  $("intro").innerHTML = ""; Frames.show($("bills"), []); $("stLink").innerHTML = "";
 }
+// The list's bills are shown by each state's own page: its watchlist view, in a frame per state's session (embed.js).
+// A list made in this browser with the list editor sets its sides and takes bills off from there.
 async function load() {
   const slug = slugNow();
   if (!slug) return gone("This link is missing the list's name.");
@@ -94,189 +68,81 @@ async function load() {
   $("title").textContent = LIST.title || "Shared list";
   $("stLink").innerHTML = one ? ` &middot; <a href="/${esc(LIST.state)}/">${esc(stName(LIST.state))}</a>` : "";
   const bills = listBills(LIST);
-  earlyFrame(bills);
-  $("by").innerHTML = [LIST.group ? `<span class="grp">${esc(LIST.group)}</span>` : "",
-    `${bills.length} bill${bills.length === 1 ? "" : "s"}`, LIST.updated ? `updated ${fmtDay(LIST.updated.slice(0, 10))}` : ""].filter(Boolean).join(" · ");
+  // A list made in this browser (it holds the list's key): Edit and Share instead of Follow, and never in the lists it follows.
+  OWN = !!editKeyFor(LIST.slug);
+  if (OWN) { const f = readFollows(); if (LIST.slug in f) { delete f[LIST.slug]; writeFollows(f); } }
+  const named = OWN && readNamed()[LIST.slug];
+  ROWS = bills;
+  drawButtons();
   $("intro").innerHTML = paras(LIST.intro);
-  const stance = showStance(LIST);
-  ROWS = await Promise.all(bills.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)), note: noteOf(LIST, b), shown: stance })));
-  const by = {};
-  for (const x of ROWS) (by[x.st] ||= []).push(x);
-  const sts = Object.keys(by).sort((a, b) => stName(a).localeCompare(stName(b)));
-  // Each bill found in its state's data opens in place (openBill()); one that isn't links to the state's page.
-  ROWS.forEach((x, i) => { x.i = i; });
-  for (const F of Object.values(FRAMES)) park(F);
-  WARMED.clear();
-  $("bills").innerHTML = sts.map((st) => `<div class="mst">${one ? "" : `<h3><a href="/${st}/">${esc(stName(st))}</a></h3>`}<ol>`
-    + by[st].map((x) => billRow({ ...x, stance: x.shown ? x.stance : "", open: x.found ? `emb${x.i}` : "" })).join("") + "</ol></div>").join("") || '<p class="muted">No bills on this list yet.</p>';
-  $("acts").hidden = false;
-  warmFrames();
-  // A list made in this browser (it holds the list's key): Edit instead of Follow, and never in the lists it follows.
-  const own = !!editKeyFor(LIST.slug);
-  if (own) { const f = readFollows(); if (LIST.slug in f) { delete f[LIST.slug]; writeFollows(f); } }
-  $("follow").hidden = own;
-  $("edit").hidden = !own;
-  if (own) $("edit").href = readNamed()[LIST.slug] ? `/lists/edit/#${encodeURIComponent(LIST.slug)}` : "/your-bills/#starred";
-  drawButtons();
-}
-function drawButtons() {
-  const on = LIST && LIST.slug in readFollows();
-  $("follow").setAttribute("aria-pressed", String(on));
-  $("follow").textContent = on ? "Following ✓" : "Follow";
-  const missing = ROWS.filter((x) => !(`${x.session}:${x.num}` in readWatch(x.st)));
-  $("addAll").hidden = !ROWS.length;
-  $("addAll").disabled = !missing.length;
-  $("addAll").textContent = missing.length ? "Add all to my watchlist" : "All on your watchlist";
-}
-$("follow").addEventListener("click", () => {
-  const f = readFollows();
-  if (LIST.slug in f) { delete f[LIST.slug]; $("msg").innerHTML = ""; countUse("list/unfollowed"); }
-  else {
-    f[LIST.slug] = { title: LIST.title, known: ROWS.map((x) => x.key), since: today() };
-    $("msg").innerHTML = `It&rsquo;s in <a href="/your-bills/#tab=${esc(encodeURIComponent(LIST.slug))}">Your bills</a>.`;
-    countUse("list/followed");
-  }
-  writeFollows(f);
-  drawButtons();
-});
-$("addAll").addEventListener("click", () => {
-  let n = 0;
-  for (const x of ROWS) {
-    const w = readWatch(x.st), k = `${x.session}:${x.num}`;
-    if (k in w) continue;
-    w[k] = { seen: x.last || today(), stance: x.stance };
-    writeWatch(x.st, w);
-    n++;
-  }
-  $("msg").innerHTML = `Added ${n} bill${n === 1 ? "" : "s"} to <a href="/your-bills/">Your bills</a>.`;
-  countUse("list/added all");
-  drawButtons();
-});
-// A bill opened in place: its card from the state's watchlist (what's next, who decides and how to reach them, the email to
-// copy, what it does, its history and votes), drawn by the state's own page in a frame. One frame per state's session
-// (FRAMES), loaded at #embed=<session> in the background once the list is drawn (the first three states; others when one
-// of their rows is pointed at, touched or reached with the keyboard): it reads only that page's bill list. Opening a bill
-// tells the frame which to show ({sbtShow: "2026.-A1234"}, "-" before an opposed bill's number), and pointing at a row
-// starts its details downloading ({sbtWarm}). The frame says how tall it is and which bill it shows ({sbtEmbed, bill});
-// it's shown once it shows the bill asked for. One bill of a state is open at a time.
-const FRAMES = {};   // a session's page ("/nj/") -> {f (the frame), ready, q (messages until it's ready), row, bill, h}
-const MOVES = !!Element.prototype.moveBefore;   // (a frame moved with appendChild would load again)
-function frameFor(x) {
-  if (FRAMES[x.page]) return FRAMES[x.page];
-  const f = document.createElement("iframe");
-  f.className = "sframe stale";
-  f.id = `frame${Object.keys(FRAMES).length}`;
-  f.title = `${stName(x.st)}: a bill from this list`;
-  f.src = `${x.page}#embed=${x.session}`;
-  $("frames").appendChild(f);
-  return (FRAMES[x.page] = { f, ready: false, q: [], row: null, bill: "", h: 0 });
-}
-function tell(F, msg) {
-  if (F.ready) F.f.contentWindow?.postMessage(msg, location.origin); else F.q.push(msg);
-}
-const rowBtn = (i) => $("bills").querySelector(`button.rowbtn[aria-controls="emb${i}"]`);
-// The first state shown starts loading as soon as the list's bills are known (its main page; a frame asked for another
-// session moves itself to that session's page), so it shares the connection with the bills' statuses; the next two
-// once the list is drawn, one after another (each once the one before has its bills, or after 4 seconds), in the order
-// the list shows them.
-function earlyFrame(bills) {
-  const st = [...new Set(bills.map((b) => b.st))].sort((a, b) => stName(a).localeCompare(stName(b)))[0];
-  if (st) frameFor({ st, page: `/${st}/`, session: Math.max(...bills.filter((b) => b.st === st).map((b) => b.session)) });
-}
-function warmFrames() {
-  const pages = [];
-  for (const b of $("bills").querySelectorAll("button.rowbtn")) { const x = ROWS[+b.getAttribute("aria-controls").slice(3)]; if (!pages.some((y) => y.page === x.page)) pages.push(x); }
-  const next = (k) => {
-    if (k >= Math.min(3, pages.length)) return;
-    const F = frameFor(pages[k]);
-    if (F.loaded) return next(k + 1);
-    F.then = () => next(k + 1);
-    setTimeout(() => { const then = F.then; F.then = null; then?.(); }, 4000);
+  const extra = (g) => {
+    const notes = {};
+    if (LIST.group) for (const b of g.bills) { const t = noteOf(LIST, b); if (t) notes[baseNum(b.num)] = t; }
+    return { ...(named ? { own: LIST.slug } : {}), ...(Object.keys(notes).length ? { notes, group: LIST.group } : {}) };
   };
-  next(0);
+  const opt = { extra: (g) => (Object.keys(extra(g)).length ? extra(g) : null) };
+  if (!bills.length) { Frames.show($("bills"), []); $("bills").innerHTML = '<p class="muted">No bills on this list yet.</p>'; return; }
+  Frames.show($("bills"), await listGroups(`list:${LIST.slug}`, bills, null, opt));
+  ROWS = await Promise.all(bills.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)) })));
+  Frames.show($("bills"), await listGroups(`list:${LIST.slug}`, bills, ROWS, { ...opt, row: (x) => ({ stance: showStance(LIST) ? x.stance : "", note: noteOf(LIST, x) }) }));
+  drawButtons();
 }
-const WARMED = new Set();
-function warmRow(e) {
-  const btn = e.target.closest?.("button.rowbtn");
-  if (!btn) return;
-  const i = +btn.getAttribute("aria-controls").slice(3), x = ROWS[i];
-  if (!x || WARMED.has(i)) return;
-  WARMED.add(i);
-  tell(frameFor(x), { sbtWarm: baseNum(x.full) });
+let OWN = false;
+// The summary line: the group, how many bills, when it changed, and the list's links: Edit · Share ▾ for its maker,
+// Follow (Unfollow) · Add all to my watchlist for anyone else.
+function drawButtons() {
+  if (!LIST) return;
+  const n = ROWS.length, on = LIST.slug in readFollows(), missing = ROWS.filter((x) => !(`${x.session}:${x.num}` in readWatch(x.st))).length;
+  if ($("by").querySelector('[aria-expanded="true"]')) return;
+  const msg = $("msg")?.innerHTML || "";
+  $("by").innerHTML = [LIST.group ? `<span class="grp">${esc(LIST.group)}</span>` : "", `<span>${n} bill${n === 1 ? "" : "s"}</span>`,
+    LIST.updated ? `<span>updated ${fmtDay(LIST.updated.slice(0, 10))}</span>` : "",
+    ...(OWN ? [`<a href="${readNamed()[LIST.slug] ? `/lists/edit/#${esc(encodeURIComponent(LIST.slug))}` : "/your-bills/#starred"}">Edit</a>`, sharePop(LIST.slug, LIST.title || "Shared list")]
+      : [`<button type="button" class="linkish" id="follow" aria-pressed="${on}">${on ? "Unfollow" : "Follow"}</button>`,
+        n ? `<button type="button" class="linkish" id="addAll"${missing ? "" : " disabled"}>${missing ? "Add all to my watchlist" : "All on your watchlist"}</button>` : ""]),
+    `<span class="lmsg muted" id="msg">${msg}</span>`].filter(Boolean).join("");
 }
-for (const ev of ["pointerover", "focusin", "touchstart"]) $("bills").addEventListener(ev, warmRow, { passive: true });
-// A frame back in its hiding place (moved without reloading, or no longer laid over a row).
-function park(F) {
-  F.row = null;
-  F.f.classList.remove("over");
-  F.f.classList.add("stale");
-  if (F.f.parentElement !== $("frames")) $("frames").moveBefore(F.f, null);
-}
-function closeRow(i) {
-  rowBtn(i)?.setAttribute("aria-expanded", "false");
-  const box = $(`emb${i}`);
-  if (box) box.hidden = true;
-  for (const F of Object.values(FRAMES)) if (F.row === i) park(F);
-  place();
-}
-function openBill(btn) {
-  const i = +btn.getAttribute("aria-controls").slice(3), x = ROWS[i], box = $(`emb${i}`);
-  if (btn.getAttribute("aria-expanded") === "true") return closeRow(i);
-  const F = frameFor(x);
-  if (F.row != null && F.row !== i) closeRow(F.row);
-  btn.setAttribute("aria-expanded", "true");
-  box.hidden = false;
-  const name = `${stName(x.st)} ${numText(x.st, x.full)}`;
-  if (!box.firstChild) {
-    box.innerHTML = `<p class="eload">Loading…</p><div class="slot"></div>`
-      + `<p class="efoot"><a href="${esc(x.href)}">Open ${esc(numText(x.st, x.full))} on ${x.st === "us" ? "the Congress page" : `${esc(stName(x.st))}'s page`}</a></p>`;
+$("by").addEventListener("click", (e) => {
+  if (e.target.closest("#follow")) {
+    const f = readFollows();
+    let msg = "";
+    if (LIST.slug in f) { delete f[LIST.slug]; countUse("list/unfollowed"); }
+    else {
+      f[LIST.slug] = { title: LIST.title, group: LIST.group || "", known: ROWS.map((x) => x.key), since: today() };
+      msg = `It&rsquo;s in <a href="/your-bills/#tab=${esc(encodeURIComponent(LIST.slug))}">Your bills</a>.`;
+      countUse("list/followed");
+    }
+    writeFollows(f);
+    $("msg").innerHTML = msg;
+    drawButtons();
+    $("follow")?.focus();
   }
-  box.querySelector(".eload").hidden = false;
-  const slot = box.querySelector(".slot");
-  F.row = i; F.bill = baseNum(x.full); F.h = 0;
-  F.f.title = `${name}: what to do, and more about it`;
-  F.f.classList.add("stale");
-  F.f.style.height = "0px"; slot.style.height = "";
-  if (MOVES) slot.moveBefore(F.f, null);
-  else { slot.setAttribute("aria-owns", F.f.id); F.f.classList.add("over"); }
-  tell(F, { sbtShow: `${x.session}.${x.stance === "oppose" ? "-" : ""}${F.bill}` });
-  place();
-  countUse("list/opened a bill");
-}
-// Without moveBefore the frames stay in #frames, laid over their row's slot.
-function place() {
-  if (MOVES) return;
-  const m = document.querySelector("main").getBoundingClientRect();
-  for (const F of Object.values(FRAMES)) {
-    if (F.row == null) continue;
-    const slot = $(`emb${F.row}`)?.querySelector(".slot");
-    if (!slot) continue;
-    slot.style.height = `${F.h}px`;
-    const r = slot.getBoundingClientRect();
-    Object.assign(F.f.style, { top: `${r.top - m.top}px`, left: `${r.left - m.left}px`, width: `${r.width}px` });
+  if (e.target.closest("#addAll")) {
+    let n = 0;
+    for (const x of ROWS) {
+      const w = readWatch(x.st), k = `${x.session}:${x.num}`;
+      if (k in w) continue;
+      w[k] = { seen: x.last || today(), stance: x.stance };
+      writeWatch(x.st, w);
+      n++;
+    }
+    $("msg").innerHTML = `Added ${n} bill${n === 1 ? "" : "s"} to <a href="/your-bills/">Your bills</a>.`;
+    countUse("list/added all");
+    drawButtons();
   }
-}
-if (!MOVES && window.ResizeObserver) new ResizeObserver(place).observe(document.querySelector("main"));
-addEventListener("resize", place);
-addEventListener("message", (e) => {
-  if (e.origin !== location.origin) return;
-  const F = Object.values(FRAMES).find((x) => x.f.contentWindow === e.source);
-  if (!F) return;
-  if (e.data?.sbtReady) { F.ready = true; for (const m of F.q.splice(0)) tell(F, m); return; }
-  if (e.data?.sbtLoaded) { F.loaded = true; const then = F.then; F.then = null; then?.(); return; }
-  if (typeof e.data?.sbtEmbed !== "number" || F.row == null || e.data.bill !== F.bill) return;
-  F.h = Math.max(40, Math.min(e.data.sbtEmbed, 20000));
-  F.f.style.height = `${F.h}px`;
-  F.f.classList.remove("stale");
-  const wait = $(`emb${F.row}`)?.querySelector(".eload");
-  if (wait) wait.hidden = true;
-  place();
 });
 $("bills").addEventListener("click", (e) => {
-  const btn = e.target.closest("button.rowbtn");
-  if (btn) return openBill(btn);
   if (e.target.closest("li > a")) countUse("list/opened a bill");
 });
+// The list changed in this browser (its sides or bills, from its cards or the editor): shown again.
+addEventListener("storage", (e) => { if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) { Frames.refresh(); drawButtons(); } if (e.key === NAMED && LIST && readNamed()[LIST.slug]) { const l = readNamed()[LIST.slug]; LIST = { ...LIST, bills: l.bills, title: l.title || LIST.title }; redraw(); } });
+async function redraw() {
+  const bills = listBills(LIST);
+  ROWS = await Promise.all(bills.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)) })));
+  const named = OWN && readNamed()[LIST.slug];
+  Frames.show($("bills"), await listGroups(`list:${LIST.slug}`, bills, ROWS, { extra: () => (named ? { own: LIST.slug } : null), row: (x) => ({ stance: showStance(LIST) ? x.stance : "", note: noteOf(LIST, x) }) }));
+  drawButtons();
+}
 addEventListener("hashchange", load);
 load();
 </script>

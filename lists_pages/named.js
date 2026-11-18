@@ -81,6 +81,20 @@ window.NamedLists = (() => {
     return true;
   }
 
+  // A bill on a list (c: its code without "-"): its side ("support", "oppose"), or off the list (null); false if it isn't on it.
+  function edit(slug, c, stance) {
+    const all = read(), l = all[slug];
+    if (!l) return false;
+    const i = l.bills.findIndex((x) => bare(x) === c);
+    if (i < 0) return false;
+    if (stance) l.bills[i] = (stance === "oppose" ? "-" : "") + c; else l.bills.splice(i, 1);
+    l.updated = new Date().toISOString();
+    write(all);
+    schedule(slug);
+    refresh(c);
+    return true;
+  }
+
   // ---- The button and its menu ----
   const ICON = '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false"><rect class="nlbg" x="2" y="2.5" width="16" height="15" rx="3"/>'
     + '<path class="nlln" d="M6 7h8M6 10h8M6 13h5"/></svg>';
@@ -198,5 +212,5 @@ window.NamedLists = (() => {
     // Another tab changed the lists.
     addEventListener("storage", (e) => { if (e.key === KEY) refresh(); });
   }
-  return { setApi, wire, ready, button, refresh, code, payload, sig, read, write, lists };
+  return { setApi, wire, ready, button, refresh, code, payload, sig, read, write, lists, edit };
 })();

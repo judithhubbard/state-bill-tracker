@@ -77,11 +77,15 @@ html:not(.ready) .frameload { display: block; min-height: 80vh; padding: 40px 4p
 html:not(.ready) .wrap > :not(.mast):not(.views):not(main), html:not(.ready) main > :not(.frameload),
 html:not(.ready) .mast > :not(.mast-top), html:not(.ready) #sessions { visibility: hidden; }
 html:not(.ready) .views { pointer-events: none; }
-/* One bill of a shared list, inside the list's page (#embed=: EMBED): only its card's body, on the list's own card. */
+/* A shared list's bills inside the list's page (#embed=: EMBED): only the watchlist (or one bill's card's body), on the
+   list's own card. */
 html.embed body { padding: 0; background: var(--sheet); }
 html.embed .mast, html.embed .views, html.embed #howto, html.embed .sitefoot, html.embed #wl, html.embed #wlActions, html.embed .frameload { display: none !important; }
 html.embed .wrap { display: block; max-width: none; }
-html.embed .wcard { border: 0; border-radius: 0; box-shadow: none; background: none; padding: 2px 12px 12px; }
+html.embed:not(.embedlist) .wcard { border: 0; border-radius: 0; box-shadow: none; background: none; padding: 2px 12px 12px; }
+/* A list's bills (#embed=2026.list..., 2026.mine): the watchlist's sections and cards, each card bounded as on the Watchlist tab. */
+html.embedlist body { padding: 10px 12px 12px; }
+html.embedlist #view-watch { margin: 0; }
 a { color: var(--navy); }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
@@ -394,6 +398,8 @@ main { display: grid; gap: 16px; min-width: 0; }
 .stance.support { color: var(--signed); border-color: var(--signed); }
 .stance.oppose { color: var(--veto); border-color: var(--veto); }
 .stance.fixed { cursor: default; background: none; }
+.lremove { appearance: none; border: 0; background: none; color: var(--ink-2); font: 600 10.5px var(--body); text-decoration: underline; cursor: pointer; margin: 4px 0 0 2px; padding: 1px 2px; justify-self: start; }
+.lremove:hover { color: var(--veto); }
 .watchview { display: grid; gap: 20px; }
 .statsview { display: grid; gap: 18px; }
 .statsview .takeaway { font-size: 16px; font-weight: 600; color: var(--ink); max-width: 75ch; }
@@ -4131,11 +4137,28 @@ function clearFilter(k, v) {
 const WATCH_STORE = STORE + "watch";
 let WATCH = new Map(); // "2025:S1234" -> { seen: date of the last action seen, stance: "support" | "oppose" }
 let SHARED = null;      // a watchlist opened from a share link: base number -> stance
-// A shared list's bills, shown inside the list's page (/list/#<slug>): one frame per state at #embed=2026, which loads
-// only the list part, then shows whichever bill the list page asks for (postMessage {sbtShow: "2026.-A1234"}, "-" for
-// oppose; #embed=2026.A1234 shows one from the start): only its watchlist card's body, with the page's header, tabs and
-// footer hidden. {num (null until a bill is asked for), stance}.
+// A list's bills, shown inside the list pages (/list/#<slug>, /your-bills/) in a frame: #embed=<what>, with the page's
+// header, tabs and footer hidden, loading only the watchlist part. What it shows (also asked later by postMessage
+// {sbtShow: what, notes, group}):
+//   "2026.list.A1234.-S12" this watchlist view for those bills ("-": opposed), as a shared watchlist is shown;
+//   "2026.mine" this browser's own watchlist of the session, as its Watchlist tab shows it;
+//   "2026.-A1234" one bill's card body, details open ("2026": nothing until one is asked for).
+// The page's height goes to the list page whenever it changes (embedSend()), so the frame fits.
+// {code (what), num (one bill), stance, list, mine}.
 let EMBED = null, EMBED_ASK = null;
+const EMBED_RE = /^(\d{4})(?:\.(-?)([A-Z]{1,7}\d{1,6}[A-Z]?)|\.list((?:\.-?[A-Z]{1,7}\d{1,6}[A-Z]?)*)|\.(mine))?$/;
+// What a #embed= code asks for, with SHARED (the bills and their stances) to match; null if it isn't one.
+function embedOf(code) {
+  const m = EMBED_RE.exec(code);
+  if (!m) return null;
+  if (m[5]) return { session: +m[1], code, mine: true, shared: null };
+  if (m[4] != null) {
+    const bills = m[4].split(".").filter(Boolean).map((n) => (n.startsWith("-") ? [baseNum(n.slice(1)), "oppose"] : [baseNum(n), "support"]));
+    return { session: +m[1], code, list: true, shared: new Map(bills) };
+  }
+  const num = m[3] ? baseNum(m[3]) : null, stance = m[2] ? "oppose" : "support";
+  return { session: +m[1], code, num, stance, shared: new Map(num ? [[num, stance]] : []) };
+}
 const baseNum = (n) => n.replace(/[A-Z]$/, "");
 const billKey = (b) => `${DATA.session}:${baseNum(b.nums[0])}`;
 const keysOf = (b) => b.nums.map((n) => `${DATA.session}:${baseNum(n)}`);
@@ -4703,7 +4726,7 @@ let W_SHARE_OPEN = null;
 function renderWatchView() {
   if (!EMBED) updateWatchTab();
   if ($("view-watch").hidden) return;
-  if (EMBED && !EMBED.num) { $("wlList").innerHTML = ""; return; }
+  if (EMBED && !EMBED.list && !EMBED.mine && !EMBED.num) { $("wlList").innerHTML = ""; return; }
   // (Its bills' shards; the statistics, for deadlines and odds; the other sessions' numbers, for bills from last
   // session's watchlist that are back.)
   if (later("watch", "watch", renderWatchView, "wlList", () => ({ bills: SHARED ? BILLS.filter(sharedStance) : BILLS.filter(isWatched),
@@ -4779,9 +4802,11 @@ function renderWatchView() {
     const dl = x.key ? deadlineOf(b) : {};
     const due = !DATA.current || !dl.d ? "" : b.stage === 4 ? ` · due ${fmtDate(dl.d)}` : dl.g === "soon" && b.stage < 3 ? ` · ${dl.origin ? STATE.originWord || "deadline to pass its house" : dl.d === sessionEnd().date ? "session ends" : "meets"} ${fmtDate(dl.d)}` : "";
     return `<article class="wcard${open ? " open" : ""}" data-idx="${b.idx}">
-      ${EMBED ? "" : `<div class="whead" data-wtoggle="${b.idx}">
+      ${ONE_CARD() ? "" : `<div class="whead" data-wtoggle="${b.idx}">
         <div class="wtop"><div class="nums">${!SHARED && list.length > 1 ? `<button class="whandle" type="button" data-whandle aria-label="Move ${esc(b.nums[0])} up or down" title="Drag to change the order (or use the arrow keys)">⠿</button>` : ""}<span class="chev" aria-hidden="true"></span>${esc(b.nums.join(" / "))}${SHARED
-          ? `${watchButton(b, false)}<span class="stance fixed ${x.stance}" title="The position of whoever shared this list">${x.stance === "oppose" ? "Oppose" : "Support"}</span>`
+          ? `${watchButton(b, false)}${EMBED?.own
+            ? `<button class="stance ${x.stance}" type="button" data-lstance="${b.idx}" title="The list's side: switch between support and oppose">${x.stance === "oppose" ? "Oppose" : "Support"}</button><button class="lremove" type="button" data-lremove="${b.idx}" aria-label="Remove ${esc(b.nums[0])} from this list" title="Remove from this list (not from your watchlist)">Remove</button>`
+            : `<span class="stance fixed ${x.stance}" title="The position of whoever shared this list">${x.stance === "oppose" ? "Oppose" : "Support"}</span>`}`
           : watchButton(b)}</div><span class="spill p${b.stage}">${esc(stageWord(b).replace(/^./, (c) => c.toUpperCase()))}${esc(due)}</span></div>
         <h3><button class="wtitle" type="button" data-wtitle aria-expanded="${open}">${esc(b.title)}</button>${SHARED ? "" : newsTags(b)}</h3>
         ${b.sponsors.length ? `<p class="wspons">${b.sponsors.map(esc).join(" / ")}</p>` : ""}
@@ -4800,11 +4825,11 @@ function renderWatchView() {
       ${!x.key ? reintroAsk(b, x.stance) : ""}
       ${!SHARED && myPublished()?.group ? `<details class="noteedit"${pubText().notes[baseNum(b.nums[0])] ? " open" : ""}><summary>Add a note</summary><textarea data-pubnote="${esc(baseNum(b.nums[0]))}" rows="2" maxlength="1000" placeholder="Why this bill matters or what to say about it">${esc(pubText().notes[baseNum(b.nums[0])] || "")}</textarea></details>` : ""}
       ${SHARED ? "" : logBlock(x)}
-      <details class="bill morebill" data-idx="${b.idx}"${EMBED ? " open" : ""}><summary>More about this bill</summary><div class="detail"></div></details>
+      <details class="bill morebill" data-idx="${b.idx}"${ONE_CARD() ? " open" : ""}><summary>More about this bill</summary><div class="detail"></div></details>
       </div>
     </article>`;
   };
-  if (EMBED) return embedCard([...active, ...idle, ...decided][0], cardFor);
+  if (ONE_CARD()) return embedCard([...active, ...idle, ...decided][0], cardFor);
   $("wlList").innerHTML = !list.length ? "" : `
     ${SHARED ? "" : newsBox(list)}
     ${list.length > 1 ? `<p class="wfold">${SHARED ? "" : `<span class="muted">Drag ⠿ to put your bills in priority order.</span>`}<span><button type="button" class="linkish" data-wfold="open">Open all</button> · <button type="button" class="linkish" data-wfold="close">Close all</button></span></p>` : ""}
@@ -4819,7 +4844,20 @@ function renderWatchView() {
       <p class="wsub">Signed into law or vetoed, most recent first.</p></summary><div class="wcards idle">${decided.map(cardFor).join("")}</div></details>` : ""}
     ${SHARED ? "" : actionRecord(list)}`;
   $("wlList")._multi = multiAll;
+  if (EMBED) embedSize();
 }
+// A list made in this browser (named.js's lists), shown in a list page's frame: switches its side on a bill, or takes the
+// bill off it (not off the watchlist). The list is kept in this browser and saved to the lists Worker by named.js; the list
+// page hears of the change and sends the new list here too.
+function embedListEdit(b, remove) {
+  const k = [...SHARED.keys()].find((n) => b.nums.some((m) => baseNum(m) === n));
+  if (!k || !window.NamedLists?.edit(EMBED.own, NamedLists.code(STATE.code, DATA.session, k), remove ? null : SHARED.get(k) === "oppose" ? "support" : "oppose")) return;
+  if (remove) SHARED.delete(k); else SHARED.set(k, SHARED.get(k) === "oppose" ? "support" : "oppose");
+  EMBED.code = `${DATA.session}.list${[...SHARED].map(([n, st]) => `.${st === "oppose" ? "-" : ""}${n}`).join("")}`;
+  renderWatchView();
+}
+// Inside a list page's frame showing one bill: only its card's body.
+const ONE_CARD = () => !!EMBED && !EMBED.list && !EMBED.mine;
 
 // The shared list's page (/list/) shows one bill's card here, in a frame: only the card's body, its details open, and the
 // page's height sent to the list's page whenever it changes, so the frame fits.
@@ -4833,24 +4871,28 @@ function embedCard(x, cardFor) {
 // The page's height, and which bill it shows, to the list page (so the frame fits, and isn't shown with another bill).
 let EMBED_SIZE = null;
 function embedSend() {
-  const done = !!$("wlList").querySelector(".wcard") && !$("wlList").querySelector(".dload");
-  try { parent.postMessage({ sbtEmbed: Math.ceil(document.documentElement.getBoundingClientRect().height), bill: EMBED?.num || "", done }, location.origin); } catch (e) {}
+  const done = !!$("wlList").querySelector(".wcard") && !$("wlList").querySelector(".dload, .loading");
+  try { parent.postMessage({ sbtEmbed: Math.ceil(document.documentElement.getBoundingClientRect().height), bill: ONE_CARD() ? EMBED.num || "" : EMBED?.code || "", done }, location.origin); } catch (e) {}
 }
 function embedSize() {
   if (parent === window) return;
   if (!EMBED_SIZE && window.ResizeObserver) { EMBED_SIZE = new ResizeObserver(embedSend); EMBED_SIZE.observe(document.documentElement); }
   embedSend();
 }
-// The list page asks for a bill ("2026.-A1234"): drawn as soon as the page's bills are in (EMBED_ASK keeps it till then).
-function embedShow(code) {
-  const m = /^(\d{4})\.(-?)([A-Z]{1,7}\d{1,6}[A-Z]?)$/.exec(code);
-  if (!m) return;
-  if (!DATA) { EMBED_ASK = code; return; }
-  if (+m[1] !== DATA.session) return;
-  EMBED = { num: baseNum(m[3]), stance: m[2] ? "oppose" : "support" };
-  SHARED = new Map([[EMBED.num, EMBED.stance]]);
-  W_OPEN.clear(); W_OPEN.add(`${DATA.session}:${EMBED.num}`);
-  $("wlList").innerHTML = "";
+// The list page asks for bills (embedOf()'s codes; extra: a group list's {notes, group}): drawn as soon as the page's bills
+// are in (EMBED_ASK keeps it till then). A list's cards left open stay open.
+function embedShow(code, extra) {
+  const e = embedOf(code);
+  if (!e) return;
+  if (!DATA) { EMBED_ASK = [code, extra]; return; }
+  if (e.session !== DATA.session) return;
+  EMBED = e; SHARED = e.shared;
+  document.documentElement.classList.toggle("embedlist", !!(e.list || e.mine));
+  SHARED_META = extra?.notes && Object.keys(extra.notes).length ? { title: "", group: extra.group || "the list's maker", notes: extra.notes, updated: new Date().toISOString() } : null;
+  if (e.list && typeof extra?.own === "string") e.own = extra.own;
+  if (e.num) { W_OPEN.clear(); W_OPEN.add(`${DATA.session}:${e.num}`); $("wlList").innerHTML = ""; }
+  // (The watchlist may have changed in another frame or page: its stars, and the "mine" list.)
+  loadWatch();
   renderWatchView();
   embedSize();
 }
@@ -5195,7 +5237,7 @@ function wire() {
       if (box) box.outerHTML = nextSteps(b);
       return;
     }
-    const s = e.target.closest(".stance");
+    const s = e.target.closest(".stance[data-stance]");
     if (s) {
       e.preventDefault(); e.stopPropagation();
       const b = BILLS[+s.dataset.stance], en = watchEntry(b);
@@ -5357,6 +5399,9 @@ function wire() {
     }
   });
   $("wlList").addEventListener("click", (e) => {
+    // A list made in this browser, inside its page's frame (EMBED.own): its side on a bill, or the bill off the list.
+    const ls = e.target.closest("[data-lstance], [data-lremove]");
+    if (ls) { e.stopPropagation(); embedListEdit(BILLS[+(ls.dataset.lstance ?? ls.dataset.lremove)], ls.dataset.lremove != null); return; }
     if (e.target.closest("[data-wseenall]")) { for (const b of BILLS) if (isWatched(b) && hasNews(b)) markSeen(b); renderWatchView(); return; }
     const nw = e.target.closest("[data-wnews]");
     if (nw) {
@@ -5515,7 +5560,7 @@ function wire() {
     });
     addEventListener("message", (e) => {
       if (e.origin !== location.origin || e.source !== parent) return;
-      if (typeof e.data?.sbtShow === "string") embedShow(e.data.sbtShow);
+      if (typeof e.data?.sbtShow === "string") embedShow(e.data.sbtShow, e.data);
       if (typeof e.data?.sbtWarm === "string") embedWarm(e.data.sbtWarm);
     });
     try { parent.postMessage({ sbtReady: true }, location.origin); } catch (e) {}
@@ -5827,13 +5872,16 @@ function shardOf(num) {
   for (const c of baseNum(num)) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193) >>> 0;
   return h % SPLIT.shards.length;
 }
-function mergeShard(p) {
+// only: a Set of first numbers, the shard's bills to merge now (a list page's frame needs a few of a shard's hundreds;
+// lazyShards() keeps the shard for the rest).
+function mergeShard(p, only) {
   const T = p.strings;
   // (Bills are found by index, or by number when the shard comes from a newer build than the list.)
   const find = (j, num) => (BILLS[j]?.nums[0] === num ? BILLS[j] : BILLS.find((x) => x.nums[0] === num));
   for (const [j, num, title, acts, summary, hist, votes, similar, veto, cos, more] of p.b) {
+    if (only && !only.has(baseNum(num))) continue;
     const b = find(j, num);
-    if (!b) continue;
+    if (!b || (only && b.full)) continue;
     if (!b.rowIn) setRow(b, title, acts, T, more);
     b.summary = decodeSummary(summary, b.title);
     setHist(b, hist);
@@ -5845,18 +5893,23 @@ function mergeShard(p) {
     b._hay = null; b.full = true;
   }
   // The similar bills they name: titles, and histories where the panel's word for how far one got reads it (endedOf()).
+  if (only) return;
   for (const [j, num, title, acts, more] of p.x) {
     const b = find(j, num);
     if (!b || b.rowIn) continue;
     if (acts) setRow(b, title, acts, T, more); else b.title = title;
   }
 }
-function needShard(k) {
+// Inside a list page's frame only the bills shown are merged from a shard (merging all of a shard's bills was most of the
+// frame's start); the shard is kept (SHARD_RAW) for the others, merged when they're wanted.
+const lazyShards = () => (EMBED ? !!(EMBED.list || EMBED.mine) : /^#embed=\d{4}\.(?:list|mine)\b/.test(location.hash));
+const SHARD_RAW = {};
+function needShard(k, only) {
   const hash = SPLIT.shards[k];
   return (SHARD_GETTING[hash] ||= (async () => {
     const p = await getJson(() => partUrl(`s${k}`, SPLIT.shards[k]));
     await LIST_READY;
-    mergeShard(p);
+    if (lazyShards() && only) { SHARD_RAW[hash] = p; mergeShard(p, only); } else mergeShard(p);
     SHARD_GETTING[hash].done = true;
   })().catch((e) => { delete SHARD_GETTING[hash]; loadFailed(e); throw e; }));
 }
@@ -5868,7 +5921,12 @@ async function needBills(bills) {
   for (let pass = 0; pass < 2; pass++) {
     const want = [...new Set(bills.filter((b) => !b.full).map((b) => shardOf(b.nums[0])))];
     if (!want.length) return;
-    await Promise.all(want.map(needShard));
+    const only = new Set(bills.map((b) => baseNum(b.nums[0])));
+    await Promise.all(want.map(async (k) => {
+      await needShard(k, lazyShards() ? only : null);
+      const raw = SHARD_RAW[SPLIT.shards[k]];
+      if (raw) mergeShard(raw, only);
+    }));
   }
   // (A page older than the data, whose bill moved to another shard: what's missing stays empty.)
   for (const b of bills) if (!b.full) { b.full = true; b.rowIn = true; }
@@ -6231,11 +6289,14 @@ function hydrate(raw) {
   const embedded = document.documentElement.classList.contains("embed");  // (#embed=: only a card is shown)
   if (!embedded) try { renderHowCal(); } catch (e) { console.error(e); }
   if (!embedded) try { renderHowComm(); } catch (e) { console.error(e); }
-  try { const h = localStorage.getItem(STORE + "howsec"); if (h && $(h)?.classList.contains("howsec")) showHowSec(h); } catch (e) {}
-  try { renderIntro(); } catch (e) { console.error(e); }
-  const parts = [staleNotice(raw), sessionNotice(raw)].filter(Boolean);
-  $("notice").innerHTML = shortNotice(parts);
-  $("notice").hidden = !parts.length;
+  // (Inside a list page's frame only the watchlist is shown: no How tab, introduction or notices.)
+  if (!embedded) {
+    try { const h = localStorage.getItem(STORE + "howsec"); if (h && $(h)?.classList.contains("howsec")) showHowSec(h); } catch (e) {}
+    try { renderIntro(); } catch (e) { console.error(e); }
+    const parts = [staleNotice(raw), sessionNotice(raw)].filter(Boolean);
+    $("notice").innerHTML = shortNotice(parts);
+    $("notice").hidden = !parts.length;
+  }
   if (raw.current) $("sort").insertAdjacentHTML("beforeend", `<option value="due">${EXEC.title}'s deadline, soonest first</option><option value="meeting">Next committee meeting, soonest first</option>`);
   // The title goes home: the current session's main page.
   const home = raw.sessions.find((x) => x.session === LATEST)?.url;
@@ -6259,7 +6320,7 @@ function hydrate(raw) {
   you.hidden = !raw.bills.some((b) => b.places.length);
   if (PLACE_WORD !== "county") you.querySelector("label").textContent = `Your ${PLACE_WORD}`;
   // (A long towns list, Congress's, comes later: the towns part.)
-  townPicker();
+  if (!embedded) townPicker();
   $("law").closest(".field").hidden = !raw.lawList.length;
   // One house: no "has a version in" choice; no parties: no party filter.
   if (UNI) $("house").closest(".field").hidden = true;
@@ -6275,14 +6336,14 @@ function hydrate(raw) {
   const pub = location.hash.match(/^#list=([a-z0-9-]{1,61})$/);
   if (pub) { SHARED = new Map(); SHARED_META = { title: "Loading the list…", group: "", updated: new Date().toISOString() }; loadPublishedList(pub[1]); }
   if (m && +m[1] === raw.session) SHARED = new Map(m[2].split(".").filter(Boolean).map((n) => (n.startsWith("-") ? [n.slice(1), "oppose"] : [n, "support"])));
-  const em = location.hash.match(/^#embed=(\d{4})(?:\.(-?)([A-Z]{1,7}\d{1,6}[A-Z]?))?$/);
+  const em = /^#embed=/.test(location.hash) && embedOf(decodeURIComponent(location.hash.slice(7)));
   // (A list page that hasn't read which page has that session starts at the state's main page: on to the right one.)
-  const other = em && +em[1] !== raw.session && raw.sessions.find((x) => x.session === +em[1])?.url;
+  const other = em && em.session !== raw.session && raw.sessions.find((x) => x.session === em.session)?.url;
   if (other) { location.replace(new URL(other, location.href).href.split("#")[0] + location.hash); return; }
-  if (em && +em[1] === raw.session) {
-    EMBED = { num: em[3] ? baseNum(em[3]) : null, stance: em[2] ? "oppose" : "support" };
-    SHARED = new Map(EMBED.num ? [[EMBED.num, EMBED.stance]] : []);
+  if (em && em.session === raw.session) {
+    EMBED = em; SHARED = em.shared;
     if (EMBED.num) W_OPEN.add(`${raw.session}:${EMBED.num}`);
+    document.documentElement.classList.toggle("embedlist", !!(em.list || em.mine));
   }
   const saved = recall("filters");
   if (saved) {
@@ -6324,7 +6385,7 @@ function hydrate(raw) {
   }
   // The address says which tab to open; a plain link opens Bills.
   let view = "bills";
-  if (PRESET?.watch || SHARED) view = "watch";
+  if (PRESET?.watch || SHARED || EMBED) view = "watch";
   if (VIEWS.includes(location.hash.slice(1))) view = location.hash.slice(1);
   if (!DATA.current && !EMBED) for (const v of ["watch", "act"]) document.querySelector(`.view-tab[data-view="${v}"]`).hidden = true;
   // Prefiled bills haven't been anywhere yet: no Weigh in or Statistics.
@@ -6342,7 +6403,7 @@ function hydrate(raw) {
   if (one) openOne();
   if (EMBED) {
     try { parent.postMessage({ sbtLoaded: true }, location.origin); } catch (e) {}
-    if (EMBED_ASK) { const c = EMBED_ASK; EMBED_ASK = null; embedShow(c); }
+    if (EMBED_ASK) { const [c, extra] = EMBED_ASK; EMBED_ASK = null; embedShow(c, extra); }
   }
 }
 // The Statistics tab's sections, set up the first time it's drawn (on the public site the statistics come later).

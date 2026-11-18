@@ -136,20 +136,16 @@ async function lookUp(st, session, num) {
   return { found: true, full, title: cut(title), stage, last, action, label: whereText(st, stage, comm, kind, s.live !== false), href: `/${st}/${page}#${full}`, page: `/${st}/${page}` };
 }
 const THIS_YEAR = new Date().getFullYear();
-// A bill's row: number, title, what's new, where it is and when, the list's note and stance, "What to do".
-// x: lookUp()'s answer plus {st, session, fresh, newLine, stance, note, star (the star's HTML), seen (data-seen value),
-// open (on /list/: the id of the box the row opens and closes below it; the row is then a button, not a link)}.
+// A bill its state's data doesn't have (the state's page shows the rest, embed.js): number, title, where it is, a link to
+// the state's page. x: lookUp()'s answer plus {st, session, stance, note, star (the star's HTML), seen (data-seen value)}.
 function billRow(x) {
   const yr = x.session < THIS_YEAR - 1 || x.session > THIS_YEAR ? ` <small>(${x.session})</small>` : "";
-  const tag = x.open ? "button" : "a";
-  return `<li${x.star ? "" : ' class="nostar"'}><${tag} ${x.open ? `type="button" class="rowbtn" aria-expanded="false" aria-controls="${esc(x.open)}"` : `href="${esc(x.href)}"`}${x.seen ? ` data-seen="${esc(x.seen)}"` : ""}>`
-    + `<span class="num">${esc(numText(x.st, x.full))}${yr}</span><span class="tt">${esc(x.title)}${x.fresh && !x.newLine ? '<span class="new">New</span>' : ""}</span>`
-    + (x.newLine ? `<span class="what"><b>New:</b> ${esc(x.newLine)}</span>` : "")
+  return `<li${x.star ? "" : ' class="nostar"'}><a href="${esc(x.href)}"${x.seen ? ` data-seen="${esc(x.seen)}"` : ""}>`
+    + `<span class="num">${esc(numText(x.st, x.full))}${yr}</span><span class="tt">${esc(x.title)}</span>`
     + (x.note ? `<span class="note">${esc(x.note)}</span>` : "")
     + `<span class="where">${x.stance ? `<span class="stance ${x.stance}">${x.stance === "oppose" ? "Oppose" : "Support"}</span>` : ""}`
     + (x.found ? `<span class="stg s${x.stage}">${esc(x.label)}</span>${x.last ? `<span>${fmtDay(x.last)}</span>` : ""}` : "")
-    + `<span class="todo">${x.open ? "What to do" : x.found ? "What to do ›" : "Open ›"}</span></span></${tag}>${x.star || ""}`
-    + `${x.open ? `<div class="emb" id="${esc(x.open)}" hidden></div>` : ""}</li>`;
+    + `<span class="todo">Open on ${x.st === "us" ? "the Congress page" : `${esc(stName(x.st))}'s page`} ›</span></span></a>${x.star || ""}</li>`;
 }
 
 // ---- The lists Worker ----
@@ -200,6 +196,29 @@ function thanksOnce() {
   } catch (e) { return ""; }
   return `Thanks for sharing! State Bill Tracker is free and run by one person. If you can, please <a href="${esc(SUPPORT)}" target="_blank" rel="noopener">chip in</a>.`;
 }
+// "Share ▾" in a list's summary line: a small menu with Copy link, Preview and the share icons (sharePop()); one open at a
+// time, closed by Escape or a click outside it.
+function sharePop(slug, title) {
+  const url = listLink(slug);
+  return `<span class="spop"><button type="button" class="linkish" data-sharepop aria-expanded="false" aria-haspopup="true">Share ▾</button>`
+    + `<span class="spopbox" hidden><span class="row"><button type="button" class="btn" data-copylink="${esc(slug)}">Copy link</button><a href="/list/#${esc(slug)}">Preview</a></span>`
+    + `${shareIcons(url, title)}</span></span>`;
+}
+function closePops(but) {
+  for (const b of document.querySelectorAll("[data-sharepop][aria-expanded=\"true\"]")) if (b !== but) { b.setAttribute("aria-expanded", "false"); b.nextElementSibling.hidden = true; }
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest?.("[data-sharepop]");
+  if (b) { const on = b.getAttribute("aria-expanded") !== "true"; closePops(b); b.setAttribute("aria-expanded", String(on)); b.nextElementSibling.hidden = !on; return; }
+  const c = e.target.closest?.("[data-copylink]");
+  if (c) { countUse("list/link copied"); return copy(c, listLink(c.dataset.copylink)); }
+  if (!e.target.closest?.(".spopbox")) closePops();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  const open = document.querySelector("[data-sharepop][aria-expanded=\"true\"]");
+  if (open) { closePops(); open.focus(); }
+});
 async function copy(btn, text) {
   try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; } catch (e) { btn.previousElementSibling?.select?.(); btn.textContent = "Select and copy it"; }
 }
