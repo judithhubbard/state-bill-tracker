@@ -2283,7 +2283,8 @@ from that repo. **Nothing here may change it.**
      Contributions: site_meta.SUPPORT (a Stripe Payment Link; the About page, the footers, and the state pages' "Glad this
      helped" note, `supportNote()` in tracker.html: after an email is copied or an action logged, once per 90 days per
      browser; events support/shown, give, share, close).
-  5. Published lists: a KV namespace for the `state-lists` Worker and each state's `listsApi`.
+  5. Shared lists: the `state-lists` Worker is deployed with its own KV (2026-11-18); check each state's `listsApi`
+     points at it (not albany-lists).
   6. Check every state's pages once more (test/crawl.js) and republish the private NJ Claude copy.
   7. Contributions: in the State Bill Tracker Stripe account (a separate account, not the Substack one), Settings →
      Business details: change the website from https://statebilltracker.pages.dev/ to https://statebilltracker.org/.
@@ -2294,10 +2295,16 @@ from that repo. **Nothing here may change it.**
 
 - **The workflow** (`.github/workflows/update.yml`) runs only when started by hand: no schedule, no
   push trigger. It has no GitHub Pages site.
-- **The Workers are renamed:** `state-lists` (with no KV namespace yet) and `state-cron` (with no timer,
-  aimed at this repo). Never deploy them under the names `albany-lists` or `albany-cron`.
-- **`lists_admin.py`** and the `LISTS_API` address in tracker.html still point at the live NY lists
-  Worker. Don't run admin commands from here.
+- **The Workers are renamed:** `state-lists` and `state-cron` (with no timer, aimed at this repo). Never deploy them
+  under the names `albany-lists` or `albany-cron`. `state-lists` (https://state-lists.lists-worker.workers.dev, deployed
+  2026-11-18) has its own KV namespace, STATE_LISTS (id in lists_worker/wrangler.toml); the account's other namespace,
+  LISTS, is the live NY site's: never bind or write to it. Shared watchlists (2026-11-18): anyone can share a list (random
+  address, up to 10 new lists a day per IP, title only); a group with an invite code also gets a named address, an
+  introduction and notes, and view counts (KV's free tier allows 1,000 writes a day, so other lists aren't counted);
+  saves at least 10 seconds apart. **`lists_admin.py`** now talks to `state-lists` (token in ~/.state_lists_admin, also
+  the Worker secret ADMIN_TOKEN): `lists`, `list-hide`/`list-show SLUG`, `list-delete SLUG`, codes as before. New
+  York's `listsApi` in states/ny/profile.js still points at the live albany-lists Worker until the page work switches
+  every state to state-lists.
 - **`artifact_urls.json` is empty.** Never publish to the NY Claude copies from here.
 
 The notes below are ny-bill-tracker's, copied as they were. They describe the code as it stands.

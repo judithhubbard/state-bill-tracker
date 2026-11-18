@@ -6,16 +6,18 @@ Usage:
   python3 lists_admin.py codes                                   # list codes and their groups
   python3 lists_admin.py code-revoke <code>                      # revoke a code (hides that group's lists)
   python3 lists_admin.py lists                                   # list published lists
+  python3 lists_admin.py list-hide <slug>                        # hide a list (list-show <slug> shows it again)
   python3 lists_admin.py list-delete <slug>                      # take a list down
 
-The admin token is read from LISTS_ADMIN_TOKEN, or else ~/.albany_lists_admin. It is never printed."""
+For statebilltracker.org's state-lists Worker (not the live NY site's albany-lists). The admin token is read from
+LISTS_ADMIN_TOKEN, or else ~/.state_lists_admin. It is never printed."""
 import json, os, sys, urllib.request
 
-API = "https://albany-lists.lists-worker.workers.dev"
+API = "https://state-lists.lists-worker.workers.dev"
 
 
 def token():
-    t = os.environ.get("LISTS_ADMIN_TOKEN") or open(os.path.expanduser("~/.albany_lists_admin")).read().strip()
+    t = os.environ.get("LISTS_ADMIN_TOKEN") or open(os.path.expanduser("~/.state_lists_admin")).read().strip()
     if not t:
         raise SystemExit("No admin token.")
     return t
@@ -24,7 +26,7 @@ def token():
 def call(method, path, body=None):
     req = urllib.request.Request(API + path, method=method, data=json.dumps(body).encode() if body is not None else None,
                                  headers={"Authorization": f"Bearer {token()}", "Content-Type": "application/json",
-                                          "User-Agent": "albany-lists-admin"})
+                                          "User-Agent": "state-lists-admin"})
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             return json.load(r)
@@ -47,7 +49,11 @@ def main():
     elif cmd == "lists":
         for l in sorted(call("GET", "/admin/lists"), key=lambda l: l["updated"], reverse=True):
             v = l.get("views") or {}
-            print(f"{l['slug']}  “{l['title']}”  {l['group']}  {l['bills']} bills  updated {l['updated'][:10]}  opened {v.get('total', 0)} times ({v.get('week', 0)} this week)")
+            seen = f"  opened {v.get('total', 0)} times ({v.get('week', 0)} this week)" if v else ""
+            print(f"{l['slug']}  {l['state']}  “{l['title']}”  {l['group']}  {l['bills']} bills  updated {l['updated'][:10]}{'  HIDDEN' if l['hidden'] else ''}{seen}")
+    elif cmd in ("list-hide", "list-show") and len(args) == 2:
+        r = call("PUT", f"/admin/lists/{args[1]}", {"hidden": cmd == "list-hide"})
+        print(f"{r['slug']} is now {'hidden' if r['hidden'] else 'shown'}.")
     elif cmd == "list-delete" and len(args) == 2:
         print(f"Deleted {call('DELETE', f'/admin/lists/{args[1]}')['deleted']}.")
     else:
