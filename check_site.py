@@ -18,16 +18,23 @@ TODAY = date.today()
 problems = []
 
 
+# A session that began this year: until February 15 its member list may not exist yet or be partial (many legislatures
+# publish theirs only once they organize in January), so a missing or short list isn't a problem then.
+NEW_SESSION_GRACE = TODAY.month == 1 or (TODAY.month == 2 and TODAY.day <= 15)
+
+
 def contacts(state, session, at_least):
     path = os.path.join(HERE, "data", state, f"contacts_{session}.json")
+    new = NEW_SESSION_GRACE and int(session) == TODAY.year
     if not os.path.exists(path):
-        problems.append(f"{state}: no legislators file for {session}")
+        if not new:
+            problems.append(f"{state}: no legislators file for {session}")
         return
     d = json.load(open(path))
     day = datetime.strptime(d.get("fetched", "1970-01-01")[:10], "%Y-%m-%d").date()
     if (TODAY - day).days > 3:
         problems.append(f"{state}: legislators last refreshed {day} (more than 3 days ago)")
-    if len(d.get("people", {})) < at_least:
+    if len(d.get("people", {})) < at_least and not new:
         problems.append(f"{state}: only {len(d.get('people', {}))} legislators (expected at least {at_least})")
 
 
