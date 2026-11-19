@@ -382,7 +382,7 @@ def choose_page(legs):
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 {ROBOTS_META.strip()}<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231d3b78'/><path d='M32 10 52 23H12z' fill='%23fff'/><rect x='14' y='25' width='36' height='4' fill='%23fff'/><rect x='17' y='31' width='6' height='16' fill='%23fff'/><rect x='29' y='31' width='6' height='16' fill='%23fff'/><rect x='41' y='31' width='6' height='16' fill='%23fff'/><rect x='11' y='49' width='42' height='5' fill='%23e3b04b'/></svg>"><title>Which {html_escape(last)}? · {P.SITE_NAME}</title>
 <style>
-:root {{ --bg: #f5f7f8; --fg: #132a2e; --muted: #46575c; --link: #007c83; color-scheme: light; }}
+:root {{ --bg: #f5f7f8; --fg: #132a2e; --muted: #46575c; --link: #00777e; color-scheme: light; }}
 @media (prefers-color-scheme: dark) {{ :root {{ --bg: #0f1515; --fg: #e4eded; --muted: #a2b3b5; --link: #4cc3be; color-scheme: dark; }} }}
 body {{ margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 40px max(16px, env(safe-area-inset-left, 0px)); }}
 main {{ max-width: 560px; margin: 0 auto; }} h1 {{ font-size: 26px; margin: 0 0 16px; }}
@@ -1983,10 +1983,13 @@ def main():
             part_list = " ".join(f"{kind}:{hash_of(kind)}" for kind in parts_)
             shard_list = " ".join(hash_of(f"s{k}") for k in range(len(shards_)))
             bundle = " ".join(lst.get("bundle") or [])
+            # The text pieces written below, named in the page so it asks only for those (a range of numbers with no
+            # summaries has no piece: Missouri's House bills).
+            text_names = sorted({f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}" for k in texts}) if texts else []
             def data_tag(prefix, base=""):
                 return (f'<script type="application/json" id="bill-data" data-src="{prefix}data/v/{names_["list"]}" '
                         f'data-v="{prefix}data/v/" data-session="{session}" data-parts="{part_list}" data-shards="{shard_list}" data-bundle="{bundle}" '
-                        f'data-texts="{prefix}data/{session}-text/"'
+                        f'data-texts="{prefix}data/{session}-text/" data-text-parts="{" ".join(text_names)}"'
                         f'{base} data-root="{P.SITE_URL}"></script>')
             def preload(prefix):
                 return f'<link rel="preload" href="{prefix}data/v/{names_["list"]}" as="fetch" crossorigin="anonymous">\n'

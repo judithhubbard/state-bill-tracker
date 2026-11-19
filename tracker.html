@@ -17,7 +17,7 @@
   --ink-2: #46575c;
   --refer: #b3c2c6;
   --rule: #dde4e7;
-  --navy: #007c83;
+  --navy: #00777e;
   --gold: #f0a00c;
   --gold-soft: #fff0c9;
   --gold-ink: #8a5300;
@@ -571,6 +571,9 @@ main { display: grid; gap: 16px; min-width: 0; }
 .statsview p { margin: 0; max-width: 80ch; font-size: 14.5px; }
 .statsview .act-btn { justify-self: start; }
 .statsview .note { color: var(--ink-2); font-size: 13px; }
+.gnext { display: block; margin-top: 4px; font-size: 13px; color: var(--ink-2); }
+.issuefield select { width: 100%; max-width: 100%; }
+.issuefield .issuelink { display: inline-block; margin-top: 6px; font-size: 13px; }
 /* Statistics' committees: one row per committee. */
 .commtab { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .commtab th { text-align: left; font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--rule); padding: 4px 6px; }
@@ -1026,6 +1029,9 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 :root .next > :is(h2, h3, h4, h5, h6) { margin: 0; font: 600 12px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 .next p { margin: 0; }
 .next .when { font-weight: 600; }
+/* The column never grows past the panel (a long menu of towns once made it 404px wide on a 375px phone). */
+.next { grid-template-columns: minmax(0, 1fr); }
+.next select { max-width: 100%; }
 .next ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13.5px; }
 .next li { display: grid; gap: 1px; }
 .next li .role { font-size: 12px; color: var(--ink-2); }
@@ -1137,6 +1143,11 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
           <summary class="group-h">Topic <span id="topicCount"></span></summary>
           <div class="topics" id="topics" role="group" aria-label="Filter by topic"></div>
         </details>
+        <div class="group issuefield" id="issueField" hidden>
+          <label class="group-h" for="issueSel">Issue</label>
+          <select id="issueSel"><option value="">Any issue</option></select>
+          <a class="issuelink" id="issueLink" hidden>This issue in every state ›</a>
+        </div>
         <details class="group morefilters" id="moreFilters">
           <summary class="group-h">More filters <span id="moreCount"></span></summary>
           <div class="morebody">
@@ -1431,8 +1442,8 @@ const passedBothLc = PASSED_BOTH.charAt(0).toLowerCase() + PASSED_BOTH.slice(1);
 STAGE_TEXT.prefiled = STATE.stageText.prefiled || Object.fromEntries(Object.entries(STAGE_TEXT.live).map(([k, v]) => [k, ["Prefiled", ...v.slice(1)]]));
 const KEY_DATES = ["intro", "floor", "passS", "passA", "died", "deliv", "signed", "vetoed"];
 const PAGE = 100;
-const FILTER_KEYS = ["stage", "topics", "law", "comm", "progress", "house", "hist", "intro", "sort", "who", "whoCos", "party", "nearby", "voted", "changed", "agenda", "amend"];
-const blank = () => ({ agenda: "", amend: "", stage: null, topics: new Set(), q: "", law: "", comm: "", progress: "", house: "", hist: "", intro: "", sort: "recent", who: "", whoCos: false, party: "", nearby: false, voted: "", changed: "", shown: PAGE });
+const FILTER_KEYS = ["stage", "topics", "law", "comm", "progress", "house", "hist", "intro", "sort", "who", "whoCos", "party", "nearby", "voted", "changed", "agenda", "amend", "issue"];
+const blank = () => ({ agenda: "", amend: "", issue: "", stage: null, topics: new Set(), q: "", law: "", comm: "", progress: "", house: "", hist: "", intro: "", sort: "recent", who: "", whoCos: false, party: "", nearby: false, voted: "", changed: "", shown: PAGE });
 
 // "Places": leave out bills only about other counties, or keep only bills about yours.
 // A bill's places are the counties it's only about ([] for bills not about specific places).
@@ -1734,6 +1745,7 @@ function matches(b, skip) {
   if (skip !== "changed" && state.changed && !CHANGED[state.changed].test(b)) return false;
   if (skip !== "agenda" && state.agenda && !nextMeeting(b)) return false;
   if (skip !== "amend" && state.amend && !(isAmendment(b) || toVoters(b))) return false;
+  if (skip !== "issue" && state.issue && !b.nums.some((n) => ISSUE_BILLS?.get(state.issue)?.has(baseNum(n)))) return false;
   if (state.q && !queryMatches(parsedQuery(state.q), hayOf(b))) return false;
   return true;
 }
@@ -2064,7 +2076,9 @@ const DECIDES = `<span class="decides">Decides</span>${TIP('The person whose dec
 // The same for a watchlist card's key contact (keyAction()).
 const copyLabel = (key) => (key.gov || !key.info?.email ? "Copy message" : "Copy email");
 const draftBtn = (b, house, name, ask, form = false) => `<button class="act-btn small" type="button" data-draft="${b.idx}" data-house="${house}" data-name="${esc(name)}" data-ask="${esc(ask)}">${house === "G" || form ? "Copy message" : "Copy email"}</button>`;
-const govItem = (ask, b, key = true) => `<li class="${key ? "key" : ""}"><span class="contact">${EXEC.office}${key ? ` ${DECIDES}` : ""}</span><span class="ask">Ask: ${esc(ask)}</span><span class="reach">${draftBtn(b, "G", "", ask)} ${GOV_REACH}</span></li>`;
+// (A governor-elect not yet in office, from the build (governors.py): who takes over, and when.)
+const govNext = () => (DATA.governorNext && DATA.governorNext.start > isoToday() ? `<span class="gnext">${EXEC.title}-elect ${esc(DATA.governorNext.name)} takes office ${fmtDate(DATA.governorNext.start)}.</span>` : "");
+const govItem = (ask, b, key = true) => `<li class="${key ? "key" : ""}"><span class="contact">${EXEC.office}${key ? ` ${DECIDES}` : ""}</span><span class="ask">Ask: ${esc(ask)}</span><span class="reach">${draftBtn(b, "G", "", ask)} ${GOV_REACH}</span>${govNext()}</li>`;
 const commKey = (n) => (n || "").toLowerCase().split("and").join("").replace(/[^a-z]/g, "");
 const HOUSE = STATE.houses;
 // The lower house's letter ("A" for an Assembly, "H" for a House of Delegates), both houses in order, and
@@ -3109,8 +3123,8 @@ function whoLayout(order) {
   }
   return anchor;
 }
-const WHO_SHORT = { env: "Environment & energy", local: "Local government", tax: "Taxes", safety: "Public safety & courts", human: "Human services", health: "Health", edu: "Education", transp: "Transportation", labor: "Labor", housing: "Housing", ag: "Agriculture", gov: "Elections & government", biz: "Business & consumers" };
-const WHO_ABBR = { env: "Environment", local: "Local gov't", safety: "Public safety", human: "Human services", transp: "Transport", gov: "Elections", biz: "Business" };
+const WHO_SHORT = { env: "Environment and energy", local: "Local government", tax: "Taxes", safety: "Public safety and courts", human: "Social services", health: "Health", edu: "Education", transp: "Transportation", labor: "Labor", housing: "Housing", ag: "Agriculture", gov: "Elections and government", biz: "Business and consumers" };
+const WHO_ABBR = { env: "Environment", local: "Local gov't", safety: "Public safety", human: "Social services", transp: "Transport", gov: "Elections", biz: "Business" };
 function whoSvg(anchor) {
   const { order, nodes } = WHO, cx = WHO_W / 2, cy = WHO_H / 2, R = WHO_R, sel = whoSel;
   const selLeg = sel?.kind === "leg" ? nodes.find((x) => x.id === sel.id) : null;
@@ -3899,6 +3913,9 @@ const textPart = (b) => { const k = baseNum(b.nums[0]); return `${k[0]}${Math.fl
 function loadBillText(b) {
   const el = $("bill-text"), src = $("bill-data").dataset.texts, part = el ? "all" : textPart(b);
   if (!DATA.hasText || BILL_TEXT[part]) return Promise.resolve(BILL_TEXT[part]);
+  // Only the pieces the build wrote (data-text-parts); a range with no summaries has none.
+  const have = $("bill-data").dataset.textParts;
+  if (!el && have != null && !have.split(" ").includes(part)) return Promise.resolve(BILL_TEXT[part] = {});
   return (BILL_TEXT_LOADING[part] ||= (el ? unpack(el.textContent).then(JSON.parse)
     : src ? fetch(`${src}${part}.json`).then((r) => (r.ok ? r.json() : {})) : Promise.resolve({}))
     .catch(() => ({})).then((t) => (BILL_TEXT[part] = t || {})));
@@ -4148,6 +4165,7 @@ function activeFilters() {
   if (state.nearby && HOME) out.push(["nearby", null, "Only", `bills that could affect ${HOME ? placeName(HOME) : `your ${PLACE_WORD}`}`]);
   if (state.changed) out.push(["changed", null, "New activity", CHANGED[state.changed].label()]);
   if (state.agenda) out.push(["agenda", null, "On", "an upcoming committee agenda"]);
+  if (state.issue) out.push(["issue", null, "Issue", issueName(state.issue)]);
   if (state.amend) out.push(["amend", null, "Only", BILLS.some((b) => isAmendment(b)) ? "constitutional amendments" : "bills sent to the voters"]);
   return out;
 }
@@ -5227,7 +5245,52 @@ function showView(v, push = true) {
   // "How this works" belongs with the bill list.
 }
 
+// ---- Issues (the front page's national issues, issues.py): which of this session's bills match each. The state's
+// data/issues_<session>.json (build_data.py's write_issues()) and the site's issues/summary.json (names and groups),
+// fetched the first time the Issue menu is used or an address names an issue. Public site only.
+let ISSUE_BILLS = null, ISSUE_META = null, ISSUE_LOADING = null;
+const issueName = (id) => ISSUE_META?.issues.find((i) => i.id === id)?.name || id;
+const siteTopUrl = () => new URL("../", ROOT).href;
+function loadIssues() {
+  if (!ROOT) return Promise.resolve();
+  return (ISSUE_LOADING ||= Promise.all([
+    fetch(new URL(`data/issues_${DATA.session}.json`, ROOT)).then((r) => (r.ok ? r.json() : null)),
+    fetch(new URL("issues/summary.json", siteTopUrl())).then((r) => (r.ok ? r.json() : null)),
+  ]).then(([mine, meta]) => {
+    const by = new Map();
+    for (const row of mine?.bills || []) {
+      for (const id of row[0] || []) {
+        const set = by.get(id) || by.set(id, new Set()).get(id);
+        for (const n of [row[2], ...(row[10] || [])]) set.add(baseNum(n));
+      }
+    }
+    ISSUE_BILLS = by; ISSUE_META = meta;
+    fillIssues();
+  }).catch(() => { ISSUE_BILLS = new Map(); }));
+}
+// The menu: the issues this session has bills on, under the same groups as the front page (the topics' names).
+function fillIssues() {
+  const sel = $("issueSel");
+  if (!ISSUE_META || !ISSUE_BILLS) return;
+  const has = (i) => ISSUE_BILLS.get(i.id)?.size;
+  const groups = [...(ISSUE_META.groups || []), ""];
+  sel.innerHTML = `<option value="">Any issue</option>` + groups.map((g) => {
+    const xs = ISSUE_META.issues.filter((i) => (g ? i.group === g : !ISSUE_META.groups.includes(i.group)) && has(i)).sort((a, b) => a.name.localeCompare(b.name));
+    return xs.length ? `<optgroup label="${esc(g || "Other")}">${xs.map((i) => `<option value="${esc(i.id)}">${esc(i.name)} (${num(has(i))})</option>`).join("")}</optgroup>` : "";
+  }).join("");
+  sel.value = state.issue || "";
+}
+function syncIssue() {
+  if (!ROOT) return;
+  $("issueField").hidden = false;
+  if (state.issue && !ISSUE_BILLS) loadIssues().then(() => { syncIssue(); render(); });
+  if ($("issueSel").value !== (state.issue || "") && ISSUE_META) $("issueSel").value = state.issue || "";
+  const link = $("issueLink");
+  link.hidden = !state.issue;
+  if (state.issue) link.href = `${siteTopUrl()}issues/${encodeURIComponent(state.issue)}/#${STATE.code}`;
+}
 function syncControls() {
+  syncIssue();
   $("q").value = state.q;
   for (const id of ["law", "comm", "progress", "house", "hist", "intro", "sort", "party", "voted", "changed"]) $(id).value = state[id];
   for (const id of ["whoCos", "nearby"]) $(id).checked = !!state[id];
@@ -5235,6 +5298,11 @@ function syncControls() {
 }
 
 function wire() {
+  if (ROOT) {
+    $("issueSel").addEventListener("focus", () => loadIssues(), { once: true });
+    $("issueSel").addEventListener("pointerdown", () => loadIssues(), { once: true });
+    $("issueSel").addEventListener("change", (e) => { state.issue = e.target.value; state.shown = PAGE; syncControls(); render(); countUse("filter/issue"); });
+  }
   // A bill pointed at, touched or reached with the keyboard: its shard starts downloading before it's opened.
   const pre = (e) => { const el = e.target.closest?.(".bill[data-idx], .wcard[data-idx]"); if (el && SPLIT) prefetchBill(BILLS[+el.dataset.idx]); };
   document.addEventListener("pointerover", pre, { passive: true });

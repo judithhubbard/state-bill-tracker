@@ -187,7 +187,7 @@ const STATE = {
     "Energy and Public Utilities": ["Public Utilities", "Utilities"],
     "Education": ["Education Policy", "Schools"],
     "Higher Education": ["Higher Education", "Colleges and universities"],
-    "Health and Human Services": ["Human Services", "Human services"],
+    "Health and Human Services": ["Human Services", "Social services"],
     "Behavioral and Mental Health": ["Mental Health & Addiction", "Mental health"],
     "Child Welfare": ["Adoption & Child Welfare", "Child welfare"],
     "State Government": ["State Government Administration", "State government"],

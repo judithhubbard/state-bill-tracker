@@ -60,19 +60,19 @@ def delegation(session):
 # Topic: (label, committees (unused; see COMMITTEE_TOPICS), official subjects (unused), title words).
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind energy|pollut\w*|energy|utilit\w*|electric\w*|carbon|recycl\w*|solid waste|wastewater|water quality|PFAS|clean water)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind energy|pollut\w*|energy|utilit\w*|electric\w*|carbon|recycl\w*|solid waste|wastewater|water quality|PFAS|clean water)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|county|counties|cities|city of|town of|townships?|local government\w*|annexation|tax increment financing|local sales tax)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|revenue)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|guns?|police|peace officers?|court\w*|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|correction\w*|expunge\w*|offenses?|law enforcement|public safety)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|foster|veteran\w*|seniors?|elderly|disabilit\w*|homeless\w*|human services|public assistance|MFIP|SNAP)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medical assistance|MinnesotaCare|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|behavioral)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|guns?|police|peace officers?|court\w*|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|correction\w*|expunge\w*|offenses?|law enforcement|public safety)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|foster|veteran\w*|seniors?|elderly|disabilit\w*|homeless\w*|human services|public assistance|MFIP|SNAP)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medical assistance|MinnesotaCare|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|behavioral)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(schools?|students?|teachers?|education|college\w*|universit\w*|tuition|pupils?)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicles?|highways?|roads?|traffic|transit|drivers?|driving|motor|trunk highway|railroad\w*|bridges?)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wages?|employ\w*|workers?|labor|pensions?|retirement|workforce|unemployment)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wages?|employ\w*|workers?|labor|pensions?|retirement|workforce|unemployment)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlords?|tenants?|rent\w*|eviction\w*|manufactured homes?|homeowners?|zoning)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunting|game and fish|crops?|forest\w*|natural resources|mining|minerals?)\b"),
-    "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|state agenc\w*|ethics|data practices|campaign\w*|legislat\w*|state government)\b"),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|banks?|banking|licens\w*|corporat\w*|economic development|liquor|alcohol\w*|cannabis|gambling|commerce)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunting|game and fish|crops?|forest\w*|natural resources|mining|minerals?)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|state agenc\w*|ethics|data practices|campaign\w*|legislat\w*|state government)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|banks?|banking|licens\w*|corporat\w*|economic development|liquor|alcohol\w*|cannabis|gambling|commerce)\b"),
     # Bills proposing an amendment to the Minnesota Constitution (tagged by convert.py, not by words).
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }

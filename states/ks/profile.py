@@ -51,19 +51,19 @@ def delegation(session):
 # title and the Research Department's keywords, used alongside the committees).
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind energy|pollut\w*|energy|utilit\w*|electric\w*|natural gas|nuclear|recycl\w*|solid waste|landfill\w*|water quality|water rights?|groundwater|aquifer|KDHE|conservation|carbon)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind energy|pollut\w*|energy|utilit\w*|electric\w*|natural gas|nuclear|recycl\w*|solid waste|landfill\w*|water quality|water rights?|groundwater|aquifer|KDHE|conservation|carbon)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|count(?:y|ies)|cit(?:y|ies)|townships?|local government\w*|annex\w*|zoning|land use|fire districts?|drainage districts?|home rule)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|revenue|property valuation|appraised value|assessed valu\w*|mill levy|homestead)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|guns?|weapons?|police|courts?|judges?|judicial|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|corrections|law enforcement|offenses?|theft|assault|fentanyl|trafficking|bail|bond|prosecut\w*|juvenile|KBI|highway patrol)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|foster|adoption|veteran\w*|seniors?|elderly|disabilit\w*|homeless\w*|public assistance|social services|child welfare|children and families|food assistance|SNAP|TANF|welfare|aging)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|KanCare|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|behavioral|opioid\w*|drugs?|dental|dentist\w*|insulin|vaccin\w*|healing arts)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|guns?|weapons?|police|courts?|judges?|judicial|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|corrections|law enforcement|offenses?|theft|assault|fentanyl|trafficking|bail|bond|prosecut\w*|juvenile|KBI|highway patrol)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|foster|adoption|veteran\w*|seniors?|elderly|disabilit\w*|homeless\w*|public assistance|social services|child welfare|children and families|food assistance|SNAP|TANF|welfare|aging)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|KanCare|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|behavioral|opioid\w*|drugs?|dental|dentist\w*|insulin|vaccin\w*|healing arts)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(schools?|students?|teachers?|education\w*|college\w*|universit\w*|educators?|scholarships?|tuition|school districts?|board of regents)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicles?|highways?|roads?|traffic|transit|drivers?|driving|motor|bridges?|transportation|KDOT|aviation|airports?|license plates?|railroads?)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wages?|employ\w*|workers?|labor|pensions?|retirement|KPERS|workforce|unemployment|workers compensation|workers' compensation)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wages?|employ\w*|workers?|labor|pensions?|retirement|KPERS|workforce|unemployment|workers compensation|workers' compensation)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlords?|tenants?|rent\w*|eviction\w*|manufactured homes?|homeowners?'? associations?|mortgage\w*)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunt\w*|crops?|poultry|forest\w*|game|deer|hemp|natural resources|cattle|grain|irrigation|parks?)\b"),
-    "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|primar(?:y|ies)|state agenc\w*|ethics|open records|open meetings|legislature|rules and regulations|procurement|state employees?|secretary of state|campaign finance)\b"),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|insurers?|banks?|banking|credit unions?|licens\w*|corporat\w*|economic development|gaming|gambling|lottery|sports wagering|alcohol\w*|beer|wine|liquor|cereal malt|cannabis|marijuana|contractors?|real estate)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunt\w*|crops?|poultry|forest\w*|game|deer|hemp|natural resources|cattle|grain|irrigation|parks?)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|primar(?:y|ies)|state agenc\w*|ethics|open records|open meetings|legislature|rules and regulations|procurement|state employees?|secretary of state|campaign finance)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|insurers?|banks?|banking|credit unions?|licens\w*|corporat\w*|economic development|gaming|gambling|lottery|sports wagering|alcohol\w*|beer|wine|liquor|cereal malt|cannabis|marijuana|contractors?|real estate)\b"),
     # Concurrent resolutions proposing an amendment to the Kansas Constitution (tagged by convert.py, not by words).
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }

@@ -53,7 +53,7 @@ def delegation(session):
 # named as in Committees.csv; the keys are shared with other states.
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy",
+    "env": ("Environment and energy",
             {"Agriculture, Chesapeake and Natural Resources", "Agriculture, Conservation and Natural Resources"},
             NO_SUBJECTS,
             r"\b(climate|greenhouse|emission|renewable|solar|wind energy|pollut\w*|wetland|watershed|chesapeake|"
@@ -61,24 +61,24 @@ TOPICS = {
     "local": ("Local government", {"Counties, Cities and Towns", "Local Government"}, NO_SUBJECTS,
               r"\b(locality|localities|county|counties|city council|town council|zoning|local government)\b"),
     "tax": ("Taxes", {"Finance"}, NO_SUBJECTS, r"\b(tax|taxes|taxation|assessment)\b"),
-    "safety": ("Public safety & courts", {"Courts of Justice", "Public Safety", "Rehabilitation and Social Services"},
+    "safety": ("Public safety and courts", {"Courts of Justice", "Public Safety", "Rehabilitation and Social Services"},
                NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|law-enforcement|court|sentenc\w*|prison|jail|felony|misdemeanor)\b"),
-    "human": ("Human services", {"Rehabilitation and Social Services"}, NO_SUBJECTS,
+    "human": ("Social services", {"Rehabilitation and Social Services"}, NO_SUBJECTS,
               r"\b(child care|foster care|social services|veterans?|senior|aging|disabilit\w*)\b"),
-    "health": ("Health & mental health", {"Health and Human Services", "Education and Health"}, NO_SUBJECTS,
+    "health": ("Health", {"Health and Human Services", "Education and Health"}, NO_SUBJECTS,
                r"\b(health|medical|medicaid|hospital|mental|behavioral|pharmac\w*|nurs\w*|physician)\b"),
     "edu": ("Education", {"Education", "Education and Health"}, NO_SUBJECTS,
             r"\b(school|schools|student\w*|teacher\w*|education|college|universit\w*)\b"),
     "transp": ("Transportation", {"Transportation"}, NO_SUBJECTS,
                r"\b(motor vehicle|highway|road|traffic|transit|driver\w*|toll)\b"),
-    "labor": ("Labor & public employees", {"Labor and Commerce", "Commerce and Labor"}, NO_SUBJECTS,
+    "labor": ("Jobs and workers", {"Labor and Commerce", "Commerce and Labor"}, NO_SUBJECTS,
               r"\b(wage|wages|employ\w*|worker\w*|labor|retirement system|collective bargaining)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlord|tenant\w*|rent|eviction\w*|mortgage)\b"),
-    "ag": ("Agriculture & natural resources", {"Agriculture, Chesapeake and Natural Resources", "Agriculture, Conservation and Natural Resources"},
+    "ag": ("Agriculture and natural resources", {"Agriculture, Chesapeake and Natural Resources", "Agriculture, Conservation and Natural Resources"},
            NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*|food)\b"),
-    "gov": ("Elections & state government", {"Privileges and Elections", "Rules", "General Laws", "General Laws and Technology"},
+    "gov": ("Elections and government", {"Privileges and Elections", "Rules", "General Laws", "General Laws and Technology"},
             NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|campaign finance|state agenc\w*|freedom of information)\b"),
-    "biz": ("Business & consumers", {"Labor and Commerce", "Commerce and Labor", "Communications, Technology and Innovation"},
+    "biz": ("Business and consumers", {"Labor and Commerce", "Commerce and Labor", "Communications, Technology and Innovation"},
             NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|license\w*|corporation\w*|commerce)\b"),
     # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words: the bills that put an
     # amendment on the ballot are signed by the governor and stay ordinary bills).

@@ -57,30 +57,30 @@ def delegation(session):
 # Topic: (label, committees, official subjects (none used), title words). Committees as the actions name them.
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", {"Energy", "Energy and Natural Resources", "Natural Resources", "Agriculture and Natural Resources",
+    "env": ("Environment and energy", {"Energy", "Energy and Natural Resources", "Natural Resources", "Agriculture and Natural Resources",
             "Energy and Public Utilities", "Public Utilities", "Environment"}, NO_SUBJECTS,
             r"\b(environment\w*|climate|emission\w*|renewable|solar|wind|pollut\w*|water|energy|utilit\w*|oil|gas)\b"),
     "local": ("Local government", {"Local Government", "Local Government and Elections"}, NO_SUBJECTS,
               r"\b(municipal\w*|county|counties|township\w*|local government|village\w*)\b"),
     "tax": ("Taxes", {"Ways and Means"}, NO_SUBJECTS, r"\b(tax\w*|revenue)\b"),
-    "safety": ("Public safety & courts", {"Judiciary", "Criminal Justice", "Civil Justice", "Homeland Security", "Public Safety"}, NO_SUBJECTS,
+    "safety": ("Public safety and courts", {"Judiciary", "Criminal Justice", "Civil Justice", "Homeland Security", "Public Safety"}, NO_SUBJECTS,
                r"\b(crim\w*|firearm\w*|police|court\w*|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|corrections|offense\w*)\b"),
-    "human": ("Human services", {"Families and Aging", "Children and Human Services", "Veterans Strategic Affairs", "Veterans and Public Safety"},
+    "human": ("Social services", {"Families and Aging", "Children and Human Services", "Veterans Strategic Affairs", "Veterans and Public Safety"},
               NO_SUBJECTS, r"\b(child care|foster|veteran\w*|senior\w*|aging|disabilit\w*|homeless\w*)\b"),
-    "health": ("Health & mental health", {"Health", "Medicaid", "Health Provider Services", "Insurance"}, NO_SUBJECTS,
+    "health": ("Health", {"Health", "Medicaid", "Health Provider Services", "Insurance"}, NO_SUBJECTS,
                r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*)\b"),
     "edu": ("Education", {"Education", "Primary and Secondary Education", "Higher Education", "Workforce and Higher Education"}, NO_SUBJECTS,
             r"\b(school\w*|student\w*|teacher\w*|education|college\w*|universit\w*)\b"),
     "transp": ("Transportation", {"Transportation"}, NO_SUBJECTS, r"\b(vehicle\w*|highway\w*|road\w*|traffic|transit|driver\w*|motor)\b"),
-    "labor": ("Labor & public employees", {"Workforce and Higher Education", "Commerce and Labor", "Pensions"}, NO_SUBJECTS,
+    "labor": ("Jobs and workers", {"Workforce and Higher Education", "Commerce and Labor", "Pensions"}, NO_SUBJECTS,
               r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*)\b"),
     "housing": ("Housing", {"Housing"}, NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|rent|eviction\w*)\b"),
-    "ag": ("Agriculture & natural resources", {"Agriculture", "Agriculture and Natural Resources"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
-    "gov": ("Elections & state government", {"General Government", "Government Oversight", "Local Government and Elections", "State and Local Government"},
+    "ag": ("Agriculture and natural resources", {"Agriculture", "Agriculture and Natural Resources"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
+    "gov": ("Elections and government", {"General Government", "Government Oversight", "Local Government and Elections", "State and Local Government"},
             NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics)\b"),
     # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words).
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
-    "biz": ("Business & consumers", {"Commerce and Labor", "Financial Institutions", "Insurance", "Development", "Technology and Innovation",
+    "biz": ("Business and consumers", {"Commerce and Labor", "Financial Institutions", "Insurance", "Development", "Technology and Innovation",
             "Economic Development"}, NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
 }
 TOPIC_WORDS = {k: re.compile(v[3], re.I) for k, v in TOPICS.items() if v[3]}

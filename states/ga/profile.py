@@ -56,21 +56,21 @@ def delegation(session):
 # Topic: (label, committee names (unused; see COMMITTEE_TOPICS), official subjects (none), title words).
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|pollut\w*|water|energy|utilit\w*)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|pollut\w*|water|energy|utilit\w*)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|county|counties|city of|board of commissioners|local government)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|revenue|homestead exemption)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|court\w*|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|correction\w*|sheriff\w*)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|foster|veteran\w*|senior\w*|aging|disabilit\w*|homeless\w*)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|court\w*|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|correction\w*|sheriff\w*)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|foster|veteran\w*|senior\w*|aging|disabilit\w*|homeless\w*)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(school\w*|student\w*|teacher\w*|education|college\w*|universit\w*)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicle\w*|highway\w*|road\w*|traffic|transit|driver\w*|motor)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*|retirement)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*|retirement)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|rent|eviction\w*)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunting|timber)\b"),
-    "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics|open records)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunting|timber)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics|open records)\b"),
     # House and Senate resolutions proposing constitutional amendments (tagged by convert.py, not by words).
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
 }
 # Committee name words -> topic.
 COMMITTEE_TOPICS = {"Natural Resources": "env", "Energy": "env", "Environment": "env", "Governmental Affairs": "gov",

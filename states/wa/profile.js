@@ -168,7 +168,7 @@ const STATE = {
     "Early Learning & K-12 Education": ["Education", "Schools"],
     "Higher Education & Workforce Development": ["Postsecondary Education & Workforce", "Colleges and job training"],
     "Health & Long-Term Care": ["Health Care & Wellness", "Health"],
-    "Human Services": ["Early Learning & Human Services", "Human services"],
+    "Human Services": ["Early Learning & Human Services", "Social services"],
     "Law & Justice": ["Civil Rights & Judiciary", "Courts and civil law"],
     "Labor & Commerce": ["Labor & Workplace Standards", "Labor"],
     "Environment, Energy & Technology": ["Environment & Energy", "Environment and energy"],

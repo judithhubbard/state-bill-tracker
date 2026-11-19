@@ -56,19 +56,19 @@ def delegation(session):
 # official title, used alongside the committees).
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|pollut\w*|energy|utilit\w*|electric\w*|natural gas|nuclear|coastal|beach\w*|recycl\w*|solid waste|landfill\w*|stormwater|DHEC|DES|conservation)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|pollut\w*|energy|utilit\w*|electric\w*|natural gas|nuclear|coastal|beach\w*|recycl\w*|solid waste|landfill\w*|stormwater|DHEC|DES|conservation)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|county|counties|cit(?:y|ies)|towns?|special purpose district|public service district|local government\w*|annex\w*|zoning|land use)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|revenue|homestead exemption|millage|assessment ratio)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|guns?|weapons?|police|courts?|judges?|judicial|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|corrections|law enforcement|offenses?|theft|assault|fentanyl|trafficking|bail|bond hearing|solicitor\w*)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|foster|adoption|veteran\w*|seniors?|elderly|disabilit\w*|homeless\w*|public assistance|social services|guardians? ad litem|child support|vulnerable adults?)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|behavioral|opioid\w*|drugs?|dental|dentist\w*|insulin|vaccin\w*)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|guns?|weapons?|police|courts?|judges?|judicial|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|corrections|law enforcement|offenses?|theft|assault|fentanyl|trafficking|bail|bond hearing|solicitor\w*)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|foster|adoption|veteran\w*|seniors?|elderly|disabilit\w*|homeless\w*|public assistance|social services|guardians? ad litem|child support|vulnerable adults?)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|behavioral|opioid\w*|drugs?|dental|dentist\w*|insulin|vaccin\w*)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(schools?|students?|teachers?|education\w*|college\w*|universit\w*|educators?|scholarships?|tuition|school district\w*)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicles?|highways?|roads?|traffic|transit|drivers?|driving|motor|bridges?|transportation|DOT|DMV|aviation|airports?|ports?)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wages?|employ\w*|workers?|labor|pensions?|retirement|workforce|unemployment|workers' compensation)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wages?|employ\w*|workers?|labor|pensions?|retirement|workforce|unemployment|workers' compensation)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlords?|tenants?|rent\w*|eviction\w*|manufactured homes?|homeowners?'? associations?|mortgage\w*)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunt\w*|crops?|poultry|shellfish|forest\w*|timber|game|deer|hemp|natural resources)\b"),
-    "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|primar(?:y|ies)|state agenc\w*|ethics|freedom of information|FOIA|General Assembly|regulations?|procurement|state employees?)\b"),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|insurers?|banks?|banking|licens\w*|corporat\w*|economic development|gaming|gambling|alcohol\w*|beer|wine|liquor|cannabis|marijuana|contractors?|real estate)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunt\w*|crops?|poultry|shellfish|forest\w*|timber|game|deer|hemp|natural resources)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|primar(?:y|ies)|state agenc\w*|ethics|freedom of information|FOIA|General Assembly|regulations?|procurement|state employees?)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|insurers?|banks?|banking|licens\w*|corporat\w*|economic development|gaming|gambling|alcohol\w*|beer|wine|liquor|cannabis|marijuana|contractors?|real estate)\b"),
     # Joint resolutions proposing an amendment to the South Carolina Constitution (tagged by convert.py, not by words).
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }

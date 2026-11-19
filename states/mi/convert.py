@@ -33,7 +33,7 @@ CATEGORY_TOPICS = {"Environmental": "env", "Energy": "env", "Natural resources":
                    "Taxation": "tax", "Property tax": "tax", "Income tax": "tax", "Sales tax": "tax", "Use tax": "tax",
                    "Corporate income tax": "tax", "Crimes": "safety", "Criminal procedure": "safety", "Corrections": "safety",
                    "Courts": "safety", "Law enforcement": "safety", "Weapons": "safety", "Juveniles": "safety",
-                   "Children": "human", "Family law": "human", "Human services": "human", "Veterans": "human",
+                   "Children": "human", "Family law": "human", "Social services": "human", "Veterans": "human",
                    "Senior citizens": "human", "Health": "health", "Health facilities": "health", "Mental health": "health",
                    "Medical marihuana": "health", "Occupations": "biz", "Education": "edu", "School aid": "edu",
                    "Higher education": "edu", "Transportation": "transp", "Vehicles": "transp", "Traffic control": "transp",

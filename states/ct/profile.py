@@ -58,19 +58,19 @@ def delegation(session):
 # them), by their codes in the files.
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", {"ENV", "ET"}, NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind|pollut\w*|water|energy|utilit\w*)\b"),
+    "env": ("Environment and energy", {"ENV", "ET"}, NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind|pollut\w*|water|energy|utilit\w*)\b"),
     "local": ("Local government", {"PD"}, NO_SUBJECTS, r"\b(municipal\w*|town\w*|cities|city|local government|regional)\b"),
     "tax": ("Taxes", {"FIN"}, NO_SUBJECTS, r"\b(tax\w*|revenue)\b"),
-    "safety": ("Public safety & courts", {"JUD", "PS"}, NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|court\w*|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|correction\w*)\b"),
-    "human": ("Human services", {"HS", "KID", "AGE", "VA"}, NO_SUBJECTS, r"\b(child care|foster|veteran\w*|senior\w*|aging|disabilit\w*|homeless\w*)\b"),
-    "health": ("Health & mental health", {"PH", "INS"}, NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*)\b"),
+    "safety": ("Public safety and courts", {"JUD", "PS"}, NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|court\w*|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|correction\w*)\b"),
+    "human": ("Social services", {"HS", "KID", "AGE", "VA"}, NO_SUBJECTS, r"\b(child care|foster|veteran\w*|senior\w*|aging|disabilit\w*|homeless\w*)\b"),
+    "health": ("Health", {"PH", "INS"}, NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*)\b"),
     "edu": ("Education", {"ED", "HED"}, NO_SUBJECTS, r"\b(school\w*|student\w*|teacher\w*|education|college\w*|universit\w*)\b"),
     "transp": ("Transportation", {"TRA"}, NO_SUBJECTS, r"\b(vehicle\w*|highway\w*|road\w*|traffic|transit|driver\w*|motor)\b"),
-    "labor": ("Labor & public employees", {"LAB"}, NO_SUBJECTS, r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*)\b"),
+    "labor": ("Jobs and workers", {"LAB"}, NO_SUBJECTS, r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*)\b"),
     "housing": ("Housing", {"HSG"}, NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|rent|eviction\w*)\b"),
-    "ag": ("Agriculture & natural resources", {"ENV"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
-    "gov": ("Elections & state government", {"GAE", "GL"}, NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics)\b"),
-    "biz": ("Business & consumers", {"CE", "BA", "INS", "GL"}, NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
+    "ag": ("Agriculture and natural resources", {"ENV"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*)\b"),
+    "gov": ("Elections and government", {"GAE", "GL"}, NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics)\b"),
+    "biz": ("Business and consumers", {"CE", "BA", "INS", "GL"}, NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
     # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words).
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }

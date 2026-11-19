@@ -70,19 +70,19 @@ def delegation(session):
 # committee gives a topic).
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind energy|pollut\w*|energy|utilit\w*|electric\w*|recycl\w*|solid waste|water quality|carbon|pipelines?|nitrates?|drainage)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind energy|pollut\w*|energy|utilit\w*|electric\w*|recycl\w*|solid waste|water quality|carbon|pipelines?|nitrates?|drainage)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(count(?:y|ies)|cit(?:y|ies)|municipal\w*|townships?|local governments?|political subdivisions?|boards? of supervisors)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|property assessments?|tax credits?)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|offen[cs]\w*|firearm\w*|guns?|weapon\w*|police|peace officers?|law enforcement|courts?|judg\w*|sentenc\w*|prison\w*|jails?|felon\w*|corrections?|correctional|parole|probation|sheriff\w*)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|foster|adoption\w*|elder\w*|older Iowans|veteran\w*|disabilit\w*|homeless\w*|child welfare|public assistance|food assistance|SNAP)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|reproductive|drugs?|opioid\w*|cannabis|dental)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|offen[cs]\w*|firearm\w*|guns?|weapon\w*|police|peace officers?|law enforcement|courts?|judg\w*|sentenc\w*|prison\w*|jails?|felon\w*|corrections?|correctional|parole|probation|sheriff\w*)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|foster|adoption\w*|elder\w*|older Iowans|veteran\w*|disabilit\w*|homeless\w*|child welfare|public assistance|food assistance|SNAP)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|reproductive|drugs?|opioid\w*|cannabis|dental)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(schools?|students?|teachers?|education\w*|colleges?|universit\w*|preschool|board of regents)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicles?|highways?|roads?|traffic|drivers?|transportation|airports?|rail\w*|transit|bicycl\w*|motorcycl\w*)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wages?|employees?|employ\w*|workers?|labor|pensions?|IPERS|retirement|unions?|collective bargaining|unemployment)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wages?|employees?|employ\w*|workers?|labor|pensions?|IPERS|retirement|unions?|collective bargaining|unemployment)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlords?|tenants?|rent\w*|evictions?|homeowners?|manufactured homes?)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|crops?|fish\w*|wildlife|hunting|forest\w*|animals?|grain|soil)\b"),
-    "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|campaigns?|ethics|lobby\w*|public records|open meetings|state agenc\w*|general assembly|administrative rules?)\b"),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|insurers?|banks?|banking|financial|licens\w*|alcohol\w*|gambling|wagering|commerce|economic development)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|crops?|fish\w*|wildlife|hunting|forest\w*|animals?|grain|soil)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|campaigns?|ethics|lobby\w*|public records|open meetings|state agenc\w*|general assembly|administrative rules?)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|insurers?|banks?|banking|financial|licens\w*|alcohol\w*|gambling|wagering|commerce|economic development)\b"),
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }
 # Committees (both houses, both General Assemblies) -> topic, for committees with one main subject. Appropriations, Ways

@@ -72,19 +72,19 @@ COMMITTEES = {"CRA": "Community and Regional Affairs", "EDC": "Education", "ENE"
 # Topic: (label, committees (unused; see COMMITTEE_TOPICS), official subjects (unused; see SUBJECT_TOPICS), title words).
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind|pollut\w*|energy|utilit\w*|electric\w*|PFAS|carbon)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind|pollut\w*|energy|utilit\w*|electric\w*|PFAS|carbon)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|boroughs?|city|cities|local government|unorganized)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|revenue)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|courts?|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|correction\w*|VPSO|troopers?)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|foster|veteran\w*|senior\w*|elderly|disabilit\w*|homeless\w*|public assistance|SNAP)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|courts?|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|correction\w*|VPSO|troopers?)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|foster|veteran\w*|senior\w*|elderly|disabilit\w*|homeless\w*|public assistance|SNAP)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(school\w*|students?|teachers?|education|college\w*|universit\w*|univ)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicles?|highways?|roads?|traffic|transit|drivers?|driving|motor|marine highway|ferr(?:y|ies)|aviation|airports?|railroad)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wages?|employ\w*|workers?|labor|pensions?|retirement|PERS|TRS)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wages?|employ\w*|workers?|labor|pensions?|retirement|PERS|TRS)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlords?|tenants?|rent|eviction\w*)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunting|game|mining|minerals?|timber|forest\w*|subsistence)\b"),
-    "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|state agenc\w*|ethics|public records|legislat\w*)\b"),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|banks?|licens\w*|corporat\w*|economic development|gaming|alcohol\w*|marijuana)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunting|game|mining|minerals?|timber|forest\w*|subsistence)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|state agenc\w*|ethics|public records|legislat\w*)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|banks?|licens\w*|corporat\w*|economic development|gaming|alcohol\w*|marijuana)\b"),
     # Joint resolutions proposing amendments to the Alaska Constitution (tagged by convert.py, not by words).
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }

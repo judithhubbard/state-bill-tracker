@@ -128,28 +128,28 @@ def district_names(seats=None):
 # (POLICY_TOPICS); words in its title and the CRS's subject terms add others.
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind energy|pollut\w*|energy|electric\w*|natural gas|nuclear|recycl\w*|hazardous waste|drinking water|water quality|clean water|PFAS|carbon|oil and gas|pipelines?)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind energy|pollut\w*|energy|electric\w*|natural gas|nuclear|recycl\w*|hazardous waste|drinking water|water quality|clean water|PFAS|carbon|oil and gas|pipelines?)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|local governments?|District of Columbia|Puerto Rico|Guam|territor(?:y|ies)|tribal|Indian tribes?|native americans?|Alaska natives?|Native Hawaiians?)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|internal revenue|tariff\w*|IRS)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|guns?|weapons?|police|courts?|judges?|judicial|sentenc\w*|prison\w*|felony|law enforcement|offenses?|fentanyl|trafficking|prosecut\w*|juvenile|FBI|terroris\w*|disaster\w*|FEMA|emergency management)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|foster|adoption|veteran\w*|seniors?|elderly|older americans|disabilit\w*|homeless\w*|social security|supplemental security income|SNAP|food assistance|nutrition assistance|TANF|welfare|child support)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|medicare|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|behavioral|opioid\w*|drugs?|dental|insulin|vaccin\w*|disease\w*)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|guns?|weapons?|police|courts?|judges?|judicial|sentenc\w*|prison\w*|felony|law enforcement|offenses?|fentanyl|trafficking|prosecut\w*|juvenile|FBI|terroris\w*|disaster\w*|FEMA|emergency management)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|foster|adoption|veteran\w*|seniors?|elderly|older americans|disabilit\w*|homeless\w*|social security|supplemental security income|SNAP|food assistance|nutrition assistance|TANF|welfare|child support)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|medicare|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|behavioral|opioid\w*|drugs?|dental|insulin|vaccin\w*|disease\w*)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(schools?|students?|teachers?|education\w*|college\w*|universit\w*|scholarships?|student loans?|Pell)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicles?|highways?|roads?|traffic|transit|drivers?|motor carriers?|bridges?|transportation|aviation|airports?|aircraft|railroads?|rail|FAA|ports?|maritime|shipping)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wages?|employ\w*|workers?|labor|pensions?|retirement|workforce|unemployment|federal employees?|civil service|unions?)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wages?|employ\w*|workers?|labor|pensions?|retirement|workforce|unemployment|federal employees?|civil service|unions?)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlords?|tenants?|rental|eviction\w*|mortgage\w*|homeowners?|HUD)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunt\w*|crops?|forest\w*|national parks?|public lands?|wilderness|grazing|mining|minerals?)\b"),
-    "gov": ("Elections & government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|federal agenc\w*|ethics|inspectors? general|freedom of information|census|postal service|regulations?|campaign finance|Congress)\b"),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|insurers?|banks?|banking|credit unions?|securities|corporat\w*|economic development|gaming|gambling|alcohol\w*|cannabis|marijuana|small business\w*|telecommunications?|broadband|internet|cryptocurrenc\w*|digital assets?|antitrust)\b"),
-    "defense": ("Defense & national security", set(), NO_SUBJECTS, r"\b(armed forces|military|defense|army|navy|air force|marine corps|space force|national guard|service ?members?|national security|intelligence)\b"),
-    "foreign": ("Foreign affairs, trade & immigration", set(), NO_SUBJECTS, r"\b(foreign|international|treaty|treaties|embassy|sanctions?|Ukraine|Israel|China|Russia|Iran|Taiwan|immigra\w*|aliens?|asylum|visas?|refugees?|border|deport\w*|exports?|imports?)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|hunt\w*|crops?|forest\w*|national parks?|public lands?|wilderness|grazing|mining|minerals?)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|federal agenc\w*|ethics|inspectors? general|freedom of information|census|postal service|regulations?|campaign finance|Congress)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|insurers?|banks?|banking|credit unions?|securities|corporat\w*|economic development|gaming|gambling|alcohol\w*|cannabis|marijuana|small business\w*|telecommunications?|broadband|internet|cryptocurrenc\w*|digital assets?|antitrust)\b"),
+    "defense": ("Defense and national security", set(), NO_SUBJECTS, r"\b(armed forces|military|defense|army|navy|air force|marine corps|space force|national guard|service ?members?|national security|intelligence)\b"),
+    "foreign": ("Foreign affairs, trade and immigration", set(), NO_SUBJECTS, r"\b(foreign|international|treaty|treaties|embassy|sanctions?|Ukraine|Israel|China|Russia|Iran|Taiwan|immigra\w*|aliens?|asylum|visas?|refugees?|border|deport\w*|exports?|imports?)\b"),
     # Joint resolutions proposing an amendment to the Constitution of the United States (tagged by convert.py).
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }
 TOPIC_WORDS = {k: re.compile(v[3], re.I) for k, v in TOPICS.items() if v[3]}
 # For test/data_check.py: the topics Congress adds to the states' 14, and its own name for "gov".
 EXTRA_TOPICS = {"defense", "foreign"}
-TOPIC_NAMES = {"gov": "Elections & government"}
+TOPIC_NAMES = {"gov": "Elections and government"}
 # The Congressional Research Service's 32 policy areas (one a bill) -> the main topic. Those left out ("Economics and
 # Public Finance": the budget, appropriations; "Arts, Culture, Religion"; "Social Sciences and History"; "Sports and
 # Recreation"; "Civil Rights and Liberties, Minority Issues"; "Private Legislation") get topics from their words.

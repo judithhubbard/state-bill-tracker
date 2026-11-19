@@ -93,7 +93,7 @@ const WatchRules = (() => {
     // Each group's name and its note.
     const groups = {
       soon: ["Due soon", () => "A vote, hearing or deadline is coming up."],
-      session: ["Before the session ends", () => {
+      session: ["By the end of the session", () => {
         const e = sessionEnd(), then = e.last || today().startsWith(String(lastYear(facts().session)))
           ? `Bills that haven't ${hooks.passedBothLc || "passed both houses"} by then die.` : "After that, nothing moves until January.";
         if (e.last) return `The session ends ${monthDay(e.date)}, ${e.date.slice(0, 4)}. ${then}`;

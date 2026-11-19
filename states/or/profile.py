@@ -59,19 +59,19 @@ NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
     # Joint resolutions proposing constitutional amendments (tagged by convert.py, not by words).
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
-    "env": ("Environment & energy", {"HCEE", "SEE", "HALNRW", "SNRW", "JWMNR"}, NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind|pollut\w*|water|energy|utilit\w*|wildfire\w*|forest\w*)\b"),
+    "env": ("Environment and energy", {"HCEE", "SEE", "HALNRW", "SNRW", "JWMNR"}, NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|wind|pollut\w*|water|energy|utilit\w*|wildfire\w*|forest\w*)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|county|counties|cities|city|local government|special district\w*)\b"),
     "tax": ("Taxes", {"HREV", "SFR"}, NO_SUBJECTS, r"\b(tax\w*|revenue)\b"),
-    "safety": ("Public safety & courts", {"HJUD", "SJUD", "JWMPS"}, NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|court\w*|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|correction\w*)\b"),
-    "human": ("Human services", {"HECHS", "SHS", "JWMHS", "HEMV", "SVEMFW"}, NO_SUBJECTS, r"\b(child care|foster|veteran\w*|senior\w*|aging|disabilit\w*|homeless\w*)\b"),
-    "health": ("Health & mental health", {"HHC", "SHC", "HBH", "SECBH"}, NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*)\b"),
+    "safety": ("Public safety and courts", {"HJUD", "SJUD", "JWMPS"}, NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|court\w*|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor|correction\w*)\b"),
+    "human": ("Social services", {"HECHS", "SHS", "JWMHS", "HEMV", "SVEMFW"}, NO_SUBJECTS, r"\b(child care|foster|veteran\w*|senior\w*|aging|disabilit\w*|homeless\w*)\b"),
+    "health": ("Health", {"HHC", "SHC", "HBH", "SECBH"}, NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*)\b"),
     "edu": ("Education", {"HED", "SED", "JWMED"}, NO_SUBJECTS, r"\b(school\w*|student\w*|teacher\w*|education|college\w*|universit\w*)\b"),
     "transp": ("Transportation", {"HCT", "SCT", "JTO", "JWMTR"}, NO_SUBJECTS, r"\b(vehicle\w*|highway\w*|road\w*|traffic|transit|driver\w*|motor)\b"),
-    "labor": ("Labor & public employees", {"HLWD", "SLB"}, NO_SUBJECTS, r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*)\b"),
+    "labor": ("Jobs and workers", {"HLWD", "SLB"}, NO_SUBJECTS, r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*)\b"),
     "housing": ("Housing", {"HHOUSH", "SHDEV"}, NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|rent|eviction\w*|homeless\w*)\b"),
-    "ag": ("Agriculture & natural resources", {"HALNRW", "SNRW"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|timber)\b"),
-    "gov": ("Elections & state government", {"SCGG", "HRULES", "SRULES", "JWMGG"}, NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics|public records)\b"),
-    "biz": ("Business & consumers", {"HCCP", "HECDSB", "SLB", "SCGG"}, NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
+    "ag": ("Agriculture and natural resources", {"HALNRW", "SNRW"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|fish\w*|wildlife|timber)\b"),
+    "gov": ("Elections and government", {"SCGG", "HRULES", "SRULES", "JWMGG"}, NO_SUBJECTS, r"\b(election\w*|voter\w*|ballot\w*|state agenc\w*|ethics|public records)\b"),
+    "biz": ("Business and consumers", {"HCCP", "HECDSB", "SLB", "SCGG"}, NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*)\b"),
 }
 TOPIC_WORDS = {k: re.compile(v[3], re.I) for k, v in TOPICS.items() if v[3]}
 

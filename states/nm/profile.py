@@ -57,19 +57,19 @@ def delegation(session):
 # fiscal impact report's synopsis, used when the committees give no topic).
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|pollut\w*|energy|utilit\w*|solar|nuclear|electric\w*|emission\w*|climate|oil and gas|methane|solid waste|recycl\w*)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|pollut\w*|energy|utilit\w*|solar|nuclear|electric\w*|emission\w*|climate|oil and gas|methane|solid waste|recycl\w*)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|county|counties|cities|city|towns?|villages?|annex\w*|land grants?)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|gross receipts|revenue)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|law enforcement|courts?|judge\w*|sentenc\w*|prison\w*|jail\w*|felon\w*|corrections|parole|sheriff\w*|fentanyl|dwi)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|early childhood|foster|adoption\w*|veteran\w*|senior\w*|elderly|aging|disabilit\w*|homeless\w*|public assistance)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|behavioral|pharmac\w*|nurs\w*|physician\w*|abortion|cannabis)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|police|law enforcement|courts?|judge\w*|sentenc\w*|prison\w*|jail\w*|felon\w*|corrections|parole|sheriff\w*|fentanyl|dwi)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|early childhood|foster|adoption\w*|veteran\w*|senior\w*|elderly|aging|disabilit\w*|homeless\w*|public assistance)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|behavioral|pharmac\w*|nurs\w*|physician\w*|abortion|cannabis)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(school\w*|student\w*|teacher\w*|education\w*|college\w*|universit\w*)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicle\w*|highway\w*|roads?|traffic|driver\w*|transportation|airport\w*|motor)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wage\w*|employee\w*|worker\w*|labor|pension\w*|retire\w*|unemployment)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wage\w*|employee\w*|worker\w*|labor|pension\w*|retire\w*|unemployment)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|eviction\w*|homeowner\w*|mobile home\w*)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|acequia\w*|water rights?|wildlife|hunting|fishing|forest\w*|ranch\w*)\b"),
-    "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(election\w*|voter\w*|voting|ballot\w*|campaign\w*|ethics|open meetings|public records|legislat\w*)\b"),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*|alcohol\w*|liquor|gaming|racing)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|acequia\w*|water rights?|wildlife|hunting|fishing|forest\w*|ranch\w*)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(election\w*|voter\w*|voting|ballot\w*|campaign\w*|ethics|open meetings|public records|legislat\w*)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*|alcohol\w*|liquor|gaming|racing)\b"),
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }
 # Standing committees (as convert.comm_name() names them, both houses) -> topic, for committees with one main subject.

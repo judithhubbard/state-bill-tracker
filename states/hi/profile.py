@@ -108,19 +108,19 @@ def committee_name(code, year, house):
 # and the bill's subject terms, used when no committee gives a topic).
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|greenhouse|emission\w*|renewable|solar|pollut\w*|energy|utilit\w*|electric\w*|recycl\w*|solid waste|plastic\w*|invasive species|coral|reefs?|ocean\w*|watershed\w*|conservation|wildfire\w*|carbon)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|greenhouse|emission\w*|renewable|solar|pollut\w*|energy|utilit\w*|electric\w*|recycl\w*|solid waste|plastic\w*|invasive species|coral|reefs?|ocean\w*|watershed\w*|conservation|wildfire\w*|carbon)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(count(?:y|ies)|city and county|county council\w*|neighborhood boards?|home rule)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|general excise|transient accommodations?|income tax|tax credits?)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|offen[cs]\w*|firearm\w*|guns?|weapon\w*|police|law enforcement|courts?|judg\w*|sentenc\w*|prison\w*|jails?|felon\w*|corrections?|correctional|parole|probation|fireworks|emergency management|sheriff\w*)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|keiki|foster|adoption\w*|kupuna|elder\w*|veteran\w*|disabilit\w*|homeless\w*|child welfare|public assistance|SNAP|food security)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|med-quest|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|reproductive|drugs?|opioid\w*|cannabis|dental)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|offen[cs]\w*|firearm\w*|guns?|weapon\w*|police|law enforcement|courts?|judg\w*|sentenc\w*|prison\w*|jails?|felon\w*|corrections?|correctional|parole|probation|fireworks|emergency management|sheriff\w*)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|keiki|foster|adoption\w*|kupuna|elder\w*|veteran\w*|disabilit\w*|homeless\w*|child welfare|public assistance|SNAP|food security)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|med-quest|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|reproductive|drugs?|opioid\w*|cannabis|dental)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(schools?|students?|teachers?|education\w*|colleges?|universit\w*|preschool|early learning)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicles?|highways?|roads?|traffic|drivers?|transportation|airports?|harbors?|rail|transit|bicycl\w*|mopeds?)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wages?|employees?|employ\w*|workers?|labor|pensions?|retirement|unions?|collective bargaining)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wages?|employees?|employ\w*|workers?|labor|pensions?|retirement|unions?|collective bargaining)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlords?|tenants?|rent\w*|evictions?|condominium\w*|homeowners?|accessory dwelling\w*)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|ranch\w*|livestock|fish\w*|aquaculture|wildlife|hunting|forest\w*|biosecurity|food systems?)\b"),
-    "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|campaigns?|ethics|lobby\w*|public records|sunshine law|procurement|state agenc\w*|legislature)\b"),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|insurers?|banks?|banking|financial|licens\w*|tourism|liquor|alcohol\w*|commerce|economic development)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|ranch\w*|livestock|fish\w*|aquaculture|wildlife|hunting|forest\w*|biosecurity|food systems?)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|campaigns?|ethics|lobby\w*|public records|sunshine law|procurement|state agenc\w*|legislature)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|insurers?|banks?|banking|financial|licens\w*|tourism|liquor|alcohol\w*|commerce|economic development)\b"),
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }
 # Committee codes (both houses, all years) -> topic, for committees with one main subject. Judiciary, Ways and Means,

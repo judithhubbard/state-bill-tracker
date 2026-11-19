@@ -207,7 +207,7 @@ const STATE = {
     "Health and Human Services": ["Health Finance and Policy", "Health"],
     "Higher Education": ["Higher Education Finance and Policy", "Higher education"],
     "Housing and Homelessness Prevention": ["Housing Finance and Policy", "Housing"],
-    "Human Services": ["Human Services Finance and Policy", "Human services"],
+    "Human Services": ["Human Services Finance and Policy", "Social services"],
     "Jobs and Economic Development": ["Workforce, Labor, and Economic Development Finance and Policy", "Jobs, labor and economic development"],
     "Judiciary and Public Safety": ["Public Safety Finance and Policy", "Public safety and courts"],
     "Rules and Administration": ["Rules and Legislative Administration", "Rules"],

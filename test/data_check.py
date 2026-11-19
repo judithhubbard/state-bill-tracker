@@ -18,10 +18,10 @@ fails = []
 # Each legislature's seats (states/legislatures.json), to check votes against the size of their house.
 LEGISLATURES = json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"]
 # The topics every state uses, with the same names, so states can be compared ("Shared conventions" in CLAUDE.md).
-TOPICS = {"ag": "Agriculture & natural resources", "biz": "Business & consumers", "const": "Constitutional amendments",
-          "edu": "Education", "env": "Environment & energy", "gov": "Elections & state government",
-          "health": "Health & mental health", "housing": "Housing", "human": "Human services",
-          "labor": "Labor & public employees", "local": "Local government", "safety": "Public safety & courts",
+TOPICS = {"ag": "Agriculture and natural resources", "biz": "Business and consumers", "const": "Constitutional amendments",
+          "edu": "Education", "env": "Environment and energy", "gov": "Elections and government",
+          "health": "Health", "housing": "Housing", "human": "Social services",
+          "labor": "Jobs and workers", "local": "Local government", "safety": "Public safety and courts",
           "tax": "Taxes", "transp": "Transportation"}
 
 

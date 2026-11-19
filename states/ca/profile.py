@@ -53,7 +53,7 @@ def delegation(session):
 # as in LOCATION_CODE_TBL without the house ("Natural Resources"); the keys are shared with other states.
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy",
+    "env": ("Environment and energy",
             {"Natural Resources", "Environmental Safety and Toxic Materials", "Utilities and Energy", "Water, Parks and Wildlife", "Environmental Quality", "Natural Resources and Water", "Energy, Utilities and Communications", "Petroleum and Gasoline Supply", "Fuel Supply and Price Spikes"}, NO_SUBJECTS,
             r"\b(climate|greenhouse|emission\w*|renewable|solar|wind energy|pollut\w*|wetland|watershed|"
             r"drinking water|pesticide|plastic|recycl\w*|pfas|stormwater|wastewater|forest\w*|wildlife|energy|"
@@ -63,13 +63,13 @@ TOPICS = {
               r"\b(city|cities|county|counties|special district\w*|zoning|local government|local agenc\w*)\b"),
     "tax": ("Taxes",
             {"Revenue and Taxation", "Governance and Finance"}, NO_SUBJECTS, r"\b(tax|taxes|taxation|property tax\w*)\b"),
-    "safety": ("Public safety & courts",
+    "safety": ("Public safety and courts",
             {"Public Safety", "Emergency Management"}, NO_SUBJECTS,
                r"\b(crim\w*|firearm\w*|police|peace officer\w*|court\w*|sentenc\w*|prison\w*|jail\w*|felony|misdemeanor)\b"),
-    "human": ("Human services",
+    "human": ("Social services",
             {"Human Services", "Aging and Long Term Care", "Military and Veterans Affairs"}, NO_SUBJECTS,
               r"\b(child care|foster care|calfresh|calworks|social services|veterans?|seniors?|aging|disabilit\w*|homeless\w*)\b"),
-    "health": ("Health & mental health",
+    "health": ("Health",
             {"Health"}, NO_SUBJECTS,
                r"\b(health|medical|medi-cal|hospital\w*|mental|behavioral|pharmac\w*|nurs\w*|physician\w*)\b"),
     "edu": ("Education",
@@ -78,17 +78,17 @@ TOPICS = {
     "transp": ("Transportation",
             {"Transportation", "Transportation and Infrastructure Development"}, NO_SUBJECTS,
                r"\b(vehicle\w*|highway\w*|road\w*|traffic|transit|driver\w*|toll\w*|rail)\b"),
-    "labor": ("Labor & public employees",
+    "labor": ("Jobs and workers",
             {"Labor and Employment", "Public Employment and Retirement", "Labor, Public Employment and Retirement", "Labor and Industrial Relations"}, NO_SUBJECTS,
               r"\b(wage|wages|employ\w*|worker\w*|labor|retirement|collective bargaining|pers|strs)\b"),
     "housing": ("Housing",
             {"Housing and Community Development", "Housing"}, NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|rent|eviction\w*|mortgage\w*)\b"),
-    "ag": ("Agriculture & natural resources",
+    "ag": ("Agriculture and natural resources",
             {"Agriculture"}, NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|animal\w*|food)\b"),
-    "gov": ("Elections & state government",
+    "gov": ("Elections and government",
             {"Elections", "Elections and Constitutional Amendments", "Governmental Organization", "Accountability and Administrative Review"}, NO_SUBJECTS,
             r"\b(election\w*|voter\w*|ballot\w*|campaign\w*|state agenc\w*|public records)\b"),
-    "biz": ("Business & consumers",
+    "biz": ("Business and consumers",
             {"Banking and Finance", "Business and Professions", "Privacy and Consumer Protection", "Insurance", "Insurance, Banking and Financial Institutions", "Business, Professions and Economic Development", "Privacy, Digital Technologies, and Consumer Protection", "Banking and Financial Institutions", "Economic Development, Growth, and Household Impact"}, NO_SUBJECTS,
             r"\b(consumer\w*|business\w*|insurance|bank\w*|licens\w*|corporation\w*|privacy|data)\b"),
     # Constitutional amendments (ACA, SCA; tagged by convert.py, not by words).

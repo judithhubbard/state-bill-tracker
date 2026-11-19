@@ -71,19 +71,19 @@ VOTE_NAME_FIX = {(2023, "Meyer"): "L:41", (2025, "Meyer"): "L:17"}
 # committee gives none).
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|pollut\w*|energy|utilit\w*|solar|wind|nuclear|electric\w*|waste|recycl\w*|carbon|power district\w*|pipelines?)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|pollut\w*|energy|utilit\w*|solar|wind|nuclear|electric\w*|waste|recycl\w*|carbon|power district\w*|pipelines?)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|county|counties|cit(?:y|ies)|villages?|annex\w*|political subdivision\w*|sanitary and improvement)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|revenue)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|guns?|police|law enforcement|courts?|judges?|sentenc\w*|prison\w*|jail\w*|felony|correction\w*|parole|probation|sheriff\w*|offenses?)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|foster|adoption\w*|veteran\w*|senior\w*|elderly|disabilit\w*|homeless\w*|public assistance|child welfare)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|cannabis)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|guns?|police|law enforcement|courts?|judges?|sentenc\w*|prison\w*|jail\w*|felony|correction\w*|parole|probation|sheriff\w*|offenses?)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|foster|adoption\w*|veteran\w*|senior\w*|elderly|disabilit\w*|homeless\w*|public assistance|child welfare)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|abortion|cannabis)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(schools?|students?|teachers?|education\w*|college\w*|universit\w*)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicles?|highways?|roads?|traffic|drivers?|transportation|airports?|aeronautics|railroads?|telecommunication\w*|broadband)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wages?|employees?|employ\w*|workers?|labor|pensions?|retirement)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wages?|employees?|employ\w*|workers?|labor|pensions?|retirement)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlords?|tenants?|evictions?|homeowners?|rent)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|cattle|fish\w*|wildlife|hunting|grain|crops?|ranch\w*|water|irrigation|natural resources district\w*)\b"),
-    "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|campaign\w*|ethics|open meetings|public records|state agenc\w*|legislat\w*)\b"),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|banks?|banking|licens\w*|alcohol\w*|liquor|gaming|gambling|lottery|corporat\w*)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|cattle|fish\w*|wildlife|hunting|grain|crops?|ranch\w*|water|irrigation|natural resources district\w*)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(elections?|voters?|voting|ballots?|campaign\w*|ethics|open meetings|public records|state agenc\w*|legislat\w*)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumers?|business\w*|insurance|banks?|banking|licens\w*|alcohol\w*|liquor|gaming|gambling|lottery|corporat\w*)\b"),
     # Proposed amendments to the Nebraska Constitution (the CA resolutions, tagged by convert.py).
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }

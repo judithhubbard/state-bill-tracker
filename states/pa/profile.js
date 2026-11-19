@@ -52,7 +52,7 @@ const STATE = {
 
   passedBothBy: (session) => STATE.sessionEnds(session),
   passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
-  passedBothGroup: ["Before the session ends", () => "Bills that pass both houses are signed by the Speaker and the Senate's presiding officer, then presented to the governor."],
+  passedBothGroup: ["By the end of the session", () => "Bills that pass both houses are signed by the Speaker and the Senate's presiding officer, then presented to the governor."],
   passedBothNext: () => ({
     what: "the Speaker and the Senate's presiding officer sign it, and it goes to the governor, who can sign it or veto it (or veto items in a spending bill). A bill the governor doesn't act on becomes law.",
     gov: ["sign it", "veto it"],

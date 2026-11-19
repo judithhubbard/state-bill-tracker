@@ -56,19 +56,19 @@ def delegation(session):
 # Topic: (label, committees (unused; see COMMITTEE_TOPICS), official subjects (unused), title words).
 NO_SUBJECTS = re.compile(r"(?!)")
 TOPICS = {
-    "env": ("Environment & energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|pollut\w*|energy|utilit\w*|electric\w*|solid waste|landfill\w*|water quality|stormwater|wetland\w*|flood\w*|PFAS|Act 250|land use|recycl\w*|weatheriz\w*|greenhouse)\b"),
+    "env": ("Environment and energy", set(), NO_SUBJECTS, r"\b(environment\w*|climate|emission\w*|renewable|solar|pollut\w*|energy|utilit\w*|electric\w*|solid waste|landfill\w*|water quality|stormwater|wetland\w*|flood\w*|PFAS|Act 250|land use|recycl\w*|weatheriz\w*|greenhouse)\b"),
     "local": ("Local government", set(), NO_SUBJECTS, r"\b(municipal\w*|charter|cities|city of|town of|village of|towns|selectboard|local government\w*|downtown\w*)\b"),
     "tax": ("Taxes", set(), NO_SUBJECTS, r"\b(tax\w*|revenue|property valuation|grand list)\b"),
-    "safety": ("Public safety & courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|gun\w*|weapon\w*|police|law enforcement|court\w*|sentenc\w*|prison\w*|correction\w*|felony|misdemeanor|expunge\w*|offense\w*|judicial|judiciary|bail|sheriff\w*)\b"),
-    "human": ("Human services", set(), NO_SUBJECTS, r"\b(child care|foster|veteran\w*|older Vermonters|elder\w*|disabilit\w*|homeless\w*|Reach Up|general assistance|human services|child welfare)\b"),
-    "health": ("Health & mental health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|Dr\. Dynasaur|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|prescription\w*|opioid\w*|substance use|cannabis|tobacco)\b"),
+    "safety": ("Public safety and courts", set(), NO_SUBJECTS, r"\b(crim\w*|firearm\w*|gun\w*|weapon\w*|police|law enforcement|court\w*|sentenc\w*|prison\w*|correction\w*|felony|misdemeanor|expunge\w*|offense\w*|judicial|judiciary|bail|sheriff\w*)\b"),
+    "human": ("Social services", set(), NO_SUBJECTS, r"\b(child care|foster|veteran\w*|older Vermonters|elder\w*|disabilit\w*|homeless\w*|Reach Up|general assistance|human services|child welfare)\b"),
+    "health": ("Health", set(), NO_SUBJECTS, r"\b(health|medical|medicaid|Dr\. Dynasaur|hospital\w*|mental|pharmac\w*|nurs\w*|physician\w*|prescription\w*|opioid\w*|substance use|cannabis|tobacco)\b"),
     "edu": ("Education", set(), NO_SUBJECTS, r"\b(school\w*|student\w*|teacher\w*|education\w*|educator\w*|college\w*|universit\w*|tuition|prekindergarten)\b"),
     "transp": ("Transportation", set(), NO_SUBJECTS, r"\b(vehicle\w*|highway\w*|road\w*|traffic|transit|driver\w*|driving|motor|transportation|rail\w*|aviation)\b"),
-    "labor": ("Labor & public employees", set(), NO_SUBJECTS, r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*|retirement|unemployment|collective bargaining)\b"),
+    "labor": ("Jobs and workers", set(), NO_SUBJECTS, r"\b(wage\w*|employ\w*|worker\w*|labor|pension\w*|retirement|unemployment|collective bargaining)\b"),
     "housing": ("Housing", set(), NO_SUBJECTS, r"\b(housing|landlord\w*|tenant\w*|rent\w*|eviction\w*|zoning|mobile home\w*|homeowner\w*)\b"),
-    "ag": ("Agriculture & natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|dairy|maple|fish\w*|wildlife|hunting|trapping|forest\w*|timber|pesticide\w*|neonicotinoid\w*)\b"),
-    "gov": ("Elections & state government", set(), NO_SUBJECTS, r"\b(election\w*|voter\w*|voting|ballot\w*|state agenc\w*|ethics|public records|campaign\w*|open meeting\w*|legislat\w*|Secretary of State|Auditor)\b"),
-    "biz": ("Business & consumers", set(), NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|insurer\w*|bank\w*|licens\w*|corporat\w*|economic development|alcohol\w*|liquor|beer|wine|spirits|gaming|sports wagering|data broker\w*|privacy)\b"),
+    "ag": ("Agriculture and natural resources", set(), NO_SUBJECTS, r"\b(agricultur\w*|farm\w*|livestock|dairy|maple|fish\w*|wildlife|hunting|trapping|forest\w*|timber|pesticide\w*|neonicotinoid\w*)\b"),
+    "gov": ("Elections and government", set(), NO_SUBJECTS, r"\b(election\w*|voter\w*|voting|ballot\w*|state agenc\w*|ethics|public records|campaign\w*|open meeting\w*|legislat\w*|Secretary of State|Auditor)\b"),
+    "biz": ("Business and consumers", set(), NO_SUBJECTS, r"\b(consumer\w*|business\w*|insurance|insurer\w*|bank\w*|licens\w*|corporat\w*|economic development|alcohol\w*|liquor|beer|wine|spirits|gaming|sports wagering|data broker\w*|privacy)\b"),
     "const": ("Constitutional amendments", set(), NO_SUBJECTS, ""),
 }
 TOPIC_WORDS = {k: re.compile(v[3], re.I) for k, v in TOPICS.items() if v[3]}

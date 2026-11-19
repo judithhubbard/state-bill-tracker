@@ -57,7 +57,7 @@ const STATE = {
 
   passedBothBy: (session) => STATE.sessionEnds(session),
   passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
-  passedBothGroup: ["Before the session ends", () => "Bills that pass both houses are ratified by the presiding officers; public bills then go to the governor, while local bills become law at once."],
+  passedBothGroup: ["By the end of the session", () => "Bills that pass both houses are ratified by the presiding officers; public bills then go to the governor, while local bills become law at once."],
   passedBothNext: () => ({
     what: "the presiding officers ratify it, and a public bill goes to the governor, who can sign it or veto it. A bill the governor doesn't act on becomes law. A local bill becomes law when ratified.",
     gov: ["sign it", "veto it"],

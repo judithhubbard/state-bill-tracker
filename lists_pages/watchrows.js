@@ -11,7 +11,7 @@
 // WatchRows.newsHtml(entries): "New since you last looked", one box at the top of the list.
 const WatchRows = (() => {
   const ORDER = ["soon", "session", "year", "later", "idle", "done"];
-  const NAMES = { soon: "Due soon", session: "Before the session ends", later: "Later", idle: "Out of time this session", done: "Decided or ended" };
+  const NAMES = { soon: "Due soon", session: "In the legislature", later: "Later", idle: "Out of time this session", done: "Decided or ended" };
   // (No general note under a heading: the headings say it. A state's own note on a group, with its dates, still shows.)
   const NOTES = {};
   // Paperwork that comes with a real step isn't news (a state's profile can say its own: STATE.routine).
@@ -114,12 +114,16 @@ const WatchRows = (() => {
   function groupHead(g, xs, opt) {
     const one = xs.every((x) => x.rules && x.rules === xs[0].rules) ? xs[0].rules : null;
     let name = NAMES[g], sub = "";
-    if (g === "year") {
-      name = new Set(xs.map((x) => x.st)).size === 1 && xs[0].yearGroup ? xs[0].yearGroup : "Due later";
-      const years = new Set(xs.map((x) => (x.date || "").slice(0, 4)).filter(Boolean));
-      if (years.size === 1 && /^By /.test(name)) name += `, ${[...years][0]}`;
-    }
+    // The dated groups say where the bills are, then the date when the group's bills share one: "In the legislature:
+    // session ends January 11, 2028", "Passed both houses: deadline December 31, 2026" (else each row shows its own date).
+    const days = new Set(xs.map((x) => x.date || ""));
+    const oneDay = days.size === 1 && [...days][0];
+    const long = (d) => new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    if (g === "session") name = `In the legislature${oneDay ? `: session ends ${long(oneDay)}` : ""}`;
+    if (g === "year") name = `Passed both houses${oneDay ? `: deadline ${long(oneDay)}` : ""}`;
     try { if (one && one.WR.groups[g]) sub = one.WR.groups[g][1]() || ""; } catch (e) {}
+    // In a list with several states (Your bills), a state's note says which state ("The New Jersey session ends ...").
+    if (sub && !opt.oneState && one) { const nm = (opt.stName || ((x) => x.toUpperCase()))(xs[0].st); sub = /^The session/.test(sub) ? sub.replace(/^The session/, `The ${nm} session`) : `${nm}: ${sub}`; }
     if (!sub) sub = NOTES[g] || "";
     return `<h2 class="wr-ghd">${h(name)} <span class="wr-n">· ${xs.length} bill${xs.length === 1 ? "" : "s"}</span></h2>${sub ? `<p class="wr-gsub">${h(sub)}</p>` : ""}${opt.groupExtra?.(g, xs) || ""}`;
   }
