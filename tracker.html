@@ -2205,7 +2205,7 @@ function renderMyReps() {
   box.innerHTML = `<div class="repsel"><label>County <select id="repC">${counties}</select></label></div>
     ${where ? `<p class="muted">${where}</p>` : ""}
     ${ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr || "NY"}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
-    <p class="muted" id="repMsg">The address goes to the U.S. Census Bureau's address lookup; only your county and district numbers are kept, in this browser.</p>` : ""}
+    <p class="muted" id="repMsg">We do not store your address; your county and district numbers are saved to this browser only.</p>` : ""}
     <div class="repsel"><label>Senate <select id="repS">${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repA">${opts(LOW)}</select></label></div>
     <p>Your legislators: ${reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`).join(" and ") || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
 }
@@ -2280,7 +2280,7 @@ function renderTownRepsByHouse(box) {
   box.innerHTML = `<div class="repsel">${picker}</div>
     ${where ? `<p class="muted">${where}</p>` : ""}
     ${STATE.addressLookup && ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
-    <p class="muted" id="repMsg">The address goes to the U.S. Census Bureau's address lookup; only your district numbers are kept, in this browser.</p>` : ""}
+    <p class="muted" id="repMsg">We do not store your address; your district numbers are saved to this browser only.</p>` : ""}
     <div class="repsel"><label>${regions ? "Your senators" : "Senate"} <select id="repDS"${regions ? " disabled" : ""}>${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repDL">${opts(LOW)}</select></label></div>
     <p>Your legislators: ${andList(reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`)) || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
 }
