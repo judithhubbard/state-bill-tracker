@@ -168,16 +168,20 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .menu button[aria-current="true"] { font-weight: 700; color: var(--navy); }
 .menu .party { border-bottom: 1px solid var(--rule); padding-bottom: 8px; margin-bottom: 10px; }
 .menu .party button { width: auto; }
-/* Wide screens (1200px and up; the owner's choice 2026-11-17): the Show choices as a column left of the map, in place
-   of the dropdown, with a smaller map and a narrower panel, all three columns the map's height, 24px apart. */
+/* Wider windows (1024px and up; the owner's choice, 2026-11-17 at 1200px, moved down 2026-11-19: at 960px the tiles were too small for a share badge): the Show choices as a
+   column left of the map, in place of the dropdown, all three columns the map's height. From 1024px the map shrinks to
+   make room; from 1200px it's its full size, 24px apart. */
 .showside { display: none; }
-@media (min-width: 1200px) {
-  main { max-width: 1140px; }
-  main .mapwrap { grid-template-columns: 210px 540px minmax(300px, 1fr); gap: 12px 24px; }
+@media (min-width: 1024px) {
+  main .mapwrap { grid-template-columns: 190px minmax(360px, 540px) minmax(260px, 1fr); gap: 12px 20px; }
   main .show .pick { display: none; }
   .showside { display: flex; flex-direction: column; contain: size; min-width: 0; background: var(--sheet); border: 1px solid var(--rule);
     border-radius: 8px; padding: 8px 0 0; }
   main .tiles { gap: 3px; }
+}
+@media (min-width: 1200px) {
+  main { max-width: 1140px; }
+  main .mapwrap { grid-template-columns: 210px 540px minmax(300px, 1fr); gap: 12px 24px; }
   main .tiles a, main .tiles span.off, main .tiles button.tile { font-size: 14px; }
 }
 .showside input { margin: 0 8px 6px; font: inherit; font-size: 14px; padding: 4px 8px; border: 1px solid var(--rule); border-radius: 6px;
@@ -1171,7 +1175,7 @@ function remember() {
       return xs.length ? `<div><h4>${esc(g)}</h4>${xs.map(opt).join("")}</div>` : "";
     }).join("") + (extra.length ? `<div><h4>Other</h4>${extra.map(opt).join("")}</div>` : "") + "</div>";
   // On wide screens the same choices as a column left of the map, with a filter box at its top (CSS shows one or the
-  // other: the dropdown below 1200px).
+  // other: the dropdown below 1024px).
   {
     const side = document.getElementById("showSide");
     side.innerHTML = `<input type="search" id="topicQ" placeholder="Find a topic" aria-label="Find a topic" autocomplete="off"><div class="sidelist">${menu.innerHTML}</div>`;
