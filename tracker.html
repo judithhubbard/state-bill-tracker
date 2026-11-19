@@ -81,7 +81,7 @@ html:not(.ready) .views { pointer-events: none; }
 /* A shared list's bills inside the list's page (#embed=: EMBED): only the watchlist (or one bill's card's body), on the
    list's own card. */
 html.embed body { padding: 0; background: var(--sheet); }
-html.embed .mast, html.embed .views, html.embed #howto, html.embed .sitefoot, html.embed #wl, html.embed #wlActions, html.embed .frameload { display: none !important; }
+html.embed .mast, html.embed .views, html.embed .sitefoot, html.embed #wl, html.embed #wlActions, html.embed .frameload { display: none !important; }
 html.embed .wrap { display: block; max-width: none; }
 html.embed:not(.embedlist) .wcard { border: 0; border-radius: 0; box-shadow: none; background: none; padding: 2px 12px 12px; }
 /* A list's bills (#embed=2026.list..., 2026.mine): the watchlist's sections and cards, each card bounded as on the Watchlist tab. */
@@ -303,8 +303,10 @@ table.oc th { vertical-align: bottom; }
 .wrap { gap: 16px; }
 .mast { display: grid; gap: 10px; position: relative; }
 /* Back to statebilltracker.org's front page (the public site only), at the top right. */
-.home-link { position: absolute; top: 0; right: 0; font: 600 13px/1.2 var(--body); color: var(--navy); text-decoration: none; }
-.home-link:hover, .home-link:focus-visible { text-decoration: underline; }
+.home-link { position: absolute; top: 0; right: 0; display: flex; gap: 16px; font: 600 13px/1.2 var(--body); }
+.home-link[hidden] { display: none; }
+.home-link a { color: var(--navy); text-decoration: none; }
+.home-link a:hover, .home-link a:focus-visible { text-decoration: underline; }
 @media (max-width: 560px) { .home-link { position: static; justify-self: start; } }
 /* Party control under the title (balance.py, written in by the build for the current session): the letter carries the meaning. */
 .power { margin: 6px 0 0; color: var(--ink-2); font-size: 13px; line-height: 1.6; }
@@ -331,7 +333,6 @@ table.oc th { vertical-align: bottom; }
   .view-tab-end { margin-left: 0; }
 }
 main { display: grid; gap: 16px; min-width: 0; }
-.resultbar .view-help { padding: 0; font-size: 13px; }
 .notice .nmore { font-size: 13px; margin-left: 4px; }
 .layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 32px; align-items: start; }
 .side { position: sticky; top: env(safe-area-inset-top, 0px); max-height: 100vh; overflow-y: auto; padding: 4px 22px 16px 0; border-right: 1px solid var(--rule); }
@@ -474,7 +475,7 @@ main { display: grid; gap: 16px; min-width: 0; }
 .repsel { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 6px; }
 .repsel label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--ink-2); }
 .repsel select { width: auto; max-width: 80vw; }
-.resultbar .csv { padding: 4px 10px; font-size: 12.5px; }
+.resultbar .sharemenu > summary { padding: 4px 10px; font-size: 12.5px; }
 .netsel { min-height: 1.4em; font-size: 13.5px; margin: 4px 0; }
 .net line { stroke: var(--ink-2); stroke-opacity: .25; vector-effect: non-scaling-stroke; }
 .net circle, .net rect { vector-effect: non-scaling-stroke; }
@@ -570,10 +571,7 @@ main { display: grid; gap: 16px; min-width: 0; }
 .frow .fn { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .frow .fn b { font-size: 15px; color: var(--ink); margin-right: 4px; }
 @media (max-width: 560px) { .frow { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; } .frow .fbar { grid-column: 1 / -1; grid-row: 2; } }
-details.statmore { border-top: 1px solid var(--rule); padding-top: 12px; }
-details.statmore > summary { cursor: pointer; font: 700 17px var(--display); font-stretch: 90%; color: var(--navy); }
-details.statmore[open] > summary { margin-bottom: 14px; }
-.statmore-body { display: grid; gap: 18px; }
+.statmore-body { display: grid; gap: 18px; border-top: 1px solid var(--rule); padding-top: 14px; }
 table.st { min-width: 0; }
 /* A legislator's tables: as wide as their content, not the page. */
 #personStats, #view-person { min-width: 0; }
@@ -686,7 +684,8 @@ table.st col.c-m { width: 80px; }
 .spill.p5 { background: var(--signed-soft); color: var(--signed); }
 .spill.p6 { background: var(--veto-soft); color: var(--veto); }
 .wsec { border-radius: 12px; padding: 14px 16px 16px; margin-top: 14px; }
-.sitefoot { margin: 40px 0 8px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-2); }
+.sitefoot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 40px 0 8px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-2); }
+.sitefoot[hidden] { display: none; }
 /* "Glad this helped": after an email is copied or an action logged, once a quarter (supportNote()). */
 .supportnote { position: relative; margin: 10px 0; padding: 10px 36px 10px 12px; border-radius: 10px; background: var(--gold-soft, rgba(201, 151, 47, .12)); font-size: 14px; line-height: 1.45; }
 .supportnote .linkish { font: inherit; }
@@ -850,6 +849,7 @@ table.commcounts td { font-variant-numeric: tabular-nums; font-weight: 600; }
 .tip:hover, .tip:focus-visible, .tip.open { background: var(--navy); border-color: var(--navy); color: var(--sheet); }
 .side label.hidebox { align-items: flex-start; margin-top: 6px; font-size: 13px; color: var(--ink); }
 .side label.hidebox input { margin-top: 3px; }
+.side label.hidebox.nohome { display: none; }
 .side label.hidebox .hc { color: var(--ink-2); font-size: 12px; }
 #youReps { display: block; }
 .yourreps { font-size: 13px; color: var(--ink-2); margin: 8px 0; }
@@ -859,6 +859,14 @@ table.commcounts td { font-variant-numeric: tabular-nums; font-weight: 600; }
 .wcard .do .askbig { font-size: 16px; font-weight: 700; color: var(--ink); }
 .wcard .do .decider { display: grid; gap: 5px; }
 .wcard .do .decider + .decider { border-top: 1px solid var(--rule); padding-top: 9px; margin-top: 4px; }
+.sharemenu { position: relative; }
+.sharemenu > summary { list-style: none; display: inline-block; }
+.sharemenu > summary::-webkit-details-marker { display: none; }
+.sharemenu > summary::after { content: " ▾"; font-size: 11px; }
+.sharemenu .smenu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; display: grid; min-width: max-content; padding: 4px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; box-shadow: 0 4px 14px rgba(0, 0, 0, .12); }
+.sharemenu .smenu button { appearance: none; border: 0; background: none; text-align: left; padding: 8px 12px; border-radius: 4px; font: 600 13px var(--body); color: var(--navy); cursor: pointer; }
+.sharemenu .smenu button:hover, .sharemenu .smenu button:focus-visible { background: var(--chip); }
+.sharemenu .smenu button[hidden] { display: none; }
 .act-btn.primary { background: var(--navy); color: var(--sheet); border-color: var(--navy); }
 .wcard .odds { font-size: 12.5px; }
 /* The share options under "My watchlist" (shareBox()). */
@@ -878,15 +886,7 @@ table.commcounts td { font-variant-numeric: tabular-nums; font-weight: 600; }
 .shareicons a:hover { color: var(--navy); border-color: var(--navy); }
 .shareicons svg { width: 17px; height: 17px; fill: currentColor; }
 .wl .wfollow { border-top: 1px solid var(--rule); padding-top: 8px; margin-top: 2px; }
-.intro { display: grid; grid-template-columns: 1fr auto auto; grid-template-areas: "h tips x" "ol ol ol"; align-items: center; gap: 4px 14px; background: var(--chip); border-left: 3px solid var(--navy); border-radius: 8px; padding: 8px 12px; margin: 10px 0 2px; font-size: 13.5px; }
-.intro .intro-h { grid-area: h; font-weight: 700; }
-.intro [data-impact] { grid-area: tips; }
-.intro .intro-x { grid-area: x; appearance: none; border: 0; background: none; font-size: 18px; line-height: 1; color: var(--ink-2); cursor: pointer; padding: 0 2px; }
-.intro ol { grid-area: ol; list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
-.intro li { display: block; }
-.intro .n { display: inline-block; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--ink-2); color: var(--sheet); font: 700 11px/18px var(--body); text-align: center; }
 ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 75ch; }
-.view-help { appearance: none; background: none; border: 0; padding: 5px 8px; font: 600 12.5px var(--body); color: var(--navy); text-decoration: underline; cursor: pointer; }
 .ver details.acts > summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--navy); margin-top: 4px; }
 .ver details.acts ol { margin-top: 6px; }
 .sankey { overflow-x: auto; margin: 6px 0 14px; }
@@ -1071,7 +1071,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 
 <div class="wrap">
   <header class="mast">
-    <a class="home-link" id="siteHome" href="../" hidden>&larr; State Bill Tracker</a>
+    <nav class="home-link" id="siteNav" aria-label="Site" hidden><a id="siteHome" href="../">&larr; State Bill Tracker</a><a id="siteAboutTop" href="../about/">About</a></nav>
     <div class="mast-top">
       <div>
         <div class="eyebrow" id="sessionLabel">New York State Legislature</div>
@@ -1095,7 +1095,6 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
   <main id="main">
   <div class="frameload" id="frameLoad">Loading bills…</div>
   <noscript><p class="notice">This page needs JavaScript to show the bills.</p></noscript>
-  <section class="intro" id="howto" hidden aria-label="How this site works"></section>
 
   <!-- Bills and Statistics share the filter sidebar -->
   <section class="layout" id="filtered">
@@ -1172,9 +1171,8 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
         <span class="qbox"><input type="search" id="q" class="q" placeholder="Search bills: number, words, sponsor" autocomplete="off" aria-label="Search bills">
         <button type="button" class="tip" aria-label="How to search" data-tip="Bills must have every word you type. Use OR for either (climate OR energy), a minus to leave out a word (wage -farm), and quote marks for words together (&quot;paid sick leave&quot;).">i</button></span>
         <span id="count" role="status"></span>
-        <button class="view-help" type="button" id="introLink" data-intro aria-controls="howto" hidden>How this works</button>
-        <button class="act-btn csv" type="button" id="csv" title="Download the bills shown, as a spreadsheet file">Download</button>
-        <button class="act-btn" type="button" id="viewLinkBtn" hidden title="Copy a link that opens this list with these filters">Copy link</button>
+        <details class="sharemenu" id="shareMenu"><summary class="act-btn">Share</summary>
+          <div class="smenu"><button type="button" id="viewLinkBtn" hidden>Copy a link to this list</button><button type="button" id="csv">Download as a spreadsheet</button></div></details>
         <span id="starAllBox"></span>
         <label class="sortby" for="sort">Sort
           <select id="sort">
@@ -1201,9 +1199,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
       <label class="inline statgen"><input type="checkbox" id="statGeneral"> Leave out bills about one place, person or group, and road namings <button type="button" class="tip" aria-label="What this means" data-tip="Bills about one place, person or group pass far more often than other bills, so including them makes the odds look better than they are for most bills.">i</button></label>
     </div>
     <section class="act-sec" id="statFunnel" aria-labelledby="funnelHead"></section>
-    <details class="statmore" id="statMore">
-    <summary>More statistics</summary>
-    <div class="statmore-body">
+    <div class="statmore-body" id="statMore">
     <nav class="subtabs" id="statTabs" aria-label="Statistics sections">
       <button type="button" data-sec="statOdds">Odds of becoming law</button>
       <button type="button" data-sec="statComm">Committees</button>
@@ -1229,7 +1225,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
       <p class="note">“Became law”: share of all bills introduced. “Governor signed”: share of bills the governor acted on. Current session changes until <span id="ocUntil"></span>.<span id="ocShells"></span></p>
     </section>
     </div>
-    </details>
+    
   </section>
 
   <!-- Watchlist -->
@@ -1416,8 +1412,8 @@ const passedBothLc = PASSED_BOTH.charAt(0).toLowerCase() + PASSED_BOTH.slice(1);
 STAGE_TEXT.prefiled = STATE.stageText.prefiled || Object.fromEntries(Object.entries(STAGE_TEXT.live).map(([k, v]) => [k, ["Prefiled", ...v.slice(1)]]));
 const KEY_DATES = ["intro", "floor", "passS", "passA", "died", "deliv", "signed", "vetoed"];
 const PAGE = 100;
-const FILTER_KEYS = ["stage", "topics", "law", "comm", "progress", "house", "hist", "intro", "sort", "who", "whoCos", "party", "nearby", "voted", "changed", "agenda"];
-const blank = () => ({ agenda: "", stage: null, topics: new Set(), q: "", law: "", comm: "", progress: "", house: "", hist: "", intro: "", sort: "recent", who: "", whoCos: false, party: "", nearby: false, voted: "", changed: "", shown: PAGE });
+const FILTER_KEYS = ["stage", "topics", "law", "comm", "progress", "house", "hist", "intro", "sort", "who", "whoCos", "party", "nearby", "voted", "changed", "agenda", "amend"];
+const blank = () => ({ agenda: "", amend: "", stage: null, topics: new Set(), q: "", law: "", comm: "", progress: "", house: "", hist: "", intro: "", sort: "recent", who: "", whoCos: false, party: "", nearby: false, voted: "", changed: "", shown: PAGE });
 
 // "Places": leave out bills only about other counties, or keep only bills about yours.
 // A bill's places are the counties it's only about ([] for bills not about specific places).
@@ -1713,10 +1709,12 @@ function matches(b, skip) {
   if (skip !== "hist" && state.hist && !HIST_FILTERS[state.hist].test(b)) return false;
   if (skip !== "intro" && state.intro && b.intro !== +state.intro) return false;
   if (skip !== "party" && state.party && b.parties !== state.party) return false;
-  if (skip !== "nearby" && state.nearby && farAway(b)) return false;
+  // (With no county chosen it does nothing: every bill about particular places would be "far away".)
+  if (skip !== "nearby" && state.nearby && HOME && farAway(b)) return false;
   if (skip !== "voted" && state.voted && !votedTest(state.voted)(b)) return false;
   if (skip !== "changed" && state.changed && !CHANGED[state.changed].test(b)) return false;
   if (skip !== "agenda" && state.agenda && !nextMeeting(b)) return false;
+  if (skip !== "amend" && state.amend && !(isAmendment(b) || toVoters(b))) return false;
   if (state.q && !queryMatches(parsedQuery(state.q), hayOf(b))) return false;
   return true;
 }
@@ -1745,10 +1743,13 @@ const AGENDA_TIP = "Bills listed for a committee meeting that hasn't happened ye
 function renderPipeline() {
   const counts = Array(7).fill(0), oneHouse = { [HOUSE.S]: 0, [HOUSE[LOW]]: 0 };
   const today = isoToday();
-  let nextDue = null, voters = 0, voted = 0;  // constitutional amendments that passed: they go to the voters, not the governor
+  // Constitutional amendments (and bills sent to the voters) that passed both houses never go to the governor, on a
+  // first passage (New York's go to the next Legislature) or a second (to the voters).
+  let nextDue = null, amend = 0, voters = 0, voted = 0;
   for (const b of BILLS) {
     if (!matches(b, "stage")) continue;
     counts[b.stage]++;
+    if (b.stage === 3 && (isAmendment(b) || toVoters(b))) amend++;
     if (b.stage === 3 && ((isAmendment(b) && secondPassage(b)) || toVoters(b))) voters++;
     if (votersDone(b)) voted++;
     if (b.stage === 2 && b.passedIn) oneHouse[b.passedIn]++;
@@ -1757,10 +1758,18 @@ function renderPipeline() {
   const subs = {
     1: "Approved by committee",
     2: `${HOUSE.S} ${num(oneHouse[HOUSE.S] || 0)} · ${HOUSE[LOW]} ${num(oneHouse[HOUSE[LOW]] || 0)}`,
-    3: !voters ? STATE.passedBothNote(DATA.current) : voters === counts[3] ? (STATE.amendmentDone ? "Constitutional amendments" : voted === voters ? "Went to the voters" : "Going to the voters")
-      : `${num(counts[3] - voters)} to ${EXEC.the} · ${num(voters)} ${STATE.amendmentDone ? "constitutional amendments" : "to the voters"}`,
+    3: !amend ? STATE.passedBothNote(DATA.current)
+      : amend === counts[3] ? (voters < amend || STATE.amendmentDone ? "Constitutional amendments" : voted === voters ? "Went to the voters" : "Going to the voters")
+      : (([c, ...r]) => `${num(counts[3] - amend)} bill${counts[3] - amend === 1 ? "" : "s"} ${c.toLowerCase()}${r.join("")}`)(STATE.passedBothNote(DATA.current)),
     4: DATA.current ? (nextDue ? `Next decision due ${fmtDate(nextDue)}` : counts[4] ? "Deadlines have passed" : "Nothing waiting") : "No decision in the records",
   };
+  // Constitutional amendments that passed both houses (and bills sent to the voters): a line of their own under
+  // "Passed both houses", since they never go to the governor.
+  const amendN = BILLS.filter((b) => b.stage === 3 && (isAmendment(b) || toVoters(b)) && matches(b, "amend") && (state.stage == null || stageSet().includes(3))).length;
+  const anyAmend = BILLS.some((b) => b.stage === 3 && isAmendment(b));
+  const amendTip = anyAmend ? `Changes to the state constitution. They don't go to ${EXEC.the}: ${STATE.amendmentOnce ? "the voters decide" : "after passing again as the rules require, the voters decide"}.` : `Questions the ${BODY} sent to the voters instead of ${EXEC.the}.`;
+  const amendRow = amendN && counts[3] > amendN || state.amend ? `<button class="srow sub" type="button" data-amend aria-pressed="${!!state.amend}"${ROW_DESC(amendTip)}>
+       <span class="sl">${anyAmend ? "Constitutional amendments" : "Sent to the voters"}${TIPR(amendTip)}</span><span class="sn">${num(amendN)}</span></button>` : "";
   // Bills on a committee agenda that hasn't met yet: a line under "In committee".
   const soon = DATA.current ? BILLS.filter((b) => nextMeeting(b) && matches(b, "agenda") && (state.stage == null || stageSet().includes(b.stage))).length : 0;
   const agendaRow = soon || state.agenda ? `<button class="srow sub" type="button" data-agenda aria-pressed="${!!state.agenda}"${ROW_DESC(AGENDA_TIP)}>
@@ -1790,14 +1799,14 @@ function renderPipeline() {
     return;
   }
   $("pipeline").innerHTML = note + (floorVotesOver() ? `
-    ${inPlay ? `<div class="pg live">${head("Still in play", [3, 4])}${[3, 4].map(row).join("")}</div>` : wentToVoters ? `<div class="pg">${head("Sent to the voters", [3])}${row(3)}</div>` : ""}
+    ${inPlay ? `<div class="pg live">${head("Still in play", [3, 4])}${row(3)}${amendRow}${row(4)}</div>` : wentToVoters ? `<div class="pg">${head("Sent to the voters", [3])}${row(3)}</div>` : ""}
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
     <div class="pg stale">${head("Out of time", [0, 1, 2], `<span>${esc(outLine())}</span>`, outTip())}${[0, 1, 2].map(row).join("")}</div>` : `
     ${!DATA.current ? `
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
     <div class="pg stale">${head("Died", [0, 1, 2, 3])}${[0, 1, 2, 3].map(row).join("")}</div>
     ${counts[4] ? `<div class="pg stale">${row(4)}</div>` : ""}` : `
-    <div class="pg leg">${head(`In ${BODY}`, [0, 1, 2, 3])}${row(0)}${agendaRow}${[1, 2, 3].map(row).join("")}</div>
+    <div class="pg leg">${head(`In ${BODY}`, [0, 1, 2, 3])}${row(0)}${agendaRow}${[1, 2, 3].map(row).join("")}${amendRow}</div>
     <div class="pg live"><div class="pg-h">With ${EXEC.the}</div>${[4].map(row).join("")}</div>
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>`}`);
 }
@@ -1956,7 +1965,7 @@ function statusParts(b) {
     small = votersDone(b);
   } else if (b.stage === 3) {
     t = PASSED_BOTH;
-    small = `${toVoters(b) ? `Sent to the voters, not ${EXEC.the}` : isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentDone || (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters")) : `First passage: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
+    small = `${toVoters(b) ? `Sent to the voters, not ${EXEC.the}` : isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentDone || (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters")) : `Constitutional amendment: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
       : STATE.passedBothNote(live, b)} · passed ${fmtDate([D.passS, D.passA].sort().pop())}`;
   } else if (b.stage === 4) {
     t = live ? `On ${EXEC.the}'s desk` : `Sent to ${EXEC.the}`;
@@ -2997,13 +3006,11 @@ function showStatSec(id) {
   for (const s of document.querySelectorAll(".statsec")) s.hidden = s.id !== id;
   for (const b of document.querySelectorAll("#statTabs button")) b.setAttribute("aria-pressed", b.dataset.sec === id);
   try { localStorage.setItem(STORE + "statsec", id); } catch (e) {}
-  // (The network and "Who works on what" are drawn only once "Explore more" is open: they measure the space they have.)
-  const shown = $("statMore").open;
-  if (id === "statNet" && shown) renderNet();
+  if (id === "statNet") renderNet();
   // The topic choice and the "leave out" box don't apply to these two sections.
-  document.querySelector(".stattopic").hidden = $("statMore").open && ["statWho", "statTrend"].includes(id);
-  if (id === "statWho" && shown) renderWho();
-  if (id === "statTrend" && shown) renderTrends();
+  document.querySelector(".stattopic").hidden = ["statWho", "statTrend"].includes(id);
+  if (id === "statWho") renderWho();
+  if (id === "statTrend") renderTrends();
 }
 
 // ---- Who works on what: each legislator is a dot pulled toward the topics of the bills they
@@ -3771,7 +3778,7 @@ function renderStats() {
     <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${PARTY.some(([x]) => (pPast[x] || [0])[0] > 0) ? pastSpan() : `${span(DATA.session)} session`}. “Both parties”: at least one sponsor or co-sponsor from each party on either version. ${STATE.partySource}.${shellsOut()}</p>`}`;
 
   renderOutcomes();
-  if (statSec === "statNet" && !$("view-stats").hidden && $("statMore").open) renderNet();
+  if (statSec === "statNet" && !$("view-stats").hidden) renderNet();
 }
 
 function renderOutcomes() {
@@ -4099,7 +4106,8 @@ function renderList() {
   const total = PAST_WHO ? BILLS.filter(pastWhoTest).length : page ? BILLS.filter((b) => sponsoredBy(b, page, state.whoCos)).length : BILLS.length;
   $("count").innerHTML = page && rows.length === total ? `<b>${num(total)}</b> bills` : `<b>${num(rows.length)}</b> of ${page ? "their " : ""}${num(total)} bills`;
   $("viewLinkBtn").hidden = !viewParams();
-  $("viewLinkBtn").textContent = "Copy link";
+  $("viewLinkBtn").textContent = "Copy a link to this list";
+  $("shareMenu").hidden = $("viewLinkBtn").hidden && $("csv").hidden;
   // Turn a filtered view into watchlist entries in one click (with undo).
   const toAdd = rows.filter((b) => !isWatched(b));
   const filtered = rows.length < total;
@@ -4197,9 +4205,10 @@ function activeFilters() {
   if (state.hist) out.push(["hist", null, "History", opt("hist", state.hist)]);
   if (state.intro) out.push(["intro", null, "Introduced", state.intro]);
   if (state.voted) out.push(["voted", null, "Vote", opt("voted", state.voted)]);
-  if (state.nearby) out.push(["nearby", null, "Only", `bills that could affect ${HOME ? placeName(HOME) : `your ${PLACE_WORD}`}`]);
+  if (state.nearby && HOME) out.push(["nearby", null, "Only", `bills that could affect ${HOME ? placeName(HOME) : `your ${PLACE_WORD}`}`]);
   if (state.changed) out.push(["changed", null, "New activity", CHANGED[state.changed].label()]);
   if (state.agenda) out.push(["agenda", null, "On", "an upcoming committee agenda"]);
+  if (state.amend) out.push(["amend", null, "Only", BILLS.some((b) => isAmendment(b)) ? "constitutional amendments" : "bills sent to the voters"]);
   return out;
 }
 
@@ -5095,6 +5104,7 @@ function fillSelects() {
   for (const id of ["who", "law", "voted", "changed", ...MORE_KEYS]) $(id)?.classList.toggle("on", !!state[id]);
   // How many more bills each "hide" box takes out, given the other filters.
   $("nearbyCounty").textContent = HOME ? placeName(HOME) : `your ${PLACE_WORD}`;
+  $("nearby").closest(".hidebox").classList.toggle("nohome", !HOME);
   $("nearbyN").textContent = `(hides ${num(BILLS.filter((b) => matches(b, "nearby") && farAway(b)).length)})`;
   const more = MORE_KEYS.filter((k) => state[k]).length;
   $("moreCount").textContent = more ? `${more} active` : "";
@@ -5253,10 +5263,9 @@ function showView(v, push = true) {
   if (v === "watch") renderWatchView();
   // What wasn't drawn while the tab was hidden (later()); the statistics draw the network themselves.
   if (STALE[v]?.size) drawStale(v);
-  else if (v === "stats" && statSec === "statNet" && $("statMore").open) renderNet();
+  else if (v === "stats" && statSec === "statNet") renderNet();
   $("filtered").hidden = v !== "bills";
   // "How this works" belongs with the bill list.
-  $("howto").hidden = v !== "bills" || !INTRO_OPEN;
 }
 
 function syncControls() {
@@ -5282,6 +5291,7 @@ function wire() {
     const g = e.target.closest("[data-g]");
     if (g) { state.stage = String(state.stage) === g.dataset.g ? null : g.dataset.g; state.shown = PAGE; render(); return; }
     if (e.target.closest("[data-agenda]")) { setAgenda(!state.agenda); return; }
+    if (e.target.closest("[data-amend]")) { state.amend = state.amend ? "" : "1"; state.shown = PAGE; syncControls(); render(); return; }
     const btn = e.target.closest(".srow"); if (!btn) return;
     const k = +btn.dataset.k; state.stage = state.stage === k ? null : k; state.shown = PAGE; render();
   });
@@ -5298,11 +5308,13 @@ function wire() {
   for (const id of ["comm", "progress", "house", "hist", "intro", "sort", "party", "voted", "changed"]) $(id).addEventListener("change", (e) => { state[id] = e.target.value; state.shown = PAGE; render(); });
   // Opening the filters (or "More filters") counts the lists inside.
   for (const id of ["side", "moreFilters"]) $(id).addEventListener("toggle", fillStaleSelects);
-  $("csv").addEventListener("click", () => { countUse("download"); need("rows").then(downloadCsv, () => {}); });
+  // The Share menu closes on a click outside it, or once it's used.
+  document.addEventListener("click", (e) => { if ($("shareMenu").open && !e.target.closest("#shareMenu")) $("shareMenu").open = false; });
+  $("csv").addEventListener("click", () => { $("shareMenu").open = false; countUse("download"); need("rows").then(downloadCsv, () => {}); });
   $("viewLinkBtn").addEventListener("click", async (e) => {
     const btn = e.currentTarget, link = viewLink();
     countUse("view-link-copied");
-    try { await navigator.clipboard.writeText(link); btn.textContent = "Copied"; }
+    try { await navigator.clipboard.writeText(link); btn.textContent = "Copied"; setTimeout(() => { $("shareMenu").open = false; }, 900); }
     catch (err) { prompt("Copy this link:", link); }
   });
   $("starAllBox").addEventListener("click", (e) => {
@@ -5378,14 +5390,6 @@ function wire() {
   // In-page links to one bill are buttons, not #S1234 anchors: some viewers (Claude's artifact
   // viewer among them) reload the page on a hash link, which lost the bill and showed old filters.
   document.addEventListener("click", (e) => {
-    if (e.target.closest("[data-intro-close]")) { try { localStorage.setItem(INTRO_STORE, "hidden"); } catch (err) {} INTRO_OPEN = false; $("howto").hidden = true; $("introLink").hidden = false; return; }
-    if (e.target.closest("[data-intro]")) { if ($("howto").hidden) {
-      renderIntro(true);
-      // Scroll only if it's out of view (e.g. after scrolling down), and then just enough to show it.
-      const r = $("howto").getBoundingClientRect();
-      if (r.top < 0 || r.bottom > innerHeight) $("howto").scrollIntoView({ block: "nearest" });
-    } else { INTRO_OPEN = false; $("howto").hidden = true; $("introLink").hidden = false; }
-    return; }
     const nm = e.target.closest("[data-nmore]");
     if (nm) { const rest = $("notice").querySelector(".nrest"), open = rest.hidden; rest.hidden = !open; nm.textContent = open ? "Less" : "More"; nm.setAttribute("aria-expanded", open); return; }
     if (e.target.closest("[data-impact]")) { showView("how"); showHowSec("impact"); $("view-how").scrollIntoView({ block: "start" }); return; }
@@ -5618,11 +5622,6 @@ function wire() {
     openShown += 25; renderOpenNow();
   });
   $("statTopic").addEventListener("change", renderStats);
-  // "Explore more": the detailed charts draw when it opens (the network and "Who works on what" need to be visible).
-  $("statMore").addEventListener("toggle", () => {
-    try { localStorage.setItem(STORE + "statmore", $("statMore").open ? "1" : ""); } catch (e) {}
-    if ($("statMore").open) showStatSec(statSec); else document.querySelector(".stattopic").hidden = false;
-  });
   $("statGeneral").addEventListener("change", (e) => { STAT_GENERAL = e.target.checked; renderStats(); });
   $("homeCounty").addEventListener("change", (e) => setCounty(e.target.value));
   document.addEventListener("change", (e) => { const p = e.target.closest("[data-reppick]"); if (p && p.value) pickReps(p.dataset.reppick, p.value); });
@@ -5698,28 +5697,7 @@ function wire() {
   if (window.NamedLists) { NamedLists.setApi(LISTS_API); NamedLists.wire(); }
 }
 
-// "How to use this site": shown until dismissed, and again from the link by the tabs.
-const INTRO_STORE = STORE + "intro";
 const PUBLIC_SITE = STATE.publicSite;
-// Shown on a first visit (on the Bills tab only), then folded to a small "How this works" link by the bill count.
-let INTRO_OPEN = false;
-function renderIntro(force) {
-  const box = $("howto");
-  let seen = null;
-  try { seen = localStorage.getItem(INTRO_STORE); } catch (e) {}
-  const can = DATA.current && !PRESET?.watch && !SHARED;
-  INTRO_OPEN = !!can && (force || !seen);
-  $("introLink").hidden = !can || INTRO_OPEN;
-  if (!INTRO_OPEN) { box.hidden = true; return; }
-  if (!seen) try { localStorage.setItem(INTRO_STORE, "seen"); } catch (e) {}
-  // Two steps: taking a side, and sharing. Share links work only on the public site.
-  const shareStep = ROOT ? "Share your watchlist so others can weigh in"
-    : `Share your watchlist from the <a href="${PUBLIC_SITE}" target="_blank" rel="noopener">public site</a> so others can weigh in`;
-  const steps = ["Mark whether you support or oppose the bills you star", shareStep];
-  box.hidden = $("view-bills").hidden;
-  box.innerHTML = `<b class="intro-h">How this works</b><ol>${steps.map((t, i) => `<li><span class="n">${i + 1}</span>${t}</li>`).join("")}</ol>
-    <button type="button" class="linkish" data-impact>Tips</button><button type="button" class="intro-x" data-intro-close aria-label="Hide these tips">×</button>`;
-}
 
 // "How a bill becomes law": the two-year session as a timeline with key dates called out.
 // "How a bill becomes law": one section at a time, like Statistics.
@@ -6422,7 +6400,6 @@ function hydrate(raw) {
   // (Inside a list page's frame only the watchlist is shown: no How tab, introduction or notices.)
   if (!embedded) {
     try { const h = localStorage.getItem(STORE + "howsec"); if (h && $(h)?.classList.contains("howsec")) showHowSec(h); } catch (e) {}
-    try { renderIntro(); } catch (e) { console.error(e); }
     const parts = [staleNotice(raw), sessionNotice(raw)].filter(Boolean);
     $("notice").innerHTML = shortNotice(parts);
     $("notice").hidden = !parts.length;
@@ -6528,6 +6505,7 @@ function hydrate(raw) {
   if (!embedded) { renderMyReps(); renderOpenNow(); }
   // Claude artifact pages can't hand visitors a file; the download works on GitHub Pages.
   $("csv").hidden = !ROOT;
+  $("shareMenu").hidden = $("viewLinkBtn").hidden && $("csv").hidden;
   const one = openFromHash();
   if (one) showView("bills");
   render();
@@ -6551,7 +6529,6 @@ function setupStats() {
   // "What's changing" needs subjects picked by hand (TRENDS in the state's profile.py).
   if (NOPARTY) document.querySelector('[data-sec="statCosp"]').textContent = "Co-sponsors";
   if (!DATA.insights?.trends?.subjects?.length) { document.querySelector('[data-sec="statTrend"]').hidden = true; if (statSec === "statTrend") statSec = "statOdds"; }
-  try { if (localStorage.getItem(STORE + "statmore")) $("statMore").open = true; } catch (e) {}
   showStatSec(statSec);
 }
 
@@ -6590,12 +6567,12 @@ async function unpack(b64) {
     BASE = el.dataset.base || "";
     ROOT = el.dataset.root || "";
     // The public site's pages link back to the front page, the folder above the state's.
-    if (ROOT) { try { $("siteHome").href = new URL("../", ROOT).href; $("siteHome").hidden = false; } catch (e) {} }
+    if (ROOT) { try { $("siteHome").href = new URL("../", ROOT).href; $("siteAboutTop").href = new URL("../about/", ROOT).href; $("siteNav").hidden = false; } catch (e) {} }
     // And to the About page and the contribution link (site_meta.SUPPORT, in the page's head).
     if (ROOT) {
       try { $("siteAbout").href = new URL("../about/", ROOT).href; } catch (e) {}
       const give = document.querySelector('meta[name="support"]')?.content;
-      if (give) $("siteAbout").insertAdjacentHTML("afterend", ` &middot; <a href="${esc(give)}">Support this site</a>`);
+      if (give) $("siteAbout").insertAdjacentHTML("afterend", `<span aria-hidden="true">&middot;</span><a href="${esc(give)}">Support this site</a>`);
       $("siteFoot").hidden = false;
     }
     const meta = document.querySelector('meta[name="abt-preset"]');

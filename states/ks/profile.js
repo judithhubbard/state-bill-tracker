@@ -88,10 +88,10 @@ const STATE = {
   dueLabel: () => "Governor's decision due (10 days after the bill is presented)",
 
   passedBothBy: (session) => STATE.plusDays(STATE.days(session + 1).end, 30),
-  passedBothNote: (live) => live ? "Waiting to be enrolled" : "Never presented to the governor",
-  passedBothGroup: ["Waiting to be enrolled", () => "A bill that passed both houses is enrolled and presented to the governor, usually within days; the governor then has 10 days."],
+  passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never presented to the governor",
+  passedBothGroup: ["Not yet sent to the governor", () => "A bill that passed both houses gets its final copy and goes to the governor, usually within days; the governor then has 10 days."],
   passedBothNext: () => ({
-    what: "it's enrolled and presented to the governor, who has 10 days to sign it or veto it; a bill the governor doesn't return becomes law without the signature. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of the members of each house: 27 senators and 84 representatives.",
+    what: "its final copy is prepared and presented to the governor, who has 10 days to sign it or veto it; a bill the governor doesn't return becomes law without the signature. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of the members of each house: 27 senators and 84 representatives.",
     gov: ["sign it", "veto it"],
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
@@ -168,7 +168,7 @@ const STATE = {
   stageText: {
     live: {
       pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-      long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses, waiting to be enrolled", "On the governor's desk", "Signed into law", "Vetoed"],
+      long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses, not yet sent to the governor", "On the governor's desk", "Signed into law", "Vetoed"],
       chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Signed", "Vetoed"],
     },
     final: {
@@ -181,7 +181,7 @@ const STATE = {
     "Waiting in a committee. A committee reports a bill favorably, or not at all.",
     "Reported by its committee and on the calendar: General Orders (debate in the Committee of the Whole) or the consent calendar. The roll call on passage is \"final action\".",
     "Passed the House or the Senate, but not both. If the second house changes it, the first has to agree, or a conference committee works out one version.",
-    "Passed both houses in the same form. It's enrolled and presented to the governor.",
+    "Passed both houses in the same form. Its final copy is prepared and presented to the governor.",
     "Presented to the governor, who has 10 days.",
     "Signed into law, became law without the signature, or became law over a veto.",
     "Vetoed by the governor. Overriding takes two-thirds of the members of each house.",

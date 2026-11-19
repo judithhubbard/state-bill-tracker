@@ -71,10 +71,10 @@ const STATE = {
   dueLabel: () => "Governor's decision due (30 days after the session for most bills; one not signed by then dies)",
 
   passedBothBy: (session) => STATE.plusDays(STATE.sessionEnds(session), 30),
-  passedBothNote: (live) => live ? "Waiting to be enrolled" : "Never sent to the governor",
-  passedBothGroup: ["Waiting to be enrolled", () => "A bill that passed both houses is enrolled, signed by the Speaker and the Senate President and sent to the governor, usually within days."],
+  passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
+  passedBothGroup: ["Not yet sent to the governor", () => "A bill that passed both houses gets its final copy, signed by the Speaker and the Senate President and sent to the governor, usually within days."],
   passedBothNext: () => ({
-    what: "it's enrolled and sent to the governor. For a bill sent in the session's last 3 days or after it (most are), the governor has 30 days after the session ends; a bill not signed by then doesn't become law. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of each house's members (34 senators, 67 representatives).",
+    what: "its final copy is prepared and sent to the governor. For a bill sent in the session's last 3 days or after it (most are), the governor has 30 days after the session ends; a bill not signed by then doesn't become law. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of each house's members (34 senators, 67 representatives).",
     gov: ["sign it", "veto it"],
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
@@ -180,7 +180,7 @@ const STATE = {
     "In a committee (or its subcommittee); the committee has to report it, often as a new bill with a new number.",
     "Reported by its committee and on the calendar; the majority leader decides which bills come up for debate.",
     "Passed the House or the Senate, but not both. If the second house changes it, the first has to agree and pass it again.",
-    "Passed both houses in the same form. It's enrolled and sent to the governor.",
+    "Passed both houses in the same form. Its final copy is prepared and sent to the governor.",
     "Sent to the governor, who has 3 days during the session, or 30 days after it; a bill not signed by then doesn't become law.",
     "Became law, as a chapter of the year's Iowa Acts.",
     "Vetoed by the governor. Overriding takes two-thirds of each house's members.",

@@ -109,9 +109,12 @@ def github_page(html, meta=""):
     """Claude artifacts get a document skeleton added when published; GitHub Pages doesn't. meta: page_meta()'s tags."""
     import site_meta
     from urllib.parse import urljoin
-    # The link to the front page shows from the start (the page would set it once loaded: it mustn't push the title down).
-    html = html.replace('<a class="home-link" id="siteHome" href="../" hidden>',
-                        f'<a class="home-link" id="siteHome" href="{html_escape(urljoin(P.SITE_URL, "../"))}">', 1)
+    # The links to the front page and About show from the start (the page would set them once loaded: they mustn't
+    # push the title down).
+    nav = '<nav class="home-link" id="siteNav" aria-label="Site" hidden><a id="siteHome" href="../">&larr; State Bill Tracker</a><a id="siteAboutTop" href="../about/">About</a></nav>'
+    assert nav in html, "tracker.html's site links changed: update github_page()"
+    html = html.replace(nav, f'<nav class="home-link" id="siteNav" aria-label="Site"><a id="siteHome" href="{html_escape(urljoin(P.SITE_URL, "../"))}">&larr; State Bill Tracker</a>'
+                        f'<a id="siteAboutTop" href="{html_escape(urljoin(P.SITE_URL, "../about/"))}">About</a></nav>', 1)
     # The named lists' button and menu (lists_pages/named.js), on the public site only: tracker.html's listButton().
     named = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lists_pages", "named.js")).read()
     html = html.replace('<script id="state-profile">', f'<script>\n{named}</script>\n<script id="state-profile">', 1)

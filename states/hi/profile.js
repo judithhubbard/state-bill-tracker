@@ -93,10 +93,10 @@ const STATE = {
   dueLabel: () => "Governor's decision due (the 45th working day after the session ends, or it becomes law without a signature)",
 
   passedBothBy: (session) => STATE.days(session + 1).end,
-  passedBothNote: (live) => live ? "Waiting to be enrolled" : "Never presented to the governor",
-  passedBothGroup: ["Waiting to be enrolled", () => "A bill that passed both houses is enrolled and sent to the governor within a day or two."],
+  passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never presented to the governor",
+  passedBothGroup: ["Not yet sent to the governor", () => "A bill that passed both houses gets its final copy and goes to the governor within a day or two."],
   passedBothNext: () => ({
-    what: "it's enrolled and sent to the governor. For a bill sent in the session's last days or after it (most are), the governor has until the 45th working day after the session ends, and must name by the 35th day any bill to be vetoed (the intent-to-veto list); a bill not acted on becomes law without a signature. Overriding a veto takes two-thirds of each house's members (17 senators, 34 representatives), which the Legislature can do in a special session on the 45th day.",
+    what: "its final copy is prepared and sent to the governor. For a bill sent in the session's last days or after it (most are), the governor has until the 45th working day after the session ends, and must name by the 35th day any bill to be vetoed (the intent-to-veto list); a bill not acted on becomes law without a signature. Overriding a veto takes two-thirds of each house's members (17 senators, 34 representatives), which the Legislature can do in a special session on the 45th day.",
     gov: ["sign it", "veto it"],
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
@@ -168,7 +168,7 @@ const STATE = {
     "In one of the committees it was referred to; it has to get through each of them.",
     "Through its committees and waiting for the house's third-reading vote.",
     "Passed the House or the Senate, but not both. If the second house changes it, the first has to agree, or a conference committee writes a final version both pass.",
-    "Passed both houses in the same form. It's enrolled and sent to the governor.",
+    "Passed both houses in the same form. Its final copy is prepared and sent to the governor.",
     "Sent to the governor, who has until the 45th working day after the session ends (10 days for a bill sent early in the session); a bill not acted on becomes law.",
     "Became law as an Act: signed, law without the governor's signature, or passed over a veto.",
     "Vetoed by the governor. Overriding takes two-thirds of each house's members.",
