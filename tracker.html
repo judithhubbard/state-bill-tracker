@@ -402,13 +402,13 @@ main { display: grid; gap: 16px; min-width: 0; }
 .stance.fixed { cursor: default; background: none; }
 /* Support | Oppose: two small buttons side by side; the side chosen is filled in (pressed again, it's cleared). */
 .sides { display: inline-flex; margin-top: 4px; justify-self: start; }
-.side { appearance: none; border: 1px solid var(--rule); background: var(--chip); color: var(--ink-2); padding: 1px 6px; font: 600 10.5px var(--body); line-height: 1.4; cursor: pointer; }
-.side:first-child { border-radius: 999px 0 0 999px; }
-.side:last-child { border-radius: 0 999px 999px 0; border-left: 0; }
-.side.support:hover { color: var(--signed); }
-.side.oppose:hover { color: var(--veto); }
-.side.support[aria-pressed="true"] { background: var(--signed); border-color: var(--signed); color: var(--paper); }
-.side.oppose[aria-pressed="true"] { background: var(--veto); border-color: var(--veto); color: var(--paper); }
+.sidebtn { appearance: none; border: 1px solid var(--rule); background: var(--chip); color: var(--ink-2); padding: 1px 6px; font: 600 10.5px var(--body); line-height: 1.4; cursor: pointer; }
+.sidebtn:first-child { border-radius: 999px 0 0 999px; }
+.sidebtn:last-child { border-radius: 0 999px 999px 0; border-left: 0; }
+.sidebtn.support:hover { color: var(--signed); }
+.sidebtn.oppose:hover { color: var(--veto); }
+.sidebtn.support[aria-pressed="true"] { background: var(--signed); border-color: var(--signed); color: var(--paper); }
+.sidebtn.oppose[aria-pressed="true"] { background: var(--veto); border-color: var(--veto); color: var(--paper); }
 .lremove { appearance: none; border: 0; background: none; color: var(--ink-2); font: 600 10.5px var(--body); text-decoration: underline; cursor: pointer; margin: 4px 0 0 2px; padding: 1px 2px; justify-self: start; }
 .lremove:hover { color: var(--veto); }
 .watchview { display: grid; gap: 20px; }
@@ -4399,10 +4399,10 @@ function updateWatchTab() {
 const showStance = (b, e) => !!e && b.stage < 5;
 const SIDES = [["support", "Support"], ["oppose", "Oppose"]];
 // (attr: the buttons' data attribute and value; on, the side pressed.)
-const sideButtons = (b, on, attr) => `<span class="sides" role="group" aria-label="Your side on ${esc(b.nums[0])}">${SIDES.map(([k, w]) => `<button type="button" class="side ${k}" ${attr} data-side="${k}" aria-pressed="${on === k}">${w}</button>`).join("")}</span>`;
+const sideButtons = (b, on, attr) => `<span class="sides" role="group" aria-label="Your side on ${esc(b.nums[0])}">${SIDES.map(([k, w]) => `<button type="button" class="sidebtn ${k}" ${attr} data-side="${k}" aria-pressed="${on === k}">${w}</button>`).join("")}</span>`;
 function starSpace(b) {
   const e = watchEntry(b);
-  return `<span class="watchbtn">${e ? "★" : "☆"}</span>` + (listButton(b) ? `<span class="nlbtn"></span>` : "") + (showStance(b, e) ? `<span class="sides">${SIDES.map(([k, w]) => `<span class="side ${k}">${w}</span>`).join("")}</span>` : "");
+  return `<span class="watchbtn">${e ? "★" : "☆"}</span>` + (listButton(b) ? `<span class="nlbtn"></span>` : "") + (showStance(b, e) ? `<span class="sides">${SIDES.map(([k, w]) => `<span class="sidebtn ${k}">${w}</span>`).join("")}</span>` : "");
 }
 // Beside the star, on the public site when this browser has lists made with the list editor: a button that adds the bill
 // to them (lists_pages/named.js's menu). The star stays the watchlist.
@@ -5330,7 +5330,7 @@ function wire() {
       if (box) box.outerHTML = nextSteps(b);
       return;
     }
-    const s = e.target.closest(".side[data-stance]");
+    const s = e.target.closest(".sidebtn[data-stance]");
     if (s) {
       e.preventDefault(); e.stopPropagation();
       const b = BILLS[+s.dataset.stance], en = watchEntry(b);
