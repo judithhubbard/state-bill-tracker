@@ -170,12 +170,13 @@ meta = site_meta.tags("About · State Bill Tracker", "Why State Bill Tracker was
 open(sys.argv[1], "w").write(page.replace("<!--meta-->\n", meta, 1).replace("SUPPORT_URL", site_meta.SUPPORT))
 PY
 # "Your bills" across states (/your-bills/), a shared list's page (/list/#<slug>) and the list editor (/lists/edit/#<slug>),
-# from lists_pages/: the shared styles and script put inside each (on the first two also embed.js, bills opened in place),
+# from lists_pages/: the shared styles and script put inside each (on the first two also embed.js, bills opened in place;
+# on Your bills also watchrules.js and onelist.js, its one list across states, and named.js),
 # the link preview tags, the visit counter, the lists Worker's address (LISTS_API, default the state-lists Worker), the
 # contributions link and, for the editor's search, the states with "Find a bill" data (search/<st>.json, written above).
 python3 - "$OUT" <<'PY'
 import os, sys, site_meta
-css, js, named, embed = (open(f"lists_pages/{f}").read() for f in ("common.css", "common.js", "named.js", "embed.js"))
+css, js, named, embed, rules, one = (open(f"lists_pages/{f}").read() for f in ("common.css", "common.js", "named.js", "embed.js", "watchrules.js", "onelist.js"))
 api = os.environ.get("LISTS_API", "https://state-lists.lists-worker.workers.dev")
 searchable = " ".join(sorted(f[:-5] for f in os.listdir(os.path.join(sys.argv[1], "search")) if len(f) == 7 and f.endswith(".json"))) if os.path.isdir(os.path.join(sys.argv[1], "search")) else ""
 for src, path, title, desc in (("yourbills.html", "your-bills", "Your bills · State Bill Tracker", "The bills you follow in every state and Congress."),
@@ -184,7 +185,7 @@ for src, path, title, desc in (("yourbills.html", "your-bills", "Your bills · S
     page = open(os.path.join("lists_pages", src)).read()
     meta = site_meta.tags(title, desc, site_meta.root() + path + "/", canonical=False) + site_meta.analytics()
     page = (page.replace("<!--meta-->\n", meta, 1).replace("/*common.css*/", css, 1).replace("/*common.js*/", js, 1).replace("/*named.js*/", named, 1)
-            .replace("/*embed.js*/", embed, 1).replace("LISTS_API_URL", api).replace("SUPPORT_URL", site_meta.SUPPORT).replace("SEARCH_STATES", searchable))
+            .replace("/*embed.js*/", embed, 1).replace("/*watchrules.js*/", rules, 1).replace("/*onelist.js*/", one, 1).replace("LISTS_API_URL", api).replace("SUPPORT_URL", site_meta.SUPPORT).replace("SEARCH_STATES", searchable))
     os.makedirs(os.path.join(sys.argv[1], path), exist_ok=True)
     open(os.path.join(sys.argv[1], path, "index.html"), "w").write(page)
 PY
