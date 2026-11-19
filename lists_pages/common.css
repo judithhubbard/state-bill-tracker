@@ -1,5 +1,6 @@
 /* Shared by /your-bills/ and /list/ (lists_pages/; build_site.sh puts it inside each page). The color tokens are home.html's. */
 :root {
+  --star: #c07f00; /* a starred bill's star: deeper than --gold so it shows on white (3.4:1) */
   --paper: #f5f7f8; --sheet: #ffffff; --ink: #132a2e; --ink-2: #46575c; --rule: #dde4e7; --navy: #007c83; --hover: #c98500;
   --law-mark: #f0a00c; --new-ink: #8a5300; --veto-ink: #a3302a;
   --st-0: #e8edf0; --st-0-ink: #46575c; --st-1: #dcecee; --st-1-ink: #18464c; --st-3: #fbefd6; --st-3-ink: #7a4f06;
@@ -70,7 +71,7 @@ li > a:hover .todo { color: var(--hover); }
 .stance.oppose { border-color: var(--veto-ink); color: var(--veto-ink); }
 .star { position: absolute; right: 8px; top: 8px; width: 34px; height: 34px; border: 0; background: none; cursor: pointer; font-size: 20px; line-height: 1;
   color: var(--ink-2); border-radius: 6px; padding: 0; }
-.star[aria-pressed="true"] { color: var(--law-mark); }
+.star[aria-pressed="true"] { color: var(--star, var(--law-mark)); }
 .star:hover { background: var(--paper); }
 /* Buttons and fields. */
 .btn { font: inherit; font-size: 14.5px; font-weight: 600; color: var(--navy); background: var(--sheet); border: 1px solid var(--navy); border-radius: 8px;

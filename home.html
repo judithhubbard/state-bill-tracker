@@ -16,6 +16,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;600;700&display=swap">
 <style>
 :root {
+  --star: #c07f00; /* a starred bill's star: deeper than --gold so it shows on white (3.4:1) */
   --paper: #f5f7f8; --sheet: #ffffff; --ink: #132a2e; --ink-2: #46575c; --rule: #dde4e7; --navy: #007c83;
   --tile-off: #e8edf0; --tile-off-ink: #55656b; --hover: #c98500;
   --dem: #1f5bb5; --rep: #c0322a; --ind: #6b7685;
@@ -400,7 +401,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 /* A star beside each bill (in "Your bills" and the map's panel): filled when it's on the state's watchlist. */
 .star { position: absolute; right: 6px; top: 50%; margin-top: -16px; width: 32px; height: 32px; border: 0; background: none; cursor: pointer;
   font-size: 19px; line-height: 1; color: var(--ink-2); border-radius: 6px; padding: 0; }
-.star[aria-pressed="true"] { color: var(--law-mark); }
+.star[aria-pressed="true"] { color: var(--star, var(--law-mark)); }
 .star:hover { background: var(--paper); }
 .star:focus-visible { outline: 3px solid var(--hover); outline-offset: 0; }
 .panel li { position: relative; }

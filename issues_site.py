@@ -204,7 +204,7 @@ ul.bills a:hover { text-decoration: underline; }
 .panel .tags > .stg { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .star { position: absolute; right: 6px; top: 50%; margin-top: -16px; width: 32px; height: 32px; border: 0; background: none; cursor: pointer;
   font-size: 19px; line-height: 1; color: var(--ink-2); border-radius: 6px; padding: 0; }
-.star[aria-pressed="true"] { color: var(--law-mark); }
+.star[aria-pressed="true"] { color: var(--star, var(--law-mark)); }
 .star:hover { background: var(--paper); }
 .tiles a.sel { outline: 3px solid var(--ink); outline-offset: 1px; }
 @media (hover: hover) { .panel .tap { display: none; } }
