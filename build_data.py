@@ -34,6 +34,7 @@ P = importlib.import_module(f"states.{STATE}.profile")
 # (governors.py), never the list's last entry.
 import governors
 P.GOV_SINCE = governors.in_office(P)[1]
+governors.apply_leaders(P)  # chosen next leaders (LEADERS_NEXT), from their first day
 # The code that reads the state's own data and turns it into bill records (C.load_session).
 C = importlib.import_module(f"states.{STATE}.convert")
 

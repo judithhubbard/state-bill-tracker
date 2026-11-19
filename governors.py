@@ -41,3 +41,13 @@ def facts_next(facts, day=None):
     """[full name, party, "YYYY-MM-DD"] of a governor-elect not yet in office, or None."""
     nxt = facts.get("governorNext")
     return nxt if nxt and nxt[2] > (day or today()) else None
+
+
+def apply_leaders(P, day=None):
+    """Put a profile's chosen next leaders in place from the day they take their post. LEADERS_NEXT, optional in a
+    profile, is {house: (name, title, pronoun, "YYYY-MM-DD")} for leaders already chosen (a caucus's Speaker-designate),
+    entered ahead of time like a governor-elect. Modifies P.LEADERS (the module is shared, so every reader sees it)."""
+    day = day or today()
+    for house, (name, title, pronoun, start) in getattr(P, "LEADERS_NEXT", {}).items():
+        if start <= day:
+            P.LEADERS = {**P.LEADERS, house: (name, title, pronoun)}
