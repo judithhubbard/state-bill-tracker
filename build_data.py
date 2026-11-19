@@ -1948,7 +1948,7 @@ def main():
         # who decides at each stage.
         weighin = os.path.join(os.path.dirname(P.__file__), "weighin.html")
         if os.path.exists(weighin):
-            start = template.index('    <div class="act-sec">\n      <h2>How to weigh in</h2>')
+            start = template.index('    <div class="act-sec">\n      <h2>Residents, organizations and local governments</h2>')
             end = template.index('  </section>', start)
             template = template[:start] + open(weighin).read() + template[end:]
         # The state's page settings and rules, read by the main script as STATE.
