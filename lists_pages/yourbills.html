@@ -50,7 +50,6 @@
       <div id="bills"></div>
       <p id="none" hidden>No starred bills in this browser yet. Star a bill on the <a href="/">front page</a> or a state&rsquo;s page and it shows up here.</p>
       <section id="shareSec" hidden>
-        <h2>Share all your bills</h2>
         <div class="panel" id="share"></div>
       </section>
     </section>
@@ -363,7 +362,7 @@ function drawStarred(list) {
 }
 async function draw() {
   syncTabs();
-  const starred = allStarred().map((b) => ({ ...b, key: crossKey(b.st, b.session, b.num), stance: b.entry.stance === "oppose" ? "oppose" : "" }));
+  const starred = allStarred().map((b) => ({ ...b, key: crossKey(b.st, b.session, b.num), stance: ["oppose", "support"].includes(b.entry.stance) ? b.entry.stance : "" }));
   const keys = new Set(starred.map((b) => b.key));
   for (const [k, b] of REMOVED) if (!keys.has(k)) starred.push(b); else REMOVED.delete(k);
   // At once from what this browser kept last time; then from the bills' statuses.
@@ -405,8 +404,8 @@ document.addEventListener("click", (e) => {
   for (const s2 of document.querySelectorAll(`button[data-star="${CSS.escape(b.dataset.star)}"]`)) {
     s2.setAttribute("aria-pressed", String(on));
     s2.textContent = on ? "★" : "☆";
-    s2.title = on ? "Remove from your bills" : "Star it";
-    s2.setAttribute("aria-label", s2.getAttribute("aria-label").replace(/^(Remove|Star) /, on ? "Remove " : "Star "));
+    s2.title = on ? "Remove from your watchlist" : "Add to your watchlist";
+    s2.setAttribute("aria-label", s2.getAttribute("aria-label").replace(/^(Remove|Add) /, on ? "Remove " : "Add ").replace(/ (from|to) your watchlist$/, on ? " from your watchlist" : " to your watchlist"));
   }
   starSum();
   schedule();
@@ -483,9 +482,8 @@ let THANKS = "";
 function drawShare(keepMsg) {
   const mine = myList(), el = $("share"), msg = keepMsg ? $("saved")?.textContent || "" : "";
   if (!mine) {
-    el.innerHTML = `<p>One link that always shows all your starred bills, in every state, kept up to date as you star and unstar them. (Each state&rsquo;s Watchlist tab shares just that state&rsquo;s.)</p>`
-      + `<p class="row"><button type="button" class="btn primary" data-act="share"${ITEMS.some((x) => x.on) ? "" : " disabled"}>Share all your bills</button> <span class="muted" id="saved"></span></p>`
-      + CODE_LINE
+    el.innerHTML = `<p class="row"><button type="button" class="btn primary" data-act="share"${ITEMS.some((x) => x.on) ? "" : " disabled"}>Share your live watchlist</button>`
+      + `${infoTip("One link to all your starred bills, in every state. It stays up to date as you star and unstar bills. (A state's Watchlist tab can share just that state's.)")} <span class="muted" id="saved"></span></p>`
       + `<details><summary>Shared these from another device?</summary><div class="row"><input type="text" id="pasteKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key">`
       + `<button type="button" class="btn" data-act="connect">Connect</button></div></details>`;
     if (msg) say(msg, true);
@@ -500,7 +498,7 @@ function drawShare(keepMsg) {
     + `<div class="row">${shareIcons(url, mine.title || DEFAULT_TITLE)}<a class="muted" href="/list/#${esc(mine.slug)}">Preview</a></div>`
     + `<p class="muted" id="saved"></p>`
     + (THANKS ? `<p class="thanks">${THANKS}</p>` : "")
-    + (group ? "" : CODE_LINE)
+    + ""  // (no group-code line: the owner, 2026-11-19)
     + `<details><summary>Use this list on another device</summary><p class="muted">Paste this key into Your bills on the other device. Anyone with it can change the list.</p>`
     + `<div class="row"><input type="text" readonly id="key" value="${esc(`${mine.slug} ${mine.editKey}`)}" aria-label="The list's key"><button type="button" class="btn" data-act="copykey">Copy</button></div></details>`
     + `<p class="row"><button type="button" class="btn quiet" data-act="stop">Stop sharing</button></p>`;
@@ -754,7 +752,7 @@ addEventListener("storage", (e) => {
   }
 });
 syncTabs();
-select(tabFromHash() || (() => { try { return localStorage.getItem(TAB_KEY) || ""; } catch (e) { return ""; } })());
+select(tabFromHash() || "starred");  // (not the tab last viewed: "Open as a page" from the front page means your starred bills)
 draw();
 drawLists();
 refreshLists();

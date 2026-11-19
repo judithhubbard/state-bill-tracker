@@ -571,7 +571,11 @@ main { display: grid; gap: 16px; min-width: 0; }
 .statsview p { margin: 0; max-width: 80ch; font-size: 14.5px; }
 .statsview .act-btn { justify-self: start; }
 .statsview .note { color: var(--ink-2); font-size: 13px; }
-.stattopic { max-width: 300px; }
+/* Statistics' topic menu with the "leave out" box beside it (below it when there isn't room). */
+.stattopic { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+.stattopic[hidden] { display: none; }
+.stattopic > label[for="statTopic"] { flex-basis: 100%; }
+.stattopic select { width: 300px; max-width: 100%; }
 .funnel { display: grid; gap: 8px; max-width: 760px; }
 .frow { display: grid; grid-template-columns: 190px minmax(0, 1fr) 110px; gap: 12px; align-items: center; }
 .frow .fl { font-size: 14px; font-weight: 600; }
@@ -581,7 +585,7 @@ main { display: grid; gap: 16px; min-width: 0; }
 .frow .fn { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .frow .fn b { font-size: 15px; color: var(--ink); margin-right: 4px; }
 @media (max-width: 560px) { .frow { grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; } .frow .fbar { grid-column: 1 / -1; grid-row: 2; } }
-.statmore-body { display: grid; gap: 18px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.statmore-body { display: grid; gap: 18px; }
 table.st { min-width: 0; }
 /* A legislator's tables: as wide as their content, not the page. */
 #personStats, #view-person { min-width: 0; }
@@ -926,7 +930,7 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .next details.others { margin-top: 8px; }
 .next details.others > summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--navy); }
 .next details.others ul { margin-top: 6px; }
-.statgen { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); margin-left: 14px; }
+.statgen { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); margin: 0; }
 .tag.narrow { background: none; border: 1px dashed var(--refer); }
 .tag.chap { background: var(--chip); color: var(--ink); cursor: help; }
 .chapam { background: var(--chip); border-radius: 6px; padding: 8px 10px; margin: 0 0 1em; }
@@ -1077,6 +1081,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .wr-emb > .wcard.inplace .wbody { padding-bottom: 10px; }
 .wcard .wside { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink-2); }
 .wcard .wside .sides { margin: 0; padding: 0; }
+.wcard .wside .wlists { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
 #wlList > .wrows { margin-top: 14px; }
 /*rows.css*/
 </style>
@@ -1204,24 +1209,24 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 
   <!-- Statistics -->
   <section class="statsview" id="view-stats" hidden>
-    <div class="field stattopic">
-      <label for="statTopic">Topic</label>
-      <select id="statTopic"><option value="all">All bills</option></select>
-      <label class="inline statgen"><input type="checkbox" id="statGeneral"> Leave out bills about one place, person or group, and road namings <button type="button" class="tip" aria-label="What this means" data-tip="Bills about one place, person or group pass far more often than other bills, so including them makes the odds look better than they are for most bills.">i</button></label>
-    </div>
     <section class="act-sec" id="statFunnel" aria-labelledby="funnelHead"></section>
     <div class="statmore-body" id="statMore">
     <nav class="subtabs" id="statTabs" aria-label="Statistics sections">
-      <button type="button" data-sec="statOdds">Odds of becoming law</button>
+      <button type="button" data-sec="statOdds">Odds</button>
       <button type="button" data-sec="statComm">Committees</button>
       <button type="button" data-sec="statTiming">Timing</button>
       <button type="button" data-sec="statPersist">Repeat tries</button>
-      <button type="button" data-sec="statCosp">Co-sponsors and party</button>
-      <button type="button" data-sec="statNet" id="statNetBtn" hidden>Who works with whom</button>
-      <button type="button" data-sec="statWho" id="statWhoBtn" hidden>Who works on what</button>
-      <button type="button" data-sec="statTrend">What's changing</button>
-      <button type="button" data-sec="statSessions">By session</button>
+      <button type="button" data-sec="statCosp">Co-sponsors</button>
+      <button type="button" data-sec="statNet" id="statNetBtn" hidden>Partners</button>
+      <button type="button" data-sec="statWho" id="statWhoBtn" hidden>Topics</button>
+      <button type="button" data-sec="statTrend">Trends</button>
+      <button type="button" data-sec="statSessions">Sessions</button>
     </nav>
+    <div class="field stattopic">
+      <label for="statTopic">Topic</label>
+      <select id="statTopic"><option value="all">All bills</option></select>
+      <label class="inline statgen"><input type="checkbox" id="statGeneral"> Leave out local and narrow bills <button type="button" class="tip" aria-label="What this means" data-tip="Bills about one town, county, person or group, and road and building namings. They pass far more often than other bills, so leaving them out gives truer odds for most bills.">i</button></label>
+    </div>
     <div class="act-sec statsec" id="statOdds"></div>
     <div class="act-sec statsec" id="statComm" hidden></div>
     <div class="act-sec statsec" id="statTiming" hidden></div>
@@ -4357,7 +4362,9 @@ function watchRow(b, x) {
   return { key: `${STATE.code}:${DATA.session}:${n}`, st: STATE.code, session: DATA.session, num: n, full: b.nums[0], found: true, b, w: x,
     title: b.title, stage: b.stage, last: b.last || "", stance: watchStance(b) || "", rules: WROW_RULES,
     label: WatchRows.where(STATE.code, b.stage, b.comm, (b.topics || []).includes("const") ? "const" : "", !!DATA.current, !!DATA.upcoming),
-    ...WatchRows.place(b, { S: STATE, WR, current: !!DATA.current, upcoming: !!DATA.upcoming, act: !!DATA.current && !DATA.upcoming && canActNow(b), exec: EXEC.title }) };
+    ...WatchRows.place(b, { S: STATE, WR, current: !!DATA.current, upcoming: !!DATA.upcoming, act: !!DATA.current && !DATA.upcoming && canActNow(b), exec: EXEC.title,
+      session: DATA.session, next: (x) => (toVoters(x) ? "Goes to the voters" : isAmendment(x) && x.stage === 3 ? (secondPassage(x) ? (STATE.amendmentDone || "Goes to the voters")
+        : `Must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`) : "") }) };
 }
 // "Needs action" is grouped by the deadline each bill faces, soonest first.
 const monthDay = WatchRules.monthDay;
@@ -4368,7 +4375,7 @@ const SOON_DAYS = WatchRules.SOON_DAYS;
 const deadlineOf = (b) => WR.deadlineOf(b);
 const W_GROUPS = WR.groups;
 const W_GROUP_OPEN = new Map();
-// "Can't move right now" and "Decided" fold up too; whether each is open is kept in this browser ({idle, decided}).
+// "Out of time this session" and "Decided" fold up too; whether each is open is kept in this browser ({idle, decided}).
 const W_SEC_OPEN = () => recall("wsec") || {};
 // The main thing that happened to a watched bill since it was last opened ("Signed into law").
 // (The passage that made it pass both houses says so, as the bill's status does, not "Passed Senate".)
@@ -4411,14 +4418,14 @@ const SIDES = [["support", "Support"], ["oppose", "Oppose"]];
 const sideButtons = (b, on, attr) => `<span class="sides" role="group" aria-label="Your side on ${esc(b.nums[0])}">${SIDES.map(([k, w]) => `<button type="button" class="sidebtn ${k}" ${attr} data-side="${k}" aria-pressed="${on === k}">${w}</button>`).join("")}</span>`;
 function starSpace(b) {
   const e = watchEntry(b);
-  return `<span class="watchbtn">${e ? "★" : "☆"}</span>` + (listButton(b) ? `<span class="nlbtn"></span>` : "") + (showStance(b, e) ? `<span class="sides">${SIDES.map(([k, w]) => `<span class="sidebtn ${k}">${w}</span>`).join("")}</span>` : "");
+  return `<span class="watchbtn">${e ? "★" : "☆"}</span>` + (showStance(b, e) ? `<span class="sides">${SIDES.map(([k, w]) => `<span class="sidebtn ${k}">${w}</span>`).join("")}</span>` : "");
 }
 // Beside the star, on the public site when this browser has lists made with the list editor: a button that adds the bill
 // to them (lists_pages/named.js's menu). The star stays the watchlist.
 const listButton = (b) => (ROOT && window.NamedLists?.ready() ? NamedLists.button(NamedLists.code(STATE.code, DATA.session, b.nums[0]), b.nums[0]) : "");
-function watchButton(b, withStance = true) {
+function watchButton(b, withStance = true, withList = false) {
   const e = watchEntry(b);
-  return `<button class="watchbtn" type="button" data-watch="${b.idx}" aria-pressed="${!!e}" aria-label="${e ? "Stop watching" : "Watch"} ${esc(b.nums[0])}" title="${e ? "Remove from" : "Add to"} my watchlist">${e ? "★" : "☆"}</button>${listButton(b)}`
+  return `<button class="watchbtn" type="button" data-watch="${b.idx}" aria-pressed="${!!e}" aria-label="${e ? "Remove" : "Add"} ${esc(b.nums[0])} ${e ? "from" : "to"} your watchlist" title="${e ? "Remove from" : "Add to"} your watchlist">${e ? "★" : "☆"}</button>${withList ? listButton(b) : ""}`
     + (withStance && showStance(b, e) ? sideButtons(b, e.stance, `data-stance="${b.idx}"`) : "");
 }
 // ---- Shared lists (public site only): one link, /list/#<slug>, that shows this watchlist. The lists Worker
@@ -4622,9 +4629,7 @@ const codeLine = () => `<p class="muted">Sharing for an organization? <a href="m
 // The share options under "My watchlist": Share, or, once shared, the link and what goes with it.
 function shareBox(n) {
   const mine = myPublished();
-  if (!mine) return `<p>One link that always shows your ${STATE.code === "us" ? "bills in Congress" : `${esc(stateName())} bills`}, kept up to date as you star and unstar them.${ROOT ? ` (To share your bills in every state, use <a href="${esc(siteTop())}your-bills/">Your bills</a>.)` : ""}</p>
-    <p class="row"><button type="button" class="act-btn primary" data-pub="share"${n ? "" : " disabled"}>${esc(shareWords())}</button> <span class="muted" id="pubMsg"></span></p>
-    ${codeLine()}
+  if (!mine) return `<p class="row"><button type="button" class="act-btn primary" data-pub="share"${n ? "" : " disabled"}>${esc(shareWords())}</button>${TIP(`One link to your ${STATE.code === "us" ? "bills in Congress" : `${stateName()} bills`}. It stays up to date as you star and unstar bills.${ROOT ? " To share your bills in every state, use Your bills." : ""}`)} <span class="muted" id="pubMsg"></span></p>
     <details><summary>Shared this list from another device?</summary><div class="row"><input type="text" id="pubKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key"><button type="button" class="act-btn" data-pub="connect">Connect</button></div></details>`;
   const url = listUrl(mine.slug), group = !!mine.group;
   return `${group ? `<p class="muted">${esc(mine.group)}&rsquo;s list</p>` : ""}
@@ -4636,7 +4641,7 @@ function shareBox(n) {
     <p class="muted" id="pubMsg"></p>
     ${group ? `<p class="muted" id="pubViews"></p>` : ""}
     ${PUB_THANKS ? `<p class="thanks">${PUB_THANKS}</p>` : ""}
-    ${group ? "" : codeLine()}
+
     <details><summary>Use this list on another device</summary><p class="muted">Paste this key under &ldquo;Shared this list from another device?&rdquo; there. Anyone with it can change the list.</p>
       <div class="row"><input type="text" readonly value="${esc(`${mine.slug} ${mine.editKey}`)}" aria-label="The list's key"><button type="button" class="act-btn" data-pub="copykey">Copy</button></div></details>
     <p><button type="button" class="act-btn ghost" data-pub="stop">Stop sharing</button></p>`;
@@ -4932,8 +4937,8 @@ function renderWatchView() {
       ${groups.map(([g, xs], i) => `<details class="wgroup" data-wgroup="${g}"${W_GROUP_OPEN.get(g) ?? i === 0 ? " open" : ""}>
         <summary><span class="wgtitle">${W_GROUPS[g][0]} <span class="n">${num(xs.length)}</span></span><span class="wgsub">${esc(W_GROUPS[g][1]())}</span></summary>
         ${multiFor(g, xs)}<div class="wcards needs">${xs.map(cardFor).join("")}</div></details>`).join("")}</section>` : ""}
-    ${idle.length ? `<details class="wsec idle" data-wsec="idle"${W_SEC_OPEN().idle === false ? "" : " open"}><summary><h2>Can't move right now <span class="n">${num(idle.length)}</span></h2>
-      <p class="wsub">Nothing to ask for until they move again. They'll be marked “New” when something changes.</p></summary><div class="wcards idle">${idle.map(cardFor).join("")}</div></details>` : ""}
+    ${idle.length ? `<details class="wsec idle" data-wsec="idle"${W_SEC_OPEN().idle === false ? "" : " open"}><summary><h2>Out of time this session <span class="n">${num(idle.length)}</span></h2>
+      </summary><div class="wcards idle">${idle.map(cardFor).join("")}</div></details>` : ""}
     ${decided.length ? `<details class="wsec idle decided" data-wsec="decided"${W_SEC_OPEN().decided === false ? "" : " open"}><summary><h2>Decided <span class="n">${num(decided.length)}</span></h2>
       <p class="wsub">Signed into law or vetoed, most recent first.</p></summary><div class="wcards idle">${decided.map(cardFor).join("")}</div></details>` : ""}
     ${SHARED ? "" : actionRecord(list)}`;
@@ -4961,7 +4966,8 @@ function watchCard(x, bodyOnly) {
     const due = WR.dueText(b, dl, fmtDate);
     // Opened below its row, the card has no heading: the side you take goes at its top, with who sponsors it.
     const e = !SHARED && watchEntry(b);
-    const top = bodyOnly ? `${showStance(b, e) ? `<p class="wside">Your side: ${sideButtons(b, e.stance, `data-stance="${b.idx}"`)}</p>` : ""}
+    const lb = SHARED ? "" : listButton(b);
+    const top = bodyOnly ? `${showStance(b, e) || lb ? `<p class="wside">${showStance(b, e) ? `Your side: ${sideButtons(b, e.stance, `data-stance="${b.idx}"`)}` : ""}${lb ? `<span class="wlists">Lists ${lb}</span>` : ""}</p>` : ""}
       ${b.sponsors.length ? `<p class="wspons">${b.sponsors.map(esc).join(" / ")}</p>` : ""}` : "";
     return `<article class="wcard${open ? " open" : ""}${bodyOnly && !ONE_CARD() ? " inplace" : ""}" data-idx="${b.idx}">
       ${bodyOnly ? "" : `<div class="whead" data-wtoggle="${b.idx}">
@@ -4969,7 +4975,7 @@ function watchCard(x, bodyOnly) {
           ? `${watchButton(b, false)}${EMBED?.own
             ? `${sideButtons(b, x.stance, `data-lstance="${b.idx}"`)}<button class="lremove" type="button" data-lremove="${b.idx}" aria-label="Remove ${esc(b.nums[0])} from this list" title="Remove from this list (not from your watchlist)">Remove</button>`
             : `<span class="stance fixed ${x.stance}" title="The position of whoever shared this list">${x.stance === "oppose" ? "Oppose" : "Support"}</span>`}`
-          : watchButton(b)}</div><span class="spill p${b.stage}">${esc(statusLabel(b))}${esc(due)}</span></div>
+          : watchButton(b, true, true)}</div><span class="spill p${b.stage}">${esc(statusLabel(b))}${esc(due)}</span></div>
         <h3><button class="wtitle" type="button" data-wtitle aria-expanded="${open}">${esc(b.title)}</button>${SHARED ? "" : newsTags(b)}</h3>
         ${b.sponsors.length ? `<p class="wspons">${b.sponsors.map(esc).join(" / ")}</p>` : ""}
         ${x.key ? `<div class="wask"><span><b>${esc(andList([x.key, ...(x.more || [])].map(titleOf)))}:</b> ${esc(x.key.ask)}</span>${x.more?.length ? "" : `<button class="act-btn small primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button>`}</div>` : ""}
@@ -5084,7 +5090,7 @@ function redrawWatchButtons(b) {
   for (const el of document.querySelectorAll(`.nums [data-watch="${b.idx}"]`)) {
     const box = el.parentElement;
     box.querySelectorAll(".watchbtn, .stance, .sides, .nlbtn").forEach((x) => x.remove());
-    box.insertAdjacentHTML("beforeend", watchButton(b));
+    box.insertAdjacentHTML("beforeend", watchButton(b, true, true));
   }
   for (const d of document.querySelectorAll(`.bill[data-idx="${b.idx}"]`)) {
     const star = d.parentElement.querySelector(":scope > .rowstar"), space = d.querySelector(":scope > summary .starspace");

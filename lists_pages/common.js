@@ -24,6 +24,8 @@ function countUse(name, tries = 0) {
   if (window.goatcounter?.count) { try { window.goatcounter.count({ path: name, title: name, event: true }); } catch (e) {} return; }
   if (document.querySelector("script[data-goatcounter]") && tries < 6) setTimeout(() => countUse(name, tries + 1), 2000);
 }
+// An ⓘ whose explanation shows on hover or focus (a tap focuses it on a phone): common.css's .info.
+const infoTip = (text) => `<span class="info" tabindex="0" role="note" aria-label="${String(text).replace(/"/g, "&quot;")}"><span aria-hidden="true">i</span><span class="info-t" aria-hidden="true">${String(text).replace(/</g, "&lt;")}</span></span>`;
 const COUNTED = new Set();
 function countOnce(name) { if (!COUNTED.has(name)) { COUNTED.add(name); countUse(name); } }
 

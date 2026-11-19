@@ -1,7 +1,7 @@
 // The watchlist's rows and groups, in one copy: each state's Watchlist tab (build_data.py puts this file in the page beside
 // watchrules.js) and /your-bills/ (onelist.js; build_site.sh puts it inside the page) draw starred bills with it, so a bill
 // shows in the same group, with the same deadline, in the same order, in both. The groups: Due soon, Before the session
-// ends, the state's year-end group (S.passedBothGroup), No deadline yet, Can't move right now, Decided or ended; within a
+// ends, the state's year-end group (S.passedBothGroup), Later, Out of time this session, Decided or ended; within a
 // group, the soonest deadline first, then the bill furthest along, then the most recent action. Every class name starts
 // with "wr-" (lists_pages/rows.css), since the state's page has its own .num, .where and .todo.
 // WatchRows.place(b, ctx): a bill's group and deadline (b: stage, due, agenda and what the state's originDeadline() reads;
@@ -11,9 +11,9 @@
 // WatchRows.newsHtml(entries): "New since you last looked", one box at the top of the list.
 const WatchRows = (() => {
   const ORDER = ["soon", "session", "year", "later", "idle", "done"];
-  const NAMES = { soon: "Due soon", session: "Before the session ends", later: "No deadline yet", idle: "Can’t move right now", done: "Decided or ended" };
-  const NOTES = { soon: "A vote, hearing or deadline is coming up.", idle: "Nothing to ask for on these now. They’re marked New when something changes.",
-    done: "Laws, vetoes and bills whose session is over, most recent first." };
+  const NAMES = { soon: "Due soon", session: "Before the session ends", later: "Later", idle: "Out of time this session", done: "Decided or ended" };
+  // (No general note under a heading: the headings say it. A state's own note on a group, with its dates, still shows.)
+  const NOTES = {};
   // Paperwork that comes with a real step isn't news (a state's profile can say its own: STATE.routine).
   const ROUTINE = /^(PRINT NUMBER|INTRODUCED|DELIVERED TO (SENATE|ASSEMBLY)|RETURNED TO (SENATE|ASSEMBLY)|\d+(ST|ND) REPORT CAL|\d+RD READING CAL)/;
   const h = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -36,7 +36,11 @@ const WatchRows = (() => {
   // this session), yearGroup (the state's name for the year-end group)}.
   function place(b, c) {
     if (b.stage >= 5 || !c.current) return { group: "done" };
-    if (c.upcoming) return { group: "later" };
+    if (c.upcoming) {
+      let opens = "";
+      try { opens = c.S.opens && c.session ? c.S.opens(c.session) : ""; } catch (e) {}
+      return { group: "later", due: opens ? `Session opens ${day(opens)}` : "Prefiled" };
+    }
     if (!c.act) return { group: "idle", out: true };
     const dl = c.WR.deadlineOf(b), x = { group: dl.g, date: dl.d || "" };
     const meet = WatchRules.nextMeeting(b.agenda, true);
@@ -48,6 +52,10 @@ const WatchRows = (() => {
       else if (dl.d === c.WR.sessionEnd().date) x.due = c.WR.daysUntil(dl.d) >= 0 ? `Session ends ${day(dl.d)}` : "Session could end any day";
     }
     if (dl.g === "year") x.yearGroup = c.S.passedBothGroup?.[0] || "";
+    if (x.group === "later") {
+      const k = (b.topics || []).includes("const");
+      x.due = c.next?.(b) || (b.ballot || (k && c.S.amendmentOnce) ? "Goes to the voters" : k ? "Next step after this session" : "");
+    }
     return x;
   }
   const rank = (g) => { const i = ORDER.indexOf(g); return i < 0 ? 3 : i; };
@@ -58,8 +66,15 @@ const WatchRows = (() => {
     if (a.group === "done" && b.group === "done") return String(b.last || "").localeCompare(String(a.last || "")) || tail();
     return (a.date || "9999").localeCompare(b.date || "9999") || (b.stage ?? -1) - (a.stage ?? -1) || String(b.last || "").localeCompare(String(a.last || "")) || tail();
   }
+  // The groups' order for these bills: Due soon, then the dated groups by their soonest date (with several states, New
+  // York's December 31 can come before New Jersey's session end two years off), then Later, Can't move, Decided.
+  function orderOf(list) {
+    const first = {};
+    for (const x of list) { const g = groupOf(x); if (x.date && !(first[g] <= x.date)) first[g] = x.date; }
+    return ["soon", ...["session", "year"].sort((a, b) => (first[a] || "9999").localeCompare(first[b] || "9999")), "later", "idle", "done"];
+  }
   // The bills in the order the list shows them (a shared list's bills are saved in it too).
-  const ordered = (list, name) => [...list].sort((a, b) => rank(groupOf(a)) - rank(groupOf(b)) || sortIn(a, b, name));
+  const ordered = (list, name) => { const o = orderOf(list); return [...list].sort((a, b) => o.indexOf(groupOf(a)) - o.indexOf(groupOf(b)) || sortIn(a, b, name)); };
   const idOf = (opt, x) => `${opt.tab}-${x.key.replace(/[^\w]/g, "_")}`;
   // One row. opt: {tab (an id for the rows' ids), byState, oneState (no state badge), stance (show Support too), stName,
   // isNew(x), newText(x), noteOf(x), remove (a Remove button on bills from sessions no longer on the site), buttons(x) (the
@@ -76,12 +91,13 @@ const WatchRows = (() => {
         + (opt.remove ? `<button type="button" class="btn quiet small" data-remove="${h(`${x.st}|${x.session}|${x.num}`)}">Remove</button>` : "") + "</div></li>";
     }
     const shown = h(numText(x.st, x.full || x.num)), note = opt.noteOf?.(x);
-    // (Support is shown where sides matter, a group's list; Oppose always.)
-    const stance = x.stance && (opt.stance || x.stance === "oppose") ? `<span class="wr-stance ${x.stance}">${x.stance === "oppose" ? "Oppose" : "Support"}</span>` : "";
+    // The side, when one is chosen (stars start with none, so a missing tag means none chosen, not "support").
+    // (A shared or named list marks every bill with a side: Support shows there only when the list uses sides, opt.stance.)
+    const stance = x.stance === "oppose" || (x.stance === "support" && opt.stance !== false) ? `<span class="wr-stance ${x.stance}">${x.stance === "oppose" ? "Oppose" : "Support"}</span>` : "";
     // (newText(x): what's new, with its day; else the last action and its day.)
     const news = opt.isNew?.(x) ? `<span class="wr-new"><b>New:</b> ${h(opt.newText ? opt.newText(x) : `${x.action || ""}${x.last ? ` (${fullDay(x.last)})` : ""}`)}</span>` : "";
-    const where = `<span class="wr-where">${stance}${x.found ? `<span class="wr-stg s${x.stage}">${h(x.label)}</span>` : ""}${x.due ? `<span class="wr-dl">${h(x.due)}</span>` : x.out ? '<span class="wr-dl">Out of time this session</span>' : ""}`
-      + `${!x.due && x.found && x.last && x.group === "done" ? `<span>${fullDay(x.last)}</span>` : ""}<span class="wr-todo">${x.found ? "Details" : "Open"}</span></span>`;
+    const where = `<span class="wr-where">${stance}${x.found ? `<span class="wr-stg s${x.stage}">${h(x.label)}</span>` : ""}${x.due ? `<span class="wr-dl">${h(x.due)}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""}`
+      + `${!x.due && x.found && x.last && x.group === "done" ? `<span>${fullDay(x.last)}</span>` : ""}<span class="wr-todo"${x.found ? ' aria-hidden="true"' : ""}>${x.found ? "" : "Open"}</span></span>`;
     const back = x.later && x.later[0] > x.session ? `<p class="wr-again">Back in ${h(x.later[2])} as <a href="${h(x.later[3])}#${h(x.later[1])}">${h(numText(x.st, x.later[1]))}</a>${x.laterStar || ""}</p>` : "";
     if (!x.found) {
       return `<li class="wr-row" data-key="${h(x.key)}"><a class="wr-btn rowbtn" href="${h(x.href || `/${x.st}/`)}"><span class="wr-num">${st}${shown}${yr}</span>`
@@ -98,10 +114,14 @@ const WatchRows = (() => {
   function groupHead(g, xs, opt) {
     const one = xs.every((x) => x.rules && x.rules === xs[0].rules) ? xs[0].rules : null;
     let name = NAMES[g], sub = "";
-    if (g === "year") name = new Set(xs.map((x) => x.st)).size === 1 && xs[0].yearGroup ? xs[0].yearGroup : "Due later";
+    if (g === "year") {
+      name = new Set(xs.map((x) => x.st)).size === 1 && xs[0].yearGroup ? xs[0].yearGroup : "Due later";
+      const years = new Set(xs.map((x) => (x.date || "").slice(0, 4)).filter(Boolean));
+      if (years.size === 1 && /^By /.test(name)) name += `, ${[...years][0]}`;
+    }
     try { if (one && one.WR.groups[g]) sub = one.WR.groups[g][1]() || ""; } catch (e) {}
     if (!sub) sub = NOTES[g] || "";
-    return `<h2 class="wr-ghd">${h(name)} <span class="wr-n">${xs.length}</span></h2>${sub ? `<p class="wr-gsub">${h(sub)}</p>` : ""}${opt.groupExtra?.(g, xs) || ""}`;
+    return `<h2 class="wr-ghd">${h(name)} <span class="wr-n">· ${xs.length} bill${xs.length === 1 ? "" : "s"}</span></h2>${sub ? `<p class="wr-gsub">${h(sub)}</p>` : ""}${opt.groupExtra?.(g, xs) || ""}`;
   }
   function draw(box, list, opt) {
     box.classList.add("wrows");
@@ -114,7 +134,7 @@ const WatchRows = (() => {
         return `<section class="wr-state"><h3><a href="/${st}/">${h(name(st))}</a><a class="wr-wl" href="/${st}/watchlist/">Watchlist ›</a></h3><ol class="wr-list">${xs.map((x) => rowHtml(x, { ...opt, byState: true })).join("")}</ol></section>`;
       }).join("");
     } else {
-      html = ORDER.map((g) => {
+      html = orderOf(list).map((g) => {
         const xs = list.filter((x) => groupOf(x) === g).sort((a, b) => sortIn(a, b, opt.stName));
         return xs.length ? `<section class="wr-grp" data-g="${g}">${groupHead(g, xs, opt)}<ol class="wr-list">${xs.map((x) => rowHtml(x, opt)).join("")}</ol></section>` : "";
       }).join("");

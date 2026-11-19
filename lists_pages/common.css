@@ -176,3 +176,11 @@ main { position: relative; }
 #frames > .sframe { position: absolute; left: 0; top: 0; visibility: hidden; }
 #frames > .sframe.over { visibility: visible; }
 #frames > .sframe.over.stale { visibility: hidden; }
+
+/* An ⓘ with its explanation (common.js's infoTip()). */
+.info { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; margin-left: 6px;
+  border: 1.5px solid currentColor; border-radius: 50%; color: var(--ink-2); font: 700 11px/1 var(--body); font-style: italic; cursor: help; vertical-align: middle; }
+.info:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; }
+.info .info-t { display: none; position: absolute; z-index: 40; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); width: max-content; max-width: min(280px, 80vw);
+  padding: 8px 10px; border-radius: 6px; background: var(--ink); color: var(--paper); font: 400 13px/1.4 var(--body); font-style: normal; text-align: left; }
+.info:hover .info-t, .info:focus .info-t { display: block; }

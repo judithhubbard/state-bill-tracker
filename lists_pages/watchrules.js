@@ -71,7 +71,7 @@ const WatchRules = (() => {
       if (b.stage === 3 && (hooks.isAmendment?.(b) || hooks.toVoters?.(b))) return { g: "later" };
       if (b.stage === 3) {
         const end = S.passedBothBy(F.session);
-        return today().startsWith(String(lastYear(F.session))) ? { g: soon(end) ? "soon" : "year", d: end } : { g: "later" };
+        return { g: soon(end) ? "soon" : "year", d: end };  // (in a two-year session's first year too: the date is real)
       }
       // A state's deadline for passing a bill's own house (Virginia's crossover).
       const origin = b.stage <= 1 && S.originDeadline?.(b);

@@ -2494,7 +2494,7 @@ Read README.md for what each script downloads. This file covers how to change th
     groups, order and deadlines: lists_pages/watchrows.js (`WatchRows`: `place()` a bill's group and deadline, `draw()`,
     `rowHtml()`, `newsHtml()`, `ordered()`, `where()`) and rows.css draw both (build_data.py puts them in each state page
     beside watchrules.js; build_site.sh with common.js/common.css). Groups: Due soon, Before the session ends, the state's
-    year-end group (`passedBothGroup`), No deadline yet, Can't move right now (current session, nothing to ask for:
+    year-end group (`passedBothGroup`), Later, Out of time this session (current session, nothing to ask for:
     watchrules.js's `canAct` false), Decided or ended (laws, vetoes, past sessions); within a group the soonest deadline,
     then furthest along, then the latest action. No drag order any more (the old `abt:<st>:worder` values are left alone,
     not read). A row opens its card below it: on the state page drawn by the page itself (`toggleRow()`, `watchCard(x,
@@ -2503,7 +2503,7 @@ Read README.md for what each script downloads. This file covers how to change th
     York · All your bills (12 in 4 states) ›" (`allStars()`); a Your bills link is in every state page's header
     (`#siteNav`, `siteYours`). `watchRow()` makes a row from the page's bill (`canActNow()`: planFor()'s actionable).
     A list someone shared (`SHARED`) and /list/'s frames (`EMBED`) still show the cards (`watchItems()`: Needs action,
-    Can't move right now, Decided).
+    Out of time this session, Decided).
   - Storage and actions: `WATCH` (localStorage), `watchItems()` (each bill's ask: `keyAction()`), `deadlineOf()` /
     `W_GROUPS` (`sessionEnd()` reads `data/session_calendar.json`, else when past sessions ended), `renderWatchView()`,
     `logBlock()` / `actionRecord()` (the action log) and `draftFor()` (email text; a group's "Copy one email about all
@@ -2548,7 +2548,7 @@ Read README.md for what each script downloads. This file covers how to change th
   - Your bills as one list (2026-11-19): every tab of /your-bills/ draws its bills from all states and sessions as one
     list (lists_pages/onelist.js, drawn by watchrows.js, as each state's Watchlist tab): Due soon, Before the session
     ends, a later deadline (a state's `passedBothGroup` name when the group is one state's, else "Due later"), No
-    deadline yet, Can't move right now (bills out of time this session), then Decided or ended (laws, vetoes, past
+    deadline yet → Later, Out of time this session, then Decided or ended (laws, vetoes, past
     sessions), soonest deadline first; "Group by state" (abt:yourbills:bystate) instead. A starred bill is new until
     it's opened anywhere (its watch entry's `seen`, which the state's page, the front page and Your bills all set; not
     abt:tabseen, which only list tabs use), and paperwork (the state's `routine`, else `WatchRows.ROUTINE`) isn't news;

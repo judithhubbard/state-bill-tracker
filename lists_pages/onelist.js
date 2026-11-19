@@ -85,7 +85,7 @@ const OneList = (() => {
     try {
       if (stage === 4 && R.F.current) bill.due = S.govDeadline(deliv || null, +b.session);
       const act = R.F.current && !R.F.upcoming && WR.canAct(bill, WR.live(WR.standing(bill), false), false, false);
-      Object.assign(x, WatchRows.place(bill, { S, WR, current: R.F.current, upcoming: R.F.upcoming, act, exec: b.st === "us" ? "President" : "Governor" }));
+      Object.assign(x, WatchRows.place(bill, { S, WR, current: R.F.current, upcoming: R.F.upcoming, act, exec: b.st === "us" ? "President" : "Governor", session: +b.session }));
     } catch (e) { x.group = "later"; }
     return x;
   }
@@ -119,9 +119,8 @@ const OneList = (() => {
   // A star: in this browser's watchlist or not (data-star "st|session|number"; the page handles the click).
   function star(st, session, num, name) {
     const on = `${session}:${baseNum(num)}` in readWatch(st);
-    return `<button type="button" class="star" data-star="${esc(`${st}|${session}|${baseNum(num)}`)}" aria-pressed="${on}" aria-label="${esc(`${on ? "Remove" : "Star"} ${name}`)}" title="${on ? "Remove from your bills" : "Star it"}">${on ? "★" : "☆"}</button>`;
+    return `<button type="button" class="star" data-star="${esc(`${st}|${session}|${baseNum(num)}`)}" aria-pressed="${on}" aria-label="${esc(`${on ? "Remove" : "Add"} ${name} ${on ? "from" : "to"} your watchlist`)}" title="${on ? "Remove from your watchlist" : "Add to your watchlist"}">${on ? "★" : "☆"}</button>`;
   }
-  const listBtn = (x) => (window.NamedLists?.ready() ? NamedLists.button(NamedLists.code(x.st, x.session, x.full || x.num), nameOf(x)) : "");
   // opt: watchrows.js's (tab, byState, stance, isNew, noteOf, remove), onOpen(id, x), and mine (the bills are this
   // browser's own stars: their cards are its own, with its side and its action log).
   function draw(box, list, opt) {
@@ -132,7 +131,7 @@ const OneList = (() => {
     const rows = list.map((x) => (x.later && x.later[0] > x.session
       ? { ...x, laterStar: star(x.st, x.later[0], x.later[1], `${nameOf({ ...x, full: x.later[1] })} (${x.later[2]})`).replace('class="star"', 'class="star inline"') } : x));
     WatchRows.draw(box, rows, { ...opt, stName, newText: (x) => `${plainAct(x.action || "")}${x.last ? ` (${fmtDay(x.last)})` : ""}`,
-      buttons: (x) => `${x.found ? listBtn(x) : ""}${star(x.st, x.session, x.full || x.num, nameOf(x))}`,
+      buttons: (x) => star(x.st, x.session, x.full || x.num, nameOf(x)),  // (the list button is in the opened card)
       onRow: (id, x) => { byId.set(id, x); Opener.row(id, { st: x.st, session: x.session, page: x.page, full: x.full, stance: x.stance, href: x.href, name: nameOf(x), mine: !!opt.mine }); } });
     box._rows = byId;
     Opener.reopen(open);
