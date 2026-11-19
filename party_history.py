@@ -44,6 +44,11 @@ PAST_PARTY = {
     "de": {"Carney": "D"}, "in": {"Holcomb": "R"}, "la": {"Edwards": "D"}, "mo": {"Parson": "R"}, "nc": {"Cooper": "D"},
     "nd": {"Burgum": "R"}, "nh": {"Sununu": "R"}, "nj": {"Murphy": "D"}, "sd": {"Noem": "R"}, "va": {"Youngkin": "R"},
     "wa": {"Inslee": "D"}, "wv": {"Justice": "R"}, "us": {"Biden": "D", "Trump": "R"},
+    # Governors whose terms end in December 2026 or January 2027 (governors.py switches on the successor's first day).
+    "ak": {"Dunleavy": "R"}, "al": {"Ivey": "R"}, "ca": {"Newsom": "D"}, "co": {"Polis": "D"}, "fl": {"DeSantis": "R"}, "ga": {"Kemp": "R"},
+    "ia": {"Reynolds": "R"}, "ks": {"Kelly": "D"}, "me": {"Mills": "D"}, "mi": {"Whitmer": "D"}, "mn": {"Walz": "D"}, "nm": {"Lujan Grisham": "D"},
+    "nv": {"Lombardo": "R"}, "oh": {"DeWine": "R"}, "ok": {"Stitt": "R"}, "ri": {"McKee": "D"}, "sc": {"McMaster": "R"}, "tn": {"Lee": "R"},
+    "tx": {"Abbott": "R"}, "wi": {"Evers": "D"}, "wy": {"Gordon": "R"},
 }
 
 # Chambers a coalition ran (legislatures.json's `coalition` is today's): both of Alaska's houses since 2023 (in 2023-24
@@ -215,8 +220,9 @@ def governor_party(state, facts, day):
     for name, start in P.GOVERNORS:
         if day >= start:
             who = name
-    if who == P.GOVERNORS[-1][0]:
-        return facts["governor"][1]
+    import governors
+    if who == governors.in_office(P, day)[0] and who == governors.in_office(P)[0]:
+        return governors.facts_governor(facts)[1]
     return PAST_PARTY[state][who]  # a KeyError here: add the governor's party above
 
 

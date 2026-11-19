@@ -2271,6 +2271,16 @@ from that repo. **Nothing here may change it.**
   first. 50 at a time; each with its status label and a star that writes the state's watchlist (with the last
   action's date from the status file). Size: 50,000 bills (NY, NJ, TX, VA, US) are 0.9 MB brotli; all states should
   be about 3 MB the first time someone searches every state.
+- **How the states compare (built 2026-11-19, approved by the owner):** each state's build writes data/compare.json
+  (`write_compare()` in build_data.py): every finished session's odds chart numbers (`reached()`, as `insights()` counts
+  them) one session at a time, without shells, narrow bills and constitutional amendments; as a check, the same counts with
+  the amendments kept, summed over the Statistics tab's sessions, must equal its "general bills" odds chart (a mismatch is
+  printed as "compare: ..." in the state's build log). `compare_site.py`, run by build_site.sh after issues_site.py, writes
+  /compare/ (one sortable table, a row per state, Congress apart; a menu for the latest finished session, all since 2023,
+  or sessions that began in a year; the odds chart for one state or two, stacked) and compare/summary.json, which
+  build_site.sh puts in the front page for the map's "Bills that became law" (a CUSTOM view, `lawsView()` in home.html:
+  shaded under 10%, 10-24%, 25% or more). The odds chart's drawing is `drawSankey()` in lists_pages/sankey.js, shared by
+  tracker.html's `sankey()` (build_data.py puts the file in each page) and /compare/; its styles stay in each page.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).

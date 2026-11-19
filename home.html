@@ -168,16 +168,20 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .menu button[aria-current="true"] { font-weight: 700; color: var(--navy); }
 .menu .party { border-bottom: 1px solid var(--rule); padding-bottom: 8px; margin-bottom: 10px; }
 .menu .party button { width: auto; }
-/* Wide screens (1200px and up; the owner's choice 2026-11-17): the Show choices as a column left of the map, in place
-   of the dropdown, with a smaller map and a narrower panel, all three columns the map's height, 24px apart. */
+/* Wider windows (1024px and up; the owner's choice, 2026-11-17 at 1200px, moved down 2026-11-19: at 960px the tiles were too small for a share badge): the Show choices as a
+   column left of the map, in place of the dropdown, all three columns the map's height. From 1024px the map shrinks to
+   make room; from 1200px it's its full size, 24px apart. */
 .showside { display: none; }
-@media (min-width: 1200px) {
-  main { max-width: 1140px; }
-  main .mapwrap { grid-template-columns: 210px 540px minmax(300px, 1fr); gap: 12px 24px; }
+@media (min-width: 1024px) {
+  main .mapwrap { grid-template-columns: 190px minmax(360px, 540px) minmax(260px, 1fr); gap: 12px 20px; }
   main .show .pick { display: none; }
   .showside { display: flex; flex-direction: column; contain: size; min-width: 0; background: var(--sheet); border: 1px solid var(--rule);
     border-radius: 8px; padding: 8px 0 0; }
   main .tiles { gap: 3px; }
+}
+@media (min-width: 1200px) {
+  main { max-width: 1140px; }
+  main .mapwrap { grid-template-columns: 210px 540px minmax(300px, 1fr); gap: 12px 24px; }
   main .tiles a, main .tiles span.off, main .tiles button.tile { font-size: 14px; }
 }
 .showside input { margin: 0 8px 6px; font: inherit; font-size: 14px; padding: 4px 8px; border: 1px solid var(--rule); border-radius: 6px;
@@ -465,6 +469,12 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .found .more { display: block; width: 100%; font: inherit; font-size: 14px; font-weight: 600; color: var(--navy); background: none; border: 0;
   border-top: 1px solid var(--rule); padding: 8px 12px; cursor: pointer; text-align: left; }
 .found .more:hover { background: var(--paper); }
+/* "Bills that became law": the panel's numbers for the state pointed at. */
+.panel table.lawt { border-collapse: collapse; width: 100%; font-size: 14px; margin: 4px 0 10px; font-variant-numeric: tabular-nums; }
+.lawt th, .lawt td { padding: 4px 0; border-bottom: 1px solid var(--rule); text-align: right; }
+.lawt th { text-align: left; font-weight: 400; color: var(--ink-2); }
+.lawt td:last-child { width: 4em; color: var(--ink-2); }
+.lawt tr.l th, .lawt tr.l td { color: var(--law-ink); font-weight: 700; }
 footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85; }
 </style>
 </head>
@@ -538,6 +548,7 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
 <script type="application/json" id="after">{}</script>
 <script type="application/json" id="past">{}</script>
 <script type="application/json" id="issues">[]</script>
+<script type="application/json" id="compare">{}</script>
 <script>
 /*named.js*/
 </script>
@@ -1022,6 +1033,47 @@ function mineChanged() {
   if (WANT_MINE && any) { WANT_MINE = false; issue = null; CUSTOM = mineView(); render(); return; }
   if (CUSTOM && CUSTOM.kind === "mine") { CUSTOM = any ? mineView() : null; if (CUSTOM) drawMap(view); else { render(); remember(); } }
 }
+// "Bills that became law": each state shaded by the share of its bills that became law in its latest finished session
+// (compare_site.py's summary: placeholder bills, local bills and constitutional amendments left out), its share on the
+// tile; the panel gives the state's numbers, with links to its Statistics tab and to /compare/.
+let CMP = {};
+try { CMP = JSON.parse(document.getElementById("compare").textContent) || {}; } catch (e) {}
+const HAS_CMP = Object.keys(CMP).some((k) => k !== "us");
+const lawPct = (c) => (c && c.intro ? (100 * c.law) / c.intro : null);
+const lawStep = (p) => (p === null ? 0 : p >= 25 ? 3 : p >= 10 ? 2 : 1);
+const pctWord = (a, b) => (b && a && a / b < 0.005 ? "<1%" : `${Math.round((100 * a) / (b || 1))}%`);
+function customOf(id) { return id === "mine" ? mineView() : id === "laws" ? lawsView() : null; }
+function lawsView() {
+  const words = (st) => { const c = CMP[st], p = lawPct(c);
+    return p === null ? "no finished session on the site yet" : `${pctWord(c.law, c.intro)} of bills became law (${c.label} session)`; };
+  const all = Object.entries(CMP).filter(([st, c]) => st !== "us" && c.intro);
+  const sum = (k) => all.reduce((a, [, c]) => a + c[k], 0), intro = sum("intro");
+  const nums = (c) => {
+    const line = (label, n, cls = "") => `<tr${cls ? ` class="${cls}"` : ""}><th scope="row">${label}</th><td>${n.toLocaleString()}</td><td>${n === c.intro ? "" : pctWord(n, c.intro)}</td></tr>`;
+    return `<table class="lawt">${line("Introduced", c.intro)}${line("Out of committee", c.floor)}${line(c.uni ? "Passed the Legislature" : "Passed both houses", c.both)}`
+      + `${line("Became law", c.law, "l")}${line("Vetoed", c.vetoed + c.overridden)}</table>`
+      + (c.overridden ? `<p>${c.overridden.toLocaleString()} of the vetoes were overridden.</p>` : "");
+  };
+  return { kind: "laws", label: "Bills that became law", by: {}, rows: {},
+    tile: (st, code, style, extra, labelHtml, name) => {
+      const c = CMP[st], p = lawPct(c), w = words(st);
+      return `<button type="button" class="tile${extra} h${lawStep(p)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc(`${name}\n${w}`)}" aria-label="${esc(`${st === "us" ? name : `${code}, ${name}`}: ${w}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${labelHtml}${p === null ? "" : `<span class="lawn" aria-hidden="true">${pctWord(c.law, c.intro)}</span>`}</button>`;
+    },
+    panel: (st) => {
+      const end = `<a href="compare/">How the states compare</a>`;
+      if (!st) return `<h3>Bills that became law</h3><p>The share of bills introduced that became law, in each state's latest finished session.`
+        + (intro ? ` Across ${all.length} states, ${pctWord(sum("law"), intro)} did, and ${pctWord(intro - sum("floor"), intro)} never got out of committee.` : "") + `</p><p>${end}</p>`;
+      const c = CMP[st], name = nameOf(st), page = built[st.toUpperCase()] || `${st}/`;
+      const close = st === pinned ? ` · <a href="#" data-unpin>Close</a>` : "";
+      if (!c) return `<h3>${esc(name)}</h3><p>No finished session on the site yet.${close}</p>`;
+      return `<h3>${esc(name)}</h3><p>${esc(c.label)} session${st === "us" ? " (not counted with the states)" : ""}${close}</p>${nums(c)}`
+        + `<p><a href="${esc(page)}#stats">${esc(name)}'s statistics</a> · ${end}</p>`;
+    },
+    legend: `<span class="key"><i class="sq h1"></i>Under 10% became law</span><span class="key"><i class="sq h2"></i>10&ndash;24%</span>`
+      + `<span class="key"><i class="sq h3"></i>25% or more</span>`
+      + (Object.keys(built).some((c) => !CMP[c.toLowerCase()]) ? `<span class="key"><i class="sq h0"></i>No finished session yet</span>` : "")
+      + (Object.keys(GRID).some((c) => !built[c]) ? `<span class="key"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>` : "") };
+}
 // A search's matches on the map (search's "Show on the map"): hits are [{st, num, title, stage, label, href, star}].
 function searchView(words, hits) {
   const by = {}, rows = {};
@@ -1044,6 +1096,7 @@ function drawCustom() {
   document.getElementById("customLegend").innerHTML = v.legend;
   const tile = (code, style, extra, labelHtml) => {
     const st = code.toLowerCase(), [n, b] = v.by[st] || [0, 0], name = st === "us" ? "U.S. Congress" : NAMES[code];
+    if (v.tile) return v.tile(st, code, style, extra, labelHtml, name);
     const spoken = st === "us" ? name : `${code}, ${name}`;  // a tile's spoken name starts with its visible letters
     const words = n ? v.some(st, n, b).replace(/<[^>]+>/g, "").replace(/&ldquo;|&rdquo;/g, '"') : "none";
     return `<button type="button" class="tile${extra} h${v.step(n)}${st === pinned ? " sel" : ""}" data-st="${st}" style="${style}" title="${esc(`${name}\n${words}`)}" aria-label="${esc(`${spoken}: ${words}`)}" aria-pressed="${st === pinned}" aria-controls="panel">${labelHtml}${b ? `<span class="${v.badge}" aria-hidden="true">${b}</span>` : ""}</button>`;
@@ -1060,6 +1113,7 @@ function customPanel(st) {
   const v = CUSTOM, panel = document.getElementById("panel"), body = document.getElementById("pbody");
   panel.hidden = false;
   document.getElementById("pparty").hidden = true;
+  if (v.panel) { body.innerHTML = v.panel(st); return; }
   const end = v.kind === "search" ? ` <a href="#" data-endview>Back to the map's views</a>` : "";
   if (!st) {
     body.innerHTML = `<h3>${v.kind === "mine" ? "Your bills" : esc(v.label)}</h3><p>${v.head}</p>`
@@ -1106,7 +1160,7 @@ function render() {
   drawMap(view);
 }
 function remember() {
-  if (CUSTOM) { try { history.replaceState(null, "", CUSTOM.kind === "mine" ? "#mine" : location.pathname); } catch (e) {} return; }
+  if (CUSTOM) { try { history.replaceState(null, "", CUSTOM.kind === "mine" ? "#mine" : CUSTOM.kind === "laws" ? "#laws" : location.pathname); } catch (e) {} return; }
   const parts = [issue ? `issue=${issue.id}` : "", year !== NOW ? `year=${year}` : "", issue && PARTY ? `party=${PARTY === "-" ? "none" : PARTY}` : "", issue && CHART ? "view=chart" : ""].filter(Boolean);
   try { history.replaceState(null, "", parts.length ? `#${parts.join("&")}` : location.pathname); } catch (e) {}
 }
@@ -1115,13 +1169,13 @@ function remember() {
   const opt = (i) => `<button type="button" data-id="${esc(i.id)}" title="${esc(i.name)}">${esc(label(i))}</button>`;
   const groups = issues.groups || [];
   const extra = issues.issues.filter((i) => !groups.includes(i.group)).sort((x, y) => label(x).localeCompare(label(y)));
-  menu.innerHTML = `<div class="party"><button type="button" data-id="">Party control</button><button type="button" data-id="mine" hidden>★ Your bills</button></div><div class="grp">`
+  menu.innerHTML = `<div class="party"><button type="button" data-id="">Party control</button>${HAS_CMP ? '<button type="button" data-id="laws">Bills that became law</button>' : ""}<button type="button" data-id="mine" hidden>★ Your bills</button></div><div class="grp">`
     + groups.map((g) => {
       const xs = issues.issues.filter((i) => i.group === g).sort((x, y) => label(x).localeCompare(label(y)));
       return xs.length ? `<div><h4>${esc(g)}</h4>${xs.map(opt).join("")}</div>` : "";
     }).join("") + (extra.length ? `<div><h4>Other</h4>${extra.map(opt).join("")}</div>` : "") + "</div>";
   // On wide screens the same choices as a column left of the map, with a filter box at its top (CSS shows one or the
-  // other: the dropdown below 1200px).
+  // other: the dropdown below 1024px).
   {
     const side = document.getElementById("showSide");
     side.innerHTML = `<input type="search" id="topicQ" placeholder="Find a topic" aria-label="Find a topic" autocomplete="off"><div class="sidelist">${menu.innerHTML}</div>`;
@@ -1135,7 +1189,7 @@ function remember() {
       const b = e.target.closest("button[data-id]");
       if (!b) return;
       issue = issues.issues.find((i) => i.id === b.dataset.id) || null;
-      CUSTOM = b.dataset.id === "mine" ? mineView() : null;
+      CUSTOM = customOf(b.dataset.id);
       countOnce(`home/topic/${b.dataset.id || "party control"}`);
       render();
       remember();
@@ -1161,7 +1215,7 @@ menu.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-id]");
   if (!b) return;
   issue = issues.issues.find((i) => i.id === b.dataset.id) || null;
-  CUSTOM = b.dataset.id === "mine" ? mineView() : null;
+  CUSTOM = customOf(b.dataset.id);
   countOnce(`home/topic/${b.dataset.id || "party control"}`);
   openMenu(false);
   show.focus();
@@ -1186,6 +1240,7 @@ document.addEventListener("click", (e) => {
   if (from) countUse(`home/to a state/${from}${issue ? " (topic)" : ""}`);
 });
 let WANT_MINE = location.hash === "#mine";  // shown once "Your bills" has loaded (drawMine())
+if (location.hash === "#laws" && HAS_CMP) CUSTOM = lawsView();
 {
   const m = location.hash.match(/^#(?:issue=([a-z]+))?&?(?:year=(\d{4}|all))?&?(?:party=(D|R|B|none))?&?(?:view=(chart|map))?$/);
   if (m) {
@@ -1200,7 +1255,7 @@ document.getElementById("controls").hidden = false;
 document.querySelector(".show .pick").hidden = YEARS.length < 2 && !issues.issues.length;
 render();
 tiles.removeAttribute("aria-hidden");
-if (!issue) document.getElementById("legend").hidden = false;
+if (!issue && !CUSTOM) document.getElementById("legend").hidden = false;
 // Starred bills. Each state's page keeps its watchlist in this browser under "abt:<st>:watch" (New York's under
 // "abt:watch"): {"2025:SB12": {seen: the date of the last action seen, stance}}, keyed by session and the number without
 // its amendment letter. The front page reads and writes the same lists, so a star here shows on the state's page and

@@ -30,6 +30,11 @@ if "--state" in ARGS:
     del ARGS[i:i + 2]
 # The state's settings and wording, as P.<name>.
 P = importlib.import_module(f"states.{STATE}.profile")
+# GOVERNORS can list a governor-elect, dated the day they take office: "the governor" is whoever holds office today
+# (governors.py), never the list's last entry.
+import governors
+P.GOV_SINCE = governors.in_office(P)[1]
+governors.apply_leaders(P)  # chosen next leaders (LEADERS_NEXT), from their first day
 # The code that reads the state's own data and turns it into bill records (C.load_session).
 C = importlib.import_module(f"states.{STATE}.convert")
 
@@ -748,6 +753,77 @@ def insights(loaded, hist, current):
         "comeback": comeback,
         "stuck": stuck,
     }
+
+
+def write_compare(done, hist, current, insight):
+    """Each finished session's odds chart numbers, for /compare/ and the front page's "Bills that became law" map
+    (compare_site.py), into data/compare.json. Counted as insights() counts its odds chart (reached(), the same steps),
+    one session at a time, with what skews comparisons left out: placeholder bills (shell), narrow bills (local, person,
+    naming: the Statistics tab's "general bills") and constitutional amendments. As a check, the same counts with the
+    amendments kept, summed over the sessions the Statistics tab pools, must equal its "general bills" odds chart.
+    {"state", "name", "years", "chart": {sankey settings}, "sessions": [{"session", "label", "kind", "odds": {step: [bills,
+    of them law]}, "cfate": {how it died in committee: [bills]}, "fate": {where it died: [died, back next session, later
+    law]} (when the next session is downloaded), "left": {"shell", "narrow", "const"}}]}."""
+    loaded, hist_ = without_shells(done, hist)
+    js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
+    pick = lambda pat: (m.group(1) if (m := re.search(pat, js)) else None)
+    exits = re.search(r'\n  oddsExits: \["([^"]*)", "([^"]*)"\]', js)
+    chart = {"uni": LOW == "L" or bool(pick(r'\n  passedBothText: "([^"]*)"')),
+             "passedBoth": pick(r'\n  passedBothText: "([^"]*)"') or "Passed both houses",
+             "exits": [exits.group(1), exits.group(2)] if exits else None,
+             "heldLabel": pick(r'\n  heldLabel: "([^"]*)"'), "exec": "the President" if STATE == "us" else "the governor",
+             "linked": any(e[0] < s for s in loaded for d in hist_[s].values() for e in d.values())}
+    sessions, check = [], defaultdict(lambda: [0, 0])
+    for s in sorted(loaded):
+        if s >= current or s == CURRENT:
+            continue
+        recs = loaded[s][0]
+        odds, cfate, fate = defaultdict(lambda: [0, 0]), {}, {}
+        left = {"shell": sum(1 for r in done[s][0] if r.get("shell")), "narrow": 0, "const": 0}
+        nxt = s + YEARS in loaded
+        for i, r in enumerate(recs):
+            if narrow_bill(r):
+                left["narrow"] += 1
+                continue
+            got = reached(r)
+            points = {"intro": True, "floor": got["floor"], "passS": got["passS"], "passA": got["passA"], "both": got["both"],
+                      "house": got["passS"] or got["passA"], "vetoed": r["stage"] == 6,
+                      "overridden": r["stage"] == 5 and bool(r["keyDates"][6])}
+            for p, ok in points.items():
+                if ok:
+                    check[(s, p)][0] += 1
+                    check[(s, p)][1] += got["law"]
+            if "const" in (r["topics"] or []):
+                left["const"] += 1
+                continue
+            for p, ok in points.items():
+                if ok:
+                    odds[p][0] += 1
+                    odds[p][1] += got["law"]
+            later = [e for e in hist_[s][i].values() if e[0] > s]
+            back, law = any(e[0] == s + YEARS for e in later), any(e[2] == 5 for e in later)
+            if r["stage"] == 0:
+                c = cfate.setdefault(r["commFate"], [0, 0, 0])
+                c[0] += 1
+                c[1] += back
+                c[2] += law
+            k = {0: "committee", 1: "floor", 2: "oneHouse", 6: "vetoed"}.get(r["stage"])
+            if k and nxt:
+                c = fate.setdefault(k, [0, 0, 0])
+                c[0] += 1
+                c[1] += back
+                c[2] += law
+        sessions.append({"session": s, "label": P.session_label(s), "kind": P.session_kind(s) if hasattr(P, "session_kind") else "",
+                         "odds": dict(odds), "cfate": cfate, "fate": fate if nxt else None, "left": left})
+    # The check: the Statistics tab's general-bills odds chart is the same counts, amendments kept, over its sessions.
+    stats = insight["odds"].get("all|g") or {}
+    for p, v in stats.items():
+        mine = [sum(check[(s, p)][j] for s in insight["pastSessions"]) for j in (0, 1)]
+        if mine != list(v):
+            print(f"compare: {p} is {mine}, the Statistics tab says {v}", file=sys.stderr)
+    out = {"state": STATE, "name": "Congress" if STATE == "us" else P.STATE_NAME, "years": YEARS, "chart": chart, "sessions": sessions}
+    with open(os.path.join(GITHUB, "data", "compare.json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
 
 
 def profiles(session, recs, legs, party_of):
@@ -1720,6 +1796,10 @@ def main():
         for kind, ref in newest.items():
             if kind != P.session_kind(current):
                 insight_of[kind] = {**insights(done, hist, ref), "trends": insight["trends"], "topicRing": insight["topicRing"]}
+    # Each finished session's odds chart, for /compare/ (compare_site.py).
+    if GITHUB:
+        os.makedirs(os.path.join(GITHUB, "data"), exist_ok=True)
+        write_compare(done, hist, current, insight)
 
     # Current legislators for past sessions' pages (profile card and the sessions they served in).
     legs_now = legislators(current)
@@ -1840,7 +1920,10 @@ def main():
             "cols": [list(c) for c in zip(*rows)] if rows else [],
             "counties": P.COUNTIES,
             # The current governor, for telling whether an earlier veto was theirs.
-            "governor": P.GOVERNORS[-1][0],
+            "governor": governors.in_office(P)[0],
+            # A governor-elect not yet in office: {"name": full name, "start": "YYYY-MM-DD"} (states/legislatures.json).
+            **({"governorNext": {"name": nx[0], "start": nx[2]}} if (nx := governors.facts_next(
+                json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "states", "legislatures.json")))["states"].get(STATE, {}))) else {}),
             # Current Senate and Assembly districts in each county, for "Where you live".
             "districtCounties": json.load(open(P.DISTRICTS_PATH)) if session == current and os.path.exists(P.DISTRICTS_PATH) else {},
             # States that find legislators by town: [[town, county, [[district, share of its people], ...]], ...].
@@ -1950,7 +2033,7 @@ def main():
         # who decides at each stage.
         weighin = os.path.join(os.path.dirname(P.__file__), "weighin.html")
         if os.path.exists(weighin):
-            start = template.index('    <div class="act-sec">\n      <h2>How to weigh in</h2>')
+            start = template.index('    <div class="act-sec">\n      <h2>Residents, organizations and local governments</h2>')
             end = template.index('  </section>', start)
             template = template[:start] + open(weighin).read() + template[end:]
         # The state's page settings and rules, read by the main script as STATE.
@@ -1961,7 +2044,9 @@ def main():
         rules_js += "\n" + open(os.path.join(HERE, "lists_pages", "watchrows.js")).read()
         assert "/*rows.css*/" in template, "tracker.html's styles lost the /*rows.css*/ marker"
         template = template.replace("/*rows.css*/", open(os.path.join(HERE, "lists_pages", "rows.css")).read(), 1)
-        template = template.replace('<script id="state-profile"></script>', f'<script id="watch-rules">\n{rules_js}</script>\n<script id="state-profile">\n{state_js}</script>', 1)
+        # The odds chart (lists_pages/sankey.js, shared with /compare/).
+        sankey_js = open(os.path.join(HERE, "lists_pages", "sankey.js")).read()
+        template = template.replace('<script id="state-profile"></script>', f'<script id="watch-rules">\n{rules_js}</script>\n<script id="sankey">\n{sankey_js}</script>\n<script id="state-profile">\n{state_js}</script>', 1)
         if session != current:
             template = template.replace(f"<title>{P.SITE_NAME}</title>",
                                         f"<title>{P.SITE_NAME} {P.session_label(session)}</title>", 1)
