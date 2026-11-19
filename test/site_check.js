@@ -318,7 +318,7 @@ async function statePage(code, quick, counts, today, keyboard) {
       if (!shown) FAIL("Tabs", `${where}: the ${v} tab doesn't show its view`);
       report("Script errors", `${where} after the ${v} tab`, errors);
     }
-    for (const v of ["bills", "watch", "act", "stats", "how"]) if (!tabs.includes(v)) LOOK("Tabs", `${where}: no ${v} tab`);
+    for (const v of ["bills", "watch", "stats", "how"]) if (!tabs.includes(v)) LOOK("Tabs", `${where}: no ${v} tab`);
 
     log(`${where}: tabs done`);
     // Bills at three stages, chosen with the "Where it is now" filter as a visitor would.

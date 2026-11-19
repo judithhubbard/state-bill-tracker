@@ -29,7 +29,8 @@ setTimeout(()=>{
   // star three bills then watchlist
   tab('bills'); [...document.querySelectorAll('#list .bill')].slice(0,3).forEach(d=>{const s=d.querySelector('[data-watch], .watch, button[aria-label*=atch]'); s&&s.click();});
   sweep('watchlist', ()=>document.getElementById('view-watch'), ()=>tab('watch'));
-  sweep('weigh in', ()=>document.getElementById('view-act'), ()=>tab('act'));
+  sweep('where you live', ()=>document.getElementById('whereBox'), ()=>{tab('bills'); const w=document.getElementById('whereBox'); if(w) w.open=true;});
+  sweep('how', ()=>document.getElementById('view-how'), ()=>tab('how'));
   sweep('filters', ()=>document.getElementById('side')||document.getElementById('filtered'), ()=>tab('bills'));
   const o=document.createElement('pre');o.id='RESULT';o.textContent='clicked '+n+'\n'+R.join('\n')+'\nERRORS: '+errs.join(' || ');document.body.prepend(o);
 },3500);

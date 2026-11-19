@@ -1720,6 +1720,14 @@ from that repo. **Nothing here may change it.**
   years come from the houses' sites (contacts.py). `check_site.py` runs last in publish.yml (daily) and fails the run (GitHub
   emails) when legislators are stale or too few, New Jersey's bill texts are missing, or Virginia's date rule stops
   fitting the floor votes. Still by hand: a new governor (`GOVERNORS`) every four years, next January 2030.
+- **Tabs (2026-11-19):** a state's page has Bills, Watchlist, Statistics and How laws are made. The Weigh in tab is gone
+  (the owner's decision): "Where you live" (`#whereBox`, `renderMyReps()`, drawn when opened) is a line under the title on
+  every tab, the only place to pick a county, town or address (the sidebar keeps only "Only bills that could affect your
+  county", shown once a county is chosen); each state's weighin.html (how to weigh in, the governor's office, who decides)
+  is still put in `#view-act` by the build and moved at startup to the end of How's "Having an impact" (`#impact`). A
+  legislator's page keeps `#view-act` as its "Open for comment" tab (`renderOpenNow()`). Statistics opens on "Odds of
+  becoming law" (the "How far bills get" bars were dropped); Statistics' Committees and Timing link to How's Committees and
+  calendar, and How's Committees back (`data-gostat`).
 - **Saved settings are per state (2026-10-29):** the states share one web address, and a browser keeps one set of saved
   settings per address, so tracker.html prefixes every saved name with `STORE` ("abt:nj:", "abt:va:", and "abt:ny:" since
   2026-11-19; New York kept the plain "abt:" names until then, which made other states' old stars show as New York's in

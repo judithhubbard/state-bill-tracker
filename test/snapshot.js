@@ -12,7 +12,7 @@ setTimeout(() => {
   bills.forEach((d) => { if (!d.open) d.querySelector("summary").click(); });
   grab("bills, 25 open", document.getElementById("view-bills"));
   bills.slice(0, 8).forEach((d) => { const s = d.querySelector("[data-watch], .watch, button[aria-label*=atch]"); s && s.click(); });
-  for (const v of ["watch", "act", "stats"]) { tab(v); grab(v, document.getElementById("view-" + v)); }
+  for (const v of ["watch", "stats"]) { tab(v); grab(v, document.getElementById("view-" + v)); }
   tab("how");
   const secs = [...new Set([...document.querySelectorAll("[data-how]")].map((e) => e.dataset.how))];
   for (const id of secs) { const b = document.querySelector('[data-how="' + id + '"]'); b && b.click(); grab("how/" + id, document.getElementById("view-how")); }

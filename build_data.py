@@ -1598,13 +1598,17 @@ def frame_tabs(page, kind):
     while the data loads, doesn't change when it arrives. kind: "past", "upcoming", "person" (a legislator's page) or
     "watch" (/watchlist/: no tabs)."""
     tab = lambda v: f'<button class="view-tab" type="button" data-view="{v}">'
-    hide = {"past": ["watch", "act"], "upcoming": ["act", "stats"], "person": ["watch", "stats"]}.get(kind, [])
+    hide = {"past": ["watch"], "upcoming": ["stats"], "person": ["watch", "stats"]}.get(kind, [])
     for v in hide:
         page = page.replace(tab(v), tab(v)[:-1] + " hidden>", 1)
     if kind == "person":
         page = page.replace('data-view="how"><span', 'data-view="how" hidden><span', 1)
         page = page.replace(tab("person")[:-1] + " hidden>", tab("person"), 1)
-        page = page.replace(tab("act") + "Weigh in<", tab("act") + "Open for comment<", 1)
+        # Only a legislator's page has the "Open for comment" tab (their bills to weigh in on).
+        page = page.replace(tab("act")[:-1] + " hidden>", tab("act"), 1)
+    # "Where you live" is for the current session's pages (a legislator's page is about them).
+    if kind in ("past", "upcoming", "person"):
+        page = page.replace('<details class="where" id="whereBox">', '<details class="where" id="whereBox" hidden>', 1)
     if kind == "watch":
         page = page.replace('<nav class="views" aria-label="Page sections">', '<nav class="views" aria-label="Page sections" hidden>', 1)
     return page

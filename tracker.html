@@ -307,7 +307,7 @@ table.oc th { vertical-align: bottom; }
 .home-link[hidden] { display: none; }
 .home-link a { color: var(--navy); text-decoration: none; }
 .home-link a:hover, .home-link a:focus-visible { text-decoration: underline; }
-@media (max-width: 560px) { .home-link { position: static; justify-self: start; } }
+@media (max-width: 820px) { .home-link { position: static; justify-self: start; } }
 /* Party control under the title (balance.py, written in by the build for the current session): the letter carries the meaning. */
 .power { margin: 6px 0 0; color: var(--ink-2); font-size: 13px; line-height: 1.6; }
 .power:empty { display: none; }
@@ -684,6 +684,13 @@ table.st col.c-m { width: 80px; }
 .spill.p5 { background: var(--signed-soft); color: var(--signed); }
 .spill.p6 { background: var(--veto-soft); color: var(--veto); }
 .wsec { border-radius: 12px; padding: 14px 16px 16px; margin-top: 14px; }
+.where { margin-top: 10px; font-size: 13.5px; }
+.where[hidden] { display: none; }
+.where > summary { display: inline; cursor: pointer; color: var(--navy); font-weight: 600; }
+.where > summary::marker { content: ""; }
+.where > summary::after { content: " ▾"; font-size: 11px; }
+.where[open] > summary::after { content: " ▴"; }
+.where[open] > .act-sec { margin-top: 10px; padding: 14px 16px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); }
 .sitefoot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 40px 0 8px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--ink-2); }
 .sitefoot[hidden] { display: none; }
 /* "Glad this helped": after an email is copied or an action logged, once a quarter (supportNote()). */
@@ -851,7 +858,6 @@ table.commcounts td { font-variant-numeric: tabular-nums; font-weight: 600; }
 .side label.hidebox input { margin-top: 3px; }
 .side label.hidebox.nohome { display: none; }
 .side label.hidebox .hc { color: var(--ink-2); font-size: 12px; }
-#youReps { display: block; }
 .yourreps { font-size: 13px; color: var(--ink-2); margin: 8px 0; }
 .yourreps label { display: inline; font: inherit; color: inherit; margin: 0; }
 .yourreps select { display: inline-block; width: auto; max-width: 100%; font: inherit; margin: 0 0 0 2px; padding: 2px 4px; }
@@ -1080,6 +1086,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
       </div>
       <nav class="sessions" id="sessions" aria-label="Legislative sessions"></nav>
     </div>
+    <details class="where" id="whereBox"><summary id="whereSum">Where you live</summary><div class="act-sec" id="myReps"></div></details>
     <p class="notice" id="notice" hidden></p>
     <div class="person" id="person" hidden></div>
   </header>
@@ -1087,7 +1094,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
   <nav class="views" aria-label="Page sections">
     <button class="view-tab" type="button" data-view="bills" aria-current="page">Bills</button>
     <button class="view-tab" type="button" data-view="watch">★ Watchlist<span id="watchTabCount"></span></button>
-    <button class="view-tab" type="button" data-view="act">Weigh in</button>
+    <button class="view-tab" type="button" data-view="act" hidden>Open for comment</button>
     <button class="view-tab" type="button" data-view="stats">Statistics</button>
     <button class="view-tab" type="button" data-view="person" hidden>Their numbers</button>
     <button class="view-tab view-tab-end" type="button" data-view="how"><span class="tab-long">How a bill becomes law in New York</span><span class="tab-short">How laws are made</span></button>
@@ -1102,9 +1109,6 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
       <summary class="side-toggle">Filters <span id="filterCount"></span></summary>
       <div class="side-body">
         <div class="field you">
-          <label for="homeCounty">Your county</label>
-          <select id="homeCounty"></select>
-          <span class="subsel" id="youReps"></span>
           <label class="inline hidebox"><input type="checkbox" id="nearby"> <span>Only bills that could affect <span id="nearbyCounty">your county</span> <span class="hc" id="nearbyN"></span> <button type="button" class="tip" aria-label="What this means" data-tip="Hides bills only about other counties, bills for one named person or group (such as a pension or a tax exemption), and road and bridge namings. Statewide bills and bills about your county stay.">i</button></span></label>
         </div>
         <div class="group">
@@ -1237,7 +1241,6 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 
   <!-- Weigh in -->
   <section class="actview" id="view-act" hidden>
-    <div class="act-sec" id="myReps"></div>
 
     <div class="act-sec">
       <h2>How to weigh in</h2>
@@ -2162,8 +2165,11 @@ function renderMyReps() {
     el.dataset.orig ||= el.textContent;
     el.textContent = chosen.length ? `Yours: ${andList(chosen.map((r) => `${r.title} ${r.name}`))}.` : el.dataset.orig;
   }
-  if (!DATA.current || !LEGS.length || PRESET?.who) { box.hidden = true; return; }
-  if (later("act", "myReps", renderMyReps, "myReps", () => ({ parts: DATA.townsLater ? ["towns"] : [] }))) return;
+  if (!DATA.current || !LEGS.length || PRESET?.who || EMBED) { $("whereBox").hidden = true; return; }
+  $("whereBox").hidden = false;
+  // Drawn when it's opened (a long towns list comes in its own part).
+  if (!$("whereBox").open) return;
+  if (DATA.townsLater && !partReady("towns")) { box.innerHTML = LOADING_HTML; need("towns").then(renderMyReps, () => {}); return; }
   if (DATA.towns) return renderTownReps(box);
   const reps = myReps(), c = chosenReps();
   const d = countyDistricts(HOME);
@@ -2180,8 +2186,7 @@ function renderMyReps() {
   const where = !d ? "" : split
     ? `${esc(HOME)} County is split among ${d.S.length} Senate and ${d.A.length} Assembly district${d.A.length === 1 ? "" : "s"}. ${ROOT ? "Look up your address, or pick" : "Pick"} yours below.`
     : `${esc(HOME)} County is entirely in Senate District ${d.S[0][0]} and Assembly District ${d.A[0][0]}.`;
-  box.innerHTML = `<h2>Where you live</h2>
-    <div class="repsel"><label>County <select id="repC">${counties}</select></label></div>
+  box.innerHTML = `<div class="repsel"><label>County <select id="repC">${counties}</select></label></div>
     ${where ? `<p class="muted">${where}</p>` : ""}
     ${ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr || "NY"}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
     <p class="muted" id="repMsg">The address goes to the U.S. Census Bureau's address lookup; only your county and district numbers are kept, in this browser.</p>` : ""}
@@ -2256,8 +2261,7 @@ function renderTownRepsByHouse(box) {
     ? `<label>${esc(STATE.regionWord || "State")} <select id="repR"><option value="">Choose your ${esc((STATE.regionWord || "State").toLowerCase())}</option>${regions.map((r) => `<option${r === region ? " selected" : ""}>${esc(r)}</option>`).join("")}</select></label>
       <label>${esc(TOWN_WORD)} <select id="repT"${region ? "" : " disabled"}>${region ? townOptions(town, towns.filter((t) => t[1] === region)) : `<option value="">Choose your ${esc((STATE.regionWord || "State").toLowerCase())} first</option>`}</select></label>`
     : `<label>${esc(TOWN_WORD)} <select id="repT">${townOptions(town)}</select></label>`;
-  box.innerHTML = `<h2>Where you live</h2>
-    <div class="repsel">${picker}</div>
+  box.innerHTML = `<div class="repsel">${picker}</div>
     ${where ? `<p class="muted">${where}</p>` : ""}
     ${STATE.addressLookup && ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
     <p class="muted" id="repMsg">The address goes to the U.S. Census Bureau's address lookup; only your district numbers are kept, in this browser.</p>` : ""}
@@ -2276,8 +2280,7 @@ function renderTownReps(box) {
   const where = !town ? "" : town[2].length > 1
     ? `${esc(named(town))} is split between ${andList(town[2].map(([d]) => `District ${d}`))}. Pick yours below.`
     : `${esc(named(town))} is in District ${town[2][0][0]}.`;
-  box.innerHTML = `<h2>Where you live</h2>
-    <div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOpts}</select></label> <label>District <select id="repD">${distOpts}</select></label></div>
+  box.innerHTML = `<div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOpts}</select></label> <label>District <select id="repD">${distOpts}</select></label></div>
     ${where ? `<p class="muted">${where}</p>` : ""}
     <p>Your legislators: ${andList(reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`)) || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
 }
@@ -3649,15 +3652,11 @@ function renderStats() {
   // What usually happens next: a funnel. Bar length is how many bills got that far; green is how many of them became law.
   const odds = I.odds[t] || {};
   const [nI, lI] = odds.intro || [0, 0], [nF, lF] = odds.floor || [0, 0];
-  // First, one plain picture: how far bills get, as bars with numbers.
-  const steps = [["Introduced", nI], ["Got through a committee", nF], ...(UNI ? [] : [["Passed one house", (odds.house || [0])[0]]]),
-    [UNI ? PASSED_BOTH : "Passed both houses", (odds.both || [0])[0]], ["Became law", lI]].filter(([, x], i, all) => i === 0 || i === all.length - 1 || x > 0);
+  // (The odds chart leads the tab; "How far bills get", a simpler bar version of it, was dropped 2026-11-19.)
   const per100 = nI ? Math.round((lI / nI) * 100) : 0;
-  $("statFunnel").innerHTML = !nI ? "" : `<h2 id="funnelHead">How far bills get</h2>
-    <p class="takeaway">${per100 >= 1 ? `About ${per100} in 100 bills introduced became law.` : "Fewer than 1 in 100 bills introduced became law."}</p>
-    <div class="funnel">${steps.map(([l, x], i) => `<div class="frow${i === steps.length - 1 ? " law" : ""}"><span class="fl">${esc(l)}</span><span class="fbar"><i style="width:${Math.max(0.6, (x / nI) * 100).toFixed(1)}%"></i></span><span class="fn"><b>${num(x)}</b> ${pctOf(x, nI)}%</span></div>`).join("")}</div>
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}: every bill introduced, and how many got to each step.${shellsOut()}</p>`;
+  $("statFunnel").innerHTML = "";
   $("statOdds").innerHTML = `<h2>Odds of becoming law</h2>
+    ${nI ? `<p class="takeaway">${per100 >= 1 ? `About ${per100} in 100 bills introduced became law.` : "Fewer than 1 in 100 bills introduced became law."}</p>` : ""}
     ${sankey(odds, I.fate?.[t], I.commFate?.[t])}
     <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}. Band widths are numbers of bills; the percentage on each band is the share of the bills at that step that went that way.${STATE.heldNote && (I.commFate?.[t]?.held || [0])[0] > 0 ? ` “${STATE.heldLabel}”: ${STATE.heldNote}` : ""}${shellsOut()}</p>
     <p class="key"><span><i class="k-law"></i>Share that became law</span></p>
@@ -3700,6 +3699,7 @@ function renderStats() {
       ${hr.length > 8 && !commAll ? `<p class="muted">${hr.length - 8} more</p>` : ""}</div>`;
   };
   $("statComm").innerHTML = `<h2>Committees</h2>
+    <p class="muted">Each committee's chair and this session's bills: <button type="button" class="linkish" data-how="howComm">Committees, in How laws are made</button>.</p>
     <div class="commctl"><label class="commsort">Show <select data-commmode>${Object.entries(COMM_MODES).map(([k, l]) => `<option value="${k}"${k === commMode ? " selected" : ""}>${l}</option>`).join("")}</select></label>
     <label class="commsort">Sort by <select data-commsort>${Object.entries(COMM_SORTS).map(([k, l]) => `<option value="${k}"${k === commSort ? " selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <p class="key">${counts ? `<span><i class="k-n"></i>Referred</span>` : ""}<span><i class="k-appr"></i>Approved by committee</span><span><i class="k-law"></i>Became law</span></p>
@@ -3713,6 +3713,7 @@ function renderStats() {
   const mid = shares.slice().sort((a, b) => a - b)[Math.floor(shares.length / 2)];
   const [late, signed] = I.lateSigning;
   $("statTiming").innerHTML = `<h2>Timing</h2>
+    <p class="muted">This year's dates: <button type="button" class="linkish" data-how="howCalSec">the calendar, in How laws are made</button>.</p>
     ${monthChart(I, t)}
     ${STATE.floorVotesEnd === false ? "" : `<h3 class="sub">End of session</h3>
     <div class="vlist">${vrow("Floor votes in the session's last 3 weeks", `${YEARS === 1 ? pastSpan() : `${years[0].year}–${years[years.length - 1].year}`}${I.timing.some((y) => y.year === 2020) ? ", except 2020" : ""}`, [[mid, "a"]], years.length > 1 ? `<b class="big">${mid}%</b> in a typical year<small>Range ${Math.min(...shares)}–${Math.max(...shares)}%</small>` : `<b class="big">${mid}%</b>`)}
@@ -5055,13 +5056,12 @@ function fillSelects() {
   $("votedField").hidden = !DATA.current || !votePeople().length;
   $("votedLabel").textContent = PRESET?.who ? "How they voted" : "How your legislators voted";
   const reps = PRESET?.who ? [] : votePeople();
-  $("youReps").innerHTML = reps.length ? `Your legislators: ${andList(reps.map((L) => esc(L.name)))} · <button type="button" class="linkish" data-goreps>change</button>` : "";
-  if ($("homeCounty").value !== HOME) $("homeCounty").value = HOME;
-  if ($("homeTown")) $("homeTown").value = chosenReps()?.town || "";
+  $("whereSum").textContent = reps.length ? `Your legislators: ${andList(reps.map((L) => `${L.title || ""} ${L.name}`.trim()))}` : "Where you live";
   for (const id of ["who", "law", "voted", "changed", ...MORE_KEYS]) $(id)?.classList.toggle("on", !!state[id]);
   // How many more bills each "hide" box takes out, given the other filters.
   $("nearbyCounty").textContent = HOME ? placeName(HOME) : `your ${PLACE_WORD}`;
-  $("nearby").closest(".hidebox").classList.toggle("nohome", !HOME);
+  // (States that find legislators by town have no county box.)
+  $("nearby").closest(".hidebox").classList.toggle("nohome", !HOME || !!(DATA.towns && !STATE.townRegions));
   $("nearbyN").textContent = `(hides ${num(BILLS.filter((b) => matches(b, "nearby") && farAway(b)).length)})`;
   const more = MORE_KEYS.filter((k) => state[k]).length;
   $("moreCount").textContent = more ? `${more} active` : "";
@@ -5203,7 +5203,7 @@ function keepFocus(fn) {
 const VIEWS = ["bills", "watch", "stats", "how", "act", "person"];
 function showView(v, push = true) {
   if (!VIEWS.includes(v)) v = "bills";
-  if (PRESET?.who ? ["watch", "stats", "how"].includes(v) : v === "person") v = "bills";
+  if (PRESET?.who ? ["watch", "stats", "how"].includes(v) : ["person", "act"].includes(v)) v = "bills";
   // A finished session has nothing to watch or weigh in on (a past bill on a shared list still shows its card).
   if (!DATA.current && ["watch", "act"].includes(v) && !(EMBED && v === "watch")) v = "bills";
   // The tab goes in the address bar, so Back moves between tabs and links keep the tab.
@@ -5351,7 +5351,9 @@ function wire() {
     if (nm) { const rest = $("notice").querySelector(".nrest"), open = rest.hidden; rest.hidden = !open; nm.textContent = open ? "Less" : "More"; nm.setAttribute("aria-expanded", open); return; }
     if (e.target.closest("[data-impact]")) { showView("how"); showHowSec("impact"); $("view-how").scrollIntoView({ block: "start" }); return; }
     const hs = e.target.closest("[data-how]");
-    if (hs) { showHowSec(hs.dataset.how); if (!hs.closest("#howTabs")) $("view-how").scrollIntoView({ block: "start" }); return; }
+    if (hs) { if ($("view-how").hidden) showView("how"); showHowSec(hs.dataset.how); if (!hs.closest("#howTabs")) $("view-how").scrollIntoView({ block: "start" }); return; }
+    const gs = e.target.closest("[data-gostat]");
+    if (gs) { showView("stats"); showStatSec(gs.dataset.gostat); $("view-stats").scrollIntoView({ block: "start" }); return; }
     const cb = e.target.closest("[data-commbills]");
     if (cb) { Object.assign(state, blank()); state.comm = cb.dataset.commbills; ONE = null; syncControls(); showView("bills"); render(); return; }
     const ct = e.target.closest("[data-contact]");
@@ -5359,7 +5361,7 @@ function wire() {
     const out = e.target.closest("[data-out]");
     if (out) countUse(`read/${out.dataset.out}`);
     if (e.target.closest("[data-mycounty]")) { const c = LINK_COUNTY.mine; LINK_COUNTY = null; setCounty(c); return; }
-    if (e.target.closest("[data-goreps]")) { showView("act"); $("myReps").scrollIntoView({ block: "start" }); return; }
+    if (e.target.closest("[data-goreps]")) { $("whereBox").open = true; $("whereBox").scrollIntoView({ block: "nearest" }); return; }
     const rc = e.target.closest("[data-repchange]");
     if (rc) { const pk = rc.parentElement.querySelector(".reppick"); pk.hidden = false; rc.hidden = true; pk.querySelector("select").focus(); return; }
     const dr = e.target.closest("[data-draft]");
@@ -5580,7 +5582,7 @@ function wire() {
   });
   $("statTopic").addEventListener("change", renderStats);
   $("statGeneral").addEventListener("change", (e) => { STAT_GENERAL = e.target.checked; renderStats(); });
-  $("homeCounty").addEventListener("change", (e) => setCounty(e.target.value));
+  $("whereBox").addEventListener("toggle", () => { if ($("whereBox").open) { countOnce("where/opened"); renderMyReps(); } });
   document.addEventListener("change", (e) => { const p = e.target.closest("[data-reppick]"); if (p && p.value) pickReps(p.dataset.reppick, p.value); });
   for (const id of ["statTabs"]) $(id).addEventListener("click", (e) => { const b = e.target.closest("[data-sec]"); if (b) showStatSec(b.dataset.sec); });
   $("statWho").addEventListener("click", (e) => {
@@ -5746,6 +5748,7 @@ function renderHowComm() {
     return `<div class="ccard"><h3>${esc(g.label)}</h3>${note ? `<p class="cnote">${esc(note)}</p>` : ""}<div class="chalves">${UNI ? "" : half("S", g.S)}${half(LOW, g[LOW])}</div></div>`;
   });
   $("howComm").innerHTML = `<h2>Committees</h2>
+    ${PRESET?.who ? "" : `<p class="muted">How the committees compare: <button type="button" class="linkish" data-gostat="statComm">Committees, in Statistics</button>.</p>`}
     <ul class="impact">
       ${(STATE.commIntro || [
         ["Every bill starts in a committee on its subject.", "Each house has its own committees, with their own members and chair."],
@@ -5902,7 +5905,7 @@ const MERGE = {
     Object.assign(DATA, rest);
     if (hist) BILLS.forEach((b, i) => { if (!b.histIn) setHist(b, hist[i]); });
   },
-  towns(p) { Object.assign(DATA, p); townPicker(); },
+  towns(p) { Object.assign(DATA, p); },
 };
 // A part, fetched once and merged into the bills once the list is in.
 function need(k, priority = k === "rows" ? "low" : "high") {
@@ -6314,17 +6317,6 @@ function monthsOf(b) {
   }
   b.firstMonth = first.slice(0, 7); b.signedMonth = signed ? signed.slice(0, 7) : null;
 }
-// States that find legislators by town (New Jersey) pick the town in the sidebar instead of a county.
-function townPicker() {
-  const you = document.querySelector(".field.you");
-  if (!(DATA.towns && DATA.current && !STATE.townRegions && !you.querySelector("#homeTown"))) return;
-  you.hidden = false;
-  you.querySelector(".hidebox").hidden = $("homeCounty").hidden = true;
-  const label = you.querySelector("label");
-  label.textContent = `Your ${TOWN_WORD.toLowerCase()}`; label.htmlFor = "homeTown";
-  $("homeCounty").insertAdjacentHTML("afterend", `<select id="homeTown">${townOptions(DATA.towns.find((t) => townKey(t) === chosenReps()?.town))}</select>`);
-  $("homeTown").addEventListener("change", (e) => setTown(e.target.value));
-}
 function hydrate(raw) {
   DATA = raw; TOPICS = raw.topics;
   // The session under way: an upcoming session's prefiled bills don't count.
@@ -6371,14 +6363,12 @@ function hydrate(raw) {
   $("statTopic").innerHTML = `<option value="all">All bills</option>` + Object.entries(TOPICS).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
   $("changedField").hidden = !raw.current;
   if (!raw.current) state.changed = "";
-  $("homeCounty").innerHTML = countyOptions();
   // Until a state's bills are tied to places, there's no county to pick; without law names, no law filter.
   // States that find legislators by town (New Jersey) pick the town here instead.
   const you = document.querySelector(".field.you");
   you.hidden = !raw.bills.some((b) => b.places.length);
   if (PLACE_WORD !== "county") you.querySelector("label").textContent = `Your ${PLACE_WORD}`;
   // (A long towns list, Congress's, comes later: the towns part.)
-  if (!embedded) townPicker();
   $("law").closest(".field").hidden = !raw.lawList.length;
   // One house: no "has a version in" choice; no parties: no party filter.
   if (UNI) $("house").closest(".field").hidden = true;
@@ -6430,7 +6420,7 @@ function hydrate(raw) {
     for (const v of ["watch", "stats", "how"]) document.querySelector(`.view-tab[data-view="${v}"]`).hidden = true;
     document.querySelector('.view-tab[data-view="person"]').hidden = false;
     renderPersonStats(LEG_BY_ID[PRESET.who]);
-    document.querySelector('.view-tab[data-view="act"]').textContent = "Open for comment";
+    document.querySelector('.view-tab[data-view="act"]').hidden = false;
     for (const sec of document.querySelectorAll("#view-act > .act-sec")) if (sec.id !== "openNow") sec.hidden = true;
   }
   // Phones start with the filter panel folded up; wider screens show it as a sidebar.
@@ -6448,7 +6438,12 @@ function hydrate(raw) {
   if (!DATA.current && !EMBED) for (const v of ["watch", "act"]) document.querySelector(`.view-tab[data-view="${v}"]`).hidden = true;
   // Prefiled bills haven't been anywhere yet: no Weigh in or Statistics.
   if (DATA.upcoming) { for (const v of ["act", "stats"]) document.querySelector(`.view-tab[data-view="${v}"]`).hidden = true; if (["act", "stats"].includes(view)) view = "bills"; }
-  if (PRESET?.who ? ["watch", "stats", "how"].includes(view) : view === "person") view = "bills";
+  if (PRESET?.who ? ["watch", "stats", "how"].includes(view) : ["person", "act"].includes(view)) view = "bills";
+  // Only a legislator's page has the "Open for comment" tab; elsewhere its advice is in How ("Having an impact").
+  if (!PRESET?.who) {
+    document.querySelector('.view-tab[data-view="act"]').hidden = true;
+    for (const sec of [...document.querySelectorAll("#view-act > .act-sec")]) if (sec.id !== "openNow") $("impact").append(sec);
+  }
   // The /watchlist/ page is only the watchlist: no tabs, with a link back to all bills.
   if (PRESET?.watch) document.querySelector(".views").hidden = true;
   showView(view, false);
