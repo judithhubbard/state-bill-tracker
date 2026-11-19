@@ -46,10 +46,11 @@
   <div id="panels">
     <section role="tabpanel" id="p-starred" data-tab="starred" aria-labelledby="t-starred">
       <p class="sub" id="sum">&nbsp;</p>
+      <div id="news"></div>
       <div id="bills"></div>
       <p id="none" hidden>No starred bills in this browser yet. Star a bill on the <a href="/">front page</a> or a state&rsquo;s page and it shows up here.</p>
       <section id="shareSec" hidden>
-        <h2>Share these</h2>
+        <h2>Share all your bills</h2>
         <div class="panel" id="share"></div>
       </section>
     </section>
@@ -74,7 +75,8 @@ const REMOVED = new Map();    // bills unstarred on this page (in the rows below
 const MAX = 500;              // the most bills a shared list holds
 
 // ---- Tabs: Starred, each list made here (list editor), each list followed (not one made here) ----
-// Tab ids: "starred", "list:<slug>", "follow:<slug>". What each tab showed when last viewed in this browser is kept in
+// Tab ids: "starred", "list:<slug>", "follow:<slug>". A starred bill is new until it's opened (its watch entry's `seen`,
+// the one record every page reads: freshStar()). What a list's tab showed when last viewed in this browser is kept in
 // abt:tabseen ({tab id: {bill key: its last action's date then}}): a bill added since, or with a newer action, is new.
 // When a tab was last opened is kept in abt:yourbills:recent ({tab id: time}): with more than five lists, the strip shows
 // the four opened most recently and a "More lists" menu of all of them.
@@ -198,6 +200,8 @@ function loaded(id, rows, newKeys) {
 }
 function markSeen(id) {
   const t = TABS.get(id);
+  // (Starred bills are new until they're opened, here or anywhere: their watch entries say so, not this tab.)
+  if (id === "starred") { if (t && t.rows) t.fresh = ITEMS.filter(freshStar).length; return drawStrip(); }
   if (!t || !t.rows || document.visibilityState === "hidden") return drawStrip();
   const s = readSeen();
   s[id] = Object.fromEntries(t.rows.map((r) => [r.key, r.last || today()]));
@@ -313,11 +317,49 @@ function starSum() {
   const t = TABS.get("starred");
   if (t) { t.count = n; drawStrip(); }
 }
-// New on the tab: a bill whose newest action came after it was last opened, and after this tab was last viewed.
-const freshStar = (x) => { const rec = readSeen().starred; return x.found && x.last && x.last > (x.entry?.seen || "") && !(rec && rec[x.key] && rec[x.key] >= x.last); };
-const NEWS = new Set();   // the starred bills new when the tab's bills came in (shown as new until the page is reloaded)
+// New: a starred bill whose newest action (not paperwork) came after it was last opened, here, on the front page or on
+// its state's page. That's one record, the watch entry's `seen` (abt:<st>:watch), which opening the bill anywhere sets.
+const entryNow = (x) => entryOf(readWatch(x.st)[`${x.session}:${x.num}`]);
+const freshStar = (x) => !!(x.on !== false && x.found && x.last && !x.routine && x.last > (entryNow(x).seen || ""));
+// A starred bill opened, or "Mark all as seen": its entry's `seen` becomes its last action's day.
+function seeStar(x) {
+  const w = readWatch(x.st), k = `${x.session}:${x.num}`;
+  if (!w[k] || !x.last) return;
+  const e = entryOf(w[k]);
+  if ((e.seen || "") >= x.last) return;
+  w[k] = { ...e, seen: x.last };
+  writeWatch(x.st, w);
+}
+// "New since you last looked", at the top (watchrows.js's box, as on each state's Watchlist tab).
+function drawNews() {
+  const fresh = ITEMS.filter(freshStar).sort((a, b) => String(b.last).localeCompare(String(a.last)));
+  $("news").innerHTML = WatchRows.newsHtml(fresh.map((x) => ({ key: x.key, kind: x.stage === 5 ? "ok" : x.stage === 6 ? "no" : "", what: plainAct(x.action || ""),
+    num: `${x.st === "us" ? "" : `${stName(x.st)} `}${WatchRows.numText(x.st, x.full || x.num)}`, title: x.title, date: fmtDay(x.last) })));
+  const t = TABS.get("starred");
+  if (t) { t.fresh = fresh.length; drawStrip(); }
+}
+$("news").addEventListener("click", (e) => {
+  if (e.target.closest("[data-wseenall]")) { for (const x of ITEMS.filter(freshStar)) seeStar(x); countUse("your-bills/marked all seen"); drawStarred(ITEMS); drawNews(); return; }
+  const n = e.target.closest("[data-wnews]");
+  if (!n) return;
+  const id = WatchRows.idOf({ tab: "s" }, { key: n.dataset.wnews });
+  if (BY_STATE || !document.querySelector(`button.rowbtn[data-open="${CSS.escape(id)}"]`)) return;
+  if (document.querySelector(`button.rowbtn[data-open="${CSS.escape(id)}"]`).getAttribute("aria-expanded") !== "true") { Opener.open(id); opened(id); }
+  n.classList.add("read");
+  document.querySelector(`button.rowbtn[data-open="${CSS.escape(id)}"]`).closest("li").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+// A starred bill's row opened: seen (its card, drawn by its state's page, marks it seen there too).
+function opened(id) {
+  const x = $("bills")._rows?.get(id) && ITEMS.find((i) => i.key === $("bills")._rows.get(id).key);
+  if (!x) return;
+  seeStar(x);
+  document.querySelector(`button.rowbtn[data-open="${CSS.escape(id)}"] .wr-new`)?.remove();
+  $("news").querySelector(`[data-wnews="${CSS.escape(x.key)}"]`)?.classList.add("read");
+  const t = TABS.get("starred");
+  if (t) { t.fresh = ITEMS.filter(freshStar).length; drawStrip(); }
+}
 function drawStarred(list) {
-  OneList.draw($("bills"), list, { tab: "s", byState: BY_STATE, isNew: (x) => NEWS.has(x.key), remove: true });
+  OneList.draw($("bills"), list, { tab: "s", byState: BY_STATE, isNew: freshStar, remove: true, mine: true, onOpen: (id) => opened(id) });
 }
 async function draw() {
   syncTabs();
@@ -330,9 +372,9 @@ async function draw() {
     if (kept.length === starred.length) drawStarred(kept);
   }
   const rows = await OneList.items(starred);
-  for (const x of rows) if (freshStar(x)) NEWS.add(x.key);
   ITEMS = rows.map((x) => ({ ...x, on: !REMOVED.has(x.key) }));
   drawStarred(ITEMS);
+  drawNews();
   $("none").hidden = ITEMS.length > 0;
   $("shareSec").hidden = !ITEMS.length && !myList();
   starSum();
@@ -386,8 +428,9 @@ $("panels").addEventListener("click", (e) => { if (e.target.closest("li > a")) c
 
 // ---- Sharing: one live list across states, saved a minute after the stars change ----
 // What the shared list should hold now.
+// (In the order the list shows them: what's due first, as each state's Watchlist tab orders its own.)
 function payload(mine) {
-  const bills = ITEMS.filter((x) => x.on).map((x) => (x.stance === "oppose" ? "-" : "") + x.key).filter((c) => CROSS_RE.test(c)).sort((a, b) => a.replace(/^-/, "").localeCompare(b.replace(/^-/, ""))).slice(0, MAX);
+  const bills = OneList.ordered(ITEMS.filter((x) => x.on)).map((x) => (x.stance === "oppose" ? "-" : "") + x.key).filter((c) => CROSS_RE.test(c)).slice(0, MAX);
   const keep = new Set(bills.map((c) => c.replace(/^-/, "")));
   const notes = {};
   if (mine?.group) for (const [k, v] of Object.entries(mine.notes || {})) if (keep.has(k) && String(v).trim()) notes[k] = String(v).trim();
@@ -440,8 +483,8 @@ let THANKS = "";
 function drawShare(keepMsg) {
   const mine = myList(), el = $("share"), msg = keepMsg ? $("saved")?.textContent || "" : "";
   if (!mine) {
-    el.innerHTML = `<p>One link that always shows these bills, kept up to date as you star and unstar them.</p>`
-      + `<p class="row"><button type="button" class="btn primary" data-act="share"${ITEMS.some((x) => x.on) ? "" : " disabled"}>Share these</button> <span class="muted" id="saved"></span></p>`
+    el.innerHTML = `<p>One link that always shows all your starred bills, in every state, kept up to date as you star and unstar them. (Each state&rsquo;s Watchlist tab shares just that state&rsquo;s.)</p>`
+      + `<p class="row"><button type="button" class="btn primary" data-act="share"${ITEMS.some((x) => x.on) ? "" : " disabled"}>Share all your bills</button> <span class="muted" id="saved"></span></p>`
       + CODE_LINE
       + `<details><summary>Shared these from another device?</summary><div class="row"><input type="text" id="pasteKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key">`
       + `<button type="button" class="btn" data-act="connect">Connect</button></div></details>`;

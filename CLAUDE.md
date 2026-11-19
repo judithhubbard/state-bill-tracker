@@ -2489,14 +2489,27 @@ Read README.md for what each script downloads. This file covers how to change th
   Its subjects (`TRENDS`) and wording pairs (`WORDING`, both in states/ny/profile.py) were picked by
   hand from an automatic phrase scan; check new ones before adding.
 - **Watchlist:**
-  - Storage and actions: `WATCH` (localStorage), `ORDER` (drag order), `watchItems()` (splits bills
-    into "Needs action" and "Can't move right now", then sorts them), `keyAction()` (the one ask on
-    each card), `deadlineOf()` / `W_GROUPS` (splits "Needs action" into Due soon, Before the session
-    ends, By December 31 and No deadline yet; `sessionEnd()` reads `data/session_calendar.json`, else
-    when past sessions ended), `renderWatchView()` (the cards), `logBlock()` / `actionRecord()` (the action log) and
-    `draftFor()` (email text).
-  - Decided bills (signed or vetoed) get their own section below "Can't move right now". The header is
-    one line with a "Share this list" button (`W_SHARE_OPEN`) that opens the share options.
+  - One watchlist, two views (the owner's decision, 2026-11-19): a state's Watchlist tab shows what /your-bills/ shows,
+    that state's bills only (this session; other sessions' stars are the "3 more in 2023–24 ›" line), with the same rows,
+    groups, order and deadlines: lists_pages/watchrows.js (`WatchRows`: `place()` a bill's group and deadline, `draw()`,
+    `rowHtml()`, `newsHtml()`, `ordered()`, `where()`) and rows.css draw both (build_data.py puts them in each state page
+    beside watchrules.js; build_site.sh with common.js/common.css). Groups: Due soon, Before the session ends, the state's
+    year-end group (`passedBothGroup`), No deadline yet, Can't move right now (current session, nothing to ask for:
+    watchrules.js's `canAct` false), Decided or ended (laws, vetoes, past sessions); within a group the soonest deadline,
+    then furthest along, then the latest action. No drag order any more (the old `abt:<st>:worder` values are left alone,
+    not read). A row opens its card below it: on the state page drawn by the page itself (`toggleRow()`, `watchCard(x,
+    true)`: the card's body, with "Your side" and the sponsors at its top), on /your-bills/ by the state's page in a frame
+    ({sbtShow, mine: true}: the person's own card, with their side and action log). The header line: "Your bills in New
+    York · All your bills (12 in 4 states) ›" (`allStars()`); a Your bills link is in every state page's header
+    (`#siteNav`, `siteYours`). `watchRow()` makes a row from the page's bill (`canActNow()`: planFor()'s actionable).
+    A list someone shared (`SHARED`) and /list/'s frames (`EMBED`) still show the cards (`watchItems()`: Needs action,
+    Can't move right now, Decided).
+  - Storage and actions: `WATCH` (localStorage), `watchItems()` (each bill's ask: `keyAction()`), `deadlineOf()` /
+    `W_GROUPS` (`sessionEnd()` reads `data/session_calendar.json`, else when past sessions ended), `renderWatchView()`,
+    `logBlock()` / `actionRecord()` (the action log) and `draftFor()` (email text; a group's "Copy one email about all
+    3" is `groupExtra`).
+  - Sharing: the state's tab shares that state's bills ("Share your New York bills"); Your bills shares all of them
+    ("Share all your bills"), a separate list on purpose. Both save their bills in the order the list shows them.
   - News: `newsBox()` ("New since you last looked", at the top; rows open the card, "Mark all as seen"),
     `newActions()` (actions since the bill was last opened, skipping `ROUTINE` paperwork,
     most important first by `WEIGHT`), `newsTags()` (the "New: …" and "Coming up: …" tags),
@@ -2512,7 +2525,7 @@ Read README.md for what each script downloads. This file covers how to change th
     profile's `listsApi`), viewed at /list/#<slug> (lists_pages/list.html); no code needed. `shareBox()` draws the
     options (Copy link, share icons, "Use this list on another device", "Stop sharing", the group-code line, the
     contribution line once in 90 days: `thanksOnce()`, shared with `supportNote()` and Your bills), `publishAction()`
-    handles them. `saveWatch()`/`saveOrder()` call `schedulePub()`, which saves (`savePub()`, `pubPayload()`) a minute
+    handles them. `saveWatch()` calls `schedulePub()`, which saves (`savePub()`, `pubPayload()`) a minute
     after the last change, and `flushPub()` on pagehide. My list is `myPublished()` ({slug, editKey, title, group,
     saved}); a group code adds the introduction and per-bill notes (`pubText()`). `followedHere()` lists followed lists
     with this state's bills. Old addresses, `watchlist/#list=<slug>`, redirect to /list/ before the data loads; snapshot
@@ -2533,10 +2546,13 @@ Read README.md for what each script downloads. This file covers how to change th
     (slow 4G, 4x CPU, phone, cold cache): first bill 1.3-1.7 s after the list shows, another of the same state 0.1-0.8 s;
     the list itself shows after 6-7 s, almost all of it the states' whole status files (NY's is 517 KB).
   - Your bills as one list (2026-11-19): every tab of /your-bills/ draws its bills from all states and sessions as one
-    list (lists_pages/onelist.js): Due soon, Before the session ends, a later deadline (a state's `passedBothGroup` name
-    when the group is one state's, else "Due later"), No deadline yet, then Decided or ended (laws, vetoes, past
-    sessions, and bills out of time this session), soonest deadline first; "Group by state" (abt:yourbills:bystate)
-    instead. The deadline rules exist once, in lists_pages/watchrules.js (`WatchRules.make(STATE, facts, hooks)`:
+    list (lists_pages/onelist.js, drawn by watchrows.js, as each state's Watchlist tab): Due soon, Before the session
+    ends, a later deadline (a state's `passedBothGroup` name when the group is one state's, else "Due later"), No
+    deadline yet, Can't move right now (bills out of time this session), then Decided or ended (laws, vetoes, past
+    sessions), soonest deadline first; "Group by state" (abt:yourbills:bystate) instead. A starred bill is new until
+    it's opened anywhere (its watch entry's `seen`, which the state's page, the front page and Your bills all set; not
+    abt:tabseen, which only list tabs use), and paperwork (the state's `routine`, else `WatchRows.ROUTINE`) isn't news;
+    "New since you last looked" is at the top of the Starred tab, as on the state's tab. The deadline rules exist once, in lists_pages/watchrules.js (`WatchRules.make(STATE, facts, hooks)`:
     `sessionEnd`, `floorVotesOver`, `standing` (adjourned, recess, a missed crossover), `live`, `canAct`, `deadlineOf`,
     `dueText`, the groups; `nextMeeting`): build_data.py puts it in every state page before the profile, and tracker.html's
     `WR` calls it (planFor(), the watchlist), so test/same.sh shows the pages unchanged. Your bills runs each starred

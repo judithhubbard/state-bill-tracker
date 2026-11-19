@@ -39,6 +39,10 @@
   --pty-r: #f5d3cf; --pty-r-ink: #6e1f18; --pty-r-step: #e49b93;
   --law-c: #1f7a4a;
   --move: #3b6f76; --move-2: #18464c; --move-soft: #dcecee;
+  /* The watchlist's rows (lists_pages/rows.css), as on /your-bills/ (lists_pages/common.css has the same values). */
+  --hover: #c98500; --law-mark: #f0a00c; --new-ink: #8a5300; --veto-ink: #a3302a;
+  --st-0: #e8edf0; --st-0-ink: #46575c; --st-1: #dcecee; --st-1-ink: #18464c; --st-3: #fbefd6; --st-3-ink: #7a4f06;
+  --st-5: #dcf1e4; --st-5-ink: #14613a; --st-6: #fae1df; --st-6-ink: #9a2b24;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -49,6 +53,9 @@
     --pty-d: #2f4670; --pty-d-ink: #e3eaf7; --pty-d-step: #4a70b5;
     --pty-r: #5c3431; --pty-r-ink: #f8dfdb; --pty-r-step: #93473f;
     --law-c: #5cc28c; --move: #8fb5b8; --move-2: #c6dedf; --move-soft: #1c3234;
+    --hover: #f2b53e; --law-mark: #f2b53e; --new-ink: #f0cd85; --veto-ink: #f08a80;
+    --st-0: #222c2d; --st-0-ink: #a9b8ba; --st-1: #1c3234; --st-1-ink: #9fd8d4; --st-3: #3a2f17; --st-3-ink: #f0cd85;
+    --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
     color-scheme: dark;
   }
 }
@@ -60,6 +67,9 @@
   --pty-d: #2f4670; --pty-d-ink: #e3eaf7; --pty-d-step: #4a70b5;
   --pty-r: #5c3431; --pty-r-ink: #f8dfdb; --pty-r-step: #93473f;
   --law-c: #5cc28c; --move: #8fb5b8; --move-2: #c6dedf; --move-soft: #1c3234;
+  --hover: #f2b53e; --law-mark: #f2b53e; --new-ink: #f0cd85; --veto-ink: #f08a80;
+  --st-0: #222c2d; --st-0-ink: #a9b8ba; --st-1: #1c3234; --st-1-ink: #9fd8d4; --st-3: #3a2f17; --st-3-ink: #f0cd85;
+  --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -723,10 +733,6 @@ details.wsec:not([open]) > summary .wsub { margin-bottom: 0; }
 .wfold { margin: 0 0 -4px; font-size: 13px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .wfold .muted { color: var(--ink-2); }
 .wfold > span:last-child { margin-left: auto; }
-.whandle { appearance: none; border: 0; background: none; color: var(--ink-2); font-size: 20px; line-height: 1; padding: 2px 4px; margin: 0 0 0 -8px; cursor: grab; touch-action: none; border-radius: 4px; }
-.whandle:hover, .whandle:focus-visible { color: var(--ink); background: var(--pip-off); }
-.wcard.dragging { opacity: .85; box-shadow: 0 8px 24px rgba(20, 33, 61, .25); position: relative; z-index: 2; }
-.wcard.dragging .whandle { cursor: grabbing; }
 .wcard .wask { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; }
 .wcard .wask .act-btn { margin-left: auto; }
 details.actrec { margin-top: 18px; }
@@ -768,18 +774,6 @@ a.phone:hover { text-decoration-color: currentColor; }
 .logtable td { padding: 7px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
 .logtable td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; font-size: 13px; }
 .logtable .bn { font: 700 12px var(--mono); }
-.wnews { border: 1px solid var(--navy); border-radius: 12px; padding: 12px 16px 10px; margin-top: 14px; background: var(--sheet); }
-.wnews-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.wnews h2 { margin: 0; font-size: 18px; }
-.wnews ul { list-style: none; margin: 8px 0 0; padding: 0; }
-.wnews li + li { border-top: 1px solid var(--rule); }
-.wnewsrow { appearance: none; background: none; border: 0; font: inherit; color: var(--ink); text-align: left; width: 100%; padding: 8px 0; cursor: pointer; line-height: 1.5; }
-.wnewsrow:hover .bn, .wnewsrow:focus-visible .bn { text-decoration: underline; }
-.wnewsrow.read { opacity: .55; }
-.wnewsrow .bn { font-family: var(--mono); font-weight: 600; }
-.wnewsrow .nk { font: 700 12.5px var(--body); background: var(--gold-soft); border-radius: 4px; padding: 2px 7px; }
-.wnewsrow .nk.ok { background: var(--signed-soft); color: var(--signed); }
-.wnewsrow .nk.no { background: var(--veto-soft); color: var(--veto); }
 .wgroup { margin-top: 12px; }
 .wgroup > summary { cursor: pointer; list-style: none; display: grid; gap: 1px; padding: 6px 0 8px; }
 .wgroup > summary::-webkit-details-marker { display: none; }
@@ -1072,12 +1066,25 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
   .statsview .barrow { grid-template-columns: 120px minmax(0, 1fr) 50px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+/* The Watchlist tab: one line saying whose bills these are, with the link to all of them; then the rows (rows.css, put
+   here by build_data.py), each opening its card below it. */
+.wlhead .wlline { margin: 0; font: 700 22px var(--display); font-stretch: 85%; }
+.wlhead .wlline a { font: 600 14px var(--body); text-decoration: none; white-space: nowrap; }
+.wlhead .wlline a:hover { text-decoration: underline; }
+.wlhead .wlsep { color: var(--ink-2); font-weight: 400; margin: 0 4px; }
+.wrows .wr-btns .watchbtn { margin: 0; }
+.wr-emb > .wcard.inplace { border: 0; border-radius: 0; box-shadow: none; padding: 10px 12px 2px; background: none; }
+.wr-emb > .wcard.inplace .wbody { padding-bottom: 10px; }
+.wcard .wside { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink-2); }
+.wcard .wside .sides { margin: 0; padding: 0; }
+#wlList > .wrows { margin-top: 14px; }
+/*rows.css*/
 </style>
 
 
 <div class="wrap">
   <header class="mast">
-    <nav class="home-link" id="siteNav" aria-label="Site" hidden><a id="siteHome" href="../">&larr; State Bill Tracker</a><a id="siteAboutTop" href="../about/">About</a></nav>
+    <nav class="home-link" id="siteNav" aria-label="Site" hidden><a id="siteHome" href="../">&larr; State Bill Tracker</a><a id="siteYours" href="../your-bills/">Your bills</a><a id="siteAboutTop" href="../about/">About</a></nav>
     <div class="mast-top">
       <div>
         <div class="eyebrow" id="sessionLabel">New York State Legislature</div>
@@ -4290,7 +4297,7 @@ const watchStance = (b) => watchEntry(b)?.stance || null;
 const WATCH_COUNT = () => BILLS.filter(isWatched).length;
 // What's happened to a watched bill since its owner last opened it. Paperwork that comes with a
 // real step (a new print number, the "sent to the other house" after a pass) doesn't count.
-const ROUTINE = STATE.routine || /^(PRINT NUMBER|INTRODUCED|DELIVERED TO (SENATE|ASSEMBLY)|RETURNED TO (SENATE|ASSEMBLY)|\d+(ST|ND) REPORT CAL|\d+RD READING CAL)/;
+const ROUTINE = STATE.routine || WatchRows.ROUTINE;   // (lists_pages/watchrows.js: /your-bills/ reads it too)
 // Most important first, so the tag names the step that matters.
 const WEIGHT = [/^SIGNED/, /^VETOED/, /^DELIVERED TO GOVERNOR/, /^(RE)?PASSED/, /^SUBSTITUTED/, /ENACTING CLAUSE STRICKEN/, /^DIED/,
   /THIRD READING|^REPORTED|RULES REPORT|DISCHARGED/, /^AMEND/, /HELD/, /REFERRED|COMMITTED/];
@@ -4324,23 +4331,33 @@ function newsTags(b) {
   return out;
 }
 function setWatch(b, entry) { keysOf(b).forEach((k) => WATCH.delete(k)); if (entry) WATCH.set(billKey(b), entry); saveWatch(); }
-// The order the person put their watchlist in (bill keys, first = top priority).
-const ORDER_STORE = STORE + "worder";
-let ORDER = [];
-try { ORDER = JSON.parse(localStorage.getItem(ORDER_STORE) || "[]"); } catch (e) { ORDER = []; }
-function saveOrder() { try { localStorage.setItem(ORDER_STORE, JSON.stringify(ORDER)); } catch (e) {} schedulePub(); }
-const myRank = (b) => Math.min(...keysOf(b).map((k) => ORDER.indexOf(k)).filter((i) => i >= 0));
+// The bills of a shared list in the list's order (its maker saved them in their watchlist's order).
 const sharedRank = (b) => { const ks = [...SHARED.keys()]; return Math.min(...b.nums.map((n) => ks.indexOf(baseNum(n))).filter((i) => i >= 0)); };
-// Watched bills split into those needing action now and the rest; a set order comes first, then soonest deadline.
-function watchItems(list, stanceOf, rank) {
+// Bills with their asks (keyAction()), split into those needing action now and the rest, soonest deadline first (a shared
+// list's: in its order). The person's own Watchlist tab shows them as rows (watchRow()).
+function watchItems(list, stanceOf, rank = () => 0) {
   const items = list.map((b) => ({ b, stance: stanceOf(b), ...keyAction(b, stanceOf(b)) }));
   const byRank = (f) => (x, y) => rank(x.b) - rank(y.b) || f(x, y);
   return {
     active: items.filter((x) => x.key).sort(byRank((x, y) => (x.plan.due || "9999").localeCompare(y.plan.due || "9999") || rankOf(y.b.stage) - rankOf(x.b.stage))),
-    // Below the person's own order: furthest along first, then the most recent action.
+    // Furthest along first, then the most recent action.
     idle: items.filter((x) => !x.key && x.b.stage < 5).sort(byRank((x, y) => rankOf(y.b.stage) - rankOf(x.b.stage) || String(y.b.last || "").localeCompare(String(x.b.last || "")))),
     decided: items.filter((x) => !x.key && x.b.stage >= 5).sort(byRank((x, y) => (y.b.dates.signed || y.b.dates.vetoed || "").localeCompare(x.b.dates.signed || x.b.dates.vetoed || ""))),
   };
+}
+// Whether there's anything to ask for on a bill now (planFor()'s actionable, without the contacts it needs):
+// watchrules.js's canAct, with what only this page knows (a floor defeat or withdrawal that ended it, a veto the next
+// session can override, an amendment the voters have decided).
+const canActNow = (b) => WR.canAct(b, WR.live(WR.standing(b), b.stage <= 2 && endedOf(b)), STATE.vetoReturns?.(b)?.live, votersDone(b));
+// A watched bill as a row of the Watchlist tab: lists_pages/watchrows.js's, the same rows, groups and order /your-bills/
+// shows (its group and deadline by the same rules: WatchRows.place()). x: the bill's watchItems() entry, when there is one.
+const WROW_RULES = { get WR() { return WR; } };
+function watchRow(b, x) {
+  const n = baseNum(b.nums[0]);
+  return { key: `${STATE.code}:${DATA.session}:${n}`, st: STATE.code, session: DATA.session, num: n, full: b.nums[0], found: true, b, w: x,
+    title: b.title, stage: b.stage, last: b.last || "", stance: watchStance(b) || "", rules: WROW_RULES,
+    label: WatchRows.where(STATE.code, b.stage, b.comm, (b.topics || []).includes("const") ? "const" : "", !!DATA.current, !!DATA.upcoming),
+    ...WatchRows.place(b, { S: STATE, WR, current: !!DATA.current, upcoming: !!DATA.upcoming, act: !!DATA.current && !DATA.upcoming && canActNow(b), exec: EXEC.title }) };
 }
 // "Needs action" is grouped by the deadline each bill faces, soonest first.
 const monthDay = WatchRules.monthDay;
@@ -4356,19 +4373,16 @@ const W_SEC_OPEN = () => recall("wsec") || {};
 // The main thing that happened to a watched bill since it was last opened ("Signed into law").
 // (The passage that made it pass both houses says so, as the bill's status does, not "Passed Senate".)
 const newsWhat = (t, d, b) => b && b.stage >= 3 && /^(?:RE)?PASSED\b/.test(t) && d === [b.dates.passS, b.dates.passA].sort().pop() ? PASSED_BOTH : plainAction(t, d, b ? b.vers.flatMap((v) => v.actions) : [], true).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, "");
-// Top of the watchlist: every bill with news, the biggest news first.
-function newsBox(list) {
-  const items = list.map((b) => ({ b, acts: newActions(b) })).filter((x) => x.acts.length)
+// Top of the watchlist: every bill with news, the biggest news first (watchrows.js's box, as on /your-bills/; rows:
+// watchRow()'s, each row's button data-wnews="<its key>").
+function newsBox(rows) {
+  const items = rows.map((r) => ({ r, acts: newActions(r.b) })).filter((x) => x.acts.length)
     .sort((x, y) => weightOf(x.acts[0][1]) - weightOf(y.acts[0][1]) || y.acts[0][0].localeCompare(x.acts[0][0]));
-  if (!items.length) return "";
-  return `<section class="wnews"><div class="wnews-h"><h2>New since you last looked</h2><button type="button" class="linkish" data-wseenall>Mark all as seen</button></div>
-    <ul>${items.map(({ b, acts }) => {
-      const [d, t] = acts[0], kind = /^SIGNED/.test(t) ? "ok" : /^VETOED/.test(t) ? "no" : "";
-      return `<li><button type="button" class="wnewsrow" data-wnews="${b.idx}"><span class="nk ${kind}">${esc(newsWhat(t, d, b))}</span> <span class="bn">${esc(b.nums.join(" / "))}</span> ${esc(b.title)} <span class="muted">· ${fmtDate(d)}${acts.length > 1 && !kind ? ` · ${acts.length - 1} more change${acts.length > 2 ? "s" : ""}` : ""}</span></button></li>`;
-    }).join("")}</ul></section>`;
+  return WatchRows.newsHtml(items.map(({ r, acts }) => {
+    const [d, t] = acts[0], kind = /^SIGNED/.test(t) ? "ok" : /^VETOED/.test(t) ? "no" : "";
+    return { key: r.key, kind, what: newsWhat(t, d, r.b), num: WatchRows.numText(STATE.code, r.full), title: r.b.title, date: fmtDate(d), more: acts.length > 1 && !kind ? acts.length - 1 : 0 };
+  }));
 }
-// My watched bills in the order they show, for share links and published lists.
-function myOrdered() { const { active, idle, decided } = watchItems(BILLS.filter(isWatched), (b) => watchStance(b) || "support", myRank); return [...active, ...idle, ...decided].map((x) => x.b); }
 // A new star has no side yet: the person picks support or oppose (a decided bill has none to pick).
 function toggleWatch(b) { if (!isWatched(b)) { countUse(`starred/${baseNum(b.nums[0])}`); step("starred"); } setWatch(b, isWatched(b) ? null : { seen: b.last || "", stance: null }); }
 function markSeen(b) { const e = watchEntry(b); if (e && e.seen !== (b.last || "")) { setWatch(b, { ...e, seen: b.last || "" }); updateWatchTab(); } }
@@ -4420,10 +4434,10 @@ function setMyPublished(v) { try { v ? localStorage.setItem(PUB_STORE(), JSON.st
 const PUBTEXT_STORE = () => `${STORE}pubtext:${DATA.session}`;
 function pubText() { try { return JSON.parse(localStorage.getItem(PUBTEXT_STORE()) || "null") || { intro: "", notes: {} }; } catch (e) { return { intro: "", notes: {} }; } }
 function setPubText(v) { try { localStorage.setItem(PUBTEXT_STORE(), JSON.stringify(v)); } catch (e) {} }
-// The watched bills as the list writes them ("A1234", "-S55" to oppose), in the order the person set, then by number:
-// a steady order, so the list is saved only when the bills or stances change.
-const watchCodes = () => BILLS.filter(isWatched).map((b) => [myRank(b), b.sortKey, (watchStance(b) === "oppose" ? "-" : "") + baseNum(b.nums[0])])
-  .sort((x, y) => x[0] - y[0] || x[1] - y[1]).map((x) => x[2]).filter((c) => /^-?[A-Z]{1,7}\d{1,6}$/.test(c)).slice(0, 500);
+// The watched bills as the list writes them ("A1234", "-S55" to oppose), in the order the Watchlist tab shows them
+// (watchrows.js's: what's due first).
+const watchCodes = () => WatchRows.ordered(BILLS.filter(isWatched).map((b) => watchRow(b)))
+  .map((r) => (r.stance === "oppose" ? "-" : "") + r.num).filter((c) => /^-?[A-Z]{1,7}\d{1,6}$/.test(c)).slice(0, 500);
 // The site's top (the folder above the state's), where /list/ and /your-bills/ are.
 const siteTop = () => (ROOT ? new URL("../", ROOT).href : "");
 const listUrl = (slug) => `${siteTop()}list/#${slug}`;
@@ -4608,8 +4622,8 @@ const codeLine = () => `<p class="muted">Sharing for an organization? <a href="m
 // The share options under "My watchlist": Share, or, once shared, the link and what goes with it.
 function shareBox(n) {
   const mine = myPublished();
-  if (!mine) return `<p>One link that always shows these bills, kept up to date as you star and unstar them.</p>
-    <p class="row"><button type="button" class="act-btn primary" data-pub="share"${n ? "" : " disabled"}>Share these</button> <span class="muted" id="pubMsg"></span></p>
+  if (!mine) return `<p>One link that always shows your ${STATE.code === "us" ? "bills in Congress" : `${esc(stateName())} bills`}, kept up to date as you star and unstar them.${ROOT ? ` (To share your bills in every state, use <a href="${esc(siteTop())}your-bills/">Your bills</a>.)` : ""}</p>
+    <p class="row"><button type="button" class="act-btn primary" data-pub="share"${n ? "" : " disabled"}>${esc(shareWords())}</button> <span class="muted" id="pubMsg"></span></p>
     ${codeLine()}
     <details><summary>Shared this list from another device?</summary><div class="row"><input type="text" id="pubKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key"><button type="button" class="act-btn" data-pub="connect">Connect</button></div></details>`;
   const url = listUrl(mine.slug), group = !!mine.group;
@@ -4663,16 +4677,14 @@ async function publishAction(btn) {
       const l = await listsApi(`/lists/${encodeURIComponent(slug)}`, opts);
       if (l.state === "all") return pubSay("That key is for a list shared from Your bills; use it there.", true);
       if (l.state !== STATE.code || l.session !== DATA.session) return pubSay("That key is for another state's or session's list.", true);
-      // Its bills join this browser's watchlist, in the list's order.
-      const want = new Map(l.bills.map((n) => (n.startsWith("-") ? [n.slice(1), "oppose"] : [n, "support"]))), order = [...want.keys()];
-      const rank = (b) => Math.min(...b.nums.map((n) => order.indexOf(baseNum(n))).filter((i) => i >= 0));
-      for (const b of BILLS.filter((b) => b.nums.some((n) => want.has(baseNum(n)))).sort((x, y) => rank(x) - rank(y))) {
+      // Its bills join this browser's watchlist.
+      const want = new Map(l.bills.map((n) => (n.startsWith("-") ? [n.slice(1), "oppose"] : [n, "support"])));
+      for (const b of BILLS.filter((b) => b.nums.some((n) => want.has(baseNum(n))))) {
         if (!isWatched(b)) WATCH.set(billKey(b), { seen: b.last || "", stance: want.get(b.nums.map(baseNum).find((n) => want.has(n))) });
-        if (!keysOf(b).some((k) => ORDER.includes(k))) ORDER.push(billKey(b));
       }
       setPubText({ intro: l.intro || "", notes: l.notes || {} });
       setMyPublished({ slug, editKey: key, title: l.title === PUB_DEFAULT ? "" : l.title, group: l.group, saved: pubSig({ title: l.title, bills: l.bills, intro: l.intro || "", notes: l.notes || {} }) });
-      saveOrder(); saveWatch();
+      saveWatch();
       countUse("list-connected");
       return render();
     }
@@ -4802,20 +4814,47 @@ function reachOf(p) {
 }
 
 const W_OPEN = new Set();
+const W_GONE = new Set();   // bills unstarred on the Watchlist tab: still shown there, to star again, until the page reloads
 let W_SHARE_OPEN = null;
+// Every bill starred in this browser, in every state and session (each state's page keeps its own: abt:<st>:watch), for
+// "All your bills (12 in 4 states)": {n, places, us}.
+function allStars() {
+  const sts = new Set();
+  let n = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const m = (localStorage.key(i) || "").match(/^abt:([a-z]{2}):watch$/);
+      if (!m) continue;
+      const k = Object.keys(JSON.parse(localStorage.getItem(localStorage.key(i)) || "{}") || {}).filter((x) => /^\d{4}:[A-Z]/.test(x)).length;
+      if (k) { n += k; sts.add(m[1]); }
+    }
+  } catch (e) {}
+  return { n, places: sts.size, us: sts.has("us") };
+}
+// The state's name as the Watchlist tab says it ("Your bills in New York", "Share your New York bills").
+const stateName = () => STATE.name || STATE.code.toUpperCase();
+// The state's Watchlist tab shares this state's bills; Your bills shares all of them (a separate list, on purpose).
+const shareWords = () => (STATE.code === "us" ? "Share your bills in Congress" : `Share your ${stateName()} bills`);
+// The person's own watchlist is rows (watchrows.js, as on /your-bills/), each opening its card in place; a list someone
+// shared (SHARED) and a list page's frame (EMBED) show cards.
+const OWN_ROWS = () => !SHARED && !EMBED;
 function renderWatchView() {
   if (!EMBED) updateWatchTab();
   if ($("view-watch").hidden) return;
   if (EMBED && !EMBED.list && !EMBED.mine && !EMBED.num) { $("wlList").innerHTML = ""; return; }
+  // A frame of /your-bills/ showing one of this browser's own starred bills ({mine}: SHARED is null): that bill, the
+  // person's own card.
+  const one = ONE_CARD() && !SHARED;
+  const pick = () => (one ? BILLS.filter((b) => b.nums.some((n) => baseNum(n) === EMBED.num)) : SHARED ? BILLS.filter(sharedStance)
+    : BILLS.filter((b) => isWatched(b) || W_GONE.has(b.idx)));
   // (Its bills' shards; the statistics, for deadlines and odds; the other sessions' numbers, for bills from last
   // session's watchlist that are back.)
-  if (later("watch", "watch", renderWatchView, "wlList", () => ({ bills: SHARED ? BILLS.filter(sharedStance) : BILLS.filter(isWatched),
-    parts: ["stats", ...(carryWanted() ? ["hist"] : [])] }))) return;
-  const list = SHARED ? BILLS.filter((b) => sharedStance(b)) : BILLS.filter(isWatched);
-  const stanceOf = (b) => (SHARED ? sharedStance(b) : watchStance(b)) || "support";
+  if (later("watch", "watch", renderWatchView, "wlList", () => ({ bills: pick(), parts: ["stats", ...(carryWanted() ? ["hist"] : [])] }))) return;
+  const list = pick(), here = list.filter(isWatched);
+  const stanceOf = (b) => (SHARED ? sharedStance(b) : watchStance(b) || (one ? EMBED.stance : null)) || "support";
   // (Who decides can depend on every bill's history, meetings(): then it's drawn again once the rows part is in.)
   MISSING.clear();
-  const items = watchItems(list, stanceOf, SHARED ? sharedRank : myRank);
+  const items = watchItems(list, stanceOf, SHARED ? sharedRank : undefined);
   if (MISSING.size) {
     STALE.watch.set("watch", renderWatchView);
     if (!$("wlList").innerHTML.trim()) $("wlList").innerHTML = LOADING_HTML;
@@ -4837,20 +4876,22 @@ function renderWatchView() {
   } else {
     // One line: the count, and Share on the right; the share options open below it (with an empty list too, to connect
     // another device's list). Sharing is on the public site only.
-    const mine = myPublished(), canShare = !!(ROOT && LISTS_API), logged = list.reduce((s, b) => s + logOf(b).length, 0);
+    // "Your bills in New York · All your bills (12 in 4 states) ›": the same bills as on Your bills, this state's only.
+    const mine = myPublished(), canShare = !!(ROOT && LISTS_API), logged = here.reduce((s, b) => s + logOf(b).length, 0);
+    const all = allStars(), allLink = ROOT ? `<span class="wlsep">·</span><a href="${esc(siteTop())}your-bills/">All your bills${all.n ? ` (${num(all.n)}${all.places > 1 ? ` in ${num(all.places)} ${all.us ? "places" : "states"}` : ""})` : ""} ›</a>` : "";
     W_SHARE_OPEN ??= !!mine;
-    card.innerHTML = `<div class="wlhead"><h2>My watchlist</h2>
-      <span class="muted">${list.length ? `${num(list.length)} bill${list.length === 1 ? "" : "s"}` : "No bills yet"}${logged ? ` · ${num(logged)} action${logged === 1 ? "" : "s"} logged` : ""} · ${mine ? "shared" : "saved in this browser only"}${back}</span>
-      ${canShare ? `<button class="act-btn${W_SHARE_OPEN || mine ? "" : " primary"}" type="button" data-wl="share" aria-expanded="${W_SHARE_OPEN}">${W_SHARE_OPEN ? "Hide sharing" : mine ? "Sharing" : "Share this list"}</button>` : ""}</div>
+    card.innerHTML = `<div class="wlhead"><h2 class="wlline">Your bills in ${esc(stateName())}${allLink}</h2>
+      <span class="muted">${here.length ? `${num(here.length)} bill${here.length === 1 ? "" : "s"}` : "No bills yet"}${logged ? ` · ${num(logged)} action${logged === 1 ? "" : "s"} logged` : ""} · ${mine ? "shared" : "saved in this browser only"}${back}</span>
+      ${canShare ? `<button class="act-btn${W_SHARE_OPEN || mine ? "" : " primary"}" type="button" data-wl="share" aria-expanded="${W_SHARE_OPEN}">${W_SHARE_OPEN ? "Hide sharing" : mine ? "Sharing" : shareWords()}</button>` : ""}</div>
       ${list.length ? "" : `<p>Click ☆ next to any bill to add it.</p>`}${carryBox()}
-      ${canShare ? `<div class="sharebox"${W_SHARE_OPEN ? "" : " hidden"}>${shareBox(list.length)}</div>` : ""}
+      ${canShare ? `<div class="sharebox"${W_SHARE_OPEN ? "" : " hidden"}>${shareBox(here.length)}</div>` : ""}
       ${followedHere()}${otherSessionsLine()}`;
     if (mine) schedulePub(PUB_TIMER ? 60e3 : 2e3);
   }
 
   if (!SHARED) showPubViews();
-  const { active, idle, decided } = items;
-  $("wlActions")._items = active;
+  const { active, idle, decided } = items, every = [...active, ...idle, ...decided];
+  $("wlActions")._items = every;
 
   // Grouped by deadline; each group offers one email per person covering several of its bills.
   const groups = Object.keys(W_GROUPS).map((g) => [g, active.filter((x) => deadlineOf(x.b).g === g)]).filter(([, xs]) => xs.length);
@@ -4864,8 +4905,44 @@ function renderWatchView() {
     }).join("");
   };
   $("wlActions").innerHTML = ""; $("wlActions").hidden = true;
-
-  const cardFor = (x) => {
+  $("wlList")._multi = multiAll;
+  if (ONE_CARD()) return embedCard(every[0], (x) => watchCard(x, true));
+  if (OWN_ROWS()) {
+    // The rows (watchrows.js): every group with its note, each row opening its card below it (toggleRow()); one email for
+    // several of a group's bills that need the same person.
+    const byIdx = new Map(every.map((x) => [x.b.idx, x])), rows = list.map((b) => watchRow(b, byIdx.get(b.idx))), rowMap = new Map();
+    $("wlList").innerHTML = !list.length ? "" : `${newsBox(rows.filter((r) => isWatched(r.b)))}<div class="wrows" id="wlRows"></div>${actionRecord(here)}`;
+    if (!list.length) { $("wlList")._rows = rowMap; return; }
+    WatchRows.draw($("wlRows"), rows, { tab: "w", oneState: true, stName: stateName,
+      isNew: (r) => isWatched(r.b) && hasNews(r.b),
+      newText: (r) => { const [d, t] = newActions(r.b)[0]; return `${newsWhat(t, d, r.b)} (${fmtDate(d)})`; },
+      buttons: (r) => watchButton(r.b, false),
+      card: (r) => (W_OPEN.has(billKey(r.b)) && r.w ? watchCard(r.w, true) : null),
+      onRow: (id, r) => rowMap.set(id, r),
+      groupExtra: (g, xs) => (g === "done" || g === "idle" ? "" : multiFor(g, xs.map((r) => r.w).filter((x) => x?.key))) });
+    $("wlList")._rows = rowMap;
+    for (const d of $("wlRows").querySelectorAll(".wr-emb .morebill")) fillDetail(d);
+    return;
+  }
+  const cardFor = (x) => watchCard(x, false);
+  $("wlList").innerHTML = !list.length ? "" : `
+    ${list.length > 1 ? `<p class="wfold"><span><button type="button" class="linkish" data-wfold="open">Open all</button> · <button type="button" class="linkish" data-wfold="close">Close all</button></span></p>` : ""}
+    ${active.length ? `<section class="wsec needs"><h2>Needs action <span class="n">${num(active.length)}</span></h2>
+      <p class="wsub">Something you can do now on each of these, soonest deadline first.</p>
+      ${groups.map(([g, xs], i) => `<details class="wgroup" data-wgroup="${g}"${W_GROUP_OPEN.get(g) ?? i === 0 ? " open" : ""}>
+        <summary><span class="wgtitle">${W_GROUPS[g][0]} <span class="n">${num(xs.length)}</span></span><span class="wgsub">${esc(W_GROUPS[g][1]())}</span></summary>
+        ${multiFor(g, xs)}<div class="wcards needs">${xs.map(cardFor).join("")}</div></details>`).join("")}</section>` : ""}
+    ${idle.length ? `<details class="wsec idle" data-wsec="idle"${W_SEC_OPEN().idle === false ? "" : " open"}><summary><h2>Can't move right now <span class="n">${num(idle.length)}</span></h2>
+      <p class="wsub">Nothing to ask for until they move again. They'll be marked “New” when something changes.</p></summary><div class="wcards idle">${idle.map(cardFor).join("")}</div></details>` : ""}
+    ${decided.length ? `<details class="wsec idle decided" data-wsec="decided"${W_SEC_OPEN().decided === false ? "" : " open"}><summary><h2>Decided <span class="n">${num(decided.length)}</span></h2>
+      <p class="wsub">Signed into law or vetoed, most recent first.</p></summary><div class="wcards idle">${decided.map(cardFor).join("")}</div></details>` : ""}
+    ${SHARED ? "" : actionRecord(list)}`;
+  if (EMBED) embedSize();
+}
+// A bill's card: what it does, where it stands, the one thing to ask now and whom, your side and the actions you've logged,
+// and "More about this bill". bodyOnly: without its heading (number, star, status, title), for a card opened below its
+// row (the Watchlist tab's, or /your-bills/' in a frame: ONE_CARD()).
+function watchCard(x, bodyOnly) {
     const { b } = x;
     const summary = b.summary && b.summary !== b.title ? `<p class="sum">${esc(b.summary.length > 260 ? b.summary.slice(0, 257) + "…" : b.summary)}</p>` : "";
     // Each person who decides gets the same block (two chairs, or a leader and chairs).
@@ -4879,12 +4956,16 @@ function renderWatchView() {
         ${x.reps.length ? `<p class="also">Also: ${x.reps.map((r) => `${esc(titleOf(r))}, ${esc(r.ask)}${r.info?.email ? ` (${emailHtml(r.info.email, r.role)})` : ""}`).join("; ")}.</p>` : ""}
         ${repsLine()}
       </div>` : "";
-    const open = W_OPEN.has(billKey(b)), logged = SHARED ? 0 : logOf(b).length;
+    const open = bodyOnly || W_OPEN.has(billKey(b)), logged = SHARED ? 0 : logOf(b).length;
     const dl = x.key ? deadlineOf(b) : {};
     const due = WR.dueText(b, dl, fmtDate);
-    return `<article class="wcard${open ? " open" : ""}" data-idx="${b.idx}">
-      ${ONE_CARD() ? "" : `<div class="whead" data-wtoggle="${b.idx}">
-        <div class="wtop"><div class="nums">${!SHARED && list.length > 1 ? `<button class="whandle" type="button" data-whandle aria-label="Move ${esc(b.nums[0])} up or down" title="Drag to change the order (or use the arrow keys)">⠿</button>` : ""}<span class="chev" aria-hidden="true"></span>${esc(b.nums.join(" / "))}${SHARED
+    // Opened below its row, the card has no heading: the side you take goes at its top, with who sponsors it.
+    const e = !SHARED && watchEntry(b);
+    const top = bodyOnly ? `${showStance(b, e) ? `<p class="wside">Your side: ${sideButtons(b, e.stance, `data-stance="${b.idx}"`)}</p>` : ""}
+      ${b.sponsors.length ? `<p class="wspons">${b.sponsors.map(esc).join(" / ")}</p>` : ""}` : "";
+    return `<article class="wcard${open ? " open" : ""}${bodyOnly && !ONE_CARD() ? " inplace" : ""}" data-idx="${b.idx}">
+      ${bodyOnly ? "" : `<div class="whead" data-wtoggle="${b.idx}">
+        <div class="wtop"><div class="nums"><span class="chev" aria-hidden="true"></span>${esc(b.nums.join(" / "))}${SHARED
           ? `${watchButton(b, false)}${EMBED?.own
             ? `${sideButtons(b, x.stance, `data-lstance="${b.idx}"`)}<button class="lremove" type="button" data-lremove="${b.idx}" aria-label="Remove ${esc(b.nums[0])} from this list" title="Remove from this list (not from your watchlist)">Remove</button>`
             : `<span class="stance fixed ${x.stance}" title="The position of whoever shared this list">${x.stance === "oppose" ? "Oppose" : "Support"}</span>`}`
@@ -4896,6 +4977,7 @@ function renderWatchView() {
         ${logged ? `<p class="wlogged">${num(logged)} action${logged === 1 ? "" : "s"} logged</p>` : ""}
       </div>`}
       <div class="wbody">
+      ${top}
       <p class="wwhen">${whenLine(b)}</p>
       ${twinLine(b)}
       ${partyTag(b) ? `<div class="tags">${partyTag(b)}</div>` : ""}
@@ -4906,26 +4988,9 @@ function renderWatchView() {
       ${!x.key ? reintroAsk(b, x.stance) : ""}
       ${!SHARED && myPublished()?.group ? `<details class="noteedit"${pubText().notes[baseNum(b.nums[0])] ? " open" : ""}><summary>Add a note</summary><textarea data-pubnote="${esc(baseNum(b.nums[0]))}" rows="2" maxlength="1000" placeholder="Why this bill matters or what to say about it">${esc(pubText().notes[baseNum(b.nums[0])] || "")}</textarea></details>` : ""}
       ${SHARED ? "" : logBlock(x)}
-      <details class="bill morebill" data-idx="${b.idx}"${ONE_CARD() ? " open" : ""}><summary>More about this bill</summary><div class="detail"></div></details>
+      <details class="bill morebill" data-idx="${b.idx}"${bodyOnly ? " open" : ""}><summary>More about this bill</summary><div class="detail"></div></details>
       </div>
     </article>`;
-  };
-  if (ONE_CARD()) return embedCard([...active, ...idle, ...decided][0], cardFor);
-  $("wlList").innerHTML = !list.length ? "" : `
-    ${SHARED ? "" : newsBox(list)}
-    ${list.length > 1 ? `<p class="wfold">${SHARED ? "" : `<span class="muted">Drag ⠿ to put your bills in priority order.</span>`}<span><button type="button" class="linkish" data-wfold="open">Open all</button> · <button type="button" class="linkish" data-wfold="close">Close all</button></span></p>` : ""}
-    ${active.length ? `<section class="wsec needs"><h2>Needs action <span class="n">${num(active.length)}</span></h2>
-      <p class="wsub">Something you can do now on each of these, soonest deadline first.</p>
-      ${groups.map(([g, xs], i) => `<details class="wgroup" data-wgroup="${g}"${W_GROUP_OPEN.get(g) ?? i === 0 ? " open" : ""}>
-        <summary><span class="wgtitle">${W_GROUPS[g][0]} <span class="n">${num(xs.length)}</span></span><span class="wgsub">${esc(W_GROUPS[g][1]())}</span></summary>
-        ${multiFor(g, xs)}<div class="wcards needs">${xs.map(cardFor).join("")}</div></details>`).join("")}</section>` : ""}
-    ${idle.length ? `<details class="wsec idle" data-wsec="idle"${W_SEC_OPEN().idle === false ? "" : " open"}><summary><h2>Can't move right now <span class="n">${num(idle.length)}</span></h2>
-      <p class="wsub">Nothing to ask for until they move again. They'll be marked “New” when something changes.</p></summary><div class="wcards idle">${idle.map(cardFor).join("")}</div></details>` : ""}
-    ${decided.length ? `<details class="wsec idle decided" data-wsec="decided"${W_SEC_OPEN().decided === false ? "" : " open"}><summary><h2>Decided <span class="n">${num(decided.length)}</span></h2>
-      <p class="wsub">Signed into law or vetoed, most recent first.</p></summary><div class="wcards idle">${decided.map(cardFor).join("")}</div></details>` : ""}
-    ${SHARED ? "" : actionRecord(list)}`;
-  $("wlList")._multi = multiAll;
-  if (EMBED) embedSize();
 }
 // A list made in this browser (named.js's lists), shown in a list page's frame: switches its side on a bill, or takes the
 // bill off it (not off the watchlist). The list is kept in this browser and saved to the lists Worker by named.js; the list
@@ -4968,6 +5033,8 @@ function embedShow(code, extra) {
   if (!DATA) { EMBED_ASK = [code, extra]; return; }
   if (e.session !== DATA.session) return;
   EMBED = e; SHARED = e.shared;
+  // One of this browser's own starred bills, on /your-bills/ ({mine}): the person's own card, with their side and log.
+  if (e.num && extra?.mine) SHARED = null;
   document.documentElement.classList.toggle("embedlist", !!(e.list || e.mine));
   SHARED_META = extra?.notes && Object.keys(extra.notes).length ? { title: "", group: extra.group || "the list's maker", notes: extra.notes, updated: new Date().toISOString() } : null;
   if (e.list && typeof extra?.own === "string") e.own = extra.own;
@@ -5337,6 +5404,8 @@ function wire() {
     const btn = e.target.closest(".watchbtn"); if (!btn) return;
     e.preventDefault(); e.stopPropagation();
     const b = BILLS[+btn.dataset.watch]; toggleWatch(b);
+    // (A bill unstarred on the Watchlist tab stays in view there, to star it again, until the page is loaded again.)
+    if (btn.closest("#wlList .wrows")) isWatched(b) ? W_GONE.delete(b.idx) : W_GONE.add(b.idx);
     refreshWatchButtons(b);
   });
   for (const id of ["list", "openNow", "wlList"]) $(id).addEventListener("click", async (e) => {
@@ -5454,37 +5523,26 @@ function wire() {
     if (open && !SHARED) markSeen(BILLS[+head.dataset.wtoggle]);
     head.querySelector("[data-wtitle]")?.setAttribute("aria-expanded", open);
   };
-  const saveDomOrder = () => {
-    const shown = [...$("wlList").querySelectorAll(".wcard")].map((c) => BILLS[+c.dataset.idx]);
-    const shownKeys = new Set(shown.flatMap(keysOf));
-    ORDER = [...shown.map(billKey), ...ORDER.filter((k) => !shownKeys.has(k))];
-    saveOrder();
+  // A row of the Watchlist tab (watchrows.js) opens its bill's card below it, drawn here (watchCard()), and marks it seen.
+  const toggleRow = (btn, open) => {
+    const r = $("wlList")._rows?.get(btn.dataset.open), box = $(`emb-${btn.dataset.open}`);
+    if (!r || !box) return;
+    open ??= btn.getAttribute("aria-expanded") !== "true";
+    btn.setAttribute("aria-expanded", String(open));
+    if (!open) { W_OPEN.delete(billKey(r.b)); box.hidden = true; box.innerHTML = ""; return; }
+    W_OPEN.add(billKey(r.b));
+    box.innerHTML = watchCard(r.w, true);
+    box.hidden = false;
+    const d = box.querySelector(".morebill");
+    if (d) fillDetail(d);
+    btn.querySelector(".wr-new")?.remove();
+    $("wlList").querySelector(`[data-wnews="${CSS.escape(r.key)}"]`)?.classList.add("read");
+    markSeen(r.b);
+    countUse("watchlist/opened a bill");
   };
-  $("wlList").addEventListener("pointerdown", (e) => {
-    const h = e.target.closest("[data-whandle]"); if (!h) return;
-    e.preventDefault();
-    const card = h.closest(".wcard"), group = card.parentElement;
-    h.setPointerCapture(e.pointerId);
-    card.classList.add("dragging");
-    const move = (ev) => {
-      const y = ev.clientY;
-      const next = [...group.children].find((c) => c !== card && c.getBoundingClientRect().top + c.offsetHeight / 2 > y);
-      if (next !== card.nextElementSibling) group.insertBefore(card, next || null);
-      if (y < 60) scrollBy(0, -12); else if (y > innerHeight - 60) scrollBy(0, 12);
-    };
-    const end = () => { card.classList.remove("dragging"); h.removeEventListener("pointermove", move); h.removeEventListener("pointerup", end); h.removeEventListener("pointercancel", end); saveDomOrder(); };
-    h.addEventListener("pointermove", move); h.addEventListener("pointerup", end); h.addEventListener("pointercancel", end);
-  });
-  $("wlList").addEventListener("keydown", (e) => {
-    const h = e.target.closest("[data-whandle]");
-    if (h && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
-      e.preventDefault();
-      const card = h.closest(".wcard"), sib = e.key === "ArrowUp" ? card.previousElementSibling : card.nextElementSibling;
-      if (sib) { e.key === "ArrowUp" ? sib.before(card) : sib.after(card); h.focus(); saveDomOrder(); }
-      return;
-    }
-  });
   $("wlList").addEventListener("click", (e) => {
+    const row = e.target.closest("button.rowbtn[data-open]");
+    if (row && $("wlList")._rows) { toggleRow(row); return; }
     // A list made in this browser, inside its page's frame (EMBED.own): its side on a bill, or the bill off the list.
     const ls = e.target.closest("[data-lstance], [data-lremove]");
     if (ls) {
@@ -5494,15 +5552,14 @@ function wire() {
       embedListEdit(BILLS[+(ls.dataset.lstance ?? ls.dataset.lremove)], ls.dataset.lremove != null); return;
     }
     if (e.target.closest("[data-wseenall]")) { for (const b of BILLS) if (isWatched(b) && hasNews(b)) markSeen(b); renderWatchView(); return; }
+    // A bill in "New since you last looked": its row opens, and the page goes to it.
     const nw = e.target.closest("[data-wnews]");
     if (nw) {
-      const card = $("wlList").querySelector(`.wcard[data-idx="${nw.dataset.wnews}"]`);
-      if (!card) return;
-      const grp = card.closest(".wgroup, details.wsec"); if (grp) grp.open = true;
-      const head = card.querySelector("[data-wtoggle]");
-      if (!card.classList.contains("open")) toggleCard(head); else markSeen(BILLS[+nw.dataset.wnews]);
+      const btn = $("wlList").querySelector(`button.rowbtn[data-open="${CSS.escape(WatchRows.idOf({ tab: "w" }, { key: nw.dataset.wnews }))}"]`);
+      if (!btn) return;
+      if (btn.getAttribute("aria-expanded") !== "true") toggleRow(btn, true);
       nw.classList.add("read");
-      card.scrollIntoView({ behavior: "smooth", block: "start" });
+      btn.closest(".wr-row").scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     const fold = e.target.closest("[data-wfold]");
@@ -5539,19 +5596,17 @@ function wire() {
     if (btn.dataset.wl === "share") { W_SHARE_OPEN = !W_SHARE_OPEN; renderWatchView(); return; }
     if (btn.dataset.wl === "import") {
       countUse("shared-list-added");
-      for (const b of BILLS.filter(sharedStance).sort((x, y) => sharedRank(x) - sharedRank(y))) {
+      for (const b of BILLS.filter(sharedStance)) {
         const st = sharedStance(b);
         if (!isWatched(b)) WATCH.set(billKey(b), { seen: b.last || "", stance: st });
-        if (!keysOf(b).some((k) => ORDER.includes(k))) ORDER.push(billKey(b));
       }
-      saveOrder();
       saveWatch(); SHARED = null; SHARED_META = null; clearHash(location.pathname); render();
     } else if (btn.dataset.wl === "carry" || btn.dataset.wl === "nocarry") {
       const c = carryCandidates();
       if (btn.dataset.wl === "carry") {
         countUse("carried-forward");
-        for (const x of c) { WATCH.set(billKey(x.b), { seen: x.b.last || "", stance: x.stance }); ORDER.push(billKey(x.b)); }
-        saveWatch(); saveOrder();
+        for (const x of c) WATCH.set(billKey(x.b), { seen: x.b.last || "", stance: x.stance });
+        saveWatch();
       }
       markCarried(c.map((x) => x.was)); render();
     } else if (btn.dataset.wl === "mine") {
@@ -6512,7 +6567,7 @@ async function unpack(b64) {
     BASE = el.dataset.base || "";
     ROOT = el.dataset.root || "";
     // The public site's pages link back to the front page, the folder above the state's.
-    if (ROOT) { try { $("siteHome").href = new URL("../", ROOT).href; $("siteAboutTop").href = new URL("../about/", ROOT).href; $("siteNav").hidden = false; } catch (e) {} }
+    if (ROOT) { try { $("siteHome").href = new URL("../", ROOT).href; $("siteAboutTop").href = new URL("../about/", ROOT).href; $("siteYours").href = new URL("../your-bills/", ROOT).href; $("siteNav").hidden = false; } catch (e) {} }
     // And to the About page and the contribution link (site_meta.SUPPORT, in the page's head).
     if (ROOT) {
       try { $("siteAbout").href = new URL("../about/", ROOT).href; } catch (e) {}

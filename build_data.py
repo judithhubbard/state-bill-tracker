@@ -111,9 +111,11 @@ def github_page(html, meta=""):
     from urllib.parse import urljoin
     # The links to the front page and About show from the start (the page would set them once loaded: they mustn't
     # push the title down).
-    nav = '<nav class="home-link" id="siteNav" aria-label="Site" hidden><a id="siteHome" href="../">&larr; State Bill Tracker</a><a id="siteAboutTop" href="../about/">About</a></nav>'
+    nav = ('<nav class="home-link" id="siteNav" aria-label="Site" hidden><a id="siteHome" href="../">&larr; State Bill Tracker</a>'
+           '<a id="siteYours" href="../your-bills/">Your bills</a><a id="siteAboutTop" href="../about/">About</a></nav>')
     assert nav in html, "tracker.html's site links changed: update github_page()"
     html = html.replace(nav, f'<nav class="home-link" id="siteNav" aria-label="Site"><a id="siteHome" href="{html_escape(urljoin(P.SITE_URL, "../"))}">&larr; State Bill Tracker</a>'
+                        f'<a id="siteYours" href="{html_escape(urljoin(P.SITE_URL, "../your-bills/"))}">Your bills</a>'
                         f'<a id="siteAboutTop" href="{html_escape(urljoin(P.SITE_URL, "../about/"))}">About</a></nav>', 1)
     # The named lists' button and menu (lists_pages/named.js), on the public site only: tracker.html's listButton().
     named = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lists_pages", "named.js")).read()
@@ -1955,6 +1957,10 @@ def main():
         state_js = state_profile_js(P)
         # The watchlist's deadline rules (lists_pages/watchrules.js, shared with /your-bills/), just before it.
         rules_js = open(os.path.join(HERE, "lists_pages", "watchrules.js")).read()
+        # And the watchlist's rows and groups (lists_pages/watchrows.js and rows.css, shared with /your-bills/).
+        rules_js += "\n" + open(os.path.join(HERE, "lists_pages", "watchrows.js")).read()
+        assert "/*rows.css*/" in template, "tracker.html's styles lost the /*rows.css*/ marker"
+        template = template.replace("/*rows.css*/", open(os.path.join(HERE, "lists_pages", "rows.css")).read(), 1)
         template = template.replace('<script id="state-profile"></script>', f'<script id="watch-rules">\n{rules_js}</script>\n<script id="state-profile">\n{state_js}</script>', 1)
         if session != current:
             template = template.replace(f"<title>{P.SITE_NAME}</title>",

@@ -103,15 +103,9 @@ async function statusOf(st, session, num) {
   return { ...out, bills: q.bills[lead] ? { [lead]: q.bills[lead] } : {} };
 }
 const fmtDay = (d) => (d ? new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
-// (up: a session not begun, whose bills are prefiled, as their state's page says.)
-function whereText(st, stage, comm, kind, live, up) {
-  if (stage === 0 && up) return "Prefiled";
-  if (stage === 0) return `${live ? "In" : "Died in"} committee${comm ? ` (${comm})` : ""}`;
-  if (stage === 3 && kind === "const") return st === "us" ? "Passed both houses; goes to the states" : "Constitutional amendment passed both houses";  // (a first passage in some states: the voters aren't always next)
-  if (!live && stage < 3) return ["", "Died on the floor", "Passed one house; died in the other"][stage];
-  return ["In committee", "On the floor", "Passed one house", "Passed both houses", st === "us" ? "On the President's desk" : "On the governor's desk",
-    "Became law", "Vetoed"][stage] || "";
-}
+// Where a bill is, in a few words: watchrows.js's (each page that has common.js has it too; up: a session not begun, whose
+// bills are prefiled, as their state's page says).
+const whereText = (st, stage, comm, kind, live, up) => WatchRows.where(st, stage, comm, kind, live, up);
 // A bill's latest step as the state wrote it, in plainer words (home.html's plainAct()).
 const titleCase = (t) => t.toLowerCase().replace(/\b([a-z])([a-z]*)/g, (w, a, b, i) => (i && /^(and|of|the|on|for|to|in|a)$/.test(w) ? w : a.toUpperCase() + b));
 function plainAct(a) {

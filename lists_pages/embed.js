@@ -165,7 +165,8 @@ const Opener = (() => {
   function tell(F, msg) { if (F.ready) F.f.contentWindow?.postMessage(msg, location.origin); else F.q.push(msg); }
   const btnOf = (id) => document.querySelector(`button.rowbtn[data-open="${CSS.escape(id)}"]`);
   const boxOf = (id) => document.getElementById(`emb-${id}`);
-  const ask = (x) => ({ sbtShow: `${x.session}.${x.stance === "oppose" ? "-" : ""}${baseNum(x.full)}` });
+  // (mine: one of this browser's own stars, shown as the person's own card, with their side and their action log.)
+  const ask = (x) => ({ sbtShow: `${x.session}.${x.stance === "oppose" ? "-" : ""}${baseNum(x.full)}`, ...(x.mine ? { mine: true } : {}) });
   function park(F) {
     F.row = null;
     F.f.classList.remove("over");
@@ -200,13 +201,17 @@ const Opener = (() => {
     }
     box.querySelector(".eload").hidden = false;
     const slot = box.querySelector(".slot");
-    F.row = id; F.bill = baseNum(x.full); F.h = 0;
+    // The same bill open again after the rows were drawn again (parkAll(), reopen()): shown as it was, not loaded again.
+    const same = F.keep && F.keep.id === id && F.keep.bill === baseNum(x.full) && F.keep.shown && F.keep.h;
+    F.row = id; F.bill = baseNum(x.full); F.h = same ? F.keep.h : 0;
+    F.keep = null;
     F.f.title = `${x.name}: what to do, and more about it`;
-    F.f.classList.add("stale");
-    F.f.style.height = "0px"; slot.style.height = "";
+    F.f.classList.toggle("stale", !same);
+    F.f.style.height = `${F.h}px`; slot.style.height = "";
     if (MOVES) slot.moveBefore(F.f, null);
     else { slot.setAttribute("aria-owns", F.f.id); F.f.classList.add("over"); }
-    tell(F, ask(x));
+    if (same) box.querySelector(".eload").hidden = true;
+    else tell(F, ask(x));
     place();
   }
   const toggle = (id) => (btnOf(id)?.getAttribute("aria-expanded") === "true" ? close(id) : open(id));
@@ -261,7 +266,7 @@ const Opener = (() => {
   const row = (id, x) => ROWS.set(id, x);
   function parkAll() {
     const ids = [...OPEN];
-    for (const F of Object.values(FRAMES)) if (F.row != null) park(F);
+    for (const F of Object.values(FRAMES)) if (F.row != null) { F.keep = { id: F.row, bill: F.bill, h: F.h, shown: !F.f.classList.contains("stale") }; park(F); }
     OPEN.clear();
     return ids;
   }

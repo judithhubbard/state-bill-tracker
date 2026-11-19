@@ -2,6 +2,7 @@
 // this file into every page, just before the main script; tracker.html reads it as STATE.
 const STATE = {
   code: "ny",
+  name: "New York",
   // The governor's office asks for ("requests") bills that passed both houses, in batches, through December.
   requestsBills: true,
   // The public site, and the Worker that keeps published watchlists.

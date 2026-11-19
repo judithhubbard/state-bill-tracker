@@ -27,8 +27,10 @@ setTimeout(()=>{
   // bill panels
   sweep('bill panel', ()=>{const d=document.querySelector('#list .bill');return d;}, ()=>{tab('bills');const d=document.querySelector('#list .bill'); if(d&&!d.open){d.querySelector('summary').click();}});
   // star three bills then watchlist
-  tab('bills'); [...document.querySelectorAll('#list .bill')].slice(0,3).forEach(d=>{const s=d.querySelector('[data-watch], .watch, button[aria-label*=atch]'); s&&s.click();});
+  tab('bills'); [...document.querySelectorAll('#list .bill')].slice(0,3).forEach(d=>{const s=(d.parentElement||d).querySelector('[data-watch], .watch, button[aria-label*=atch]'); s&&s.click();});
   sweep('watchlist', ()=>document.getElementById('view-watch'), ()=>tab('watch'));
+  // a watchlist row's card, opened below it
+  sweep('watchlist card', ()=>document.querySelector('#wlList .wr-emb:not([hidden])'), ()=>{tab('watch'); const b=document.querySelector('#wlList button.rowbtn[data-open]'); if(b&&b.getAttribute('aria-expanded')!=='true') b.click();});
   sweep('where you live', ()=>document.getElementById('whereBox'), ()=>{tab('bills'); const w=document.getElementById('whereBox'); if(w) w.open=true;});
   sweep('how', ()=>document.getElementById('view-how'), ()=>tab('how'));
   sweep('filters', ()=>document.getElementById('side')||document.getElementById('filtered'), ()=>tab('bills'));

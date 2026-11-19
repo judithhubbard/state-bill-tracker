@@ -2,6 +2,7 @@
 // this file into every page, just before the main script; tracker.html reads it as STATE.
 const STATE = {
   code: "nj",
+  name: "New Jersey",
   // The public site, and the Worker that keeps published watchlists (none yet for New Jersey).
   publicSite: "https://statebilltracker.org/nj/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
