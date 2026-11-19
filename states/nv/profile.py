@@ -53,6 +53,12 @@ DELEGATION_NAMES = set()
 # chosen when it organizes (the members-elect's list still shows 2025's posts): update this then.
 LEADERS = {"S": ("Nicole J. Cannizzaro", "Senate Majority Leader", "her"),
            "A": ("Steve Yeager", "Speaker of the Assembly", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Edgar Flores", "Senate Majority Leader", "them", "2027-02-01"),
+    "A": ("Elaine Marzola", "Speaker of the Assembly", "them", "2027-02-01"),
+}
 
 
 def delegation(session):
@@ -116,7 +122,7 @@ def narrow_kind(title):
 # Governors and the day each took office (the first Monday of January after the election). Joe Lombardo (R) took office
 # January 2, 2023, and ran again in November 2026: if a new governor takes office January 4, 2027, add them here and in
 # states/legislatures.json.
-GOVERNORS = [("Sisolak", "2019-01-07"), ("Lombardo", "2023-01-02")]
+GOVERNORS = [("Sisolak", "2019-01-07"), ("Lombardo", "2023-01-02"), ("Ford", "2027-01-04")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

@@ -126,7 +126,7 @@ def narrow_kind(title):
 # Governors and the day each took office. Dan McKee became governor when Gina Raimondo resigned (March 2, 2021) and was
 # elected in 2022; the governor elected in November 2026 takes office in January 2027: add them here (and in
 # states/legislatures.json) if it's someone else.
-GOVERNORS = [("Raimondo", "2015-01-06"), ("McKee", "2021-03-02")]
+GOVERNORS = [("Raimondo", "2015-01-06"), ("McKee", "2021-03-02"), ("Foulkes", "2027-01-05")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

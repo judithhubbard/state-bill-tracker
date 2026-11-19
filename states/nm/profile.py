@@ -99,7 +99,7 @@ def narrow_kind(title):
 
 # Governors and the day each took office. Michelle Lujan Grisham's second term ends January 1, 2027 (term-limited): add the
 # next governor here, and in states/legislatures.json.
-GOVERNORS = [("Martinez", "2011-01-01"), ("Lujan Grisham", "2019-01-01")]
+GOVERNORS = [("Martinez", "2011-01-01"), ("Lujan Grisham", "2019-01-01"), ("Haaland", "2027-01-01")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

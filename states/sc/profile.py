@@ -121,7 +121,7 @@ def narrow_kind(title, delegation=False):
 # Governors and the day each took office. Henry McMaster (R) took over when Nikki Haley resigned (January 24, 2017) and
 # was elected in 2018 and 2022; he is term-limited. The governor elected in November 2026 takes office in January 2027:
 # add them here and in states/legislatures.json.
-GOVERNORS = [("Haley", "2011-01-12"), ("McMaster", "2017-01-24")]
+GOVERNORS = [("Haley", "2011-01-12"), ("McMaster", "2017-01-24"), ("Wilson", "2027-01-13")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

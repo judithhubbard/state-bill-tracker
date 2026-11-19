@@ -38,6 +38,11 @@ DELEGATION_NAMES = set()
 # Lieutenant Governor presides but isn't a senator) with the Majority Leader.
 LEADERS = {"S": ("Kim Ward", "President Pro Tempore of the Senate", "her"),
            "H": ("Joanna McClinton", "Speaker of the House", "her")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Jay Costa", "President Pro Tempore of the Senate", "them", "2027-01-05"),
+}
 
 
 def delegation(session):

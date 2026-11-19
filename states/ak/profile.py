@@ -49,6 +49,12 @@ DELEGATION_NAMES = set()
 # notes, 2026-11-08; the 35th Legislature chooses its own in January 2027.
 LEADERS = {"S": ("Gary Stevens", "President of the Senate", "him"),
            "H": ("Bryce Edgmon", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Cathy Giessel", "President of the Senate", "them", "2027-01-19"),
+    "H": ("Calvin Schrage", "Speaker of the House", "them", "2027-01-19"),
+}
 
 
 def delegation(session):
@@ -145,7 +151,7 @@ def narrow_kind(title):
 
 # Governors and the day each took office (the first Monday of December after the election). Dunleavy is term-limited: the
 # governor elected in November 2026 takes office December 7, 2026; add them here and in states/legislatures.json.
-GOVERNORS = [("Walker", "2014-12-01"), ("Dunleavy", "2018-12-03")]
+GOVERNORS = [("Walker", "2014-12-01"), ("Dunleavy", "2018-12-03"), ("Kreiss-Tomkins", "2026-12-07")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

@@ -126,7 +126,7 @@ def narrow_kind(title):
 
 # Governors and the day each took office. Kay Ivey is term-limited: a new governor takes office in January 2027 (add
 # them here, and in states/legislatures.json).
-GOVERNORS = [("Bentley", "2011-01-17"), ("Ivey", "2017-04-10")]
+GOVERNORS = [("Bentley", "2011-01-17"), ("Ivey", "2017-04-10"), ("Tuberville", "2027-01-18")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

@@ -111,7 +111,7 @@ def narrow_kind(title):
 
 # Governors and the day each took office. Janet Mills is term-limited: the governor elected in November 2026 takes office
 # in January 2027; add them here (and in states/legislatures.json) then.
-GOVERNORS = [("LePage", "2011-01-05"), ("Mills", "2019-01-02")]
+GOVERNORS = [("LePage", "2011-01-05"), ("Mills", "2019-01-02"), ("Pingree", "2027-01-06")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

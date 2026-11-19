@@ -39,6 +39,12 @@ DELEGATION_NAMES = set()
 # Who decides which bills reach each house's floor: the Speaker and the Senate President.
 LEADERS = {"S": ("Warren Petersen", "President of the Senate", "him"),
            "H": ("Steve Montenegro", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Priya Sundareshan", "President of the Senate", "them", "2027-01-11"),
+    "H": ("Oscar De Los Santos", "Speaker of the House", "them", "2027-01-11"),
+}
 
 
 def delegation(session):

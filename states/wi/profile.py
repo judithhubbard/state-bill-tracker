@@ -40,6 +40,12 @@ DELEGATION_NAMES = set()
 # President presides).
 LEADERS = {"S": ("Devin LeMahieu", "Senate Majority Leader", "him"),
            "A": ("Robin Vos", "Speaker of the Assembly", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Dianne Hesselbein", "Senate Majority Leader", "them", "2027-01-04"),
+    "A": ("Greta Neubauer", "Speaker of the Assembly", "her", "2027-01-04"),
+}
 
 
 def delegation(session):
@@ -89,7 +95,7 @@ def narrow_kind(title):
 
 
 # Governors and the day each took office (the first Monday of January after the election).
-GOVERNORS = [("Walker", "2011-01-03"), ("Evers", "2019-01-07")]
+GOVERNORS = [("Walker", "2011-01-03"), ("Evers", "2019-01-07"), ("Crowley", "2027-01-04")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

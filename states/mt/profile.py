@@ -45,6 +45,11 @@ DELEGATION_NAMES = set()
 # (legislators.json "position"), 2026-11-09; the 70th Legislature chooses its own in January 2027.
 LEADERS = {"S": ("Matt Regier", "President of the Senate", "him"),
            "H": ("Brandon Ler", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "H": ("Katie Zolnikov", "Speaker of the House", "them", "2027-01-04"),
+}
 
 
 def delegation(session):

@@ -41,6 +41,12 @@ DELEGATION_NAMES = set()
 # presides (not a senator), with each house's Rules Committee.
 LEADERS = {"S": ("Burt Jones", "Lieutenant Governor, President of the Senate", "him"),
            "H": ("Jon Burns", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Josh McLaurin", "Lieutenant Governor, President of the Senate", "them", "2027-01-11"),
+    "H": ("Carolyn Hugley", "Speaker of the House", "them", "2027-01-11"),
+}
 
 
 def delegation(session):
@@ -90,7 +96,7 @@ def narrow_kind(title):
 
 
 # Governors and the day each took office (the second Monday of January after the election).
-GOVERNORS = [("Deal", "2011-01-10"), ("Kemp", "2019-01-14")]
+GOVERNORS = [("Deal", "2011-01-10"), ("Kemp", "2019-01-14"), ("Bottoms", "2027-01-11")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

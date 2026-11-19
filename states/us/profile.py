@@ -50,6 +50,11 @@ DELEGATION_NAMES = set()
 # 2027: update these then (and P.OFFICERS for the record).
 LEADERS = {"S": ("John Thune", "Senate Majority Leader", "him"),
            "H": ("Mike Johnson", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "H": ("Hakeem Jeffries", "Speaker of the House", "them", "2027-01-03"),
+}
 # Each Congress's leaders, for the record (contacts.py names the current ones only).
 OFFICERS = {117: {"S": "Chuck Schumer", "H": "Nancy Pelosi"},
             118: {"S": "Chuck Schumer", "H": "Mike Johnson"},  # Kevin McCarthy was Speaker until October 3, 2023

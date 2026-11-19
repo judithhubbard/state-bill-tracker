@@ -46,6 +46,12 @@ DELEGATION_NAMES = set()
 # General Court chooses them in December 2026.
 LEADERS = {"S": ("Sharon Carson", "President of the Senate", "her"),
            "H": ("Sherman Packard", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Rebecca Perkins Kwoka", "President of the Senate", "them", "2026-12-02"),
+    "H": ("Alexis Simpson", "Speaker of the House", "them", "2026-12-02"),
+}
 # Other leadership posts, shown on the members' cards (the data has none). Checked 2026-11-08.
 POSITIONS = {("H", "Jason Osborne"): "Majority Leader", ("S", "Regina Birdsell"): "Majority Leader",
              ("H", "Alexis Simpson"): "Democratic Leader", ("S", "Rebecca Perkins Kwoka"): "Democratic Leader"}

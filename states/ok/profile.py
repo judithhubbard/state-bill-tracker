@@ -176,7 +176,7 @@ def narrow_kind(title):
 
 # Governors and the day each took office. Kevin Stitt is term-limited: the governor elected in November 2026 takes office
 # January 11, 2027 (the second Monday of January); add them here (and in states/legislatures.json) then.
-GOVERNORS = [("Fallin", "2011-01-10"), ("Stitt", "2019-01-14")]
+GOVERNORS = [("Fallin", "2011-01-10"), ("Stitt", "2019-01-14"), ("Mazzei", "2027-01-11")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

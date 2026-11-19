@@ -46,6 +46,11 @@ DELEGATION_NAMES = set()
 # House's Calendar and Rules) schedules the floor votes.
 LEADERS = {"S": ("Randy McNally", "Lieutenant Governor and Speaker of the Senate", "him"),
            "H": ("Cameron Sexton", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Jack Johnson", "Lieutenant Governor and Speaker of the Senate", "them", "2027-01-12"),
+}
 
 
 def delegation(session):
@@ -150,7 +155,7 @@ def narrow_kind(title):
 
 # Governors and the day each took office. Bill Lee is term-limited: the governor elected in November 2026 takes office
 # in January 2027; add them here (and in states/legislatures.json) then.
-GOVERNORS = [("Haslam", "2011-01-15"), ("Lee", "2019-01-19")]
+GOVERNORS = [("Haslam", "2011-01-15"), ("Lee", "2019-01-19"), ("Blackburn", "2027-01-16")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

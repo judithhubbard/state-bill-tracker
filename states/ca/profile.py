@@ -110,7 +110,7 @@ def narrow_kind(title):
 
 # Governors and the day each took office. A new governor takes office on the first Monday after January 1
 # following the election (next: January 4, 2027).
-GOVERNORS = [("Brown", "2011-01-03"), ("Newsom", "2019-01-07")]
+GOVERNORS = [("Brown", "2011-01-03"), ("Newsom", "2019-01-07"), ("Becerra", "2027-01-04")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

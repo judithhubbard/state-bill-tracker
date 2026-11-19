@@ -143,7 +143,7 @@ def narrow_kind(title, kind="", key=""):
 
 # Governors and the day each took office. Ron DeSantis is term-limited; the governor elected in November 2026 takes office
 # January 5, 2027: add them here, and in states/legislatures.json.
-GOVERNORS = [("Scott", "2011-01-04"), ("DeSantis", "2019-01-08")]
+GOVERNORS = [("Scott", "2011-01-04"), ("DeSantis", "2019-01-08"), ("Donalds", "2027-01-05")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

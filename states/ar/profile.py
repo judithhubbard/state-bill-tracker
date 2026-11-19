@@ -54,6 +54,11 @@ DELEGATION_NAMES = set()
 # House 2025", "2025 President Pro Tempore"), 2026-11-08; the 96th General Assembly chooses its own in January 2027.
 LEADERS = {"S": ("Bart Hester", "President Pro Tempore of the Senate", "him"),
            "H": ("Brian S. Evans", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Joshua Bryant", "President Pro Tempore of the Senate", "him", "2027-01-11"),
+}
 # Other leadership posts, shown on the members' cards: the ones the members file names for 2025 (its House majority and
 # minority leaders' lines are years old, so they're left out).
 POSITIONS = {("S", "Blake Johnson"): "Majority Leader", ("S", "Greg Leding"): "Minority Leader"}

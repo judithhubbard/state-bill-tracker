@@ -36,6 +36,11 @@ DELEGATION_NAMES = set()
 # Who decides which bills reach each house's floor: the Speaker and the President of the Senate.
 LEADERS = {"S": ("James Coleman", "President of the Senate", "them"),
            "H": ("Julie McCluskie", "Speaker of the House", "them")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "H": ("Jennifer Bacon", "Speaker of the House", "them", "2027-01-11"),
+}
 
 
 def delegation(session):
@@ -94,7 +99,7 @@ def narrow_kind(title):
 
 
 # Governors and the day each took office (the second Tuesday of January after the election).
-GOVERNORS = [("Hickenlooper", "2011-01-11"), ("Polis", "2019-01-08")]
+GOVERNORS = [("Hickenlooper", "2011-01-11"), ("Polis", "2019-01-08"), ("Weiser", "2027-01-12")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

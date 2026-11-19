@@ -108,7 +108,7 @@ def narrow_kind(title):
 # Governors and the day each took office. Laura Kelly (D) since January 14, 2019; she is term-limited. The governor
 # elected in November 2026 takes office January 11, 2027 (the second Monday of January): add them here and in
 # states/legislatures.json.
-GOVERNORS = [("Brownback", "2011-01-10"), ("Colyer", "2018-01-31"), ("Kelly", "2019-01-14")]
+GOVERNORS = [("Brownback", "2011-01-10"), ("Colyer", "2018-01-31"), ("Kelly", "2019-01-14"), ("Holscher", "2027-01-11")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 

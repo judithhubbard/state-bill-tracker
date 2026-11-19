@@ -37,6 +37,11 @@ DELEGATION_NAMES = set()
 # Rules Committee). The member list marks the Speaker but not the Senate's officers.
 LEADERS = {"S": ("J. Stuart Adams", "President of the Senate", "him"),
            "H": ("Mike Schultz", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Evan Vickers", "President of the Senate", "them", "2027-01-19"),
+}
 
 
 def delegation(session):

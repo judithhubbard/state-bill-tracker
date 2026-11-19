@@ -46,6 +46,12 @@ DELEGATION_NAMES = set()
 # Rodric Bray as President Pro Tempore once the Senate votes, after the November 2026 election: change it then.
 LEADERS = {"S": ("Rodric Bray", "President Pro Tempore of the Senate", "them"),
            "H": ("Todd Huston", "Speaker of the House", "them")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Chris Garten", "President Pro Tempore of the Senate", "him", "2026-11-17"),
+    "H": ("Ben Smaltz", "Speaker of the House", "them", "2026-11-17"),
+}
 # Other leadership posts, shown on the members' cards (the API has none). Checked 2026-11-08.
 POSITIONS = {("H", "Matt Lehman"): "Majority Floor Leader", ("S", "Chris Garten"): "Majority Floor Leader",
              ("H", "Philip GiaQuinta"): "Minority Leader", ("S", "Shelli Yoder"): "Minority Leader"}

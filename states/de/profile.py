@@ -46,6 +46,11 @@ DELEGATION_NAMES = set()
 # in January 2027.
 LEADERS = {"S": ("David P. Sokola", "President Pro Tempore", "him"),
            "H": ("Melissa Minor-Brown", "Speaker of the House", "her")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Bryan Townsend", "President Pro Tempore", "them", "2027-01-12"),
+}
 
 
 def delegation(session):

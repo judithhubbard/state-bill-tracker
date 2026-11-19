@@ -43,6 +43,11 @@ DELEGATION_NAMES = set()
 # the President Pro Tempore (with the Senate Majority Leader).
 LEADERS = {"S": ("Martin Looney", "Senate President Pro Tempore", "him"),
            "H": ("Matthew Ritter", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". Checked 2026-11-19.
+LEADERS_NEXT = {
+    "S": ("Bob Duff", "Senate President Pro Tempore", "them", "2027-01-06"),
+}
 
 
 def delegation(session):

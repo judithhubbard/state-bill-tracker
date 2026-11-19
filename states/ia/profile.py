@@ -116,7 +116,7 @@ def narrow_kind(title, desc=""):
 # Governors and the day each took office: Kim Reynolds (R) since May 24, 2017 (Terry Branstad before her). Reynolds didn't
 # run in 2026; Rob Sand (D), elected November 3, 2026, takes office in January 2027 (the inauguration day wasn't announced
 # in November): add him then.
-GOVERNORS = [("Branstad", "2011-01-14"), ("Reynolds", "2017-05-24")]
+GOVERNORS = [("Branstad", "2011-01-14"), ("Reynolds", "2017-05-24"), ("Sand", "2027-01-12")]  # governor-elect: in office from that day (governors.py)
 GOV_SINCE = GOVERNORS[-1][1]
 
 
