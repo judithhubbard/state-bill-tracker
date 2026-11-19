@@ -76,6 +76,8 @@ done
 echo "rebuilt:${REBUILT:- none}"
 # The national issue pages (/issues/), from each built state's data/issues_<session>.json; issues/summary.json feeds the front page.
 python3 issues_site.py "$OUT" || echo "issue pages: BUILD FAILED"
+# How the states compare (/compare/), from each built state's data/compare.json; compare/summary.json feeds the front page.
+python3 compare_site.py "$OUT" || echo "compare page: BUILD FAILED"
 # The front page's "Find a bill" data (search/<st>.json), from each built state's live status_<session>.json.
 python3 search_site.py "$OUT" || echo "search data: BUILD FAILED"
 # Where each bill is, for /list/, /your-bills/, the list editor and the front page's "Your bills": /status.json names every
@@ -144,6 +146,13 @@ except (OSError, ValueError):
 if summ:
     page = page.replace('<script type="application/json" id="issues">[]</script>',
                         '<script type="application/json" id="issues">' + json.dumps(summ, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
+# Each state's latest finished session (compare_site.py's summary), for the map's "Bills that became law".
+try:
+    cmp = json.load(open(os.path.join(out, "compare", "summary.json")))
+except (OSError, ValueError):
+    cmp = {}
+page = page.replace('<script type="application/json" id="compare">{}</script>',
+                    '<script type="application/json" id="compare">' + json.dumps(cmp, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
 page = page.replace('<script type="application/json" id="power">{}</script>',
                     '<script type="application/json" id="power">' + json.dumps(power, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
 page = page.replace('<script type="application/json" id="after">{}</script>',
