@@ -39,7 +39,7 @@
     --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0;
     --tile-off: #1b2438; --tile-off-ink: #8a96ae; --hover: #e0b04e;
     --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9;
-    --heat-1: #1f3d3b; --heat-2: #3f8c84; --heat-3: #8fd3c9; --heat-ink-1: #e6ebf5; --heat-ink-2: #07110f; --heat-ink-3: #0f1626;
+    --heat-1: #2d6660; --heat-2: #4fa89e; --heat-3: #a3e3d9; --heat-ink-1: #e6ebf5; --heat-ink-2: #07110f; --heat-ink-3: #0f1626;
     --law-mark: #e0b04e; --law-ink: #5cc28c; --veto-ink: #f08a80;
     --st-0: #222c42; --st-0-ink: #a9b5cc; --st-1: #1d2f52; --st-1-ink: #a8c4f5; --st-3: #3a2f17; --st-3-ink: #f0cd85;
     --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
@@ -55,7 +55,7 @@
   --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0;
   --tile-off: #1b2438; --tile-off-ink: #8a96ae; --hover: #e0b04e;
   --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9;
-  --heat-1: #1f3d3b; --heat-2: #3f8c84; --heat-3: #8fd3c9; --heat-ink-1: #e6ebf5; --heat-ink-2: #07110f; --heat-ink-3: #0f1626;
+  --heat-1: #2d6660; --heat-2: #4fa89e; --heat-3: #a3e3d9; --heat-ink-1: #e6ebf5; --heat-ink-2: #07110f; --heat-ink-3: #0f1626;
   --law-mark: #e0b04e; --law-ink: #5cc28c; --veto-ink: #f08a80;
     --st-0: #222c42; --st-0-ink: #a9b5cc; --st-1: #1d2f52; --st-1-ink: #a8c4f5; --st-3: #3a2f17; --st-3-ink: #f0cd85;
     --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
@@ -104,6 +104,11 @@ h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: u
 .when button { font: inherit; border: 0; background: var(--sheet); color: var(--ink-2); padding: 6px 12px; cursor: pointer; }
 .when button[aria-pressed="true"] { background: var(--navy); color: var(--sheet); font-weight: 600; }
 .when button:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
+/* On a phone the year row stays one line: tighter buttons, and "All years" as "All" (its name stays "All years"). */
+@media (max-width: 479.98px) {
+  .when button { padding: 6px 9px; }
+  .when .yw { display: none; }
+}
 .tiles a.c-R1, .legend .c-R1 { background: var(--ctl-r1); color: var(--ctl-r1-ink); box-shadow: none; }
 .tiles a.c-R2, .legend .c-R2 { background: var(--ctl-r2); color: var(--ctl-r2-ink); box-shadow: none; }
 .tiles a.c-D1, .legend .c-D1 { background: var(--ctl-d1); color: var(--ctl-d1-ink); box-shadow: none; }
@@ -120,7 +125,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 /* The state list: plain names in columns (the map's squares link to the states too). */
 /* Every state as one quiet run of links under the map (the map's squares are the main way in). */
 .allst { margin: 24px 0 0; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 13.5px; line-height: 1.9; color: var(--ink-2); }
-/* Folded to one line ("All states ▸"); the links stay in the page for search engines and screen readers. */
+/* Open by default; folds to one line ("All states ▸"). */
 .allst summary { cursor: pointer; font-weight: 600; color: var(--ink-2); width: max-content; }
 .allst summary:hover { color: var(--navy); }
 .allst summary:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; }
@@ -507,9 +512,9 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
     <span class="key" id="offKey"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
     </span>
     <span class="kset ck">
-    <span class="key"><i class="pD"></i>Democratic sponsors</span>
+    <span class="key"><i class="pD"></i>Democrats</span>
     <span class="key"><i class="pB"></i>Both parties</span>
-    <span class="key"><i class="pR"></i>Republican</span>
+    <span class="key"><i class="pR"></i>Republicans</span>
     <span class="key"><i class="pN"></i>Committee or none</span>
     <span class="key lawk"><span class="lawn">3</span>Number that became law</span>
     </span>
@@ -517,12 +522,12 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
   </div>
     <aside class="panel" id="panel" hidden>
       <select id="pparty" aria-label="Sponsor's party" title="The party of each bill's main sponsors, not what the bill does. Both parties: main sponsors from both, or at least one in five sponsors and co-sponsors from the other party. Committee bills and Nebraska's have none.">
-        <option value="">Sponsor&rsquo;s party: all</option><option value="D">Democrats</option><option value="R">Republicans</option><option value="B">Both parties</option><option value="-">Committee or none</option>
+        <option value="">Sponsor&rsquo;s party: all</option><option value="D">Democrats</option><option value="B">Both parties</option><option value="R">Republicans</option><option value="-">Committee or none</option>
       </select>
       <div id="pbody"></div>
     </aside>
   </div>
-  <nav class="allst" aria-label="All states"><details><summary>All states</summary>
+  <nav class="allst" aria-label="All states"><details open><summary>All states</summary>
   <ul id="states">
     <li><a href="ca/"><b>California</b></a></li>
   </ul></details></nav>
@@ -597,14 +602,14 @@ const PARTY_TAG = { D: ["D", "Sponsored by Democrats"], R: ["R", "Sponsored by R
 const partyTag = (c) => (PARTY_TAG[c] ? `<span class="pty ${c}" role="img" title="${PARTY_TAG[c][1]}" aria-label="${PARTY_TAG[c][1]}">${PARTY_TAG[c][0]}</span>` : "");
 // Sponsors' party on the map: summary.json's count for a state is [bills, laws, D, B, R] (trailing zeros left off; the
 // rest have no party sponsor), from which each tile gets a thin bar and the panel a bigger one whose parts set PARTY.
-const PARTS = [["D", "Democratic"], ["B", "both"], ["R", "Republican"], ["-", "committee"]];
+const PARTS = [["D", "Democrats"], ["B", "Both parties"], ["R", "Republicans"], ["-", "Committee or none"]];
 const PCLASS = { D: "pD", B: "pB", R: "pR", "-": "pN" };
 function splitOf(e) {
   if (!e || !e[0]) return null;
   const [n, , d = 0, b = 0, r = 0] = e;
   return [d, b, r, Math.max(0, n - d - b - r)];
 }
-const splitWords = (sp) => PARTS.map(([, w], i) => (sp[i] ? `${sp[i]} ${w}` : "")).filter(Boolean).join(", ");
+const splitWords = (sp) => PARTS.map(([, w], i) => (sp[i] ? `${sp[i]} ${w.replace(/^(?:Both|Committee)/, (x) => x.toLowerCase())}` : "")).filter(Boolean).join(", ");
 // The tiles show the number of bills only (the owner's choice 2026-11-17: the thin party bar was hard to see on the
 // green); the party split is in the panel, the chart view and each tile's tooltip.
 const pbar = () => "";
@@ -787,7 +792,7 @@ function showPanel(st) {
       + `${laws ? `, ${laws} became law` : ""}.${n && st !== "us" ? ` <a href="issues/${issue.id}/${page}#${st}">See them on the issue page</a>` : ""}${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`;
     body.innerHTML = head + pbig(splitOf((issue.y[year] || { by: {} }).by[st])) + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last, pc, , lawHere]) => {
       // A law from a later (or earlier) year than the one shown says when: the map counts laws by year.
-      const stg = kind === "const" && stage === 3 ? "To voters" : stage === 5 && lawHere === 0 && last ? `Law ${last.slice(0, 4)}` : STAGE_SHORT[stage];
+      const stg = stage === 0 && +session > NOW ? "Prefiled" : kind === "const" && stage === 3 ? "To voters" : stage === 5 && lawHere === 0 && last ? `Law ${last.slice(0, 4)}` : STAGE_SHORT[stage];
       if (why && (why.toLowerCase().replace(/\W+/g, " ").trim() === title.toLowerCase().replace(/\W+/g, " ").trim()
         || title.toLowerCase().includes(why.toLowerCase()))) why = "";
       if (why) title = title.replace(/[.\s]+$/, "");
@@ -1090,7 +1095,7 @@ function render() {
     : `Party control is shown for ${YEARS.filter(usable).join(", ")}`;
   yearsEl.innerHTML = YEARS.map((y) => `<button type="button" data-year="${y}" aria-pressed="${y === year}"${usable(y) ? "" : ` disabled title="${esc(lacks)}"`}>${y}</button>`).join("")
     // "All years": an issue's bills over every year its pages cover, each bill once (not for party control).
-    + (issues.years && issues.years.length > 1 ? `<button type="button" data-year="all" aria-pressed="${year === "all"}"${usable("all") ? ` title="${issues.years[0]}–${issues.years[issues.years.length - 1]}, each bill once"` : ` disabled title="Party control is shown one year at a time"`}>All years</button>` : "");
+    + (issues.years && issues.years.length > 1 ? `<button type="button" data-year="all" aria-pressed="${year === "all"}"${usable("all") ? ` title="${issues.years[0]}–${issues.years[issues.years.length - 1]}, each bill once"` : ` disabled title="Party control is shown one year at a time"`} aria-label="All years">All<span class="yw"> years</span></button>` : "");
   show.textContent = CUSTOM ? CUSTOM.label : label(issue);
   const cur = CUSTOM ? CUSTOM.kind : issue ? issue.id : "";
   for (const b of document.querySelectorAll("#showMenu button, #showSide button")) b.setAttribute("aria-current", String(b.dataset.id === cur));
@@ -1255,7 +1260,9 @@ async function statusOf(st, session, num) {
   return { ...out, bills: q.bills[lead] ? { [lead]: q.bills[lead] } : {} };
 }
 const fmtDay = (d) => (d ? new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
-function whereText(stage, comm, kind, live) {
+// (up: a session not begun, whose bills are prefiled, as their state's page says.)
+function whereText(stage, comm, kind, live, up) {
+  if (stage === 0 && up) return "Prefiled";
   if (stage === 0) return `${live ? "In" : "Died in"} committee${comm ? ` (${comm})` : ""}`;
   if (stage === 3 && kind === "const") return "Passed both houses; goes to the voters";
   if (!live && stage < 3) return ["", "Died on the floor", "Passed one house; died in the other"][stage];
@@ -1332,11 +1339,11 @@ async function drawMine() {
       if (!b && st === "ny") return null;
       if (!b) return { last: "", html: `<li><a href="${st}/"><span class="num">${esc(spaced(num))}</span><span class="tt">${session} session</span></a>${starBtn(st, +session, num, "", spaced(num))}</li>` };
       const [full, title, stage, last, action, comm, kind] = b, fresh = last && last > seen;
-      return { last, fresh, st, session: +session, full, title, stage, label: whereText(stage, comm, kind, s.live !== false),
+      return { last, fresh, st, session: +session, full, title, stage, label: whereText(stage, comm, kind, s.live !== false, +session > NOW),
         href: `${st}/${page}#${full}`, seen: `${st}|${k}|${last}`, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
         + `<span class="num">${esc(numText(st, full))}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh && !action ? '<span class="new">New</span>' : ""}</span>`
         + (fresh && action ? `<span class="what"><b>New:</b> ${esc(plainAct(action))}</span>` : "")
-        + `<span class="where"><span class="stg s${stage}">${esc(whereText(stage, comm, kind, s.live !== false))}</span>${last ? ` · ${fmtDay(last)}` : ""}</span></a>`
+        + `<span class="where"><span class="stg s${stage}">${esc(whereText(stage, comm, kind, s.live !== false, +session > NOW))}</span>${last ? ` · ${fmtDay(last)}` : ""}</span></a>`
         + `${starBtn(st, +session, full, last, numText(st, full))}</li>` };
     }));
     const kept = rows.filter(Boolean).sort((a, b) => (b.last > a.last ? 1 : b.last < a.last ? -1 : 0));
@@ -1526,8 +1533,22 @@ drawMine();
     // Within a tier: laws first, then vetoed bills, then the furthest along.
     const rank = (r) => (r[2] === 5 ? 9 : r[2] === 6 ? 8 : r[2]);
     hits.sort((a, b) => b.tier - a.tier || b.score - a.score || (a.s.up - b.s.up) || rank(b.r) - rank(a.r) || a.name.localeCompare(b.name));
-    draw(hits, p, want.filter((st) => !ready[st]).length);
+    // While states are still loading, the rows already shown keep their places and the new states' bills go below them,
+    // so a click lands on the bill it was aimed at; all are ranked together once every state is in, but not while the
+    // pointer is on the results (then when it leaves them).
+    const pending = want.filter((st) => !ready[st]).length, key = `${raw}|${only}`, keyOf = (h) => `${h.st}|${h.s.session}|${h.r[0]}`;
+    if (shownKey !== key) { shownKey = key; shown = []; }
+    const hovering = found.matches(":hover");
+    reRank = !pending && hovering && shown.length > 0;
+    if (shown.length && (pending || hovering)) {
+      const at = new Map(shown.map((k, i) => [k, i]));
+      hits = [...hits.filter((h) => at.has(keyOf(h))).sort((a, b) => at.get(keyOf(a)) - at.get(keyOf(b))), ...hits.filter((h) => !at.has(keyOf(h)))];
+    }
+    shown = hits.slice(0, limit).map(keyOf);
+    draw(hits, p, pending);
   }
+  let shown = [], shownKey = "", reRank = false;
+  found.addEventListener("mouseleave", () => { if (reRank) { reRank = false; shown = []; run(); } });
   // States whose name the query is (or starts: "new", "caro"), offered as links to their pages above the bills.
   function goTo(p) {
     const qf = fold(q.value.trim()).replace(/[^a-z. ]+/g, " ").replace(/\s+/g, " ").trim();

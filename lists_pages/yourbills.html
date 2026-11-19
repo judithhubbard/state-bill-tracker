@@ -186,6 +186,8 @@ function loaded(id, rows, newKeys) {
   const t = TABS.get(id);
   if (!t) return;
   Object.assign(t, { rows, newKeys, fresh: newKeys.length });
+  // (How many were new when the tab's bills came in: the Starred tab's summary line says when none were.)
+  if (t.opened == null) t.opened = newKeys.length;
   if (id === CUR) markSeen(id); else drawStrip();
 }
 function markSeen(id) {
@@ -276,9 +278,21 @@ const NO_BILLS = '<p class="muted">No bills on it yet.</p>';
 // ---- Starred bills: each state's own watchlist (its Watchlist tab, as it shows it), in a frame per state's session ----
 // Bills the state's data doesn't have are listed below its card, each with its star.
 const starBtn = (x, on) => `<button type="button" class="star" data-star="${esc(x.key)}" aria-pressed="${on}" aria-label="${on ? "Remove" : "Star"} ${esc(numText(x.st, x.full))}" title="${on ? "Remove from your bills" : "Star it again"}">${on ? "★" : "☆"}</button>`;
+// The day of the last visit to the starred bills' states before today (each state's page keeps it: abt:<st>:visit, and
+// abt:<st>:visitPrev once the day changes; New York's without the state), the latest of them.
+function lastVisit(sts) {
+  const t = today(), days = [...sts].map((st) => {
+    const k = st === "ny" ? "abt:" : `abt:${st}:`;
+    try { const v = localStorage.getItem(k + "visit"); return v && v < t ? v : localStorage.getItem(k + "visitPrev") || ""; } catch (e) { return ""; }
+  }).filter(Boolean).sort();
+  return days.pop() || "";
+}
+const VISITED = lastVisit(new Set(allStarred().map((b) => b.st)));
 function starSum() {
   const on = ITEMS.filter((x) => x.on), n = on.length, sts = new Set(on.map((x) => x.st));
-  $("sum").innerHTML = n ? `${n} bill${n === 1 ? "" : "s"}${sts.size > 1 ? ` in ${sts.size} ${sts.has("us") ? "places" : "states"}` : ""}` : "&nbsp;";
+  // (Once the statuses are in: nothing new on the tab when it opened.)
+  const t0 = TABS.get("starred"), quiet = t0?.rows && !t0.opened ? ` · Nothing new${VISITED ? ` since ${fmtDay(VISITED)}` : ""}` : "";
+  $("sum").innerHTML = n ? `${n} bill${n === 1 ? "" : "s"}${sts.size > 1 ? ` in ${sts.size} ${sts.has("us") ? "places" : "states"}` : ""}${quiet}` : "&nbsp;";
   $("sum").hidden = !n;
   const t = TABS.get("starred");
   if (t) { t.count = n; drawStrip(); }
@@ -305,6 +319,7 @@ async function draw() {
   const rec = readSeen().starred, on = ITEMS.filter((x) => x.on);
   const fresh = (x) => x.found && x.last && x.last > (x.entry.seen || "") && !(rec && rec[x.key] && rec[x.key] >= x.last);
   loaded("starred", on.map((x) => ({ key: x.key, last: x.last })), on.filter(fresh).map((x) => x.key));
+  starSum();
 }
 $("bills").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-star]");

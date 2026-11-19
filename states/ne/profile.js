@@ -155,17 +155,19 @@ const STATE = {
   calendar(Y, end1, end2, MD) {
     const LEG = 112, o1 = STATE.opens(Y), a1 = STATE.adjourns(Y), o2 = STATE.opens(Y + 1), a2 = STATE.adjourns(Y + 1);
     const intro1 = STATE.plusDays(o1, 14), intro2 = STATE.plusDays(o2, 14);
+    // (Two years on one line: each date with its year.)
+    const MDY = (d) => `${MD(d)}, ${d.slice(0, 4)}`;
     return {
       leg: [["", o1, a1, "First session (90 days)"], ["light", a1, o2, "Interim"], ["", o2, a2, "Second session (60 days)"], ["light", a2, `${Y + 1}-12-31`, "Interim"]],
       gov: [["light", o1, STATE.plusDays(a1, 5), "Acts on bills"], ["light", o2, STATE.plusDays(a2, 5), "Acts on bills"]],
       events: [
-        [o1, "up", LEG, MD(o1), "The Legislature convenes and elects its Speaker and committee chairs."],
-        [intro1, "down", LEG, "January", "Senators may introduce bills only in the first 10 legislative days of each session."],
-        [`${Y}-03-01`, "up", LEG, "February–March", "Public hearings on every bill; senators and committees name their priority bills."],
-        [a1, "down", LEG, MD(a1), "The first session ends with the two-year budget. Bills that didn't pass carry over."],
-        [o2, "up", LEG, MD(o2), "The second session starts where the first left off."],
-        [intro2, "down", LEG, "January", "The 10-day limit on new bills again."],
-        [a2, "down", LEG, MD(a2), "The Legislature ends. Every bill still pending is indefinitely postponed."],
+        [o1, "up", LEG, MDY(o1), "The Legislature convenes and elects its Speaker and committee chairs."],
+        [intro1, "down", LEG, `January ${Y}`, "Senators may introduce bills only in the first 10 legislative days of each session."],
+        [`${Y}-03-01`, "up", LEG, `February–March ${Y}`, "Public hearings on every bill; senators and committees name their priority bills."],
+        [a1, "down", LEG, MDY(a1), "The first session ends with the two-year budget. Bills that didn't pass carry over."],
+        [o2, "up", LEG, MDY(o2), "The second session starts where the first left off."],
+        [intro2, "down", LEG, `January ${Y + 1}`, "The 10-day limit on new bills again."],
+        [a2, "down", LEG, MDY(a2), "The Legislature ends. Every bill still pending is indefinitely postponed."],
       ],
       note: "The governor has 5 days (Sundays excepted) to act on a bill; a bill not returned becomes law. The governor can veto items in appropriation bills. Overriding a veto takes three-fifths of the senators (30 of 49). Laws without an emergency clause take effect three calendar months after the session adjourns.",
     };

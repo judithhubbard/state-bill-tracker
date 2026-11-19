@@ -104,7 +104,9 @@ async function statusOf(st, session, num) {
   return { ...out, bills: q.bills[lead] ? { [lead]: q.bills[lead] } : {} };
 }
 const fmtDay = (d) => (d ? new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
-function whereText(st, stage, comm, kind, live) {
+// (up: a session not begun, whose bills are prefiled, as their state's page says.)
+function whereText(st, stage, comm, kind, live, up) {
+  if (stage === 0 && up) return "Prefiled";
   if (stage === 0) return `${live ? "In" : "Died in"} committee${comm ? ` (${comm})` : ""}`;
   if (stage === 3 && kind === "const") return st === "us" ? "Passed both houses; goes to the states" : "Passed both houses; goes to the voters";
   if (!live && stage < 3) return ["", "Died on the floor", "Passed one house; died in the other"][stage];
@@ -133,7 +135,7 @@ async function lookUp(st, session, num) {
   const lead = s ? (s.bills[num] ? num : s.alias?.[num]) : null, b = lead && s.bills[lead];
   if (!b) return { found: false, full: num, title: `${session} session`, href: `/${st}/` };
   const [full, title, stage, last, action, comm, kind] = b, page = s.page && s.page !== "./" ? s.page : "";
-  return { found: true, full, title: cut(title), stage, last, action, label: whereText(st, stage, comm, kind, s.live !== false), href: `/${st}/${page}#${full}`, page: `/${st}/${page}` };
+  return { found: true, full, title: cut(title), stage, last, action, label: whereText(st, stage, comm, kind, s.live !== false, +session > THIS_YEAR), href: `/${st}/${page}#${full}`, page: `/${st}/${page}` };
 }
 const THIS_YEAR = new Date().getFullYear();
 // A bill its state's data doesn't have (the state's page shows the rest, embed.js): number, title, where it is, a link to

@@ -124,9 +124,10 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .starspace { display: grid; gap: 1px; visibility: hidden; }
 /* With the list button beside the star (named.js): the two side by side, the stance below them. */
 .starspace:has(.nlbtn), .billrow > .rowstar:has(.nlbtn) { grid-template-columns: auto auto; justify-content: start; column-gap: 2px; }
-.starspace:has(.nlbtn) .stance, .rowstar:has(.nlbtn) .stance { grid-column: 1 / -1; }
+.starspace:has(.nlbtn) .sides, .rowstar:has(.nlbtn) .sides { grid-column: 1 / -1; }
 .starspace .nlbtn { width: 26px; }
-.starspace .watchbtn, .starspace .stance { display: inline-block; }
+.starspace .watchbtn { display: inline-block; }
+.starspace .sides { display: inline-flex; }
 .billrow > .rowstar { position: absolute; left: 4px; top: calc(12px + 19.55px); display: grid; justify-items: start; }
 .rowstar .nlbtn { margin-top: -3px; }
 .billrow > .rowstar.two { top: calc(12px + 2 * 19.55px); }
@@ -398,6 +399,15 @@ main { display: grid; gap: 16px; min-width: 0; }
 .stance.support { color: var(--signed); border-color: var(--signed); }
 .stance.oppose { color: var(--veto); border-color: var(--veto); }
 .stance.fixed { cursor: default; background: none; }
+/* Support | Oppose: two small buttons side by side; the side chosen is filled in (pressed again, it's cleared). */
+.sides { display: inline-flex; margin-top: 4px; justify-self: start; }
+.side { appearance: none; border: 1px solid var(--rule); background: var(--chip); color: var(--ink-2); padding: 1px 6px; font: 600 10.5px var(--body); line-height: 1.4; cursor: pointer; }
+.side:first-child { border-radius: 999px 0 0 999px; }
+.side:last-child { border-radius: 0 999px 999px 0; border-left: 0; }
+.side.support:hover { color: var(--signed); }
+.side.oppose:hover { color: var(--veto); }
+.side.support[aria-pressed="true"] { background: var(--signed); border-color: var(--signed); color: var(--paper); }
+.side.oppose[aria-pressed="true"] { background: var(--veto); border-color: var(--veto); color: var(--paper); }
 .lremove { appearance: none; border: 0; background: none; color: var(--ink-2); font: 600 10.5px var(--body); text-decoration: underline; cursor: pointer; margin: 4px 0 0 2px; padding: 1px 2px; justify-self: start; }
 .lremove:hover { color: var(--veto); }
 .watchview { display: grid; gap: 20px; }
@@ -648,7 +658,7 @@ table.st col.c-m { width: 80px; }
 /* A shaded strip across the top of each card: bill number, star, position and status. */
 .wcard .wtop { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; margin: 0 -16px; padding: 9px 16px; background: var(--chip); border-bottom: 1px solid var(--rule); }
 .wcard .nums { display: flex; gap: 10px; align-items: center; font: 700 13px var(--mono); }
-.wcard .nums .watchbtn, .wcard .nums .stance { margin: 0; padding-top: 0; }
+.wcard .nums .watchbtn, .wcard .nums .stance, .wcard .nums .sides { margin: 0; padding-top: 0; }
 .wcard .nums .nlbtn { margin: 0 0 0 -6px; }
 .wcard .wstatus { min-width: 0; }
 .wcard .whead h3 { margin: 4px 0 0; font: 700 17px/1.3 var(--body); }
@@ -841,6 +851,9 @@ table.commcounts td { font-variant-numeric: tabular-nums; font-weight: 600; }
 .side label.hidebox input { margin-top: 3px; }
 .side label.hidebox .hc { color: var(--ink-2); font-size: 12px; }
 #youReps { display: block; }
+.yourreps { font-size: 13px; color: var(--ink-2); margin: 8px 0; }
+.yourreps label { display: inline; font: inherit; color: inherit; margin: 0; }
+.yourreps select { display: inline-block; width: auto; max-width: 100%; font: inherit; margin: 0 0 0 2px; padding: 2px 4px; }
 .wcard .do:not(.reintro) { border-left: 0; background: var(--gold-soft); border-radius: 8px; padding: 10px 12px; gap: 5px; }
 .wcard .do .askbig { font-size: 16px; font-weight: 700; color: var(--ink); }
 .wcard .do .decider { display: grid; gap: 5px; }
@@ -1738,6 +1751,11 @@ function renderPipeline() {
   // elsewhere on the page (the notice counts every bill).
   const by = activeFilters().filter(([k]) => k !== "stage" && k !== "one");
   const note = !by.length ? "" : `<p class="pnote">${by.length === 1 && by[0][0] === "nearby" ? `Counting only ${esc(by[0][3])}.` : "Counting only the bills your filters show."}</p>`;
+  // Prefiled bills, before the session opens: only the stages some bills are at.
+  if (DATA.upcoming) {
+    $("pipeline").innerHTML = note + `<div class="pg leg">${head(`In ${BODY}`, [0, 1, 2, 3])}${[0, 1, 2, 3, 4, 5, 6].filter((k) => !k || counts[k]).map(row).join("")}</div>`;
+    return;
+  }
   $("pipeline").innerHTML = note + (floorVotesOver() ? `
     ${inPlay ? `<div class="pg live">${head("Still in play", [3, 4])}${[3, 4].map(row).join("")}</div>` : wentToVoters ? `<div class="pg">${head("Sent to the voters", [3])}${row(3)}</div>` : ""}
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
@@ -1866,7 +1884,9 @@ function shortStep(t, d, all) {
   if (s.length > 80) s = s.slice(0, 76).replace(/[\s,;:]+\S*$/, "") + "…";
   return s;
 }
-function statusText(b) {
+// A bill's status: [the label, the line under it, " over" for a bill out of time]. The label is the one the bill has
+// everywhere on the page (its row, its watchlist card, lists of similar bills).
+function statusParts(b) {
   const D = b.dates, live = DATA.current;
   // Say what the latest action was ("Amended by the sponsor"), not just when.
   const [lastDay, latest, all] = latestStep(b);
@@ -1874,7 +1894,9 @@ function statusText(b) {
   let t = stageLong(b.stage), small = `${what} · ${fmtDate(lastDay)}`;
   // A bill that died with the session reads as one in a finished session's page.
   const alive = live && !billsDied();
-  if (b.stage === 0) {
+  // (Prefiled bills, for a session not begun: "Prefiled", as in the watchlist and the bill lists elsewhere.)
+  if (b.stage === 0 && DATA.upcoming) t = TEXT.long[0];
+  else if (b.stage === 0) {
     t = `${alive ? "In" : "Died in"} ${b.comm ? `the ${commPlain(b.comm)} Committee` : "committee"}`;
     const passed = D.passS ? HOUSE.S : D.passA ? HOUSE[LOW] : null;
     if (passed && D.died) small = `Passed ${passed} ${fmtDate((D.passSAll[0] || D.passAAll[0]))}; sent back to committee ${fmtMonth(D.died)}`;
@@ -1922,6 +1944,11 @@ function statusText(b) {
   // (What the break between sessions means for a bill is said once, in the notice and the "Out of time" heading, and
   // in the bill's panel: not on every row.)
   const over = b.stage <= 2 && !stillAlive(b) ? " over" : "";
+  return [t, small, over];
+}
+const statusLabel = (b) => statusParts(b)[0];
+function statusText(b) {
+  const [t, small, over] = statusParts(b);
   return `<div class="st s${b.stage}${over}">${esc(t)}<small>${esc(small)}</small></div>`;
 }
 
@@ -2075,7 +2102,8 @@ function setCounty(county) {
 const andList = (xs) => (xs.length < 3 ? xs.join(" and ") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
 function myReps() {
   const c = chosenReps() || countyReps(HOME);
-  if (!c || !LEGS.length) return DATA.contacts?.reps || [];
+  // (Nothing chosen: none. The build's delegation, DATA.contacts.reps, was the Albany site's default, Tompkins County's.)
+  if (!c || !LEGS.length) return [];
   // A district can have more than one Assembly member (New Jersey's have two). New Hampshire's towns vote in all their
   // House districts (STATE.townInAllDistricts: their own and a "floterial" one over them and their neighbors).
   const town = STATE.townInAllDistricts && c.town ? DATA.towns?.find((t) => townKey(t) === c.town) : null;
@@ -2105,7 +2133,7 @@ function renderMyReps() {
     const rest = all.filter((L) => !inCounty.has(L.district)).sort((a, b) => a.district - b.district);
     return here.length ? `<optgroup label="In ${esc(HOME)} County">${here.map(one).join("")}</optgroup><optgroup label="Other districts">${rest.map(one).join("")}</optgroup>` : rest.map(one).join("");
   };
-  const counties = (DATA.counties || []).map((x) => `<option${x === HOME ? " selected" : ""}>${esc(x)}</option>`).join("");
+  const counties = countyOptions();
   const split = d && (d.S.length > 1 || d.A.length > 1);
   const where = !d ? "" : split
     ? `${esc(HOME)} County is split among ${d.S.length} Senate and ${d.A.length} Assembly district${d.A.length === 1 ? "" : "s"}. ${ROOT ? "Look up your address, or pick" : "Pick"} yours below.`
@@ -2139,6 +2167,8 @@ const DNUM = (h, d) => DATA.districtNames?.[h]?.[d] || d;
 const distLabel = (h, d) => DNAME(h, d) || `District ${DNUM(h, d)}`;
 const distPhrase = (h, d) => STATE.distPhrase?.(h, d, DNAME(h, d)) || (DNAME(h, d) ? `the ${DNAME(h, d)} ${HOUSE[h]} district` : `${HOUSE[h]} District ${DNUM(h, d)}`);
 const townsSplitByHouse = () => (DATA.towns?.[0] || []).length > 3;
+// The counties to pick from (none chosen until the visitor picks one).
+const countyOptions = () => `<option value="">Choose your ${PLACE_WORD}</option>` + (DATA.counties || []).map((x) => `<option${x === HOME ? " selected" : ""}>${esc(x)}</option>`).join("");
 const townOptions = (town, list = DATA.towns) => `<option value="">Choose your ${TOWN_WORD.toLowerCase()}</option>` + list.map((t) => `<option value="${esc(townKey(t))}"${t === town ? " selected" : ""}>${esc(townName(t))}</option>`).join("");
 // Choosing a town (here or in the Bills sidebar): its district, the one with most of its people if split.
 function setTown(key) {
@@ -2232,6 +2262,40 @@ function lookUpReps(address) {
   s.src = `https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress?address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&vintage=Current_Current&layers=all&format=jsonp&callback=${cb}`;
   s.onerror = () => { clearTimeout(timer); done("The address lookup isn't available here. Choose your districts from the lists below."); };
   document.head.appendChild(s);
+}
+
+// "Your legislators" where a bill's contacts are (the panel's "What's next and who to contact", a watchlist card's ask):
+// who they are, with "change", which opens the picker in place; or, until a place is chosen, Weigh in's own place picker
+// (the same choice, kept in the same place).
+function repsLine() {
+  if (!DATA.current || DATA.upcoming || !LEGS.length || PRESET?.who) return "";
+  if (!DATA.towns && !DATA.districtCounties) {
+    if (!DATA.townsLater) return "";
+    need("towns").then(refreshRepsLines, () => {});
+    return `<p class="yourreps" data-repslater hidden></p>`;
+  }
+  const c = chosenReps(), reps = myReps(), regions = DATA.towns ? townRegions() : null;
+  const town = DATA.towns && c?.town ? DATA.towns.find((t) => townKey(t) === c.town) : null;
+  const rw = (STATE.regionWord || "State").toLowerCase();
+  const picker = !DATA.towns ? `<select data-reppick="county">${countyOptions()}</select>`
+    : regions ? `<select data-reppick="region"><option value="">Choose your ${esc(rw)}</option>${regions.map((r) => `<option${r === (town?.[1] || c?.region) ? " selected" : ""}>${esc(r)}</option>`).join("")}</select>`
+    : `<select data-reppick="town">${townOptions(town)}</select>`;
+  if (!reps.length) return `<p class="yourreps"><label>Your legislators: ${picker}</label></p>`;
+  const place = town ? townName(town) : c?.region || (!DATA.towns && HOME ? placeName(HOME) : "");
+  return `<p class="yourreps">Your legislators: ${esc(reps.map((r) => `${TITLE[r.house]} ${r.name}`).join(", "))}${place ? ` (${esc(place)})` : ""}`
+    + ` · <button type="button" class="linkish" data-repchange>change</button><span class="reppick" hidden> ${picker}</span></p>`;
+}
+function refreshRepsLines() { for (const el of document.querySelectorAll(".yourreps")) el.outerHTML = repsLine(); }
+// Choosing a place there: the lists are drawn again, with the bills that were open opened again, where they were.
+function pickReps(kind, value) {
+  const open = [...document.querySelectorAll("#list .bill[open], #openNow .bill[open]")].map((d) => [d.closest("#list, #openNow").id, d.dataset.idx]);
+  const y = scrollY;
+  if (kind === "town") setTown(value); else if (kind === "region") setRegion(value); else setCounty(value);
+  for (const [box, idx] of open) {
+    const d = $(box).querySelector(`.bill[data-idx="${idx}"]`);
+    if (d && !d.open) { d.open = true; fillDetail(d); }
+  }
+  scrollTo(0, y);
 }
 
 // The bills now shown, as a CSV file for a spreadsheet.
@@ -2660,7 +2724,7 @@ function nextSteps(b) {
   const contacts = !items.length ? "" : keys.length
     ? `<div class="mainask">${list(keys)}</div>${rest.length ? `<details class="others"><summary>Others to contact (${rest.length})</summary>${list(rest)}</details>` : ""}`
     : list(rest);
-  return `<div class="next"><h4>What's next and who to contact</h4>${what}${contacts}</div>`;
+  return `<div class="next"><h4>What's next and who to contact</h4>${what}${plan.actionable ? repsLine() : ""}${contacts}</div>`;
 }
 
 // Bills still open for comment, listed right here (filters on the Bills tab don't apply).
@@ -3446,7 +3510,7 @@ function sankey(odds, fate, cfate) {
   const h = (v) => Math.max(1.5, v * k);
   const band = (x0, a0, b0, x1, a1, b1, cls) => { const m = (x0 + x1) / 2;
     return `<path class="${cls}" d="M${x0},${a0} C${m},${a0} ${m},${a1} ${x1},${a1} L${x1},${b1} C${m},${b1} ${m},${b0} ${x0},${b0} Z"/>`; };
-  const pct = (v, d = N[0]) => `${Math.round((v / d) * 100)}%`;
+  const pct = (v, d = N[0]) => (v > 0 && v / d < 0.005 ? "&lt;1%" : `${Math.round((v / d) * 100)}%`);
   const back = (key) => { const f = fate?.[key]; return f && f[0] && linkedSessions() ? `${pct(f[1], f[0])} reintroduced next session` : ""; };
   const STEPS = UNI ? ["Introduced", "Approved by a committee", PASSED_BOTH] : ["Introduced", "Approved by a committee", "Passed one house", "Passed both houses"];
   // A state where every bill gets a floor vote (North Dakota) names the first two exits itself, and has no committee breakdown.
@@ -3521,7 +3585,7 @@ function sankey(odds, fate, cfate) {
   const height = Math.max(bottom, top + H0) + 12;
   // The chart's numbers for a screen reader: each step's count and share, then laws and vetoes.
   const said = `How bills move from introduction to law: ${STEPS.map((t, i) => `${t.toLowerCase()} ${num(N[i])}${i ? ` (${pct(N[i])})` : ""}`).join(", ")}; became law ${num(law)} (${pct(law)})${allVetoes ? `; vetoed ${num(allVetoes)}${over ? `, ${num(over)} of them overridden` : ""}` : ""}.`;
-  return `<div class="sankey"><svg viewBox="0 0 ${W + 150} ${height}" role="img" aria-label="${esc(said)}">${g}${labels}</svg></div>`;
+  return `<div class="sankey"><svg viewBox="0 0 ${W + 150} ${height}" role="img" aria-label="${esc(said.replace(/&lt;/g, "<"))}">${g}${labels}</svg></div>`;
 }
 
 // The Statistics switch: the same figures for general bills only (leaving out bills about one place,
@@ -3982,7 +4046,7 @@ function similarBlock(b) {
     const o = BILLS[j];
     return `<li class="s${o.stage}"><span class="bn"><button type="button" class="linkish" data-bill="${esc(baseNum(o.nums[0]))}">${esc(o.nums.join(" / "))}</button></span>
       <span class="sim-t">${esc(o.title)}${s >= 70 ? ` <span class="twin">Nearly the same</span>` : ""}</span>
-      <span class="oc oc${o.stage}">${esc(stageWord(o).replace(/^./, (c) => c.toUpperCase()))}</span></li>`;
+      <span class="oc oc${o.stage}">${esc(statusLabel(o))}</span></li>`;
   }).join("")}</ol></div>`;
 }
 function lineage(b) {
@@ -4012,7 +4076,7 @@ function renderList() {
   const filtered = rows.length < total;
   $("starAllBox").innerHTML = STAR_UNDO
     ? `<span class="muted">Added ${num(STAR_UNDO.length)} to your watchlist.</span> <button type="button" class="linkish" data-starall="undo">Undo</button>`
-    : filtered && toAdd.length && toAdd.length <= 1000
+    : filtered && rows.length > 1 && ONE == null && toAdd.length && toAdd.length <= 1000
       ? `<button class="act-btn" type="button" data-starall="add" title="Star every bill shown">☆ Add ${toAdd.length === rows.length ? `all ${num(rows.length)}` : `${num(toAdd.length)} more`} to watchlist</button>`
       : "";
   const slice = rows.slice(0, state.shown);
@@ -4217,7 +4281,7 @@ function newsTags(b) {
   let out = "";
   if (acts.length) {
     const all = b.vers.flatMap((v) => v.actions);
-    const what = plainAction(acts[0][1], acts[0][0], all, true).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, "");
+    const what = newsWhat(acts[0][1], acts[0][0], b);
     out += ` <span class="news" title="${esc(acts.map(([d, t]) => `${fmtDate(d)}: ${plainAction(t, d, all, true)}`).join("\n"))}">New: ${esc(what)}${acts.length > 1 ? ` (+${acts.length - 1} more)` : ""}</span>`;
   }
   if (meet) {
@@ -4294,7 +4358,8 @@ const W_GROUP_OPEN = new Map();
 // "Can't move right now" and "Decided" fold up too; whether each is open is kept in this browser ({idle, decided}).
 const W_SEC_OPEN = () => recall("wsec") || {};
 // The main thing that happened to a watched bill since it was last opened ("Signed into law").
-const newsWhat = (t, d, b) => plainAction(t, d, b ? b.vers.flatMap((v) => v.actions) : [], true).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, "");
+// (The passage that made it pass both houses says so, as the bill's status does, not "Passed Senate".)
+const newsWhat = (t, d, b) => b && b.stage >= 3 && /^(?:RE)?PASSED\b/.test(t) && d === [b.dates.passS, b.dates.passA].sort().pop() ? PASSED_BOTH : plainAction(t, d, b ? b.vers.flatMap((v) => v.actions) : [], true).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, "");
 // Top of the watchlist: every bill with news, the biggest news first.
 function newsBox(list) {
   const items = list.map((b) => ({ b, acts: newActions(b) })).filter((x) => x.acts.length)
@@ -4328,12 +4393,15 @@ function updateWatchTab() {
 }
 // The bill row keeps an invisible copy of the star (and stance) in its number column, holding the place where the real
 // buttons (.rowstar, just after the summary: a summary can't contain buttons) are drawn over it.
-// The side a watched bill's owner takes: "Support", "Oppose", or not picked yet. Decided bills have no side to pick.
-const stanceWord = (st) => (st === "oppose" ? "Oppose" : st === "support" ? "Support" : "Pick a side");
+// The side a watched bill's owner takes: two buttons, Support and Oppose (none pressed until one is picked; the one
+// pressed, pressed again, clears it). Decided bills have no side to pick.
 const showStance = (b, e) => !!e && b.stage < 5;
+const SIDES = [["support", "Support"], ["oppose", "Oppose"]];
+// (attr: the buttons' data attribute and value; on, the side pressed.)
+const sideButtons = (b, on, attr) => `<span class="sides" role="group" aria-label="Your side on ${esc(b.nums[0])}">${SIDES.map(([k, w]) => `<button type="button" class="side ${k}" ${attr} data-side="${k}" aria-pressed="${on === k}">${w}</button>`).join("")}</span>`;
 function starSpace(b) {
   const e = watchEntry(b);
-  return `<span class="watchbtn">${e ? "★" : "☆"}</span>` + (listButton(b) ? `<span class="nlbtn"></span>` : "") + (showStance(b, e) ? `<span class="stance">${stanceWord(e.stance)}</span>` : "");
+  return `<span class="watchbtn">${e ? "★" : "☆"}</span>` + (listButton(b) ? `<span class="nlbtn"></span>` : "") + (showStance(b, e) ? `<span class="sides">${SIDES.map(([k, w]) => `<span class="side ${k}">${w}</span>`).join("")}</span>` : "");
 }
 // Beside the star, on the public site when this browser has lists made with the list editor: a button that adds the bill
 // to them (lists_pages/named.js's menu). The star stays the watchlist.
@@ -4341,7 +4409,7 @@ const listButton = (b) => (ROOT && window.NamedLists?.ready() ? NamedLists.butto
 function watchButton(b, withStance = true) {
   const e = watchEntry(b);
   return `<button class="watchbtn" type="button" data-watch="${b.idx}" aria-pressed="${!!e}" aria-label="${e ? "Stop watching" : "Watch"} ${esc(b.nums[0])}" title="${e ? "Remove from" : "Add to"} my watchlist">${e ? "★" : "☆"}</button>${listButton(b)}`
-    + (withStance && showStance(b, e) ? `<button class="stance ${e.stance || "unset"}" type="button" data-stance="${b.idx}" title="${e.stance ? "Switch between support and oppose" : "Do you support or oppose this bill?"}">${stanceWord(e.stance)}</button>` : "");
+    + (withStance && showStance(b, e) ? sideButtons(b, e.stance, `data-stance="${b.idx}"`) : "");
 }
 // ---- Shared lists (public site only): one link, /list/#<slug>, that shows this watchlist. The lists Worker
 // (lists_worker/) keeps it; this page keeps it in step with the stars and stances, a minute after they change. Anyone
@@ -4441,7 +4509,8 @@ async function loadPublishedList(slug) {
     SHARED = new Map(other ? [] : bills.map((n) => (n.startsWith("-") ? [n.slice(1), "oppose"] : [n, "support"])));
     SHARED_META = { slug: l.slug, title: l.title, group: l.group, updated: l.updated, intro: l.intro || "", notes, other };
   } catch (e) {
-    SHARED = new Map(); SHARED_META = { error: e.message };
+    // (The words the /list/ page uses.)
+    SHARED = new Map(); SHARED_META = { error: e.status === 404 ? "This list isn't available. Its owner may have stopped sharing it." : "The list couldn't be loaded just now. Try again in a moment." };
   }
   render();
 }
@@ -4542,7 +4611,7 @@ const codeLine = () => `<p class="muted">Sharing for an organization? <a href="m
 function shareBox(n) {
   const mine = myPublished();
   if (!mine) return `<p>One link that always shows these bills, kept up to date as you star and unstar them.</p>
-    <p class="row"><button type="button" class="act-btn primary" data-pub="share"${n ? "" : " disabled"}>Share it</button> <span class="muted" id="pubMsg"></span></p>
+    <p class="row"><button type="button" class="act-btn primary" data-pub="share"${n ? "" : " disabled"}>Share these</button> <span class="muted" id="pubMsg"></span></p>
     ${codeLine()}
     <details><summary>Shared this list from another device?</summary><div class="row"><input type="text" id="pubKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key"><button type="button" class="act-btn" data-pub="connect">Connect</button></div></details>`;
   const url = listUrl(mine.slug), group = !!mine.group;
@@ -4632,6 +4701,19 @@ function followedHere() {
     + ` · <a href="${esc(siteTop())}your-bills/">Your bills ›</a></p>`;
 }
 
+// Bills starred in this state's other sessions (the Watchlist tab counts this session's): "3 more in 2023–24 ›", to
+// that session's watchlist (a past session's page has none: Your bills shows them).
+function otherSessionsLine() {
+  const n = new Map();
+  for (const k of WATCH.keys()) { const s = +k.split(":")[0]; if (s && s !== DATA.session) n.set(s, (n.get(s) || 0) + 1); }
+  const links = [...n].sort((a, b) => b[0] - a[0]).map(([s, c]) => {
+    const url = DATA.sessions.find((x) => x.session === s)?.url;
+    if (!url) return "";
+    const href = s >= LATEST ? `${/^https?:/.test(url) ? url : BASE + url}#watch` : ROOT ? `${siteTop()}your-bills/` : /^https?:/.test(url) ? url : BASE + url;
+    return `<a href="${esc(href)}">${num(c)} more in ${span(s)} ›</a>`;
+  }).filter(Boolean);
+  return links.length ? `<p class="muted wother">${links.join(" · ")}</p>` : "";
+}
 const sharedStance = (b) => { for (const n of b.nums) if (SHARED.has(baseNum(n))) return SHARED.get(baseNum(n)); return null; };
 
 // ---- Personal log of actions taken (kept in this browser, never shared) ----
@@ -4764,7 +4846,7 @@ function renderWatchView() {
       ${canShare ? `<button class="act-btn${W_SHARE_OPEN || mine ? "" : " primary"}" type="button" data-wl="share" aria-expanded="${W_SHARE_OPEN}">${W_SHARE_OPEN ? "Hide sharing" : mine ? "Sharing" : "Share this list"}</button>` : ""}</div>
       ${list.length ? "" : `<p>Click ☆ next to any bill to add it.</p>`}${carryBox()}
       ${canShare ? `<div class="sharebox"${W_SHARE_OPEN ? "" : " hidden"}>${shareBox(list.length)}</div>` : ""}
-      ${followedHere()}`;
+      ${followedHere()}${otherSessionsLine()}`;
     if (mine) schedulePub(PUB_TIMER ? 60e3 : 2e3);
   }
 
@@ -4797,6 +4879,7 @@ function renderWatchView() {
         <p class="askbig">Ask: ${esc(p.ask)}</p>
         <p class="reach"><button class="act-btn primary" type="button" data-email="${b.idx}" data-who="${i}">${copyLabel(p)}</button> ${reachOf(p)}</p></div>`).join("")}
         ${x.reps.length ? `<p class="also">Also: ${x.reps.map((r) => `${esc(titleOf(r))}, ${esc(r.ask)}${r.info?.email ? ` (${emailHtml(r.info.email, r.role)})` : ""}`).join("; ")}.</p>` : ""}
+        ${repsLine()}
       </div>` : "";
     const open = W_OPEN.has(billKey(b)), logged = SHARED ? 0 : logOf(b).length;
     const dl = x.key ? deadlineOf(b) : {};
@@ -4805,9 +4888,9 @@ function renderWatchView() {
       ${ONE_CARD() ? "" : `<div class="whead" data-wtoggle="${b.idx}">
         <div class="wtop"><div class="nums">${!SHARED && list.length > 1 ? `<button class="whandle" type="button" data-whandle aria-label="Move ${esc(b.nums[0])} up or down" title="Drag to change the order (or use the arrow keys)">⠿</button>` : ""}<span class="chev" aria-hidden="true"></span>${esc(b.nums.join(" / "))}${SHARED
           ? `${watchButton(b, false)}${EMBED?.own
-            ? `<button class="stance ${x.stance}" type="button" data-lstance="${b.idx}" title="The list's side: switch between support and oppose">${x.stance === "oppose" ? "Oppose" : "Support"}</button><button class="lremove" type="button" data-lremove="${b.idx}" aria-label="Remove ${esc(b.nums[0])} from this list" title="Remove from this list (not from your watchlist)">Remove</button>`
+            ? `${sideButtons(b, x.stance, `data-lstance="${b.idx}"`)}<button class="lremove" type="button" data-lremove="${b.idx}" aria-label="Remove ${esc(b.nums[0])} from this list" title="Remove from this list (not from your watchlist)">Remove</button>`
             : `<span class="stance fixed ${x.stance}" title="The position of whoever shared this list">${x.stance === "oppose" ? "Oppose" : "Support"}</span>`}`
-          : watchButton(b)}</div><span class="spill p${b.stage}">${esc(stageWord(b).replace(/^./, (c) => c.toUpperCase()))}${esc(due)}</span></div>
+          : watchButton(b)}</div><span class="spill p${b.stage}">${esc(statusLabel(b))}${esc(due)}</span></div>
         <h3><button class="wtitle" type="button" data-wtitle aria-expanded="${open}">${esc(b.title)}</button>${SHARED ? "" : newsTags(b)}</h3>
         ${b.sponsors.length ? `<p class="wspons">${b.sponsors.map(esc).join(" / ")}</p>` : ""}
         ${x.key ? `<div class="wask"><span><b>${esc(andList([x.key, ...(x.more || [])].map(titleOf)))}:</b> ${esc(x.key.ask)}</span>${x.more?.length ? "" : `<button class="act-btn small primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button>`}</div>` : ""}
@@ -4916,11 +4999,18 @@ function actionRecord(list) {
     </tbody></table></div></details>`;
 }
 
-// A short, plain email: one person, one or more bills.
+// The side the visitor took on a bill, when they took one: on a shared list, its maker's; else the watchlist's, or the
+// panel's "Asks if you support / oppose" when it's set to oppose.
+const chosenStance = (b) => (SHARED ? sharedStance(b) : watchStance(b) || panelStances()[billKey(b)] || null);
+// A short, plain email: one person, one or more bills. It says the side taken ("in support of this bill"), several bills
+// grouped by side; "about" for bills without one.
 function draftFor(person, xs) {
   const greet = person.gov ? EXEC.dear : `Dear ${GREET[person.house]} ${shortName(person.name)},`;
-  const lines = xs.map((x) => `- ${x.b.nums.join(" / ")}, ${x.b.title}: please ${x.ask}.`).join("\n");
-  return `${greet}\n\nI'm writing about ${xs.length === 1 ? "this bill" : "these bills"}:\n\n${lines}\n\nThank you,\n[Your name]\n[Your address]`;
+  const line = (x) => `- ${x.b.nums.join(" / ")}, ${x.b.title}: please ${x.ask}.`;
+  const groups = [["support", "in support of"], ["oppose", "in opposition to"], [null, "about"]]
+    .map(([k, w]) => [w, xs.filter((x) => (chosenStance(x.b) || null) === k)]).filter(([, ys]) => ys.length);
+  const body = groups.map(([w, ys], i) => `I'm ${i ? "also " : ""}writing ${w} ${ys.length === 1 ? "this bill" : "these bills"}:\n\n${ys.map(line).join("\n")}`).join("\n\n");
+  return `${greet}\n\n${body}\n\nThank you,\n[Your name]\n[Your address]`;
 }
 
 function refreshWatchButtons(b) { keepFocus(() => redrawWatchButtons(b)); }
@@ -4928,7 +5018,7 @@ function redrawWatchButtons(b) {
   if (SHARED && !$("view-watch").hidden) { renderWatchView(); return; }
   for (const el of document.querySelectorAll(`.nums [data-watch="${b.idx}"]`)) {
     const box = el.parentElement;
-    box.querySelectorAll(".watchbtn, .stance, .nlbtn").forEach((x) => x.remove());
+    box.querySelectorAll(".watchbtn, .stance, .sides, .nlbtn").forEach((x) => x.remove());
     box.insertAdjacentHTML("beforeend", watchButton(b));
   }
   for (const d of document.querySelectorAll(`.bill[data-idx="${b.idx}"]`)) {
@@ -5237,11 +5327,11 @@ function wire() {
       if (box) box.outerHTML = nextSteps(b);
       return;
     }
-    const s = e.target.closest(".stance[data-stance]");
+    const s = e.target.closest(".side[data-stance]");
     if (s) {
       e.preventDefault(); e.stopPropagation();
       const b = BILLS[+s.dataset.stance], en = watchEntry(b);
-      setWatch(b, { ...en, stance: en.stance === "support" ? "oppose" : "support" });
+      setWatch(b, { ...en, stance: en.stance === s.dataset.side ? null : s.dataset.side });
       refreshWatchButtons(b); return;
     }
     const btn = e.target.closest(".watchbtn"); if (!btn) return;
@@ -5278,6 +5368,8 @@ function wire() {
     if (out) countUse(`read/${out.dataset.out}`);
     if (e.target.closest("[data-mycounty]")) { const c = LINK_COUNTY.mine; LINK_COUNTY = null; setCounty(c); return; }
     if (e.target.closest("[data-goreps]")) { showView("act"); $("myReps").scrollIntoView({ block: "start" }); return; }
+    const rc = e.target.closest("[data-repchange]");
+    if (rc) { const pk = rc.parentElement.querySelector(".reppick"); pk.hidden = false; rc.hidden = true; pk.querySelector("select").focus(); return; }
     const dr = e.target.closest("[data-draft]");
     if (dr) {
       const b = BILLS[+dr.dataset.draft], h = dr.dataset.house;
@@ -5401,7 +5493,12 @@ function wire() {
   $("wlList").addEventListener("click", (e) => {
     // A list made in this browser, inside its page's frame (EMBED.own): its side on a bill, or the bill off the list.
     const ls = e.target.closest("[data-lstance], [data-lremove]");
-    if (ls) { e.stopPropagation(); embedListEdit(BILLS[+(ls.dataset.lstance ?? ls.dataset.lremove)], ls.dataset.lremove != null); return; }
+    if (ls) {
+      e.stopPropagation();
+      // (A list always has a side for each bill: the side it has, pressed again, stays.)
+      if (ls.dataset.lstance != null && ls.getAttribute("aria-pressed") === "true") return;
+      embedListEdit(BILLS[+(ls.dataset.lstance ?? ls.dataset.lremove)], ls.dataset.lremove != null); return;
+    }
     if (e.target.closest("[data-wseenall]")) { for (const b of BILLS) if (isWatched(b) && hasNews(b)) markSeen(b); renderWatchView(); return; }
     const nw = e.target.closest("[data-wnews]");
     if (nw) {
@@ -5497,6 +5594,7 @@ function wire() {
   });
   $("statGeneral").addEventListener("change", (e) => { STAT_GENERAL = e.target.checked; renderStats(); });
   $("homeCounty").addEventListener("change", (e) => setCounty(e.target.value));
+  document.addEventListener("change", (e) => { const p = e.target.closest("[data-reppick]"); if (p && p.value) pickReps(p.dataset.reppick, p.value); });
   for (const id of ["statTabs"]) $(id).addEventListener("click", (e) => { const b = e.target.closest("[data-sec]"); if (b) showStatSec(b.dataset.sec); });
   $("statWho").addEventListener("click", (e) => {
     const l = e.target.closest("[data-whol]"), t = e.target.closest("[data-whot]"), bills = e.target.closest("[data-whobills]");
@@ -6109,11 +6207,12 @@ function endedOf(b) {
 }
 // A bill's place in a list of other bills ("died in committee", "became law"), in the wording that's true today.
 function stageWord(o) {
+  const low = (x) => x.charAt(0).toLowerCase() + x.slice(1);
   const e = endedOf(o);
-  if (e) return e.status.toLowerCase();
+  if (e) return low(e.status);
   if (o.stage === 5) return "became law";
   if (o.stage === 6) return "vetoed";
-  return (o.stage <= 2 && DATA.current && !DATA.upcoming && billsDied() ? STAGE_TEXT.final : TEXT).pipe[o.stage].toLowerCase();
+  return low((o.stage <= 2 && DATA.current && !DATA.upcoming && billsDied() ? STAGE_TEXT.final : TEXT).pipe[o.stage]);
 }
 
 // The notice above the tabs, kept short: the first sentence of each part, the rest behind "More".
@@ -6297,7 +6396,8 @@ function hydrate(raw) {
     $("notice").innerHTML = shortNotice(parts);
     $("notice").hidden = !parts.length;
   }
-  if (raw.current) $("sort").insertAdjacentHTML("beforeend", `<option value="due">${EXEC.title}'s deadline, soonest first</option><option value="meeting">Next committee meeting, soonest first</option>`);
+  // (Not for prefiled bills: no governor's deadlines or committee meetings before the session opens.)
+  if (raw.current && !raw.upcoming) $("sort").insertAdjacentHTML("beforeend", `<option value="due">${EXEC.title}'s deadline, soonest first</option><option value="meeting">Next committee meeting, soonest first</option>`);
   // The title goes home: the current session's main page.
   const home = raw.sessions.find((x) => x.session === LATEST)?.url;
   $("homeLink").href = ROOT || (home && /^https?:/.test(home) ? home : BASE || "./");
@@ -6313,7 +6413,7 @@ function hydrate(raw) {
   $("statTopic").innerHTML = `<option value="all">All bills</option>` + Object.entries(TOPICS).map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join("");
   $("changedField").hidden = !raw.current;
   if (!raw.current) state.changed = "";
-  $("homeCounty").innerHTML = (raw.counties || []).map((c) => `<option${c === HOME ? " selected" : ""}>${esc(c)}</option>`).join("");
+  $("homeCounty").innerHTML = countyOptions();
   // Until a state's bills are tied to places, there's no county to pick; without law names, no law filter.
   // States that find legislators by town (New Jersey) pick the town here instead.
   const you = document.querySelector(".field.you");
@@ -6351,7 +6451,7 @@ function hydrate(raw) {
     for (const k of FILTER_KEYS) if (k in saved) state[k] = k === "topics" ? new Set((saved.topics || []).filter((t) => t in TOPICS)) : saved[k];
     if (state.hist && !(state.hist in HIST_FILTERS)) state.hist = "";
     if (state.progress && !(state.progress in PROGRESS)) state.progress = "";
-    if ((state.sort === "due" || state.sort === "meeting") && !raw.current) state.sort = "recent";
+    if ((state.sort === "due" || state.sort === "meeting") && (!raw.current || raw.upcoming)) state.sort = "recent";
     syncControls();
   }
   if (applyViewLink()) syncControls();
