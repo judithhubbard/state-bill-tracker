@@ -26,7 +26,10 @@ def files():
                 # lag a quiet day's last check by a few hours, but never by a day).
                 if n != "last_checked":
                     yield os.path.join(d, n)
-    for f in ("tracker.html", "build_data.py", "stages.py", "issues.py", "fetch_contacts.py", "listing_dates.py", "balance.py",
+    # The shared code in states/ (legiscan_convert.py, window.py, openstates_bulk.py ...): several states' converters
+    # import it, and the list below once missed it.
+    yield from sorted(glob.glob(os.path.join(HERE, "states", "*.py")))
+    for f in ("governors.py", "party_history.py", "tracker.html", "build_data.py", "stages.py", "issues.py", "fetch_contacts.py", "listing_dates.py", "balance.py",
               "site_meta.py", os.path.join("lists_pages", "named.js"), os.path.join("lists_pages", "watchrules.js"), os.path.join("lists_pages", "sankey.js"),
               os.path.join("states", "legislatures.json")):
         yield os.path.join(HERE, f)

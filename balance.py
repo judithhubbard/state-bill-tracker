@@ -72,7 +72,8 @@ def current(state):
     if not facts or not path:
         return None
     people = json.load(open(path)).get("people", {})
-    out = {"chambers": {}, "governor": facts["governor"], "note": facts.get("note", ""),
+    import governors
+    out = {"chambers": {}, "governor": governors.facts_governor(facts), "note": facts.get("note", ""),
            "asOf": int(re.search(r"(\d{4})", os.path.basename(path)).group(1))}
     frac = None if facts["override"] == "majority" else Fraction(facts["override"])  # Indiana: a majority of the members
     for chamber, seats in facts["seats"].items():

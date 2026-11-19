@@ -30,6 +30,10 @@ if "--state" in ARGS:
     del ARGS[i:i + 2]
 # The state's settings and wording, as P.<name>.
 P = importlib.import_module(f"states.{STATE}.profile")
+# GOVERNORS can list a governor-elect, dated the day they take office: "the governor" is whoever holds office today
+# (governors.py), never the list's last entry.
+import governors
+P.GOV_SINCE = governors.in_office(P)[1]
 # The code that reads the state's own data and turns it into bill records (C.load_session).
 C = importlib.import_module(f"states.{STATE}.convert")
 
@@ -1913,7 +1917,10 @@ def main():
             "cols": [list(c) for c in zip(*rows)] if rows else [],
             "counties": P.COUNTIES,
             # The current governor, for telling whether an earlier veto was theirs.
-            "governor": P.GOVERNORS[-1][0],
+            "governor": governors.in_office(P)[0],
+            # A governor-elect not yet in office: {"name": full name, "start": "YYYY-MM-DD"} (states/legislatures.json).
+            **({"governorNext": {"name": nx[0], "start": nx[2]}} if (nx := governors.facts_next(
+                json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "states", "legislatures.json")))["states"].get(STATE, {}))) else {}),
             # Current Senate and Assembly districts in each county, for "Where you live".
             "districtCounties": json.load(open(P.DISTRICTS_PATH)) if session == current and os.path.exists(P.DISTRICTS_PATH) else {},
             # States that find legislators by town: [[town, county, [[district, share of its people], ...]], ...].
