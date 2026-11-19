@@ -44,7 +44,7 @@ function allStarred() {
   const out = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
-      const m = (localStorage.key(i) || "").match(/^abt:(?:([a-z]{2}):)?watch$/);
+      const m = (localStorage.key(i) || "").match(/^abt:([a-z]{2}):watch$/);
       if (!m) continue;
       const st = m[1];
       if (!NAMES[st]) continue;
