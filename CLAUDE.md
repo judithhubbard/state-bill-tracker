@@ -2524,6 +2524,26 @@ Read README.md for what each script downloads. This file covers how to change th
     `walkCommittees()`/`meetings()`: keep them in step), so an opened bill never needs the rows part. Measured 2026-11-18
     (slow 4G, 4x CPU, phone, cold cache): first bill 1.3-1.7 s after the list shows, another of the same state 0.1-0.8 s;
     the list itself shows after 6-7 s, almost all of it the states' whole status files (NY's is 517 KB).
+  - Your bills as one list (2026-11-19): every tab of /your-bills/ draws its bills from all states and sessions as one
+    list (lists_pages/onelist.js): Due soon, Before the session ends, a later deadline (a state's `passedBothGroup` name
+    when the group is one state's, else "Due later"), No deadline yet, then Decided or ended (laws, vetoes, past
+    sessions, and bills out of time this session), soonest deadline first; "Group by state" (abt:yourbills:bystate)
+    instead. The deadline rules exist once, in lists_pages/watchrules.js (`WatchRules.make(STATE, facts, hooks)`:
+    `sessionEnd`, `floorVotesOver`, `standing` (adjourned, recess, a missed crossover), `live`, `canAct`, `deadlineOf`,
+    `dueText`, the groups; `nextMeeting`): build_data.py puts it in every state page before the profile, and tracker.html's
+    `WR` calls it (planFor(), the watchlist), so test/same.sh shows the pages unchanged. Your bills runs each starred
+    state's own profile (data/v/profile.<hash>.js, written by build_data.py, named by each session's `f.s` in
+    /status.json) in its own scope (`new Function` with fmtDate, esc, isoToday, lastYear, span, monthDay, DATA, BILLS), with
+    the session's facts in /status.json (`f`: c current, u upcoming, e scheduled last days, v last floor vote, t past
+    sessions' last votes) and the bill's status row, whose columns after the seventh are what the rules read: the day it
+    went to the governor (stage 4), upcoming committee meetings, flags ("b" budget, "v" sent to the voters), and its
+    version in the newest later session ([session, number]: "Back in 2025–26 as A 1234" with its own star); trailing empty
+    columns are left off (about +50 B a current session, +4-8% on past sessions' pieces). Bills from a session /status.json
+    doesn't name say "<session>: no longer on this site" with Remove. What the rows can't know (a bill a floor vote or
+    withdrawal ended early, Nevada's exempt bills, whether the state's card has someone to ask) differs from the state's
+    own watchlist only there. A row opens its card in place (embed.js's `Opener`: one frame per session page at
+    #embed=<session>, {sbtShow}, moveBefore; 1f77f66's design, brought back). Rows are kept in abt:yourbills:rows and
+    drawn at once on the next visit. Lists made in the editor are changed there (Edit), not in their cards.
   - Status pieces (2026-11-18): the pages that show a few bills from a state's status file (/list/, /your-bills/, the
     list editor: common.js's `statusOf(st, session, num)`; the front page's "Your bills" and search stars: home.html's
     copy of it) read it in pieces. build_data.py's `write_status_shards()` writes, beside status_<session>.json (still

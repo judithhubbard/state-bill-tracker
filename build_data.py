@@ -1235,23 +1235,37 @@ def write_issues(session, recs, texts, page, current, party_of=None):
         json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
 
 
-def write_status(session, recs, page, live):
-    """Where each bill is, for the front page's "Your bills" (home.html), which shows the bills a visitor starred on
-    any state's page or on the front page: data/status_<session>.json, {"page", "live" (the session isn't over), "bills": {number without its amendment
-    letter: [number, title, stage, last action's date, the last action, committee, "const" or ""]}, "alias": {the
-    record's other numbers: its first}}. The watchlist keys bills as "<session>:<number without the letter>"."""
+def write_status(session, recs, page, live, facts=None, agenda_of=None, later_of=None):
+    """Where each bill is, for the front page's "Your bills" (home.html) and /your-bills/, which show the bills a visitor
+    starred on any state's page or on the front page: data/status_<session>.json, {"page", "live" (the session isn't
+    over), "bills": {number without its amendment letter: [number, title, stage, last action's date, the last action,
+    committee, "const" or "", and what the watchlist's deadline rules (lists_pages/watchrules.js) read: the day it went
+    to the governor (stage 4), its committee meetings to come ([[when, committee]]), flags ("b" a budget bill, "v" sent
+    to the voters), its version in the newest later session ([session, number])]}, "alias": {the record's other
+    numbers: its first}}; the columns after the seventh are left off from the last one that's empty. The watchlist keys
+    bills as "<session>:<number without the letter>". facts: the session's facts the rules read (write_status_shards())."""
     base = lambda n: re.sub(r"[A-Z]$", "", n)
+    from datetime import date, timedelta
+    soon = (date.today() - timedelta(days=1)).isoformat()
     bills, alias = {}, {}
-    for r in recs:
+    for i, r in enumerate(recs):
         lead = base(r["nums"][0])
         acts = [a for v in r["vers"] for a in v["actions"] if a[0] == r["last"]]
+        deliv = (r["keyDates"][4] or "").split(";")[-1] if r["stage"] == 4 and len(r["keyDates"]) > 4 else ""
+        meets = [[w, c] for c, w in (agenda_of(r) if agenda_of else []) if w >= soon]
+        flags = ("b" if r.get("budget") else "") + ("v" if r.get("ballot") else "")
+        later = later_of(i) if later_of else None
+        extra = [deliv, meets, flags, later or ""]
+        while extra and not extra[-1]:
+            extra.pop()
         bills[lead] = [r["nums"][0], r["title"][:140], r["stage"], r["last"] or "", (acts[-1][1] if acts else "")[:120],
-                       r["comm"] or "", "const" if "const" in (r["topics"] or []) else ""]
+                       r["comm"] or "", "const" if "const" in (r["topics"] or []) else "", *extra]
         for n in r["nums"][1:]:
             alias[base(n)] = lead
     with open(os.path.join(GITHUB, "data", f"status_{session}.json"), "w", encoding="utf-8") as f:
-        json.dump({"session": session, "page": page, "live": live, "bills": bills, "alias": alias}, f, separators=(",", ":"), ensure_ascii=False)
-    write_status_shards(session, bills, alias, page, live)
+        json.dump({"session": session, "page": page, "live": live, "bills": bills, "alias": alias, **({"facts": facts} if facts else {})},
+                  f, separators=(",", ":"), ensure_ascii=False)
+    write_status_shards(session, bills, alias, page, live, facts)
 
 
 # The status file in pieces, for the pages that show a few bills from it (/list/, /your-bills/, the list editor, the
@@ -1265,7 +1279,7 @@ def write_status(session, recs, page, live):
 STATUS_GZ = {"current": 12_000, "past": 40_000}
 
 
-def write_status_shards(session, bills, alias, page, live):
+def write_status_shards(session, bills, alias, page, live, facts=None):
     import hashlib
     target = STATUS_GZ["current" if live else "past"]
     def make(n):
@@ -1292,7 +1306,7 @@ def write_status_shards(session, bills, alias, page, live):
         index = json.load(open(path))
     except (OSError, ValueError):
         index = {}
-    index[str(session)] = {"p": page, "l": live, "h": "".join(hashes)}
+    index[str(session)] = {"p": page, "l": live, "h": "".join(hashes), **({"f": facts} if facts else {})}
     with open(path, "w", encoding="utf-8") as f:
         json.dump(dict(sorted(index.items())), f, separators=(",", ":"), ensure_ascii=False)
 
@@ -1598,6 +1612,16 @@ def hashed_name(session, kind, text):
     return f"{session}.{hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}.{kind}.json"
 
 
+def state_profile_js(P):
+    """The state's page settings and rules (states/<code>/profile.js), as its pages and /your-bills/ read them."""
+    state_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
+    # Shared watchlists go to the state-lists Worker (lists_worker/); LISTS_API names another (a local test copy), as
+    # in build_site.sh.
+    if os.environ.get("LISTS_API"):
+        state_js = re.sub(r'listsApi: "[^"]*"', f'listsApi: "{os.environ["LISTS_API"]}"', state_js)
+    return state_js
+
+
 def last_checked():
     """When the state's download last succeeded (data/<state>/last_checked), in the state's time zone, or None."""
     from datetime import datetime
@@ -1885,7 +1909,25 @@ def main():
                     with open(os.path.join(GITHUB, "data", f"{session}-text", f"{name}.json"), "w", encoding="utf-8") as f:
                         json.dump(part, f, separators=(",", ":"), ensure_ascii=False)
             write_issues(session, recs, texts, urls.get(str(session)) or "./", current, {**other_party, **party_of})
-            write_status(session, recs, urls.get(str(session)) or "./", session >= current)
+            # The session's facts the watchlist's deadline rules read (lists_pages/watchrules.js), for /your-bills/:
+            # {c: current, u: upcoming, e: scheduled last days by year, v: the last floor vote, t: past sessions' last votes}.
+            # The state's profile (its STATE object) as its own file, data/v/profile.<hash>.js, so /your-bills/ loads only
+            # the starred states' rules; its hash is the facts' "s".
+            import hashlib
+            prof_js = state_profile_js(P)
+            prof_hash = hashlib.sha256(prof_js.encode("utf-8")).hexdigest()[:12]
+            with open(os.path.join(GITHUB, "data", "v", f"profile.{prof_hash}.js"), "w", encoding="utf-8") as f:
+                f.write(prof_js)
+            facts = {"s": prof_hash, "c": session >= current, "u": session > current, "e": data.get("sessionEnd") or {},
+                     "v": data.get("lastVote") or "", "t": [t["lastVote"] for t in (data.get("insights") or {}).get("timing") or [] if t.get("lastVote")]}
+
+            def later_of(i):
+                newer = [e for e in hist[session][i].values() if e[0] > session and e[2] >= 0 and e[1]]
+                if not newer:
+                    return None
+                e = max(newer, key=lambda e: e[0])
+                return [e[0], re.sub(r"[A-Z]$", "", e[1].split(" / ")[0])]
+            write_status(session, recs, urls.get(str(session)) or "./", session >= current, facts, agenda_of, later_of)
         # The template is written with New York's names (title, header and the script that updates them).
         template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)
         template = template.replace("How a bill becomes law in New York", f"How a bill becomes law in {P.STATE_NAME}")
@@ -1903,12 +1945,10 @@ def main():
             end = template.index('  </section>', start)
             template = template[:start] + open(weighin).read() + template[end:]
         # The state's page settings and rules, read by the main script as STATE.
-        state_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
-        # Shared watchlists go to the state-lists Worker (lists_worker/); LISTS_API names another (a local test copy), as
-        # in build_site.sh.
-        if os.environ.get("LISTS_API"):
-            state_js = re.sub(r'listsApi: "[^"]*"', f'listsApi: "{os.environ["LISTS_API"]}"', state_js)
-        template = template.replace('<script id="state-profile"></script>', f'<script id="state-profile">\n{state_js}</script>', 1)
+        state_js = state_profile_js(P)
+        # The watchlist's deadline rules (lists_pages/watchrules.js, shared with /your-bills/), just before it.
+        rules_js = open(os.path.join(HERE, "lists_pages", "watchrules.js")).read()
+        template = template.replace('<script id="state-profile"></script>', f'<script id="watch-rules">\n{rules_js}</script>\n<script id="state-profile">\n{state_js}</script>', 1)
         if session != current:
             template = template.replace(f"<title>{P.SITE_NAME}</title>",
                                         f"<title>{P.SITE_NAME} {P.session_label(session)}</title>", 1)

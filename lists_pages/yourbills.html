@@ -4,8 +4,9 @@
      starred bills as one live list (lists_worker/, a list across states) that this page keeps in step with the stars.
      build_site.sh writes it to your-bills/index.html, putting common.css and common.js in place of their comments, the link
      preview tags and visit counter in place of the meta comment, and the addresses of the lists Worker (LISTS_API_URL) and
-     the contributions page (SUPPORT_URL). Each state's bills are shown by the state's own page, its watchlist view in a
-     frame (embed.js). -->
+     the contributions page (SUPPORT_URL). Every tab's bills are one list across states (onelist.js), grouped by what's
+     due first with each state's own deadline rules (watchrules.js); a bill opens in place, its card drawn by its state's
+     page in a frame (embed.js's Opener). -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -26,6 +27,8 @@
 <style>
 /*common.css*/
 .grp { font-weight: 600; color: var(--ink); }
+.bystate { display: flex; justify-content: flex-end; margin: -8px 0 8px; font-size: 14px; color: var(--ink-2); }
+.bystate label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -39,6 +42,7 @@
       <div id="lmenuList" role="listbox" aria-label="Every list"></div></div></div>
     <a class="tab add" href="/lists/edit/#new">+ New list</a>
   </div>
+  <p class="bystate"><label><input type="checkbox" id="byState"> Group by state</label></p>
   <div id="panels">
     <section role="tabpanel" id="p-starred" data-tab="starred" aria-labelledby="t-starred">
       <p class="sub" id="sum">&nbsp;</p>
@@ -58,6 +62,9 @@
 <script>
 /*common.js*/
 /*embed.js*/
+/*watchrules.js*/
+/*onelist.js*/
+/*named.js*/
 </script>
 <script>
 const DEFAULT_TITLE = "Bills I'm following";
@@ -178,7 +185,6 @@ function select(id, how = {}) {
   if (how.focus) tab?.focus();
   tab?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   markSeen(id);
-  Frames.pump();
   if (how.user) countUse(`your-bills/tab ${id === "starred" ? "starred" : id.split(":")[0]}`);
 }
 // A tab's bills, once drawn: which are new, and seen now if it's the tab in view.
@@ -275,11 +281,21 @@ function tabFromHash() {
 addEventListener("hashchange", () => { const id = tabFromHash(); if (id && id !== CUR) select(id); });
 const NO_BILLS = '<p class="muted">No bills on it yet.</p>';
 
-// ---- Starred bills: each state's own watchlist (its Watchlist tab, as it shows it), in a frame per state's session ----
-// Bills the state's data doesn't have are listed below its card, each with its star.
-const starBtn = (x, on) => `<button type="button" class="star" data-star="${esc(x.key)}" aria-pressed="${on}" aria-label="${on ? "Remove" : "Star"} ${esc(numText(x.st, x.full))}" title="${on ? "Remove from your bills" : "Star it again"}">${on ? "★" : "☆"}</button>`;
+// ---- Starred bills: one list across states, what's due first (onelist.js) ----
+// "Group by state" (kept in this browser) shows each state's bills together instead.
+const BYSTATE = "abt:yourbills:bystate";
+let BY_STATE = false;
+try { BY_STATE = localStorage.getItem(BYSTATE) === "1"; } catch (e) {}
+$("byState").checked = BY_STATE;
+$("byState").addEventListener("change", () => {
+  BY_STATE = $("byState").checked;
+  try { localStorage.setItem(BYSTATE, BY_STATE ? "1" : "0"); } catch (e) {}
+  countUse(`your-bills/by state ${BY_STATE ? "on" : "off"}`);
+  redrawAll();
+});
+if (window.NamedLists) { NamedLists.setApi(LISTS_API); NamedLists.wire(); }
 // The day of the last visit to the starred bills' states before today (each state's page keeps it: abt:<st>:visit, and
-// abt:<st>:visitPrev once the day changes; New York's without the state), the latest of them.
+// abt:<st>:visitPrev once the day changes), the latest of them.
 function lastVisit(sts) {
   const t = today(), days = [...sts].map((st) => {
     const k = `abt:${st}:`;
@@ -297,44 +313,74 @@ function starSum() {
   const t = TABS.get("starred");
   if (t) { t.count = n; drawStrip(); }
 }
-async function starGroups(starred, rows) {
-  return listGroups("starred", starred, rows, { heads: true, wl: true, code: (g) => `${g.session}.mine`,
-    row: (x) => ({ star: starBtn(x, x.on), stance: x.entry?.stance === "oppose" ? "oppose" : "" }) });
+// New on the tab: a bill whose newest action came after it was last opened, and after this tab was last viewed.
+const freshStar = (x) => { const rec = readSeen().starred; return x.found && x.last && x.last > (x.entry?.seen || "") && !(rec && rec[x.key] && rec[x.key] >= x.last); };
+const NEWS = new Set();   // the starred bills new when the tab's bills came in (shown as new until the page is reloaded)
+function drawStarred(list) {
+  OneList.draw($("bills"), list, { tab: "s", byState: BY_STATE, isNew: (x) => NEWS.has(x.key), remove: true });
 }
 async function draw() {
   syncTabs();
-  const starred = allStarred().map((b) => ({ ...b, key: crossKey(b.st, b.session, b.num), stance: b.entry.stance }));
-  // The frames start loading at once; the bills' statuses (for the count, what's new and bills not in the data) after.
-  if (starred.length) Frames.show($("bills"), await starGroups(starred, null));
+  const starred = allStarred().map((b) => ({ ...b, key: crossKey(b.st, b.session, b.num), stance: b.entry.stance === "oppose" ? "oppose" : "" }));
   const keys = new Set(starred.map((b) => b.key));
   for (const [k, b] of REMOVED) if (!keys.has(k)) starred.push(b); else REMOVED.delete(k);
-  ITEMS = await Promise.all(starred.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)), on: !REMOVED.has(b.key),
-    stance: b.entry.stance === "oppose" ? "oppose" : "", seen: "" })));
-  Frames.show($("bills"), await starGroups(ITEMS.filter((x) => x.on || !x.found), ITEMS));
+  // At once from what this browser kept last time; then from the bills' statuses.
+  if (!ITEMS.length && starred.length) {
+    const kept = OneList.cached(starred);
+    if (kept.length === starred.length) drawStarred(kept);
+  }
+  const rows = await OneList.items(starred);
+  for (const x of rows) if (freshStar(x)) NEWS.add(x.key);
+  ITEMS = rows.map((x) => ({ ...x, on: !REMOVED.has(x.key) }));
+  drawStarred(ITEMS);
   $("none").hidden = ITEMS.length > 0;
   $("shareSec").hidden = !ITEMS.length && !myList();
   starSum();
   drawShare();
-  // New on the tab: a bill whose newest action came after it was last opened, and after this tab was last viewed.
-  const rec = readSeen().starred, on = ITEMS.filter((x) => x.on);
-  const fresh = (x) => x.found && x.last && x.last > (x.entry.seen || "") && !(rec && rec[x.key] && rec[x.key] >= x.last);
-  loaded("starred", on.map((x) => ({ key: x.key, last: x.last })), on.filter(fresh).map((x) => x.key));
+  const on = ITEMS.filter((x) => x.on);
+  loaded("starred", on.map((x) => ({ key: x.key, last: x.last })), on.filter(freshStar).map((x) => x.key));
   starSum();
 }
-$("bills").addEventListener("click", (e) => {
+// Every tab drawn again (the switch, or a star changed).
+function redrawAll() {
+  if (ITEMS.length) drawStarred(ITEMS);
+  for (const [id, t] of TABS) if (t.items && panelOf(id)) OneList.draw(panelOf(id).querySelector(".sbills"), t.items, t.opt);
+}
+// A star (a bill, or where it's back in a later session), in any tab. A bill unstarred in the Starred tab stays in view
+// until the page is reloaded, to star it again.
+document.addEventListener("click", (e) => {
   const b = e.target.closest("button[data-star]");
-  if (!b) return;
+  if (!b || !$("panels").contains(b)) return;
   e.preventDefault();
-  const x = ITEMS.find((i) => i.key === b.dataset.star);
-  if (!x) return;
-  const w = readWatch(x.st), k = `${x.session}:${x.num}`;
-  if (k in w) { delete w[k]; REMOVED.set(x.key, x); countUse("your-bills/unstarred"); }
-  else { w[k] = { ...x.entry, seen: x.entry.seen || x.last || today() }; REMOVED.delete(x.key); }
-  writeWatch(x.st, w);
-  x.on = !x.on;
-  b.outerHTML = starBtn(x, x.on);
+  const [st, session, num] = b.dataset.star.split("|"), key = crossKey(st, +session, num);
+  const x = ITEMS.find((i) => i.key === key), w = readWatch(st), k = `${session}:${num}`;
+  const on = !(k in w);
+  if (!on) { delete w[k]; if (x) REMOVED.set(key, x); countUse("your-bills/unstarred"); }
+  else { w[k] = { ...(x?.entry || {}), seen: x?.entry?.seen || x?.last || today(), stance: x?.entry?.stance || "support" }; REMOVED.delete(key); countUse("your-bills/starred"); }
+  writeWatch(st, w);
+  if (x) x.on = on;
+  // (Only the star changes; a bill starred that wasn't on the tab joins it.)
+  for (const s2 of document.querySelectorAll(`button[data-star="${CSS.escape(b.dataset.star)}"]`)) {
+    s2.setAttribute("aria-pressed", String(on));
+    s2.textContent = on ? "★" : "☆";
+    s2.title = on ? "Remove from your bills" : "Star it";
+    s2.setAttribute("aria-label", s2.getAttribute("aria-label").replace(/^(Remove|Star) /, on ? "Remove " : "Star "));
+  }
   starSum();
   schedule();
+  if (on && !x) draw();
+});
+// A bill from a session this site no longer has: off the watchlist.
+$("bills").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-remove]");
+  if (!b) return;
+  const [st, session, num] = b.dataset.remove.split("|"), w = readWatch(st);
+  delete w[`${session}:${num}`];
+  writeWatch(st, w);
+  REMOVED.delete(crossKey(st, +session, num));
+  ITEMS = ITEMS.filter((x) => x.key !== crossKey(st, +session, num));
+  countUse("your-bills/removed an old bill");
+  draw(); schedule();
 });
 $("panels").addEventListener("click", (e) => { if (e.target.closest("li > a")) countUse("your-bills/opened a bill"); });
 
@@ -493,20 +539,11 @@ $("share").addEventListener("input", (e) => {
 });
 $("share").addEventListener("click", (e) => { const a = e.target.closest("a[data-share]"); if (a) countUse(`your-bills/share by ${a.dataset.share}`); });
 
-// ---- A list's tab (lists made here and lists followed): its summary line, its bills shown by each state's page ----
-// A group list's notes on its bills, by bill key ("nj:2026:A1234"), for each state's frame: {notes: {A1234: text}, group}.
-function notesFor(l, g) {
-  if (!l.group || !l.notes) return null;
-  const notes = {};
-  for (const b of g.bills) { const t = noteOf(l, b); if (t) notes[baseNum(b.num)] = t; }
-  return Object.keys(notes).length ? { notes, group: l.group } : null;
-}
-// The bills' statuses: what's new on the tab (bills added since, or with a newer action) and bills not in the data.
-async function statuses(bills) { return Promise.all(bills.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)) }))); }
+// ---- A list's tab (lists made here and lists followed): its summary line, its bills as one list (onelist.js) ----
 const billsText = (n) => `${n} bill${n === 1 ? "" : "s"}`;
 
 // ---- Lists made with the list editor (/lists/edit/), each with its own link ----
-// Its cards set the list's side on each bill and take bills off it (tracker.html's embedListEdit(), through named.js).
+// Its sides and bills are changed in the editor (Edit).
 // New on its tab: a bill with an action since the tab was last viewed (bills added here aren't news to their maker).
 const GONE = new Set();     // lists the Worker no longer has
 async function drawList(l) {
@@ -515,7 +552,7 @@ async function drawList(l) {
   const title = l.title || "Untitled list";
   if (GONE.has(l.slug)) {
     p.querySelector(".lmeta").innerHTML = `<span>This list isn&rsquo;t online any more.</span><button type="button" class="linkish" data-forget="${esc(l.slug)}">Remove it</button>`;
-    Frames.show(p.querySelector(".sbills"), []);
+    p.querySelector(".sbills").innerHTML = "";
     return loaded(id, [], []);
   }
   const bills = (l.bills || []).map(parseCross).filter(Boolean);
@@ -525,12 +562,16 @@ async function drawList(l) {
   if (!box.querySelector('[aria-expanded="true"]')) box.innerHTML = meta();
   p.querySelector(".lfoot").innerHTML = `<details class="quietbox"><summary>Use this list on another device</summary><p class="muted">Paste this key into Your bills on the other device. Anyone with it can change the list.</p>`
     + `<div class="row"><input type="text" readonly value="${esc(`${l.slug} ${l.editKey}`)}" aria-label="The list's key"><button type="button" class="btn" data-copykey="${esc(l.slug)}">Copy</button></div></details>`;
-  const extra = (g) => ({ own: l.slug, ...(notesFor(l, g) || {}) });
-  const sb = p.querySelector(".sbills");
-  if (!bills.length) { Frames.show(sb, []); sb.innerHTML = NO_BILLS; return loaded(id, [], []); }
-  Frames.show(sb, await listGroups(id, bills, null, { extra }));
-  const rows = await statuses(bills), rec = readSeen()[id] || {};
-  Frames.show(sb, await listGroups(id, bills, rows, { extra, row: (x) => ({ note: noteOf(l, x) }) }));
+  const sb = p.querySelector(".sbills"), t = TABS.get(id);
+  if (!bills.length) { if (t) t.items = null; sb.innerHTML = NO_BILLS; return loaded(id, [], []); }
+  const rec = readSeen()[id] || {};
+  const opt = { tab: `l${domId(l.slug)}`, get byState() { return BY_STATE; }, stance: showStance(l), noteOf: (x) => noteOf(l, x),
+    isNew: (x) => !!(rec[x.key] && x.last && x.last > rec[x.key]) };
+  const kept = OneList.cached(bills);
+  if (kept.length === bills.length && !t?.items) OneList.draw(sb, kept, opt);
+  const rows = await OneList.items(bills);
+  if (t) Object.assign(t, { items: rows, opt });
+  OneList.draw(sb, rows, opt);
   // Bills not seen on this tab before start from where they are now.
   if (rows.some((x) => !(x.key in rec))) {
     const now = readSeen();
@@ -587,13 +628,17 @@ async function drawFollow(slug) {
   const missing = () => bills.filter((x) => !(`${x.session}:${x.num}` in readWatch(x.st))).length;
   p.querySelector(".lmeta").innerHTML = meta(missing());
   p.querySelector(".lintro").innerHTML = l.intro ? `<details class="quietbox intro"><summary>About this list</summary>${paras(l.intro)}</details>` : "";
-  const sb = p.querySelector(".sbills"), extra = (g) => notesFor(l, g);
-  if (!bills.length) { Frames.show(sb, []); sb.innerHTML = NO_BILLS; return; }
-  Frames.show(sb, await listGroups(id, bills, null, { extra }));
-  const known = new Set(was.known || []), rec = readSeen()[id], rows = await statuses(bills);
-  Frames.show(sb, await listGroups(id, bills, rows, { extra, row: (x) => ({ stance: showStance(l) ? x.stance : "", note: noteOf(l, x) }) }));
-  FOLLOWED[slug] = rows;
+  const sb = p.querySelector(".sbills");
+  if (!bills.length) { if (t) t.items = null; sb.innerHTML = NO_BILLS; return; }
+  const known = new Set(was.known || []), rec = readSeen()[id];
   const added = (x) => (rec ? !(x.key in rec) : !known.has(x.key)), isNew = (x) => !added(x) && !!(rec && x.last && rec[x.key] && x.last > rec[x.key]);
+  const opt = { tab: `f${domId(slug)}`, get byState() { return BY_STATE; }, stance: showStance(l), noteOf: (x) => noteOf(l, x), isNew: (x) => added(x) || isNew(x) };
+  const kept = OneList.cached(bills);
+  if (kept.length === bills.length && !t?.items) OneList.draw(sb, kept, opt);
+  const rows = await OneList.items(bills);
+  if (t) Object.assign(t, { items: rows, opt });
+  OneList.draw(sb, rows, opt);
+  FOLLOWED[slug] = rows;
   loaded(id, rows.map((x) => ({ key: x.key, last: x.last })), rows.filter((x) => added(x) || isNew(x)).map((x) => x.key));
 }
 function drawFollows() { return Promise.all(Object.keys(readFollows()).filter((s) => !editKeyFor(s)).map(drawFollow)); }
@@ -657,7 +702,7 @@ $("listConnect").addEventListener("click", async () => {
 
 // A change in another tab (a star on a state's page, a list edited or followed): redraw, and keep the shared list in step.
 addEventListener("storage", (e) => {
-  if (/^abt:([a-z]{2}):watch$/.test(e.key || "")) { draw(); Frames.refresh(); }
+  if (/^abt:([a-z]{2}):watch$/.test(e.key || "")) { draw(); redrawAll(); }
   if (e.key === NAMED || e.key === PUB) { syncTabs(); drawLists(); }
   if (e.key === FOLLOWS) {
     const had = new Set([...TABS.keys()]);

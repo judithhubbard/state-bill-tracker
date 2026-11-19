@@ -2048,6 +2048,10 @@ const MEMBER = STATE.memberWords || { S: "state senator", [LOW]: "Assembly membe
 const GREET = STATE.greetings || { S: "Senator", [LOW]: "Assemblymember" };
 // How many years a session runs (two in New York and New Jersey, one in Virginia), and its last year.
 const YEARS = STATE.years || 2;
+// The watchlist's deadline rules (lists_pages/watchrules.js, shared with /your-bills/), for this session.
+const WR = WatchRules.make(STATE, () => ({ session: DATA.session, current: DATA.current, upcoming: DATA.upcoming, lastVote: DATA.lastVote,
+  sessionEnd: DATA.sessionEnd, timing: DATA.insights?.timing }), { today: isoToday, nextMeeting: (b) => nextMeeting(b),
+  isAmendment: (b) => isAmendment(b), toVoters: (b) => toVoters(b), passedBothLc });
 const lastYear = (s) => s + YEARS - 1;
 // When a bill that didn't pass both houses dies, once floor votes are over.
 // The session a bill was carried over to, where a state allows it (Virginia's even-year committees can continue
@@ -2575,14 +2579,8 @@ function planFor(b, stance = "support") {
   if (!DATA.current || !DATA.contacts) return null;
   const opp = stance === "oppose";
   const A = (yes, no) => (opp ? no : yes);
-  const today = isoToday(), y2 = lastYear(DATA.session);
-  const lv = DATA.lastVote || "", quiet = lv && (new Date(today) - new Date(lv)) / 864e5 > 21;
-  const adjourned = STATE.floorVotesEnd === false ? today > STATE.sessionEnds(DATA.session)
-    : today > `${y2}-12-31` || (quiet && lv.startsWith(String(y2)));
-  const recess = !adjourned && quiet && today.startsWith(String(DATA.session));
-  // A state's deadline for passing a bill's own house (Virginia's crossover), once it has gone by.
-  const origin = !adjourned && b.stage <= 1 && DATA.current && STATE.originDeadline?.(b);
-  const missed = origin && today > origin ? origin : null;
+  // Where the session stands (lists_pages/watchrules.js): over, between its years, a deadline to pass its own house missed.
+  const standing = WR.standing(b), { today, y2, lv, adjourned, recess, missed } = standing;
   // A bill that ended before the session did, where a floor defeat or a withdrawal ends it (North Dakota: STATE.endedNote),
   // or a committee step ended it (Massachusetts's study orders: STATE.heldAction).
   const ended = b.stage <= 2 && endedOf(b);
@@ -2596,7 +2594,7 @@ function planFor(b, stance = "support") {
     : adjourned
     ? overLine
     : recess ? `${BODY_CAP} is out until ${STATE.opens ? fmtDate(STATE.opens(y2)) : `January ${y2}`}.` : "";
-  const live = !stalled || recess; // can anything move before the session ends?
+  const live = WR.live(standing, ended); // can anything move before the session ends?
   // Once the session is over and its bills have died (not New York's, which can move until December 31), a bill
   // still at stage 0-2 has no next step: say where it stopped instead.
   const other_ = b.passedIn === HOUSE.S ? HOUSE[LOW] : HOUSE.S;
@@ -2700,7 +2698,7 @@ function planFor(b, stance = "support") {
   if (gap?.step) what += `<p>${esc(gap.step)}</p>`;
   const v = b.vetoNote;
   if (v && !v.own && b.stage <= 2 && live && !opp && lastName(v.governor) === lastName(DATA.governor)) govAlso = govAlso || "support it this time";
-  const actionable = (b.stage <= 4 || !!STATE.vetoReturns?.(b)?.live) && (live || b.stage >= 3) && !votersDone(b);
+  const actionable = WR.canAct(b, live, STATE.vetoReturns?.(b)?.live, votersDone(b));
   // Why nothing can be done now, in plain words.
   let reason = "";
   if (b.stage === 5) reason = `${lawLine(b)}${b.chapter ? ` as ${LAW_WORD} ${b.chapter}` : ""}. Changing it would take a new bill.`;
@@ -4298,11 +4296,7 @@ const hasNews = (b) => newActions(b).length > 0;
 // A meeting's day, and its time when known (Virginia's dockets give only the day, written as midnight).
 const fmtMeet = (when, time) => { const d = new Date(when); return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + (time && !/T00:00(:00)?$/.test(when) ? `, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""); };
 // The next committee meeting with this bill on the agenda (current session).
-function nextMeeting(b) {
-  if (!DATA.current || !b.agenda.length) return null;
-  const now = new Date(Date.now() - 6 * 36e5).toISOString().slice(0, 16);
-  return b.agenda.filter((a) => a.when >= now).sort((x, y) => (x.when < y.when ? -1 : 1))[0] || null;
-}
+function nextMeeting(b) { return WatchRules.nextMeeting(b.agenda, DATA.current); }
 // Tags after a watched bill's title: what's new, and a committee meeting coming up.
 function newsTags(b) {
   if (!isWatched(b)) return "";
@@ -4339,50 +4333,13 @@ function watchItems(list, stanceOf, rank) {
   };
 }
 // "Needs action" is grouped by the deadline each bill faces, soonest first.
-const monthDay = (d) => new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)).toLocaleDateString("en-US", { month: "long", day: "numeric" });
-const daysUntil = (d) => (new Date(d.slice(0, 10)) - new Date(isoToday())) / 864e5;
+const monthDay = WatchRules.monthDay;
+const daysUntil = (d) => WR.daysUntil(d);
 // This year's scheduled last session day (data/session_calendar.json), or when past sessions ended.
-function sessionEnd() {
-  // States whose Legislature meets until the session's last day: bills die only then.
-  if (STATE.floorVotesEnd === false) return { date: STATE.sessionEnds(DATA.session), last: true };
-  const y = isoToday().slice(0, 4), date = DATA.sessionEnd?.[y];
-  if (date) return { date };
-  const past = (DATA.insights?.timing || []).map((t) => t.lastVote.slice(5)).sort();
-  return past.length ? { from: `${y}-${past[0]}`, to: `${y}-${past[past.length - 1]}` } : {};
-}
-const SOON_DAYS = 14;
-function deadlineOf(b) {
-  const soon = (d) => daysUntil(d) <= SOON_DAYS;
-  if (b.stage === 4 && b.due) return { g: "soon", d: b.due };
-  const meet = nextMeeting(b);
-  if (meet && soon(meet.when)) return { g: "soon", d: meet.when.slice(0, 10) };
-  if (b.stage === 3 && (isAmendment(b) || toVoters(b))) return { g: "later" };
-  if (b.stage === 3) {
-    const end = STATE.passedBothBy(DATA.session);
-    return isoToday().startsWith(String(lastYear(DATA.session))) ? { g: soon(end) ? "soon" : "year", d: end } : { g: "later" };
-  }
-  // A state's deadline for passing a bill's own house (Virginia's crossover).
-  const origin = b.stage <= 1 && STATE.originDeadline?.(b);
-  if (origin && daysUntil(origin) >= 0) return { g: soon(origin) ? "soon" : "session", d: origin, origin: true };
-  if (b.stage <= 2 && !floorVotesOver()) {
-    const e = sessionEnd();
-    return { g: e.date && daysUntil(e.date) >= 0 && soon(e.date) ? "soon" : "session", d: e.date };
-  }
-  return { g: "later" };
-}
-const W_GROUPS = {
-  soon: ["Due soon", () => "A vote, hearing or deadline is coming up."],
-  session: ["Before the session ends", () => {
-    const e = sessionEnd(), then = e.last || isoToday().startsWith(String(lastYear(DATA.session)))
-      ? `Bills that haven't ${passedBothLc} by then die.` : "After that, nothing moves until January.";
-    if (e.last) return `The session ends ${monthDay(e.date)}, ${e.date.slice(0, 4)}. ${then}`;
-    if (e.date && daysUntil(e.date) >= 0) return `The session is scheduled to end ${monthDay(e.date)}. ${then}`;
-    if (e.date) return `The session was scheduled to end ${monthDay(e.date)}; it could end any day. ${then}`;
-    return e.from ? `The session usually ends between ${monthDay(e.from)} and ${monthDay(e.to)}. ${then}` : then;
-  }],
-  year: STATE.passedBothGroup,
-  later: ["No deadline yet", () => "Nothing is due soon on these."],
-};
+const sessionEnd = () => WR.sessionEnd();
+const SOON_DAYS = WatchRules.SOON_DAYS;
+const deadlineOf = (b) => WR.deadlineOf(b);
+const W_GROUPS = WR.groups;
 const W_GROUP_OPEN = new Map();
 // "Can't move right now" and "Decided" fold up too; whether each is open is kept in this browser ({idle, decided}).
 const W_SEC_OPEN = () => recall("wsec") || {};
@@ -4914,7 +4871,7 @@ function renderWatchView() {
       </div>` : "";
     const open = W_OPEN.has(billKey(b)), logged = SHARED ? 0 : logOf(b).length;
     const dl = x.key ? deadlineOf(b) : {};
-    const due = !DATA.current || !dl.d ? "" : b.stage === 4 ? ` · due ${fmtDate(dl.d)}` : dl.g === "soon" && b.stage < 3 ? ` · ${dl.origin ? STATE.originWord || "deadline to pass its house" : dl.d === sessionEnd().date ? "session ends" : "meets"} ${fmtDate(dl.d)}` : "";
+    const due = WR.dueText(b, dl, fmtDate);
     return `<article class="wcard${open ? " open" : ""}" data-idx="${b.idx}">
       ${ONE_CARD() ? "" : `<div class="whead" data-wtoggle="${b.idx}">
         <div class="wtop"><div class="nums">${!SHARED && list.length > 1 ? `<button class="whandle" type="button" data-whandle aria-label="Move ${esc(b.nums[0])} up or down" title="Drag to change the order (or use the arrow keys)">⠿</button>` : ""}<span class="chev" aria-hidden="true"></span>${esc(b.nums.join(" / "))}${SHARED
@@ -6179,14 +6136,7 @@ function decode(raw) {
 // A one-paragraph note on where the session stands, worked out from the data and today's date,
 // so it stays accurate as the year goes on. Returns "" while the Legislature is actively voting.
 // True once the current session's second year has had no floor votes for three weeks.
-function floorVotesOver() {
-  // States whose Legislature meets until the session's last day: over once that day has passed (Texas, Montana,
-  // Nevada and North Dakota between their odd-year sessions; California after August 31 of its second year).
-  if (!DATA.current) return false;
-  if (STATE.floorVotesEnd === false) return !DATA.upcoming && isoToday() > STATE.sessionEnds(DATA.session);
-  const lv = DATA.lastVote || "", today = isoToday();
-  return lv.startsWith(String(lastYear(DATA.session))) && (new Date(today) - new Date(lv)) / 864e5 > 21;
-}
+const floorVotesOver = () => WR.floorVotesOver();
 
 // True once the current session is over and its unpassed bills have died with it (Texas between its odd-year
 // sessions, Virginia after its spring session); not New York's, which can still move until December 31.

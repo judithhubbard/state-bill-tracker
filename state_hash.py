@@ -27,7 +27,7 @@ def files():
                 if n != "last_checked":
                     yield os.path.join(d, n)
     for f in ("tracker.html", "build_data.py", "stages.py", "issues.py", "fetch_contacts.py", "listing_dates.py", "balance.py",
-              "site_meta.py", os.path.join("lists_pages", "named.js"),
+              "site_meta.py", os.path.join("lists_pages", "named.js"), os.path.join("lists_pages", "watchrules.js"),
               os.path.join("states", "legislatures.json")):
         yield os.path.join(HERE, f)
     for s in sorted({state, "ny"}):
