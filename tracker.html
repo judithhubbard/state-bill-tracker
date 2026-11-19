@@ -4558,7 +4558,7 @@ const codeLine = () => `<p class="muted">Sharing for an organization? <a href="m
 // The share options under "My watchlist": Share, or, once shared, the link and what goes with it.
 function shareBox(n) {
   const mine = myPublished();
-  if (!mine) return `<p class="row"><button type="button" class="act-btn primary" data-pub="share"${n ? "" : " disabled"}>${esc(shareWords())}</button>${TIP(`One link to your ${STATE.code === "us" ? "bills in Congress" : `${stateName()} bills`}. It stays up to date as you star and unstar bills.${ROOT ? " To share your bills in every state, use Your bills." : ""}`)} <span class="muted" id="pubMsg"></span></p>
+  if (!mine) return `<p class="row"><button type="button" class="act-btn primary" data-pub="share"${n ? "" : " disabled"}>${esc(shareWords())}</button>${TIP("The link always shows your current list.")} <span class="muted" id="pubMsg"></span></p>
     <details><summary>Shared this list from another device?</summary><div class="row"><input type="text" id="pubKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key"><button type="button" class="act-btn" data-pub="connect">Connect</button></div></details>`;
   const url = listUrl(mine.slug), group = !!mine.group;
   return `${group ? `<p class="muted">${esc(mine.group)}&rsquo;s list</p>` : ""}

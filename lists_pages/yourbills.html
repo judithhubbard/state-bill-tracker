@@ -483,7 +483,7 @@ function drawShare(keepMsg) {
   const mine = myList(), el = $("share"), msg = keepMsg ? $("saved")?.textContent || "" : "";
   if (!mine) {
     el.innerHTML = `<p class="row"><button type="button" class="btn primary" data-act="share"${ITEMS.some((x) => x.on) ? "" : " disabled"}>Share your live watchlist</button>`
-      + `${infoTip("One link to all your starred bills, in every state. It stays up to date as you star and unstar bills. (A state's Watchlist tab can share just that state's.)")} <span class="muted" id="saved"></span></p>`
+      + `${infoTip("The link always shows your current list.")} <span class="muted" id="saved"></span></p>`
       + `<details><summary>Shared these from another device?</summary><div class="row"><input type="text" id="pasteKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key">`
       + `<button type="button" class="btn" data-act="connect">Connect</button></div></details>`;
     if (msg) say(msg, true);
