@@ -1,25 +1,25 @@
 /* Shared by /your-bills/ and /list/ (lists_pages/; build_site.sh puts it inside each page). The color tokens are home.html's. */
 :root {
-  --paper: #f6f8fb; --sheet: #ffffff; --ink: #14213d; --ink-2: #4a5878; --rule: #d9e0ec; --navy: #1d3b78; --hover: #9a6a0e;
-  --law-mark: #c8901f; --new-ink: #7a5a12; --veto-ink: #a3302a;
-  --st-0: #e8ecf3; --st-0-ink: #46526b; --st-1: #dfe9fb; --st-1-ink: #1f4a99; --st-3: #fbefd6; --st-3-ink: #7a4f06;
+  --paper: #f5f7f8; --sheet: #ffffff; --ink: #132a2e; --ink-2: #46575c; --rule: #dde4e7; --navy: #007c83; --hover: #c98500;
+  --law-mark: #f0a00c; --new-ink: #8a5300; --veto-ink: #a3302a;
+  --st-0: #e8edf0; --st-0-ink: #46575c; --st-1: #dcecee; --st-1-ink: #18464c; --st-3: #fbefd6; --st-3-ink: #7a4f06;
   --st-5: #dcf1e4; --st-5-ink: #14613a; --st-6: #fae1df; --st-6-ink: #9a2b24;
   --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0; --hover: #e0b04e;
-    --law-mark: #e0b04e; --new-ink: #f0cd85; --veto-ink: #f08a80;
-    --st-0: #222c42; --st-0-ink: #a9b5cc; --st-1: #1d2f52; --st-1-ink: #a8c4f5; --st-3: #3a2f17; --st-3-ink: #f0cd85;
+    --paper: #0f1515; --sheet: #172021; --ink: #e4eded; --ink-2: #a2b3b5; --rule: #2b3739; --navy: #4cc3be; --hover: #f2b53e;
+    --law-mark: #f2b53e; --new-ink: #f0cd85; --veto-ink: #f08a80;
+    --st-0: #222c2d; --st-0-ink: #a9b8ba; --st-1: #1c3234; --st-1-ink: #9fd8d4; --st-3: #3a2f17; --st-3-ink: #f0cd85;
     --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0; --hover: #e0b04e;
-  --law-mark: #e0b04e; --new-ink: #f0cd85; --veto-ink: #f08a80;
-  --st-0: #222c42; --st-0-ink: #a9b5cc; --st-1: #1d2f52; --st-1-ink: #a8c4f5; --st-3: #3a2f17; --st-3-ink: #f0cd85;
+  --paper: #0f1515; --sheet: #172021; --ink: #e4eded; --ink-2: #a2b3b5; --rule: #2b3739; --navy: #4cc3be; --hover: #f2b53e;
+  --law-mark: #f2b53e; --new-ink: #f0cd85; --veto-ink: #f08a80;
+  --st-0: #222c2d; --st-0-ink: #a9b8ba; --st-1: #1c3234; --st-1-ink: #9fd8d4; --st-3: #3a2f17; --st-3-ink: #f0cd85;
   --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
   color-scheme: dark;
 }
@@ -36,7 +36,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 h1 { font: 800 clamp(28px, 7vw, 40px)/1.05 var(--display); font-stretch: 85%; margin: 0 0 8px; overflow-wrap: anywhere; }
 h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 32px 0 10px; }
 .sub { color: var(--ink-2); margin: 0 0 18px; }
-.sub b { color: #14213d; background: var(--law-mark); border-radius: 999px; padding: 0 7px; font-size: 13px; }
+.sub b { color: #132a2e; background: var(--law-mark); border-radius: 999px; padding: 0 7px; font-size: 13px; }
 .muted { color: var(--ink-2); font-size: 14px; }
 /* A state's bills: a card with the state's name, and one row per bill. */
 .mst { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; margin: 0 0 12px; }
@@ -65,7 +65,7 @@ li > a:hover .todo { color: var(--hover); }
 .stg.s3, .stg.s4 { background: var(--st-3); color: var(--st-3-ink); }
 .stg.s5 { background: var(--st-5); color: var(--st-5-ink); }
 .stg.s6 { background: var(--st-6); color: var(--st-6-ink); }
-.new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #14213d; font: 700 11px/1.6 var(--body); vertical-align: 1px; }
+.new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #132a2e; font: 700 11px/1.6 var(--body); vertical-align: 1px; }
 .stance { display: inline-block; font: 600 12px/1.5 var(--body); padding: 0 7px; border-radius: 999px; border: 1px solid var(--rule); color: var(--ink-2); }
 .stance.oppose { border-color: var(--veto-ink); color: var(--veto-ink); }
 .star { position: absolute; right: 8px; top: 8px; width: 34px; height: 34px; border: 0; background: none; cursor: pointer; font-size: 20px; line-height: 1;

@@ -372,8 +372,8 @@ def choose_page(legs):
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 {ROBOTS_META.strip()}<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231d3b78'/><path d='M32 10 52 23H12z' fill='%23fff'/><rect x='14' y='25' width='36' height='4' fill='%23fff'/><rect x='17' y='31' width='6' height='16' fill='%23fff'/><rect x='29' y='31' width='6' height='16' fill='%23fff'/><rect x='41' y='31' width='6' height='16' fill='%23fff'/><rect x='11' y='49' width='42' height='5' fill='%23e3b04b'/></svg>"><title>Which {html_escape(last)}? · {P.SITE_NAME}</title>
 <style>
-:root {{ --bg: #f6f8fb; --fg: #14213d; --muted: #4a5878; --link: #1d3b78; color-scheme: light; }}
-@media (prefers-color-scheme: dark) {{ :root {{ --bg: #0f1626; --fg: #e6ebf5; --muted: #a3b0c9; --link: #8fb0f0; color-scheme: dark; }} }}
+:root {{ --bg: #f5f7f8; --fg: #132a2e; --muted: #46575c; --link: #007c83; color-scheme: light; }}
+@media (prefers-color-scheme: dark) {{ :root {{ --bg: #0f1515; --fg: #e4eded; --muted: #a2b3b5; --link: #4cc3be; color-scheme: dark; }} }}
 body {{ margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 40px max(16px, env(safe-area-inset-left, 0px)); }}
 main {{ max-width: 560px; margin: 0 auto; }} h1 {{ font-size: 26px; margin: 0 0 16px; }}
 ul {{ list-style: none; padding: 0; margin: 0 0 24px; display: grid; gap: 12px; }} a {{ color: var(--link); font-weight: 600; }}

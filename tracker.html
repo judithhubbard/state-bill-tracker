@@ -10,24 +10,24 @@
 /* Layout: masthead, then three views (Bills, Statistics, How it works). Bills puts the
    filters in a sticky sidebar beside a paged list with a six-step progress track per row. */
 :root {
-  --paper: #f6f8fb;
+  --paper: #f5f7f8;
   --sheet: #ffffff;
-  --ink: #14213d;
-  --ink-2: #4a5878;
-  --refer: #b3bdcf;
-  --rule: #d9e0ec;
-  --navy: #1d3b78;
-  --gold: #c8921a;
-  --gold-soft: #f6ead0;
-  --gold-ink: #8a5f0c;
+  --ink: #132a2e;
+  --ink-2: #46575c;
+  --refer: #b3c2c6;
+  --rule: #dde4e7;
+  --navy: #007c83;
+  --gold: #f0a00c;
+  --gold-soft: #fff0c9;
+  --gold-ink: #8a5300;
   --signed: #1f7a4a; --signed-ink: #1f7a4a;
   --signed-soft: #dcefe4;
   --law-bar: #43b072;
   --veto: #b3372b;
   --veto-soft: #f6dedb;
-  --pip-off: #e3e8f1;
-  --chip: #eef2f8;
-  --focus: #3a6fd8;
+  --pip-off: #e4eaed;
+  --chip: #eaf0f2;
+  --focus: #00a3ab;
   --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -37,28 +37,28 @@
   --pty-d: #d2def5; --pty-d-ink: #1b3566; --pty-d-step: #92aee3;
   --pty-r: #f5d3cf; --pty-r-ink: #6e1f18; --pty-r-step: #e49b93;
   --law-c: #1f7a4a;
-  --move: #5d6b86; --move-2: #2c3a57; --move-soft: #e4e9f2;
+  --move: #3b6f76; --move-2: #18464c; --move-soft: #dcecee;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754;
-    --navy: #8fb0f0; --gold: #e3b04b; --gold-ink: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
-    --veto: #ee7d70; --veto-soft: #3d1f1d; --refer: #4f5d7c; --pip-off: #26324b; --chip: #1d2944; --focus: #8fb0f0;
-    --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1626;
+    --paper: #0f1515; --sheet: #172021; --ink: #e4eded; --ink-2: #a2b3b5; --rule: #2b3739;
+    --navy: #4cc3be; --gold: #f2b53e; --gold-ink: #f2b53e; --gold-soft: #3a2e14; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
+    --veto: #ee7d70; --veto-soft: #3d1f1d; --refer: #4d5d60; --pip-off: #283435; --chip: #1d2829; --focus: #5fd6d0;
+    --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1515;
     --pty-d: #2f4670; --pty-d-ink: #e3eaf7; --pty-d-step: #4a70b5;
     --pty-r: #5c3431; --pty-r-ink: #f8dfdb; --pty-r-step: #93473f;
-    --law-c: #5cc28c; --move: #8e9bb5; --move-2: #c3cde0; --move-soft: #22304d;
+    --law-c: #5cc28c; --move: #8fb5b8; --move-2: #c6dedf; --move-soft: #1c3234;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754;
-  --navy: #8fb0f0; --gold: #e3b04b; --gold-ink: #e3b04b; --gold-soft: #3a3020; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
-  --veto: #ee7d70; --veto-soft: #3d1f1d; --refer: #4f5d7c; --pip-off: #26324b; --chip: #1d2944; --focus: #8fb0f0;
-  --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1626;
+  --paper: #0f1515; --sheet: #172021; --ink: #e4eded; --ink-2: #a2b3b5; --rule: #2b3739;
+  --navy: #4cc3be; --gold: #f2b53e; --gold-ink: #f2b53e; --gold-soft: #3a2e14; --signed: #5cc28c; --signed-ink: #5cc28c; --signed-soft: #173628; --law-bar: #1f8a50;
+  --veto: #ee7d70; --veto-soft: #3d1f1d; --refer: #4d5d60; --pip-off: #283435; --chip: #1d2829; --focus: #5fd6d0;
+  --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9; --badge-ink: #0f1515;
   --pty-d: #2f4670; --pty-d-ink: #e3eaf7; --pty-d-step: #4a70b5;
   --pty-r: #5c3431; --pty-r-ink: #f8dfdb; --pty-r-step: #93473f;
-  --law-c: #5cc28c; --move: #8e9bb5; --move-2: #c3cde0; --move-soft: #22304d;
+  --law-c: #5cc28c; --move: #8fb5b8; --move-2: #c6dedf; --move-soft: #1c3234;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -394,7 +394,7 @@ main { display: grid; gap: 16px; min-width: 0; }
 .watchbtn:hover { color: var(--gold); }
 .news { display: inline-block; font: 600 11px var(--body); background: var(--gold-soft); color: var(--ink); border-radius: 3px; padding: 1px 6px; vertical-align: 2px; box-shadow: inset 0 0 0 1px var(--gold); }
 .news.soon { background: var(--chip); color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); }
-.tabnew { display: inline-block; margin-left: 4px; font: 700 11px var(--body); background: var(--gold); color: #fff; border-radius: 999px; padding: 1px 7px; vertical-align: 1px; }
+.tabnew { display: inline-block; margin-left: 4px; font: 700 11px var(--body); background: var(--gold); color: #132a2e; border-radius: 999px; padding: 1px 7px; vertical-align: 1px; }
 .stance { appearance: none; border: 1px solid var(--rule); background: var(--chip); color: var(--ink-2); border-radius: 999px; padding: 1px 7px; font: 600 10.5px var(--body); cursor: pointer; margin-top: 4px; justify-self: start; }
 .stance.support { color: var(--signed); border-color: var(--signed); }
 .stance.oppose { color: var(--veto); border-color: var(--veto); }
@@ -695,7 +695,7 @@ table.st col.c-m { width: 80px; }
 .wsec h2 .n { font: 700 13px var(--body); border-radius: 999px; padding: 2px 9px; }
 .wsec .wsub { margin: 2px 0 12px; font-size: 13.5px; color: var(--ink-2); }
 .wsec.needs { background: var(--paper); border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent); }
-.wsec.needs h2 .n { background: var(--gold); color: var(--sheet); }
+.wsec.needs h2 .n { background: var(--gold); color: #132a2e; }
 .wsec.needs .wtop { background: var(--sheet); }
 .wsec.needs .wcard { border-color: color-mix(in srgb, var(--ink-2) 25%, transparent); border-left-color: var(--gold); box-shadow: 0 2px 10px rgba(20, 33, 61, .10); }
 .wsec.idle { background: none; border: 1px dashed var(--rule); }
@@ -779,7 +779,7 @@ a.phone:hover { text-decoration-color: currentColor; }
 .wgroup .wgtitle { font: 700 16px var(--body); display: flex; align-items: center; gap: 8px; }
 .wgroup .wgtitle::before { content: "▸"; color: var(--ink-2); font-size: 13px; width: 10px; }
 .wgroup[open] .wgtitle::before { content: "▾"; }
-.wgroup .wgtitle .n { font: 700 12px var(--body); border-radius: 999px; padding: 1px 8px; background: var(--gold); color: var(--sheet); }
+.wgroup .wgtitle .n { font: 700 12px var(--body); border-radius: 999px; padding: 1px 8px; background: var(--gold); color: #132a2e; }
 .wgroup .wgsub { font-size: 13px; color: var(--ink-2); padding-left: 18px; }
 .wgroup .multi { margin: 0 0 10px; }
 .multi { margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 14px; }
@@ -2269,7 +2269,7 @@ function lookUpReps(address) {
 // (the same choice, kept in the same place).
 function repsLine() {
   if (!DATA.current || DATA.upcoming || !LEGS.length || PRESET?.who) return "";
-  if (!DATA.towns && !DATA.districtCounties) {
+  if (!DATA.towns && !(DATA.counties?.length && Object.keys(DATA.districtCounties || {}).length)) {
     if (!DATA.townsLater) return "";
     need("towns").then(refreshRepsLines, () => {});
     return `<p class="yourreps" data-repslater hidden></p>`;
@@ -4495,7 +4495,9 @@ async function loadPublishedList(slug) {
   try {
     // The list's own editors send their key, so their visits aren't counted as views.
     const mine = myPublished();
-    const l = await listsApi(`/lists/${encodeURIComponent(slug)}`, mine?.slug === slug ? { headers: { "X-Edit-Key": mine.editKey } } : {});
+    // (A service that doesn't answer: after 15 seconds, the same message as any other failure, not "Loading" for good.)
+    const l = await Promise.race([listsApi(`/lists/${encodeURIComponent(slug)}`, mine?.slug === slug ? { headers: { "X-Edit-Key": mine.editKey } } : {}),
+      new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 15000))]);
     countUse("list-viewed");
     // A list of several states' bills ("ny:2025:A10424", "-nj:2026:S55"): this state's bills of this session. Its notes are
     // keyed the same way, without the "-".

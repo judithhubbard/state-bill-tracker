@@ -16,54 +16,54 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;600;700&display=swap">
 <style>
 :root {
-  --paper: #f6f8fb; --sheet: #ffffff; --ink: #14213d; --ink-2: #4a5878; --rule: #d9e0ec; --navy: #1d3b78;
-  --tile-off: #e3e8f1; --tile-off-ink: #56627c; --hover: #9a6a0e;
+  --paper: #f5f7f8; --sheet: #ffffff; --ink: #132a2e; --ink-2: #46575c; --rule: #dde4e7; --navy: #007c83;
+  --tile-off: #e8edf0; --tile-off-ink: #55656b; --hover: #c98500;
   --dem: #1f5bb5; --rep: #c0322a; --ind: #6b7685;
   /* Amounts of bills (the issue maps' steps): teal, a hue no party uses. Blue and red mean party only; green "became
      law"; gold the visitor's own stars and what's new; red-brown vetoed. */
-  --heat-1: #cfe7e4; --heat-2: #6fb3ab; --heat-3: #1f6f68; --heat-ink-1: #14213d; --heat-ink-2: #0b1530; --heat-ink-3: #ffffff;
-  --law-mark: #c8901f; --law-ink: #18693f; --veto-ink: #a3302a;
-  --st-0: #e8ecf3; --st-0-ink: #46526b; --st-1: #dfe9fb; --st-1-ink: #1f4a99; --st-3: #fbefd6; --st-3-ink: #7a4f06;
+  --heat-1: #9ad8cf; --heat-2: #3fb0a6; --heat-3: #0b6f68; --heat-ink-1: #0b2b29; --heat-ink-2: #0b2b29; --heat-ink-3: #ffffff;
+  --law-mark: #f0a00c; --law-ink: #18693f; --veto-ink: #a3302a;
+  --st-0: #e8edf0; --st-0-ink: #46575c; --st-1: #dcecee; --st-1-ink: #18464c; --st-3: #fbefd6; --st-3-ink: #7a4f06;
   --st-5: #dcf1e4; --st-5-ink: #14613a; --st-6: #fae1df; --st-6-ink: #9a2b24;
   --ctl-r1: #f2c6c0; --ctl-r1-ink: #6e1f18; --ctl-r2: #e49b93; --ctl-r2-ink: #4a120d;
   --ctl-d1: #c4d4f1; --ctl-d1-ink: #1b3566; --ctl-d2: #87a5df; --ctl-d2-ink: #0f2550;
-  --ctl-x: #e6e2da; --ctl-x-ink: #4a4438; --ctl-n: #e4e7ed; --ctl-n-ink: #3a4253;
+  --ctl-x: #e6e2da; --ctl-x-ink: #4a4438; --ctl-n: #e5eaec; --ctl-n-ink: #3a4a4e;
   --lawn: #1f7a4a; --lawn-ink: #ffffff;
   /* Sponsors' party on the issue maps: Democratic, both parties (purple), Republican, none (committee bills). */
-  --pty-d: #87a5df; --pty-b: #a487d1; --pty-r: #e49b93; --pty-n: #aab3c2;
+  --pty-d: #87a5df; --pty-b: #a487d1; --pty-r: #e49b93; --pty-n: #aab7ba;
   --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0;
-    --tile-off: #1b2438; --tile-off-ink: #8a96ae; --hover: #e0b04e;
+    --paper: #0f1515; --sheet: #172021; --ink: #e4eded; --ink-2: #a2b3b5; --rule: #2b3739; --navy: #4cc3be;
+    --tile-off: #1b2425; --tile-off-ink: #8b9c9e; --hover: #f2b53e;
     --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9;
-    --heat-1: #2d6660; --heat-2: #4fa89e; --heat-3: #a3e3d9; --heat-ink-1: #e6ebf5; --heat-ink-2: #07110f; --heat-ink-3: #0f1626;
-    --law-mark: #e0b04e; --law-ink: #5cc28c; --veto-ink: #f08a80;
-    --st-0: #222c42; --st-0-ink: #a9b5cc; --st-1: #1d2f52; --st-1-ink: #a8c4f5; --st-3: #3a2f17; --st-3-ink: #f0cd85;
+    --heat-1: #1f5752; --heat-2: #33a397; --heat-3: #8fe0d5; --heat-ink-1: #e4eded; --heat-ink-2: #0b2b29; --heat-ink-3: #0b2b29;
+    --law-mark: #f2b53e; --law-ink: #5cc28c; --veto-ink: #f08a80;
+    --st-0: #222c2d; --st-0-ink: #a9b8ba; --st-1: #1c3234; --st-1-ink: #9fd8d4; --st-3: #3a2f17; --st-3-ink: #f0cd85;
     --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
   --ctl-r1: #5c3431; --ctl-r1-ink: #f8dfdb; --ctl-r2: #93473f; --ctl-r2-ink: #ffffff;
   --ctl-d1: #2f4670; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4a70b5; --ctl-d2-ink: #ffffff;
-  --ctl-x: #34312b; --ctl-x-ink: #e6e2da; --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
-  --lawn: #5cc28c; --lawn-ink: #0f1626;
-  --pty-d: #5b82c8; --pty-b: #8a6cbd; --pty-r: #b0574e; --pty-n: #5d6880;
+  --ctl-x: #34312b; --ctl-x-ink: #e6e2da; --ctl-n: #283234; --ctl-n-ink: #c9d6d8;
+  --lawn: #5cc28c; --lawn-ink: #0f1515;
+  --pty-d: #5b82c8; --pty-b: #8a6cbd; --pty-r: #b0574e; --pty-n: #5e6b6e;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #0f1626; --sheet: #162036; --ink: #e6ebf5; --ink-2: #a3b0c9; --rule: #2a3754; --navy: #8fb0f0;
-  --tile-off: #1b2438; --tile-off-ink: #8a96ae; --hover: #e0b04e;
+  --paper: #0f1515; --sheet: #172021; --ink: #e4eded; --ink-2: #a2b3b5; --rule: #2b3739; --navy: #4cc3be;
+  --tile-off: #1b2425; --tile-off-ink: #8b9c9e; --hover: #f2b53e;
   --dem: #7fa8ee; --rep: #f08a80; --ind: #a3b0c9;
-  --heat-1: #2d6660; --heat-2: #4fa89e; --heat-3: #a3e3d9; --heat-ink-1: #e6ebf5; --heat-ink-2: #07110f; --heat-ink-3: #0f1626;
-  --law-mark: #e0b04e; --law-ink: #5cc28c; --veto-ink: #f08a80;
-    --st-0: #222c42; --st-0-ink: #a9b5cc; --st-1: #1d2f52; --st-1-ink: #a8c4f5; --st-3: #3a2f17; --st-3-ink: #f0cd85;
+  --heat-1: #1f5752; --heat-2: #33a397; --heat-3: #8fe0d5; --heat-ink-1: #e4eded; --heat-ink-2: #0b2b29; --heat-ink-3: #0b2b29;
+  --law-mark: #f2b53e; --law-ink: #5cc28c; --veto-ink: #f08a80;
+    --st-0: #222c2d; --st-0-ink: #a9b8ba; --st-1: #1c3234; --st-1-ink: #9fd8d4; --st-3: #3a2f17; --st-3-ink: #f0cd85;
     --st-5: #183a29; --st-5-ink: #8fdcb0; --st-6: #3d1f1d; --st-6-ink: #f5aaa2;
   --ctl-r1: #5c3431; --ctl-r1-ink: #f8dfdb; --ctl-r2: #93473f; --ctl-r2-ink: #ffffff;
   --ctl-d1: #2f4670; --ctl-d1-ink: #e3eaf7; --ctl-d2: #4a70b5; --ctl-d2-ink: #ffffff;
-  --ctl-x: #34312b; --ctl-x-ink: #e6e2da; --ctl-n: #2a3245; --ctl-n-ink: #c9d2e3;
-  --lawn: #5cc28c; --lawn-ink: #0f1626;
-  --pty-d: #5b82c8; --pty-b: #8a6cbd; --pty-r: #b0574e; --pty-n: #5d6880;
+  --ctl-x: #34312b; --ctl-x-ink: #e6e2da; --ctl-n: #283234; --ctl-n-ink: #c9d6d8;
+  --lawn: #5cc28c; --lawn-ink: #0f1515;
+  --pty-d: #5b82c8; --pty-b: #8a6cbd; --pty-r: #b0574e; --pty-n: #5e6b6e;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -205,7 +205,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
    "Law" label; gold is kept for the visitor's own stars and what's new). In "Your bills", .newn: the new ones, in gold. */
 .lawn, .newn { display: inline-flex; align-items: center; justify-content: center; min-width: 1.6em; height: 1.6em; padding: 0 .3em;
   border-radius: 999px; background: var(--lawn); color: var(--lawn-ink); font: 700 clamp(9px, 2vw, 12px)/1 var(--body); }
-.newn { background: var(--law-mark); color: #14213d; }
+.newn { background: var(--law-mark); color: #132a2e; }
 /* On a tile, the state's letters keep one place whether or not a badge is there; the badge sits at the bottom, ringed in
    the page's color so it stands out on any step. Congress's wide tile has it at the right. */
 .tiles.issue > button.tile:not(.fed), .tiles.issue > span.off:not(.fed) { justify-content: flex-start; padding-top: 17%; }
@@ -370,7 +370,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .minebar[aria-expanded="true"]::after { content: "▴"; }
 .minebar .mstar { color: var(--law-mark); }
 .minebar .cnt { color: var(--ink-2); font-weight: 400; }
-.minebar .cnt b { color: #14213d; background: var(--law-mark); border-radius: 999px; padding: 0 6px; font-weight: 700; font-size: 12px; }
+.minebar .cnt b { color: #132a2e; background: var(--law-mark); border-radius: 999px; padding: 0 6px; font-weight: 700; font-size: 12px; }
 .minebar:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
 #mineList { position: absolute; right: 0; top: calc(100% + 6px); z-index: 7; width: min(600px, calc(100vw - 32px)); max-height: 70vh;
   overflow-y: auto; background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 10px 0;
@@ -395,7 +395,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 /* "Open as a page" (/your-bills/) at the bottom of the "Your bills" list. */
 .mine .mpage { margin: 0 0 10px; padding: 0 2px; font-size: 13.5px; text-align: right; }
 .mine .mpage a { color: var(--navy); font-weight: 600; }
-.new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #14213d;
+.new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #132a2e;
   font: 700 11px/1.6 var(--body); }
 /* A star beside each bill (in "Your bills" and the map's panel): filled when it's on the state's watchlist. */
 .star { position: absolute; right: 6px; top: 50%; margin-top: -16px; width: 32px; height: 32px; border: 0; background: none; cursor: pointer;

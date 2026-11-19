@@ -168,6 +168,8 @@ ul.bills a:hover { text-decoration: underline; }
 .when a[aria-current="page"] { background: var(--navy); color: var(--sheet); font-weight: 600; }
 .when a:hover { color: var(--ink); }
 .when a:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
+/* On a phone the year row stays one line, as on the front page: tighter links, "All years" as "All". */
+@media (max-width: 479.98px) { .when a { padding: 6px 9px; } .when .yw { display: none; } }
 /* The map and, beside it (below it on a phone), the counts, the legend and the notes. */
 .mapwrap { display: grid; gap: 12px 24px; margin: 0 0 16px; }
 .mapcol { min-width: 0; }
@@ -610,7 +612,7 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
     unbuilt = any(code.lower() not in names for code in GRID)
     cur, pre = ' aria-current="page"', ' title="Prefiled so far"'
     year_links = "".join(f'<a href="{page_name(y, default)}"{cur if y == year else ""}{pre if y > default else ""}>{y}</a>'
-                         for y in years) + f'<a href="all.html"{cur if year == "all" else ""} title="{years[0]}–{years[-1]}, each bill once">All years</a>'
+                         for y in years) + f'<a href="all.html"{cur if year == "all" else ""} title="{years[0]}–{years[-1]}, each bill once" aria-label="All years">All<span class="yw"> years</span></a>'
     fopts = "".join(f'<option value="f:{e(re.sub(r"[^a-z]+", "-", k.lower()))}">{e(k)}</option>' for k in issue.get("filters", {}))
     verb = "prefiled" if upcoming else "with action"
     up = "../../"
