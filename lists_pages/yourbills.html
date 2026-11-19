@@ -282,7 +282,7 @@ const starBtn = (x, on) => `<button type="button" class="star" data-star="${esc(
 // abt:<st>:visitPrev once the day changes; New York's without the state), the latest of them.
 function lastVisit(sts) {
   const t = today(), days = [...sts].map((st) => {
-    const k = st === "ny" ? "abt:" : `abt:${st}:`;
+    const k = `abt:${st}:`;
     try { const v = localStorage.getItem(k + "visit"); return v && v < t ? v : localStorage.getItem(k + "visitPrev") || ""; } catch (e) { return ""; }
   }).filter(Boolean).sort();
   return days.pop() || "";
@@ -657,7 +657,7 @@ $("listConnect").addEventListener("click", async () => {
 
 // A change in another tab (a star on a state's page, a list edited or followed): redraw, and keep the shared list in step.
 addEventListener("storage", (e) => {
-  if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) { draw(); Frames.refresh(); }
+  if (/^abt:([a-z]{2}):watch$/.test(e.key || "")) { draw(); Frames.refresh(); }
   if (e.key === NAMED || e.key === PUB) { syncTabs(); drawLists(); }
   if (e.key === FOLLOWS) {
     const had = new Set([...TABS.keys()]);

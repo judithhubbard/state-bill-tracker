@@ -19,8 +19,9 @@ a { color: var(--navy); }
 <script>
 // albanybilltracker.org's forwarding pages send visitors here with their saved settings in the address:
 // /welcome/ny/#d=<"g." gzipped or "j." plain JSON, base64url>&to=<a path on this site>. The settings are every
-// localStorage name starting "abt:" there; New York's pages here use the same names (STORE is plain "abt:" for New
-// York in tracker.html), so they're saved as they are, merged with anything this browser already has here:
+// localStorage name starting "abt:" there (New York only, so no state in the names); New York's pages here keep
+// them as "abt:ny:..." (tracker.html's STORE), so "abt:watch" is saved as "abt:ny:watch", merged with what this
+// browser already has here:
 // watchlists joined (the newer "last seen" kept), action logs joined by entry id, stances and other lists joined,
 // and any other setting saved only where this browser has none. Then on to the page the visitor asked for.
 (function () {
@@ -115,8 +116,9 @@ a { color: var(--navy); }
       var theirs = got.keys[name];
       if (name.indexOf("abt:") !== 0 || typeof theirs !== "string") return;
       try {
-        var v = merge(name, localStorage.getItem(name), theirs);
-        if (v !== null) localStorage.setItem(name, v);
+        var here = "abt:ny:" + name.slice(4);
+        var v = merge(name, localStorage.getItem(here), theirs);
+        if (v !== null) localStorage.setItem(here, v);
       } catch (e) {}
     });
     finish();

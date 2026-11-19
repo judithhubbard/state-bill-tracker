@@ -1205,7 +1205,7 @@ if (!issue) document.getElementById("legend").hidden = false;
 // "abt:watch"): {"2025:SB12": {seen: the date of the last action seen, stance}}, keyed by session and the number without
 // its amendment letter. The front page reads and writes the same lists, so a star here shows on the state's page and
 // the other way around. Where each bill is comes from the state's data/status_<session>.json (build_data.py), in pieces (statusOf()).
-const WKEY = (st) => (st === "ny" ? "abt:watch" : `abt:${st}:watch`);
+const WKEY = (st) => `abt:${st}:watch`;
 const baseNum = (n) => n.replace(/[A-Z]$/, "");
 const spaced = (n) => n.replace(/^([A-Z]+)(\d)/, "$1 $2");
 // A number as the state writes it: Maine's records are "HLD307"/"SLD307" (the house that has the paper, then its LD
@@ -1214,8 +1214,7 @@ const numText = (st, n) => (st === "me" ? spaced(n).replace(/^[HS]LD /, "LD ") :
 function readWatch(st) {
   try { const o = JSON.parse(localStorage.getItem(WKEY(st)) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
 }
-function writeWatch(st, o) { try { localStorage.setItem(WKEY(st), JSON.stringify(o)); } catch (e) {} }
-function starBtn(st, session, num, last, label) {
+function writeWatch(st, o) { try { localStorage.setItem(WKEY(st), JSON.stringify(o)); } catch (e) {} }function starBtn(st, session, num, last, label) {
   const on = `${session}:${baseNum(num)}` in readWatch(st);
   return `<button type="button" class="star" data-star="${esc(st)}|${session}|${esc(num)}|${esc(last || "")}" aria-pressed="${on}"`
     + ` aria-label="${esc(`${on ? "Remove" : "Star"} ${label || spaced(num)}${on ? " from your bills" : ": follow it in Your bills"}`)}" title="${on ? "Remove from your bills" : "Star: follow it in Your bills"}">${on ? "★" : "☆"}</button>`;
@@ -1326,7 +1325,7 @@ async function drawMine() {
     for (let i = 0; i < localStorage.length; i++) {
       const m = (localStorage.key(i) || "").match(/^abt:(?:([a-z]{2}):)?watch$/);
       if (!m) continue;
-      const st = m[1] || "ny", w = readWatch(st), keys = Object.keys(w);
+      const st = m[1], w = readWatch(st), keys = Object.keys(w);
       if (keys.length && (NAMES[st.toUpperCase()] || st === "us")) lists.push([st, w, keys]);
     }
   } catch (e) {}
@@ -1383,10 +1382,10 @@ function markSeen(e) {
 }
 document.getElementById("mine").addEventListener("click", (e) => { if (!starClick(e)) markSeen(e); });
 // Back from a state's page, or a change in another tab: redraw.
-addEventListener("storage", (e) => { if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) drawMine(); });
+addEventListener("storage", (e) => { if (/^abt:([a-z]{2}):watch$/.test(e.key || "")) drawMine(); });
 addEventListener("pageshow", () => drawMine());
 // Show the bar at once when this browser has a watchlist, so it doesn't appear late and move the page (drawMine() fills it).
-try { for (let i = 0; i < localStorage.length; i++) if (/^abt:(?:[a-z]{2}:)?watch$/.test(localStorage.key(i) || "") && localStorage.getItem(localStorage.key(i)) !== "{}") { document.getElementById("mine").hidden = false; break; } } catch (e) {}
+try { for (let i = 0; i < localStorage.length; i++) if (/^abt:([a-z]{2}):watch$/.test(localStorage.key(i) || "") && localStorage.getItem(localStorage.key(i)) !== "{}") { document.getElementById("mine").hidden = false; break; } } catch (e) {}
 drawMine();
 // "Find a bill": bills by number ("HB 1234", "hb1234", "H.B. 1234", "A5663") or words in the title, in every built state's
 // and Congress's live sessions (current, and next year's prefiled bills), from search/<st>.json (search_site.py). Nothing

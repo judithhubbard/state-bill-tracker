@@ -23,7 +23,7 @@ from that repo. **Nothing here may change it.**
      them). Map /kelles/ to /ny/kelles/, and so on. Interim forwards must be 302, never 301.
      **Approved by the owner 2026-11-18:** do it right after statebilltracker.org launches, before the January 2027
      sessions. albanybilltracker.org's pages become forwarding pages that pass each browser's saved data (watchlist,
-     stances, action log, county; NY's names are the same here: "abt:...") to the matching statebilltracker.org/ny/ page,
+     stances, action log, county; saved here as "abt:ny:..." by welcome-ny.html) to the matching statebilltracker.org/ny/ page,
      which saves it and clears it from the address; its published lists are copied from the albany-lists KV (LISTS) to
      state-lists (state "ny"), keeping their addresses. This is the one change allowed to the AlbanyBillTracker repo.
      Prepared 2026-11-18 (not switched): the forwarding pages and a publish-only workflow are on the local, unpushed
@@ -1721,9 +1721,12 @@ from that repo. **Nothing here may change it.**
   emails) when legislators are stale or too few, New Jersey's bill texts are missing, or Virginia's date rule stops
   fitting the floor votes. Still by hand: a new governor (`GOVERNORS`) every four years, next January 2030.
 - **Saved settings are per state (2026-10-29):** the states share one web address, and a browser keeps one set of saved
-  settings per address, so tracker.html prefixes every saved name with `STORE` ("abt:nj:", "abt:va:"; New York keeps
-  plain "abt:" so its visitors' watchlists still load after the move). `adoptShared()` takes a state's own bills, once,
-  from the watchlist, log and stances saved under the plain names before this.
+  settings per address, so tracker.html prefixes every saved name with `STORE` ("abt:nj:", "abt:va:", and "abt:ny:" since
+  2026-11-19; New York kept the plain "abt:" names until then, which made other states' old stars show as New York's in
+  Your bills). `adoptShared()` takes a state's own bills, once, from the watchlist, log and stances saved under the plain
+  names before this; New York's page moves its own once (`moveNewYork()`: odd-year A and S bills, odd-year sessions'
+  settings). Every watchlist scan (`/^abt:([a-z]{2}):watch$/`) needs the state in the name. Site-wide names stay plain:
+  abt:follows, abt:lists, abt:all:published, abt:yourbills:*, abt:tabseen, abt:issueview, abt:supportnote.
 - **Adding a state (learned from NJ and VA):** missing settings fall back to New York's rules and wording, silently.
   Copy states/nj or states/va and decide each of these: in profile.py, `YEARS`, `LOWER`/`LOWER_NAME`/`TITLES`,
   `LEADERS`, `GOVERNORS`, `TOPICS`, `TOWNS_PATH`; in profile.js, `code`, `houses`, `titles`, `memberWords`,

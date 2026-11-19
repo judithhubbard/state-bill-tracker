@@ -1368,8 +1368,40 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 // pipe = stage boxes, long = bill status and history, chart = stats panel bars.
 // STATE is the state's profile (states/<code>/profile.js), which the build puts before this script.
 // Saved settings are per state (New Jersey's are "abt:nj:watch" and so on): states share one web address, and a
-// browser keeps one set of saved settings per address. New York keeps the plain names its visitors already have.
-const STORE = STATE.code && STATE.code !== "ny" ? `abt:${STATE.code}:` : "abt:";
+// browser keeps one set of saved settings per address. New York's are "abt:ny:..." like every state's.
+const STORE = `abt:${STATE.code || "ny"}:`;
+// Until 2026-11-19 New York saved under the plain names ("abt:watch"), which every state used before 2026-10-29, so
+// they can also hold New Jersey's and Virginia's stars from then. New York's page moves them once: its own bills only
+// (sessions from odd years, A and S numbers), its own sessions' settings, never the site-wide names (follows, lists,
+// Your bills, the front page's) or another state's. The plain names are left as they are.
+if (STORE === "abt:ny:") (function moveNewYork() {
+  try {
+    if (localStorage.getItem("abt:ny:moved")) return;
+    const ours = (k) => /^\d{3}[13579]:[AS]\d+$/.test(k);
+    const SITE_WIDE = /^abt:(follows|supportnote|issueview|tabseen|lists|all:|yourbills:|[a-z]{2}:)/;
+    for (const name of Object.keys(localStorage)) {
+      if (!name.startsWith("abt:") || SITE_WIDE.test(name)) continue;
+      const rest = name.slice(4), to = "abt:ny:" + rest;
+      if (localStorage.getItem(to) !== null) continue;
+      const year = (rest.match(/^(?:(?:carried|published|pubtext):)?(\d{4})(?::|$)/) || [])[1];
+      if (year && !(+year % 2)) continue;   // a session-keyed setting of an even year isn't New York's
+      let v = localStorage.getItem(name);
+      if (["watch", "log", "stance"].includes(rest)) {
+        const o = JSON.parse(v);
+        if (!o || typeof o !== "object" || Array.isArray(o)) continue;
+        v = JSON.stringify(Object.fromEntries(Object.entries(o).filter(([k]) => ours(k))));
+      } else if (rest === "worder") {
+        const a = JSON.parse(v);
+        if (!Array.isArray(a)) continue;
+        v = JSON.stringify(a.filter(ours));
+      } else if (rest === "reps") {
+        if (JSON.parse(v)?.town) continue;   // a choice with a town was New Jersey's or Virginia's
+      }
+      localStorage.setItem(to, v);
+    }
+    localStorage.setItem("abt:ny:moved", "1");
+  } catch (e) {}
+})();
 const STAGE_TEXT = STATE.stageText;
 // One house (Nebraska's Legislature: STATE.houses has one entry): no "passed one house" stage, no second chamber.
 const UNI = Object.keys(STATE.houses).length === 1;
@@ -2068,13 +2100,9 @@ const lastName = (n) => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "
 // ---- Your legislators: chosen by address or from a list, kept in this browser; otherwise
 // none. ----
 const REPS_STORE = STORE + "reps";
-// New York keeps the plain "abt:reps", which New Jersey and Virginia also wrote before each state had its own
-// (2026-10-29): a choice with a town is theirs (New Jersey's District 16 read as Sen. Liu and Asm. Norber), so it's dropped.
 function chosenReps() {
   try {
-    const c = JSON.parse(localStorage.getItem(REPS_STORE) || "null");
-    if (c && STORE === "abt:" && c.town) { localStorage.removeItem(REPS_STORE); return null; }
-    return c;
+    return JSON.parse(localStorage.getItem(REPS_STORE) || "null");
   } catch (e) { return null; }
 }
 // Your county sets your legislators unless you picked them (or looked up an address).
@@ -4230,7 +4258,7 @@ const keysOf = (b) => b.nums.map((n) => `${DATA.session}:${baseNum(n)}`);
 // Before settings were per state, every state on the shared address saved under the plain names: take this
 // state's own bills from there, once.
 function adoptShared(name) {
-  if (STORE === "abt:") return;
+  if (STORE === "abt:ny:") return;   // (New York's own move is moveNewYork(), above)
   try {
     if (localStorage.getItem(STORE + name) !== null) return;
     const old = JSON.parse(localStorage.getItem(`abt:${name}`) || "null");

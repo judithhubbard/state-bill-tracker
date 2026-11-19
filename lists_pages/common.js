@@ -28,7 +28,7 @@ const COUNTED = new Set();
 function countOnce(name) { if (!COUNTED.has(name)) { COUNTED.add(name); countUse(name); } }
 
 // ---- Watchlists in this browser ----
-const WKEY = (st) => (st === "ny" ? "abt:watch" : `abt:${st}:watch`);
+const WKEY = (st) => `abt:${st}:watch`;
 const baseNum = (n) => n.replace(/[A-Z]$/, "");
 const spaced = (n) => n.replace(/^([A-Z]+)(\d)/, "$1 $2");
 // Maine's records are "HLD307" (the house that has the paper, then its LD number), shown "LD 307".
@@ -37,15 +37,14 @@ function readWatch(st) {
   try { const o = JSON.parse(localStorage.getItem(WKEY(st)) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
 }
 function writeWatch(st, o) { try { localStorage.setItem(WKEY(st), JSON.stringify(o)); } catch (e) {} }
-const entryOf = (v) => (typeof v === "string" ? { seen: v, stance: "support" } : v || {});
-// Every starred bill in this browser: [{st, session, num, entry}].
+const entryOf = (v) => (typeof v === "string" ? { seen: v, stance: "support" } : v || {});// Every starred bill in this browser: [{st, session, num, entry}].
 function allStarred() {
   const out = [];
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const m = (localStorage.key(i) || "").match(/^abt:(?:([a-z]{2}):)?watch$/);
       if (!m) continue;
-      const st = m[1] || "ny";
+      const st = m[1];
       if (!NAMES[st]) continue;
       for (const [k, v] of Object.entries(readWatch(st))) {
         const [session, num] = k.split(":");

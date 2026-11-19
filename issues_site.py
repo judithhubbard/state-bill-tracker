@@ -794,7 +794,7 @@ const pdef = document.getElementById("pdefault"), pst = document.getElementById(
 const canHover = matchMedia("(hover: hover)").matches;
 let pinned = null, showing = null;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({{ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }}[c]));
-const WKEY = (st) => (st === "ny" ? "abt:watch" : `abt:${{st}}:watch`);
+const WKEY = (st) => `abt:${{st}}:watch`;
 function readWatch(st) {{
   try {{ const o = JSON.parse(localStorage.getItem(WKEY(st)) || "{{}}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {{}}; }} catch (e) {{ return {{}}; }}
 }}

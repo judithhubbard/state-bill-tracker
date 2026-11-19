@@ -135,7 +135,7 @@ $("bills").addEventListener("click", (e) => {
   if (e.target.closest("li > a")) countUse("list/opened a bill");
 });
 // The list changed in this browser (its sides or bills, from its cards or the editor): shown again.
-addEventListener("storage", (e) => { if (/^abt:(?:[a-z]{2}:)?watch$/.test(e.key || "")) { Frames.refresh(); drawButtons(); } if (e.key === NAMED && LIST && readNamed()[LIST.slug]) { const l = readNamed()[LIST.slug]; LIST = { ...LIST, bills: l.bills, title: l.title || LIST.title }; redraw(); } });
+addEventListener("storage", (e) => { if (/^abt:([a-z]{2}):watch$/.test(e.key || "")) { Frames.refresh(); drawButtons(); } if (e.key === NAMED && LIST && readNamed()[LIST.slug]) { const l = readNamed()[LIST.slug]; LIST = { ...LIST, bills: l.bills, title: l.title || LIST.title }; redraw(); } });
 async function redraw() {
   const bills = listBills(LIST);
   ROWS = await Promise.all(bills.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)) })));
