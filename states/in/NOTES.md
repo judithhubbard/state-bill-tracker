@@ -2,7 +2,7 @@
 
 Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and the site's code notes stay there.
 
-- **Indiana (built 2026-11-08; not yet in build_site.sh, publish.yml or states.json):** `python3 states/in/fetch.py` reads the
+- **Indiana (built 2026-11-08; in build_site.sh, publish.yml and states.json since):** `python3 states/in/fetch.py` reads the
   General Assembly's API (api.iga.in.gov, with the owner's key: INDIANA_API_KEY or ~/.indiana_api_key, a header, never
   printed): each regular session's bill list, every action and roll-call tally in one answer each, each HB, SB, HJ and SJ in
   full (authors, sponsors, versions with the Legislative Services Agency's digest, subjects), legislators and committees;

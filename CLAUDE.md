@@ -75,7 +75,7 @@ notes before changing its code. Shared notes on the LegiScan states are in state
 - **South Dakota (started 2026-11-01)**: see states/sd/NOTES.md.
 - **Utah (started 2026-11-07)**: see states/ut/NOTES.md.
 - **Colorado (built 2026-11-07)**: see states/co/NOTES.md.
-- **Indiana (built 2026-11-08; not yet in build_site.sh, publish.yml or states.json)**: see states/in/NOTES.md.
+- **Indiana (built 2026-11-08)**: see states/in/NOTES.md.
 - **Arkansas (built 2026-11-08)**: see states/ar/NOTES.md.
 - **New Hampshire (built 2026-11-08)**: see states/nh/NOTES.md.
 - **Alaska (built 2026-11-08)**: see states/ak/NOTES.md.
@@ -516,9 +516,8 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   address, up to 10 new lists a day per IP, title only); a group with an invite code also gets a named address, an
   introduction and notes, and view counts (KV's free tier allows 1,000 writes a day, so other lists aren't counted);
   saves at least 10 seconds apart. **`lists_admin.py`** now talks to `state-lists` (token in ~/.state_lists_admin, also
-  the Worker secret ADMIN_TOKEN): `lists`, `list-hide`/`list-show SLUG`, `list-delete SLUG`, codes as before. New
-  York's `listsApi` in states/ny/profile.js still points at the live albany-lists Worker until the page work switches
-  every state to state-lists.
+  the Worker secret ADMIN_TOKEN): `lists`, `list-hide`/`list-show SLUG`, `list-delete SLUG`, codes as before. Every
+  state's `listsApi`, New York's included, points at state-lists.
 - **`artifact_urls.json` is empty.** Never publish to the NY Claude copies from here.
 
 The notes below are ny-bill-tracker's, copied as they were. They describe the code as it stands.
@@ -599,7 +598,7 @@ Read README.md for what each script downloads. This file covers how to change th
 - **Prefiled bills:** in November and December of even years the workflow also downloads the next
   session. `build_data.py` decides the current session by the calendar (`CURRENT`); a later one is
   "upcoming": its page is `<year>.html`, its data has `current` and `upcoming` true, its stages
-  read "Prefiled" (`STAGE_TEXT.prefiled`), and it has no Weigh in or Statistics tab. Statistics and
+  read "Prefiled" (`STAGE_TEXT.prefiled`), and it has no Statistics tab. Statistics and
   outcomes leave it out. Stars made there carry into January, since watchlists are keyed by session.
 - **cron_worker/** is a Cloudflare Worker that starts the update workflow on time (GitHub's own
   schedule often runs late or skips runs; it stays in update.yml as a backup). It fires hourly and
@@ -619,6 +618,8 @@ Read README.md for what each script downloads. This file covers how to change th
   sessions are stored as `data/bills_<year>.json.gz`.
 
 ## Map of tracker.html (search for these names; line numbers drift)
+
+ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from download to publish, which checks run where, where each visible part is drawn, shared code, and a troubleshooting list. Read it first when diagnosing a problem; this section is tracker.html's detail.
 
 - **Top:**
   - CSS, with color tokens on `:root`. Dark mode is defined twice: under
@@ -706,7 +707,7 @@ Read README.md for what each script downloads. This file covers how to change th
     are back under new numbers (handled ones are kept in `abt:carried:<session>`).
 - **Committee agendas:** `state.agenda` ("On an upcoming committee agenda", a sub-row under In
   committee, turned on by `setAgenda()`, which also sorts by `meeting`), the "On the agenda" tag on
-  bill rows, and `comingUp()` (Weigh in: the next two weeks' meetings, each folding open to its bills).
+  bill rows, and `comingUp()` (a legislator's "Open for comment" tab: the next two weeks' meetings, each folding open to its bills).
   `CHANGED` also has "Introduced since your last visit" and "in the last 7 days" (`b.dates.intro`).
     `markSeen()` runs when a bill's details or its watchlist card are opened.
   - Sharing (2026-11-18; public site only): "Share this list" makes one live list in the state-lists Worker (every
@@ -810,7 +811,7 @@ Read README.md for what each script downloads. This file covers how to change th
   place: a list of bills not in yet (`renderList()`: their shards for up to 3, else the rows part), an opened bill
   (`fillDetail()`: its shard and the stats part), the list under a search, the vote or co-sponsor filter or on a
   legislator's page (`listNeeds()`: `render()` shows "Loading…" in the list; the page's frame stays until they're in,
-  as it does for a bill named in the address). Hidden tabs (Statistics, Watchlist, Weigh in, How, Their numbers) are
+  as it does for a bill named in the address). Hidden tabs (Statistics, Watchlist, How, a legislator's Open for comment and Their numbers) are
   drawn when opened: their render functions start with `later(view, key, fn, box, needs)`, which keeps them in `STALE`
   and says "not now"; `needs()` returns the parts and bills the drawing reads (the watchlist: its bills, the stats
   part); `showView()` draws what's stale. A drawing that finds it needs a part only while it runs (`meetings()` reads
