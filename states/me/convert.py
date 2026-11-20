@@ -1,6 +1,6 @@
-"""Maine's bills from LegiScan's files (downloaded by legiscan.py into data/me/legiscan/<session_id>/; the Legislature's
-own site, legislature.maine.gov, asks automated readers not to), in the shape build_data.py reads. The shared reading is
-states/legiscan_convert.py; this file says what's particular to Maine.
+"""Maine's bills from LegiScan's files (downloaded by legiscan.py into data/me/legiscan/<session_id>/), with each law's
+signing date and chapter from its page on legislature.maine.gov (states/me/laws.py, data/me/laws.json), in the shape
+build_data.py reads. The shared reading is states/legiscan_convert.py; this file says what's particular to Maine.
 
 - What's shown: the Legislative Documents (LDs) of each two-year Legislature's regular sessions: bills ("An Act to ..."),
   resolves ("Resolve, ...": laws with a limited purpose or time, numbered separately as "Resolves 2025, chapter 12") and
@@ -24,8 +24,9 @@ states/legiscan_convert.py; this file says what's particular to Maine.
   placed on the Senate's Special Appropriations Table pending enactment, and those not funded when the session ends die
   there, after the House enacted them.
 - The governor: the history doesn't record a bill reaching the governor or being signed, nor its chapter number. A bill
-  enacted by both houses whose chaptered text LegiScan holds (texts[].type "Chaptered") became law: it's marked as law on
-  the day of its final enactment. Vetoes appear when the house of origin reconsiders the bill ("This Bill, having been
+  enacted by both houses whose chaptered text LegiScan holds (texts[].type "Chaptered") became law: it's marked as signed
+  on the day its page gives ("Governor's Action: Signed, Apr 15, 2026"), with its chapter ("Public Law, chapter 699"),
+  or, until laws.py has read the page, as law on the day of its final enactment. Vetoes appear when the house of origin reconsiders the bill ("This Bill, having been
   returned by the Governor, together with objections ..."), with the vote ("...the veto was sustained", or "...become a
   law notwithstanding the objections of the Governor"). "HELD BY THE GOVERNOR" marks bills enacted at the end of a session
   that the governor keeps until the Legislature meets again (she then has three days); a bill still held when the
@@ -103,8 +104,24 @@ def tally(t):
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
-def decode_bill(b, kind):
-    """Every history line of one LD -> its steps, reading each line with the ones around it."""
+_FACTS = None
+
+
+def facts_of(b, facts=None):
+    """What the law's page on the Legislature's site says (data/me/laws.json, read by states/me/laws.py): {"gov":
+    "Signed", "date": "2026-04-15", "series": "Public Law", "chapter": 699}, or {}."""
+    global _FACTS
+    if facts is None:
+        if _FACTS is None:
+            _FACTS = L.read_json(os.path.join(P.DATA, "laws.json"), {}) or {}
+        facts = _FACTS
+    session = str((b.get("session") or {}).get("year_start") or "")
+    return (facts.get(session) or {}).get(L.number(b.get("bill_number") or "")[2:]) or {}
+
+
+def decode_bill(b, kind, facts=None):
+    """Every history line of one LD -> its steps, reading each line with the ones around it. facts: laws.json's contents
+    (None: read the file)."""
     hist = b.get("history") or []
     origin = b.get("body") if b.get("body") in HOUSE else "H"
     lines = [((a.get("date") or "")[:10], a.get("chamber") if a.get("chamber") in HOUSE else "", L.text(a.get("action"))) for a in hist]
@@ -238,8 +255,44 @@ def decode_bill(b, kind):
         out[i].append((lines[i][1], "enrolled", "ENACTED BY BOTH HOUSES", {}))
     if enact_lines and kind == "bill" and enacted["S"] and enacted["H"]:
         i = enact_lines[-1]
-        if chaptered:
-            out[i].append(("G", "chapter", "Became law (the date the governor signed it isn't in the record)", {"num": ""}))
+        f = facts_of(b, facts)
+        gov, series, num = f.get("gov") or "", f.get("series") or "", f.get("chapter")
+        vetoed = any(x[1] == "veto" for line in out for x in line)
+        overridden = any(x[1] == "override" for line in out for x in line)
+        # Held by the governor until the Legislature ended, and never a law, though LegiScan's status says "Passed" (LD
+        # 1152 of 2023-24, enacted on veto day: "Held by Governor, May 22, 2024"; "Died Upon Conclusion of the 131st").
+        died = bool(re.match(r"Died", f.get("final") or "") or
+                    (gov.startswith("Held") and not num and (b.get("session") or {}).get("sine_die"))) and \
+            not any((t.get("type") or "") == "Chaptered" for t in b.get("texts") or [])
+        # A page read that names no governor's action and no chapter, for a bill LegiScan calls "Passed" without a chaptered
+        # text (LD 25, 2205 and 2210 of 2023-24, enacted on veto day): not a law here, and no decision recorded.
+        silent = bool(f.get("checked")) and not gov and not num and not f.get("final") and \
+            not any((t.get("type") or "") == "Chaptered" for t in b.get("texts") or [])
+        if silent:
+            if (b.get("session") or {}).get("sine_die"):
+                out[i].append(("G", None, "No governor's action or chapter is recorded on the Legislature's page", {}))
+        elif died:
+            out[i].append(("G", "sent", "Held by the governor until the Legislature meets again", {"date": f["date"]} if f.get("date") else {}))
+            out[i].append(("G", "veto", "Not signed: the Legislature ended while the governor held it (a pocket veto)",
+                           {"date": f.get("final_date") or f.get("date")} if f.get("final_date") or f.get("date") else {}))
+        elif chaptered and vetoed and not overridden:
+            pass  # a veto that stood (LD 1610 of 2023-24, an initiative LegiScan holds a chaptered text of: "IB, Chapter 2")
+        elif chaptered:
+            # The governor's action and the chapter from the law's page (laws.py), once it's been read: the signature on
+            # its own day, the chapter with it. A Public Law's number is the record's chapter; private and special laws and
+            # resolves are numbered in series of their own, so theirs is only in the line.
+            when = f.get("date") if f.get("date") and not vetoed else ""
+            where = {"date": when} if when else {}
+            if when and re.search(r"Unsigned|without", gov, re.I):
+                out[i].append(("G", "nosign", "Became law without the governor's signature", where))
+            elif when and re.search(r"\bSigned\b", gov):
+                out[i].append(("G", "signed", "Signed by the governor" + (" (an emergency law, in effect at once)" if "Emergency" in gov else ""), where))
+            else:
+                when = where = ""
+            if num:
+                out[i].append(("G", "chapter", f"{series or 'Chapter'}, chapter {num}", dict(where or {}, num=num if series == "Public Law" else "")))
+            elif not when:
+                out[i].append(("G", "chapter", "Became law (the date the governor signed it isn't in the record)", {"num": ""}))
         elif held_at is not None and b.get("session", {}).get("sine_die") and held_at == max(j for j, x in enumerate(lines) if x[2]):
             # Held by the governor when the Legislature ended for good, and not a law: a pocket veto.
             out[held_at].append(("G", "veto", "Not signed: the Legislature ended while the governor held it (a pocket veto)", {}))

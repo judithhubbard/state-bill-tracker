@@ -373,6 +373,10 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     known\x95as"; 518 of 2025's), decoded with "replace" as U+FFFD; `states/ny/memos.py` reads them as spaces and reads
     those memos again. And PDFs whose own text is mojibake (NE's committee statement for LB 94 of 2023: "Commissionâ€™s",
     "â€œminorâ€•"): `unmangle()` in states/ne/texts.py. The "wrongly decoded characters" check caught both.
+  - (2026-11-19) An aggregator's "Passed" on bills the governor held until the Legislature ended: LegiScan calls 36 of Maine's
+    2023-24 veto-day bills passed; their official pages say "Held by Governor" and "Died Upon Conclusion of the 131st" (32,
+    pocket vetoes) or nothing (3). Read the official page (states/me/laws.py) and re-read robots.txt rather than trusting an
+    old note that it bars everything. The check LOOKs at laws whose history ends with the governor holding them.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.
