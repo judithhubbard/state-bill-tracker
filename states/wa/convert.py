@@ -73,11 +73,16 @@ REFER = re.compile(r"^(?:First reading, )?(?:referred|And refer|Referred) to (.+
 REPORT = re.compile(r"^(?:([A-Z&]{2,6}) - )?Majority;.*\bdo pass\b", re.I)
 
 
+def comm_name(name):
+    """A committee name as a history line writes it, without "the", a subcommittee's prefix or the introduction note."""
+    name = re.sub(r"^(?:the )?", "", re.sub(r"\s*\(Not Officially read.*$", "", name.strip()))
+    return re.sub(r"^.* Subcommittee to ", "", name)
+
+
 def where_to(name, comms):
     """A committee name in a history line -> (house, name), or None. Subcommittees count as their committee."""
-    name = re.sub(r"^(?:the )?", "", re.sub(r"\s*\(Not Officially read.*$", "", name.strip()))
-    name = re.sub(r"^.* Subcommittee to ", "", name)
-    return comms.get(name.lower())
+    name = comm_name(name)
+    return comms.get(name.lower()) or comms.get(name.lower().replace(" and ", " & "))
 
 
 def steps_of(bill, d, comms):
@@ -135,7 +140,10 @@ def steps_of(bill, d, comms):
         conc = re.match(r"^(House|Senate) (concurred|receded|refuses|adopted|insists|grants|appoints)", line)
         if conc:
             house = "H" if conc.group(1) == "House" else "S"
-        r = REFER.match(line)
+        # "Rules Committee relieved of further consideration.  On motion, referred to Ways & Means." sends the bill back
+        # to a committee, not to the floor (SB 5659 of 2025-26, on the 2026 session's first day).
+        r = REFER.match(re.sub(r"^Rules Committee relieved of further consideration[.;]\s*(?:On motion, )?(?=referred to )", "",
+                               line, flags=re.I))
         if r:
             hit = where_to(r.group(1), comms)
             if re.match(r"Rules\b", r.group(1)):
@@ -143,11 +151,15 @@ def steps_of(bill, d, comms):
             elif hit:
                 house = hit[0]
                 t = f"REFERRED TO {hit[1].upper()}"
+            else:
+                # A committee the biennium's list doesn't name (renamed or merged since: 2023's "Community Safety, Justice,
+                # & Reentry", 2025's "Business, Financial Services & Trade") is still a referral, in the bill's house.
+                t = f"REFERRED TO {comm_name(r.group(1)).upper()}"
         elif RETURNED.match(line):
             house = "H" if RETURNED.match(line).group(1).lower() == "house" else "S"
             t = "REFERRED TO RULES"
         # Not the end-of-session "Returned to House Rules 3.": bookkeeping for every bill left on the floor calendar.
-        elif re.match(r"^Passed to Rules Committee for second reading|^(?:By resolution, )?[Rr]eturned to (?:(?:House|Senate) )?Rules Committee|"
+        elif re.match(r"^Passed to Rules Committee for (?:second|third) reading|^(?:By resolution, )?[Rr]eturned to (?:(?:House|Senate) )?Rules Committee|"
                       r'^(?:House|Senate) Rules "X" file', line):
             t = "REFERRED TO RULES"
         elif REPORT.match(line):

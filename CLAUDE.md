@@ -373,6 +373,10 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     known\x95as"; 518 of 2025's), decoded with "replace" as U+FFFD; `states/ny/memos.py` reads them as spaces and reads
     those memos again. And PDFs whose own text is mojibake (NE's committee statement for LB 94 of 2023: "Commissionâ€™s",
     "â€œminorâ€•"): `unmangle()` in states/ne/texts.py. The "wrongly decoded characters" check caught both.
+  - A line read by its opening words when it ends in another step: WA's "Rules Committee relieved of further consideration.
+    On motion, referred to Ways & Means." read as placed on the floor (17 Senate bills of 2025-26, SB 5659); the referral wins.
+    And a referral to a committee the session's list no longer names (renamed) was kept as text (9 WA bills of 2023-24).
+    The check LOOKs (FAIL over 0.5%) at bills on the floor whose last line refers them to a committee.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.
