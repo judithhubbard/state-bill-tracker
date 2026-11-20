@@ -8,7 +8,8 @@ would more than double the download. Each file is small enough to load all 51 on
 (Cloudflare compresses them); a query naming a state loads that state's first.
 
 Each file: {"st", "name", "s": [{"session", "label" ("2025–26": shown beside a result when a state has two sessions in the
-search), "page" ("" for the state's index page), "live", "up" (prefiled for a session not begun), "b": [[number, title, stage, ("c" for a constitutional amendment, else 0), [other numbers]?], ...],
+search), "page" ("" for the state's index page), "live", "up" (prefiled for a session not begun), "w": [status words (as the state's page words them: build_data.py's
+bill_labels())], "b": [[number, title, stage, its status words' index in "w", [other numbers]?], ...],
 "t": {issue id: [indexes into b]}}]}: "t" is each national issue's bills (the state's data/issues_<session>.json), so a
 search for "kratom" also finds "Prohibits the sale of 7-hydroxymitragynine products". search/topics.json gives each issue
 the words that call it up: its name, short name and issues.py's "words".
@@ -62,15 +63,15 @@ def main(out):
                         on.setdefault(re.sub(r"[A-Z]$", "", n), set()).update(x[0])
             except (OSError, ValueError, KeyError):
                 pass
-            rows, tags = [], {}
+            rows, tags, words = [], {}, {}
             for key, b in d["bills"].items():
                 for i in on.get(key, set()) | on.get(re.sub(r"[A-Z]$", "", b[0]), set()):
                     tags.setdefault(i, []).append(len(rows))
-                row = [b[0], short(b[1]), b[2], "c" if b[6] == "const" else 0]
+                row = [b[0], short(b[1]), b[2], words.setdefault(b[11] if len(b) > 11 else "", len(words))]
                 if key in others:
                     row.append(others[key])
                 rows.append(row)
-            sessions.append({"session": d["session"], "label": label, "page": page, "live": True, "up": bool(page), "b": rows, "t": tags})
+            sessions.append({"session": d["session"], "label": label, "page": page, "live": True, "up": bool(page), "w": list(words), "b": rows, "t": tags})
             total += len(rows)
         if not sessions:
             continue

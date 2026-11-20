@@ -1,9 +1,5 @@
-// Shared by /your-bills/ and /list/ (lists_pages/; build_site.sh puts it inside each page, ahead of the page's own script).
-// Each state's page keeps its watchlist in this browser under "abt:<st>:watch" (New York's under "abt:watch"):
-// {"2025:SB12": {seen: the date of the last action seen, stance}}, keyed by session and the number without its amendment
-// letter. Where each bill is comes from the state's data/status_<session>.json (build_data.py): {page, live, bills:
-// {number: [full number, title, stage, last action's date, last action, committee, kind]}, alias: {other number: number}}.
-// It's read in pieces (statusOf(), below).
+// Shared by /your-bills/, /list/ and the list editor (lists_pages/; build_site.sh puts it inside each page, after
+// billfacts.js and status.js, which hold the starred bills in this browser and where each bill is, as on the front page).
 // Shared lists live in the lists Worker (lists_worker/): a list across states writes each bill "nj:2026:A1234" ("-" in
 // front: opposed).
 const LISTS_API = (document.querySelector('meta[name="lists-api"]')?.content || "").replace(/\/$/, "");
@@ -30,16 +26,7 @@ const COUNTED = new Set();
 function countOnce(name) { if (!COUNTED.has(name)) { COUNTED.add(name); countUse(name); } }
 
 // ---- Watchlists in this browser ----
-const WKEY = (st) => `abt:${st}:watch`;
-const baseNum = (n) => n.replace(/[A-Z]$/, "");
-const spaced = (n) => n.replace(/^([A-Z]+)(\d)/, "$1 $2");
-// Maine's records are "HLD307" (the house that has the paper, then its LD number), shown "LD 307".
-const numText = (st, n) => (st === "me" ? spaced(n).replace(/^[HS]LD /, "LD ") : spaced(n));
-function readWatch(st) {
-  try { const o = JSON.parse(localStorage.getItem(WKEY(st)) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
-}
-function writeWatch(st, o) { try { localStorage.setItem(WKEY(st), JSON.stringify(o)); } catch (e) {} }
-const entryOf = (v) => (typeof v === "string" ? { seen: v, stance: "support" } : v || {});// Every starred bill in this browser: [{st, session, num, entry}].
+// Every starred bill in this browser: [{st, session, num, entry}].
 function allStarred() {
   const out = [];
   try {
@@ -75,52 +62,8 @@ function listBills(l) {
 const showStance = (l) => !!l.group || l.bills.some((b) => b.startsWith("-"));
 const noteOf = (l, b) => (l.notes || {})[l.state === "all" ? b.key : b.num] || "";
 
-// ---- Where each bill is ----
-// The pages read the status file in pieces (build_data.py's write_status_shards()): /status.json names each state's
-// sessions' pieces ({st: {session: {p: page, l: live, h: an 8-character hash per piece}}}), and a bill is in piece
-// shardOf(number) of data/v/<session>.<hash>.t<k>.json ({bills, alias}); an alias's record may be in another piece. The
-// whole file is the fallback (a state or session /status.json doesn't name, or a piece gone after a deploy).
-// statusOf(st, session, num) answers {page, live, bills, alias} holding at least that bill, or null.
-const STATUS = {}, PIECES = {};
-let STATUS_INDEX;
-const statusIndex = () => (STATUS_INDEX ||= fetch("/status.json").then((r) => (r.ok ? r.json() : null)).catch(() => null));
+// ---- Where each bill is (status.js) ----
 statusIndex();  // at once: the pages preload it
-const wholeStatus = (st, session) => (STATUS[`${st}/${session}`] ||= fetch(`/${st}/data/status_${session}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
-const pieceOf = (num, n) => { let h = 0x811c9dc5; for (const c of baseNum(num)) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193) >>> 0; return h % n; };
-async function statusOf(st, session, num) {
-  const index = await statusIndex();
-  if (!index || !index[st]) return wholeStatus(st, session);
-  const ix = index[st][session];
-  if (!ix) return null;
-  const n = ix.h.length / 8;
-  const piece = (k) => (PIECES[`${st}/${session}/${k}`] ||= fetch(`/${st}/data/v/${session}.${ix.h.slice(8 * k, 8 * k + 8)}.t${k}.json`)
-    .then((r) => (r.ok ? r.json() : null)).catch(() => null));
-  const p = await piece(pieceOf(num, n));
-  if (!p) return wholeStatus(st, session);
-  const out = { session: +session, page: ix.p, live: ix.l, bills: p.bills, alias: p.alias };
-  const lead = !p.bills[num] && p.alias[num];
-  if (!lead || p.bills[lead]) return out;
-  const q = await piece(pieceOf(lead, n));
-  if (!q) return wholeStatus(st, session);
-  return { ...out, bills: q.bills[lead] ? { [lead]: q.bills[lead] } : {} };
-}
-const fmtDay = (d) => (d ? new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
-// Where a bill is, in a few words: watchrows.js's (each page that has common.js has it too; up: a session not begun, whose
-// bills are prefiled, as their state's page says).
-const whereText = (st, stage, comm, kind, live, up) => WatchRows.where(st, stage, comm, kind, live, up);
-// A bill's latest step as the state wrote it, in plainer words (home.html's plainAct()).
-const titleCase = (t) => t.toLowerCase().replace(/\b([a-z])([a-z]*)/g, (w, a, b, i) => (i && /^(and|of|the|on|for|to|in|a)$/.test(w) ? w : a.toUpperCase() + b));
-function plainAct(a) {
-  a = String(a).trim();
-  let m;
-  if ((m = a.match(/^REFERRED TO (.+)$/))) return `Sent to the ${titleCase(m[1])} Committee`;
-  if ((m = a.match(/^SIGNED CHAP\.?\s*(\d+)/i))) return `Signed into law (chapter ${m[1]})`;
-  if (/^DELIVERED TO GOVERNOR$/i.test(a)) return "Sent to the governor";
-  if (/^VETOED/i.test(a)) return "Vetoed";
-  if (/^APPROVAL MEMO/i.test(a)) return "Signed into law";
-  if (a === a.toUpperCase() && /[A-Z]{3}/.test(a)) a = a.charAt(0) + a.slice(1).toLowerCase();
-  return a.length > 140 ? a.slice(0, 140).replace(/\s\S*$/, "") + "…" : a;
-}
 // The status files cut long titles short (about 140 characters): mark the cut.
 const cut = (t) => (t.length >= 120 && !/[.!?)"”']$/.test(t) ? t.replace(/[\s,;:]+$/, "") + "…" : t);
 // One bill's status: {found, full, title, stage, last, action, label, href, page} (href: its card on the state's page;
@@ -129,8 +72,8 @@ async function lookUp(st, session, num) {
   const s = await statusOf(st, session, num);
   const lead = s ? (s.bills[num] ? num : s.alias?.[num]) : null, b = lead && s.bills[lead];
   if (!b) return { found: false, full: num, title: `${session} session`, href: `/${st}/` };
-  const [full, title, stage, last, action, comm, kind] = b, page = s.page && s.page !== "./" ? s.page : "";
-  return { found: true, full, title: cut(title), stage, last, action, label: whereText(st, stage, comm, kind, s.live !== false, +session > THIS_YEAR), href: `/${st}/${page}#${full}`, page: `/${st}/${page}` };
+  const { full, title, stage, last, action, label } = rowOf(b), page = s.page && s.page !== "./" ? s.page : "";
+  return { found: true, full, title: cut(title), stage, last, action, label, href: `/${st}/${page}#${full}`, page: `/${st}/${page}` };
 }
 const THIS_YEAR = new Date().getFullYear();
 // A bill its state's data doesn't have (the state's page shows the rest, embed.js): number, title, where it is, a link to

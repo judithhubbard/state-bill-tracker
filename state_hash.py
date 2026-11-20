@@ -32,6 +32,7 @@ def files():
     for f in ("governors.py", "party_history.py", "tracker.html", "build_data.py", "stages.py", "issues.py", "fetch_contacts.py", "listing_dates.py", "balance.py",
               "site_meta.py", os.path.join("lists_pages", "named.js"), os.path.join("lists_pages", "watchrules.js"), os.path.join("lists_pages", "sankey.js"),
               os.path.join("lists_pages", "watchrows.js"), os.path.join("lists_pages", "rows.css"),
+              os.path.join("lists_pages", "billfacts.js"), os.path.join("lists_pages", "billlabels.js"),
               os.path.join("states", "legislatures.json")):
         yield os.path.join(HERE, f)
     for s in sorted({state, "ny"}):

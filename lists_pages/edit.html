@@ -422,8 +422,7 @@ function drawResults() {
     : most ? `No bill${where} has all those words; these have most of them`
     : `${HITS.length.toLocaleString()} bill${HITS.length === 1 ? "" : "s"} found${where}${LOADING ? " · still loading some states…" : ""}`;
   $("res").innerHTML = HITS.slice(0, LIMIT).map(({ st, s, r, shown }) => {
-    const [num, title, stage, kind] = r, on = onList(st, s.session, num);
-    const label = s.up ? `Prefiled for ${s.session}` : whereText(st, stage, "", kind === "c" ? "const" : "", s.live !== false);
+    const [num, title, stage, w] = r, label = s.w[w] || "", on = onList(st, s.session, num);
     const same = shown && shown !== num ? ` (same bill as ${esc(numText(st, num))})` : "";
     return `<li><span><span class="fn">${esc(stName(st))} <b>${esc(numText(st, shown || num))}</b>${same}</span> <span class="stg s${s.up ? 0 : stage}">${esc(label)}</span>`
       + `<span class="tt">${esc(title)}</span></span><button type="button" class="btn" data-add="${esc(`${st}|${s.session}|${num}`)}"${on ? " disabled" : ""}`

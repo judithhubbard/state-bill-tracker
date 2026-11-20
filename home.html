@@ -766,7 +766,7 @@ function markPin() {
   for (const x of document.querySelectorAll("#tiles button.tile, #chart button.crow")) { x.classList.toggle("sel", x.dataset.st === pinned); x.setAttribute("aria-pressed", String(x.dataset.st === pinned)); }
 }
 // The panel: a state's bills on the issue that year (issues/<id>/bills.json, loaded once per issue), one line each.
-const PANEL = {}, STAGE_SHORT = ["Committee", "Floor", "Passed one house", "Passed both", "Governor", "Law", "Vetoed"];
+const PANEL = {};
 const canHover = matchMedia("(hover: hover)").matches;
 let pinned = null;
 function panelData() {
@@ -802,14 +802,15 @@ function showPanel(st) {
     // (The issue pages list the states only: Congress's bills are here and on its own page.)
     const head = `<h3>${esc(nameOf(st))}</h3><p>${n ? `${n} bill${n === 1 ? "" : "s"} on ${esc(issue.short)}${pw} in ${YT()}` : `No bills on ${esc(issue.short)}${pw} in ${YT()}`}`
       + `${laws ? `, ${laws} became law` : ""}.${n && st !== "us" ? ` <a href="issues/${issue.id}/${page}#${st}">See them on the issue page</a>` : ""}${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`;
-    body.innerHTML = head + pbig(splitOf((issue.y[year] || { by: {} }).by[st])) + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last, pc, , lawHere]) => {
-      // A law from a later (or earlier) year than the one shown says when: the map counts laws by year.
-      const stg = stage === 0 && +session > NOW ? "Prefiled" : kind === "const" && stage === 3 ? "To voters" : stage === 5 && lawHere === 0 && last ? `Law ${last.slice(0, 4)}` : STAGE_SHORT[stage];
+    body.innerHTML = head + pbig(splitOf((issue.y[year] || { by: {} }).by[st])) + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last, pc, , lawHere, label]) => {
+      // The status words as the state's page has them (issues_site.py passes the build's); a law from a later (or
+      // earlier) year than the one shown says when, as on the issue pages: the map counts laws by year.
+      const stg = `${label || ""}${stage === 5 && lawHere === 0 && last ? ` in ${last.slice(0, 4)}` : ""}`;
       if (why && (why.toLowerCase().replace(/\W+/g, " ").trim() === title.toLowerCase().replace(/\W+/g, " ").trim()
         || title.toLowerCase().includes(why.toLowerCase()))) why = "";
       if (why) title = title.replace(/[.\s]+$/, "");
       const full = why ? `${title}: ${why}` : title;
-      return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="tags">${partyTag(pc)}<span class="stg s${stage}">${stg}</span></span></a>${raw ? starBtn(st, session, raw, last, num) + listBtn(st, session, raw, `${nameOf(st)} ${num}`) : ""}</li>`;
+      return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="tags">${partyTag(pc)}<span class="stg s${stage}" title="${esc(stg)}">${esc(stg)}</span></span></a>${raw ? starBtn(st, session, raw, last, num) + listBtn(st, session, raw, `${nameOf(st)} ${num}`) : ""}</li>`;
     }).join("")}</ul>` : "");
     ppFocus(body);
   });
@@ -1256,20 +1257,12 @@ document.querySelector(".show .pick").hidden = YEARS.length < 2 && !issues.issue
 render();
 tiles.removeAttribute("aria-hidden");
 if (!issue && !CUSTOM) document.getElementById("legend").hidden = false;
-// Starred bills. Each state's page keeps its watchlist in this browser under "abt:<st>:watch" (New York's under
-// "abt:watch"): {"2025:SB12": {seen: the date of the last action seen, stance}}, keyed by session and the number without
-// its amendment letter. The front page reads and writes the same lists, so a star here shows on the state's page and
-// the other way around. Where each bill is comes from the state's data/status_<session>.json (build_data.py), in pieces (statusOf()).
-const WKEY = (st) => `abt:${st}:watch`;
-const baseNum = (n) => n.replace(/[A-Z]$/, "");
-const spaced = (n) => n.replace(/^([A-Z]+)(\d)/, "$1 $2");
-// A number as the state writes it: Maine's records are "HLD307"/"SLD307" (the house that has the paper, then its LD
-// number), shown "LD 307".
-const numText = (st, n) => (st === "me" ? spaced(n).replace(/^[HS]LD /, "LD ") : spaced(n));
-function readWatch(st) {
-  try { const o = JSON.parse(localStorage.getItem(WKEY(st)) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
-}
-function writeWatch(st, o) { try { localStorage.setItem(WKEY(st), JSON.stringify(o)); } catch (e) {} }function starBtn(st, session, num, last, label) {
+// Starred bills: the front page reads and writes the same lists as each state's page (lists_pages/status.js: readWatch(),
+// writeWatch(), statusOf() and the rest, shared with the list pages, put here by build_site.sh after billfacts.js), so a
+// star here shows on the state's page and the other way around.
+/*billfacts.js*/
+/*status.js*/
+function starBtn(st, session, num, last, label) {
   const on = `${session}:${baseNum(num)}` in readWatch(st);
   return `<button type="button" class="star" data-star="${esc(st)}|${session}|${esc(num)}|${esc(last || "")}" aria-pressed="${on}"`
     + ` aria-label="${esc(`${on ? "Remove" : "Star"} ${label || spaced(num)}${on ? " from your bills" : ": follow it in Your bills"}`)}" title="${on ? "Remove from your bills" : "Star: follow it in Your bills"}">${on ? "★" : "☆"}</button>`;
@@ -1289,55 +1282,7 @@ function starClick(e) {
   drawMine();
   return true;
 }
-// The status file in pieces, as lists_pages/common.js reads it (build_data.py's write_status_shards()): status.json names
-// each state's sessions' pieces, a bill is in piece pieceOf(number) (an alias's record may be in another); the whole
-// file is the fallback. statusOf(st, session, num): {page, live, bills, alias} holding at least that bill, or null.
-const STATUS = {}, PIECES = {};
-let STATUS_INDEX;
-const statusIndex = () => (STATUS_INDEX ||= fetch("status.json").then((r) => (r.ok ? r.json() : null)).catch(() => null));
-const wholeStatus = (st, session) => (STATUS[`${st}/${session}`] ||= fetch(`${st}/data/status_${session}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null));
-const pieceOf = (num, n) => { let h = 0x811c9dc5; for (const c of baseNum(num)) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193) >>> 0; return h % n; };
-async function statusOf(st, session, num) {
-  const index = await statusIndex();
-  if (!index || !index[st]) return wholeStatus(st, session);
-  const ix = index[st][session];
-  if (!ix) return null;
-  const n = ix.h.length / 8;
-  const piece = (k) => (PIECES[`${st}/${session}/${k}`] ||= fetch(`${st}/data/v/${session}.${ix.h.slice(8 * k, 8 * k + 8)}.t${k}.json`)
-    .then((r) => (r.ok ? r.json() : null)).catch(() => null));
-  const p = await piece(pieceOf(num, n));
-  if (!p) return wholeStatus(st, session);
-  const out = { session: +session, page: ix.p, live: ix.l, bills: p.bills, alias: p.alias };
-  const lead = !p.bills[num] && p.alias[num];
-  if (!lead || p.bills[lead]) return out;
-  const q = await piece(pieceOf(lead, n));
-  if (!q) return wholeStatus(st, session);
-  return { ...out, bills: q.bills[lead] ? { [lead]: q.bills[lead] } : {} };
-}
-const fmtDay = (d) => (d ? new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
-// (up: a session not begun, whose bills are prefiled, as their state's page says.)
-function whereText(stage, comm, kind, live, up) {
-  if (stage === 0 && up) return "Prefiled";
-  if (stage === 0) return `${live ? "In" : "Died in"} committee${comm ? ` (${comm})` : ""}`;
-  if (stage === 3 && kind === "const") return "Constitutional amendment passed both houses";  // (a first passage in some states: the voters aren't always next)
-  if (!live && stage < 3) return ["", "Died on the floor", "Passed one house; died in the other"][stage];
-  return ["In committee", "On the floor", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"][stage] || "";
-}
 let mineDrawn = "";
-// A bill's latest step as the state wrote it, in plainer words: "REFERRED TO LAW AND PUBLIC SAFETY" -> "Sent to the Law
-// and Public Safety Committee"; other capitals in sentence case.
-const titleCase = (t) => t.toLowerCase().replace(/\b([a-z])([a-z]*)/g, (w, a, b, i) => (i && /^(and|of|the|on|for|to|in|a)$/.test(w) ? w : a.toUpperCase() + b));
-function plainAct(a) {
-  a = String(a).trim();
-  let m;
-  if ((m = a.match(/^REFERRED TO (.+)$/))) return `Sent to the ${titleCase(m[1])} Committee`;
-  if ((m = a.match(/^SIGNED CHAP\.?\s*(\d+)/i))) return `Signed into law (chapter ${m[1]})`;
-  if (/^DELIVERED TO GOVERNOR$/i.test(a)) return "Sent to the governor";
-  if (/^VETOED/i.test(a)) return "Vetoed";
-  if (/^APPROVAL MEMO/i.test(a)) return "Signed into law";
-  if (a === a.toUpperCase() && /[A-Z]{3}/.test(a)) a = a.charAt(0) + a.slice(1).toLowerCase();
-  return a.length > 140 ? a.slice(0, 140).replace(/\s\S*$/, "") + "…" : a;
-}
 // The map's star marks: a small gold star in the corner of each tile (Congress's too) whose watchlist in this browser has
 // starred bills ({st: count}, the bills "Your bills" lists, so New York's old list counts only New York's bills), with
 // "N starred bills" in its hover text and spoken label. Redrawn with the map and with "Your bills".
@@ -1393,12 +1338,13 @@ async function drawMine() {
       const page = s && s.page && s.page !== "./" ? s.page : "";
       if (!b && st === "ny") return null;
       if (!b) return { last: "", html: `<li><a href="${st}/"><span class="num">${esc(spaced(num))}</span><span class="tt">${session} session</span></a>${starBtn(st, +session, num, "", spaced(num))}</li>` };
-      const [full, title, stage, last, action, comm, kind] = b, fresh = last && last > seen;
-      return { last, fresh, st, session: +session, full, title, stage, label: whereText(stage, comm, kind, s.live !== false, +session > NOW),
+      // (The status words as the state's page has them; "New" as everywhere: lists_pages/billfacts.js.)
+      const { full, title, stage, last, action, label, news } = rowOf(b), fresh = BillFacts.isNew(seen, news);
+      return { last, fresh, st, session: +session, full, title, stage, label,
         href: `${st}/${page}#${full}`, seen: `${st}|${k}|${last}`, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
         + `<span class="num">${esc(numText(st, full))}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh && !action ? '<span class="new">New</span>' : ""}</span>`
         + (fresh && action ? `<span class="what"><b>New:</b> ${esc(plainAct(action))}</span>` : "")
-        + `<span class="where"><span class="stg s${stage}">${esc(whereText(stage, comm, kind, s.live !== false, +session > NOW))}</span>${last ? ` · ${fmtDay(last)}` : ""}</span></a>`
+        + `<span class="where"><span class="stg s${stage}">${esc(label)}</span>${last ? ` · ${fmtDay(last)}` : ""}</span></a>`
         + `${starBtn(st, +session, full, last, numText(st, full))}</li>` };
     }));
     const kept = rows.filter(Boolean).sort((a, b) => (b.last > a.last ? 1 : b.last < a.last ? -1 : 0));
@@ -1625,9 +1571,8 @@ drawMine();
     const opts = [["", "All states"], ...codes().map((c) => [c, stateName(c)]).sort((a, b) => (a[0] === "us" ? -1 : b[0] === "us" ? 1 : a[1].localeCompare(b[1])))];
     const pick = `<select id="fstate" aria-label="Search one state, or all">${opts.map(([c, n]) => `<option value="${c}"${c === (only === "all" ? "" : only || p.st || "") ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
     const rows = hits.slice(0, limit).map(({ st, name, s, r, shown }) => {
-      const [num, title, stage, kind] = r;
+      const [num, title, stage, w] = r, label = s.w[w] || "";
       const page = s.page ? s.page : "";
-      const label = s.up ? `Prefiled for ${s.session}` : whereText(stage, "", kind === "c" ? "const" : "", s.live !== false);
       const same = shown !== num ? ` <span>(same bill as ${esc(numText(st, num))})</span>` : "";
       // The session, when the state has two in the search (this one and next year's prefiled bills).
       const sess = (ready[st] || { s: [] }).s.length > 1 ? ` <small>${esc(s.label || String(s.session))}</small>` : "";
@@ -1700,9 +1645,8 @@ drawMine();
     if (e.target.closest(".onmap") && lastHits) {
       const [words, hits] = lastHits;
       CUSTOM = searchView(words, hits.map(({ st, s, r }) => {
-        const [num, title, stage, kind] = r;
-        return { st, num: numText(st, num), title, stage: s.up ? 0 : stage, href: `${st}/${s.page || ""}#${num}`,
-          stg: s.up ? `Prefiled for ${s.session}` : whereText(stage, "", kind === "c" ? "const" : "", s.live !== false),
+        const [num, title, stage, w] = r, label = s.w[w] || "";
+        return { st, num: numText(st, num), title, stage: s.up ? 0 : stage, href: `${st}/${s.page || ""}#${num}`, stg: label,
           star: starBtn(st, s.session, num, "", `${stateName(st)} ${numText(st, num)}`) + listBtn(st, s.session, num, `${stateName(st)} ${numText(st, num)}`) };
       }));
       issue = null; pinned = null;

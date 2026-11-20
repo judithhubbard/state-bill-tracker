@@ -319,7 +319,8 @@ function starSum() {
 // New: a starred bill whose newest action (not paperwork) came after it was last opened, here, on the front page or on
 // its state's page. That's one record, the watch entry's `seen` (abt:<st>:watch), which opening the bill anywhere sets.
 const entryNow = (x) => entryOf(readWatch(x.st)[`${x.session}:${x.num}`]);
-const freshStar = (x) => !!(x.on !== false && x.found && x.last && !x.routine && x.last > (entryNow(x).seen || ""));
+// ("New": an action since the day last seen that isn't paperwork, decided as on every page: BillFacts.isNew().)
+const freshStar = (x) => !!(x.on !== false && x.found && BillFacts.isNew(entryNow(x).seen, x.news ?? x.last));
 // A starred bill opened, or "Mark all as seen": its entry's `seen` becomes its last action's day.
 function seeStar(x) {
   const w = readWatch(x.st), k = `${x.session}:${x.num}`;

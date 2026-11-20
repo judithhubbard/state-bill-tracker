@@ -1269,18 +1269,18 @@ def bill_texts(session, recs):
     return out
 
 
-def write_issues(session, recs, texts, page, current, party_of=None):
+def write_issues(session, recs, texts, page, current, party_of=None, labels=None):
     """A session's bills on each national issue (issues.py), into data/issues_<session>.json for issues_site.py, which
     builds the issue pages from every state's files, by calendar year: {"state", "name", "session", "years" (P.YEARS),
     "upcoming", "label", "page", "total" (bills counted, for scale), "active" ({year: bills introduced or acted on}), "bills": [[issue ids, {issue: [filters]}, number,
     title, stage, last action's date, "const" or "", year introduced (the session's first year at the earliest, so a
     bill prefiled in December counts in its session's year), date it became law or "", {issue: the sentence that
     matched} for titles under eight words, the record's other numbers, the sponsors' party (sponsor_class(): "D", "R", "B"
-    or "")], ...]}. Local bills for one
+    or ""), the status words (bill_labels())], ...]}. Local bills for one
     place and placeholder bills are left out, as in the statistics."""
     import issues
     bills, total, active = [], 0, {}
-    for r in recs:
+    for i, r in enumerate(recs):
         if r.get("narrow") == "place" or r.get("shell"):
             continue
         total += 1
@@ -1308,7 +1308,8 @@ def write_issues(session, recs, texts, page, current, party_of=None):
                       {i: issues.excerpt(i, head, body) for i in found} if len(r["title"].split()) < 8 else {},
                       # The record's other numbers (New York's identical Assembly and Senate bills are one record).
                       r["nums"][1:],
-                      sponsor_class(r, party_of or {})])
+                      sponsor_class(r, party_of or {}),
+                      labels[i][0] if labels else ""])
     out = {"state": STATE, "name": P.STATE_NAME, "session": session, "years": getattr(P, "YEARS", 2),
            "upcoming": session > current,
            "label": P.session_label(session), "page": page, "total": total, "active": active, "bills": bills}
@@ -1316,13 +1317,41 @@ def write_issues(session, recs, texts, page, current, party_of=None):
         json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
 
 
-def write_status(session, recs, page, live, facts=None, agenda_of=None, later_of=None):
+# The page's names for a record's key dates (tracker.html's KEY_DATES; keyDates has all but the first, intro).
+KEY_DATES = ["intro", "floor", "passS", "passA", "died", "deliv", "signed", "vetoed"]
+
+
+def bill_labels(session, recs, hist_s, profile_js, facts):
+    """Each record's [status words, flags, latest day with news], worked out by the code the state's page runs
+    (lists_pages/billlabels.js: billfacts.js, watchrules.js and the profile, in Node) from the bill as the page sees it."""
+    import subprocess
+    bills = []
+    for i, r in enumerate(recs):
+        kd = [r["first"] or ""] + list(r["keyDates"] or [])
+        dates = {k: ((kd[j] if j < len(kd) else "") or "").split(";")[-1] or None for j, k in enumerate(KEY_DATES)}
+        bills.append({"stage": r["stage"], "comm": r["comm"] or "", "passedIn": r["passedIn"] or "", "topics": r["topics"] or [],
+                      "ballot": bool(r.get("ballot")), "budget": bool(r.get("budget")), "title": r["title"], "summary": r["summary"] or "",
+                      "nums": [v["p"] for v in r["vers"]], "chapter": r["chapter"] or 0, "veto": r["veto"] or 0, "last": r["last"] or "",
+                      "vers": [{"p": v["p"], "committee": v["committee"] or "", "statusDesc": v["statusDesc"] or "", "sponsor": v["sponsor"] or "",
+                                "actions": [[a[0], a[1]] for a in v["actions"]]} for v in r["vers"]],
+                      "dates": dates, "earlier": sorted((e for e in hist_s[i].values() if e[0] < session), key=lambda e: (e[0], str(e[1])))})
+    run = subprocess.run(["node", os.path.join(HERE, "lists_pages", "billlabels.js")], capture_output=True, text=True,
+                         input=json.dumps({"profile": profile_js, "session": session, "facts": facts, "bills": bills}, ensure_ascii=False))
+    if run.returncode:
+        raise SystemExit(f"lists_pages/billlabels.js failed: {run.stderr[-2000:]}")
+    return json.loads(run.stdout)
+
+
+def write_status(session, recs, page, live, facts=None, agenda_of=None, later_of=None, labels=None):
     """Where each bill is, for the front page's "Your bills" (home.html) and /your-bills/, which show the bills a visitor
     starred on any state's page or on the front page: data/status_<session>.json, {"page", "live" (the session isn't
     over), "bills": {number without its amendment letter: [number, title, stage, last action's date, the last action,
     committee, "const" or "", and what the watchlist's deadline rules (lists_pages/watchrules.js) read: the day it went
     to the governor (stage 4), its committee meetings to come ([[when, committee]]), flags ("b" a budget bill, "v" sent
-    to the voters), its version in the newest later session ([session, number])]}, "alias": {the record's other
+    to the voters; and bill_labels()'s: "e" ended before the session did, "a" an amendment that doesn't go to the governor,
+    "2" its second passage, "d" decided by the voters, "r" a veto that can still be overridden), its version in the newest
+    later session ([session, number]), the status words (bill_labels(): as its state's page words them), the latest day
+    with news (an action that isn't paperwork; left empty when it's the last action's day, "-" when there's none)]}, "alias": {the record's other
     numbers: its first}}; the columns after the seventh are left off from the last one that's empty. The watchlist keys
     bills as "<session>:<number without the letter>". facts: the session's facts the rules read (write_status_shards())."""
     base = lambda n: re.sub(r"[A-Z]$", "", n)
@@ -1331,12 +1360,17 @@ def write_status(session, recs, page, live, facts=None, agenda_of=None, later_of
     bills, alias = {}, {}
     for i, r in enumerate(recs):
         lead = base(r["nums"][0])
+        # (Nebraska's "LB525A", the appropriation for LB 525, has the same key: the bill numbered exactly so keeps it.)
+        if lead in bills and bills[lead][0] == lead and r["nums"][0] != lead:
+            continue
         acts = [a for v in r["vers"] for a in v["actions"] if a[0] == r["last"]]
         deliv = (r["keyDates"][4] or "").split(";")[-1] if r["stage"] == 4 and len(r["keyDates"]) > 4 else ""
         meets = [[w, c] for c, w in (agenda_of(r) if agenda_of else []) if w >= soon]
-        flags = ("b" if r.get("budget") else "") + ("v" if r.get("ballot") else "")
+        lab = labels[i] if labels else ["", "", ""]
+        flags = ("b" if r.get("budget") else "") + ("v" if r.get("ballot") else "") + lab[1]
         later = later_of(i) if later_of else None
-        extra = [deliv, meets, flags, later or ""]
+        news = "" if lab[2] == (r["last"] or "") else lab[2] or "-"  # ("-": nothing but paperwork)
+        extra = [deliv, meets, flags, later or "", lab[0], news]
         while extra and not extra[-1]:
             extra.pop()
         bills[lead] = [r["nums"][0], r["title"][:140], r["stage"], r["last"] or "", (acts[-1][1] if acts else "")[:120],
@@ -2003,7 +2037,6 @@ def main():
                 for name, part in parts.items():
                     with open(os.path.join(GITHUB, "data", f"{session}-text", f"{name}.json"), "w", encoding="utf-8") as f:
                         json.dump(part, f, separators=(",", ":"), ensure_ascii=False)
-            write_issues(session, recs, texts, urls.get(str(session)) or "./", current, {**other_party, **party_of})
             # The session's facts the watchlist's deadline rules read (lists_pages/watchrules.js), for /your-bills/:
             # {c: current, u: upcoming, e: scheduled last days by year, v: the last floor vote, t: past sessions' last votes}.
             # The state's profile (its STATE object) as its own file, data/v/profile.<hash>.js, so /your-bills/ loads only
@@ -2015,6 +2048,10 @@ def main():
                 f.write(prof_js)
             facts = {"s": prof_hash, "c": session >= current, "u": session > current, "e": data.get("sessionEnd") or {},
                      "v": data.get("lastVote") or "", "t": [t["lastVote"] for t in (data.get("insights") or {}).get("timing") or [] if t.get("lastVote")]}
+            # Each bill's status words, as its state's page words them (lists_pages/billfacts.js, run in Node), for the
+            # views that show it without the page.
+            labels = bill_labels(session, recs, hist[session], prof_js, facts)
+            write_issues(session, recs, texts, urls.get(str(session)) or "./", current, {**other_party, **party_of}, labels)
 
             def later_of(i):
                 newer = [e for e in hist[session][i].values() if e[0] > session and e[2] >= 0 and e[1]]
@@ -2022,7 +2059,7 @@ def main():
                     return None
                 e = max(newer, key=lambda e: e[0])
                 return [e[0], re.sub(r"[A-Z]$", "", e[1].split(" / ")[0])]
-            write_status(session, recs, urls.get(str(session)) or "./", session >= current, facts, agenda_of, later_of)
+            write_status(session, recs, urls.get(str(session)) or "./", session >= current, facts, agenda_of, later_of, labels)
         # The template is written with New York's names (title, header and the script that updates them).
         template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)
         template = template.replace("How a bill becomes law in New York", f"How a bill becomes law in {P.STATE_NAME}")
@@ -2043,7 +2080,9 @@ def main():
         state_js = state_profile_js(P)
         # The watchlist's deadline rules (lists_pages/watchrules.js, shared with /your-bills/), just before it.
         rules_js = open(os.path.join(HERE, "lists_pages", "watchrules.js")).read()
-        # And the watchlist's rows and groups (lists_pages/watchrows.js and rows.css, shared with /your-bills/).
+        # The status words and what a bill's history says (lists_pages/billfacts.js, which the build runs too, for the
+        # other pages), and the watchlist's rows and groups (lists_pages/watchrows.js and rows.css, shared with /your-bills/).
+        rules_js += "\n" + open(os.path.join(HERE, "lists_pages", "billfacts.js")).read()
         rules_js += "\n" + open(os.path.join(HERE, "lists_pages", "watchrows.js")).read()
         assert "/*rows.css*/" in template, "tracker.html's styles lost the /*rows.css*/ marker"
         template = template.replace("/*rows.css*/", open(os.path.join(HERE, "lists_pages", "rows.css")).read(), 1)

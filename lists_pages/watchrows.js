@@ -7,15 +7,14 @@
 // WatchRows.place(b, ctx): a bill's group and deadline (b: stage, due, agenda and what the state's originDeadline() reads;
 //   ctx: {S (the state's profile), WR (watchrules.js's rules), current, upcoming, act (WR.canAct()), exec}).
 // WatchRows.draw(box, items, opt): the rows (items: {key, st, session, num, full, title, stage, label, last, action, group,
-//   date, due, out, later, sessionLabel, old, found, gone, stance, rules, yearGroup}).
+//   date, due, out, later, sessionLabel, old, found, gone, stance, rules, yearGroup}; label: the status words, from
+//   billfacts.js: the state's page works them out, the other pages read them from the status rows).
 // WatchRows.newsHtml(entries): "New since you last looked", one box at the top of the list.
 const WatchRows = (() => {
   const ORDER = ["soon", "session", "year", "later", "idle", "done"];
   const NAMES = { soon: "Due soon", session: "In the legislature", later: "Later", idle: "Out of time this session", done: "Decided or ended" };
   // (No general note under a heading: the headings say it. A state's own note on a group, with its dates, still shows.)
   const NOTES = {};
-  // Paperwork that comes with a real step isn't news (a state's profile can say its own: STATE.routine).
-  const ROUTINE = /^(PRINT NUMBER|INTRODUCED|DELIVERED TO (SENATE|ASSEMBLY)|RETURNED TO (SENATE|ASSEMBLY)|\d+(ST|ND) REPORT CAL|\d+RD READING CAL)/;
   const h = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const today = () => WatchRules.localToday();
   // Maine's records are "HLD307" (the house that has the paper, then its LD number), shown "LD 307".
@@ -23,15 +22,6 @@ const WatchRows = (() => {
   // A day as a row shows it: "Dec 1", with the year when it isn't this one.
   const day = (d) => { const t = new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)); return t.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(d.slice(0, 4) === today().slice(0, 4) ? {} : { year: "numeric" }) }); };
   const fullDay = (d) => (d ? new Date(`${d.slice(0, 10)}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
-  // Where a bill is, in a few words (up: a session not begun, whose bills are prefiled).
-  function where(st, stage, comm, kind, live, up) {
-    if (stage === 0 && up) return "Prefiled";
-    if (stage === 0) return `${live ? "In" : "Died in"} committee${comm ? ` (${comm})` : ""}`;
-    if (stage === 3 && kind === "const") return st === "us" ? "Passed both houses; goes to the states" : "Constitutional amendment passed both houses";  // (a first passage in some states: the voters aren't always next)
-    if (!live && stage < 3) return ["", "Died on the floor", "Passed one house; died in the other"][stage];
-    return ["In committee", "On the floor", "Passed one house", "Passed both houses", st === "us" ? "On the President's desk" : "On the governor's desk",
-      "Became law", "Vetoed"][stage] || "";
-  }
   // A bill's group and deadline: {group, date (its deadline, for sorting), due (the deadline in words), out (it can't move
   // this session), yearGroup (the state's name for the year-end group)}.
   function place(b, c) {
@@ -153,5 +143,5 @@ const WatchRows = (() => {
       + `<ul>${entries.map((n) => `<li><button type="button" class="wnewsrow" data-wnews="${h(n.key)}"><span class="nk ${n.kind || ""}">${h(n.what)}</span> <span class="bn">${h(n.num)}</span> ${h(n.title)}`
         + ` <span class="wr-muted">· ${h(n.date)}${n.more ? ` · ${n.more} more change${n.more > 1 ? "s" : ""}` : ""}</span></button></li>`).join("")}</ul></section>`;
   }
-  return { ORDER, NAMES, ROUTINE, place, where, ordered, sortIn, rowHtml, draw, newsHtml, numText, day, fullDay, idOf };
+  return { ORDER, NAMES, place, ordered, sortIn, rowHtml, draw, newsHtml, numText, day, fullDay, idOf };
 })();

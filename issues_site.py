@@ -22,8 +22,6 @@ import site_meta
 
 # States whose legislatures publish titles only (no summaries or "What it does"): matched on fewer words.
 TITLES_ONLY = {"ak", "ar", "ma", "me", "ms", "mt", "nd", "ne", "nh", "ok", "vt"}
-STAGES = ["In committee", "On the floor", "Passed one house", "Passed both houses", "On the governor’s desk",
-          "Became law", "Vetoed"]
 DESC = {
     "datacenters": "Bills about data centers and other very large electricity users: siting, power and water use, rates, tax breaks.",
     "pfas": "Bills about PFAS, the “forever chemicals”: bans in products, drinking water limits, firefighting foam, cleanup, and sewage sludge spread on farmland.",
@@ -155,6 +153,8 @@ ul.bills a:hover { text-decoration: underline; }
 .stg.s5 { background: var(--st-5); color: var(--st-5-ink); }
 .stg.s6 { background: var(--st-6); color: var(--st-6-ink); }
 .tags { display: inline-flex; gap: 4px; align-items: center; align-self: start; justify-self: end; }
+/* (A long status, "Passed the Senate; voted down in the House", wraps rather than widening the page on a phone.) */
+ul.bills .stg { white-space: normal; max-width: 13em; text-align: right; border-radius: 10px; }
 .pty { display: inline-block; font: 700 11px/1.6 var(--body); padding: 0 5px; border-radius: 4px; white-space: nowrap; }
 .pty.D { background: var(--ctl-d1); color: var(--ctl-d1-ink); }
 .pty.R { background: var(--ctl-r1); color: var(--ctl-r1-ink); }
@@ -353,16 +353,10 @@ def party_tag(c):
     return f'<span class="pty {c}" role="img" title="{words}" aria-label="{words}">{short}</span>'
 
 
-def stage_text(state, stage, kind, upcoming=False):
-    if upcoming and stage == 0:
-        return "Prefiled"
-    if kind == "const" and stage == 3:
-        return "Sent to the voters"
-    if state == "ne" and stage == 3:
-        return "Passed the Legislature"
-    if state == "us" and stage == 4:
-        return "On the President’s desk"
-    return STAGES[stage]
+def stage_text(b):
+    """A bill's status words, as its state's page words them: build_data.py's bill_labels() (lists_pages/billfacts.js)
+    wrote them into the issues file."""
+    return b[12] if len(b) > 12 else ""
 
 
 def load(site, congress=False):
@@ -561,7 +555,7 @@ def bill_items(iid, st, mine):
         fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
         why = (b[9].get(iid) if len(b) > 9 else "") or ""
         items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}" data-k="{f["session"]}|{e(b[2])}|{e(b[5] or "")}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else (), st))}</a>'
-                     f'<span class="tags">{party_tag(party(b))}<span class="stg s{b[4]}">{e(stage_text(st, b[4], b[6], f.get("upcoming")) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span></span>'
+                     f'<span class="tags">{party_tag(party(b))}<span class="stg s{b[4]}">{e(stage_text(b) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span></span>'
                      f'<span class="t">{e(b[3])}</span>'
                      + (f'<span class="why">{e(why)}</span>' if why and why.lower() not in b[3].lower() else "")
                      + '</li>')
@@ -998,7 +992,9 @@ def main(site):
                                    b[2], f["session"], b[5],
                                    # The sponsors' party, and whether it counts in the year's bills and laws (the map
                                    # follows the panel's "Sponsor's party" menu).
-                                   party(b), int(new), int(passed)]
+                                   party(b), int(new), int(passed),
+                                   # Its status words (the build's, as on its state's page).
+                                   stage_text(b)]
                                   for f, b, new, passed in sorted(sorted(rows, key=lambda x: x[1][5], reverse=True),
                                                                   key=lambda x: (x[1][4] != 5, -x[1][4]))]
                              for st, (n, laws, rows) in {**by, **us_by}.items()}

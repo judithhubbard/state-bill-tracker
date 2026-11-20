@@ -109,6 +109,8 @@ page = page.replace(desc.group(0), desc.group(0) + site_meta.tags("State Bill Tr
 page = page.replace("SUPPORT_URL", site_meta.SUPPORT)
 # The named lists' button and menu beside each star (lists_pages/named.js), saving to the lists Worker (LISTS_API).
 page = page.replace("/*named.js*/", open("lists_pages/named.js").read(), 1)
+# The status words and "New" (billfacts.js), starred bills and where each bill is (status.js): the same copies as the list pages'.
+page = page.replace("/*billfacts.js*/", open("lists_pages/billfacts.js").read(), 1).replace("/*status.js*/", open("lists_pages/status.js").read(), 1)
 page = page.replace("LISTS_API_URL", os.environ.get("LISTS_API", "https://state-lists.lists-worker.workers.dev"), 1)
 items, power, after = [], {}, {}
 for s in sorted(os.listdir(out)):
@@ -186,9 +188,10 @@ PY
 python3 - "$OUT" <<'PY'
 import os, sys, site_meta
 css, js, named, embed, rules, one = (open(f"lists_pages/{f}").read() for f in ("common.css", "common.js", "named.js", "embed.js", "watchrules.js", "onelist.js"))
-# The watchlist's rows (watchrows.js, rows.css: the same as each state's Watchlist tab) go with the shared script and styles.
+# The watchlist's rows (watchrows.js, rows.css: the same as each state's Watchlist tab) go with the shared script and styles,
+# after the status words and "New" (billfacts.js) and the starred bills and status reader (status.js), shared with the front page.
 css += "\n" + open("lists_pages/rows.css").read()
-js += "\n" + open("lists_pages/watchrows.js").read()
+js = open("lists_pages/billfacts.js").read() + "\n" + open("lists_pages/status.js").read() + "\n" + js + "\n" + open("lists_pages/watchrows.js").read()
 api = os.environ.get("LISTS_API", "https://state-lists.lists-worker.workers.dev")
 searchable = " ".join(sorted(f[:-5] for f in os.listdir(os.path.join(sys.argv[1], "search")) if len(f) == 7 and f.endswith(".json"))) if os.path.isdir(os.path.join(sys.argv[1], "search")) else ""
 for src, path, title, desc in (("yourbills.html", "your-bills", "Your bills · State Bill Tracker", "The bills you follow in every state and Congress."),

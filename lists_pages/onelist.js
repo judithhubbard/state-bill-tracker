@@ -19,20 +19,6 @@ const OneList = (() => {
     return (SRC[st] ||= fetch(`/${st}/data/v/profile.${h}.js`).then((r) => (r.ok ? r.text() : null)).catch(() => null));
   }
   const iso = WatchRules.localToday;
-  // The profile run in its own scope, with the page helpers it uses (its STATE reads DATA.session for the session).
-  function runProfile(src, session, F) {
-    let S = null;
-    const DATA = { session, current: F.c, upcoming: F.u };
-    const fmtDate = (d) => (d ? WatchRules.shortDay(d) : "");
-    const escH = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-    const lastYear = (s) => s + ((S && S.years) || 2) - 1;
-    const span = (s) => (S && S.sessionLabel ? S.sessionLabel(s) : String(s));
-    try {
-      S = new Function("fmtDate", "esc", "isoToday", "lastYear", "span", "monthDay", "DATA", "BILLS", `${src}\n;return STATE;`)(
-        fmtDate, escH, iso, lastYear, span, WatchRules.monthDay, DATA, []);
-    } catch (e) { return null; }
-    return S;
-  }
   // The rules for one state's session: {S (its profile), WR (watchrules.js), F (the facts)}, or null.
   async function rulesFor(st, session) {
     const k = `${st}/${session}`;
@@ -40,7 +26,7 @@ const OneList = (() => {
     return (RULES[k] = (async () => {
       const f = (await statusIndex())?.[st]?.[session]?.f, src = f && (await profileText(st));
       if (!src) return null;
-      const S = runProfile(src, +session, f);
+      const S = BillFacts.runProfile(src, +session, f);
       if (!S) return null;
       const F = { session: +session, current: !!f.c, upcoming: !!f.u, lastVote: f.v || "", sessionEnd: f.e || {}, timing: (f.t || []).map((v) => ({ lastVote: v })) };
       const lc = (S.passedBothText || "Passed both houses").replace(/^./, (c) => c.toLowerCase());
@@ -64,28 +50,30 @@ const OneList = (() => {
     const s = await statusOf(b.st, b.session, x.num);
     const lead = s ? (s.bills[x.num] ? x.num : s.alias?.[x.num]) : null, r = lead && s.bills[lead];
     if (!r) return { ...x, found: false, gone: !s, group: "done", full: x.num, title: "", href: `/${b.st}/` };
-    const [full, title, stage, last, action, comm, kind, deliv, meets, flags, later] = r;
+    const { full, title, stage, last, action, comm, kind, deliv, meets, flags, later, label, news } = rowOf(r);
     const page = `/${b.st}/${s.page && s.page !== "./" ? s.page : ""}`, up = !!(ix?.f?.u ?? +b.session > THIS_YEAR);
-    Object.assign(x, { found: true, full, title: cut(title), stage, last, action, page, href: `${page}#${full}`,
-      label: whereText(b.st, stage, comm, kind, s.live !== false, up) });
-    if (later && Array.isArray(later)) {
+    // (The status words and the day of the latest news, as the state's page has them: the build wrote them.)
+    Object.assign(x, { found: true, full, title: cut(title), stage, last, action, page, href: `${page}#${full}`, label, news });
+    if (later) {
       const lp = named?.[later[0]]?.p;
       x.later = [later[0], later[1], sessionText(R, later[0]), `/${b.st}/${lp && lp !== "./" ? lp : ""}`];
     }
     x.upcoming = up;
     if (stage >= 5 || !R) return { ...x, group: stage >= 5 ? "done" : "later" };
     const { S, WR } = R;
-    // (Paperwork isn't news: the state's own list of it, else the watchlist's.)
-    try { x.routine = (S.routine || WatchRows.ROUTINE).test(action || ""); } catch (e) {}
     x.rules = R;
     // The group and deadline, by the same rules (watchrows.js's place()) as the state's own Watchlist tab: a stand-in for
-    // the state's bill, from the status row.
-    const bill = { stage, due: null, agenda: (meets || []).map(([when, committee]) => ({ when, committee })), topics: kind === "const" ? ["const"] : [],
-      vers: [{ p: full, actions: [], statusDesc: "", committee: comm || "" }], nums: [full], budget: (flags || "").includes("b"), ballot: (flags || "").includes("v") };
+    // the state's bill, from the status row, with what only its history tells (worked out by the build, as the state's
+    // page works it out: billfacts.js): it ended before the session did ("e"), a veto that can still be overridden ("r"),
+    // the voters have decided it ("d"), an amendment ("a") on its second passage ("2").
+    const has = (c) => flags.includes(c);
+    const bill = { stage, due: null, agenda: meets.map(([when, committee]) => ({ when, committee })), topics: kind === "const" ? ["const"] : [],
+      vers: [{ p: full, actions: [], statusDesc: "", committee: comm || "" }], nums: [full], budget: has("b"), ballot: has("v") };
     try {
       if (stage === 4 && R.F.current) bill.due = S.govDeadline(deliv || null, +b.session);
-      const act = R.F.current && !R.F.upcoming && WR.canAct(bill, WR.live(WR.standing(bill), false), false, false);
-      Object.assign(x, WatchRows.place(bill, { S, WR, current: R.F.current, upcoming: R.F.upcoming, act, exec: b.st === "us" ? "President" : "Governor", session: +b.session }));
+      const act = R.F.current && !R.F.upcoming && WR.canAct(bill, WR.live(WR.standing(bill), has("e")), has("r"), has("d"));
+      const next = () => BillFacts.nextStep(S, { stage, amend: has("a"), second: has("2"), ballot: has("v") && !has("a") });
+      Object.assign(x, WatchRows.place(bill, { S, WR, current: R.F.current, upcoming: R.F.upcoming, act, exec: S.executive?.title || "Governor", session: +b.session, next }));
     } catch (e) { x.group = "later"; }
     return x;
   }
@@ -95,7 +83,7 @@ const OneList = (() => {
     return out;
   }
   // ---- Kept in this browser, to show the rows at once next time ----
-  const FIELDS = ["key", "st", "session", "num", "found", "gone", "full", "title", "stage", "label", "last", "action", "group", "date", "due", "out", "later", "sessionLabel", "old", "upcoming", "href", "page", "yearGroup", "routine"];
+  const FIELDS = ["key", "st", "session", "num", "found", "gone", "full", "title", "stage", "label", "last", "action", "group", "date", "due", "out", "later", "sessionLabel", "old", "upcoming", "href", "page", "yearGroup", "news"];
   function keep(list) {
     try {
       const o = JSON.parse(localStorage.getItem(CACHE) || "{}");

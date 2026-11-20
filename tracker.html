@@ -1958,62 +1958,39 @@ function shortStep(t, d, all) {
   return s;
 }
 // A bill's status: [the label, the line under it, " over" for a bill out of time]. The label is the one the bill has
-// everywhere on the page (its row, its watchlist card, lists of similar bills).
+// everywhere on the site (its row, its watchlist card, lists of similar bills, the front page, issue pages, /your-bills/):
+// lists_pages/billfacts.js's words(); the line under it says when, and what the label leaves out.
 function statusParts(b) {
   const D = b.dates, live = DATA.current;
   // Say what the latest action was ("Amended by the sponsor"), not just when.
   const [lastDay, latest, all] = latestStep(b);
   const what = latest ? shortStep(latest, lastDay, all) : "Last action";
-  let t = stageLong(b.stage), small = `${what} · ${fmtDate(lastDay)}`;
-  // A bill that died with the session reads as one in a finished session's page.
-  const alive = live && !billsDied();
-  // (Prefiled bills, for a session not begun: "Prefiled", as in the watchlist and the bill lists elsewhere.)
-  if (b.stage === 0 && DATA.upcoming) t = TEXT.long[0];
-  else if (b.stage === 0) {
-    t = `${alive ? "In" : "Died in"} ${b.comm ? `the ${commPlain(b.comm)} Committee` : "committee"}`;
+  const f = BF.factsOf(b), t = BillFacts.words(STATE, f);
+  let small = `${what} · ${fmtDate(lastDay)}`;
+  const passedOn = () => fmtDate([D.passS, D.passA].sort().pop());
+  if (b.stage === 0 && !DATA.upcoming) {
     const passed = D.passS ? HOUSE.S : D.passA ? HOUSE[LOW] : null;
     if (passed && D.died) small = `Passed ${passed} ${fmtDate((D.passSAll[0] || D.passAAll[0]))}; sent back to committee ${fmtMonth(D.died)}`;
     // Illinois: back in Rules or Assignments after a committee approved it means it missed a deadline.
-    const gv = STATE.gates && b.vers.find((v) => v.committee === b.comm && STATE.gates[v.p[0]] === b.comm);
-    const acts = gv ? gv.actions : [];
-    const back = acts.map(([, x]) => x).lastIndexOf(`REFERRED TO ${(b.comm || "").toUpperCase()}`);
-    const ok = acts.slice(0, Math.max(back, 0)).filter(([, x]) => x === "REPORTED").pop();
-    if (ok) {
-      t = alive ? `Sent back to ${b.comm}` : `Died in the ${b.comm} Committee`;
-      small = `Approved by committee ${fmtDate(ok[0])}; missed a deadline ${fmtDate(acts[back][0])}`;
-    }
-    // Massachusetts: a study order ends a bill in its committee (New Hampshire's heldAction is a pattern: the house's vote).
-    const held = endedOf(b);
-    if (held) t = held.status;
-    // A bill kept over to the next session (Virginia's continued bills, New Hampshire's retained ones) didn't die.
-    if (!alive && continuedTo(b)) t = `Carried over to ${continuedTo(b)}${b.comm ? ` in the ${commPlain(b.comm)} Committee` : ""}`;
-  } else if (b.stage === 2 && b.passedIn) {
-    t = `Passed one house${alive || continuedTo(b) ? "" : " only"} (${b.passedIn})`;
+    const g = f.gate && BF.gateBack(b);
+    if (g) small = `Approved by committee ${fmtDate(g.ok[0])}; missed a deadline ${fmtDate(g.back[0])}`;
+  } else if (b.stage === 2 && b.passedIn && !f.ended) {
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
-  } else if (b.stage === 3 && votersDone(b)) {
+  } else if (b.stage === 3 && f.voted) {
     // A constitutional amendment (or a measure referred to the voters) whose election day has passed.
-    t = PASSED_BOTH;
-    small = votersDone(b);
+    small = `${PASSED_BOTH} · passed ${passedOn()}`;
   } else if (b.stage === 3) {
-    t = PASSED_BOTH;
-    small = `${toVoters(b) ? `Sent to the voters, not ${EXEC.the}` : isAmendment(b) ? (secondPassage(b) ? (STATE.amendmentDone || (STATE.amendmentOnce ? "Goes to the voters" : "Second passage: went to the voters")) : `Constitutional amendment: must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`)
-      : STATE.passedBothNote(live, b)} · passed ${fmtDate([D.passS, D.passA].sort().pop())}`;
+    small = `${f.ballot ? `Sent to the voters, not ${EXEC.the}` : f.amend ? `Constitutional amendment${STATE.amendmentOnce || STATE.amendmentDone ? "" : f.second ? ", second passage" : ", first passage"}`
+      : STATE.passedBothNote(live, b)} · passed ${passedOn()}`;
   } else if (b.stage === 4) {
-    t = live ? `On ${EXEC.the}'s desk` : `Sent to ${EXEC.the}`;
     small = live && b.due ? `Sent ${fmtDate(D.deliv)} · decision due ${fmtDate(b.due)} (est.)` : `Sent ${fmtDate(D.deliv)}`;
   } else if (b.stage === 5) {
-    const how = overriddenLaw(b) ? "Veto overridden" : unsignedLaw(b) ? "Law without signature" : STATE.noSignatures ? "Became law" : "Signed";
-    t = (b.chapter ? `${how} · ${LAW_WORD} ${b.chapter}` : lawLine(b)) + (partlyVetoed(b) ? " · part vetoed" : "");
-    small = fmtDate(D.signed);
+    small = `${lawLine(b)}${b.chapter ? ` · ${LAW_WORD} ${b.chapter}` : ""}${partlyVetoed(b) ? " · part vetoed" : ""} · ${fmtDate(D.signed)}`;
   } else if (b.stage === 6) {
-    t = b.veto ? `Vetoed · Memo ${b.veto}` : "Vetoed";
     // Nevada: a veto after the session goes back to the next regular session (STATE.vetoReturns).
     const back = STATE.vetoReturns?.(b);
-    small = fmtDate(D.vetoed) + (back ? ` · ${back.short}` : "");
+    small = (b.veto ? `Memo ${b.veto} · ` : "") + fmtDate(D.vetoed) + (back ? ` · ${back.short}` : "");
   }
-  // A bill that ended before the session did (North Dakota's floor defeats and withdrawals: STATE.endedNote).
-  const ended = b.stage <= 2 && STATE.endedNote?.(b);
-  if (ended) t = ended.status;
   // (What the break between sessions means for a bill is said once, in the notice and the "Out of time" heading, and
   // in the bill's panel: not on every row.)
   const over = b.stage <= 2 && !stillAlive(b) ? " over" : "";
@@ -2094,6 +2071,9 @@ const YEARS = STATE.years || 2;
 const WR = WatchRules.make(STATE, () => ({ session: DATA.session, current: DATA.current, upcoming: DATA.upcoming, lastVote: DATA.lastVote,
   sessionEnd: DATA.sessionEnd, timing: DATA.insights?.timing }), { today: isoToday, nextMeeting: (b) => nextMeeting(b),
   isAmendment: (b) => isAmendment(b), toVoters: (b) => toVoters(b), passedBothLc });
+// What a bill's history says about where it is (lists_pages/billfacts.js, shared with the build, which words every bill the
+// same way for the pages that show it without this one: the front page, issue pages, /your-bills/).
+const BF = BillFacts.make(STATE, { WR, facts: () => ({ session: DATA.session, current: DATA.current, upcoming: DATA.upcoming }), today: isoToday, fmtDate: (d) => fmtDate(d) });
 const lastYear = (s) => s + YEARS - 1;
 // When a bill that didn't pass both houses dies, once floor votes are over.
 // The session a bill was carried over to, where a state allows it (Virginia's even-year committees can continue
@@ -2101,7 +2081,7 @@ const lastYear = (s) => s + YEARS - 1;
 // Whether the data links bills to their versions in other sessions (Virginia's bill numbers restart each year
 // with no link back), so statistics about bills coming back mean something.
 const linkedSessions = () => BILLS.some((b) => b.earlier?.length);
-const continuedTo = (b) => STATE.continuedTo?.(b) || null;
+const continuedTo = (b) => BF.continuedTo(b);
 const DIES = STATE.diesAfterFloor || ((y2) => `Unless lawmakers return for a special session, it dies December 31, ${y2}.`);
 // What the state calls its legislature, for sentences ("the General Assembly"; default "the Legislature").
 const BODY = STATE.bodyName || "the Legislature", BODY_CAP = BODY[0].toUpperCase() + BODY.slice(1);
@@ -2577,28 +2557,12 @@ const agendaAsk = (committee) => STATE.chairAsks?.[committee] || ["put it on the
 
 // What happens next for a bill, who decides it, and what to ask each person. Asks follow
 // the reader's side: supporters by default, opponents for bills marked Oppose on the watchlist.
-// A constitutional amendment that doesn't go to the governor (STATE.amendments, New York's concurrent resolutions): it
-// passes two separately elected Legislatures, then the voters. Elsewhere "Constitutional amendments" is just a topic
-// (Virginia's are bills setting up the ballot question, which the governor signs).
-const isAmendment = (b) => !!STATE.amendments && b.topics.includes("const");
-// A bill the Legislature refers to the voters (Colorado's TABOR questions, SB26-135): it passes both houses and goes on
-// the ballot, not to the governor. The converter marks it `ballot`.
-const toVoters = (b) => !!b.ballot && !isAmendment(b);
-// Its second passage: the version in the session two years earlier (the Legislature before this one) passed both houses.
-// In Maryland (STATE.amendmentOnce) one passage, by three-fifths, sends it to the voters.
-// A state can decide it per bill (STATE.amendmentFinal: Connecticut and New Jersey send one to the voters after a single
-// supermajority passage, otherwise after two).
-const secondPassage = (b) => STATE.amendmentFinal ? !!STATE.amendmentFinal(b) : !!STATE.amendmentOnce || b.earlier.some((e) => e[0] === DATA.session - 2 && e[2] >= 3);
-// After its second passage it goes on the ballot in November: that year's if it passed by July (it has to be at least
-// three months before the election), else the next year's.
-function ballotLine(b) {
-  // A state whose legislature picks the election (Ohio: May, August or November) says so itself.
-  if (STATE.ballotLine) return STATE.ballotLine(b);
-  const d = [b.dates.passS, b.dates.passA].sort().pop() || "";
-  let y = STATE.ballotYear ? STATE.ballotYear(d) : +d.slice(0, 4) + (d.slice(5, 7) > "07" ? 1 : 0);
-  if (STATE.ballotEvenYears && y % 2) y++;  // Maryland votes on amendments at general elections, in even years
-  return isoToday() > `${y}-11-10` ? `It went to the voters in November ${y}. The result isn't shown here.` : `Next: the voters, in November ${y}.`;
-}
+// Constitutional amendments that don't go to the governor (STATE.amendments), bills sent to the voters, an amendment's
+// second passage and its ballot line: lists_pages/billfacts.js.
+const isAmendment = (b) => BF.isAmendment(b);
+const toVoters = (b) => BF.toVoters(b);
+const secondPassage = (b) => BF.secondPassage(b);
+const ballotLine = (b) => BF.ballotLine(b);
 // The ballot line as shown: once the election has passed, the state's official results page when the profile gives one
 // (STATE.electionResults), instead of "The result isn't shown here".
 function ballotText(b) {
@@ -2609,14 +2573,7 @@ function ballotText(b) {
 }
 // A constitutional amendment (or a measure referred to the voters) whose election has passed: "Went to the voters
 // (November 2025)", or "" for anything else. It's decided, not still in play.
-const BALLOT_MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December";
-function votersDone(b) {
-  if (b.stage !== 3 || STATE.amendmentDone || !((isAmendment(b) && secondPassage(b)) || toVoters(b))) return "";
-  const line = ballotLine(b);
-  if (!/^It went to the voters/.test(line)) return "";
-  const m = line.match(new RegExp(`(${BALLOT_MONTHS}) (\\d{4})`));
-  return m ? `Went to the voters (${m[1]} ${m[2]})` : "Went to the voters";
-}
+const votersDone = (b) => BF.votersDone(b);
 function planFor(b, stance = "support") {
   if (!DATA.current || !DATA.contacts) return null;
   const opp = stance === "oppose";
@@ -4249,7 +4206,7 @@ const watchStance = (b) => watchEntry(b)?.stance || null;
 const WATCH_COUNT = () => BILLS.filter(isWatched).length;
 // What's happened to a watched bill since its owner last opened it. Paperwork that comes with a
 // real step (a new print number, the "sent to the other house" after a pass) doesn't count.
-const ROUTINE = STATE.routine || WatchRows.ROUTINE;   // (lists_pages/watchrows.js: /your-bills/ reads it too)
+const ROUTINE = STATE.routine || BillFacts.ROUTINE;   // (lists_pages/billfacts.js: the build reads it too, for the other pages)
 // Most important first, so the tag names the step that matters.
 const WEIGHT = [/^SIGNED/, /^VETOED/, /^DELIVERED TO GOVERNOR/, /^(RE)?PASSED/, /^SUBSTITUTED/, /ENACTING CLAUSE STRICKEN/, /^DIED/,
   /THIRD READING|^REPORTED|RULES REPORT|DISCHARGED/, /^AMEND/, /HELD/, /REFERRED|COMMITTED/];
@@ -4261,7 +4218,8 @@ function newActions(b) {
   return b.vers.flatMap((v) => v.actions).filter(([d, t]) => d > seen && !ROUTINE.test(t))
     .sort((x, y) => weightOf(x[1]) - weightOf(y[1]) || y[0].localeCompare(x[0]));
 }
-const hasNews = (b) => newActions(b).length > 0;
+// ("New" is decided the same way on every page: BillFacts.isNew(), from the latest day with news.)
+const hasNews = (b) => isWatched(b) && BillFacts.isNew(watchEntry(b).seen, BillFacts.newsDay(b.vers.flatMap((v) => v.actions), ROUTINE));
 // A meeting's day, and its time when known (Virginia's dockets give only the day, written as midnight).
 const fmtMeet = (when, time) => { const d = new Date(when); return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + (time && !/T00:00(:00)?$/.test(when) ? `, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""); };
 // The next committee meeting with this bill on the agenda (current session).
@@ -4308,10 +4266,9 @@ function watchRow(b, x) {
   const n = baseNum(b.nums[0]);
   return { key: `${STATE.code}:${DATA.session}:${n}`, st: STATE.code, session: DATA.session, num: n, full: b.nums[0], found: true, b, w: x,
     title: b.title, stage: b.stage, last: b.last || "", stance: watchStance(b) || "", rules: WROW_RULES,
-    label: WatchRows.where(STATE.code, b.stage, b.comm, (b.topics || []).includes("const") ? "const" : "", !!DATA.current, !!DATA.upcoming),
+    label: statusLabel(b),
     ...WatchRows.place(b, { S: STATE, WR, current: !!DATA.current, upcoming: !!DATA.upcoming, act: !!DATA.current && !DATA.upcoming && canActNow(b), exec: EXEC.title,
-      session: DATA.session, next: (x) => (toVoters(x) ? "Goes to the voters" : isAmendment(x) && x.stage === 3 ? (secondPassage(x) ? (STATE.amendmentDone || "Goes to the voters")
-        : `Must pass again${STATE.amendmentAgain ? "" : " in the next Legislature"}`) : "") }) };
+      session: DATA.session, next: (x) => BillFacts.nextStep(STATE, BF.factsOf(x)) }) };
 }
 // "Needs action" is grouped by the deadline each bill faces, soonest first.
 const monthDay = WatchRules.monthDay;
@@ -5993,9 +5950,7 @@ function needMore() {
 }
 // Which shard holds a bill: FNV-1a of its first number without the version letter (build_data.py's shard_of()).
 function shardOf(num) {
-  let h = 0x811c9dc5;
-  for (const c of baseNum(num)) h = Math.imul(h ^ c.charCodeAt(0), 0x01000193) >>> 0;
-  return h % SPLIT.shards.length;
+  return BillFacts.hash(num) % SPLIT.shards.length;  // (lists_pages/billfacts.js; build_data.py's shard_of())
 }
 // only: a Set of first numbers, the shard's bills to merge now (a list page's frame needs a few of a shard's hundreds;
 // lazyShards() keeps the shard for the rest).
@@ -6181,8 +6136,7 @@ const floorVotesOver = () => WR.floorVotesOver();
 // sessions, Virginia after its spring session); not New York's, which can still move until December 31.
 // A state whose bills die only later (Vermont's and Washington's bienniums end in January; Massachusetts's informal
 // sessions run until then) keeps New York's wording until that day: out of time, but not dead yet.
-const billsDied = () => floorVotesOver() && (STATE.floorVotesEnd === false || (!!STATE.diesAfterFloor
-  && (/\bdied\b/.test(DIES(lastYear(DATA.session))) || !STATE.sessionEnds || isoToday() > STATE.sessionEnds(DATA.session))));
+const billsDied = () => BF.billsDied();
 // The day the session ended (or ends), for "it died when the session ended Nov 1, 2026".
 const sessionEndDay = () => (STATE.sessionEnds ? STATE.sessionEnds(DATA.session) : DATA.lastVote || "");
 // What the panel says about a bill that ran out of time: the state's own line, in the past tense once that day has gone
@@ -6215,16 +6169,7 @@ function stillAlive(b) {
 }
 // How a bill ended before the session did: the state's own reading (STATE.endedNote: North Dakota's floor defeats,
 // Mississippi's deadlines), or a committee step that ends it (STATE.heldAction: Massachusetts's study orders).
-function endedOf(b) {
-  const own = b.stage <= 2 && STATE.endedNote?.(b);
-  if (own) return own;
-  if (b.stage !== 0 || !STATE.heldAction) return null;
-  const held = (x) => (STATE.heldAction instanceof RegExp ? STATE.heldAction.test(x) : x === STATE.heldAction);
-  const hit = b.vers.flatMap((v) => v.actions).filter(([, x]) => held(x)).pop();
-  if (!hit) return null;
-  const where = b.comm ? ` by the ${commPlain(b.comm)} Committee` : "";
-  return { status: `${STATE.heldLabel}${where}`, when: `${STATE.heldLabel}${where}, ${fmtDate(hit[0])}.`, tail: STATE.heldTip || "" };
-}
+const endedOf = (b) => BF.endedOf(b);
 // A bill's place in a list of other bills ("died in committee", "became law"), in the wording that's true today.
 function stageWord(o) {
   const low = (x) => x.charAt(0).toLowerCase() + x.slice(1);
