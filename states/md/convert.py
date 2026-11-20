@@ -6,6 +6,12 @@ referral, hearing, committee report, second and third reading), how the houses s
 ("InteractionBetweenChambers"), whether the General Assembly passed it, its chapter number and its status ("Approved by
 the Governor - Chapter 437", "Vetoed by the Governor (Policy)"). It has no dates for the governor's actions and no votes.
 A committee's unfavorable report kills a bill; most such bills are then withdrawn by their sponsors.
+
+The governor's actions come from each passed bill's page (data/md/governor_<year>.json, from fetch.py): the day the
+governor signed or vetoed it, and any override, which the bill list never shows (it was saved on 2025-12-01 and still says
+"Vetoed" for the 19 bills of 2025 that became law over the veto on 2025-12-16, in the special session: "Became law per
+Maryland Constitution, Chapter 9 of 2025 Special Session"). A bill whose page isn't read yet keeps the old reading, with
+the governor's action on the bill's last day.
 """
 import json, os, re
 from collections import defaultdict
@@ -33,6 +39,18 @@ def load(session):
 
 def number(n):
     return f"{n[:2]}{int(n[2:])}"
+
+
+def governor(session):
+    """Bill number ("HB0270") -> [[chamber, date, action]]: the governor's actions and what followed (overrides)."""
+    path = os.path.join(P.DATA, f"governor_{session}.json")
+    try:
+        return {k: v["lines"] for k, v in json.load(open(path)).items()}
+    except (OSError, ValueError):
+        return {}
+
+
+GOV_HOUSE = {"Post Passage": "G", "House": "H", "Senate": "S"}
 
 
 def contacts():
@@ -88,6 +106,7 @@ def load_session(session):
     path = os.path.join(P.DATA, f"legislation_{session}RS.json")
     fetched = datetime.fromtimestamp(os.path.getmtime(path), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
     texts, recs, index = {}, [], {}
+    gov = governor(session)
     for b in sorted(load(session), key=lambda b: (b["BillNumber"][0], int(b["BillNumber"][2:]))):
         p = number(b["BillNumber"])
         origin, other = p[0], "S" if p[0] == "H" else "H"
@@ -119,16 +138,51 @@ def load_session(session):
         last_day = max((s[0] for s in steps), default=f"{session}-01-01")
         passed = {s[1] for s in steps if s[2].startswith("PASSED")}
         chapter = re.search(r"CH(\d+)", b.get("ChapterNumber") or "")
+        # The governor's actions and overrides, from the bill's page (dated); else from the list's status (undated).
+        lines = gov.get(b["BillNumber"], []) if b.get("PassedByMGA") else []
+        first = lambda pat: next((l for l in lines if re.search(pat, l[2], re.I)), None)
+        vetoed_on = first(r"^Vetoed by the Governor")
+        approved_on = first(r"^Approved by the Governor")
+        unsigned_on = first(r"^Enacted under")
+        # Became law over the veto: "Became law per Maryland Constitution, Chapter 9 of 2025 Special Session" (the list's
+        # status still says "Vetoed"), or in the same year's numbering ("Gubernatorial Veto Override - Chapter 879").
+        over_on = first(r"^Became law|^Gubernatorial Veto Override") if vetoed_on else None
+        gov_steps = []
+        for h, d, t in lines:
+            if re.match(r"(Veto )?Overridden\b", t):
+                t = "Veto overridden " + re.sub(r"^(Veto )?Overridden\s*", "", t)
+            elif approved_on and t == approved_on[2]:
+                t = "SIGNED"
+            elif vetoed_on and t == vetoed_on[2]:
+                t = "VETOED"
+            elif unsigned_on and t == unsigned_on[2] and "17(c)" in t:
+                t = "Became law without the governor's signature"
+            gov_steps.append((d, GOV_HOUSE.get(h, "G"), t.strip()))
+        signed_day = veto_day = ""
         # A constitutional amendment gets a chapter number but goes to the voters, not the governor.
         amendment = b.get("ConstitutionalAmendment") and not status.startswith("Approved by the Governor")
         if amendment and chapter:
             stage, chapter = 3, None
             steps.append(("", "S", "Goes to the voters at the next general election"))
+        elif over_on:
+            stage, signed_day, veto_day = 5, over_on[1], vetoed_on[1]
+            # A special session's chapters are numbered on their own ("Chapter 9 of 2025 Special Session"): not this one's.
+            if "Special Session" in over_on[2]:
+                chapter = None
+            steps += gov_steps
         elif chapter:
             stage = 5
-            steps.append(("", "G", "SIGNED" if status.startswith("Approved") else status))
+            law_on = approved_on or unsigned_on
+            if law_on:
+                signed_day = law_on[1]
+                steps += gov_steps
+            else:
+                steps.append(("", "G", "SIGNED" if status.startswith("Approved") else status))
         # Every bill the General Assembly passes gets a chapter number unless the governor vetoes it; the status of a
         # vetoed bill sometimes shows a later motion instead ("Special Order vote on veto until next session").
+        elif vetoed_on:
+            stage, veto_day = 6, vetoed_on[1]
+            steps += gov_steps
         elif status.startswith("Vetoed") or (b.get("PassedByMGA") and (re.search(r"\bveto", status, re.I) or str(datetime.now().date()) > f"{session}-06-15")):
             stage = 6
             steps.append(("", "G", "VETOED"))
@@ -139,7 +193,7 @@ def load_session(session):
         else:
             stage = None
         if "line item veto" in status.lower():
-            steps.append(("", "G", "Signed with item vetoes"))
+            steps.append((signed_day, "G", "Signed with item vetoes"))
         if stage is not None and stage >= 3:
             passed = {"S", "H"}
         # Where it is: the last house to act, in committee until its committee reports.
@@ -183,8 +237,9 @@ def load_session(session):
             ds = sorted({s[0] for s in steps if test(s[1], s[2]) and s[0]})
             return {"first": ds[0], "last": ds[-1], "all": ";".join(ds)}[mode] if ds else ""
 
-        # The governor's actions have no dates here: they're shown on the last day of the bill's record.
+        # The governor's actions without a page read yet have no dates: they're shown on the last day of the bill's record.
         actions = [[s[0] or last_day, s[2]] for s in steps]
+        last_day = max([last_day] + [s[0] for s in steps if s[0]])
         rec = {
             "nums": [p], "base": [p], "prev": earlier(session, b),
             "title": title, "summary": "", "act": "", "lawCode": "", "law": None, "laws": [],
@@ -203,7 +258,7 @@ def load_session(session):
                 dates(lambda h, t: t == "REPORTED", "first"),
                 dates(lambda h, t: t == "PASSED SENATE", "all"),
                 dates(lambda h, t: t == "PASSED HOUSE", "all"),
-                "", "", "", "",
+                "", "", signed_day, veto_day,
             ],
             "votes": [], "firstComms": [(refs[0][0], refs[0][1], fate == "passed")] if refs else [],
             "vers": [{"p": p, "sponsor": sponsor, "district": 0, "cosponsors": cos, "primes": 1, "cosp": len(cos),
