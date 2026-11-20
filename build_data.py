@@ -1340,11 +1340,21 @@ def bill_labels(session, recs, hist_s, profile_js, facts):
                       "vers": [{"p": v["p"], "committee": v["committee"] or "", "statusDesc": v["statusDesc"] or "", "sponsor": v["sponsor"] or "",
                                 "actions": [[a[0], a[1]] for a in v["actions"]]} for v in r["vers"]],
                       "dates": dates, "earlier": sorted((e for e in hist_s[i].values() if e[0] < session), key=lambda e: (e[0], str(e[1])))})
-    run = subprocess.run(["node", os.path.join(HERE, "lists_pages", "billlabels.js")], capture_output=True, text=True,
-                         input=json.dumps({"profile": profile_js, "session": session, "facts": facts, "bills": bills}, ensure_ascii=False))
-    if run.returncode:
-        raise SystemExit(f"lists_pages/billlabels.js failed: {run.stderr[-2000:]}")
-    return json.loads(run.stdout)
+    # In batches (each bill's words are its own), and a batch Node crashes on is run once more: one run with a whole
+    # session's histories (Illinois, New York: ~10,000 bills) sometimes died in Node itself ("double free or corruption")
+    # on the publish runners, 2026-11-19 and -20, failing that state's build.
+    out = []
+    for start in range(0, len(bills), 2000):
+        batch = json.dumps({"profile": profile_js, "session": session, "facts": facts, "bills": bills[start:start + 2000]}, ensure_ascii=False)
+        for attempt in (1, 2):
+            run = subprocess.run(["node", os.path.join(HERE, "lists_pages", "billlabels.js")], capture_output=True, text=True, input=batch)
+            if not run.returncode:
+                break
+            print(f"  lists_pages/billlabels.js failed (bills {start}-{start + 1999}, try {attempt}): {run.stderr.strip()[-300:]}")
+        else:
+            raise SystemExit(f"lists_pages/billlabels.js failed: {run.stderr[-2000:]}")
+        out += json.loads(run.stdout)
+    return out
 
 
 def write_status(session, recs, page, live, facts=None, agenda_of=None, later_of=None, labels=None):
