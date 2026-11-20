@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "id", "il", "in", "ks", "ky", "la", "ma", "md", "me", "mi", "mn", "mo", "ms", "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy", "us") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "hi", "ia", "id", "il", "in", "ks", "ky", "la", "ma", "md", "me", "mi", "mn", "mo", "ms", "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy", "us") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -101,6 +101,13 @@ def check(state):
         if unsorted:
             say(state, "FAIL" if len(unsorted) > 0.01 * len(recs) else "LOOK",
                 f"{s}: {len(unsorted)} bills with history lines out of date order, e.g. {unsorted[:4]}")
+        # A last action's day with no history line on it: the status rows (/your-bills/, /list/, the front page) then show a
+        # date and no wording (IA and HI dated a bill by paperwork the history leaves out, "Subcommittee: ...": HF 29 of 2025).
+        blank = [r["nums"][0] for r in recs if r["last"] and any(v["actions"] for v in r["vers"])
+                 and not any(a[0] == r["last"] for v in r["vers"] for a in v["actions"])]
+        if blank:
+            say(state, "FAIL" if len(blank) > 0.01 * len(recs) else "LOOK",
+                f"{s}: {len(blank)} bills whose last action's day has no history line, e.g. {blank[:4]}")
         # The governor's action twice, days apart: DE's bill histories copy a substitute's lines under the day they were
         # copied (HS 2 for HB 168 of 2023-24: signed 9/30/24, copied 10/2/24); read the substitute's own history.
         GOV_ACT = re.compile(r"^(?:(?:Signed|Approved|Vetoed) by (?:the )?[Gg]overnor\b|VETOED$)")
@@ -120,6 +127,17 @@ def check(state):
         unover = [r["nums"][0] for r in recs if r["stage"] == 5 and r["keyDates"][6] and not any(ovr.search(t) for v in r["vers"] for _, t in v["actions"])]
         if unover:
             say(state, "LOOK", f"{s}: {len(unover)} laws vetoed with no override in their history (a veto read as overridden?), e.g. {unover[:4]}")
+        # A veto that stood, whose last action reads as an override: NH's SB 434 of 2026, overridden by the Senate and
+        # sustained by the House, showed "VETO OVERRIDDEN" (one house's override sorted after the other's sustaining vote).
+        def last_line(r):
+            acts = [a for v in r["vers"] for a in v["actions"] if a[0] == r["last"]]
+            return acts[-1][1] if acts else ""
+        # (Only where the history has a sustaining vote: a veto one house overrode and the other never took up stands too.)
+        sustained = lambda r: any(re.search(r"\bveto sustained|sustain(?:ed|s)? the (?:governor'?s? )?veto", t, re.I) for v in r["vers"] for _, t in v["actions"])
+        stood = [r["nums"][0] for r in recs if r["stage"] == 6 and re.search(r"overrid", last_line(r), re.I)
+                 and not re.search(r"sustain|fail|lost|\bnot\b|n't|\bno\b|requires|message", last_line(r), re.I) and sustained(r)]
+        if stood:
+            say(state, "FAIL", f"{s}: {len(stood)} vetoed bills whose last action reads as an override, e.g. {stood[:4]}")
         # Law numbers given twice (NH's history lines: SB 62 and HB 511 of 2025 both "Chapter 39"; the LSRs file's column is
         # right). In one-year sessions a chapter, act or public law number belongs to one bill.
         if getattr(P, "YEARS", 2) == 1:

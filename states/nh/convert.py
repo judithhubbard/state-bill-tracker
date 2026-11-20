@@ -155,7 +155,7 @@ def tally(a):
 def decode(a, h):
     """One history line -> (shared wording, kind of step), or (the line as written, "") for lines the rules don't use.
     Kinds: intro (introduced and referred), refer (a later referral), report, pass, kill, retain, table, untable, reconsider, concur, ccr, enroll, sign, nosign, veto,
-    override."""
+    override, sustain."""
     adopted = bool(re.search(r"(?::|,|;)\s*MA\b|\bMA\s+(?:VV|RC|DV)\b|\bMA\s*[;,]", a)) and not re.search(r"\bMF\b", a)
     m = re.match(r"(?:To Be )?Introduced\b.*?\band [Rr]eferred to (.+)$", a)
     if m:
@@ -220,13 +220,17 @@ def decode(a, h):
         return "VETOED", "veto"
     if re.search(r"Veto Overridden", a) and not re.search(r"Sustained", a):
         return "VETO OVERRIDDEN", "override"
+    if re.search(r"Veto Sustained", a):
+        # One house's vote is enough to sustain a veto: the bill's last word, even when the other house overrode it
+        # (SB 434 of 2026: the Senate overrode, the House sustained; HB 1766 the other way round).
+        return "VETO SUSTAINED", "sustain"
     return a, ""
 
 
 # Within a day: the house of origin's steps, then the other house's, then the steps between the houses, enrollment, the
 # governor and overrides; within each, the clerks' entry order (which isn't reliable across the two houses: HB 10 of
 # 2025's concurrence was entered before the Senate's passage).
-GROUP = {"concur": 2, "ccr": 2, "enroll": 3, "sign": 4, "nosign": 4, "veto": 4, "override": 5}
+GROUP = {"concur": 2, "ccr": 2, "enroll": 3, "sign": 4, "nosign": 4, "veto": 4, "override": 5, "sustain": 6}
 # And within a house's day: referral, the committee's report, amendments and motions, the vote, a second referral.
 PHASE = {"intro": 0, "report": 1, "report-otp": 1, "report-kill": 1, "retain": 1, "pass": 3, "kill": 3, "reconsider": 3.5, "refer": 4, "waive": 5}
 BETWEEN = re.compile(r"Non-?Concur|Request(?:s)? (?:for )?(?:a )?(?:CofC|Committee of Conference)|Accedes|Conferee|Appoints|Conference Committee", re.I)

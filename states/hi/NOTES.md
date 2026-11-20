@@ -64,3 +64,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   `GOVERNORS` and legislatures.json if it isn't Green. Places (`towns.py`): Census-designated places (Hawaii has no
   incorporated cities) and the counties, separate Senate (25) and House (51) lists. data/hi/incomplete, written by fetch.py
   before the bulk import, stays until fetch.py's next run on GitHub removes it; until then build_site.sh skips Hawaii.
+- (2026-11-19) A record's `last` is the day of the latest line the history shows, not of a "routine" line it leaves out
+  (floor amendments, conferee changes, rescheduled meetings): 257 of 2025-26's and 324 of 2023-24's status rows had a date
+  and no wording (HB 48: 2026-04-01, now 2025-12-08 "Carried over to the 2026 session").

@@ -739,6 +739,9 @@ def record(session, key, b, parties):
         return {"first": ds[0], "last": ds[-1], "all": ";".join(ds)}[mode] if ds else ""
 
     action_dates = [s[0] for s in steps if s[0]]
+    # The last action's day is the latest shown in the history: paperwork kept out of it ("routine") would leave the
+    # status rows (/your-bills/, /list/, the front page) a day with no wording.
+    shown_dates = [s[0] for s in steps if s[0] and s[3] != "routine"] or action_dates
     origin_reported = any(h_ == origin for h_, _ in reported)
     left_first = bool(first_ref and ((origin, first_ref) in reported or origin in passed))
     rec = {
@@ -755,7 +758,7 @@ def record(session, key, b, parties):
         "simText": f"{official} {desc}",
         "comm": comm_now if stage == 0 else None,
         "first": min(action_dates, default=f"{session}-01-01"),
-        "last": max(action_dates, default=f"{session}-01-01"),
+        "last": max(shown_dates, default=f"{session}-01-01"),
         "cosp": len(cos),
         "keyDates": [
             dates(lambda s: s[3] in ("reported", "report") and s[1] == origin, "first"),

@@ -68,3 +68,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   vetoed, four budgets item-vetoed). Places (`towns.py`, run once): cities, Census-designated places and counties, separate
   Senate (50) and House (100) lists. data/ia/incomplete (committees not downloaded yet) keeps Iowa off the site until
   fetch.py removes it on GitHub.
+- (2026-11-19) A record's `last` is the day of the latest line the history shows: "routine" lines (subcommittee
+  assignments, committee tallies, amendments filed, sponsors added) are left out of the history, and dating by them left
+  523 of 2025-26's status rows with a date and no wording (HF 29: 2026-04-20 "Subcommittee: Wulf, Gjerde and Meggers",
+  now 2025-01-14 "REFERRED TO WAYS AND MEANS").

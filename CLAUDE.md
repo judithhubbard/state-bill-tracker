@@ -373,6 +373,14 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     known\x95as"; 518 of 2025's), decoded with "replace" as U+FFFD; `states/ny/memos.py` reads them as spaces and reads
     those memos again. And PDFs whose own text is mojibake (NE's committee statement for LB 94 of 2023: "Commissionâ€™s",
     "â€œminorâ€•"): `unmangle()` in states/ne/texts.py. The "wrongly decoded characters" check caught both.
+  - (2026-11-19) One house's override sorted after the other's sustaining vote: NH's SB 434 of 2026 (Senate overrode, House
+    sustained) showed "VETO OVERRIDDEN" as its last action though the veto stood. `decode()` in states/nh/convert.py reads
+    "Veto Sustained" as its own step, placed last in the day; the check fails on vetoed bills whose last action reads as an
+    override when the history has a sustaining vote.
+  - (2026-11-19) A last action's day taken from lines the history leaves out: IA's and HI's converters dated bills by
+    paperwork they hide ("Subcommittee: ...", floor amendments filed; IA's HF 29 of 2025), so status rows on /your-bills/,
+    /list/ and the front page had a date and no wording (523 IA, 257 HI bills). "last" is now the latest shown line's day;
+    the check counts bills whose last action's day has no history line.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.
