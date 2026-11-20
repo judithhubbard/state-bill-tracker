@@ -120,6 +120,13 @@ def check(state):
         unover = [r["nums"][0] for r in recs if r["stage"] == 5 and r["keyDates"][6] and not any(ovr.search(t) for v in r["vers"] for _, t in v["actions"])]
         if unover:
             say(state, "LOOK", f"{s}: {len(unover)} laws vetoed with no override in their history (a veto read as overridden?), e.g. {unover[:4]}")
+        # The governor's action with no date of its own: MD's bill list has none, and its laws and vetoes were shown on the
+        # bill's last legislative day (SB 448 of 2026: April 9; vetoed May 22); the dates are on each bill's page.
+        # Laws and vetoes should each carry the day of the governor's action (or of the override).
+        undated = [r["nums"][0] for r in recs if (r["stage"] == 5 and not r["keyDates"][5]) or (r["stage"] == 6 and not r["keyDates"][6])]
+        if undated:
+            say(state, "LOOK", f"{s}: {len(undated)} of {sum(r['stage'] in (5, 6) for r in recs)} laws and vetoes with no date "
+                               f"for the governor's action, e.g. {undated[:4]}")
         # Law numbers given twice (NH's history lines: SB 62 and HB 511 of 2025 both "Chapter 39"; the LSRs file's column is
         # right). In one-year sessions a chapter, act or public law number belongs to one bill.
         if getattr(P, "YEARS", 2) == 1:

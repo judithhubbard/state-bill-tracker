@@ -373,6 +373,10 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     known\x95as"; 518 of 2025's), decoded with "replace" as U+FFFD; `states/ny/memos.py` reads them as spaces and reads
     those memos again. And PDFs whose own text is mojibake (NE's committee statement for LB 94 of 2023: "Commissionâ€™s",
     "â€œminorâ€•"): `unmangle()` in states/ne/texts.py. The "wrongly decoded characters" check caught both.
+  - A finished session's bulk file that stops before a later override: MD's 2025 bill list (saved 2025-12-01) still says
+    "Vetoed" for the 19 bills (of 29 vetoed) that became law over the veto in the special session of 2025-12-16, and it
+    has no dates for the governor's actions (each law and veto showed on the bill's last legislative day). Read each
+    passed bill's page (states/md/NOTES.md); the check LOOKs at laws and vetoes with no date for the governor's action.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.

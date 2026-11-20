@@ -5,6 +5,12 @@ robots.txt; see the state-survey-2026-10-31 memory).
 - Each regular session's bill list (/<year>RS/misc/billsmasterlist/legislation.json: every bill's sponsors, synopsis,
   committees, the dates and results of each reading in each house, the chapter number and the status) into
   data/md/legislation_<year>RS.json. A finished session's (after its governor's last vetoes, by June) is read once.
+- The governor's actions and the veto overrides, which the bill list lacks: each bill the General Assembly passed, its
+  page (/mgawebsite/Legislation/Details/<bill>?ys=<year>RS), whose history has the day the governor signed or vetoed it
+  ("Post Passage") and any override, often months later in another session ("Overridden (111-23)", "Became law per
+  Maryland Constitution, Chapter 3 of 2025 Special Session"; the bill list still says "Vetoed"). Into
+  data/md/governor_<year>.json; a decided bill's page is read once, a vetoed one weekly while it can be overridden, an
+  undecided one daily; at most GOV_MINUTES of a run, the rest on later runs.
 - The members: each house's member list and each member's page (district, county, party, committees, Annapolis phone,
   email), into data/md/members.json; then states/md/contacts.py.
 Usage: python3 states/md/fetch.py
@@ -19,6 +25,8 @@ DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 TODAY = date.today()
 INCOMPLETE = []
+START = time.time()
+GOV_MINUTES = float(os.environ.get("MD_GOV_MINUTES", 11))  # of the state's 20-minute run; the members' pages take about 4
 
 
 def get(url):
@@ -73,6 +81,87 @@ def members():
     print(f"members: {len(out)}")
 
 
+def history(page):
+    """A bill page's history table: [[chamber, calendar date (ISO), action]] for the governor's actions and everything
+    from the first of them on (overrides), and the page's status."""
+    rows, out, after = [], [], False
+    for tr in re.findall(r"(?s)<tr>(.*?)</tr>", page):
+        tds = [re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", td))).strip() for td in re.findall(r"(?s)<td>(.*?)</td>", tr)]
+        if len(tds) >= 4 and tds[3] and re.fullmatch(r"\d{1,2}/\d{1,2}/\d{4}", tds[1]):
+            m, d, y = tds[1].split("/")
+            rows.append([tds[0], f"{y}-{int(m):02d}-{int(d):02d}", tds[3]])
+    for r in rows:
+        after = after or r[0] == "Post Passage"
+        if after or re.search(r"governor|veto|overrid|became law", r[2], re.I):
+            out.append(r)
+    st = re.search(r'(?s)<dt class="col-sm-2">Status</dt>\s*<dd class="col-sm-10">(.*?)</dd>', page)
+    return out, re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", st.group(1)))).strip() if st else ""
+
+
+def governor(y, bills, vetoes_only=False):
+    """The governor's actions and overrides of the bills the General Assembly passed in year y's session."""
+    path = os.path.join(DATA, f"governor_{y}.json")
+    try:
+        have = json.load(open(path))
+    except (OSError, ValueError):
+        have = {}
+    live = y >= TODAY.year - 1  # a veto can be overridden at the next session (or a special one before it)
+
+    def due(b):
+        n = b["BillNumber"]
+        got = have.get(n)
+        if not got:
+            return 0
+        lines = " ".join(l[2] for l in got["lines"])
+        age = (TODAY - date.fromisoformat(got["read"])).days
+        # Decided for good: signed, law without signature, or law over the veto (one house's override isn't enough).
+        if re.search(r"Approved by the Governor|Enacted under|Became law|Assigned a chapter|Gubernatorial Veto Override", lines):
+            return None
+        if not live:
+            return None
+        if re.search(r"Vetoed by the Governor", lines):
+            return 2 if age >= 7 else None
+        return 1 if age >= 1 else None
+
+    todo = []
+    for b in bills:
+        if not b.get("PassedByMGA") or b["BillNumber"][:2] not in ("HB", "SB"):
+            continue
+        if b.get("ConstitutionalAmendment") and not str(b.get("Status", "")).startswith("Approved"):
+            continue  # goes to the voters, not the governor
+        k = due(b)
+        if k is not None:
+            # Vetoes first (a vetoed bill's status may show a later motion instead, but it has no chapter, or an override's)
+            vetoish = "veto" in str(b.get("Status")).lower() or not b.get("ChapterNumber")
+            if vetoish or not vetoes_only:
+                todo.append((k, not vetoish, b["BillNumber"]))
+    todo.sort()
+    done = 0
+    for _, _, n in todo:
+        if time.time() - START > GOV_MINUTES * 60:
+            break
+        # Bills of a special session held after the regular one are in its list too (HB 2101 of 2026, August 3), with
+        # pages under the special session's code ("NotFound" under 2026RS).
+        for code in ("RS", "S1", "S2"):
+            page = get(f"{SITE}/mgawebsite/Legislation/Details/{n.lower()}?ys={y}{code}")
+            if not page or "Legislation History" in page:
+                break
+        if not page or "Legislation History" not in page:
+            continue
+        lines, status = history(page)
+        have[n] = {"read": TODAY.isoformat(), "status": status, "lines": lines}
+        done += 1
+        if done % 50 == 0:
+            json.dump(have, open(path + ".tmp", "w"), ensure_ascii=False)
+            os.replace(path + ".tmp", path)
+    if done:
+        json.dump(have, open(path + ".tmp", "w"), ensure_ascii=False)
+        os.replace(path + ".tmp", path)
+    if todo:
+        print(f"{y}: governor's actions read for {done} bills; {len(todo) - done} left for later runs" if len(todo) > done else
+              f"{y}: governor's actions read for {done} bills")
+
+
 def sessions():
     """The years of the shared window (states/window.py: this year and the four before, not before 2023), the current
     one first; a year's session from the second Wednesday of January. Each is one file, so a year the window adds back
@@ -98,6 +187,12 @@ def main():
             print(f"{y}: {len(data)} bills")
         elif y < TODAY.year or TODAY.month > 1:
             print(f"{y}: no bill list; kept the last copy")
+    # Every year's vetoes first (overrides), then the rest.
+    for only in (True, False):
+        for y in sessions():
+            path = os.path.join(DATA, f"legislation_{y}RS.json")
+            if os.path.exists(path):
+                governor(y, json.load(open(path)), only)
     members()
     sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
     from states.md import contacts
