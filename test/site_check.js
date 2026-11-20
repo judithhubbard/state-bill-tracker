@@ -37,6 +37,9 @@ const PAUSE = +arg("pause", 3000);            // between states, to be polite
 const DEADLINE = Date.now() + +arg("minutes", 70) * 60000;  // stop starting new states after this
 const AXE_UNTIL = Date.now() + +arg("axe-minutes", 40) * 60000; // and stop running axe after this, so every state is still checked
 const QUICK_HOURS = 8, ALL_HOURS = 30, DROP = 0.10;
+// A quiet state's "updated" mark is saved only every 12 hours (download.yml), so its page may lag that much behind its
+// last successful download; CHECKED (from download.yml's runs) holds those times.
+const MARK_HOURS = 12, CHECKED = {};
 const CHROME = process.env.CHROME || [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable",
   "/usr/bin/chromium", "/usr/bin/chromium-browser"].find((p) => fs.existsSync(p));
@@ -88,6 +91,10 @@ function quickLane() {
     for (const r of runs) {
       for (const j of api(`repos/${repo}/actions/runs/${r.id}/jobs?per_page=100`).jobs) {
         if (!["success", "failure"].includes(j.conclusion) || !j.completed_at) continue;
+        // The last time the state's download succeeded: download.yml then writes data/<state>/last_checked, but saves it
+        // (and so shows it as "updated") only when something changed or the saved mark is 12 hours old.
+        const mark = (j.steps || []).find((st) => st.name === "Mark the copy as checked" && st.conclusion === "success");
+        if (mark && codesOf[j.name]) for (const c of codesOf[j.name]) CHECKED[c] = Math.max(CHECKED[c] || 0, Date.parse(mark.completed_at));
         const list = (times[j.name] ||= []);
         if (list.length < 3) list.push((Date.parse(j.completed_at) - Date.parse(j.started_at)) / 60000);
       }
@@ -293,7 +300,13 @@ async function statePage(code, quick, counts, today, keyboard) {
     else {
       const hours = (Date.now() - when) / 3600000;
       const limit = quick ? QUICK_HOURS : ALL_HOURS;
-      if (hours > limit) FAIL("Freshness", `${where}: updated ${info.fetched} (${tz.replace(/.*\//, "").replace(/_/g, " ")} time), ${hours.toFixed(1)} hours ago; limit ${limit} hours${quick ? " (quick lane)" : ""}`);
+      const place = `${tz.replace(/.*\//, "").replace(/_/g, " ")} time`;
+      if (quick && CHECKED[code]) {
+        // Quiet states: the download is what must be recent; the page may show a mark up to 12 hours older than it.
+        const since = (Date.now() - CHECKED[code]) / 3600000;
+        if (since > limit) FAIL("Freshness", `${where}: last successful download ${since.toFixed(1)} hours ago; limit ${limit} hours (quick lane)`);
+        else if (hours > limit + MARK_HOURS) FAIL("Freshness", `${where}: updated ${info.fetched} (${place}), ${hours.toFixed(1)} hours ago, though its download succeeded ${since.toFixed(1)} hours ago: the publish isn't carrying the new copy`);
+      } else if (hours > limit) FAIL("Freshness", `${where}: updated ${info.fetched} (${place}), ${hours.toFixed(1)} hours ago; limit ${limit} hours${quick ? " (quick lane)" : ""}`);
       if (hours < -1) LOOK("Freshness", `${where}: "updated" time ${info.fetched} is in the future`);
     }
     if (!info.label.includes("updated")) LOOK("Freshness", `${where}: the header line doesn't say when it was updated ("${info.label.trim()}")`);
