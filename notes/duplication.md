@@ -4,85 +4,46 @@ Inventory made 2026-11-19 by reading the code (not CLAUDE.md). Each entry: where
 today, the risk, and where the one copy should live. Ranked by risk: the first ones already disagree, or would show a
 visitor two different answers about the same bill.
 
-## 1. The words for where a bill is (high: they disagree today)
+## Done 2026-11-19 (items 1-5 of the first inventory)
 
-Six places turn a stage number into words:
+`test/consistency.js` reads the same bills in every view (state Bills row and panel, state Watchlist, /your-bills/, the
+front page's Your bills and search, issue pages and the front page's issue panel) and fails on any difference in the
+status words, the watchlist group and deadline, or "New". `test/hash_check.py` checks the bill-number hash.
 
-| Copy | Used by | Congress, stage 4 | Amendment passed (stage 3) | Nebraska, stage 3 |
-|---|---|---|---|---|
-| `tracker.html` `statusParts()` / `stageLong()` / `STATE.stageText`, `PASSED_BOTH`, `endedOf()` | state Bills list, panel | "the President" (`EXEC`) | the state's own (`amendmentFinal`, `amendmentDone`) | "Passed the Legislature" |
-| `lists_pages/watchrows.js` `where()` | state Watchlist rows, common.js `whereText()` → /your-bills/, /list/ rows, editor | "On the President's desk" | "Constitutional amendment passed both houses"; Congress "Passed both houses; goes to the states" | "Passed both houses" |
-| `home.html` `whereText()` (own copy, no state argument) | front page search results, Your bills panel | **"On the governor's desk"** | "Constitutional amendment passed both houses" (also for Congress) | "Passed both houses" |
-| `home.html` `STAGE_SHORT` + inline rules in `showPanel()` | front page issue panel | **"Governor"** | "To voters" (also Congress) | "Passed both" |
-| `issues_site.py` `stage_text()` / `STAGES` | issue pages | (Congress left out) | "Sent to the voters" (wrong for states where a first passage isn't the last) | "Passed the Legislature" |
-| `stages.py` `STAGE_LABEL` | build logs only | — | — | — |
+1. **The words for where a bill is: one copy.** `lists_pages/billfacts.js`: `BillFacts.words(S, f)` words the status
+   from facts (`make(S, opt).factsOf(b)`: ended mid-session from `endedNote`/`heldAction`, carried over, Illinois's gate,
+   the session's bills died, amendment and its second passage, sent to the voters, voters done; the profile's
+   `stageText`, `passedBothText`, `executive`, `amendmentDone`). The state page uses it for its rows, panels and Watchlist
+   (`statusParts()`, `watchRow()`); the build runs the same file in Node (`lists_pages/billlabels.js`, from
+   build_data.py's `bill_labels()`) and writes the words into the status rows, the issue files and the search files, so
+   the front page, issue pages, /your-bills/, /list/ and the list editor show them as written. Gone: watchrows.js's
+   `where()`, home.html's `whereText()` and `STAGE_SHORT`, issues_site.py's `STAGES`/own wording, common.js's
+   `whereText()`. The isAmendment/toVoters/secondPassage/ballotLine/votersDone/endedOf/billsDied/continuedTo helpers moved
+   from tracker.html into billfacts.js (tracker.html keeps aliases).
+2. **"New": one definition.** `BillFacts.newsDay(actions, routine)` (the latest day with an action that isn't paperwork:
+   the state's `routine`, else `BillFacts.ROUTINE`) and `BillFacts.isNew(seen, day)`. The state page applies them to the
+   bill's history; the build writes the day into the status row (its last column, left empty when it's the last
+   action's day), which /your-bills/ (`freshStar()`) and the front page (`drawMine()`) read.
+3. **/your-bills/ groups: the same inputs.** The status row's flags now carry what only the history tells: "e" ended
+   before the session did, "r" a veto that can still be overridden, "d" decided by the voters, "a" an amendment, "2" its
+   second passage. onelist.js passes them to `WR.canAct()` as tracker.html's `canActNow()` does, and the amendment's next
+   step comes from `BillFacts.nextStep()` on both pages; `exec` is the profile's (`S.executive.title`).
+4. **Watchlists in localStorage and the status reader: one copy.** `lists_pages/status.js` (`WKEY`, `readWatch`,
+   `writeWatch`, `entryOf`, `statusIndex`, `statusOf`, `pieceOf`, `wholeStatus`, `rowOf`, `fmtDay`, `plainAct`), put by
+   build_site.sh into the front page and, ahead of common.js, into the list pages. home.html and common.js lost their
+   copies (the old `abt:watch` loop bug was already fixed in 8e2f58e).
+5. **The bill-number hash: one JS copy.** `BillFacts.hash()`, used by tracker.html's `shardOf()` and status.js's
+   `pieceOf()`; build_data.py's `shard_of()` is the Python side, and `test/hash_check.py SITE` runs both over every
+   built state's numbers (4,497 on 2026-11-19: no difference).
 
-Disagreements now: a Congress bill on the President's desk reads "On the governor's desk" in the front page's search and
-Your bills panel; the same Nebraska bill is "Passed the Legislature" on its page and issue page but "Passed both houses"
-in its watchlist row and on the front page; an amendment is "Sent to the voters" on issue pages, "To voters" in the
-front page panel, and "Constitutional amendment passed both houses" elsewhere. No copy but tracker.html knows a bill
-that died mid-session (`endedNote`: floor defeat, withdrawn, replaced), so the others can say "On the floor" for a dead
-bill.
-
-Fix: one function in `watchrows.js` (`where(st, stage, comm, kind, live, up, extra)`), taking the state's words from its
-profile (`passedBothText`, `executive`, `amendmentDone`), and an "ended" flag written into the status row by
-`write_status()` (`endedOf()`'s answer worked out at build time). home.html should load it (it already has named.js
-spliced in; add watchrows.js the same way) and issues_site.py should write the label into bills.json instead of
-computing its own.
-
-## 2. "New since you last looked" (high: three definitions)
-
-- tracker.html `newActions()` / `hasNews()`: any action after the entry's `seen` day, skipping `ROUTINE` paperwork
-  (`STATE.routine || WatchRows.ROUTINE`).
-- lists_pages/yourbills.html `freshStar()`: the status row's last action is after `seen` and isn't routine (only the
-  last action is known).
-- home.html `drawMine()`: `last > seen`, no routine filter. So the front page can show "New" for paperwork the state's
-  Watchlist doesn't count.
-
-All three write `seen` the same way (`{...entry, seen: last}`): tracker `markSeen()`, home `markSeen()`, yourbills
-`seeStar()`. Fix: one `isNew(entry, row, routine)` in common.js / watchrows.js, and a `routine` flag computed at build time
-in the status row (so the status file decides, not three regexes).
-
-## 3. Watchlist groups and deadlines on the state page vs /your-bills/ (high)
-
-Both use `WatchRules` and `WatchRows.place()`, but with different inputs:
-
-- tracker.html `watchRow()`: the full bill; `act` from `canActNow()` = `WR.canAct(b, WR.live(WR.standing(b), b.stage <= 2 && endedOf(b)), STATE.vetoReturns?.(b)?.live, votersDone(b))`;
-  `next` hook for amendments ("Must pass again ..."); `exec: EXEC.title`.
-- lists_pages/onelist.js `itemOf()`: a stand-in bill from the status row (no history, no versions' actions);
-  `WR.canAct(bill, WR.live(WR.standing(bill), false), false, false)`; no `next` hook; `exec` "President"/"Governor".
-
-So a bill that ended mid-session, a veto the next session can still override (NV), or an amendment the voters already
-decided can sit in a different group on /your-bills/ than in the state's Watchlist tab; an amendment's "due" line differs.
-Also any `originDeadline()` that reads the bill's history or versions sees an empty stand-in. Fix: write the facts only
-the full bill knows (ended, vetoReturns live, voters done, the amendment's next step) into the status row at build time,
-and have both pages pass them the same way. This is the first thing a consistency test should compare.
-
-## 4. Reading watchlists from localStorage (high: one copy has a bug)
-
-- tracker.html: `STORE`, `WATCH_STORE`, `loadWatch()`, `saveWatch()`, `setWatch()`, `moveNewYork()`.
-- lists_pages/common.js: `WKEY`, `readWatch()`, `writeWatch()`, `entryOf()`, `allStarred()`.
-- home.html: its own `WKEY`, `readWatch()`, `writeWatch()`, `starBtn()`, `starClick()`, `markSeen()`, and the loop in
-  `drawMine()`.
-- lists_pages/welcome-ny.html: merges New York's names.
-
-They agree on the format (string or `{seen, stance}`). But `drawMine()` matches keys with
-`/^abt:(?:([a-z]{2}):)?watch$/`, which also matches the old plain `abt:watch` (left in place by `moveNewYork()`), and then
-calls `st.toUpperCase()` on `undefined`: the error is caught and ends the loop, so a browser that still has `abt:watch`
-can show some or none of its starred bills on the front page. (common.js's `allStarred()` skips it safely.) Also the
-comments at the top of common.js and in home.html (above `WKEY`) still say New York saves under `abt:watch`.
-
-Fix: home.html should use common.js (splice it in as the list pages do) and drop its copies.
-
-## 5. The status-file reader and the shard hash (medium: agree now; a mismatch would lose bills silently)
-
-- FNV-1a of a bill's number without its letter: `build_data.py` `shard_of()`, tracker.html `shardOf()`,
-  lists_pages/common.js `pieceOf()`, home.html `pieceOf()`. All four agree today. If one changes, bills "aren't found"
-  or the page fetches the wrong shard.
-- `statusOf()`, `statusIndex()`, `wholeStatus()`: common.js and home.html, identical except home.html uses relative
-  paths (`status.json`) and common.js absolute ones (`/status.json`).
-
-Fix: home.html loads common.js; a test that runs `shard_of()` and the JS `shardOf()` over every bill number of one state.
+On a build of NE, CO, VA, US, TN, NV, ND and DE (175 bills, about 800 views), the test found 204 differences before
+(149 in the words, 45 in "New", 10 in the watchlist group or deadline) and none after. Found by it and left as they are:
+Nebraska's appropriation bills share their bill's key ("LB525A" and "LB525" are both `2025:LB525`), so starring one
+stars both on the state's Watchlist (the status row now keeps the bill numbered exactly); Nebraska's "LR19CA" is keyed
+`LR19C` and `#LR19CA` doesn't open it, so it's missing from /your-bills/ and the search. Both need the key to stop
+dropping a final letter that isn't a version letter.
+Also new: the words depend on the day (a session's bills die, an election passes), so a state page and the build agree
+only on the day the build ran (it runs daily).
 
 ## 6. Python ports of page logic (medium: kept in step by hand)
 
@@ -112,18 +73,19 @@ Fix: one source per fact (JSON beside the profile, read by both), or a data_chec
   ("REFERRED TO", "DELIVERED TO GOVERNOR"), so other states' actions pass through as written and Congress says
   "governor" if a line matches.
 
-Fix: one copy in common.js; ideally the status row carries the state page's own plain wording, written at build time.
+Now one copy (lists_pages/status.js, 2026-11-19), still with New York's patterns only. Fix: the status row carries the
+state page's own plain wording (`plainAction()`), written at build time.
 
 ## 9. Bill numbers as text (low-medium)
 
-Maine's "HLD307" → "LD 307" and the space after the letters: common.js `numText()`, home.html `numText()`,
-watchrows.js `numText()`, issues_site.py (in the link text), states/me/profile.js `ld()`. Agree today. Fix: watchrows.js's
-copy only; issues_site.py writes the display number into bills.json.
+Maine's "HLD307" → "LD 307" and the space after the letters: status.js `numText()` (the front page and the list pages,
+since 2026-11-19), watchrows.js `numText()`, issues_site.py (in the link text), states/me/profile.js `ld()`. Agree today.
+Fix: one JS copy (status.js's, read by watchrows.js); issues_site.py writes the display number into bills.json.
 
 ## 10. Number search (low-medium)
 
 home.html `numScore()` and the state-name parsing in its search, and lists_pages/edit.html `numScore()`, `stateIn()`,
-`numbersIn()`: same code, two copies. Fix: move to common.js and load it on the front page.
+`numbersIn()`: same code, two copies. Fix: move to status.js (already on both pages).
 
 ## 11. Colors (low: agree today)
 
@@ -157,19 +119,19 @@ bill in each view and compare the stage words, the group/deadline, "new", the nu
 
 | View | Bill data from | Stage words | Group / deadline | "New" | Number shown |
 |---|---|---|---|---|---|
-| State Bills list (tracker.html `billRow()`) | the page's own data (list part, rows part) | own: `statusParts()` | — | — | `numText`/profile |
-| State bill panel (`fillDetail()`) | shard + stats part | own: `statusParts()`, `nextSteps()` | own (`planFor()`) | — | profile |
-| State Watchlist tab (`renderWatchView()` → `watchRow()`) | full bills | shared: `WatchRows.where()` | shared rules, full inputs (`canActNow()`) | own `newActions()` (all actions, routine skipped) | watchrows.js |
-| /your-bills/ (`OneList.items()` → `itemOf()`) | status row (common.js `statusOf()`) + `profile.<hash>.js` + `/status.json` facts | shared: `WatchRows.where()` via `whereText()` | shared rules, stand-in inputs | own `freshStar()` (last action only) | watchrows.js |
-| /your-bills/ and /list/ opened card | the state's page in a frame (`EMBED`) | tracker.html's own | tracker.html's | tracker.html's | tracker.html's |
-| /list/ rows for bills not in data | common.js `lookUp()` | shared `whereText()` | — | — | common.js |
-| Front page Your bills panel (`drawMine()`) | status row (home.html's own `statusOf()`) | own `whereText()` | none | own (`last > seen`) | home.html `numText()` |
-| Front page search (`run()`) | `search/<st>.json` (stage, "c") | own `whereText()` | — | — | home.html `numText()` |
-| Front page issue panel (`showPanel()`) | `issues/<id>/bills.json` | own `STAGE_SHORT` | — | — | issues_site.py |
-| Issue pages (`issues_site.py` `bill_items()`) | `data/issues_<session>.json` | own `stage_text()` | — | — | issues_site.py |
-| List editor (edit.html `drawBills()`) | `search/<st>.json` | shared `whereText()` | — | — | common.js |
+| State Bills list (tracker.html `billRow()`) | the page's own data (list part, rows part) | `BillFacts.words()` (`statusParts()`) | — | — | `numText`/profile |
+| State bill panel (`fillDetail()`) | shard + stats part | `BillFacts.words()` (`statusParts()`), `nextSteps()` | own (`planFor()`) | — | profile |
+| State Watchlist tab (`renderWatchView()` → `watchRow()`) | full bills | `BillFacts.words()` (`statusLabel()`) | shared rules, full inputs (`canActNow()`) | `BillFacts.isNew()` on the history | watchrows.js |
+| /your-bills/ (`OneList.items()` → `itemOf()`) | status row (status.js `statusOf()`, `rowOf()`) + `profile.<hash>.js` + `/status.json` facts | the build's `BillFacts.words()` | shared rules, the row's flags (e, r, d, a, 2) | `BillFacts.isNew()` on the row's news day | watchrows.js |
+| /your-bills/ and /list/ opened card | the state's page in a frame (`EMBED`) | tracker.html's | tracker.html's | tracker.html's | tracker.html's |
+| /list/ rows for bills not in data | common.js `lookUp()` | the build's | — | — | status.js |
+| Front page Your bills panel (`drawMine()`) | status row (status.js) | the build's | none | `BillFacts.isNew()` on the row's news day | status.js |
+| Front page search (`run()`) | `search/<st>.json` | the build's (`w`) | — | — | status.js |
+| Front page issue panel (`showPanel()`) | `issues/<id>/bills.json` | the build's | — | — | issues_site.py |
+| Issue pages (`issues_site.py` `bill_items()`) | `data/issues_<session>.json` | the build's | — | — | issues_site.py |
+| List editor (edit.html `drawBills()`) | `search/<st>.json` | the build's (`w`) | — | — | status.js |
 
-A consistency test could, for a sample of bills per state (one per stage, plus an amendment, a Congress bill on the
-President's desk, a Nebraska bill that passed, a bill that died mid-session), build the site once and compare: the
-label from each column's function; `WatchRows.place()` with tracker's inputs vs onelist's; and "new" for an entry whose
-`seen` is the day before the last action.
+`test/consistency.js` reads these views for a sample of bills (each stage, ended mid-session, amendments on first and
+second passage, sent to the voters, Nebraska, Congress, past and prefiled sessions, bills on a national issue) and
+compares them. /list/ isn't read (a shared list needs the lists Worker); its rows are the state page's card in a frame,
+or `lookUp()`, the same words as /your-bills/.

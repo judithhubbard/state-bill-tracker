@@ -69,7 +69,9 @@ download.yml (GitHub, every 2 h)       publish.yml (after each quick-lane downlo
 2. Writes the side files under `DIR/data/`:
    - `issues_<session>.json` (`write_issues()`, matching rules in `issues.py`),
    - `status_<session>.json` and its pieces `data/v/<session>.<hash>.t<k>.json` plus `data/status.json`
-     (`write_status()`, `write_status_shards()`): where each bill is, for every page outside the state's own,
+     (`write_status()`, `write_status_shards()`): where each bill is, for every page outside the state's own, with its
+     status words, "New" day and watchlist flags from `bill_labels()` (which runs `lists_pages/billlabels.js` in Node:
+     the page's own `billfacts.js` and the state's profile over every bill; the issues file carries the words too),
    - `data/v/profile.<hash>.js` (the state's `STATE` object, for /your-bills/),
    - `compare.json` (`write_compare()`, for /compare/),
    - `<session>-text/<letter><n>.json` ("What it does" pieces of 500 numbers, from `bill_texts()`, which reads
@@ -83,8 +85,8 @@ download.yml (GitHub, every 2 h)       publish.yml (after each quick-lane downlo
    - **other parts** fetched on demand: `stats`, `net`, `search`, `votes`, `hist`, `cos`, `towns` (big towns lists).
    - a **past session** has no shards: list, rows, and one `more` file.
 4. Assembles the page from `tracker.html` (written with New York's names, replaced here), splicing in:
-   `states/<st>/how.html` (How tab), `states/<st>/weighin.html`, `lists_pages/watchrules.js` + `watchrows.js`
-   (`<script id="watch-rules">`), `lists_pages/rows.css` (at `/*rows.css*/`), `lists_pages/sankey.js`
+   `states/<st>/how.html` (How tab), `states/<st>/weighin.html`, `lists_pages/watchrules.js` + `billfacts.js` +
+   `watchrows.js` (`<script id="watch-rules">`), `lists_pages/rows.css` (at `/*rows.css*/`), `lists_pages/sankey.js`
    (`<script id="sankey">`), `states/<st>/profile.js` (`<script id="state-profile">`, via `state_profile_js()`) and, on
    the public site, `lists_pages/named.js` (`github_page()`). The data tag `#bill-data` names the part files
    (`data-src`, `data-parts`, `data-shards`, `data-texts`); `frame_tabs()` and `sessions_nav()` pre-draw the frame.
@@ -105,8 +107,8 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
   `/status.json` (every state's `data/status.json`), the front page (home.html with JSON blocks `#issues`, `#compare`,
   `#power` from `front_page.map_data()`, `#after` from `front_page.next_data()`, `#past` from
   `states/party_history.json`), /about/, /your-bills/, /list/, /lists/edit/ (from `lists_pages/*.html` with
-  `common.css`+`rows.css`, `common.js`+`watchrows.js`, `named.js`, `embed.js`, `watchrules.js`, `onelist.js` spliced at
-  `/*name*/` markers), /welcome/ny/, `_headers`, `robots.txt`, 404.html.
+  `common.css`+`rows.css`, `billfacts.js`+`status.js`+`common.js`+`watchrows.js`, `named.js`, `embed.js`, `watchrules.js`,
+  `onelist.js` spliced at `/*name*/` markers; the front page gets `billfacts.js`, `status.js` and `named.js` the same way), /welcome/ny/, `_headers`, `robots.txt`, 404.html.
 - Fails above 19,500 files (Cloudflare Pages' limit is 20,000 a deployment).
 - `ONLY="wy sd" ./build_site.sh /tmp/out` builds a few states locally.
 
@@ -130,6 +132,8 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
 | `check_site.py` | daily in publish.yml | contacts fresh and plentiful, NJ/CA texts present, VA date rule, publish.yml restores every state |
 | `test/site_check.js` (site-check.yml, 11:30 UTC) | daily, against the live site | freshness (8 h quick lane, 30 h others), bill counts, script errors, phone-width overflow, axe-core, keyboard; ends "`N problems:`" |
 | `test/issues/get.py`, `check.py` | by hand, after an issue rule change | samples of matches to read |
+| `test/consistency.js` | by hand, against a local build (`ONLY="ne co va us tn nv nd de" SITE_BASE=http://localhost:8766/ ./build_site.sh DIR`, served) | FAIL when a bill's status words, watchlist group and deadline, or "New" differ between views; ends "`N problem(s)`" |
+| `test/hash_check.py SITE` | by hand, after touching `shard_of()` or `BillFacts.hash()` | FAIL on bill numbers the two place differently |
 
 **Who sees failures:** only the owner, by GitHub's emails. A Claude session sees nothing unless it looks:
 `gh run list --workflow publish.yml`, `gh run list --workflow site-check.yml`, `gh run view <id> --log-failed`.
@@ -146,7 +150,8 @@ opened (`later()`, `STALE`, `showView()`).
 
 - **Bills tab** (`#view-bills`): filters `matches()`, `parseQuery()`, `sortBills()`; "Where it is now"
   `renderPipeline()`; topics `renderTopics()`; the Issue filter `loadIssues()`/`fillIssues()`; list `renderList()`.
-- **A bill row:** `billRow()` → `statusText()`/`statusParts()` (the status words: `STAGE_TEXT`, `STATE.stageText`,
+- **A bill row:** `billRow()` → `statusText()`/`statusParts()` (the status words: `BillFacts.words()` from `BF.factsOf(b)`,
+  lists_pages/billfacts.js, the same words every other view shows; the line under them: `STATE.stageText`,
   `endedOf()`, `STATE.endedNote`), `track()` (progress bar), `panelTags()`, `partyTag()`, `watchButton()`.
 - **The opened panel:** `fillDetail()`: `whatItDoes()`/`loadBillText()`, `sponsorsBlock()`, `verBlock()`, `votesBlock()`,
   `oddsLine()`, `similarBlock()`, `twinLine()`, `vetoMemo()`, `signingMemo()`, `chapterAmendment()`, `nextSteps()` /
@@ -154,7 +159,7 @@ opened (`later()`, `STALE`, `showView()`).
 - **Where you live** (`#whereBox`): `renderMyReps()`, `myReps()`, `setCounty()`, `setTown()`, `setRegion()` (Congress),
   `renderTownReps()`, `renderTownRepsByHouse()`, `lookUpReps()` (Census geocoder, `STATE.addressLookup`).
 - **Watchlist tab** (`#view-watch`): `renderWatchView()`. Its rows, groups and order come from
-  `lists_pages/watchrows.js` (`WatchRows.place()`, `.where()`, `.draw()`) with deadlines from `lists_pages/watchrules.js`
+  `lists_pages/watchrows.js` (`WatchRows.place()`, `.draw()`; the words are `statusLabel()`'s) with deadlines from `lists_pages/watchrules.js`
   (`WR = WatchRules.make(STATE, ...)`; `deadlineOf()` and `W_GROUPS` are aliases). The card: `watchCard()`,
   `keyAction()`, `logBlock()`. News: `newActions()`, `newsBox()`, `updateWatchTab()`. Sharing: `shareBox()`,
   `publishAction()`, `schedulePub()`/`savePub()`. Embedded in /list/ and /your-bills/ frames: `EMBED`, `embedCard()`,
@@ -172,7 +177,7 @@ opened (`later()`, `STALE`, `showView()`).
 | Page | Source | Main functions |
 |---|---|---|
 | Front page `/` | `home.html` (+ `named.js`) | map `drawMap()`, `control()`, `partyPanel()`; Show menu `render()`; issue view `drawIssue()`, `showPanel()` (reads `issues/<id>/bills.json`), `drawChart()`; "Bills that became law" `lawsView()`; Your bills panel `drawMine()`, `starClick()`, `markSeen()`, `mineView()`; search `prep()`, `load()`, `parse()`, `numScore()`, `run()`, `searchView()` (reads `search/<st>.json`) |
-| `/issues/`, `/issues/<id>/` | `issues_site.py` | `main()`, `issue_page()`, `tile_map()`, `bill_items()`, `stage_text()` |
+| `/issues/`, `/issues/<id>/` | `issues_site.py` | `main()`, `issue_page()`, `tile_map()`, `bill_items()`, `stage_text()` (the build's words, from the issues file) |
 | `/compare/` | `compare_site.py` | `page()`, `latest()`; chart from `sankey.js` |
 | `/your-bills/` | `lists_pages/yourbills.html` | tabs `syncTabs()`, `drawStrip()`; `drawStarred()`, `drawLists()`, `drawFollows()`; rows via `OneList.items()`/`.draw()` (`onelist.js`); a row opens the state's card in a frame (`embed.js`'s `Opener`) |
 | `/list/#<slug>` | `lists_pages/list.html` | `load()`, `redraw()`, `drawButtons()`; `Frames.show()` with `listGroups()` (embed.js): each state's page draws its bills |
@@ -182,13 +187,19 @@ opened (`later()`, `STALE`, `showView()`).
 
 ## 3. Shared code and settings
 
+- `lists_pages/billfacts.js` (`BillFacts`): **the status words** (`words(S, f)`), the facts they need from a bill's
+  history (`make(S, opt).factsOf(b)`: ended mid-session, carried over, amendments and second passage, sent to the voters,
+  the session's bills died), an amendment's next step (`nextStep`), "New" (`newsDay`, `isNew`), the bill-number hash
+  (`hash`, = build_data.py's `shard_of()`), and `runProfile` (a profile outside its page). On state pages, the list pages,
+  the front page, and in the build (`lists_pages/billlabels.js`, run by `bill_labels()` in build_data.py).
+- `lists_pages/status.js` (the front page and the list pages): watchlist storage (`WKEY`, `readWatch`, `writeWatch`,
+  `entryOf`), the status reader (`statusIndex`, `statusOf`, `pieceOf`, `wholeStatus`, `rowOf`: a status row's columns by
+  name), `fmtDay`, `plainAct`.
 - `lists_pages/common.js` (/your-bills/, /list/, /lists/edit/): state names `NAMES`, `esc`, `countUse`, `infoTip`,
-  watchlist storage (`WKEY`, `readWatch`, `writeWatch`, `entryOf`, `allStarred`), status reader (`statusIndex`,
-  `statusOf`, `pieceOf`, `wholeStatus`, `lookUp`), `whereText` (→ `WatchRows.where`), `plainAct`, `billRow`, the lists
-  Worker (`api`, `myList`, `readFollows`, `readNamed`).
-- `lists_pages/watchrules.js` (`WatchRules`): deadlines and groups; read by tracker.html and onelist.js.
-- `lists_pages/watchrows.js` (`WatchRows`): the watchlist's rows and groups, labels (`where`), news box; `rows.css`
-  styles them (classes `wr-*`).
+  `allStarred`, `lookUp`, `billRow`, the lists Worker (`api`, `myList`, `readFollows`, `readNamed`).
+- `lists_pages/watchrules.js` (`WatchRules`): deadlines and groups; read by tracker.html, onelist.js and the build.
+- `lists_pages/watchrows.js` (`WatchRows`): the watchlist's rows and groups, news box; `rows.css` styles them (classes
+  `wr-*`).
 - `lists_pages/onelist.js` (`OneList`): /your-bills/'s list across states; runs each state's `profile.<hash>.js`.
 - `lists_pages/embed.js` (`Frames`, `Opener`, `listCodes`, `listGroups`): state pages in frames at `#embed=...`.
 - `lists_pages/named.js` (`NamedLists`): the list button beside each star; on state pages, the front page, the editor.
@@ -232,16 +243,19 @@ opened (`later()`, `STALE`, `showView()`).
   actions and `stage`; about 19 converters also print totals against the official lists with
   `python3 -m states.<st>.convert`. Then `python3 test/data_check.py <st>` and read CLAUDE.md's
   "Data traps". If the stage is right but the words are wrong, see the next item.
-- **The words for where a bill is differ between pages.** Each view has its own wording: tracker.html `statusParts()`,
-  watchrows.js `where()`, home.html `whereText()`, issues_site.py `stage_text()`, home.html `STAGE_SHORT`. See
-  notes/duplication.md.
+- **The words for where a bill is differ between pages.** They all come from `BillFacts.words()`
+  (lists_pages/billfacts.js): the state's page works them out in the browser, every other view shows what the build
+  wrote (`bill_labels()` → status rows, issue files, search files). A difference means the build's run of a profile hook
+  failed or saw other data (billlabels.js catches a hook's error and leaves that fact out), or the page and the build ran on
+  different days. `test/consistency.js` compares every view on a local build.
 - **A deadline or watchlist group is wrong.** `lists_pages/watchrules.js` (`deadlineOf`, `canAct`) with the profile's
   `govDeadline`, `passedBothBy`, `sessionEnds`, `originDeadline`, `dated`; then `WatchRows.place()`. On /your-bills/ the
   same rules run on a stand-in bill built from the status row (`onelist.js` `itemOf()`), with the facts `f` from
   `/status.json` (`write_status_shards()`).
-- **The state Watchlist and Your bills disagree.** /your-bills/ has no history: `endedOf()`, `vetoReturns`, `votersDone`
-  are taken as false there, and `x.routine` uses only the last action. Compare `watchRow()` in tracker.html with
-  `itemOf()` in onelist.js. The front page's Your bills panel (`drawMine()` in home.html) uses neither.
+- **The state Watchlist and Your bills disagree.** /your-bills/ has no history: what it needs from one comes as the status
+  row's flags ("e" ended, "r" veto still open, "d" voters done, "a"/"2" amendment and second passage) and its "New" day,
+  from the build. Compare `watchRow()`/`canActNow()` in tracker.html with `itemOf()` in onelist.js; `test/consistency.js`
+  compares the groups and deadlines.
 - **A page change isn't live.** Is a publish queued or running? `gh run list --workflow publish.yml`. A run can take
   35-50 minutes when many states rebuild, and runs queue one at a time. Did it deploy? A run started by a download
   deploys only if some state was rebuilt; start one by hand to force it. Did the change reach `state_hash.py`'s list?
