@@ -53,7 +53,9 @@ LEADERS_NEXT = {
     "H": ("Ben Smaltz", "Speaker of the House", "them", "2026-11-17"),
 }
 # Other leadership posts, shown on the members' cards (the API has none). Checked 2026-11-08.
-POSITIONS = {("H", "Matt Lehman"): "Majority Floor Leader", ("S", "Chris Garten"): "Majority Floor Leader",
+# Chris Garten, Majority Floor Leader until 2026-11-17, is now President Pro Tempore (LEADERS_NEXT); his successor
+# as floor leader isn't named yet.
+POSITIONS = {("H", "Matt Lehman"): "Majority Floor Leader",
              ("H", "Philip GiaQuinta"): "Minority Leader", ("S", "Shelli Yoder"): "Minority Leader"}
 
 

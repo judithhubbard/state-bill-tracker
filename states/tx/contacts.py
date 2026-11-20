@@ -18,6 +18,8 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from fetch_contacts import committee_key, name_key
 from states.tx import profile as P
+import governors
+governors.apply_leaders(P)  # the Lieutenant Governor-elect from January 19, 2027 (LEADERS_NEXT)
 
 HOUSE = "https://house.texas.gov"
 SENATE = "https://senate.texas.gov"

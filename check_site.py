@@ -205,6 +205,28 @@ for year in range(TODAY.year - 2, TODAY.year + 1):
         problems.append(f"va: {year}'s last floor votes were on {last}, but the rule says it adjourned {adjourns}; "
                         "add the year to `dated` in states/va/profile.js")
 
+# Leaders: the pages show the profile's (states/<st>/profile.py LEADERS, with LEADERS_NEXT from each one's first day).
+# These states' contacts.py read the legislature's own leadership pages; when those name someone else, the profile
+# needs checking (a new Speaker or President), so it fails here rather than going unnoticed.
+OWN_LEADERS = ("ca", "fl", "ma", "va")
+sys.path.insert(0, HERE)
+import importlib, governors
+def _key(name):
+    return re.sub(r"[^a-z ]", "", name.lower().replace(".", " ")).split()[-1] if name.strip() else ""
+for st in OWN_LEADERS:
+    P = importlib.import_module(f"states.{st}.profile")
+    governors.apply_leaders(P)
+    files = sorted(f for f in os.listdir(os.path.join(HERE, "data", st)) if re.fullmatch(r"contacts_\d{4}\.json", f)) \
+        if os.path.isdir(os.path.join(HERE, "data", st)) else []
+    if not files:
+        continue
+    listed = json.load(open(os.path.join(HERE, "data", st, files[-1]))).get("leaders", {})
+    for h, v in listed.items():
+        mine = P.LEADERS.get(h)
+        if mine and _key(v.get("name", "")) and _key(v["name"]) != _key(mine[0]):
+            problems.append(f"{st}: the legislature's site names {v['name']} ({v.get('role', h)}); the profile has "
+                            f"{mine[0]}: update LEADERS (or LEADERS_NEXT) in states/{st}/profile.py")
+
 # Every state in .github/states.json (what download.yml downloads) must be restored by publish.yml, or its saved
 # copy never reaches the site.
 states_list = json.load(open(os.path.join(HERE, ".github", "states.json")))["states"]

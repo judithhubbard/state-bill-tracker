@@ -356,8 +356,13 @@ def contacts_for(session, recs, delegation_names):
     leaders = {}
     # Leaders as the state's own sites name them (Virginia's contacts carry them), else the profile's list. A
     # leader's pronoun comes from the profile when it names the same person, else "them".
-    listed = {h: (v["name"], v["role"], next((pr for n, _, pr in [P.LEADERS.get(h, ("", "", ""))] if n and name_key(n) == name_key(v["name"])), "them"))
-              for h, v in raw.get("leaders", {}).items()}
+    # The profile's leaders win (with LEADERS_NEXT applied from each one's first day): most contacts.py copy the profile
+    # at download time, so their file still names the one before (Indiana's Speaker, 2026-11-17), and a legislature's
+    # own site can lag too (Florida's still named the old leaders after the 2026-11-17 organization session). The
+    # contacts file's leaders fill only a house the profile leaves out; check_site.py fails when a legislature's own
+    # site (OWN_LEADERS there) names someone else, so the profile gets updated.
+    due = set(P.LEADERS)
+    listed = {h: (v["name"], v["role"], "them") for h, v in raw.get("leaders", {}).items() if h not in due}
     for house, (name, role, pronoun) in {**P.LEADERS, **listed}.items():
         if any(k[0] == house and v["key"] == name_key(name) for k, v in seats.items()):
             person(name, house)
