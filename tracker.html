@@ -2738,7 +2738,7 @@ function nextSteps(b) {
   const who = plan.book.html((plan.gov ? govItem(plan.gov, b) : "") + (plan.govAlso ? govItem(plan.govAlso, b, false) : ""));
   // The sponsors' contact details are on their cards below: the reintroduce line doesn't repeat them.
   if (!plan.actionable) what += reintroAsk(b, panelStance(b), !!who);
-  if (plan.actionable && who) what += `<p class="hint">Asks if you <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${(plan.opp ? "oppose" : "support") === s}">${s}</button>`).join("")}</span> this bill</p>`;
+  if (plan.actionable && who) what += `<p class="hint">You <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${(plan.opp ? "oppose" : "support") === s}">${s}</button>`).join("")}</span> this bill</p>`;
   // The person who decides the next step comes first, set apart; everyone else folds away.
   const box = document.createElement("ul");
   box.innerHTML = who;
@@ -5012,7 +5012,7 @@ function actionRecord(list) {
 }
 
 // The side the visitor took on a bill, when they took one: on a shared list, its maker's; else the watchlist's, or the
-// panel's "Asks if you support / oppose" when it's set to oppose.
+// panel's "You support / oppose this bill" when it's set to oppose.
 const chosenStance = (b) => (SHARED ? sharedStance(b) : watchStance(b) || panelStances()[billKey(b)] || null);
 // A short, plain email: one person, one or more bills. It says the side taken ("in support of this bill"), several bills
 // grouped by side; "about" for bills without one.
