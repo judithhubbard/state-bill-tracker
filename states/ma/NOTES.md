@@ -17,3 +17,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   the Third Reading counts as the floor. Formal sessions end July 31 of the second year (`formalEnds()`), informal ones
   when the court ends. Governor 10 days. No summaries in the data ("What it does" isn't shown); House votes are tallies,
   Senate votes by member. Earlier courts linked by identical title (`earlier()`). Cities and towns (351) by district.
+- **Passed both houses (2026-11-19):** only when the branches agree on one text: the second branch passed it unamended,
+  or the first concurred in its amendment (the last word, not "NON-concurred" or "concurred ... with a further
+  amendment"), or, after "Committee of conference appointed", both accepted the report (`agreed()`); or it was enacted.
+  A changed title alone isn't an amendment (about 300 bills went from "Read third (title changed) and passed" straight to
+  enactment). Bills each branch passed in its own version are stage 2, "In conference: each house passed its own version"
+  or "Passed each house in a different version". Found by the pre-launch check: H5576, S2619 and 11 more of 2025-26 in
+  conference; H1999, H4049, S2922 of 2023-24 amended by the second branch and never concurred in.

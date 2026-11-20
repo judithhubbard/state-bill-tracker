@@ -377,6 +377,10 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     "Vetoed" for the 19 bills (of 29 vetoed) that became law over the veto in the special session of 2025-12-16, and it
     has no dates for the governor's actions (each law and veto showed on the bill's last legislative day). Read each
     passed bill's page (states/md/NOTES.md); the check LOOKs at laws and vetoes with no date for the governor's action.
+  - A refusal worded like the agreement: MA's "House NON-concurred in the Senate amendment" matched "concurred in the Senate
+    amendment", so 13 bills of 2025-26 in conference (H5576, S2619) showed as passed both houses; a second house's "Read
+    second, amended" was missed too (H1999 of 2023-24). The check fails on bills passed both houses whose last step is a
+    refusal to concur or a conference committee.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.
