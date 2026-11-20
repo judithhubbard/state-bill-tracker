@@ -75,6 +75,13 @@ async function pickOn(page) {
   });
 }
 
+// A bill's watchlist row. Rows are keyed by the number without its letter, so Nebraska's LB525 and LB525A share a key: the
+// row whose number is the bill's.
+function rowFor(rows, p) {
+  const all = rows.filter((x) => x.key === `${p.st}:${p.session}:${p.num}`);
+  return all.find((x) => x.num.startsWith(p.full) && !/^[A-Z0-9]/.test(x.num.slice(p.full.length))) || all[0];
+}
+
 async function main() {
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-sandbox", "--disable-gpu", "--lang=en-US"] });
   const page = await browser.newPage();
@@ -150,7 +157,7 @@ async function main() {
     for (const p of ps) {
       if (++done % 20 === 0) log(`state pages: ${done} of ${picks.length}`);
       // (A new load each time: going from one #bill to another on the same page is only a change of address.)
-      await page.goto("about:blank");
+      await page.goto(BASE + "robots.txt");
       await go(`${url}#${p.full}`);
       const t = await waitFor(page, (full) => {
         const b = BILLS.find((x) => x.nums[0] === full);
@@ -163,15 +170,16 @@ async function main() {
     }
     // (Re-read the watchlist: opening a bill marks it seen, so the starred lists go back as they were first.)
     await page.evaluate((lists) => { for (const [st, w] of Object.entries(lists)) localStorage.setItem(`abt:${st}:watch`, JSON.stringify(w)); }, lists);
-    await page.goto("about:blank");
+    await page.goto(BASE + "robots.txt");
     await go(`${url}#watch`);
     await waitFor(page, () => document.querySelector("#wlList .wr-row, #wlList .wempty, #wlList p"), null, 20000);
     await sleep(500);
     const rows = await page.evaluate(() => [...document.querySelectorAll("#wlList .wr-row")].map((r) => ({
       key: r.dataset.key, label: r.querySelector(".wr-stg")?.textContent || null, due: r.querySelector(".wr-dl")?.textContent || "",
-      group: r.closest("section[data-g]")?.dataset.g || "", fresh: !!r.querySelector(".wr-new") })));
+      group: r.closest("section[data-g]")?.dataset.g || "", fresh: !!r.querySelector(".wr-new"),
+      num: [...(r.querySelector(".wr-num")?.childNodes || [])].filter((n) => !n.classList?.contains("wr-st")).map((n) => n.textContent).join("").replace(/\s+/g, "") })));
     for (const p of ps) {
-      const r = rows.find((x) => x.key === `${p.st}:${p.session}:${p.num}`);
+      const r = rowFor(rows, p);
       if (!r) continue;
       Object.assign(R.get(p), { });
       R.get(p).views.watch = r.label; R.get(p).group.watch = r.group; R.get(p).due.watch = r.due; R.get(p).fresh.watch = r.fresh;
@@ -186,9 +194,10 @@ async function main() {
   {
     const rows = await page.evaluate(() => [...document.querySelectorAll("#bills .wr-row")].map((r) => ({
       key: r.dataset.key, label: r.querySelector(".wr-stg")?.textContent || null, due: r.querySelector(".wr-dl")?.textContent || "",
-      group: r.closest("section[data-g]")?.dataset.g || "", fresh: !!r.querySelector(".wr-new") })));
+      group: r.closest("section[data-g]")?.dataset.g || "", fresh: !!r.querySelector(".wr-new"),
+      num: [...(r.querySelector(".wr-num")?.childNodes || [])].filter((n) => !n.classList?.contains("wr-st")).map((n) => n.textContent).join("").replace(/\s+/g, "") })));
     for (const p of picks) {
-      const r = rows.find((x) => x.key === `${p.st}:${p.session}:${p.num}`);
+      const r = rowFor(rows, p);
       if (!r) continue;
       R.get(p).views.yours = r.label; R.get(p).group.yours = r.group; R.get(p).due.yours = r.due; R.get(p).fresh.yours = r.fresh;
     }

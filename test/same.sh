@@ -3,6 +3,7 @@
 # 25 open bills and a watchlist of 8 (test/snapshot.js) from built pages, and compares them with
 # the pages built from another commit (default: HEAD).
 # Usage: test/same.sh [commit] [session ...]   (default sessions: 2025 2023)
+#        ST=va test/same.sh [commit] [session ...]   (another state's pages, from its data in data/va/)
 set -e
 cd "$(dirname "$0")/.."
 REF=${1:-HEAD}; shift || true
@@ -12,8 +13,13 @@ CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 snap() {  # snap DIR: build the sessions in DIR and record each page
   for s in $SESSIONS; do
-    (cd "$1" && python3 build_data.py "$s" > /dev/null)
-    cat "$1/site/$s.html" test/snapshot.js > "$TMP/page.html"
+    if [ -n "$ST" ]; then
+      (cd "$1" && python3 build_data.py --state "$ST" "$s" > /dev/null)
+      cat "$1/site/$ST/$s.html" test/snapshot.js > "$TMP/page.html"
+    else
+      (cd "$1" && python3 build_data.py "$s" > /dev/null)
+      cat "$1/site/$s.html" test/snapshot.js > "$TMP/page.html"
+    fi
     "$CHROME" --headless=new --disable-gpu --user-data-dir="$TMP/chrome-$(basename "$2")-$s" --virtual-time-budget=60000 \
       --dump-dom "file://$TMP/page.html" 2>/dev/null |
       python3 -c "import html,re,sys; m=re.search(r'<pre id=\"SNAP\">(.*?)</pre>', sys.stdin.read(), re.S); print(html.unescape(m.group(1)) if m else 'NO SNAPSHOT')" > "$2.$s"
@@ -25,6 +31,8 @@ cp -R data/. "$TMP/old/data/"   # untracked fresh downloads
 snap "$TMP/old" "$TMP/old.snap"
 snap . "$TMP/new.snap"
 git worktree remove --force "$TMP/old"
+# (KEEP=DIR keeps both snapshots there, to read the whole difference.)
+if [ -n "$KEEP" ]; then mkdir -p "$KEEP" && cp "$TMP"/old.snap.* "$TMP"/new.snap.* "$KEEP"/; fi
 
 status=0
 for s in $SESSIONS; do
