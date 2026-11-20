@@ -101,7 +101,11 @@ def decode(line, branch):
         return [(h, f"PASSED {HOUSE.get(h, 'HOUSE').upper()}")]
     if re.search(r"placed in the Orders of the Day|ordered to a third reading", t, re.I):
         return [(h, "PLACED ON FLOOR")]
-    if re.search(r"concurred in the (?:Senate|House) amendment", t, re.I):
+    # "NON-concurred in the Senate amendment" is a refusal (then a conference committee), and "concurred ... with a
+    # further amendment" is a new change the other branch must agree to: neither ends the disagreement (both are kept
+    # as written, and agreed() reads them).
+    if (re.search(r"concurred\b.*\b(?:Senate|House)\b.*\bamendment", t, re.I) and not re.search(r"NON-?concurred", t, re.I)
+            and not re.search(r"with an?(?: still)? further\s+amendment", t, re.I)):
         return [(h, "CONCURRED")]
     if re.search(r"laid before (?:t?he )?Governor", t, re.I):
         return [(h, "DELIVERED TO GOVERNOR")]
@@ -120,11 +124,34 @@ def decode(line, branch):
 
 def agreed(own):
     """Both branches passed it: did they pass the same text? The second branch's passage counts unless it amended
-    the bill, when the first has to concur."""
-    second = max((i for i, s in enumerate(own) if s[2].startswith("PASSED")))
-    amended = re.search(r"amend", own[second][3], re.I) or any(
-        re.search(r"^Amend|amendment.*adopted", s[3], re.I) and s[1] == own[second][1] for s in own[second - 3:second] if s[0] == own[second][0])
+    the bill, when the first has to concur. A concurrence "with a further amendment" goes back to the other branch, and
+    one that refuses ("NON-concurred in the Senate amendment") leads to a conference committee, whose report both
+    branches must accept (H5576 of 2025-26: each branch passed its own text, then a conference; S2619 the same)."""
+    conf = [i for i, s in enumerate(own) if re.match(r"(?:House |Senate )?Committee o[nf] conference\b(?!.*\b(?:report|membership)\b)", s[3], re.I)]
+    if conf:
+        took = {s[1] for s in own[conf[-1]:] if re.search(r"conference report accepted", s[3], re.I) and not re.search(r"reconsider", s[3], re.I)}
+        return took >= {"S", "H"}
+    # The last word on the other branch's amendment: a plain concurrence, or a refusal or a further amendment.
+    word = [s for s in own if s[2] == "CONCURRED" or re.search(r"NON-?concurred in the (?:Senate|House)|concurred\b.*\bwith an?(?: still)? further\s+amendment", s[3], re.I)]
+    if word and word[-1][2] != "CONCURRED":
+        return False
+    passes = [i for i, s in enumerate(own) if s[2].startswith("PASSED")]
+    first_h = own[passes[0]][1]
+    second = max(i for i in passes if own[i][1] != first_h)
+    # What the second branch did since the bill reached it (or since its own earlier passage, when a reconsidered
+    # passage was taken again: H4009 of 2025-26, whose amendment was then rejected). Read only these lines: a
+    # committee's recommendation isn't an amendment until the branch adopts it, and a changed title alone isn't one
+    # either (about 300 bills went straight to enactment after "Read third (title changed) and passed").
+    start = max(i for i in passes if i < second)
+    amended = any(s[1] == own[second][1] and AMENDED.search(s[3]) and not re.search(r"rejected|withdrawn", s[3], re.I)
+                  for s in own[start + 1:second + 1])
     return not amended or any(s[2] == "CONCURRED" for s in own[second:])
+
+
+# A branch adopting an amendment: "Amended (Creem) by striking out ...", "Read second, amended (as recommended by the
+# committee on House Ways and Means)", "Consolidated amendment A adopted", "New text substituted, see H4963".
+AMENDED = re.compile(r"^Amended\b|, amended\b|\bamended \(as recommended|amendment\b.*\badopted\b|New text substituted"
+                     r"|passed to be engrossed,? with an? amendment", re.I)
 
 
 def tally(t):
@@ -313,6 +340,10 @@ def load_session(session):
                     4: "On the governor's desk", 5: "Signed into law", 6: "Vetoed"}[stage]
         else:
             desc = own[-1][3] if own else "Filed"
+        if stage == 2 and len(passed) == 2:
+            # Each branch passed its own version: the two have to agree (a concurrence, or a conference report both accept).
+            conf = any(re.match(r"(?:House |Senate )?Committee o[nf] conference\b(?!.*\b(?:report|membership)\b)", s[3], re.I) for s in own)
+            desc = "In conference: each house passed its own version" if conf else "Passed each house in a different version"
         if amendment and stage == 3:
             desc = "Approved by the joint session of both houses"
         elif amendment and stage == 1:

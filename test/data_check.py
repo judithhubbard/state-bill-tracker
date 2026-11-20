@@ -55,6 +55,17 @@ def check(state):
         missing = [r["nums"][0] for r in recs if r["stage"] >= 3 and not (r["passedS"] and r["passedA"])]
         if missing:
             say(state, "FAIL", f"{s}: {len(missing)} bills past both houses without both houses' passage, e.g. {missing[:4]}")
+        # Passed both houses while the houses still disagree: MA's "House NON-concurred in the Senate amendment", read as
+        # a concurrence, then "Committee of conference appointed" (H5576 of 2025-26, and 12 more). A bill whose last step
+        # is a refusal to concur or a conference committee's appointment hasn't passed both houses in one version.
+        split = [r["nums"][0] for r in recs if r["stage"] == 3 and "const" not in r["topics"] and r["vers"][0]["actions"]
+                 and re.search(r"\bnon-?concur|refuse[sd]? to concur|conference (?:committee )?(?:appointed|requested)|"
+                               r"committee of conference appointed|appointed? (?:a )?conference committee",
+                               r["vers"][0]["actions"][-1][1], re.I)]
+        if split:
+            say(state, "FAIL" if len(split) > 0.002 * len(recs) else "LOOK",
+                f"{s}: {len(split)} bills shown as passed both houses whose last step is a refusal to concur or a conference "
+                f"committee, e.g. {split[:4]}")
         # A passage that never took effect: a bill shown as passed by one house that then died in that same house (MS's
         # HB 1602 of 2026: passed, held there by a motion to reconsider entered and never decided, "Died On Calendar").
         lower = getattr(P, "LOWER_NAME", "Assembly")
