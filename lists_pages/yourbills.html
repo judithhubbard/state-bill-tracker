@@ -48,15 +48,17 @@
       <p class="sub" id="sum">&nbsp;</p>
       <div id="news"></div>
       <div id="bills"></div>
-      <p id="none" hidden>No starred bills in this browser yet. Star a bill on the <a href="/">front page</a> or a state&rsquo;s page and it shows up here.</p>
+      <p id="none" hidden>No starred bills yet. Star &#9734; any bill to follow it here.</p>
       <section id="shareSec" hidden>
         <div class="panel" id="share"></div>
       </section>
     </section>
   </div>
-  <details id="connectList" class="quietbox"><summary>Made a list on another device?</summary>
+  <details id="connectList" class="quietbox"><summary>Using another device? Paste your list's key</summary>
     <div class="row"><input type="text" id="listKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key">
-    <button type="button" class="btn" id="listConnect">Connect</button></div><p class="muted err" id="listMsg"></p></details>
+    <button type="button" class="btn" id="listConnect">Connect</button></div>
+    <div class="row" id="listWhich" hidden><button type="button" class="btn" data-as="starred">Add to Starred</button><button type="button" class="btn" data-as="list">Keep as its own list</button></div>
+    <p class="muted err" id="listMsg" aria-live="polite"></p></details>
   <footer><a href="/about/">About</a> &middot; <a href="SUPPORT_URL">Support this site</a></footer>
 </main>
 <script>
@@ -483,10 +485,8 @@ let THANKS = "";
 function drawShare(keepMsg) {
   const mine = myList(), el = $("share"), msg = keepMsg ? $("saved")?.textContent || "" : "";
   if (!mine) {
-    el.innerHTML = `<p class="row"><button type="button" class="btn primary" data-act="share"${ITEMS.some((x) => x.on) ? "" : " disabled"}>Share your live watchlist</button>`
-      + `${infoTip("The link always shows your current list.")} <span class="muted" id="saved"></span></p>`
-      + `<details><summary>Shared these from another device?</summary><div class="row"><input type="text" id="pasteKey" autocomplete="off" placeholder="Paste the list's key" aria-label="The list's key">`
-      + `<button type="button" class="btn" data-act="connect">Connect</button></div></details>`;
+    el.innerHTML = `<p class="row"><button type="button" class="btn primary" data-act="share"${ITEMS.some((x) => x.on) ? "" : " disabled"}>Share this list</button>`
+      + `${infoTip("The link always shows your current list.")} <span class="muted" id="saved"></span></p>`;
     if (msg) say(msg, true);
     return;
   }
@@ -546,18 +546,6 @@ $("share").addEventListener("click", async (e) => {
       countUse("your-bills/shared for a group");
       if (!mine) THANKS = thanksOnce();
       return drawShare();
-    }
-    if (act === "connect") {
-      const [slug, key] = $("pasteKey").value.trim().split(/\s+/);
-      if (!slug || !key) return say("Paste the key exactly as it was copied: a name, a space and a code.", true);
-      await api(`/lists/${encodeURIComponent(slug)}/views`, { headers: { "X-Edit-Key": key } });
-      const l = await api(`/lists/${encodeURIComponent(slug)}`, { headers: { "X-Edit-Key": key } });
-      if (l.state !== "all") return say(`That key is for a list shared from ${stName(l.state)}'s watchlist; use it there.`, true);
-      adopt(l);
-      const p = { title: l.title, bills: l.bills, intro: l.intro || "", notes: l.notes || {} };
-      setMyList({ slug, editKey: key, title: l.title === DEFAULT_TITLE ? "" : l.title, group: l.group, intro: p.intro, notes: p.notes, saved: sig(p) });
-      countUse("your-bills/connected");
-      return draw();
     }
     if (act === "stop") {
       if (!confirm("Stop sharing? The link will stop working for everyone.")) return;
@@ -722,25 +710,55 @@ $("panels").addEventListener("click", (e) => {
   if (sh && !sh.closest("#share")) countUse(`your-bills/list share by ${sh.dataset.share}`);
 });
 
-// ---- A list made on another device: its key connects it here ----
+// ---- Another device: a list's key connects it here. Two kinds of list share one box: the starred bills shared from
+// another browser (their bills join Starred, and both browsers keep the one shared list up to date), or a list made in
+// the editor (kept as its own tab). Which it is: a list this browser already has; the shared starred list's default
+// name; else the visitor picks. ----
+let PENDING = null;  // {slug, key, w}: a fetched list waiting for the visitor's choice
+function connectStarred(slug, key, l) {
+  adopt(l);
+  const p = { title: l.title, bills: l.bills, intro: l.intro || "", notes: l.notes || {} };
+  setMyList({ slug, editKey: key, title: l.title === DEFAULT_TITLE ? "" : l.title, group: l.group, intro: p.intro, notes: p.notes, saved: sig(p) });
+  countUse("your-bills/connected");
+  $("listKey").value = ""; $("listMsg").textContent = ""; $("connectList").open = false;
+  select("starred", { user: true, focus: true });
+  return draw();
+}
+$("listWhich").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-as]");
+  if (!b || !PENDING) return;
+  const { slug, key, w } = PENDING;
+  PENDING = null; $("listWhich").hidden = true;
+  try { if (b.dataset.as === "starred") await connectStarred(slug, key, w); else await connectNamed(slug, key, w); }
+  catch (err) { $("listMsg").textContent = err.message; }
+});
 $("listConnect").addEventListener("click", async () => {
   const [slug, key] = $("listKey").value.trim().split(/\s+/), msg = $("listMsg");
+  PENDING = null; $("listWhich").hidden = true; msg.classList.add("err");
   if (!slug || !key) return (msg.textContent = "Paste the key exactly as it was copied: a name, a space and a code.");
   try {
     await api(`/lists/${encodeURIComponent(slug)}/views`, { headers: { "X-Edit-Key": key } });
     const w = await api(`/lists/${encodeURIComponent(slug)}`, { headers: { "X-Edit-Key": key } });
     if (w.state !== "all") return (msg.textContent = `That key is for a list shared from ${stName(w.state)}'s watchlist; use it there.`);
-    const p = { title: w.title || "", bills: w.bills, intro: w.intro || "", notes: w.notes || {} };
-    const all = readNamed();
-    all[slug] = { slug, editKey: key, ...p, group: w.group || "", saved: JSON.stringify([p.title, p.bills, p.intro, p.notes]), updated: w.updated };
-    writeNamed(all);
-    $("listKey").value = ""; msg.textContent = ""; $("connectList").open = false;
-    countUse("your-bills/connected a list");
-    syncTabs();
-    await drawList(all[slug]);
-    select(`list:${slug}`, { user: true, focus: true });
-  } catch (err) { msg.textContent = err.message; }
+    if (myList()?.slug === slug || (!readNamed()[slug] && w.title === DEFAULT_TITLE)) return await connectStarred(slug, key, w);
+    if (readNamed()[slug]) return await connectNamed(slug, key, w);
+    PENDING = { slug, key, w };
+    msg.textContent = `“${w.title || "Untitled list"}”, ${w.bills.length} bill${w.bills.length === 1 ? "" : "s"}:`;
+    msg.classList.remove("err");
+    $("listWhich").hidden = false;
+  } catch (err) { msg.classList.add("err"); msg.textContent = err.message; }
 });
+async function connectNamed(slug, key, w) {
+  const p = { title: w.title || "", bills: w.bills, intro: w.intro || "", notes: w.notes || {} };
+  const all = readNamed();
+  all[slug] = { slug, editKey: key, ...p, group: w.group || "", saved: JSON.stringify([p.title, p.bills, p.intro, p.notes]), updated: w.updated };
+  writeNamed(all);
+  $("listKey").value = ""; $("listMsg").textContent = ""; $("connectList").open = false;
+  countUse("your-bills/connected a list");
+  syncTabs();
+  await drawList(all[slug]);
+  select(`list:${slug}`, { user: true, focus: true });
+}
 
 // A change in another tab (a star on a state's page, a list edited or followed): redraw, and keep the shared list in step.
 addEventListener("storage", (e) => {

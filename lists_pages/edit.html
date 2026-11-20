@@ -419,7 +419,7 @@ function drawResults() {
   if (!p) { $("cnt").textContent = ""; $("res").innerHTML = ""; return; }
   const most = HITS.length && HITS.every((h) => h.tier === 1);
   $("cnt").textContent = !HITS.length ? (LOADING ? "Searching…" : `No bills found${where}.`)
-    : most ? `No bill${where} has all those words; these have most of them`
+    : most ? `No exact match${where}. Closest:`
     : `${HITS.length.toLocaleString()} bill${HITS.length === 1 ? "" : "s"} found${where}${LOADING ? " · still loading some states…" : ""}`;
   $("res").innerHTML = HITS.slice(0, LIMIT).map(({ st, s, r, shown }) => {
     const [num, title, stage, w] = r, label = s.w[w] || "", on = onList(st, s.session, num);

@@ -21,11 +21,11 @@ FIRST = 2023  # "All finished sessions": from 2023 on, as every state keeps (sta
 
 # The odds chart's colors (tracker.html's tokens), light and dark.
 TOKENS = """
-:root { --move: #3b6f76; --move-2: #18464c; --refer: #b3c2c6; --law-bar: #43b072; --veto: #b3372b; }
+:root { --move: #3b6f76; --move-2: #18464c; --refer: #b3c2c6; --law-bar: #43b072; --veto: #b3372b; --stall: #98a4a8; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --move: #8fb5b8; --move-2: #c6dedf; --refer: #4d5d60; --law-bar: #1f8a50; --veto: #ee7d70; }
+  :root:not([data-theme="light"]) { --move: #8fb5b8; --move-2: #c6dedf; --refer: #4d5d60; --law-bar: #1f8a50; --veto: #ee7d70; --stall: #6f7d80; }
 }
-:root[data-theme="dark"] { --move: #8fb5b8; --move-2: #c6dedf; --refer: #4d5d60; --law-bar: #1f8a50; --veto: #ee7d70; }
+:root[data-theme="dark"] { --move: #8fb5b8; --move-2: #c6dedf; --refer: #4d5d60; --law-bar: #1f8a50; --veto: #ee7d70; --stall: #6f7d80; }
 """
 
 CSS = """
@@ -60,7 +60,8 @@ table.cmp td.st a { text-decoration: none; }
 table.cmp td.st a:hover { text-decoration: underline; }
 table.cmp td small { display: block; color: var(--ink-2); font-size: 12.5px; font-weight: 400; white-space: nowrap; }
 table.cmp td .bar { display: block; height: 4px; border-radius: 2px; background: var(--rule); margin-top: 3px; overflow: hidden; }
-table.cmp td .bar i { display: block; height: 100%; background: var(--ink-2); }
+table.cmp td .bar i { display: block; height: 100%; background: var(--stall); }
+table.cmp td.house .bar i { background: var(--navy); }
 table.cmp td.law .bar i { background: var(--lawn); }
 table.cmp tbody.all td { font-weight: 700; background: var(--paper); }
 table.cmp tbody.fed td { border-top: 2px solid var(--rule); }
@@ -68,6 +69,8 @@ table.cmp button.pickc { font: inherit; font-size: 13px; color: var(--navy); bac
   padding: 1px 8px; cursor: pointer; white-space: nowrap; }
 table.cmp button.pickc[aria-pressed="true"] { background: var(--navy); color: var(--sheet); border-color: var(--navy); }
 table.cmp td.dash { color: var(--ink-2); }
+table.cmp th .itip { margin-left: 3px; }
+table.cmp td.sess .itip { margin-left: 5px; }
 .tablewrap { margin: 0 0 8px; position: relative; }
 table.cmp td.st small.ph { display: none; }
 /* On a phone: the share columns that matter most, the session under the state's name. */
@@ -117,6 +120,7 @@ const STATES = DATA.filter((d) => d.state !== "us"), US = DATA.find((d) => d.sta
 const num = (n) => n.toLocaleString("en-US");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pctOf = (a, b) => (b ? Math.round((100 * a) / b) : 0);
+const itip = (text, cls = "") => `<span class="itip${cls ? ` ${cls}` : ""}" tabindex="0" role="note" aria-label="${esc(text)}"><span aria-hidden="true">i</span><span class="itip-t" aria-hidden="true">${esc(text)}</span></span>`;
 const pctText = (a, b) => (b && a && a / b < 0.005 ? "<1%" : `${pctOf(a, b)}%`);
 // The sessions a choice covers: the latest finished one, every one from 2023 on, or those that began in one year.
 const PERIOD = document.getElementById("period"), A = document.getElementById("chartA"), B = document.getElementById("chartB");
@@ -151,12 +155,16 @@ const KEYS = { name: (r) => r.d.name, intro: (r) => r.intro, comm: (r) => r.comm
 function cell(cls, a, b, sub) {
   return `<td class="n ${cls}">${pctText(a, b)}<small>${num(a)}</small><span class="bar" aria-hidden="true"><i style="width:${Math.min(100, (100 * a) / (b || 1)).toFixed(1)}%"></i></span></td>`;
 }
-const lengthText = (d, list) => (list.length > 1 ? `${d.years === 1 ? "One year" : "Two years"} each` : `${d.years === 1 ? "One year" : "Two years"}${list[0].kind ? `, ${list[0].kind}` : ""}`);
+// The session's kind, in an ⓘ beside it. A two-year legislature whose session is named by one year (Montana, Texas)
+// meets every other year.
+const lengthText = (d, list) => (d.years === 2 && !/–|-/.test(list[0].label) ? "Meets every other year"
+  : list.length > 1 ? `${d.years === 1 ? "One-year" : "Two-year"} sessions`
+  : `${d.years === 1 ? "One-year" : "Two-year"} session${list[0].kind ? ` (${list[0].kind})` : ""}`);
 function tr(r, all) {
   const { d, list } = r, picked = [A.value, B.value].includes(d.state);
   const ph = `<small class="ph">${esc(all ? r.sessText : yearsText(d, list))}</small>`;
   const name = all ? `<td class="st">${esc(d.name)}${ph}</td>` : `<td class="st"><a href="../${d.state}/#stats">${esc(d.name)}</a>${ph}${d.state === "us" ? "<small>Not counted with the states</small>" : ""}</td>`;
-  return `<tr>${name}<td class="sess">${esc(all ? r.sessText : yearsText(d, list))}<small>${esc(all ? "" : lengthText(d, list))}</small></td>`
+  return `<tr>${name}<td class="sess">${esc(all ? r.sessText : yearsText(d, list))}${all ? "" : itip(lengthText(d, list))}</td>`
     + `<td class="n">${num(r.intro)}</td>${cell("", r.comm, r.intro)}${cell("house", r.house, r.intro)}${cell("law", r.law, r.intro)}`
     + `<td class="n">${num(r.vetoes)}${r.over ? `<small>${num(r.over)} overridden</small>` : ""}</td>`
     + `<td class="pickcol">${all ? "" : `<button type="button" class="pickc" data-st="${d.state}" aria-pressed="${picked}" aria-label="${esc(`Show ${d.name}'s chart`)}">Chart</button>`}</td></tr>`;
@@ -200,10 +208,10 @@ function drawCharts() {
   box.innerHTML = [A.value, B.value].filter(Boolean).map((id) => {
     const c = chartFor(id);
     if (c.none) return `<h3>${esc(c.name)}</h3><p class="note">No finished session for this choice.</p>`;
-    const o = c.data.odds, intro = (o.intro || [0, 0])[0], law = (o.intro || [0, 0])[1];
+    const o = c.data.odds;
     const svg = drawSankey(o, c.data.fate, c.data.cfate, { ...c.chart, linked: () => c.chart.linked, num, esc });
     return `<h3>${esc(c.name)} <small>${esc(c.when)}</small></h3>${svg}`
-      + `<p class="note">${num(law)} of ${num(intro)} bills became law (${pctText(law, intro)}).${c.st ? ` <a href="../${c.st}/#stats">More in ${esc(c.name)}'s statistics</a>` : ""}</p>`;
+      + (c.st ? `<p class="note"><a href="../${c.st}/#stats">More in ${esc(c.name)}'s statistics</a></p>` : "");
   }).join("");
   for (const b of document.querySelectorAll("button.pickc")) b.setAttribute("aria-pressed", String([A.value, B.value].includes(b.dataset.st)));
 }
@@ -214,7 +222,7 @@ function remember() {
 {
   const opts = DATA.map((d) => `<option value="${d.state}">${esc(d.name)}</option>`).join("");
   A.innerHTML = `<option value="all">All states</option>${opts}`;
-  B.innerHTML = `<option value="">None</option><option value="all">All states</option>${opts}`;
+  B.innerHTML = `<option value="">Compare with…</option><option value="all">All states</option>${opts}`;
   const years = [...new Set(DATA.flatMap((d) => d.sessions.map((s) => s.session)).filter((s) => s >= FIRST))].sort().reverse();
   PERIOD.innerHTML = `<option value="latest">Latest finished session</option><option value="all">All finished sessions since ${FIRST}</option>`
     + years.map((y) => `<option value="${y}">Sessions that began in ${y}</option>`).join("");
@@ -229,7 +237,7 @@ A.addEventListener("change", () => { drawCharts(); remember(); });
 B.addEventListener("change", () => { drawCharts(); remember(); });
 document.querySelector("table.cmp thead").addEventListener("click", (ev) => {
   const th = ev.target.closest("th[data-k]");
-  if (!th) return;
+  if (!th || ev.target.closest(".itip")) return;
   SORT = SORT[0] === th.dataset.k ? [th.dataset.k, -SORT[1]] : [th.dataset.k, th.dataset.k === "name" ? 1 : -1];
   draw();
 });
@@ -252,7 +260,7 @@ draw();
 def page(states):
     lede = "Bills introduced in each legislature, and how far they got."
     data = json.dumps(states, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
-    th = lambda k, label, cls="n": f'<th scope="col" class="{cls}" data-k="{k}"><button type="button">{label}</button></th>'
+    th = lambda k, label, cls="n", tip="": f'<th scope="col" class="{cls}" data-k="{k}"><button type="button">{label}</button>{tip}</th>'
     meta = site_meta.tags("How the states compare · State Bill Tracker", lede, site_meta.root() + "compare/") + site_meta.analytics()
     return issues_site.HEAD.format(title="How the states compare", desc=e(lede), css=issues_site.css() + TOKENS + CSS, meta=meta) + f"""
 <p class="crumbs"><a href="../">State Bill Tracker</a></p>
@@ -260,12 +268,10 @@ def page(states):
 <p class="big" id="lede"></p>
 <div class="tools"><select id="period" aria-label="Sessions"></select></div>
 <div class="tablewrap"><table class="cmp">
-<thead><tr>{th("name", "State", "")}{th("years", "Session", "sess")}{th("intro", "Bills")}{th("comm", "Died in committee")}{th("house", "Passed a house", "n house")}{th("law", "Became law")}{th("vetoes", "Vetoed")}<th scope="col" class="pickcol"><span class="vh">Chart</span></th></tr></thead>
+<thead><tr>{th("name", "State", "")}{th("years", "Session", "sess")}{th("intro", "Bills", "n", issues_site.itip("States count bills differently: New York counts a Senate bill and its identical Assembly bill as one, while most states count each, and some, like Minnesota, put their budget in a few large bills.", "r"))}{th("comm", "Died in committee")}{th("house", "Passed a house", "n house")}{th("law", "Became law")}{th("vetoes", "Vetoed")}<th scope="col" class="pickcol"><span class="vh">Chart</span></th></tr></thead>
 <tbody id="rows"></tbody><tbody class="all" id="allrow"></tbody><tbody class="fed" id="fedrow"></tbody>
 </table></div>
-<p class="note">Finished sessions only, without local bills, placeholder bills and constitutional amendments. States count bills differently:
-New York counts a Senate bill and its identical Assembly bill as one, while most states count each, and some, like Minnesota, put their budget
-in a few large bills.</p>
+<p class="note">Finished sessions only, without local bills, placeholder bills and constitutional amendments.</p>
 <h2 id="chartsHead">How bills move</h2>
 <div class="tools"><select id="chartA" aria-label="Chart"></select><select id="chartB" aria-label="Beside it"></select></div>
 <div class="charts" id="charts"></div>

@@ -254,6 +254,30 @@ ul.bills .stg { white-space: normal; text-align: left; }
 .legend .sq.h0 { background: var(--tile-off); } .legend .sq.h1 { background: var(--heat-1); }
 .legend .sq.h2 { background: var(--heat-2); } .legend .sq.h3 { background: var(--heat-3); }
 .legend .sq.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
+/* No session (or no bills filed yet): a dash under the letters, so it doesn't look like "None" (as on the front page). */
+.tiles span.wait::after { content: ""; position: absolute; left: 50%; bottom: 18%; width: 30%; height: 2px; border-radius: 1px;
+  transform: translateX(-50%); background: var(--ink-2); opacity: .55; }
+.legend .sq.wait { background: linear-gradient(var(--ink-2), var(--ink-2)) center / 6px 1.5px no-repeat; }
+/* Dark mode: the law badge on the palest squares gets a dark ring. */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tiles .h3 .lawn { box-shadow: 0 0 0 2px var(--heat-ink-3); } }
+:root[data-theme="dark"] .tiles .h3 .lawn { box-shadow: 0 0 0 2px var(--heat-ink-3); }
+/* The legend's law badge: a number, or on phones a dot, as the squares show it. */
+.lawk .lw-d { display: none; }
+@media (max-width: 479.98px) {
+  .mk .lawk .lw-n { display: none; } .mk .lawk .lw-d { display: inline; }
+  .mk .lawk .lawn { min-width: 0; width: 7px; height: 7px; padding: 0; font-size: 0; }
+}
+/* An ⓘ with its explanation (as common.js's infoTip()). */
+.itip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 4px;
+  border: 1.5px solid currentColor; border-radius: 50%; color: var(--ink-2); font: 700 10px/1 var(--body); font-style: italic; cursor: help;
+  vertical-align: middle; text-decoration: none; }
+.itip:focus-visible { outline: 3px solid var(--hover); outline-offset: 2px; }
+.itip .itip-t { display: none; position: absolute; z-index: 40; left: -8px; top: calc(100% + 6px); width: max-content; max-width: min(260px, 70vw);
+  padding: 8px 10px; border-radius: 6px; background: var(--ink); color: var(--paper); font: 400 13px/1.4 var(--body); font-style: normal;
+  text-align: left; letter-spacing: normal; text-transform: none; }
+.itip.r .itip-t { left: auto; right: -8px; }
+.itip:hover .itip-t, .itip:focus .itip-t { display: block; }
+.itip.star { width: auto; height: auto; border: 0; border-radius: 0; font: inherit; font-style: normal; color: inherit; margin-left: 0; vertical-align: baseline; }
 .legend .sq.nodata { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--rule) 4px 5.5px); box-shadow: inset 0 0 0 1px var(--rule); }
 .legend .sq.off { background: transparent; border: 1px dashed var(--rule); }
 /* "Map | Chart", as on the front page: the chart lies over the hidden map (same size, scrolls inside), one row per
@@ -583,6 +607,12 @@ def bill_items(iid, st, mine):
 STAR_TIP = "The legislature publishes only bill titles, so some of its bills on this issue may be missed."
 
 
+def itip(text, cls="", mark="i"):
+    """An ⓘ (or another mark, the asterisk) that shows its text on hover or focus."""
+    return (f'<span class="itip{" " + cls if cls else ""}" tabindex="0" role="note" aria-label="{e(text)}"><span aria-hidden="true">{mark}</span>'
+            f'<span class="itip-t" aria-hidden="true">{e(text)}</span></span>')
+
+
 def issue_page(issue, states, year, years, default, upcoming, congress=None):
     iid = issue["id"]
     names = {st: d["name"] for st, d in states.items()}
@@ -596,7 +626,7 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
         n, laws, mine = by[st]
         n_moving = sum(1 for f, b, new, _ in mine if new and 1 <= b[4] <= 4)
         intro_n, laws_n, moving = intro_n + n, laws_n + laws, moving + n_moving
-        flag = f'&nbsp;<abbr title="{STAR_TIP}">*</abbr>' if st in TITLES_ONLY else ""
+        flag = "&nbsp;" + itip(STAR_TIP, "star", "*") if st in TITLES_ONLY else ""
         label, total = info.get(st, ("", 0))
         rows.append((n, f'<tr data-st="{st}"><th scope="row"><a href="#{st}">{e(names[st])}</a>{flag}</th><td class="n">{n}</td>'
                         f'<td class="n">{laws}</td><td class="n">{n_moving}</td><td class="n">{f"{total:,}" if total else ""}</td>'
@@ -626,18 +656,17 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
     year_links = "".join(f'<a href="{page_name(y, default)}"{cur if y == year else ""}{pre if y > default else ""}>{y}</a>'
                          for y in years) + f'<a href="all.html"{cur if year == "all" else ""} title="{years[0]}–{years[-1]}, each bill once" aria-label="All years">All<span class="yw"> years</span></a>'
     fopts = "".join(f'<option value="f:{e(re.sub(r"[^a-z]+", "-", k.lower()))}">{e(k)}</option>' for k in issue.get("filters", {}))
-    verb = "prefiled" if upcoming else "with action"
     up = "../../"
-    lede_counts = (f'<b id="nBills">{intro_n:,}</b> bills {verb} in <b id="nStates">{in_states}</b> states in {ytext}'
-                   + ("" if upcoming else f'; <b id="nLaws">{laws_n:,}</b> became law' + ("" if year == "all" else f" in {ytext}")) + ".")
+    lede_counts = (f'In {ytext}: <b id="nBills">{intro_n:,}</b> bills{" prefiled" if upcoming else ""} in <b id="nStates">{in_states}</b> states'
+                   + ("" if upcoming else f'; <b id="nLaws">{laws_n:,}</b> became law') + ".")
     keys = ['<span class="key"><i class="sq h0"></i>None</span>', '<span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>',
             '<span class="key"><i class="sq h2"></i>5&ndash;14</span>', '<span class="key"><i class="sq h3"></i>15 or more</span>']
     # The chart view's keys (the party colors and the law badge), in the same place as the map's.
     ckeys = ['<span class="key"><i class="pD"></i>Democrats</span>', '<span class="key"><i class="pB"></i>Both parties</span>',
              '<span class="key"><i class="pR"></i>Republicans</span>', '<span class="key"><i class="pN"></i>Committee or none</span>']
     if not upcoming:
-        keys.append('<span class="key"><span class="lawn">3</span>Number that became law</span>')
-        ckeys.append(keys[-1])
+        keys.append('<span class="key lawk"><span class="lawn">3</span><span class="lw-n">Number that became law</span><span class="lw-d">Became law</span></span>')
+        ckeys.append('<span class="key"><span class="lawn">3</span>Number that became law</span>')
     if upcoming and quiet:
         keys.append('<span class="key"><i class="sq wait"></i>No bills filed yet</span>')
     if not upcoming and nosession:
@@ -654,11 +683,10 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
     if upcoming and quiet:
         notes.append(f"No bills filed yet for {ytext}: {e(', '.join(sorted(names[st] for st in quiet)))}.")
     if not upcoming and nosession:
-        notes.append(f"No regular session in {ytext} (these legislatures meet every other year): {e(', '.join(nosession))}.")
+        notes.append(f"No session in {ytext}: {e(', '.join(nosession))}.")
     if gaps:
         notes.append(f"No data on this site for {ytext} (the legislature met; this site&rsquo;s data for it begins later): {e(', '.join(gaps))}.")
     note_html = "".join(f'<p class="note">{x}</p>' for x in notes)
-    star_note = (f'<p class="note">* {STAR_TIP}</p>' if any(st in TITLES_ONLY for st in by) else "")
     # Link previews and the canonical link (site_meta.py): the default year's page is the issue's folder.
     meta = site_meta.tags(f"{issue['name']}: bills in every state, {ytext} · State Bill Tracker", DESC.get(iid, ""),
                           site_meta.root() + f"issues/{iid}/" + ("" if year == default else f"{year}.html")) + site_meta.analytics()
@@ -688,7 +716,6 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
 <thead><tr><th scope="col">State</th><th scope="col" class="n">{"Prefiled" if upcoming else "Bills"}</th><th scope="col" class="n">Became law</th><th scope="col" class="n">Moving</th><th scope="col" class="n">All bills</th><th scope="col">Session</th></tr></thead>
 <tbody>{"".join(r for _, r in rows)}</tbody></table></div>
 <p class="note">{"Each bill counts once, whichever years it was active in." if year == "all" else "A bill counts in each year from its introduction to its last action in its session (in a two-year legislature, most are filed in the first year and keep moving in the second); &ldquo;Became law&rdquo; counts the year it did, and the bill counts that year too."} &ldquo;Moving&rdquo;: out of committee, not yet law or vetoed. &ldquo;All bills&rdquo;: every bill in the state's {"sessions" if year == "all" else "session"}, for scale.</p>
-{star_note}
 </details>
 <h2 id="bills">The bills</h2>
 <div class="tools">
@@ -700,7 +727,7 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
 </div>
 <p class="note hidden" id="partyNote">{PARTY_NOTE}</p>
 <p class="note" id="count" aria-live="polite"></p>
-{star_note}{"".join(blocks)}{fed_block}
+{"".join(blocks)}{fed_block}
 <footer>Bills are found by the words in their titles and summaries, so a few are missed and a few are only partly about the issue. Bills for one city or county are left out. Open a bill for its status, votes and who to contact. &middot; <a href="/about/">About</a> &middot; <a href="{site_meta.SUPPORT}">Support this site</a></footer>
 </main>
 <script>
@@ -1046,14 +1073,14 @@ def main(site):
                     for g in issues.GROUPS if any(s["group"] == g for s in summary))
     cards += "".join(card(s) for s in abc if s["group"] not in issues.GROUPS) and \
         f'<h2>Other</h2><ul class="cards">{"".join(card(s) for s in abc if s["group"] not in issues.GROUPS)}</ul>'
-    lede = "Bills on the same subjects across all 50 legislatures, and which ones became law."
+    lede = f"In {default}: bills on the same subjects in all 50 legislatures, and which became law."
     index = HEAD.format(title="Issues across the states", desc=lede, css=css(),
                         meta=site_meta.tags("Issues across the states · State Bill Tracker", lede, site_meta.root() + "issues/") + site_meta.analytics()) + f"""
 <p class="crumbs"><a href="../">State Bill Tracker</a></p>
 <h1>Issues across the states</h1>
-<p class="lede">Bills on the same subjects across all 50 legislatures, and which ones became law.</p>
+<p class="lede">{e(lede)}{itip("Found by words in titles and summaries. Congress is counted separately, on each issue's page.", "r")}</p>
 {cards}
-<footer>Counts are for {default} ({len(states)} states; Congress is on each issue&rsquo;s page, apart from the states). Bills are found by the words in their titles and summaries; see each issue's page for what counts. &middot; <a href="/about/">About</a> &middot; <a href="{site_meta.SUPPORT}">Support this site</a></footer>
+<footer><a href="/about/">About</a> &middot; <a href="{site_meta.SUPPORT}">Support this site</a></footer>
 </main>
 </body>
 </html>
