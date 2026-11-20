@@ -142,9 +142,7 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .billrow > .rowstar { position: absolute; left: 4px; top: calc(12px + 19.55px); display: grid; justify-items: start; }
 .rowstar .nlbtn { margin-top: -3px; }
 .billrow > .rowstar.two { top: calc(12px + 2 * 19.55px); }
-.billrow:has(> .bill[open]) > .rowstar { left: 15px; top: calc(15px + 12px + 19.55px); }
-.billrow:has(> .bill[open]) > .rowstar.two { top: calc(15px + 12px + 2 * 19.55px); }
-.bill > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 116px minmax(0, 1fr) 150px; gap: 14px; padding: 12px 4px; align-items: start; }
+.bill > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 116px minmax(0, 1fr) 190px; gap: 14px; padding: 12px 4px; align-items: start; }
 .bill > summary::-webkit-details-marker { display: none; }
 .bill > summary:hover { background: var(--sheet); }
 .nums { display: grid; gap: 1px; font: 700 13px/1.35 var(--mono); }
@@ -161,22 +159,12 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .ptyline { font-size: 12.5px; color: var(--ink-2); }
 .ptags { display: grid; gap: 6px; }
 .ptags .pfacts { font-size: 12.5px; color: var(--ink-2); }
-.status { display: grid; gap: 5px; justify-items: start; }
-.track { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; width: 100%; }
-.pip { height: 6px; border-radius: 1px; background: var(--pip-off); }
-.pip.on { background: var(--move); }
-.pip.on.gold { background: var(--move-2); }
-.pip.on.ok { background: var(--signed); }
-.pip.on.no { background: var(--veto); }
-.st { font-size: 12px; font-weight: 600; line-height: 1.25; }
-.st.s3, .st.s4 { color: var(--ink); }
-.st.over { color: var(--ink-2); }
-.st.s5 { color: var(--signed); }
-.st.s6 { color: var(--veto); }
-.st small { display: block; font-weight: 400; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.st small.gap { margin-top: 3px; font-style: italic; }
+/* (The status column's pips, label and date line are lists_pages/rows.css's .pips, .stg and .stw, as in every bill row.) */
 
-.detail { padding: 2px 4px 18px 134px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; font-size: 14px; }
+/* An opened bill: its details indented under the title (the number column and the gap), with a rule down their left, so
+   the next bill down is plainly separate. On a phone the indent is small, so the text keeps its width. */
+.bill[open] > summary { padding-bottom: 8px; }
+.detail { margin: 2px 4px 22px 134px; padding: 4px 0 4px 18px; border-left: 3px solid var(--navy); display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; font-size: 14px; }
 .detail p { margin: 0; max-width: 78ch; }
 .act { font: 500 12.5px/1.4 var(--mono); color: var(--ink-2); max-width: 78ch; }
 .versions { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
@@ -238,8 +226,11 @@ footer p { margin: 0; max-width: 90ch; }
 .votes .theirs { font-size: 12.5px; color: var(--ink-2); }
 .votes .vy { color: var(--signed); } .votes .vn { color: var(--veto); } .votes .vo { color: var(--ink-2); }
 .votes .muted { color: var(--ink-2); font-size: 12px; }
-.linkrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
-.linkrow input { flex: 1 1 260px; min-width: 0; font: 12px var(--mono); color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 5px; padding: 5px 8px; }
+/* The last line of an opened bill: its pages on the legislature's site and "Copy link to this bill". */
+.blinks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font-size: 13.5px; }
+.blinks br { display: none; }
+.history .tally { color: var(--ink-2); }
+.history .tally > b { color: var(--ink); }
 
 /* Session switcher */
 .sessions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -300,10 +291,11 @@ table.oc th { vertical-align: bottom; }
 
 @media (max-width: 860px) {
 }
-@media (max-width: 620px) {
+@media (max-width: 640px) {
   .bill > summary { grid-template-columns: 86px minmax(0, 1fr); }
-  .bill > summary .status { grid-column: 1 / -1; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 10px; }
-  .detail { padding-left: 4px; }
+  .bill > summary .status { grid-column: 2; }
+  .bill > summary .status .pips { max-width: 170px; }
+  .detail { margin: 2px 0 20px 20px; padding-left: 14px; }
   .lineage li { grid-template-columns: 60px minmax(0, 1fr); }
   .lineage li .oc { grid-column: 2; }
   .keydates li { grid-template-columns: 96px minmax(0, 1fr); }
@@ -701,11 +693,6 @@ table.st col.c-m { width: 80px; }
 .wtwin { margin: 0; font-size: 13.5px; background: var(--chip); border-radius: 6px; padding: 6px 10px; justify-self: start; }
 .wcard .wlogged { margin: 0; font-size: 12.5px; color: var(--signed); font-weight: 600; }
 .wcard .wlogged::before { content: "✓ "; }
-.spill { font: 600 12.5px var(--body); border-radius: 999px; padding: 3px 10px; background: var(--pip-off); color: var(--ink); white-space: nowrap; }
-.spill.p2 { background: var(--chip); color: var(--ink); box-shadow: inset 0 0 0 1px var(--move); }
-.spill.p3, .spill.p4 { background: var(--move-soft); color: var(--ink); box-shadow: inset 0 0 0 1px var(--move-2); }
-.spill.p5 { background: var(--signed-soft); color: var(--signed); }
-.spill.p6 { background: var(--veto-soft); color: var(--veto); }
 .wsec { border-radius: 12px; padding: 14px 16px 16px; margin-top: 14px; }
 .where { margin-top: 10px; font-size: 13.5px; }
 .where[hidden] { display: none; }
@@ -742,7 +729,7 @@ details.wsec:not([open]) > summary .wsub { margin-bottom: 0; }
 .wcards.idle .wcard:not(.open) .wtop { background: none; border-bottom: 0; padding-bottom: 0; }
 .wcards.idle .wcard:not(.open) .whead { gap: 2px; padding-bottom: 9px; }
 .wcards.idle .wcard:not(.open) .whead h3 { font-size: 15px; font-weight: 600; color: var(--ink-2); margin: 0; }
-.wcards.idle .wcard:not(.open) .spill { font-size: 11.5px; padding: 2px 8px; }
+.wcards.idle .wcard:not(.open) .stg { font-size: 11.5px; padding: 0 7px; }
 .wfold { margin: 0 0 -4px; font-size: 13px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .wfold .muted { color: var(--ink-2); }
 .wfold > span:last-child { margin-left: auto; }
@@ -769,7 +756,7 @@ a.phone:hover { text-decoration-color: currentColor; }
 .wcard details.morefiltersbill { border: 0; }
 .wcard details.morefiltersbill > summary { display: block; padding: 0; background: none; border: 0; text-align: left; cursor: pointer; font-size: 13px; color: var(--navy); font-weight: 600; }
 .wcard details.morefiltersbill > summary:hover { background: none; text-decoration: underline; }
-.wcard details.morefiltersbill .detail { padding: 10px 0 0; }
+.wcard details.morefiltersbill .detail { margin: 0; border: 0; padding: 10px 0 0; }
 .wcard .why { margin: 0; font-size: 13.5px; color: var(--ink-2); border-left: 3px solid var(--rule); padding: 2px 0 2px 12px; max-width: 85ch; }
 .log { display: grid; gap: 6px; justify-items: start; }
 .logged { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; }
@@ -928,7 +915,7 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .wcard details.morebill > summary { display: block; padding: 8px 0 0; background: none; border: 0; font-weight: 600; font-size: 13px; color: var(--navy); }
 .wcard details.morebill > summary::before { content: "▸ "; }
 .wcard details.morebill[open] > summary::before { content: "▾ "; }
-.wcard details.morebill > .detail { padding: 8px 0 0; }
+.wcard details.morebill > .detail { margin: 0; border: 0; padding: 8px 0 0; }
 .do.reintro { border-left: 3px solid var(--navy); padding: 6px 0 6px 12px; display: grid; gap: 3px; }
 .do.reintro p { margin: 0; font-size: 14px; }
 .do.reintro .reach { font-size: 13px; color: var(--ink-2); }
@@ -947,9 +934,6 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .chapam .memo summary { cursor: pointer; color: var(--navy); }
 .chapam .memo p { margin: 6px 0 0; }
 .tag.vno { background: var(--veto-soft); color: var(--veto); }
-.bill[open] { background: var(--sheet); border: 1px solid var(--rule); border-left: 4px solid var(--navy); border-radius: 8px; margin: 14px 0; box-shadow: 0 2px 10px rgba(20, 33, 61, .08); }
-.bill[open] > summary { border-bottom: 1px solid var(--rule); background: var(--chip); border-radius: 8px 8px 0 0; padding-left: 10px; }
-.bill[open] > .detail { padding: 0 12px 14px; }
 .pg { padding: 8px 6px 6px; border-radius: 8px; border-left: 4px solid transparent; }
 .pg + .pg { margin-top: 10px; }
 .pg .pg-h { padding: 0 8px 2px; }
@@ -1025,7 +1009,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .notes p { margin: 0; }
 
 /* What's next, in each bill's details */
-.next { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; display: grid; gap: 8px; max-width: 78ch; }
+.next { display: grid; gap: 8px; max-width: 78ch; }
 :root .next > :is(h2, h3, h4, h5, h6) { margin: 0; font: 600 12px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 .next p { margin: 0; }
 .next .when { font-weight: 600; }
@@ -1089,8 +1073,16 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .wlhead .wlline a:hover { text-decoration: underline; }
 .wlhead .wlsep { color: var(--ink-2); font-weight: 400; margin: 0 4px; }
 .wrows .wr-btns .watchbtn { margin: 0; }
-.wr-emb > .wcard.inplace { border: 0; border-radius: 0; box-shadow: none; padding: 10px 12px 2px; background: none; }
-.wr-emb > .wcard.inplace .wbody { padding-bottom: 10px; }
+.wr-emb > .wcard.inplace { border: 0; border-radius: 0; box-shadow: none; padding: 2px 0 0; background: none; }
+.wr-emb > .wcard.inplace .wbody { padding-bottom: 4px; }
+/* A card opened below its row (or in a list page's frame) is the bill's panel: "What you can do", then the details
+   without their "More about this bill" fold, in the same order as on the Bills list (fillDetail()). */
+.wcard .wbody:has(> .morebill.inplace) { gap: 16px; }
+.wcard details.morebill.inplace { border-top: 0; margin: 0; }
+.wcard details.morebill.inplace > summary { display: none; }
+.wcard details.morebill.inplace > .detail { padding: 0; }
+.wcan { display: grid; gap: 9px; }
+:root .wcan > :is(h2, h3, h4, h5, h6) { margin: 0; font: 600 12px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
 .wcard .wside { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink-2); }
 .wcard .wside .sides { margin: 0; padding: 0; }
 .wcard .wside .wlists { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
@@ -1858,12 +1850,9 @@ function renderTopics() {
 }
 
 
-function track(b) {
-  const cls = b.stage === 5 ? "ok" : b.stage === 6 ? "no" : b.stage >= 3 ? "gold" : "";
-  // One house (UNI): five steps, with no "passed one house".
-  const n = UNI ? 5 : 6, filled = b.stage >= 5 ? n : UNI && b.stage >= 3 ? b.stage : b.stage + 1;
-  return `<div class="track" aria-hidden="true">${[0,1,2,3,4,5].slice(0, n).map((i) => `<span class="pip ${i < filled ? "on " + cls : ""}"></span>`).join("")}</div>`;
-}
+// The row's progress pips (lists_pages/billfacts.js, styled by rows.css, as in every bill row on the site). One house
+// (UNI): five steps, with no "passed one house". A bill out of time is grey, as its label.
+const track = (b) => BillFacts.pips(b.stage, UNI, statusParts(b)[2].trim());
 
 // "Energy And Telecommunications" -> "Energy and Telecommunications".
 const commPlain = (n) => (n || "").replace(/ And /g, " and ").replace(/ Committee$/, "");
@@ -1997,9 +1986,10 @@ function statusParts(b) {
   return [t, small, over];
 }
 const statusLabel = (b) => statusParts(b)[0];
+// The status label (colored by stage, lists_pages/rows.css's .stg) and the grey line under it.
 function statusText(b) {
   const [t, small, over] = statusParts(b);
-  return `<div class="st s${b.stage}${over}">${esc(t)}<small>${esc(small)}</small></div>`;
+  return `<span class="stg s${b.stage}${over}">${esc(t)}</span><span class="stw">${esc(small)}</span>`;
 }
 
 // ---- What's next and who to contact (current session only) ----
@@ -2750,7 +2740,7 @@ function nextSteps(b) {
   const contacts = !items.length ? "" : keys.length
     ? `<div class="mainask">${list(keys)}</div>${rest.length ? `<details class="others"><summary>Others to contact (${rest.length})</summary>${list(rest)}</details>` : ""}`
     : list(rest);
-  return `<div class="next"><h4>What's next and who to contact</h4>${what}${plan.actionable ? repsLine() : ""}${contacts}</div>`;
+  return `<div class="next"><h4>What you can do</h4>${what}${plan.actionable ? repsLine() : ""}${contacts}</div>`;
 }
 
 // Bills still open for comment, listed right here (filters on the Bills tab don't apply).
@@ -2870,18 +2860,6 @@ function votedTest(key) {
   const [id, how] = key.split("|");
   const people = id === "any" ? votePeople() : [LEG_BY_ID[id]].filter(Boolean);
   return (b) => people.some((L) => { const x = floorVote(b, L); return how === "miss" ? x && x !== "Yes" && x !== "No" : x === how; });
-}
-function votesBlock(b) {
-  if (!b.votes.length) return "";
-  const people = votePeople();
-  const rows = b.votes.map((v) => {
-    // (A state can name the vote itself: Nebraska's floor rounds, STATE.voteWhat.)
-    const what = STATE.voteWhat?.(v) || (v.kind === "F" ? `${HOUSE[v.house]} floor` : `${HOUSE[v.house]} ${esc(v.committee || "")}${/ommittee$/.test(v.committee || "") ? "" : " Committee"}`);  // (Tennessee's subcommittees)
-    const other = [...v.notYes.values()].filter((c) => c !== "N").length;
-    const theirs = people.map((L) => { const x = voteOf(v, L); return x ? `${L.title} ${esc(shortName(L.name))}: <b class="v${x === "Yes" ? "y" : x === "No" ? "n" : "o"}">${x}</b>` : ""; }).filter(Boolean).join(" · ");
-    return `<li><time>${fmtDate(v.date)}</time><span>${what}: <b>${v.yes}–${v.no}</b>${other ? ` <span class="muted">(${other} not voting)</span>` : ""}${theirs ? `<br><span class="theirs">${theirs}</span>` : ""}</span></li>`;
-  }).join("");
-  return `<div class="keydates votes"><h4>Votes</h4><ol>${rows}</ol></div>`;
 }
 
 // ---- Statistics: questions people act on ----
@@ -3817,21 +3795,37 @@ function renderPersonStats(L) {
       <tr><td>Excused or absent</td><td>${num(away)}</td>${peer ? `<td>${num(Math.round(peer.missed))}</td>` : ""}</tr></tbody></table></div>
     <p class="note">Out of ${num(fv)} floor votes. The records don't give a reason for an absence.</p>` : ""}`;
 }
-function keyDates(b) {
-  const D = b.dates;
+// "History": the bill's main steps and its recorded votes in one dated list. A floor vote that passed goes on the line of
+// the passage it records ("Passed the Senate · 26–11"); other votes (committees, votes that failed) keep a line of their
+// own, worded as in the old Votes list. Your legislators' votes are under the vote. While the bill waits on the governor,
+// the decision's due date is last, in gold.
+function historyBlock(b) {
+  const D = b.dates, people = votePeople();
+  // [day, words, the house a passage was in]; rank orders one day's lines: introduced, committee votes, the rest.
   const items = [
-    [D.intro, "Introduced"],
+    [D.intro, "Introduced", null, 0],
     [D.floor, "Approved by committee and sent to the floor"],
-    ...D.passSAll.map((d, i) => [d, i ? "Passed the Senate again" : "Passed the Senate"]),
-    ...D.passAAll.map((d, i) => [d, i ? `Passed the ${HOUSE[LOW]} again` : `Passed the ${HOUSE[LOW]}`]),
+    ...D.passSAll.map((d, i) => [d, i ? "Passed the Senate again" : "Passed the Senate", "S"]),
+    ...D.passAAll.map((d, i) => [d, i ? `Passed the ${HOUSE[LOW]} again` : `Passed the ${HOUSE[LOW]}`, LOW]),
     [D.died, "Sent back to committee for the new year (had to pass again)"],
     [D.deliv, `Sent to ${EXEC.the}`],
     [D.signed, `${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}`],
     [D.vetoed, `Vetoed${b.veto ? `, Memo ${b.veto}` : ""}`],
-  ].filter(([d]) => d).sort((x, y) => x[0].localeCompare(y[0]));
-  if (DATA.current && b.stage === 4 && b.due) items.push([b.due, STATE.dueLabel(b.due), true]);
-  return `<div class="keydates"><h4>Key dates</h4><ol>${items.map(([d, l, est]) =>
-    `<li><time>${fmtDate(d)}</time><span class="${est ? "est" : ""}">${esc(l)}</span></li>`).join("")}</ol></div>`;
+  ].filter(([d]) => d).map(([d, l, house, rank = 2]) => ({ d, html: esc(l), house, rank }));
+  for (const v of b.votes) {
+    const other = [...v.notYes.values()].filter((c) => c !== "N").length;
+    const theirs = people.map((L) => { const x = voteOf(v, L); return x ? `${L.title} ${esc(shortName(L.name))}: <b class="v${x === "Yes" ? "y" : x === "No" ? "n" : "o"}">${x}</b>` : ""; }).filter(Boolean).join(" · ");
+    const tally = `<b>${v.yes}–${v.no}</b>${other ? ` <span class="muted">(${other} not voting)</span>` : ""}${theirs ? `<br><span class="theirs">${theirs}</span>` : ""}`;
+    const step = v.kind === "F" && v.yes > v.no && !STATE.voteWhat?.(v) && items.find((x) => x.house === v.house && x.d === v.date && !x.voted);
+    if (step) { step.voted = true; step.html += ` <span class="tally">· ${tally}</span>`; continue; }
+    // (A state can name the vote itself: Nebraska's floor rounds, STATE.voteWhat.)
+    const what = STATE.voteWhat?.(v) || (v.kind === "F" ? `${HOUSE[v.house]} floor` : `${HOUSE[v.house]} ${esc(v.committee || "")}${/ommittee$/.test(v.committee || "") ? "" : " Committee"}`);  // (Tennessee's subcommittees)
+    items.push({ d: v.date || "", html: `${what}: ${tally}`, rank: v.kind === "F" ? 2 : 1 });
+  }
+  items.sort((x, y) => x.d.localeCompare(y.d) || x.rank - y.rank);
+  if (DATA.current && b.stage === 4 && b.due) items.push({ d: b.due, html: esc(STATE.dueLabel(b.due)), est: true });
+  return `<div class="keydates votes history"><h4>History</h4><ol>${items.map((x) =>
+    `<li><time>${fmtDate(x.d)}</time><span${x.est ? ' class="est"' : ""}>${x.html}</span></li>`).join("")}</ol></div>`;
 }
 
 const earlierSessions = (b) => new Set(b.earlier.map((e) => e[0])).size;
@@ -3879,27 +3873,29 @@ function loadBillText(b) {
 }
 const billTextOf = (b) => BILL_TEXT[$("bill-text") ? "all" : textPart(b)];
 const paras = (t) => t.split("\n").filter((p) => p.trim()).map((p) => `<p>${esc(p)}</p>`).join("");
-function whatItDoesHtml(b) {
+// head: with its own "What it does" heading (false: under the summary's, in the same section).
+function whatItDoesHtml(b, head = true) {
   const t = billTextOf(b)?.[baseNum(b.nums[0])];
   if (!t) return "";
   const [stmt, comm, when, commText, cost, label] = t;
   // A long statement shows its first paragraph, the rest folded.
   const ps = stmt.split("\n").filter((p) => p.trim());
   const lead = ps.length > 1 && ps.join(" ").length > 700 ? `${paras(ps[0])}<details class="memo"><summary>Read the rest</summary>${paras(ps.slice(1).join("\n"))}</details>` : paras(stmt);
-  return `<div class="whatdoes"><h4>What it does</h4>${stmt ? `<div class="wd-stmt">${lead}<p class="muted">${esc(label || "From the sponsor's statement.")}</p></div>` : ""}
+  const body = `${stmt ? `<div class="wd-stmt">${lead}<p class="muted">${esc(label || "From the sponsor's statement.")}</p></div>` : ""}
     ${commText ? `<details class="memo"><summary>As the ${esc(comm || "committee")} approved it${when ? `, ${fmtDate(when)}` : ""}</summary>${paras(commText)}</details>` : ""}
-    ${cost ? `<details class="memo"><summary>What it would cost (${BODY}'s budget office)</summary>${paras(cost)}</details>` : ""}</div>`;
+    ${cost ? `<details class="memo"><summary>What it would cost (${BODY}'s budget office)</summary>${paras(cost)}</details>` : ""}`;
+  return head ? `<div class="whatdoes"><h4>What it does</h4>${body}</div>` : body;
 }
 // In a bill panel: the text if it's loaded, else a spot filled in when it arrives.
-function whatItDoes(b) {
+function whatItDoes(b, head = true) {
   if (!DATA.hasText) return "";
-  if (billTextOf(b)) return whatItDoesHtml(b);
+  if (billTextOf(b)) return whatItDoesHtml(b, head);
   // (At the panel's heading level: fillDetail()'s data-hl.)
   loadBillText(b).then(() => document.querySelectorAll(`[data-wd="${b.idx}"]`).forEach((el) => {
-    const lv = el.closest("[data-hl]")?.dataset.hl;
-    el.outerHTML = lv ? whatItDoesHtml(b).replace(/<(\/?)h4\b/g, `<$1h${lv}`) : whatItDoesHtml(b);
+    const lv = el.closest("[data-hl]")?.dataset.hl, html = whatItDoesHtml(b, el.dataset.wdh !== "0");
+    el.outerHTML = lv ? html.replace(/<(\/?)h4\b/g, `<$1h${lv}`) : html;
   }));
-  return `<div data-wd="${b.idx}"></div>`;
+  return `<div data-wd="${b.idx}"${head ? "" : ' data-wdh="0"'}></div>`;
 }
 
 // Everyone on each version, up front: its sponsors (New Jersey bills can have several "prime" sponsors),
@@ -3940,7 +3936,7 @@ function verBlock(v, b) {
   let st = esc(v.statusDesc), where = v.committee ? " · " + esc(commPlain(v.committee)) : "";
   if (b && b.stage <= 2 && !stillAlive(b)) {
     const inComm = v.committee && /committee/i.test(v.statusDesc || "");
-    st = b.vers.length > 1 && inComm && !endedOf(b) ? esc(`Died in the ${commPlain(v.committee)} Committee`) : (statusText(b).match(/^<div[^>]*>(.*?)<small>/) || [, st])[1];
+    st = b.vers.length > 1 && inComm && !endedOf(b) ? esc(`Died in the ${commPlain(v.committee)} Committee`) : esc(statusLabel(b));
     where = "";
   }
   return `<div class="ver">
@@ -3957,7 +3953,7 @@ function whenLine(b) {
   if (b.stage === 2 && b.passedIn) return esc(`Passed the ${b.passedIn} ${fmtDate(b.passedIn === "Senate" ? D.passS : D.passA)}`);
   if (b.stage === 5 && D.signed) return esc(`${overriddenLaw(b) ? "Became law over the veto" : unsignedLaw(b) ? "Became law without signature" : STATE.noSignatures ? "Became law" : "Signed"} ${fmtDate(D.signed)}`);
   if (b.stage === 6 && D.vetoed) return esc(`Vetoed ${fmtDate(D.vetoed)}`);
-  return statusText(b).match(/<small>(.*?)<\/small>/)?.[1] || "";
+  return esc(statusParts(b)[1]);
 }
 // Of two near-identical bills, the one more likely to move, and why. To become law a bill must pass
 // both houses in identical form, so one with a matching bill in each house is the usual vehicle;
@@ -3996,7 +3992,7 @@ function similarBlock(b) {
     const o = BILLS[j];
     return `<li class="s${o.stage}"><span class="bn"><button type="button" class="linkish" data-bill="${esc(baseNum(o.nums[0]))}">${esc(o.nums.join(" / "))}</button></span>
       <span class="sim-t">${esc(o.title)}${s >= 70 ? ` <span class="twin">Nearly the same</span>` : ""}</span>
-      <span class="oc oc${o.stage}">${esc(statusLabel(o))}</span></li>`;
+      <span class="oc"><span class="stg s${o.stage}${statusParts(o)[2]}">${esc(statusLabel(o))}</span></span></li>`;
   }).join("")}</ol></div>`;
 }
 function lineage(b) {
@@ -4093,7 +4089,7 @@ function billRow(b) {
             <div class="meta">${pageRole(b)}${b.sponsors.map(esc).join(" / ")}</div>
             ${one ? `<div class="tags">${one}</div>` : ""}
           </div>
-          <div class="status">${track(b)}${statusText(b)}</div>
+          <div class="status bstat">${track(b)}${statusText(b)}</div>
         </summary>
         <div class="detail"></div>
       </details><div class="rowstar${second ? " two" : ""}">${watchButton(b)}</div></div>`.replace(/ role="button" tabindex="0" aria-label="What this means"/g, ' aria-hidden="true"');
@@ -4868,18 +4864,30 @@ function watchCard(x, bodyOnly) {
     const open = bodyOnly || W_OPEN.has(billKey(b)), logged = SHARED ? 0 : logOf(b).length;
     const dl = x.key ? deadlineOf(b) : {};
     const due = WR.dueText(b, dl, fmtDate);
-    // Opened below its row, the card has no heading: the side you take goes at its top, with who sponsors it.
+    // Opened below its row, the card has no heading: the side you take goes at its top.
     const e = !SHARED && watchEntry(b);
     const lb = SHARED ? "" : listButton(b);
-    const top = bodyOnly ? `${showStance(b, e) || lb ? `<p class="wside">${showStance(b, e) ? `Your side: ${sideButtons(b, e.stance, `data-stance="${b.idx}"`)}` : ""}${lb ? `<span class="wlists">Lists ${lb}</span>` : ""}</p>` : ""}
-      ${b.sponsors.length ? `<p class="wspons">${b.sponsors.map(esc).join(" / ")}</p>` : ""}` : "";
+    const top = bodyOnly && (showStance(b, e) || lb) ? `<p class="wside">${showStance(b, e) ? `Your side: ${sideButtons(b, e.stance, `data-stance="${b.idx}"`)}` : ""}${lb ? `<span class="wlists">Lists ${lb}</span>` : ""}</p>` : "";
+    const odds = x.key && oddsLine(b) ? `<p class="odds">${oddsLine(b)}</p>` : "";
+    const why = `${!x.key && x.plan?.reason ? `<p class="why">${esc(x.plan.reason)}</p>` : ""}${!x.key ? reintroAsk(b, x.stance) : ""}`;
+    const note = !SHARED && myPublished()?.group ? `<details class="noteedit"${pubText().notes[baseNum(b.nums[0])] ? " open" : ""}><summary>Add a note</summary><textarea data-pubnote="${esc(baseNum(b.nums[0]))}" rows="2" maxlength="1000" placeholder="Why this bill matters or what to say about it">${esc(pubText().notes[baseNum(b.nums[0])] || "")}</textarea></details>` : "";
+    const log = SHARED ? "" : logBlock(x);
+    // Opened below its row (or in a list page's frame), the card is the bill's panel, as on the Bills list: what you can
+    // do first (your side, whom to ask, the odds, your actions), then everything else (fillDetail(), "inplace").
+    if (bodyOnly) {
+      const can = `${top}${action}${odds}${why}${note}${log}`;
+      return `<article class="wcard open${ONE_CARD() ? "" : " inplace"}" data-idx="${b.idx}"><div class="wbody">
+        ${can.trim() ? `<div class="wcan"><h3>What you can do</h3>${can}</div>` : ""}
+        <details class="bill morebill inplace" data-idx="${b.idx}" open><summary>More about this bill</summary><div class="detail"></div></details>
+      </div></article>`;
+    }
     return `<article class="wcard${open ? " open" : ""}${bodyOnly && !ONE_CARD() ? " inplace" : ""}" data-idx="${b.idx}">
       ${bodyOnly ? "" : `<div class="whead" data-wtoggle="${b.idx}">
         <div class="wtop"><div class="nums"><span class="chev" aria-hidden="true"></span>${esc(b.nums.join(" / "))}${SHARED
           ? `${watchButton(b, false)}${EMBED?.own
             ? `${sideButtons(b, x.stance, `data-lstance="${b.idx}"`)}<button class="lremove" type="button" data-lremove="${b.idx}" aria-label="Remove ${esc(b.nums[0])} from this list" title="Remove from this list (not from your watchlist)">Remove</button>`
             : `<span class="stance fixed ${x.stance}" title="The position of whoever shared this list">${x.stance === "oppose" ? "Oppose" : "Support"}</span>`}`
-          : watchButton(b, true, true)}</div><span class="spill p${b.stage}">${esc(statusLabel(b))}${esc(due)}</span></div>
+          : watchButton(b, true, true)}</div><span class="stg s${b.stage}${statusParts(b)[2]}">${esc(statusLabel(b))}${esc(due)}</span></div>
         <h3><button class="wtitle" type="button" data-wtitle aria-expanded="${open}">${esc(b.title)}</button>${SHARED ? "" : newsTags(b)}</h3>
         ${b.sponsors.length ? `<p class="wspons">${b.sponsors.map(esc).join(" / ")}</p>` : ""}
         ${x.key ? `<div class="wask"><span><b>${esc(andList([x.key, ...(x.more || [])].map(titleOf)))}:</b> ${esc(x.key.ask)}</span>${x.more?.length ? "" : `<button class="act-btn small primary" type="button" data-email="${b.idx}">${copyLabel(x.key)}</button>`}</div>` : ""}
@@ -4893,12 +4901,11 @@ function watchCard(x, bodyOnly) {
       ${partyTag(b) ? `<div class="tags">${partyTag(b)}</div>` : ""}
       ${summary}
       ${action}
-      ${x.key && oddsLine(b) ? `<p class="odds">${oddsLine(b)}</p>` : ""}
-      ${!x.key && x.plan?.reason ? `<p class="why">${esc(x.plan.reason)}</p>` : ""}
-      ${!x.key ? reintroAsk(b, x.stance) : ""}
-      ${!SHARED && myPublished()?.group ? `<details class="noteedit"${pubText().notes[baseNum(b.nums[0])] ? " open" : ""}><summary>Add a note</summary><textarea data-pubnote="${esc(baseNum(b.nums[0]))}" rows="2" maxlength="1000" placeholder="Why this bill matters or what to say about it">${esc(pubText().notes[baseNum(b.nums[0])] || "")}</textarea></details>` : ""}
-      ${SHARED ? "" : logBlock(x)}
-      <details class="bill morebill" data-idx="${b.idx}"${bodyOnly ? " open" : ""}><summary>More about this bill</summary><div class="detail"></div></details>
+      ${odds}
+      ${why}
+      ${note}
+      ${log}
+      <details class="bill morebill" data-idx="${b.idx}"><summary>More about this bill</summary><div class="detail"></div></details>
       </div>
     </article>`;
 }
@@ -5127,25 +5134,26 @@ function fillDetail(el) {
     countUse(`opened/${baseNum(b.nums[0])}`);
     step("opened a bill");
   }
-  // On a watchlist card the summary and the key action are already shown above.
-  const inCard = el.classList.contains("morebill");
+  // On a watchlist card, what you can do is the card's own, above. A card opened below its row (inplace) shows the rest
+  // here: the summary, the party and the near-identical bills; a folded card ("More about this bill") has them above.
+  const inCard = el.classList.contains("morebill"), folded = inCard && !el.classList.contains("inplace");
   MISSING.clear();
-  const html = `${b.summary && !inCard ? `<p>${esc(b.summary)}</p>` : ""}
-    ${panelTags(b, inCard)}
-    <p class="textlink">${STATE.textLinks(b)}</p>
+  // The order: what you can do; what it does; its history (steps and votes); who sponsors it; the rest; the official
+  // links and "Copy link to this bill" last.
+  const sum = b.summary && !folded ? `<p>${esc(b.summary)}</p>` : "";
+  const html = `${inCard ? "" : nextSteps(b)}
+    ${STATE.resetNote?.(b) ? `<p class="reset">${esc(STATE.resetNote(b))}</p>` : ""}
+    ${sum ? `<div class="whatdoes"><h4>What it does</h4>${sum}${whatItDoes(b, false)}</div>` : whatItDoes(b)}
+    ${historyBlock(b)}
+    ${sponsorsBlock(b)}
+    ${panelTags(b, folded)}
     ${chapterAmendment(b)}
     ${signingMemo(b)}${vetoMemo(b)}
-    ${whatItDoes(b)}
-    ${sponsorsBlock(b)}
-    <div class="linkrow"><span>Link to this bill:</span><input type="text" readonly value="${esc(billLink(b))}" aria-label="Link to this bill" onclick="this.select()"><button class="act-btn" type="button" data-copylink>Copy</button></div>
-    ${STATE.resetNote?.(b) ? `<p class="reset">${esc(STATE.resetNote(b))}</p>` : ""}
-    ${inCard ? "" : nextSteps(b)}
-    ${keyDates(b)}
-    ${votesBlock(b)}
+    ${folded ? "" : twinLine(b)}
     ${lineage(b)}
-    ${inCard ? "" : twinLine(b)}
     ${similarBlock(b)}
-    <div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>`;
+    <div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>
+    <p class="blinks">${STATE.textLinks(b)}${inCard ? "" : `<button class="act-btn" type="button" data-copylink="${esc(billLink(b))}">Copy link to this bill</button>`}</p>`;
   // (Who decides can depend on every bill's history: meetings().)
   if (MISSING.size) return waitIn(d, Promise.all([...MISSING].map((k) => need(k))), again);
   d.dataset.done = "1";
@@ -5370,8 +5378,8 @@ function wire() {
   });
   for (const id of ["list", "openNow", "wlList"]) $(id).addEventListener("click", async (e) => {
     const btn = e.target.closest("[data-copylink]"); if (!btn) return;
-    const input = btn.previousElementSibling;
-    try { await navigator.clipboard.writeText(input.value); btn.textContent = "Copied"; } catch (err) { input.select(); btn.textContent = "Press Ctrl/Cmd+C"; }
+    const link = btn.dataset.copylink, was = btn.textContent;
+    try { await navigator.clipboard.writeText(link); btn.textContent = "Copied"; setTimeout(() => { btn.textContent = was; }, 1500); } catch (err) { prompt("Copy this link:", link); }
   });
   // In-page links to one bill are buttons, not #S1234 anchors: some viewers (Claude's artifact
   // viewer among them) reload the page on a hash link, which lost the bill and showed old filters.

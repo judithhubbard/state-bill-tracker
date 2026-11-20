@@ -158,6 +158,17 @@ const BillFacts = (() => {
     } catch (e) { return null; }
     return S;
   }
-  return { make, words, nextStep, newsDay, isNew, ROUTINE, hash, runProfile, commPlain };
+  // A bill's progress as the six steps every bill row shows (five in a one-house legislature: no "passed one house"),
+  // filled up to its stage, in the colors of its status label (lists_pages/rows.css's .pips). Nebraska is the one
+  // legislature with one house (oneHouse(), for the pages that show several states; a state's page reads its profile).
+  const oneHouse = (st) => st === "ne";
+  // (more: other classes, "mini" for the compact rows, "over" for a bill out of time.)
+  function pips(stage, uni, more) {
+    const n = uni ? 5 : 6, k = +stage || 0, filled = k >= 5 ? n : uni && k >= 3 ? k : k + 1;
+    let out = "";
+    for (let i = 0; i < n; i++) out += i < filled ? '<i class="on"></i>' : "<i></i>";
+    return `<span class="pips s${k}${uni ? " uni" : ""}${more ? ` ${more}` : ""}" aria-hidden="true">${out}</span>`;
+  }
+  return { make, words, nextStep, newsDay, isNew, ROUTINE, hash, runProfile, commPlain, pips, oneHouse };
 })();
 if (typeof module !== "undefined") module.exports = BillFacts;

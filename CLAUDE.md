@@ -666,7 +666,10 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
   `PLAIN` / `plainAction()` (plain-language wording for actions).
 - **Bills list:** `matches()` (filters), `sortBills()`, `renderPipeline()` ("Where it is now"),
   `renderList()`, `billRow()`, `statusText()`, `track()` (the progress bar in each row),
-  `fillDetail()` (the panel that opens under a bill) and `nextSteps()` / `planFor()` /
+  `fillDetail()` (the panel that opens under a bill, indented under its title: What you can do, What it does, History
+  (`historyBlock()`: steps and votes in one list), Who sponsors it, the rest, the official links and "Copy link to this
+  bill" last; the owner's chosen design "A · Tidied", 2026-11-20; a row's pips, label and date are lists_pages/rows.css's,
+  the same in every view) and `nextSteps()` / `planFor()` /
   `contactBook()` (who to contact and what to ask; `draftBtn()` adds "Copy email" / "Copy message",
   which uses `draftFor()`).
   `holdUp()` adds the leader (and, for a money committee, the governor) when a bill stuck in committee

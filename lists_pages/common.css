@@ -61,11 +61,7 @@ h2 { font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: u
 .where { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
 .where .todo { margin-left: auto; color: var(--navy); font-weight: 600; white-space: nowrap; }
 li > a:hover .todo { color: var(--hover); }
-.stg { display: inline-block; font: 600 12px/1.5 var(--body); padding: 0 7px; border-radius: 999px; background: var(--st-0); color: var(--st-0-ink); }
-.stg.s1, .stg.s2 { background: var(--st-1); color: var(--st-1-ink); }
-.stg.s3, .stg.s4 { background: var(--st-3); color: var(--st-3-ink); }
-.stg.s5 { background: var(--st-5); color: var(--st-5-ink); }
-.stg.s6 { background: var(--st-6); color: var(--st-6-ink); }
+/* (.stg, the status label, and .pips are lists_pages/rows.css's, put after this file.) */
 .new { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--law-mark); color: #132a2e; font: 700 11px/1.6 var(--body); vertical-align: 1px; }
 .stance { display: inline-block; font: 600 12px/1.5 var(--body); padding: 0 7px; border-radius: 999px; border: 1px solid var(--rule); color: var(--ink-2); }
 .stance.oppose { border-color: var(--veto-ink); color: var(--veto-ink); }

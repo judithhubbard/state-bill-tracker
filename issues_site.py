@@ -144,17 +144,13 @@ ul.bills a { font-weight: 600; text-decoration: none; }
 ul.bills a:hover { text-decoration: underline; }
 .t { grid-column: 1 / -1; overflow-wrap: anywhere; }
 .why { grid-column: 1 / -1; color: var(--ink-2); font-size: 14px; overflow-wrap: anywhere; }
-/* Where each bill is, as on the front page: grey in committee, blue moving, amber passed both houses or with the
-   governor, green law, red-brown vetoed. Before it, the sponsors' party: D, R or Both (none for committee bills). */
-.stg { display: inline-block; font: 600 12px/1.5 var(--body); padding: 0 7px; border-radius: 999px; white-space: nowrap;
-  background: var(--st-0); color: var(--st-0-ink); }
-.stg.s1, .stg.s2 { background: var(--st-1); color: var(--st-1-ink); }
-.stg.s3, .stg.s4 { background: var(--st-3); color: var(--st-3-ink); }
-.stg.s5 { background: var(--st-5); color: var(--st-5-ink); }
-.stg.s6 { background: var(--st-6); color: var(--st-6-ink); }
-.tags { display: inline-flex; gap: 4px; align-items: center; align-self: start; justify-self: end; }
+/* Where each bill is, as in every bill row (lists_pages/rows.css, added after these styles: css()): the pips and the
+   colored label, then the date. Before them, the sponsors' party: D, R or Both (none for committee bills). */
+.tags { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 6px; align-items: center; align-self: start; justify-self: end; }
+.panel .stg { white-space: nowrap; }
 /* (A long status, "Passed the Senate; voted down in the House", wraps rather than widening the page on a phone.) */
-ul.bills .stg { white-space: normal; max-width: 13em; text-align: right; border-radius: 10px; }
+ul.bills .tags { max-width: 34em; }
+ul.bills .stg { white-space: normal; text-align: left; }
 .pty { display: inline-block; font: 700 11px/1.6 var(--body); padding: 0 5px; border-radius: 4px; white-space: nowrap; }
 .pty.D { background: var(--ctl-d1); color: var(--ctl-d1-ink); }
 .pty.R { background: var(--ctl-r1); color: var(--ctl-r1-ink); }
@@ -305,7 +301,28 @@ footer { margin-top: 32px; color: var(--ink-2); font-size: 14px; }
 
 
 def css():
-    return tokens() + CSS_PARTS
+    # (A bill row's parts, the pips and the status label: lists_pages/rows.css, the same styles as every bill row.)
+    rows = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lists_pages", "rows.css"), encoding="utf-8").read()
+    return tokens() + CSS_PARTS + rows
+
+
+def pips(stage, st):
+    """A bill's progress as small pips, as BillFacts.pips(stage, uni, "mini") draws them (lists_pages/billfacts.js):
+    six steps, five in Nebraska's one house, filled up to its stage."""
+    uni = st == "ne"
+    n, k = (5 if uni else 6), int(stage or 0)
+    filled = n if k >= 5 else k if uni and k >= 3 else k + 1
+    cells = "".join('<i class="on"></i>' if i < filled else "<i></i>" for i in range(n))
+    return f'<span class="pips s{k}{" uni" if uni else ""} mini" aria-hidden="true">{cells}</span>'
+
+
+def day(d):
+    """"Oct 22, 2026", as the state pages write a day."""
+    try:
+        y, m, dd = (int(x) for x in d[:10].split("-"))
+    except (ValueError, TypeError):
+        return ""
+    return f'{["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]} {dd}, {y}'
 
 
 HEAD = """<!DOCTYPE html>
@@ -555,7 +572,8 @@ def bill_items(iid, st, mine):
         fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
         why = (b[9].get(iid) if len(b) > 9 else "") or ""
         items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}" data-k="{f["session"]}|{e(b[2])}|{e(b[5] or "")}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else (), st))}</a>'
-                     f'<span class="tags">{party_tag(party(b))}<span class="stg s{b[4]}">{e(stage_text(b) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span></span>'
+                     f'<span class="tags">{party_tag(party(b))}{pips(b[4], st)}<span class="stg s{b[4]}">{e(stage_text(b) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span>'
+                     + (f'<span class="stw">{day(b[5])}</span>' if b[5] else "") + '</span>'
                      f'<span class="t">{e(b[3])}</span>'
                      + (f'<span class="why">{e(why)}</span>' if why and why.lower() not in b[3].lower() else "")
                      + '</li>')

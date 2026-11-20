@@ -152,10 +152,18 @@ opened (`later()`, `STALE`, `showView()`).
   `renderPipeline()`; topics `renderTopics()`; the Issue filter `loadIssues()`/`fillIssues()`; list `renderList()`.
 - **A bill row:** `billRow()` → `statusText()`/`statusParts()` (the status words: `BillFacts.words()` from `BF.factsOf(b)`,
   lists_pages/billfacts.js, the same words every other view shows; the line under them: `STATE.stageText`,
-  `endedOf()`, `STATE.endedNote`), `track()` (progress bar), `panelTags()`, `partyTag()`, `watchButton()`.
-- **The opened panel:** `fillDetail()`: `whatItDoes()`/`loadBillText()`, `sponsorsBlock()`, `verBlock()`, `votesBlock()`,
-  `oddsLine()`, `similarBlock()`, `twinLine()`, `vetoMemo()`, `signingMemo()`, `chapterAmendment()`, `nextSteps()` /
-  `planFor()` / `contactBook()` / `holdUp()` (who to contact; `draftFor()` writes the email), `historyTags()`.
+  `endedOf()`, `STATE.endedNote`), `track()` (the pips: `BillFacts.pips()`), `panelTags()`, `partyTag()`, `watchButton()`.
+  Every view's bill row has the same parts, styled once in lists_pages/rows.css (`.pips`, the status label `.stg`, the
+  grey date line `.stw`): the Bills list, the Watchlist tab and /your-bills/ (watchrows.js), and at a compact size the
+  front page's lists, /list/, the list editor and the issue pages (issues_site.py's `pips()` is the Python copy).
+- **The opened panel:** `fillDetail()`, indented under the title with a rule down its left, in this order: "What you can
+  do" (`nextSteps()` / `planFor()` / `contactBook()` / `holdUp()`, `oddsLine()`; `draftFor()` writes the email), "What
+  it does" (the summary, `whatItDoes()`/`loadBillText()`), "History" (`historyBlock()`: the main steps with each passing
+  floor vote's tally on its line, other votes on their own, the governor's due date last), "Who sponsors it"
+  (`sponsorsBlock()`, `panelTags()`), `chapterAmendment()`, `signingMemo()`, `vetoMemo()`, `twinLine()`, `lineage()`,
+  `similarBlock()`, `verBlock()` (each version's "Every action"), then the official links (`STATE.textLinks()`) and "Copy
+  link to this bill". A watchlist card opened below its row (`watchCard(x, true)`) is the same panel: its own "What you
+  can do" (`.wcan`), then `fillDetail()` of a `details.morebill.inplace`. `historyTags()`.
 - **Where you live** (`#whereBox`): `renderMyReps()`, `myReps()`, `setCounty()`, `setTown()`, `setRegion()` (Congress),
   `renderTownReps()`, `renderTownRepsByHouse()`, `lookUpReps()` (Census geocoder, `STATE.addressLookup`).
 - **Watchlist tab** (`#view-watch`): `renderWatchView()`. Its rows, groups and order come from

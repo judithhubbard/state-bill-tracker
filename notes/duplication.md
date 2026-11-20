@@ -97,6 +97,22 @@ home.html `numScore()` and the state-name parsing in its search, and lists_pages
 
 Fix: one tokens file (lists_pages/tokens.css) spliced into every page at build time, as rows.css is.
 
+## 11a. A bill row's look (done 2026-11-20, with the "A · Tidied" bill design)
+
+The status label had four copies of its CSS (home.html `.stg`, issues_site.py `.stg`, lists_pages/common.css `.stg`,
+rows.css `.wr-stg`) and tracker.html had its own row pips (`.track .pip`) and status text (`.st`). Now one copy:
+lists_pages/rows.css's `.pips`, `.stg` and `.stw`, put into every page that lists bills (tracker.html by build_data.py,
+the list pages with common.css and home.html by build_site.sh, the issue pages by issues_site.py's `css()`). The pips'
+HTML is `BillFacts.pips()` (lists_pages/billfacts.js) in every page's script. Left as copies:
+- issues_site.py `pips()` writes the same pips in Python (the issue pages are written at build time); keep it in step
+  with `BillFacts.pips()`. Both say a one-house legislature is Nebraska (`oneHouse()`); a state's own page reads its
+  profile (`UNI`).
+- The compact rows' layout (where the pips and label sit beside the number and title) is still each page's own:
+  home.html's `.panel`, `.mine` and `.found`, issues_site.py's `ul.bills` and `.panel`, common.css's list rows. Only the
+  parts are shared.
+- tracker.html still has `.lineage .oc*` colors for "This bill in other sessions" (an outcome per session, not a bill's
+  status label).
+
 ## 12. ⓘ tips (low: different behavior, same look intended)
 
 - tracker.html `TIP()`, `TIPI()`, `TIPR()`: a button whose text shows in one floating `#tipbox` (`showTip()`).

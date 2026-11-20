@@ -162,9 +162,9 @@ async function main() {
       const t = await waitFor(page, (full) => {
         const b = BILLS.find((x) => x.nums[0] === full);
         const d = b && document.querySelector(`details.bill[data-idx="${b.idx}"]`);
-        const st = d && d.querySelector(".status .st");
+        const st = d && d.querySelector(".status .stg");
         if (!st || !d.open || !d.querySelector(".detail").children.length) return null;
-        return st.firstChild.textContent;
+        return st.textContent;
       }, p.full, 20000);
       R.get(p).views.bills = t;
     }
@@ -175,7 +175,7 @@ async function main() {
     await waitFor(page, () => document.querySelector("#wlList .wr-row, #wlList .wempty, #wlList p"), null, 20000);
     await sleep(500);
     const rows = await page.evaluate(() => [...document.querySelectorAll("#wlList .wr-row")].map((r) => ({
-      key: r.dataset.key, label: r.querySelector(".wr-stg")?.textContent || null, due: r.querySelector(".wr-dl")?.textContent || "",
+      key: r.dataset.key, label: r.querySelector(".stg")?.textContent || null, due: r.querySelector(".wr-dl")?.textContent || "",
       group: r.closest("section[data-g]")?.dataset.g || "", fresh: !!r.querySelector(".wr-new"),
       num: [...(r.querySelector(".wr-num")?.childNodes || [])].filter((n) => !n.classList?.contains("wr-st")).map((n) => n.textContent).join("").replace(/\s+/g, "") })));
     for (const p of ps) {
@@ -193,7 +193,7 @@ async function main() {
   await sleep(2000);
   {
     const rows = await page.evaluate(() => [...document.querySelectorAll("#bills .wr-row")].map((r) => ({
-      key: r.dataset.key, label: r.querySelector(".wr-stg")?.textContent || null, due: r.querySelector(".wr-dl")?.textContent || "",
+      key: r.dataset.key, label: r.querySelector(".stg")?.textContent || null, due: r.querySelector(".wr-dl")?.textContent || "",
       group: r.closest("section[data-g]")?.dataset.g || "", fresh: !!r.querySelector(".wr-new"),
       num: [...(r.querySelector(".wr-num")?.childNodes || [])].filter((n) => !n.classList?.contains("wr-st")).map((n) => n.textContent).join("").replace(/\s+/g, "") })));
     for (const p of picks) {

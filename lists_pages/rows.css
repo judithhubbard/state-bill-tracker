@@ -1,6 +1,34 @@
-/* The watchlist's rows and groups (lists_pages/watchrows.js), on each state's Watchlist tab (build_data.py puts this in the
-   page's styles) and on /your-bills/ (build_site.sh). The color tokens are each page's own (both pages define --sheet,
-   --paper, --rule, --ink, --ink-2, --navy, --hover, --star, --law-mark, --new-ink, --veto-ink and --st-*). */
+/* A bill's row, in one look wherever bills are listed: each state's Bills list, its Watchlist tab and /your-bills/
+   (lists_pages/watchrows.js), /list/, the front page's Your bills, search and issue panel, and the issue pages (this file
+   is put in each page's styles: build_data.py, build_site.sh, issues_site.py). The parts: the progress pips
+   (BillFacts.pips()), the status as a colored label (.stg; its words from BillFacts.words()) and a small grey line with
+   the date and any deadline (.stw). Colors are the stage tokens every page defines (--st-*): grey stalled or ended, teal
+   moving, amber passed both houses or with the governor, green law, red vetoed. */
+.pips { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; width: 100%; }
+.pips.uni { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.pips i { display: block; height: 6px; border-radius: 1px; background: var(--st-0); }
+.pips i.on { background: var(--st-1-ink); }
+.pips.s3 i.on, .pips.s4 i.on { background: var(--st-3-ink); }
+.pips.s5 i.on { background: var(--st-5-ink); }
+.pips.s6 i.on { background: var(--st-6-ink); }
+.pips.over i.on { background: var(--st-0-ink); }
+.stg { display: inline-block; justify-self: start; font: 600 12.5px/1.45 var(--body); padding: 1px 8px; border-radius: 10px; background: var(--st-0); color: var(--st-0-ink); }
+.stg.s1, .stg.s2 { background: var(--st-1); color: var(--st-1-ink); }
+.stg.s3, .stg.s4 { background: var(--st-3); color: var(--st-3-ink); }
+.stg.s5 { background: var(--st-5); color: var(--st-5-ink); }
+.stg.s6 { background: var(--st-6); color: var(--st-6-ink); }
+.stg.over { background: var(--st-0); color: var(--st-0-ink); }
+.stw { display: block; color: var(--ink-2); font-size: 12.5px; line-height: 1.35; font-weight: 400; font-variant-numeric: tabular-nums; }
+/* The status column of a full row: pips, the label under them, then the date. */
+.bstat { display: grid; gap: 5px; align-content: start; justify-items: start; min-width: 0; }
+/* The compact rows (the front page's lists, the issue pages): small pips just before the label. */
+.pips.mini { display: inline-grid; width: 40px; gap: 2px; vertical-align: middle; flex: none; }
+.pips.mini i { height: 4px; }
+
+/* The watchlist's rows and groups (lists_pages/watchrows.js), on each state's Watchlist tab and on /your-bills/: the same
+   row as a state's Bills list. Left, the number with the star (and list button) under it; middle, the title; right, the
+   pips, the status label and the date or deadline. An opened bill's card is indented under the title with a rule down
+   its left, so the next bill is plainly separate. */
 .wrows .wr-grp h2.wr-ghd, .wrows h2.wr-ghd { margin: 26px 0 4px; font: 700 15px/1.2 var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); display: block; }
 .wrows .wr-grp:first-child h2.wr-ghd { margin-top: 4px; }
 .wrows .wr-n { font: 600 13px/1 var(--body); letter-spacing: 0; color: var(--ink-2); margin-left: 4px; text-transform: none; }
@@ -14,46 +42,41 @@
 .wrows .wr-state h3 .wr-wl { margin-left: auto; font: 600 13px/1.2 var(--body); }
 .wrows .wr-row { position: relative; border-bottom: 1px solid var(--rule); }
 .wrows .wr-row:last-child { border-bottom: 0; }
-.wrows .wr-btn { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; width: 100%; padding: 8px 84px 8px 12px; margin: 0;
-  border: 0; background: none; color: var(--ink); font: inherit; font-size: 14.5px; line-height: 1.5; text-align: left; cursor: pointer; text-decoration: none; border-radius: 0; }
+.wrows .wr-btn { display: grid; grid-template-columns: 96px minmax(0, 1fr) 190px; gap: 3px 14px; align-items: start; width: 100%; padding: 12px; margin: 0;
+  border: 0; background: none; color: var(--ink); font: inherit; font-size: 14.5px; line-height: 1.45; text-align: left; cursor: pointer; text-decoration: none; border-radius: 0; }
 .wrows .wr-btn:hover, .wrows .wr-btn:focus-visible { background: var(--paper); }
 .wrows .wr-btn:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
-.wrows .wr-num { font-weight: 600; color: var(--navy); white-space: nowrap; }
-.wrows .wr-num small { font-weight: 400; color: var(--ink-2); }
-.wrows .wr-tt { min-width: 0; overflow-wrap: anywhere; }
-.wrows .wr-new { grid-column: 1 / -1; font-size: 13.5px; }
+/* (The number column keeps room under the number for the star and list button, drawn over it: .wr-btns.) */
+.wrows .wr-num { grid-row: 1 / span 4; font: 700 13.5px/1.45 var(--mono, var(--body)); color: var(--ink); overflow-wrap: anywhere; padding-bottom: 32px; }
+.wrows .wr-num small { display: block; font: 400 12px/1.4 var(--body); color: var(--ink-2); }
+.wrows .wr-tt { grid-column: 2; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.wrows .wr-new, .wrows .wr-note { grid-column: 2; }
+.wrows .wr-new { font-size: 13.5px; }
 .wrows .wr-new b { color: var(--new-ink); }
-.wrows .wr-note { grid-column: 1 / -1; font-size: 13.5px; border-left: 3px solid var(--rule); padding-left: 8px; white-space: pre-line; overflow-wrap: anywhere; }
-.wrows .wr-where { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin: 0; }
-.wrows .wr-where .wr-todo { margin-left: auto; color: var(--navy); font-weight: 600; white-space: nowrap; }
+.wrows .wr-note { font-size: 13.5px; border-left: 3px solid var(--rule); padding-left: 8px; white-space: pre-line; overflow-wrap: anywhere; }
+.wrows .wr-where { grid-column: 3; grid-row: 1 / span 4; margin: 0; }
+.wrows .wr-where .stw > * + *::before { content: " · "; font-weight: 400; color: var(--ink-2); }
+.wrows .wr-todo { color: var(--navy); font-weight: 600; font-size: 13px; white-space: nowrap; }
 .wrows .wr-btn:hover .wr-todo { color: var(--hover); }
-.wrows .wr-todo::after { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 2px 2px 7px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform .15s; }
-.wrows .wr-btn[aria-expanded="true"] .wr-todo::after { transform: rotate(-135deg); margin-bottom: -1px; }
-.wrows a.wr-btn .wr-todo::after { transform: rotate(-45deg); }
 .wrows .wr-dl { font-weight: 600; color: var(--ink); }
-.wrows .wr-stg { display: inline-block; font: 600 12px/1.5 var(--body); padding: 0 7px; border-radius: 999px; background: var(--st-0); color: var(--st-0-ink); }
-.wrows .wr-stg.s1, .wrows .wr-stg.s2 { background: var(--st-1); color: var(--st-1-ink); }
-.wrows .wr-stg.s3, .wrows .wr-stg.s4 { background: var(--st-3); color: var(--st-3-ink); }
-.wrows .wr-stg.s5 { background: var(--st-5); color: var(--st-5-ink); }
-.wrows .wr-stg.s6 { background: var(--st-6); color: var(--st-6-ink); }
 .wrows .wr-stance { display: inline-block; font: 600 12px/1.5 var(--body); padding: 0 7px; border-radius: 999px; border: 1px solid var(--rule); color: var(--ink-2); }
 .wrows .wr-stance.oppose { border-color: var(--veto-ink); color: var(--veto-ink); }
 .wrows .wr-st { display: inline-block; margin-right: 6px; padding: 0 5px; border-radius: 4px; background: var(--paper); border: 1px solid var(--rule); color: var(--ink-2); font: 700 11.5px/1.5 var(--body); vertical-align: 1px; }
-.wrows .wr-btns { position: absolute; right: 8px; top: 6px; display: flex; align-items: center; gap: 2px; }
-.wrows .wr-again { margin: -4px 0 0; padding: 0 84px 8px 12px; font-size: 13.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; }
+.wrows .wr-btns { position: absolute; left: 6px; top: 34px; display: flex; align-items: center; gap: 2px; }
+.wrows .wr-row.wr-yr > .wr-btns { top: 52px; }
+.wrows .wr-again { margin: -6px 0 0; padding: 0 12px 10px 122px; font-size: 13.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; }
 .wrows .wr-gone .wr-grow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 8px 12px; font-size: 14.5px; color: var(--ink-2); }
-.wrows .wr-gone .wr-tt { flex: 1 1 200px; }
-.wrows .wr-emb { border-top: 1px dashed var(--rule); }
-.wrows .wr-emb .eload { margin: 0; padding: 10px 12px; color: var(--ink-2); font-size: 14px; }
-.wrows .wr-emb .efoot { margin: 0; padding: 4px 12px 10px; font-size: 13.5px; }
+.wrows .wr-gone .wr-tt { flex: 1 1 200px; font-weight: 400; }
+.wrows .wr-emb { margin: 0 12px 16px 122px; padding: 4px 0 2px 18px; border-left: 3px solid var(--navy); }
+.wrows .wr-emb .eload { margin: 0; padding: 10px 0; color: var(--ink-2); font-size: 14px; }
+.wrows .wr-emb .efoot { margin: 0; padding: 4px 0 10px; font-size: 13.5px; }
 .wr-muted { color: var(--ink-2); }
-@media (prefers-reduced-motion: reduce) { .wrows .wr-todo::after { transition: none; } }
-/* (On a phone the title goes under the number, the full width of the row.) */
-@media (max-width: 480px) {
-  .wrows .wr-btn { grid-template-columns: minmax(0, 1fr); padding-right: 12px; }
-  .wrows .wr-btn .wr-num { padding-right: 76px; min-height: 30px; }
-  .wrows .wr-where .wr-todo { margin-left: 0; }
-  .wrows .wr-again { padding-right: 12px; }
+/* (On a phone the status goes under the title, and an opened card keeps its width: a small indent.) */
+@media (max-width: 640px) {
+  .wrows .wr-btn { grid-template-columns: 76px minmax(0, 1fr); gap: 4px 10px; }
+  .wrows .wr-where { grid-column: 2; grid-row: auto; }
+  .wrows .wr-again { padding-left: 98px; }
+  .wrows .wr-emb { margin-left: 20px; padding-left: 14px; }
 }
 /* "New since you last looked", at the top of the list. */
 .wnews { border: 1px solid var(--navy); border-radius: 12px; padding: 12px 16px 10px; margin: 0 0 18px; background: var(--sheet); }

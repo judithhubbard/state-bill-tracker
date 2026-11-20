@@ -356,14 +356,9 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .pty.D { background: var(--ctl-d1); color: var(--ctl-d1-ink); }
 .pty.R { background: var(--ctl-r1); color: var(--ctl-r1-ink); }
 .pty.B { background: var(--tile-off); color: var(--tile-off-ink); }
-/* Where each bill is, as a colored label: grey in committee, blue moving through the houses, amber passed both houses
-   or with the governor, green law, red vetoed (the panel and "Your bills"). */
-.stg { display: inline-block; font: 600 12px/1.5 var(--body); padding: 0 7px; border-radius: 999px; white-space: nowrap;
-  background: var(--st-0); color: var(--st-0-ink); }
-.stg.s1, .stg.s2 { background: var(--st-1); color: var(--st-1-ink); }
-.stg.s3, .stg.s4 { background: var(--st-3); color: var(--st-3-ink); }
-.stg.s5 { background: var(--st-5); color: var(--st-5-ink); }
-.stg.s6 { background: var(--st-6); color: var(--st-6-ink); }
+/* Where each bill is: the pips and the colored label of every bill row (lists_pages/rows.css, put at the end of these
+   styles by build_site.sh), at the compact size. */
+.panel .stg, .found .stg { white-space: nowrap; }
 /* "Your bills": the bills starred on any state's page or in the map's panel (each state's watchlist), by state. */
 /* The title, and "Your bills" at its right; the list drops down over the page, so opening it moves nothing. */
 .top { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 0 18px; }
@@ -395,7 +390,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .mine li a:hover, .mine li a:focus-visible { background: var(--paper); }
 .mine .num { font-weight: 600; color: var(--navy); white-space: nowrap; }
 .mine .tt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mine .where { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; }
+.mine .where { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; }
 .mine .stg { white-space: normal; }
 /* "Open as a page" (/your-bills/) at the bottom of the "Your bills" list. */
 .mine .mpage { margin: 0 0 10px; padding: 0 2px; font-size: 13.5px; text-align: right; }
@@ -464,7 +459,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .found .fn b { font-weight: 600; color: var(--navy); }
 .found .fn small { font-size: 12px; }
 .found .tt { grid-column: 1 / -1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.found .stg { justify-self: end; }
+.found .fst { justify-self: end; display: inline-flex; gap: 6px; align-items: center; min-width: 0; }
 .found .note { padding: 10px 12px; margin: 0; font-size: 14px; color: var(--ink-2); }
 .found .more { display: block; width: 100%; font: inherit; font-size: 14px; font-weight: 600; color: var(--navy); background: none; border: 0;
   border-top: 1px solid var(--rule); padding: 8px 12px; cursor: pointer; text-align: left; }
@@ -476,6 +471,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .lawt td:last-child { width: 4em; color: var(--ink-2); }
 .lawt tr.l th, .lawt tr.l td { color: var(--law-ink); font-weight: 700; }
 footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85; }
+/*rows.css*/
 </style>
 </head>
 <body>
@@ -810,7 +806,7 @@ function showPanel(st) {
         || title.toLowerCase().includes(why.toLowerCase()))) why = "";
       if (why) title = title.replace(/[.\s]+$/, "");
       const full = why ? `${title}: ${why}` : title;
-      return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="tags">${partyTag(pc)}<span class="stg s${stage}" title="${esc(stg)}">${esc(stg)}</span></span></a>${raw ? starBtn(st, session, raw, last, num) + listBtn(st, session, raw, `${nameOf(st)} ${num}`) : ""}</li>`;
+      return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="tags">${partyTag(pc)}${BillFacts.pips(stage, BillFacts.oneHouse(st), "mini")}<span class="stg s${stage}" title="${esc(stg)}">${esc(stg)}</span></span></a>${raw ? starBtn(st, session, raw, last, num) + listBtn(st, session, raw, `${nameOf(st)} ${num}`) : ""}</li>`;
     }).join("")}</ul>` : "");
     ppFocus(body);
   });
@@ -1125,7 +1121,7 @@ function customPanel(st) {
   body.innerHTML = `<h3>${esc(nameOf(st))}</h3><p>${n ? v.some(st, n, b) : v.none(st)} <a href="${esc(built[st.toUpperCase()] || `${st}/`)}">Open ${esc(nameOf(st))}'s bills</a>`
     + `${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`
     + (rows.length ? `<ul>${rows.slice(0, 200).map((x) => `<li><a href="${esc(x.href)}" title="${esc(x.title)}"${x.seen ? ` data-seen="${esc(x.seen)}"` : ""}><b>${esc(x.num)}</b>`
-      + `<span class="tt">${esc(x.title)}</span><span class="tags">${x.fresh ? '<span class="new">New</span>' : ""}<span class="stg s${x.stage}" title="${esc(x.stg)}">${esc(x.stg)}</span></span></a>${x.star}</li>`).join("")}</ul>` : "");
+      + `<span class="tt">${esc(x.title)}</span><span class="tags">${x.fresh ? '<span class="new">New</span>' : ""}${BillFacts.pips(x.stage, BillFacts.oneHouse(st), "mini")}<span class="stg s${x.stage}" title="${esc(x.stg)}">${esc(x.stg)}</span></span></a>${x.star}</li>`).join("")}</ul>` : "");
 }
 // The controls: year buttons, then "Show" (party control or a national issue). For party control, this year is now and
 // next year is after the November 2026 election (reported results, until the new sessions begin); last year has no party
@@ -1344,7 +1340,7 @@ async function drawMine() {
         href: `${st}/${page}#${full}`, seen: `${st}|${k}|${last}`, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
         + `<span class="num">${esc(numText(st, full))}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh && !action ? '<span class="new">New</span>' : ""}</span>`
         + (fresh && action ? `<span class="what"><b>New:</b> ${esc(plainAct(action))}</span>` : "")
-        + `<span class="where"><span class="stg s${stage}">${esc(label)}</span>${last ? ` · ${fmtDay(last)}` : ""}</span></a>`
+        + `<span class="where">${BillFacts.pips(stage, BillFacts.oneHouse(st), "mini")}<span class="stg s${stage}">${esc(label)}</span>${last ? `<span>${fmtDay(last)}</span>` : ""}</span></a>`
         + `${starBtn(st, +session, full, last, numText(st, full))}</li>` };
     }));
     const kept = rows.filter(Boolean).sort((a, b) => (b.last > a.last ? 1 : b.last < a.last ? -1 : 0));
@@ -1577,7 +1573,7 @@ drawMine();
       // The session, when the state has two in the search (this one and next year's prefiled bills).
       const sess = (ready[st] || { s: [] }).s.length > 1 ? ` <small>${esc(s.label || String(s.session))}</small>` : "";
       return `<li><a href="${st}/${page}#${esc(num)}" title="${esc(title)}"><span class="fn">${esc(name)} <b>${esc(numText(st, shown))}</b>${sess}${same}</span>`
-        + `<span class="stg s${s.up ? 0 : stage}">${esc(label)}</span><span class="tt">${esc(title)}</span></a>${starBtn(st, s.session, num, "", `${name} ${numText(st, num)}`)}${listBtn(st, s.session, num, `${name} ${numText(st, num)}`)}</li>`;
+        + `<span class="fst">${BillFacts.pips(s.up ? 0 : stage, BillFacts.oneHouse(st), "mini")}<span class="stg s${s.up ? 0 : stage}">${esc(label)}</span></span><span class="tt">${esc(title)}</span></a>${starBtn(st, s.session, num, "", `${name} ${numText(st, num)}`)}${listBtn(st, s.session, num, `${name} ${numText(st, num)}`)}</li>`;
     }).join("");
     const more = hits.length > limit ? `<li><button type="button" class="more">Show ${Math.min(PAGE, hits.length - limit)} more</button></li>` : "";
     // Words found in several places: "Show on the map" shades each state by its matches (searchView()).

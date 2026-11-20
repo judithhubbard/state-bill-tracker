@@ -86,16 +86,21 @@ const WatchRows = (() => {
     const stance = x.stance === "oppose" || (x.stance === "support" && opt.stance !== false) ? `<span class="wr-stance ${x.stance}">${x.stance === "oppose" ? "Oppose" : "Support"}</span>` : "";
     // (newText(x): what's new, with its day; else the last action and its day.)
     const news = opt.isNew?.(x) ? `<span class="wr-new"><b>New:</b> ${h(opt.newText ? opt.newText(x) : `${x.action || ""}${x.last ? ` (${fullDay(x.last)})` : ""}`)}</span>` : "";
-    const where = `<span class="wr-where">${stance}${x.found ? `<span class="wr-stg s${x.stage}">${h(x.label)}</span>` : ""}${x.due ? `<span class="wr-dl">${h(x.due)}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""}`
-      + `${!x.due && x.found && x.last && x.group === "done" ? `<span>${fullDay(x.last)}</span>` : ""}<span class="wr-todo"${x.found ? ' aria-hidden="true"' : ""}>${x.found ? "" : "Open"}</span></span>`;
+    // The status column, as on the state's Bills list: the pips, the status label, then the date of the latest action
+    // and the deadline (lists_pages/rows.css). A bill out of time this session is greyed, as there.
+    const over = (x.out || x.group === "done") && x.stage <= 2 ? " over" : "", uni = opt.uni ? opt.uni(x) : BillFacts.oneHouse(x.st);
+    const when = [x.found && x.last ? `<span>${fullDay(x.last)}</span>` : "",
+      x.due ? `<span class="wr-dl">${h(x.due)}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""].filter(Boolean).join("");
+    const where = `<span class="wr-where bstat">${x.found ? BillFacts.pips(x.stage, uni, over.trim()) + `<span class="stg s${x.stage}${over}">${h(x.label)}</span>` : ""}`
+      + `${when ? `<span class="stw">${when}</span>` : ""}${stance}${x.found ? "" : '<span class="wr-todo">Open</span>'}</span>`;
     const back = x.later && x.later[0] > x.session ? `<p class="wr-again">Back in ${h(x.later[2])} as <a href="${h(x.later[3])}#${h(x.later[1])}">${h(numText(x.st, x.later[1]))}</a>${x.laterStar || ""}</p>` : "";
     if (!x.found) {
-      return `<li class="wr-row" data-key="${h(x.key)}"><a class="wr-btn rowbtn" href="${h(x.href || `/${x.st}/`)}"><span class="wr-num">${st}${shown}${yr}</span>`
+      return `<li class="wr-row${yr ? " wr-yr" : ""}" data-key="${h(x.key)}"><a class="wr-btn rowbtn" href="${h(x.href || `/${x.st}/`)}"><span class="wr-num">${st}${shown}${yr}</span>`
         + `<span class="wr-tt">Not in ${h(x.sessionLabel || x.session)}'s data</span>${where}</a>${btns}</li>`;
     }
     opt.onRow?.(id, x);
     const card = opt.card ? opt.card(x) : null;
-    return `<li class="wr-row" data-key="${h(x.key)}"><button type="button" class="wr-btn rowbtn" data-open="${h(id)}" aria-controls="emb-${h(id)}" aria-expanded="${card != null}">`
+    return `<li class="wr-row${yr ? " wr-yr" : ""}" data-key="${h(x.key)}"><button type="button" class="wr-btn rowbtn" data-open="${h(id)}" aria-controls="emb-${h(id)}" aria-expanded="${card != null}">`
       + `<span class="wr-num">${st}${shown}${yr}</span><span class="wr-tt">${h(x.title)}</span>${note ? `<span class="wr-note">${h(note)}</span>` : ""}${news}${where}</button>`
       + `${btns}${back}<div class="wr-emb" id="emb-${h(id)}"${card != null ? "" : " hidden"}>${card || ""}</div></li>`;
   }

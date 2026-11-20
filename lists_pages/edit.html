@@ -256,7 +256,7 @@ async function drawBills() {
       const yr = x.session < THIS_YEAR - 1 || x.session > THIS_YEAR ? ` <small>(${x.session})</small>` : "", name = `${stName(x.st)} ${numText(x.st, x.full || x.num)}`;
       return `<li data-key="${esc(x.key)}"><div class="head"><a class="num" href="${esc(x.href || `/${x.st}/`)}">${esc(numText(x.st, x.full || x.num))}${yr}</a>`
         + `<span class="tt"><span class="st">${esc(stName(x.st))}:</span> ${esc(x.title || "")}</span></div>`
-        + (x.found ? `<div class="where"><span class="stg s${x.stage}">${esc(x.label)}</span>${x.last ? `<span>${fmtDay(x.last)}</span>` : ""}</div>` : "")
+        + (x.found ? `<div class="where">${BillFacts.pips(x.stage, BillFacts.oneHouse(x.st), "mini")}<span class="stg s${x.stage}">${esc(x.label)}</span>${x.last ? `<span>${fmtDay(x.last)}</span>` : ""}</div>` : "")
         + `<div class="ctl"><span class="seg" role="group" aria-label="Your position on ${esc(name)}">`
         + `<button type="button" data-act="support" aria-pressed="${x.stance !== "oppose"}">Support</button>`
         + `<button type="button" class="op" data-act="oppose" aria-pressed="${x.stance === "oppose"}">Oppose</button></span>`
@@ -424,7 +424,7 @@ function drawResults() {
   $("res").innerHTML = HITS.slice(0, LIMIT).map(({ st, s, r, shown }) => {
     const [num, title, stage, w] = r, label = s.w[w] || "", on = onList(st, s.session, num);
     const same = shown && shown !== num ? ` (same bill as ${esc(numText(st, num))})` : "";
-    return `<li><span><span class="fn">${esc(stName(st))} <b>${esc(numText(st, shown || num))}</b>${same}</span> <span class="stg s${s.up ? 0 : stage}">${esc(label)}</span>`
+    return `<li><span><span class="fn">${esc(stName(st))} <b>${esc(numText(st, shown || num))}</b>${same}</span> ${BillFacts.pips(s.up ? 0 : stage, BillFacts.oneHouse(st), "mini")}<span class="stg s${s.up ? 0 : stage}">${esc(label)}</span>`
       + `<span class="tt">${esc(title)}</span></span><button type="button" class="btn" data-add="${esc(`${st}|${s.session}|${num}`)}"${on ? " disabled" : ""}`
       + ` aria-label="${on ? "On the list" : `Add ${esc(stName(st))} ${esc(numText(st, num))}`}">${on ? "Added" : "Add"}</button></li>`;
   }).join("") + (HITS.length > LIMIT ? `<li><button type="button" class="btn quiet more">Show ${Math.min(PAGE, HITS.length - LIMIT)} more</button></li>` : "");

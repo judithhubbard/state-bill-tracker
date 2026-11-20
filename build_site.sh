@@ -111,6 +111,9 @@ page = page.replace("SUPPORT_URL", site_meta.SUPPORT)
 page = page.replace("/*named.js*/", open("lists_pages/named.js").read(), 1)
 # The status words and "New" (billfacts.js), starred bills and where each bill is (status.js): the same copies as the list pages'.
 page = page.replace("/*billfacts.js*/", open("lists_pages/billfacts.js").read(), 1).replace("/*status.js*/", open("lists_pages/status.js").read(), 1)
+# A bill row's parts (the pips and the status label), the same styles as every other page's bill rows.
+assert "/*rows.css*/" in page, "home.html's styles lost the /*rows.css*/ marker"
+page = page.replace("/*rows.css*/", open("lists_pages/rows.css").read(), 1)
 page = page.replace("LISTS_API_URL", os.environ.get("LISTS_API", "https://state-lists.lists-worker.workers.dev"), 1)
 items, power, after = [], {}, {}
 for s in sorted(os.listdir(out)):
