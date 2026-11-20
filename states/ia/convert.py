@@ -921,6 +921,9 @@ def record(session, chain, secs, parties):
         return {"first": ds[0], "last": ds[-1], "all": ";".join(ds)}[mode] if ds else ""
 
     action_dates = [x[0] for x in steps if x[0]]
+    # The last action's day is the latest shown in the history: paperwork kept out of it ("routine") would leave the
+    # status rows (/your-bills/, /list/, the front page) a day with no wording.
+    shown_dates = [x[0] for x in steps if x[0] and x[3] != "routine"] or action_dates
     left_first = bool(first_ref and ((origin, first_ref) in reported or origin in passed))
     chap = f"{chapter[0]} of {chapter[1]}" if chapter and stage == 5 else None
     signed_on = dates(lambda x: x[3] == "signed")
@@ -957,7 +960,7 @@ def record(session, chain, secs, parties):
         "simText": official,
         "comm": comm_now if stage == 0 else None,
         "first": min(action_dates, default=f"{session}-01-01"),
-        "last": max(action_dates, default=f"{session}-01-01"),
+        "last": max(shown_dates, default=f"{session}-01-01"),
         "cosp": len(cos),
         "keyDates": [
             dates(lambda x: x[3] in ("reported", "renumber") and x[1] == origin, "first"),

@@ -37,3 +37,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   analysis needed." and have none. 142 representatives list no phone; none is invented. The governor's phone and contact page haven't been
   checked by the owner. Laws and vetoes match the LSRs file's chapters and status codes exactly (2023: 243 and 9; 2024:
   381 and 13; 2025: 305 and 12; 2026: 344 and 25). Add each year's first and last floor days to `opened`/`dated`.
+- (2026-11-19) A veto one house overrode and the other sustained stands (SB 434, SB 552, SB 661, HB 1766 of 2026; HB 337 of
+  2023; HB 274, HB 1415, HB 1581 of 2024). "Veto Sustained" lines (the House's "Veto Sustained 08/19/2026: RC 165-140 ...",
+  the Senate's "... Veto Sustained, lacking the necessary two-thirds vote") are read as "VETO SUSTAINED", the day's last
+  step (`GROUP["sustain"]`, after "override"), so the last action no longer reads "VETO OVERRIDDEN".
