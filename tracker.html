@@ -169,8 +169,9 @@ input[type="search"], select { width: 100%; min-width: 0; font: inherit; font-si
 .act { font: 500 12.5px/1.4 var(--mono); color: var(--ink-2); max-width: 78ch; }
 .versions { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
 .ver { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; display: grid; gap: 6px; min-width: 0; }
-:root .ver > :is(h2, h3, h4, h5, h6) { margin: 0; font: 700 13px var(--mono); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-:root .ver > :is(h2, h3, h4, h5, h6) a { font: 600 12px var(--body); }
+:root .ver > :is(h2, h3, h4, h5, h6) { margin: 0; font: 700 13px var(--mono); display: flex; justify-content: flex-start; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+:root .ver > :is(h2, h3, h4, h5, h6) a { font: 700 13px var(--mono); }
+:root .ver > :is(h2, h3, h4, h5, h6) .vst { font: 600 13px var(--body); color: var(--ink-2); }
 .ver .who { font-size: 12.5px; color: var(--ink-2); }
 .ver ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 12.5px; max-height: 220px; overflow-y: auto; }
 .ver li { display: grid; grid-template-columns: minmax(88px, max-content) minmax(0, 1fr); gap: 6px; }
@@ -226,9 +227,13 @@ footer p { margin: 0; max-width: 90ch; }
 .votes .theirs { font-size: 12.5px; color: var(--ink-2); }
 .votes .vy { color: var(--signed); } .votes .vn { color: var(--veto); } .votes .vo { color: var(--ink-2); }
 .votes .muted { color: var(--ink-2); font-size: 12px; }
-/* The last line of an opened bill: its pages on the legislature's site and "Copy link to this bill". */
-.blinks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font-size: 13.5px; }
+/* The end of an opened bill: "Copy link to share this bill", then its pages on the legislature's site. */
+.blinks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 13px; color: var(--ink-2); }
 .blinks br { display: none; }
+/* The legislature's pages are a reference, not the next step: small and grey, underlined only on hover. */
+.blinks a { color: var(--ink-2); text-decoration: none; }
+.blinks a:hover, .blinks a:focus-visible { color: var(--navy); text-decoration: underline; }
+.sharebill { margin: 0; }
 .history .tally { color: var(--ink-2); }
 .history .tally > b { color: var(--ink); }
 
@@ -293,6 +298,8 @@ table.oc th { vertical-align: bottom; }
 }
 @media (max-width: 640px) {
   .bill > summary { grid-template-columns: 86px minmax(0, 1fr); }
+  /* Support / Oppose stacked, so they fit the number column instead of running into the title. */
+  .starspace .sides, .rowstar .sides { flex-direction: column; align-items: stretch; }
   .bill > summary .status { grid-column: 2; }
   .bill > summary .status .pips { max-width: 170px; }
   .detail { margin: 2px 0 20px 20px; padding-left: 14px; }
@@ -3804,7 +3811,7 @@ function historyBlock(b) {
   // [day, words, the house a passage was in]; rank orders one day's lines: introduced, committee votes, the rest.
   const items = [
     [D.intro, "Introduced", null, 0],
-    [D.floor, "Approved by committee and sent to the floor"],
+    [D.floor, "Approved by committee and sent to the floor", "floor"],
     ...D.passSAll.map((d, i) => [d, i ? "Passed the Senate again" : "Passed the Senate", "S"]),
     ...D.passAAll.map((d, i) => [d, i ? `Passed the ${HOUSE[LOW]} again` : `Passed the ${HOUSE[LOW]}`, LOW]),
     [D.died, "Sent back to committee for the new year (had to pass again)"],
@@ -3820,6 +3827,10 @@ function historyBlock(b) {
     if (step) { step.voted = true; step.html += ` <span class="tally">· ${tally}</span>`; continue; }
     // (A state can name the vote itself: Nebraska's floor rounds, STATE.voteWhat.)
     const what = STATE.voteWhat?.(v) || (v.kind === "F" ? `${HOUSE[v.house]} floor` : `${HOUSE[v.house]} ${esc(v.committee || "")}${/ommittee$/.test(v.committee || "") ? "" : " Committee"}`);  // (Tennessee's subcommittees)
+    // The committee vote that sent the bill to the floor joins that line: "Approved by the Assembly Appropriations
+    // Committee and sent to the floor · 11–3", not two lines for one step.
+    const sent = v.kind !== "F" && v.yes > v.no && !STATE.voteWhat?.(v) && items.find((x) => x.house === "floor" && x.d === v.date && !x.voted);
+    if (sent) { sent.voted = true; sent.rank = 1; sent.html = `Approved by the ${what} and sent to the floor <span class="tally">· ${tally}</span>`; continue; }
     items.push({ d: v.date || "", html: `${what}: ${tally}`, rank: v.kind === "F" ? 2 : 1 });
   }
   items.sort((x, y) => x.d.localeCompare(y.d) || x.rank - y.rank);
@@ -3928,6 +3939,24 @@ function cosponsorList(v) {
   return `<details class="cosp"><summary>${label}</summary><p>${names.map((n) => mine.has(lastName(n)) ? `<b>${esc(n)}</b>` : esc(n)).join(", ")}</p></details>`;
 }
 
+// A version's official pages, from the state's own STATE.textLinks() asked about that version alone: the first link is
+// its main page (its number in the version box links there); any others (Ohio's text, New York's Assembly memo,
+// Congress.gov's text) go in a small line at the end of the panel.
+function officialLinks(b, v) {
+  const box = document.createElement("div");
+  box.innerHTML = STATE.textLinks({ ...b, vers: [v] }) || "";
+  const as = [...box.querySelectorAll("a")];
+  return { main: as[0]?.getAttribute("href") || "", more: as.slice(1).map((a) => a.outerHTML) };
+}
+// The other official pages, in a small grey line; with two versions each version's are named ("A1234: Text ↗").
+function officialMore(b) {
+  const seen = new Set(b.vers.map((v) => officialLinks(b, v).main));
+  const parts = b.vers.map((v) => {
+    const links = officialLinks(b, v).more.filter((a) => { const h = a.match(/href="([^"]*)"/)?.[1]; return h && !seen.has(h) && seen.add(h); });
+    return links.length ? `<span>${b.vers.length > 1 ? `<b>${esc(v.p)}</b> ` : ""}${links.join(" · ")}</span>` : "";
+  }).filter(Boolean);
+  return parts.length ? `<p class="blinks">${parts.join("")}</p>` : "";
+}
 function verBlock(v, b) {
   if (!v) return "";
   const acts = v.actions.slice().reverse().map((a) => `<li><time>${fmtDate(a[0])}</time><span>${esc(plainAction(a[1], a[0], v.actions))}</span></li>`).join("");
@@ -3939,10 +3968,11 @@ function verBlock(v, b) {
     st = b.vers.length > 1 && inComm && !endedOf(b) ? esc(`Died in the ${commPlain(v.committee)} Committee`) : esc(statusLabel(b));
     where = "";
   }
+  // One line: the number (linking to the legislature's page) and where this version is. Its sponsors are in "Who
+  // sponsors it" above.
+  const main = b && officialLinks(b, v).main;
   return `<div class="ver">
-    <h3><span>${esc(v.p)}</span></h3>
-    <div class="who">${esc(v.sponsor || "No sponsor listed")}${v.cosp ? ` · ${cosponsorList(v)}` : ""}</div>
-    <div class="who"><b>${st}</b>${where}</div>
+    <h3><span>${main ? `<a href="${esc(main)}" target="_blank" rel="noopener" data-out="bill-text" title="${esc(v.p)} on the legislature's site">${esc(v.p)} ↗</a>` : esc(v.p)}</span> <span class="vst">· ${st}${where}</span></h3>
     <details class="acts"><summary>Every action (${v.actions.length})</summary><ol>${acts}</ol></details>
   </div>`;
 }
@@ -4063,7 +4093,7 @@ const chapTag = (b) => amendedBills(b) ? `<span class="tag chap">Chapter amendme
 // What used to crowd each row (party, topics, the law it changes, earlier sessions ...), shown when the bill is opened.
 function panelTags(b, inCard = false) {
   const noes = DATA.current ? votePeople().filter((L) => floorVote(b, L) === "No") : [];
-  const facts = [b.law && `Changes ${esc(b.law)}`, DATA.current && b.intro && YEARS > 1 && `Introduced ${b.intro}`, b.budget && "Budget bill", b.program && esc(b.program)].filter(Boolean);
+  const facts = [b.law && `Changes ${esc(b.law)}`, b.budget && "Budget bill", b.program && esc(b.program)].filter(Boolean);
   const tags = (b.shell ? `<span class="tag narrow">${STATE.shellTag || "Shell bill"}${TIPI(SHELL_TIP)}</span>` : "") + (STATE.rowTags?.(b) || "")
     + (NARROW_TAG[b.narrow] ? `<span class="tag narrow">${NARROW_TAG[b.narrow]}</span>` : "") + chapTag(b)
     + noes.map((L) => `<span class="tag vno">${esc(shortName(L.name))} voted no</span>`).join("")
@@ -4652,7 +4682,7 @@ function logBlock(x) {
   who.push("Someone else");
   return `<div class="log">
     ${entries.length ? `<ul class="logged">${entries.map((e) => `<li><time>${fmtDate(e.d)}</time> <b>${esc(e.how)}</b> · ${esc(e.who)}${e.note ? ` · <span class="note">${esc(e.note)}</span>` : ""} <button class="x" type="button" data-unlog="${e.id}" title="Delete this entry">×</button></li>`).join("")}</ul>` : ""}
-    <button class="act-btn small" type="button" data-logopen="${b.idx}">+ Log an action</button> <button class="act-btn small" type="button" data-cardlink="${b.idx}">Copy link to this bill</button>
+    <button class="act-btn small" type="button" data-logopen="${b.idx}">+ Log an action</button> <button class="act-btn small" type="button" data-cardlink="${b.idx}">Copy link to share this bill</button>
     <form class="logform" data-logform="${b.idx}" hidden>
       <label>Date <input type="date" name="d" value="${isoToday()}" required></label>
       <label>Who <select name="who">${who.map((w) => `<option>${esc(w)}</option>`).join("")}</select></label>
@@ -5139,7 +5169,7 @@ function fillDetail(el) {
   const inCard = el.classList.contains("morebill"), folded = inCard && !el.classList.contains("inplace");
   MISSING.clear();
   // The order: what you can do; what it does; its history (steps and votes); who sponsors it; the rest; the official
-  // links and "Copy link to this bill" last.
+  // "Copy link to share this bill" and the official links last.
   const sum = b.summary && !folded ? `<p>${esc(b.summary)}</p>` : "";
   const html = `${inCard ? "" : nextSteps(b)}
     ${STATE.resetNote?.(b) ? `<p class="reset">${esc(STATE.resetNote(b))}</p>` : ""}
@@ -5153,7 +5183,8 @@ function fillDetail(el) {
     ${lineage(b)}
     ${similarBlock(b)}
     <div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>
-    <p class="blinks">${STATE.textLinks(b)}${inCard ? "" : `<button class="act-btn" type="button" data-copylink="${esc(billLink(b))}">Copy link to this bill</button>`}</p>`;
+    ${inCard ? "" : `<p class="sharebill"><button class="act-btn" type="button" data-copylink="${esc(billLink(b))}">Copy link to share this bill</button></p>`}
+    ${officialMore(b)}`;
   // (Who decides can depend on every bill's history: meetings().)
   if (MISSING.size) return waitIn(d, Promise.all([...MISSING].map((k) => need(k))), again);
   d.dataset.done = "1";
