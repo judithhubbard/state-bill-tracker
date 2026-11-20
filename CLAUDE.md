@@ -385,6 +385,11 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     On motion, referred to Ways & Means." read as placed on the floor (17 Senate bills of 2025-26, SB 5659); the referral wins.
     And a referral to a committee the session's list no longer names (renamed) was kept as text (9 WA bills of 2023-24).
     The check LOOKs (FAIL over 0.5%) at bills on the floor whose last line refers them to a committee.
+  - A change marker that doesn't change: OH's legislation list keeps a bill's `revno` when it's enrolled or sent to the
+    governor (HB 13 of the 136th, sent 2026-11-17), so versions read only on a new revno missed every delivery. fetch.py
+    reads versions again when the actions change or the bill waits on the governor (`waiting()`). No data check can see
+    it; the accuracy check against the API found it. And OH laws of a running session with no signing date (SB 152, HB 479
+    of the 136th): a "Line item veto receipt" or the enrolled version's effective date is the law, while it runs too.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.

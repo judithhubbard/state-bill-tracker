@@ -8,11 +8,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   everything comes from the API except legislators' emails and page links, which come from Open States' public-domain
   file (data/oh/openstates_people.csv; it has no phones), named as the source in "About this data". Sessions are
   General Assemblies (`assembly_of()`: 2025 -> 136). Each bill's versions (read again when its entry in the
-  legislation list changes) and actions (the current General Assembly's every run; about 1,500 requests, no change
+  legislation list changes, its actions change, or it has passed both houses and waits on the governor: the list's
+  `revno` doesn't change on enrollment or delivery, so HB 13, HB 397 and SB 214, sent 2026-11-17, were missed until
+  2026-11-19) and actions (the current General Assembly's every run; about 1,500 requests, no change
   feed) go into data/oh/<session>/bills/<HB96>.json. Actions are structured, with each vote's members: committee and
   floor votes are member by member. The governor's signature is the enrolled version's governor_signed_date, not an
   action; a few have none (HB 110 of the 134th), so in a finished General Assembly an enrolled bill without "Veto
-  receipt" is law. "Line item veto receipt" stays as written (a law, part vetoed). "Reported - Re-referred to X" is a
+  receipt" is law; while one runs, a "Line item veto receipt" or the enrolled version's effective date is (SB 152 and
+  HB 479 of the 136th had neither a signing date; a future effective date is dated the day it was sent, and a "sent" date
+  after the effective date, SB 152's 2026-06-12, is dropped). "Line item veto receipt" stays as written (a law, part vetoed). "Reported - Re-referred to X" is a
   referral to X. Each house's Rules and Reference Committee schedules floor votes. "What it does" is the long title's
   purpose clause, after the last list of sections, its verb turned into "Modifies ..." (`purpose()`, `texts.py`).
   Full-time Legislature (`floorVotesEnd: false`); governor 10 days, Sundays excepted. Separate Senate (33) and House
