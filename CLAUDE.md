@@ -107,9 +107,9 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   emails) when legislators are stale or too few, New Jersey's bill texts are missing, or Virginia's date rule stops
   fitting the floor votes. Still by hand: a new governor (`GOVERNORS`) every four years, next January 2030.
 - **Tabs (2026-11-19):** a state's page has Bills, Watchlist, Statistics and How laws are made. The Weigh in tab is gone
-  (the owner's decision): "Where you live" (`#whereBox`, `renderMyReps()`, drawn when opened) is a line under the title on
-  every tab, the only place to pick a county, town or address (the sidebar keeps only "Only bills that could affect your
-  county", shown once a county is chosen); each state's weighin.html (how to weigh in, the governor's office, who decides)
+  (the owner's decision): "Find your legislators" (`#whereBox`, `renderMyReps()`, drawn when opened; "Where you live"
+  until 2026-11-20; the names link to their pages) is a line under the title on every tab, the only place to pick a
+  county, town or address (the sidebar keeps only "Hide bills about other places", shown once a county is chosen); each state's weighin.html (how to weigh in, the governor's office, who decides)
   is still put in `#view-act` by the build and moved at startup to the end of How's "Having an impact" (`#impact`). A
   legislator's page keeps `#view-act` as its "Open for comment" tab (`renderOpenNow()`). Statistics opens on "Odds of
   becoming law" (the "How far bills get" bars were dropped); Statistics' Committees and Timing link to How's Committees and
@@ -268,7 +268,7 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     a later report needs both houses again). And a pocket veto is a veto (MI HB 5190 of 2023-24: "pocket veto 1/22/2025").
   - An official file that's out of date: NH's HouseDistricts.txt still has the 2012 map (Belknap has 9 districts there, 8
     in the law and the member list); the districts come from the law (RSA 662:5). The check fails when a legislator's
-    district isn't in any place's list in "Where you live". And NH Members.txt's electedStatus "Former" is on 18 members
+    district isn't in any place's list in "Find your legislators". And NH Members.txt's electedStatus "Former" is on 18 members
     still sitting and voting.
   - Typos in a line's year: NH's HB 425 of 2025 "03/06/2035", HB 49 of 2023 "04/13/2022" (the entry time is used when
     they're more than 180 days apart). The check fails on history dates years from the session.
