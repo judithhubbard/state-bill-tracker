@@ -8,7 +8,8 @@ doesn't).
   ones applying to Congress for a convention or confirming an appointment). Other resolutions are left out.
 - For each bill, into data/oh/<session>/bills/<HB1>.json: its versions (as introduced, as reported, as passed, as
   enrolled: titles, dates sent to and signed by the governor) and its actions (each with its votes, member by member).
-  Versions are read again when the bill's entry in the list changes; the current General Assembly's actions every run
+  Versions are read again when the bill's entry in the list changes, its actions change, or it waits on enrollment or
+  the governor (the entry's revno doesn't change for either); the current General Assembly's actions every run
   (an action like a referral doesn't change the list); a finished one's once. Three requests at a time.
 - The legislators, committees with their members, and the next three weeks' committee meetings (agendas).
 - Legislators' emails aren't in the API: Open States' public-domain file (data.openstates.org, copied from the
@@ -61,6 +62,19 @@ def wanted(i):
     return num[:3] in ("hjr", "sjr") and num[3:].isdigit() and bool(re.match(r"CA\s*:", i.get("short_title") or ""))
 
 
+def waiting(versions, actions):
+    """Whether a bill has passed both houses (or one house agreed to the other's changes) and the governor's decision
+    isn't in yet: no signing or effective date on the enrolled version, no veto receipt."""
+    acts = [a.get("action") or "" for a in actions]
+    if any(re.search(r"veto receipt", a, re.I) for a in acts):
+        return False
+    en = next((v for v in versions if v.get("version_id") == "EN"), None)
+    if en and (en.get("governor_signed_date") or en.get("effective_date")):
+        return False
+    houses = {a.get("chamber") for a in actions if re.match(r"Passed", a.get("action") or "")}
+    return bool(en) or len(houses) == 2 or any(re.match(r"Concurred|Conference report agreed", a) for a in acts)
+
+
 def session(session):
     ga = P.assembly_of(session)
     base = f"{API}/general_assembly_{ga}"
@@ -87,8 +101,13 @@ def session(session):
         rev = str(bills[b].get("revno"))
         if old and not live and revs.get(b) == rev:
             return b, True  # a finished General Assembly's bill, unchanged
-        versions = old["versions"] if old and revs.get(b) == rev else get(f"{base}/legislation/{b.lower()}/")
         actions = get(f"{base}/legislation/{b.lower()}/actions/")
+        # The list's revno doesn't change when a bill is enrolled or sent to the governor (HB 13 of the 136th: enrolled
+        # and sent 2026-11-17, revno unchanged since its Senate committee report), so versions are read again when the
+        # entry changes, when the actions changed, or while the bill waits on enrollment or the governor.
+        fresh = old and revs.get(b) == rev and actions is not False and actions == old.get("actions") \
+            and not waiting(old["versions"], old.get("actions") or [])
+        versions = old["versions"] if fresh else get(f"{base}/legislation/{b.lower()}/")
         if versions is False:
             return b, False
         if actions is False:

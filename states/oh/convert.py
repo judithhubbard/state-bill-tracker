@@ -19,6 +19,7 @@ from states.oh import profile as P
 
 HOUSE = {"S": "Senate", "H": "House"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
+TODAY = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
 
 
 def folder(session):
@@ -224,6 +225,17 @@ def load_session(session):
             signed = sent = None  # goes to the voters, not the governor
         if not signed and en and not live and not vetoed and not amendment:
             signed = en.get("effective_date") or en.get("concurrence_date") or (raw[-1].get("occurred") or "")[:10] or None
+        # While a General Assembly runs, the API often leaves the signing date empty too (SB 152 and HB 479 of the 136th):
+        # a "Line item veto receipt" (signed, some items vetoed) or an effective date on the enrolled version is the law.
+        # An effective date can be months after the signature, even in the future: the day it's sent is used then.
+        if not signed and en and live and not vetoed and not amendment:
+            items_vetoed = next(((a.get("occurred") or "")[:10] for a in raw if re.match(r"line item veto receipt", text(a.get("action")), re.I)), None)
+            eff = en.get("effective_date")
+            if eff and eff > TODAY and sent:
+                eff = sent
+            signed = items_vetoed or eff or None
+            if signed and sent and sent > signed:
+                sent = None  # SB 152 of the 136th: "sent" 2026-06-12, in effect from 2026-03-04
         if signed:
             steps.append((signed, "G", "SIGNED", "Signed by the governor"))
         if sent:
