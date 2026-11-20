@@ -381,6 +381,10 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     amendment", so 13 bills of 2025-26 in conference (H5576, S2619) showed as passed both houses; a second house's "Read
     second, amended" was missed too (H1999 of 2023-24). The check fails on bills passed both houses whose last step is a
     refusal to concur or a conference committee.
+  - A line read by its opening words when it ends in another step: WA's "Rules Committee relieved of further consideration.
+    On motion, referred to Ways & Means." read as placed on the floor (17 Senate bills of 2025-26, SB 5659); the referral wins.
+    And a referral to a committee the session's list no longer names (renamed) was kept as text (9 WA bills of 2023-24).
+    The check LOOKs (FAIL over 0.5%) at bills on the floor whose last line refers them to a committee.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.

@@ -32,3 +32,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   governor's signature, overridden vetoes and initiatives to the Legislature, so the governor's "signed" lists are a
   few short. Until the first full copy is complete, fetch.py writes data/wa/incomplete and build_site.sh and the
   checks skip Washington. GitHub downloaded the first full copy in one run (2026-10-31), and Washington is on the front page.
+- **Sent back to committee from Rules (fixed 2026-11-19):** "Rules Committee relieved of further consideration.  On motion,
+  referred to Ways & Means." (or "...; referred to ...") is a referral, not a floor placement: 17 Senate bills of 2025-26
+  (SB 5659, SB 5085, SB 5797 ...) showed "On the floor" from the 2026 session's first day. And "Passed to Rules Committee
+  for third reading." (a committee sending such a bill back, SB 5234) goes to Rules like "for second reading".
+  And a referral to a committee the biennium's committees.json doesn't name (renamed since: 2023-24's "Community Safety,
+  Justice, & Reentry", "Human Services, Youth, & Early Learning"; 2025-26's "Business, Financial Services & Trade") was
+  kept as text, so 9 House bills of 2023-24 (HB 1098, HB 1108) sent back to committee in January 2024 showed on the floor:
+  it's now a referral under the name as written ("and" matches "&").

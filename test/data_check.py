@@ -105,6 +105,18 @@ def check(state):
         if odd:
             say(state, "LOOK", f"{s}: history lines mentioning passage not read as one: " +
                 "; ".join(f"{n}× {k}" for k, n in odd.most_common(4)))
+        # A line read by its opening words when it ends in another step: WA's "Rules Committee relieved of further
+        # consideration.  On motion, referred to Ways & Means." was read as placed on the floor (SB 5659 of 2025-26).
+        # A bill shown on the floor whose last line sends it to a committee (not Rules, Assignments or a calendar).
+        refloor = []
+        for r in recs:
+            acts = sorted(r["vers"][0]["actions"], key=lambda a: a[0] or "") if r["stage"] == 1 else []
+            if acts and re.search(r"\b(?:re-?)?referred to (?!(?:the )?(?:\w+ )?(?:Rules|Assignments|Calendar|third|3rd|second|2nd|"
+                                  r"engross|enroll|floor|Senate\b|House\b|Assembly\b|Governor))", acts[-1][1], re.I):
+                refloor.append(r["nums"][0])
+        if refloor:
+            say(state, "FAIL" if len(refloor) > 0.005 * len(recs) else "LOOK",
+                f"{s}: {len(refloor)} bills shown on the floor whose last line refers them to a committee, e.g. {refloor[:4]}")
         # Histories out of order: some lines with a time and some with only a date (MA's S2913: sorting by the full
         # time put "Read second" after "Laid before the Governor"). Sort by day and keep the file's order within a day.
         unsorted = [r["nums"][0] for r in recs for v in r["vers"] if any(a[0] > b[0] for a, b in zip(v["actions"], v["actions"][1:]) if a[0] and b[0])]
