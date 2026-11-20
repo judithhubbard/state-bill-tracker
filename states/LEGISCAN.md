@@ -5,6 +5,8 @@ Moved from CLAUDE.md (2026-11-19). Each state's own notes: states/tn, ok, me, ri
 - **LegiScan states (2026-11-08): Tennessee, then Oklahoma, Maine, Rhode Island, Vermont.** Their legislatures' sites bar
   automated readers in robots.txt, so `legiscan.py` downloads LegiScan's data (CC BY 4.0; monthly query budget shared and
   counted on GitHub) into data/<st>/legiscan/<session_id>/. Converters read only those files, never the API.
+  (Maine's robots.txt, read again 2026-11-19, bars only its search pages and LawMakerWeb: its laws' signing dates and
+  chapters, which LegiScan lacks, come from their bill pages, states/me/laws.py; see states/me/NOTES.md.)
   The budget (reworked 2026-11-13, before the January sessions): every run reads each running session's getMasterList
   (status and last action for every bill, kept as the bill's "ml" in meta.json; `bills()` in legiscan_convert.py adds
   that last action to an older saved copy's history, so stages stay current; checked by cutting every bill's history

@@ -168,6 +168,16 @@ def check(state):
                  and not re.search(r"sustain|fail|lost|\bnot\b|n't|\bno\b|requires|message", last_line(r), re.I) and sustained(r)]
         if stood:
             say(state, "FAIL", f"{s}: {len(stood)} vetoed bills whose last action reads as an override, e.g. {stood[:4]}")
+        # A law whose history ends with the governor holding it: LegiScan's "Passed" status on ten of Maine's 2023-24 bills
+        # the governor held until the Legislature ended (LD 1152: "Held by Governor", then "Died Upon Conclusion of the
+        # 131st"), a pocket veto. A held law should show a signature, a chapter or an override after the hold.
+        held = re.compile(r"held by (?:the )?governor", re.I)
+        after = re.compile(r"sign|became law|chapter|overrid|notwithstanding|\bact\b|public law|session law", re.I)
+        heldlaw = [r["nums"][0] for r in recs if r["stage"] == 5 and any(
+            any(held.search(t) for _, t in v["actions"]) and not any(after.search(t) for _, t in v["actions"][max(i for i, (_, t) in enumerate(v["actions"]) if held.search(t)) + 1:])
+            for v in r["vers"])]
+        if heldlaw:
+            say(state, "LOOK", f"{s}: {len(heldlaw)} laws whose history ends with the governor holding them (a pocket veto?), e.g. {heldlaw[:4]}")
         # Law numbers given twice (NH's history lines: SB 62 and HB 511 of 2025 both "Chapter 39"; the LSRs file's column is
         # right). In one-year sessions a chapter, act or public law number belongs to one bill.
         if getattr(P, "YEARS", 2) == 1:

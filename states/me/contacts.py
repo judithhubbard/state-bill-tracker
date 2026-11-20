@@ -12,7 +12,7 @@
   (the Passamaquoddy Tribe's and the Houlton Band of Maliseet Indians') speak and sponsor bills but have no floor vote and
   no district, so they aren't seats here: "Where you live" can't name them, and their bills show their names.
 - Committees: none. Neither LegiScan nor Open States has committee members or chairs, and the General Assembly's site
-  (legislature.maine.gov) asks automated readers not to read it.
+  (legislature.maine.gov) isn't read for them (its robots.txt bars LawMakerWeb).
 - Leaders: P.LEADERS (the Speakers), for the current session only.
 Usage: python3 states/me/contacts.py [session]
 """

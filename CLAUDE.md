@@ -398,6 +398,10 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     paperwork they hide ("Subcommittee: ...", floor amendments filed; IA's HF 29 of 2025), so status rows on /your-bills/,
     /list/ and the front page had a date and no wording (523 IA, 257 HI bills). "last" is now the latest shown line's day;
     the check counts bills whose last action's day has no history line.
+  - (2026-11-19) An aggregator's "Passed" on bills the governor held until the Legislature ended: LegiScan calls 36 of Maine's
+    2023-24 veto-day bills passed; their official pages say "Held by Governor" and "Died Upon Conclusion of the 131st" (32,
+    pocket vetoes) or nothing (3). Read the official page (states/me/laws.py) and re-read robots.txt rather than trusting an
+    old note that it bars everything. The check LOOKs at laws whose history ends with the governor holding them.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.
