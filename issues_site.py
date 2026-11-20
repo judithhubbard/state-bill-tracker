@@ -657,7 +657,7 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
                          for y in years) + f'<a href="all.html"{cur if year == "all" else ""} title="{years[0]}–{years[-1]}, each bill once" aria-label="All years">All<span class="yw"> years</span></a>'
     fopts = "".join(f'<option value="f:{e(re.sub(r"[^a-z]+", "-", k.lower()))}">{e(k)}</option>' for k in issue.get("filters", {}))
     up = "../../"
-    lede_counts = (f'In {ytext}: <b id="nBills">{intro_n:,}</b> bills{" prefiled" if upcoming else ""} in <b id="nStates">{in_states}</b> states'
+    lede_counts = (f'In {ytext}: <b id="nBills">{intro_n:,}</b> <span id="wBills">bill{"" if intro_n == 1 else "s"}</span>{" prefiled" if upcoming else ""} in <b id="nStates">{in_states}</b> <span id="wStates">state{"" if in_states == 1 else "s"}</span>'
                    + ("" if upcoming else f'; <b id="nLaws">{laws_n:,}</b> became law') + ".")
     keys = ['<span class="key"><i class="sq h0"></i>None</span>', '<span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>',
             '<span class="key"><i class="sq h2"></i>5&ndash;14</span>', '<span class="key"><i class="sq h3"></i>15 or more</span>']
@@ -798,9 +798,11 @@ function apply() {{
     SPLIT[sec.querySelector("h3").id] = sp;
     bills += n; laws += l; states += n ? 1 : 0;
   }}
-  document.getElementById("count").textContent = (v || q || pv) ? `Showing ${{shown.toLocaleString()}} bills.` : "";
+  document.getElementById("count").textContent = (v || q || pv) ? `Showing ${{shown.toLocaleString()}} bill${{shown === 1 ? "" : "s"}}.` : "";
   document.getElementById("nBills").textContent = bills.toLocaleString();
   document.getElementById("nStates").textContent = states;
+  document.getElementById("wBills").textContent = bills === 1 ? "bill" : "bills";
+  document.getElementById("wStates").textContent = states === 1 ? "state" : "states";
   const nl = document.getElementById("nLaws");
   if (nl) nl.textContent = laws.toLocaleString();
   const all = [0, 0, 0, 0];
