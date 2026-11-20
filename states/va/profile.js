@@ -78,7 +78,7 @@ const STATE = {
   amended: (b) => b.vers.some((v) => v.actions.some(([, t]) => /Governor's (recommendation|amendment)/i.test(t))),
   passedBothBy: (session) => STATE.reconvenes(session),
   passedBothNote: (live, b) => !live ? "Never sent to the governor"
-    : !b ? "Includes bills sent back with the governor's amendments"
+    : !b ? ""
     : STATE.amended(b) ? "Sent back with the governor's amendments" : "Not yet sent to the governor",
   passedBothGroup: ["Before the reconvened session", () => `The Legislature meets on ${monthDay(STATE.reconvenes(DATA.session))} to vote on the governor's amendments and vetoes.`],
   passedBothNext(b) {
@@ -123,7 +123,7 @@ const STATE = {
     const today = isoToday(), y = raw.session, end = STATE.sessionEnds(y), back = STATE.reconvenes(y);
     const due = STATE.govDeadline(end, y);
     if (today <= end) return "";
-    if (today <= back) return `The ${y} session adjourned ${fmtDate(end)}. The governor has until ${fmtDate(due)} to act on its bills, and the Legislature returns ${fmtDate(back)} to vote on the governor's amendments and vetoes.`;
+    if (today <= back) return `The ${y} session ended ${fmtDate(end).replace(/, \d{4}$/, "")}. The governor has until ${fmtDate(due)} to act on its bills, and the Legislature returns ${fmtDate(back)} to vote on the governor's amendments and vetoes.`;
     const next = y + 1, carried = raw.sessions.find((x) => x.session === next);
     // Between sessions is when bills for the next one are planned: the session itself is a sprint.
     return `The ${y} session is over, and the ${next} session opens ${fmtDate(STATE.opens(next))}. Now is the time to ask your legislators to sponsor bills for it: they're drafted over the fall and can be filed from mid-November${carried ? `. Bills continued from ${y} are already on the ${next} <a href="${esc(carried.url)}">page</a>` : ""}.`;
@@ -179,7 +179,7 @@ const STATE = {
     "Passed the House or the Senate, but not both. Both houses have to pass the same text.",
     "Passed both houses. A bill the governor sent back with amendments waits here for the reconvened session.",
     "Passed both houses and sent to the governor, who can sign it, veto it, or send it back with amendments.",
-    "Signed into law and given a chapter number.",
+    "Signed by the governor.",
     "Vetoed by the governor. Overriding a veto takes two-thirds of each house.",
   ],
   pastStageTips: [

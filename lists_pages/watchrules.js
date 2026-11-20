@@ -4,7 +4,7 @@
 //   S: the state's profile (its STATE object: govDeadline, passedBothBy, sessionEnds, originDeadline, floorVotesEnd,
 //     passedBothGroup, originWord, years).
 //   facts(): the session's facts, read each time a rule runs: {session, current, upcoming, lastVote (the last floor vote's
-//     day), sessionEnd ({year: the scheduled last session day}), timing (past sessions' [{lastVote}])}.
+//     day), lastComm (the last or next committee vote or scheduled meeting's day), sessionEnd ({year: the scheduled last session day}), timing (past sessions' [{lastVote}])}.
 //   hooks: {today() (ISO date), nextMeeting(b) (the next committee meeting with the bill on its agenda, {when, committee},
 //     or null), isAmendment(b), toVoters(b), passedBothLc ("passed both houses")}.
 // A bill (b) here needs stage and due (the governor's deadline, stage 4), plus whatever the state's originDeadline() reads
@@ -44,9 +44,12 @@ const WatchRules = (() => {
     // Where the session stands for a bill: {today, y2 (the session's last year), lv (the last floor vote), quiet (no floor
     // votes for three weeks), adjourned (the session is over), recess (between a two-year session's years), missed (the
     // day of the deadline to pass its own house it missed)}.
+    // (Quiet only when committees haven't met for three weeks either, and none is scheduled to: New Jersey's committees
+    // meet in November and December with no floor votes.)
     function standing(b) {
       const F = facts(), t = today(), y2 = lastYear(F.session);
-      const lv = F.lastVote || "", quiet = lv && (new Date(t) - new Date(lv)) / 864e5 > 21;
+      const lv = F.lastVote || "", lc = F.lastComm || "";
+      const quiet = !!lv && (new Date(t) - new Date(lv)) / 864e5 > 21 && !(lc && (new Date(t) - new Date(lc.slice(0, 10))) / 864e5 <= 21);
       const adjourned = S.floorVotesEnd === false ? t > S.sessionEnds(F.session)
         : t > `${y2}-12-31` || (quiet && lv.startsWith(String(y2)));
       const recess = !adjourned && quiet && t.startsWith(String(F.session));

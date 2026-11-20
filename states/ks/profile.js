@@ -130,8 +130,8 @@ const STATE = {
   // The note above the bill list between sessions (empty while the Legislature meets).
   sessionNotice(raw) {
     const t = isoToday(), y = raw.session, end1 = STATE.days(y).end, end2 = STATE.days(y + 1).end;
-    if (t > end1 && t < `${y + 1}-01-01`) return `The ${y} session adjourned ${fmtDate(end1)}. Bills that haven't passed stay alive for ${y + 1}, when the Legislature meets again from ${fmtDate(STATE.opens(y + 1))}.`;
-    if (t > end2) return `The ${y}–${String(y + 1).slice(2)} Legislature's last session adjourned ${fmtDate(end2)}. Bills that didn't pass both houses died. The next Legislature opens ${fmtDate(STATE.opens(y + 2))}.`;
+    if (t > end1 && t < `${y + 1}-01-01`) return `The ${y} session ended ${fmtDate(end1).replace(/, \d{4}$/, "")}. Bills that haven't passed stay alive for ${y + 1}, when the Legislature meets again from ${fmtDate(STATE.opens(y + 1))}.`;
+    if (t > end2) return `The ${y}–${String(y + 1).slice(2)} Legislature's last session ended ${fmtDate(end2).replace(/, \d{4}$/, "")}. Bills that didn't pass both houses died. The next Legislature opens ${fmtDate(STATE.opens(y + 2))}.`;
     return "";
   },
   upcomingNotice: (raw, cur) => `The ${raw.session}–${String(raw.session + 1).slice(2)} Legislature opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,

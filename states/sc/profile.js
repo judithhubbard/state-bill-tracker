@@ -123,8 +123,8 @@ const STATE = {
   // The note above the bill list between sessions (empty while the General Assembly meets).
   sessionNotice(raw) {
     const t = isoToday(), y = raw.session, end1 = STATE.sineDie(y), end2 = STATE.sineDie(y + 1);
-    if (t > end1 && t < `${y + 1}-01-01`) return `The ${y} session adjourned ${fmtDate(end1)}. Bills that haven't passed stay alive for the second year, which opens ${fmtDate(STATE.opens(y + 1))}. The governor acts on bills as they're ratified.`;
-    if (t > end2) return `The ${STATE.ga(y)} General Assembly's last session adjourned ${fmtDate(end2)} (it came back later only for vetoes, conference reports and the budget). Bills that didn't pass both houses died. The next General Assembly opens ${fmtDate(STATE.opens(y + 2))}.`;
+    if (t > end1 && t < `${y + 1}-01-01`) return `The ${y} session ended ${fmtDate(end1).replace(/, \d{4}$/, "")}. Bills that haven't passed stay alive for the second year, which opens ${fmtDate(STATE.opens(y + 1))}. The governor acts on bills as they're ratified.`;
+    if (t > end2) return `The ${STATE.ga(y)} General Assembly's last session ended ${fmtDate(end2).replace(/, \d{4}$/, "")} (it came back later only for vetoes, conference reports and the budget). Bills that didn't pass both houses died. The next General Assembly opens ${fmtDate(STATE.opens(y + 2))}.`;
     return "";
   },
   upcomingNotice: (raw, cur) => `The ${STATE.ga(raw.session)} General Assembly opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're prefiled in December. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,

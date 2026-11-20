@@ -6,7 +6,7 @@
 // sessions linked, so "reintroduced next session" can be said), exec ("the governor"), num, esc}. Its styles are the
 // pages' own (.sankey, .sk-*).
 // How bills move: a Sankey diagram. Bills flow left to right through each step; at each step a band
-// drops down to the bills that stopped there, labeled with how many were reintroduced the next session.
+// drops down to the bills that stopped there; how many were reintroduced the next session is in an ⓘ on its label.
 // Bills that died in committee are split by what happened to them there.
 function drawSankey(odds, fate, cfate, o) {
   const { uni: UNI, passedBoth: PASSED_BOTH, exits, heldLabel, linked, exec, num, esc } = o;
@@ -30,6 +30,8 @@ function drawSankey(odds, fate, cfate, o) {
   // Each exit sits just under the step it leaves to, so the exits step down instead of sharing one line.
   let exitTop = 0, bottom = 0;
   const label = (x, y, lines) => lines.filter(Boolean).map((l, i) => `<text class="sk-l${i ? "" : " sk-b"}" x="${x}" y="${y + i * 15}">${l}</text>`).join("");
+  // An exit's name with how many came back next session behind an ⓘ (its hover title), not a line of its own.
+  const named = (name, key) => { const b = back(key); return b ? `${name} <tspan class="sk-i">ⓘ</tspan><title>${b}</title>` : name; };
   let g = "", labels = "";
   // The two shares at a split: the upper one centred on its band, the lower one just under it. On a thin band the lower
   // one is pushed down so the two never overlap (Congress's "Passed one house": 33% and 67% were drawn on top of each other).
@@ -54,12 +56,12 @@ function drawSankey(odds, fate, cfate, o) {
       const tot = PARTS.reduce((a, [pk]) => a + ((cfate[pk] || [0])[0]), 0) || 1;
       let y = exitTop;
       PARTS.forEach(([pk, , cls]) => { const hh = h(out) * ((cfate[pk] || [0])[0] / tot); g += `<rect class="${cls}" x="${ex}" y="${y}" width="${nodeW}" height="${hh}"/>`; y += hh; });
-      labels += label(ex + nodeW + 8, exitTop + 11, [name, `${num(out)} · ${pct(out)} of bills`, back(key)]);
+      labels += label(ex + nodeW + 8, exitTop + 11, [named(name, key), `${num(out)} · ${pct(out)} of bills`]);
       labels += PARTS.map(([pk, pl, cls], j) => { const [cn, , claw] = cfate[pk] || [0, 0, 0];
         return `<rect class="${cls}" x="${ex + nodeW + 8}" y="${exitTop + 50 + j * 17}" width="9" height="9"/><text class="sk-l" x="${ex + nodeW + 22}" y="${exitTop + 58 + j * 17}">${pl} ${cn && cn / tot < 0.005 ? `(${num(cn)} bills)` : pct(cn, tot)}</text>`; }).join("");
     } else {
       g += `<rect class="sk-exit" x="${ex}" y="${exitTop}" width="${nodeW}" height="${h(out)}"/>`;
-      labels += label(ex + nodeW + 8, exitTop + 11, [name, `${num(out)} · ${pct(out)} of bills`, back(key)]);
+      labels += label(ex + nodeW + 8, exitTop + 11, [named(name, key), `${num(out)} · ${pct(out)} of bills`]);
     }
   }
   // Passed both houses: signed, or vetoed. A veto is a step of its own (the governor said no); from it, the legislature
@@ -91,7 +93,7 @@ function drawSankey(odds, fate, cfate, o) {
     labels += label(x5 + nodeW + 8, top + 11, ["Became law", `${num(law)} · ${pct(law)} of bills`,
       over ? `${num(over)} over ${exec}'s veto` : ""]);
     g += `<rect class="sk-veton" x="${x5}" y="${sy}" width="${nodeW}" height="${h(vetoed)}"/>`;
-    labels += label(x5 + nodeW + 8, sy + 8, ["Veto stood", `${num(vetoed)} · ${pct(vetoed)} of bills`, back("vetoed")]);
+    labels += label(x5 + nodeW + 8, sy + 8, [named("Veto stood", "vetoed"), `${num(vetoed)} · ${pct(vetoed)} of bills`]);
     bottom = Math.max(bottom, sy + 45, vy + h(allVetoes) + 50);
   }
   const height = Math.max(bottom, top + H0) + 12;

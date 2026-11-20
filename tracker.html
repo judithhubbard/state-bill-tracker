@@ -243,6 +243,11 @@ footer p { margin: 0; max-width: 90ch; }
 .sessions a:hover { border-color: var(--navy); color: var(--navy); }
 .sessions .here { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 .sessions .off { opacity: .55; }
+.sessions .sessmenu { display: none; }
+@media (max-width: 560px) {
+  .sessions:has(.sessmenu) > a, .sessions:has(.sessmenu) > span { display: none; }
+  .sessions .sessmenu { display: block; font: 600 14px var(--body); padding: 6px 8px; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); color: var(--ink); }
+}
 
 /* Outcomes across sessions */
 .tablewrap { overflow-x: auto; }
@@ -334,12 +339,16 @@ table.oc th { vertical-align: bottom; }
 .view-tab:hover { color: var(--ink); background: var(--chip); }
 .view-tab-end { margin-left: auto; }
 .view-tab[aria-current="page"] { background: var(--ink); color: var(--paper); }
-.view-tab .tab-short { display: none; }
+.view-tab .tab-short, .view-tab .tab-tiny { display: none; }
 @media (max-width: 760px) {
   .view-tab { padding: 7px 10px; font-size: 15px; }
   .view-tab .tab-long { display: none; }
   .view-tab .tab-short { display: inline; }
   .view-tab-end { margin-left: 0; }
+}
+@media (max-width: 560px) {
+  .view-tab .tab-short { display: none; }
+  .view-tab .tab-tiny { display: inline; }
 }
 main { display: grid; gap: 16px; min-width: 0; }
 .notice .nmore { font-size: 13px; margin-left: 4px; }
@@ -962,6 +971,7 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .pg.stale { border-left-color: var(--rule); padding-top: 6px; }
 .pg.stale .pg-h { color: var(--ink-2); }
 .pnote { font-size: 12.5px; color: var(--ink-2); margin: 0 0 8px; line-height: 1.35; }
+.pnote .ftag { display: inline-block; padding: 1px 7px; border-radius: 9px; background: var(--chip); color: var(--ink-2); font-weight: 600; font-size: 12px; cursor: help; }
 .pg.stale .pg-h span:not(.tip) { display: block; font-weight: 400; font-size: 11.5px; }
 .pg.stale .srow:not([aria-pressed="true"]) { color: var(--ink-2); }
 .pg.stale .srow .sl { font-size: 12.5px; }
@@ -975,14 +985,14 @@ details.morefilters[open] > summary::after { content: "Hide"; }
 details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6px; color: var(--gold); text-transform: none; letter-spacing: 0; }
 .side .field .subsel, .subsel { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; color: var(--ink-2); text-transform: none; letter-spacing: 0; font-weight: 400; }
 .subsel select { width: auto; padding: 4px 8px; font-size: 13px; }
-.tl { position: relative; height: 270px; max-width: 940px; margin: 8px 0 0; padding-left: 96px; }
+.tl { position: relative; height: 228px; max-width: 940px; margin: 8px 0 0; padding-left: 96px; }
 .tl .plot { position: relative; height: 100%; }
 .tl .rl { position: absolute; left: 0; width: 90px; font: 600 11px var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); line-height: 22px; }
 .tl .track { position: absolute; left: 0; right: 0; height: 22px; background: var(--chip); border-radius: 4px; }
 .tl .track b { position: absolute; top: 0; bottom: 0; border-radius: 4px; font: 600 11.5px/22px var(--body); padding: 0 8px; overflow: hidden; white-space: nowrap; }
 .tl .leg b { background: var(--move); color: var(--sheet); }
-.tl .gov b { background: var(--law-bar); color: #fff; }
-.tl .gov b.light { background: var(--signed-soft); color: var(--signed); }
+.tl .gov b { background: var(--st-3); color: var(--st-3-ink); }
+.tl .gov b.light { background: none; color: var(--ink-2); }
 .tl .leg b.light { background: none; color: var(--ink-2); }
 .tl .yrs { position: absolute; top: 0; left: 0; right: 0; height: 16px; }
 .tl .yrs span { position: absolute; font: 700 12px var(--body); color: var(--ink-2); padding-left: 5px; border-left: 1px solid var(--ink-2); }
@@ -999,6 +1009,8 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .tl li.right div { left: auto; right: 8px; text-align: right; }
 .tl li b { display: block; }
 .tl-note { margin-top: 2px; }
+.tl-notes { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; max-width: 760px; font-size: 13.5px; line-height: 1.4; }
+.tl-notes b { margin-right: 4px; }
 @media (max-width: 960px) {
   .tl { height: auto; padding-left: 0; }
   .tl .plot { height: auto; }
@@ -1006,12 +1018,16 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
   .tl ol { border-left: 2px solid var(--rule); margin-left: 6px; display: grid; gap: 14px; padding: 4px 0; }
   .tl li { position: relative; left: auto !important; top: auto !important; height: auto !important; width: auto; border: 0; padding-left: 16px; }
   .tl li::after, .tl li.up::after, .tl li.down::after { left: -8px; top: 4px; bottom: auto; }
+  .tl { display: none; }
   .tl li div, .tl li.right div { position: static; width: auto; text-align: left; }
 }
 
 
 .steps { margin: 0; padding-left: 22px; display: grid; gap: 10px; max-width: 75ch; }
 .steps b { font-weight: 600; }
+.steps details.fold > summary { cursor: pointer; list-style: none; color: var(--navy); }
+.steps details.fold > summary::-webkit-details-marker { display: none; }
+.steps details.fold[open] > summary b { color: var(--ink); }
 .notes { display: grid; gap: 8px; max-width: 80ch; color: var(--ink-2); font-size: 14px; }
 .notes p { margin: 0; }
 
@@ -1109,7 +1125,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
       </div>
       <nav class="sessions" id="sessions" aria-label="Legislative sessions"></nav>
     </div>
-    <details class="where" id="whereBox"><summary id="whereSum">Where you live</summary><div class="act-sec" id="myReps"></div></details>
+    <details class="where" id="whereBox"><summary id="whereSum">Find your legislators</summary><div class="act-sec" id="myReps"></div></details>
     <p class="notice" id="notice" hidden></p>
     <div class="person" id="person" hidden></div>
   </header>
@@ -1117,10 +1133,10 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
   <nav class="views" aria-label="Page sections">
     <button class="view-tab" type="button" data-view="bills" aria-current="page">Bills</button>
     <button class="view-tab" type="button" data-view="watch">★ Watchlist<span id="watchTabCount"></span></button>
-    <button class="view-tab" type="button" data-view="act" hidden>Open for comment</button>
+    <button class="view-tab" type="button" data-view="act" hidden>Coming up</button>
     <button class="view-tab" type="button" data-view="stats">Statistics</button>
-    <button class="view-tab" type="button" data-view="person" hidden>Their numbers</button>
-    <button class="view-tab view-tab-end" type="button" data-view="how"><span class="tab-long">How a bill becomes law in New York</span><span class="tab-short">How laws are made</span></button>
+    <button class="view-tab" type="button" data-view="person" hidden>Record</button>
+    <button class="view-tab view-tab-end" type="button" data-view="how"><span class="tab-long">How a bill becomes law in New York</span><span class="tab-short">How laws are made</span><span class="tab-tiny">How</span></button>
   </nav>
   <main id="main">
   <div class="frameload" id="frameLoad">Loading bills…</div>
@@ -1132,7 +1148,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
       <summary class="side-toggle">Filters <span id="filterCount"></span></summary>
       <div class="side-body">
         <div class="field you">
-          <label class="inline hidebox"><input type="checkbox" id="nearby"> <span>Only bills that could affect <span id="nearbyCounty">your county</span> <span class="hc" id="nearbyN"></span> <button type="button" class="tip" aria-label="What this means" data-tip="Hides bills only about other counties, bills for one named person or group (such as a pension or a tax exemption), and road and bridge namings. Statewide bills and bills about your county stay.">i</button></span></label>
+          <label class="inline hidebox"><input type="checkbox" id="nearby"> <span>Hide bills about other places <span class="hc" id="nearbyN"></span> <button type="button" class="tip" aria-label="What this means" data-tip="Hides bills only about other counties, bills for one named person or group (such as a pension or a tax exemption), and road and bridge namings. Statewide bills and bills about your county stay.">i</button></span></label>
         </div>
         <div class="group">
           <div class="group-h">Where it is now</div>
@@ -1169,7 +1185,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
             <select id="party"><option value="">Any</option></select>
           </div>
           <div class="field">
-            <label for="progress">Furthest it has gotten this session <button type="button" class="tip" aria-label="What this means" data-tip="The furthest a bill got this session, even if it was later sent back to committee. “Where it is now” shows only its current stage.">i</button></label>
+            <label for="progress">Got as far as <button type="button" class="tip" aria-label="What this means" data-tip="The furthest a bill got this session, even if it was later sent back to committee. “Where it is now” shows only its current stage.">i</button></label>
             <select id="progress"><option value="">Any</option></select>
           </div>
           <div class="field">
@@ -1182,7 +1198,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
             <select id="comm"><option value="">All committees</option></select>
           </div>
           <div class="field">
-            <label for="house">Has a version in</label>
+            <label for="house">Filed in</label>
             <select id="house"><option value="">Either house</option></select>
           </div>
           <div class="field">
@@ -1210,7 +1226,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
           <select id="sort">
             <option value="recent">Latest action</option>
             <option value="stage">Furthest along</option>
-            <option value="sessions">Most sessions introduced</option>
+            <option value="sessions">Introduced most often</option>
             <option value="num">Bill number</option>
             <option value="cosp">Most cosponsors</option>
           </select>
@@ -1240,7 +1256,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     <div class="field stattopic">
       <label for="statTopic">Topic</label>
       <select id="statTopic"><option value="all">All bills</option></select>
-      <label class="inline statgen"><input type="checkbox" id="statGeneral"> Leave out local and narrow bills <button type="button" class="tip" aria-label="What this means" data-tip="Bills about one town, county, person or group, and road and building namings. They pass far more often than other bills, so leaving them out gives truer odds for most bills.">i</button></label>
+      <label class="inline statgen"><input type="checkbox" id="statGeneral"> Leave out local bills <button type="button" class="tip" aria-label="What this means" data-tip="Bills about one town, county, person or group, and road and building namings. They pass far more often than other bills, so leaving them out gives truer odds for most bills.">i</button></label>
     </div>
     <div class="act-sec statsec" id="statOdds"></div>
     <div class="act-sec statsec" id="statComm" hidden></div>
@@ -1253,7 +1269,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     <section class="act-sec statsec" id="statSessions" hidden aria-labelledby="ocHead">
       <h2 id="ocHead">Outcomes by session</h2>
       <div class="tablewrap"><table class="oc" id="ocTable"></table></div>
-      <p class="note"><span id="ocOpen"></span>“Became law”: share of all bills introduced. “Governor signed”: share of bills the governor acted on.<span hidden> Current session changes until <span id="ocUntil"></span>.</span><span id="ocShells"></span></p>
+      <p class="note"><span id="ocOpen"></span><span hidden> Current session changes until <span id="ocUntil"></span>.</span><span id="ocShells"></span></p>
     </section>
     </div>
     
@@ -1352,10 +1368,9 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     <div class="howsec" id="impact" hidden>
     <h2>How to have an impact</h2>
     <ul class="impact">
-      <li><b>Contact whoever decides the next step.</b> In committee, that's the committee chair. On the floor, it's the house's leaders, who choose which bills get a vote. Once a bill has passed both houses, it's the governor's office. Each bill on this site names that person and what to ask.</li>
-      <li><b>Bring in your own legislators.</b> Your senator and Assembly member listen most to their own constituents. Ask them to co-sponsor a bill, to press the chair or leaders to move it, and to vote for it.</li>
+      <li><b>Bring in your own legislators:</b> they listen most to their own voters. Ask them to co-sponsor, to press the chair or leaders, and to vote for it.</li>
       <li><b>Time it.</b> Committee agendas usually come out the week before a meeting, so write to the chair before then. A bill sent to the governor starts her 10-day clock; if you write her only once, write then.</li>
-      <li><b>Write again only with something new,</b> such as a new fact, a local impact, or a new stage ("it was just delivered; please sign it"). The same message twice from the same person usually counts once.</li>
+      <li><b>Write again only with news:</b> a new fact, a local impact, a new stage.</li>
       <li><b>Ask others to write too.</b> Ten people writing once counts for more than one person writing ten times. Share your watchlist so others can weigh in too.</li>
       <li><b>Make it personal.</b> A sentence about why it matters to you or your community carries more weight than form text.</li>
       <li><b>If it runs out of time,</b> ask the sponsors to reintroduce it next session, and ask your legislator in the other house to sponsor it there if it has no sponsor in that house.</li>
@@ -1598,7 +1613,7 @@ const PROGRESS = {
   passedA: { label: `Passed the ${STATE.houses[Object.keys(STATE.houses).find((h) => h !== "S")]} at some point`, test: (b) => b.passedA },
   onlyS: { label: `Passed the Senate but not the ${STATE.houses[Object.keys(STATE.houses).find((h) => h !== "S")]}`, test: (b) => b.passedS && !b.passedA },
   onlyA: { label: `Passed the ${STATE.houses[Object.keys(STATE.houses).find((h) => h !== "S")]} but not the Senate`, test: (b) => b.passedA && !b.passedS },
-  both: { label: `${PASSED_BOTH} (whatever happened next)`, test: (b) => b.stage >= 3 },
+  both: { label: PASSED_BOTH, test: (b) => b.stage >= 3 },
   never: { label: UNI ? "Never passed" : "Never passed either house", test: (b) => !b.passedS && !b.passedA },
 };
 if (UNI) for (const k of ["passedS", "passedA", "onlyS", "onlyA"]) delete PROGRESS[k];
@@ -1790,7 +1805,7 @@ function renderPipeline() {
     2: `${HOUSE.S} ${num(oneHouse[HOUSE.S] || 0)} · ${HOUSE[LOW]} ${num(oneHouse[HOUSE[LOW]] || 0)}`,
     3: !amend ? STATE.passedBothNote(DATA.current)
       : amend === counts[3] ? (voters < amend || STATE.amendmentDone ? "Constitutional amendments" : voted === voters ? "Went to the voters" : "Going to the voters")
-      : (([c, ...r]) => `${num(counts[3] - amend)} bill${counts[3] - amend === 1 ? "" : "s"} ${c.toLowerCase()}${r.join("")}`)(STATE.passedBothNote(DATA.current)),
+      : (([c = "", ...r]) => `${num(counts[3] - amend)} bill${counts[3] - amend === 1 ? "" : "s"}${c ? ` ${c.toLowerCase()}${r.join("")}` : ""}`)(STATE.passedBothNote(DATA.current)),
     4: DATA.current ? (nextDue ? `Next decision due ${fmtDate(nextDue)}` : counts[4] ? "Deadlines have passed" : "Nothing waiting") : "No decision in the records",
   };
   // Constitutional amendments that passed both houses (and bills sent to the voters): a line of their own under
@@ -1822,7 +1837,7 @@ function renderPipeline() {
   // The counts follow the other filters (a county, a topic ...): say so, so they don't seem to disagree with totals
   // elsewhere on the page (the notice counts every bill).
   const by = activeFilters().filter(([k]) => k !== "stage" && k !== "one");
-  const note = !by.length ? "" : `<p class="pnote">${by.length === 1 && by[0][0] === "nearby" ? `Counting only ${esc(by[0][3])}.` : "Counting only the bills your filters show."}</p>`;
+  const note = !by.length ? "" : `<p class="pnote"><span class="ftag" title="${by.length === 1 && by[0][0] === "nearby" ? `Counting only ${esc(by[0][3])}.` : "Counting only the bills your filters show."}">Filtered</span></p>`;
   // Prefiled bills, before the session opens: only the stages some bills are at.
   if (DATA.upcoming) {
     $("pipeline").innerHTML = note + `<div class="pg leg">${head(`In ${BODY}`, [0, 1, 2, 3])}${[0, 1, 2, 3, 4, 5, 6].filter((k) => !k || counts[k]).map(row).join("")}</div>`;
@@ -1885,6 +1900,8 @@ function plainAction(t, d, acts, short) {
   const PLAIN = [
     [/^reported (?:referred|and committed) to (.+)$/, (m, c) => `Approved by committee; sent to ${comm(c)}`],
     [/^reported$/, () => "Approved by committee"],
+    [/^reported with committee amendments$/, () => "Approved with changes"],
+    [/^reported as a committee substitute$/, () => "Approved as a rewritten bill"],
     [/^reported to calendar for consideration$/, () => "Sent to the floor calendar for consideration"],
     [/^committee discharged and committed to (.+)$/, (m, c) => `Taken out of committee; sent to ${comm(c)}`],
     [/^(?:re-)?referred to (.+)$/, (m, c) => `Referred to ${comm(c)}`],
@@ -2065,7 +2082,7 @@ const GREET = STATE.greetings || { S: "Senator", [LOW]: "Assemblymember" };
 // How many years a session runs (two in New York and New Jersey, one in Virginia), and its last year.
 const YEARS = STATE.years || 2;
 // The watchlist's deadline rules (lists_pages/watchrules.js, shared with /your-bills/), for this session.
-const WR = WatchRules.make(STATE, () => ({ session: DATA.session, current: DATA.current, upcoming: DATA.upcoming, lastVote: DATA.lastVote,
+const WR = WatchRules.make(STATE, () => ({ session: DATA.session, current: DATA.current, upcoming: DATA.upcoming, lastVote: DATA.lastVote, lastComm: DATA.lastComm,
   sessionEnd: DATA.sessionEnd, timing: DATA.insights?.timing }), { today: isoToday, nextMeeting: (b) => nextMeeting(b),
   isAmendment: (b) => isAmendment(b), toVoters: (b) => toVoters(b), passedBothLc });
 // What a bill's history says about where it is (lists_pages/billfacts.js, shared with the build, which words every bill the
@@ -2097,7 +2114,8 @@ const BODY = STATE.bodyName || "the Legislature", BODY_CAP = BODY[0].toUpperCase
 function interimNote(b) {
   if (!DATA.current || DATA.upcoming || STATE.floorVotesEnd === false || b.stage > 2 || endedOf(b)) return null;
   const lv = DATA.lastVote || "", today = isoToday();
-  if (!lv || (new Date(today) - new Date(lv)) / 864e5 <= 21) return null;
+  // (No floor votes for three weeks, and no committee meetings either: lists_pages/watchrules.js.)
+  if (!lv || !WR.standing(b).quiet) return null;
   const over = floorVotesOver(), cont = over && continuedTo(b), after = (b.last || "") > lv;
   const opening = (y) => { const d = STATE.opens?.(y); return d && d > today ? fmtDate(d) : `January ${y}`; };
   const carry = (y) => (STATE.interimCarry ? STATE.interimCarry(opening(y)) : `${BODY_CAP} isn't meeting until ${opening(y)}; it can be taken up again then.`);
@@ -2166,11 +2184,11 @@ function myReps() {
 function renderMyReps() {
   const box = $("myReps");
   if (!box) return;
-  // The state's "how to weigh in" text ("Pick your town above to see who they are") names them once they're chosen.
+  // The state's "how to weigh in" text ("Write your senator ... (Find yours ›)") names them once they're chosen.
   const chosen = chosenReps() && LEGS.length ? myReps() : [];
   for (const el of document.querySelectorAll(".pickline")) {
-    el.dataset.orig ||= el.textContent;
-    el.textContent = chosen.length ? `Yours: ${andList(chosen.map((r) => `${r.title} ${r.name}`))}.` : el.dataset.orig;
+    el.dataset.orig ||= el.innerHTML;
+    el.innerHTML = chosen.length ? `(yours: ${andList(chosen.map((r) => esc(`${r.title} ${r.name}`)))})` : el.dataset.orig;
   }
   if (!DATA.current || !LEGS.length || PRESET?.who || EMBED) { $("whereBox").hidden = true; return; }
   $("whereBox").hidden = false;
@@ -2197,8 +2215,7 @@ function renderMyReps() {
     ${where ? `<p class="muted">${where}</p>` : ""}
     ${ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr || "NY"}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
     <p class="muted" id="repMsg">We do not store your address; your county and district numbers are saved to this browser only.</p>` : ""}
-    <div class="repsel"><label>Senate <select id="repS">${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repA">${opts(LOW)}</select></label></div>
-    <p>Your legislators: ${reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`).join(" and ") || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
+    <div class="repsel"><label>Senate <select id="repS">${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repA">${opts(LOW)}</select></label></div>`;
 }
 function setReps(s, a, more = {}) {
   try { localStorage.setItem(REPS_STORE, JSON.stringify({ S: +s || 0, [LOW]: +a || 0, ...more })); } catch (e) {}
@@ -2272,8 +2289,7 @@ function renderTownRepsByHouse(box) {
     ${where ? `<p class="muted">${where}</p>` : ""}
     ${STATE.addressLookup && ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
     <p class="muted" id="repMsg">We do not store your address; your district numbers are saved to this browser only.</p>` : ""}
-    <div class="repsel"><label>${regions ? "Your senators" : "Senate"} <select id="repDS"${regions ? " disabled" : ""}>${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repDL">${opts(LOW)}</select></label></div>
-    <p>Your legislators: ${andList(reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`)) || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
+    <div class="repsel"><label>${regions ? "Your senators" : "Senate"} <select id="repDS"${regions ? " disabled" : ""}>${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repDL">${opts(LOW)}</select></label></div>`;
 }
 function renderTownReps(box) {
   if (townsSplitByHouse()) return renderTownRepsByHouse(box);
@@ -2288,8 +2304,7 @@ function renderTownReps(box) {
     ? `${esc(named(town))} is split between ${andList(town[2].map(([d]) => `District ${d}`))}. Pick yours below.`
     : `${esc(named(town))} is in District ${town[2][0][0]}.`;
   box.innerHTML = `<div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOpts}</select></label> <label>District <select id="repD">${distOpts}</select></label></div>
-    ${where ? `<p class="muted">${where}</p>` : ""}
-    <p>Your legislators: ${andList(reps.map((r) => `<b>${esc(r.title)} ${esc(r.name)}</b>`)) || "not set"}. Contact suggestions and the "How your legislators voted" filter use them.</p>`;
+    ${where ? `<p class="muted">${where}</p>` : ""}`;
 }
 // The Census geocoder answers in JSONP, so it works from a static page.
 function lookUpReps(address) {
@@ -2437,7 +2452,7 @@ function contactBook(b, canMove = true, oppose = false) {
         // Someone with no way to reach them and no decision to make is left out, rather than shown as an empty card.
         if (!reach && !info.url && !p.star) return null;
         const roles = p.roles.join("; ");
-        const ask = p.asks.length ? `<span class="ask">Ask: ${esc(p.asks.join("; "))}</span>` : "";
+        const ask = p.asks.length ? `<span class="ask">${this.ifSupport ? "If you support it" : "Ask"}: ${esc(p.asks.join("; "))}</span>` : "";
         return { star: p.star, html: `<li class="${p.star ? "key" : ""}"><span class="contact">${name}${status}${p.star ? ` ${DECIDES}` : ""}</span><span class="role">${esc(roles.charAt(0).toUpperCase() + roles.slice(1))}</span>${ask}${reach ? `<span class="reach">${draft}${reach}</span>` : ""}</li>` };
       });
       const shown = items.filter(Boolean).sort((x, y) => y.star - x.star);
@@ -2716,17 +2731,21 @@ function planFor(b, stance = "support") {
 // chosen in the bill panel (kept in this browser).
 const STANCE_STORE = STORE + "stance";
 function panelStances() { try { return JSON.parse(localStorage.getItem(STANCE_STORE) || "{}"); } catch (e) { return {}; } }
-const panelStance = (b) => watchStance(b) || panelStances()[billKey(b)] || "support";
+// (No side until the visitor picks one: null.)
+const panelStance = (b) => watchStance(b) || panelStances()[billKey(b)] || null;
 function setPanelStance(b, st) {
   if (isWatched(b)) { setWatch(b, { ...watchEntry(b), stance: st }); refreshWatchButtons(b); return; }
   const all = panelStances();
-  if (st === "oppose") all[billKey(b)] = st; else delete all[billKey(b)];
+  if (st) all[billKey(b)] = st; else delete all[billKey(b)];
   try { localStorage.setItem(STANCE_STORE, JSON.stringify(all)); } catch (e) {}
 }
 
 function nextSteps(b) {
-  const plan = planFor(b, panelStance(b));
+  // No side chosen yet: the support asks, each "If you support it: ..." (book.html()'s ifSupport).
+  const side = panelStance(b);
+  const plan = planFor(b, side || "support");
   if (!plan) return "";
+  plan.book.ifSupport = !side;
   let what = plan.what;
   const meet = nextMeeting(b);
   if (meet) {
@@ -2738,7 +2757,7 @@ function nextSteps(b) {
   const who = plan.book.html((plan.gov ? govItem(plan.gov, b) : "") + (plan.govAlso ? govItem(plan.govAlso, b, false) : ""));
   // The sponsors' contact details are on their cards below: the reintroduce line doesn't repeat them.
   if (!plan.actionable) what += reintroAsk(b, panelStance(b), !!who);
-  if (plan.actionable && who) what += `<p class="hint">You <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${(plan.opp ? "oppose" : "support") === s}">${s}</button>`).join("")}</span> this bill</p>`;
+  if (plan.actionable && who) what += `<p class="hint">You <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${side === s}">${s}</button>`).join("")}</span> this bill</p>`;
   // The person who decides the next step comes first, set apart; everyone else folds away.
   const box = document.createElement("ul");
   box.innerHTML = who;
@@ -2747,7 +2766,14 @@ function nextSteps(b) {
   const contacts = !items.length ? "" : keys.length
     ? `<div class="mainask">${list(keys)}</div>${rest.length ? `<details class="others"><summary>Others to contact (${rest.length})</summary>${list(rest)}</details>` : ""}`
     : list(rest);
-  return `<div class="next"><h4>What you can do</h4>${what}${plan.actionable ? repsLine() : ""}${contacts}</div>`;
+  // A decided bill (a law, a veto, a bill that died) has no "What you can do" heading, and its outcome isn't said again:
+  // the row and the history say it.
+  if (!plan.actionable) {
+    if (b.stage === 5) what = partlyVetoed(b) ? `<p class="when">${EXEC.The} vetoed part of it.</p>` : "";
+    if (b.stage === 6) what = what.replace(/^(<p class="when">)Vetoed\. /, "$1");
+    return what || contacts ? `<div class="next">${what}${contacts}</div>` : "";
+  }
+  return `<div class="next"><h4>What you can do</h4>${what}${repsLine()}${contacts}</div>`;
 }
 
 // Bills still open for comment, listed right here (filters on the Bills tab don't apply).
@@ -2767,7 +2793,7 @@ function renderOpenNow() {
   const waiting = BILLS.filter((b) => b.stage === 3 && !isAmendment(b) && !toVoters(b) && mine(b)).sort((a, b) => own(a) - own(b) || (b.last || "").localeCompare(a.last || ""));
   const all = [...desk, ...waiting], nOwn = all.filter((b) => !own(b)).length;
   const more = waiting.length - openShown;
-  $("openNow").innerHTML = `<h2>${L ? `${esc(L.label)}'s bills open for comment` : "Open for comment"}</h2>
+  $("openNow").innerHTML = `<h2>Coming up</h2>
     ${L ? `<p class="muted">${num(nOwn)} they sponsor and ${num(all.length - nOwn)} they co-sponsor; their own bills are listed first.</p>` : ""}
     ${comingUp(mine)}
     <h3>On ${EXEC.the}'s desk (${num(desk.length)}), soonest deadline first</h3>
@@ -3192,7 +3218,12 @@ function renderTrends() {
   const who = ([h, name]) => `${TITLE[h]} ${legLink(h, name)}`;
   const cards = T.subjects.map((x) => {
     const p = x.per, hi = Math.max(...p), at = p.indexOf(hi);
-    const story = x.kind === "spike"
+    // In bills (x.n, each session's count); the sparkline is per 1,000, so sessions of different sizes compare.
+    const n = x.n, here = DATA.current ? "this session" : `in ${lastS}`;
+    const story = n ? (x.kind === "spike"
+      ? `Peaked at <b>${num(n[at])}</b> bills in ${span(S[at])}; <b>${num(n[n.length - 1])}</b> ${here}.`
+      : `<b>${num(n[n.length - 1])}</b> bills ${here}; ${num(n[0])} in ${first}.`)
+      : x.kind === "spike"
       ? `Peaked at <b>${hi}</b> per 1,000 bills in ${span(S[at])}; <b>${p[p.length - 1]}</b> now.`
       : `<b>${p[p.length - 1]}</b> per 1,000 bills in ${lastS}, up from ${p[0]} in ${first}.`;
     const times = x.kind === "rise" && p[0] ? Math.round(p[p.length - 1] / p[0]) : 0;
@@ -3209,12 +3240,12 @@ function renderTrends() {
       ${x.note ? `<p class="muted">${esc(x.note)}</p>` : ""}</div>`;
   }).join("");
   box.innerHTML = `<h2>What's changing</h2>
-    <p>Subjects that came up in more and more bills, ${first} to ${lastS}.</p>
+    <p>Subjects on the rise since ${first}${TIP(`The lines: out of every 1,000 bills introduced each session, how many name the subject in their title or summary. ${lastS} is still under way. The subjects were found by scanning for the phrases whose share changed most, then checked by hand.`)}</p>
     <div class="tcards">${cards}</div>
     ${words ? `<h3 class="sub">How the wording changed</h3>
     <p class="muted">The same things in new words. Dotted line: the old wording; solid: the new.</p>
     <div class="tcards">${words}</div>` : ""}
-    <p class="note">Out of every 1,000 bills introduced each session, how many name the subject in their title or summary. ${lastS} is still under way.${TIP("The subjects were found by scanning for the phrases whose share changed most, then checked by hand.")}</p>`;
+`;
 }
 
 // ---- Who works with whom: a co-sponsorship network for one house, this session ----
@@ -3541,7 +3572,7 @@ function renderStats() {
   const per100 = nI ? Math.round((lI / nI) * 100) : 0;
   $("statFunnel").innerHTML = "";
   const [q0, , , , qAll] = I.persistence?.[t] || [0, 0, 0, 0, 0];
-  const tries = I.pastSessions.length >= 2 && qAll ? `<p>${pctOf(qAll - q0, qAll)}% of laws took more than one try: they were introduced in an earlier session first.</p>` : "";
+  const tries = I.pastSessions.length >= 2 && qAll ? `<p>${pctOf(qAll - q0, qAll)}% of laws had been introduced in an earlier session first.</p>` : "";
   $("statOdds").innerHTML = `<h2>Odds of becoming law${ofTopic}</h2>
     ${nI ? `<p class="takeaway">${per100 >= 1 ? `About ${per100} in 100 bills introduced became law.` : "Fewer than 1 in 100 bills introduced became law."}</p>` : ""}
     ${sankey(odds, I.fate?.[t], I.commFate?.[t])}
@@ -3589,10 +3620,10 @@ function renderStats() {
       ${hr.length > 8 && !commAll ? `<p class="muted">${hr.length - 8} more</p>` : ""}</div>`;
   };
   $("statComm").innerHTML = `<h2>Committees${ofTopic}</h2>
-    <p class="muted">Each committee's chair and this session's bills: <button type="button" class="linkish" data-how="howComm">Committees, in How laws are made</button>.</p>
+    <p class="muted"><button type="button" class="linkish" data-how="howComm">Chairs and this session's bills ›</button></p>
     <div class="commctl"><label class="commsort">Sort by <select data-commsort>${Object.entries(COMM_SORTS).map(([k, l]) => `<option value="${k}"${k === commSort ? " selected" : ""}>${l}</option>`).join("")}</select></label></div>
     <div class="houses">${houseList(LOW, UNI ? "Committees" : `${HOUSE[LOW]} committees`)}${houseList("S", "Senate committees")}</div>
-    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)} referred to each committee, ${pastSpan()}; "now": this session so far.${shellsOut()}</p>
+    <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)} referred to each committee, ${pastSpan()}.${TIP("“now”: this session so far.")}${shellsOut()}</p>
     ${rows.length > 16 ? `<button class="act-btn" type="button" data-commall>${commAll ? "Show fewer" : `Show all ${rows.length} committees`}</button>` : ""}`;
 
   // Timing
@@ -3601,7 +3632,7 @@ function renderStats() {
   const mid = shares.slice().sort((a, b) => a - b)[Math.floor(shares.length / 2)];
   const [late, signed] = I.lateSigning;
   $("statTiming").innerHTML = `<h2>Timing${ofTopic}</h2>
-    <p class="muted">This year's dates: <button type="button" class="linkish" data-how="howCalSec">the calendar, in How laws are made</button>.</p>
+    <p class="muted"><button type="button" class="linkish" data-how="howCalSec">This year's calendar ›</button></p>
     ${monthChart(I, t)}
     ${STATE.floorVotesEnd === false ? "" : `<h3 class="sub">End of session</h3>
     <div class="vlist">${vrow("Floor votes in the session's last 3 weeks", `${YEARS === 1 ? pastSpan() : `${years[0].year}–${years[years.length - 1].year}`}${I.timing.some((y) => y.year === 2020) ? ", except 2020" : ""}`, [[mid, "a"]], years.length > 1 ? `<b class="big">${mid}%</b> in a typical year<small>Range ${Math.min(...shares)}–${Math.max(...shares)}%</small>` : `<b class="big">${mid}%</b>`)}
@@ -3648,15 +3679,17 @@ function renderStats() {
   const PARTY = [["DR", "Both parties"], ["D", "Democrats only"], ["R", "Republicans only"]];
   const pPast = I.party?.past?.[t] || {}, pNow = I.party?.current?.[t] || {};
   const mixMax = 100;
-  const csLine = cs.length > 5 && cs[0][0] && cs[5][0] ? `<p class="takeaway">Bills with 40 or more co-sponsors became law ${pctOf(cs[5][2], cs[5][0])}% of the time; bills with none, ${pctOf(cs[0][2], cs[0][0])}%.</p>` : "";
+  // "More co-sponsors, better odds: none 0%, 20 or more 64%." (said only when it's so)
+  const n20 = cs.length > 5 ? cs[4][0] + cs[5][0] : 0, law20 = n20 ? pctOf(cs[4][2] + cs[5][2], n20) : 0, law0 = cs[0]?.[0] ? pctOf(cs[0][2], cs[0][0]) : 0;
+  const csLine = n20 && cs[0][0] && law20 > law0 ? `<p class="takeaway">More co-sponsors, better odds: none ${law0}%, 20 or more ${law20}%.</p>` : "";
   const pRow = (k) => { const known = PARTY.some(([x]) => (pPast[x] || [0])[0] > 0); return (known ? pPast[k] : pNow[k]) || [0, 0, 0]; };
   const [pb, pd, pr] = ["DR", "D", "R"].map(pRow);
   const pLine = pb[0] && pd[0] && pr[0] ? `<p class="takeaway">Bills with sponsors from both parties became law ${pctOf(pb[2], pb[0])}% of the time; Democrats' alone ${pctOf(pd[2], pd[0])}%, Republicans' alone ${pctOf(pr[2], pr[0])}%.</p>` : "";
   $("statCosp").innerHTML = `<h2>${NOPARTY ? "Co-sponsors" : "Co-sponsors and party"}${ofTopic}</h2>
-    <p class="key"><span><i class="k-appr"></i>${PASSED_BOTH}</span><span><i class="k-law"></i>Became law</span></p>
+    <p class="key"><span><i class="k-law"></i>Became law</span></p>
     <h3 class="sub">By number of co-sponsors</h3>
     ${csLine}
-    <div class="vlist">${cs.map(([n, both, law], i) => vrow(CB[i], `${num(n)} bills`, [[pctOf(both, n), "a"], [pctOf(law, n), "l"]],
+    <div class="vlist">${cs.map(([n, both, law], i) => vrow(CB[i], `${num(n)} bills`, [[pctOf(law, n), "l"]],
       `${pctOf(both, n)}% passed · <b class="big">${pctOf(law, n)}%</b> law`)).join("")}</div>
     <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${pastSpan()}.${shellsOut()}</p>
     ${NOPARTY ? "" : `<h3 class="sub">By party of sponsors and co-sponsors</h3>
@@ -3664,7 +3697,7 @@ function renderStats() {
     <div class="vlist">${PARTY.map(([k, l]) => { const pastKnown = PARTY.some(([x]) => (pPast[x] || [0])[0] > 0);
       // Without parties for past sessions' sponsors (Virginia's come only with today's legislators), this session's.
       const [n, both, law] = pastKnown ? pPast[k] || [0, 0, 0] : pNow[k] || [0, 0, 0]; const now = pastKnown ? pNow[k] : null;
-      return vrow(l, `${num(n)} bills`, [[(pctOf(both, n) / mixMax) * 100, "a"], [(pctOf(law, n) / mixMax) * 100, "l"]],
+      return vrow(l, `${num(n)} bills`, [[(pctOf(law, n) / mixMax) * 100, "l"]],
         `${pctOf(both, n)}% passed · <b class="big">${pctOf(law, n)}%</b> law${now ? `<small>This session so far: ${pctOf(now[1], now[0])}% passed · ${pctOf(now[2], now[0])}% law</small>` : ""}`,
         null); }).join("")}</div>
     <p class="note">${topicName.charAt(0).toUpperCase() + topicName.slice(1)}, ${PARTY.some(([x]) => (pPast[x] || [0])[0] > 0) ? pastSpan() : `${span(DATA.session)} session`}.${TIP(`“Both parties”: at least one sponsor or co-sponsor from each party. ${STATE.partySource}.`)}${shellsOut()}</p>`}`;
@@ -3685,10 +3718,9 @@ function renderOutcomes() {
   $("ocHead").textContent = `Outcomes by session${t === "all" ? "" : `: ${TOPICS[t]} bills`}`;
   // The open session's shares are so far: how many that passed both houses aren't decided yet.
   const open = rows.find((r) => r.session === LATEST), waiting = open ? Math.max(0, open.c[1] - open.c[2] - open.c[3]) : 0;
-  $("ocOpen").textContent = open && waiting ? `${span(LATEST)} so far: ${num(waiting)} bill${waiting === 1 ? "" : "s"} that passed both houses ${waiting === 1 ? "isn't" : "aren't"} decided yet, so its shares will change. ` : "";
+  $("ocOpen").textContent = open && waiting ? `${span(LATEST)}: ${num(waiting)} bill${waiting === 1 ? "" : "s"} still with ${EXEC.the}. ` : "";
   $("ocShells").textContent = shellsOut();
-  if (STATE.executive) { const note = $("ocUntil").closest("p"); note.innerHTML = note.innerHTML.replace("“Governor signed”: share of bills the governor acted on.", `“${EXEC.title} signed”: share of bills ${EXEC.the} acted on.`); }
-  $("ocTable").innerHTML = `<thead><tr><th>Session</th><th>Bills introduced</th><th>${PASSED_BOTH}</th><th>Signed into law</th><th>Vetoed</th><th>Became law, as % of bills introduced</th><th>${EXEC.title} signed, as % of bills ${EXEC.the} acted on</th></tr></thead>
+  $("ocTable").innerHTML = `<thead><tr><th>Session</th><th>Bills introduced</th><th>${PASSED_BOTH}</th><th>Signed into law</th><th>Vetoed</th><th>Became law${TIP("Share of all bills introduced.")}</th><th>Signed${TIP(`Share of the bills ${EXEC.the} acted on.`)}</th></tr></thead>
     <tbody>${rows.map(({ session, c, share }) => `<tr class="${session === DATA.session ? "here" : ""}">
       <td>${span(session)}${session === LATEST ? " (so far)" : ""}</td><td>${num(c[0])}</td><td>${num(c[1])}</td><td>${num(c[2])}</td><td>${num(c[3])}</td>
       <td class="bar"><div class="sharebar"><i style="width:${(share / max) * 70}%"></i><b>${pct(c[2], c[0])}</b></div></td>
@@ -3773,7 +3805,7 @@ function renderPersonStats(L) {
     const x = voteOf(v, L); if (!x) continue; fv++; if (x === "No") no++; else if (x === "Excused" || x === "Absent") away++;
   }
 
-  $("personStats").innerHTML = `<h2>${esc(L.label)}: their numbers</h2>
+  $("personStats").innerHTML = `<h2>Their record</h2>
     <h3 class="sub">Their bills this session</h3>
     ${peer ? `<p class="key"><span><i class="k-appr"></i>${last}</span><span><i class="k-tick p"></i>${typical}</span></p>` : ""}
     <div class="vlist">${path}</div>
@@ -3831,7 +3863,9 @@ function historyBlock(b) {
     // Committee and sent to the floor · 11–3", not two lines for one step.
     const sent = v.kind !== "F" && v.yes > v.no && !STATE.voteWhat?.(v) && items.find((x) => x.house === "floor" && x.d === v.date && !x.voted);
     if (sent) { sent.voted = true; sent.rank = 1; sent.html = `Approved by the ${what} and sent to the floor <span class="tally">· ${tally}</span>`; continue; }
-    items.push({ d: v.date || "", html: `${what}: ${tally}`, rank: v.kind === "F" ? 2 : 1 });
+    // A committee vote says what happened: "Approved by the Senate Labor Committee · 3–1", "Voted down in the ...".
+    const html = v.kind === "F" ? `${what}: ${tally}` : `${v.yes > v.no ? "Approved by" : "Voted down in"} the ${what} <span class="tally">· ${tally}</span>`;
+    items.push({ d: v.date || "", html, rank: v.kind === "F" ? 1.5 : 1 });
   }
   items.sort((x, y) => x.d.localeCompare(y.d) || x.rank - y.rank);
   if (DATA.current && b.stage === 4 && b.due) items.push({ d: b.due, html: esc(STATE.dueLabel(b.due)), est: true });
@@ -3846,9 +3880,7 @@ const earlierSessions = (b) => new Set(b.earlier.map((e) => e[0])).size;
 const LINEAGE = `data-lineage title="See this bill in other sessions"`;
 function historyTags(b) {
   const tags = [];
-  // A session can hold more than one version of a bill (a new number the second year).
-  const n = earlierSessions(b);
-  if (n) tags.push(`<span class="tag hist" ${LINEAGE}>${n} earlier session${n === 1 ? "" : "s"}</span>`);
+  // (How many earlier sessions isn't a tag: "This bill in other sessions" in the panel says it.)
   const vetoes = new Map();
   for (const e of b.earlier) if (e[2] === 6) vetoes.set(e[0], (vetoes.get(e[0]) || 0) + 1);
   if (vetoes.size) tags.push(`<span class="tag veto" ${LINEAGE}>Vetoed in ${[...vetoes].sort((x, y) => x[0] - y[0]).map(([s, c]) => span(s) + (c > 1 ? ` (${c === 2 ? "twice" : `${c} times`})` : "")).join(", ")}</span>`);
@@ -3893,7 +3925,7 @@ function whatItDoesHtml(b, head = true) {
   const ps = stmt.split("\n").filter((p) => p.trim());
   const lead = ps.length > 1 && ps.join(" ").length > 700 ? `${paras(ps[0])}<details class="memo"><summary>Read the rest</summary>${paras(ps.slice(1).join("\n"))}</details>` : paras(stmt);
   const body = `${stmt ? `<div class="wd-stmt">${lead}<p class="muted">${esc(label || "From the sponsor's statement.")}</p></div>` : ""}
-    ${commText ? `<details class="memo"><summary>As the ${esc(comm || "committee")} approved it${when ? `, ${fmtDate(when)}` : ""}</summary>${paras(commText)}</details>` : ""}
+    ${commText ? `<details class="memo"><summary${comm ? ` title="${esc(comm)}"` : ""}>Committee statement${when ? `, ${when.slice(0, 4) === isoToday().slice(0, 4) ? fmtDate(when).replace(/, \d{4}$/, "") : fmtDate(when)}` : ""}</summary>${paras(commText)}</details>` : ""}
     ${cost ? `<details class="memo"><summary>What it would cost (${BODY}'s budget office)</summary>${paras(cost)}</details>` : ""}`;
   return head ? `<div class="whatdoes"><h4>What it does</h4>${body}</div>` : body;
 }
@@ -4071,12 +4103,29 @@ function renderList() {
     return;
   }
   if (!slice.length) {
-    $("list").innerHTML = `<div class="empty">No bills match these filters.</div>`;
+    $("list").innerHTML = `<div class="empty">No bills match.${otherYears()}</div>`;
   } else {
     $("list").innerHTML = slice.map(billRow).join("");
   }
   $("more").hidden = rows.length <= state.shown;
   $("more").textContent = `Show ${num(Math.min(PAGE, rows.length - state.shown))} more`;
+}
+
+// A search that found nothing: the same words in the two nearest other sessions, and the national issue page when the
+// words name an issue (issues/summary.json, fetched once).
+let OTHER_YEARS_ISSUES = false;
+function otherYears() {
+  if (!state.q) return "";
+  const q = state.q.trim(), hash = `#v&${new URLSearchParams({ q })}`;
+  const others = DATA.sessions.filter((x) => x.session !== DATA.session && x.url && !/^https?:/.test(x.url))
+    .sort((a, b) => Math.abs(a.session - DATA.session) - Math.abs(b.session - DATA.session) || b.session - a.session).slice(0, 2);
+  const years = others.map((x) => `<a href="${esc(BASE + x.url + hash)}">${span(x.session)}</a>`).join(" · ");
+  let issue = "";
+  if (ROOT && !ISSUE_META && !OTHER_YEARS_ISSUES) { OTHER_YEARS_ISSUES = true; loadIssues().then(() => { if (ISSUE_META) renderList(); }); }
+  const low = q.toLowerCase();
+  const hit = low.length >= 3 && ISSUE_META?.issues.find((i) => [i.name, ...(i.words || [])].some((w) => { w = String(w).toLowerCase(); return w && (low.includes(w) || (low.length >= 4 && w.includes(low))); }));
+  if (hit) issue = `<a href="${esc(`${siteTopUrl()}issues/${encodeURIComponent(hit.id)}/`)}">${esc(hit.name)} in every state ›</a>`;
+  return `${years ? ` Try ${years} ›` : ""}${issue ? `<br>${issue}` : ""}`;
 }
 
 // Party of the sponsors and co-sponsors: a "D", "R" or "Both" badge in the muted party colors, with the head counts.
@@ -4766,7 +4815,7 @@ function allStars() {
   } catch (e) {}
   return { n, places: sts.size, us: sts.has("us") };
 }
-// The state's name as the Watchlist tab says it ("Your bills in New York", "Share your New York bills").
+// The state's name as the Watchlist tab says it ("Your New York bills", "Share your New York bills").
 const stateName = () => STATE.name || STATE.code.toUpperCase();
 // The state's Watchlist tab shares this state's bills; Your bills shares all of them (a separate list, on purpose).
 const shareWords = () => (STATE.code === "us" ? "Share your bills in Congress" : `Share your ${stateName()} bills`);
@@ -4811,14 +4860,16 @@ function renderWatchView() {
   } else {
     // One line: the count, and Share on the right; the share options open below it (with an empty list too, to connect
     // another device's list). Sharing is on the public site only.
-    // "Your bills in New York · All your bills (12 in 4 states) ›": the same bills as on Your bills, this state's only.
+    // "Your New York bills · All your bills (12 in 4 states) ›": the same bills as on Your bills, this state's only.
     const mine = myPublished(), canShare = !!(ROOT && LISTS_API), logged = here.reduce((s, b) => s + logOf(b).length, 0);
     const all = allStars(), allLink = ROOT ? `<span class="wlsep">·</span><a href="${esc(siteTop())}your-bills/">All your bills${all.n ? ` (${num(all.n)}${all.places > 1 ? ` in ${num(all.places)} ${all.us ? "places" : "states"}` : ""})` : ""} ›</a>` : "";
     W_SHARE_OPEN ??= !!mine;
-    card.innerHTML = `<div class="wlhead"><h2 class="wlline">Your bills in ${esc(stateName())}${allLink}</h2>
-      <span class="muted">${here.length ? `${num(here.length)} bill${here.length === 1 ? "" : "s"}` : "No bills yet"}${logged ? ` · ${num(logged)} action${logged === 1 ? "" : "s"} logged` : ""} · ${mine ? "shared" : "saved in this browser only"}${back}</span>
+    const yours = STATE.code === "us" ? "Your bills in Congress" : `Your ${esc(stateName())} bills`;
+    const kept = mine ? "shared" : "";
+    card.innerHTML = `<div class="wlhead"><h2 class="wlline">${yours}${allLink}${mine ? "" : TIP("Saved in this browser. Share the list to see it on another device.")}</h2>
+      <span class="muted">${[logged ? `${num(logged)} action${logged === 1 ? "" : "s"} logged` : "", kept].filter(Boolean).join(" · ")}${back}</span>
       ${canShare ? `<button class="act-btn${W_SHARE_OPEN || mine ? "" : " primary"}" type="button" data-wl="share" aria-expanded="${W_SHARE_OPEN}">${W_SHARE_OPEN ? "Hide sharing" : mine ? "Sharing" : shareWords()}</button>` : ""}</div>
-      ${list.length ? "" : `<p>Click ☆ next to any bill to add it.</p>`}${carryBox()}
+      ${list.length ? "" : `<p>Star ☆ a bill to add it here.</p>`}${carryBox()}
       ${canShare ? `<div class="sharebox"${W_SHARE_OPEN ? "" : " hidden"}>${shareBox(here.length)}</div>` : ""}
       ${followedHere()}${otherSessionsLine()}`;
     if (mine) schedulePub(PUB_TIMER ? 60e3 : 2e3);
@@ -5018,7 +5069,8 @@ const chosenStance = (b) => (SHARED ? sharedStance(b) : watchStance(b) || panelS
 // grouped by side; "about" for bills without one.
 function draftFor(person, xs) {
   const greet = person.gov ? EXEC.dear : `Dear ${GREET[person.house]} ${shortName(person.name)},`;
-  const line = (x) => `- ${x.b.nums.join(" / ")}, ${x.b.title}: please ${x.ask}.`;
+  // (No side taken: the bill, without an ask.)
+  const line = (x) => `- ${x.b.nums.join(" / ")}, ${x.b.title}${chosenStance(x.b) ? `: please ${x.ask}` : ""}.`;
   const groups = [["support", "in support of"], ["oppose", "in opposition to"], [null, "about"]]
     .map(([k, w]) => [w, xs.filter((x) => (chosenStance(x.b) || null) === k)]).filter(([, ys]) => ys.length);
   const body = groups.map(([w, ys], i) => `I'm ${i ? "also " : ""}writing ${w} ${ys.length === 1 ? "this bill" : "these bills"}:\n\n${ys.map(line).join("\n")}`).join("\n\n");
@@ -5070,13 +5122,13 @@ function fillSelects() {
   $("votedField").hidden = !DATA.current || !votePeople().length;
   $("votedLabel").textContent = PRESET?.who ? "How they voted" : "How your legislators voted";
   const reps = PRESET?.who ? [] : votePeople();
-  $("whereSum").textContent = reps.length ? `Your legislators: ${andList(reps.map((L) => `${L.title || ""} ${L.name}`.trim()))}` : "Where you live";
+  // (Each name links to the legislator's page on the public site.)
+  $("whereSum").innerHTML = reps.length ? `Your legislators: ${andList(reps.map((L) => { const n = esc(`${L.title || ""} ${L.name}`.trim()); return ROOT && L.slug && DATA.current ? `<a href="${esc(ROOT + L.slug)}/">${n}</a>` : n; }))}` : "Find your legislators";
   for (const id of ["who", "law", "voted", "changed", ...MORE_KEYS]) $(id)?.classList.toggle("on", !!state[id]);
   // How many more bills each "hide" box takes out, given the other filters.
-  $("nearbyCounty").textContent = HOME ? placeName(HOME) : `your ${PLACE_WORD}`;
   // (States that find legislators by town have no county box.)
   $("nearby").closest(".hidebox").classList.toggle("nohome", !HOME || !!(DATA.towns && !STATE.townRegions));
-  $("nearbyN").textContent = `(hides ${num(BILLS.filter((b) => matches(b, "nearby") && farAway(b)).length)})`;
+  $("nearbyN").textContent = `(${num(BILLS.filter((b) => matches(b, "nearby") && farAway(b)).length)})`;
   const more = MORE_KEYS.filter((k) => state[k]).length;
   $("moreCount").textContent = more ? `${more} active` : "";
   if (more) $("moreFilters").open = true;
@@ -5299,6 +5351,12 @@ function wire() {
     $("issueSel").addEventListener("pointerdown", () => loadIssues(), { once: true });
     $("issueSel").addEventListener("change", (e) => { state.issue = e.target.value; state.shown = PAGE; syncControls(); render(); countUse("filter/issue"); });
   }
+  // The phone's session menu (renderSessions()): to the session picked.
+  document.addEventListener("change", (e) => {
+    const m = e.target.closest?.(".sessmenu"), o = m?.selectedOptions[0];
+    if (!o?.value) return;
+    if (o.hasAttribute("data-ext")) { window.open(o.value, "_blank", "noopener"); m.value = ""; } else location.href = o.value;
+  });
   // A bill pointed at, touched or reached with the keyboard: its shard starts downloading before it's opened.
   const pre = (e) => { const el = e.target.closest?.(".bill[data-idx], .wcard[data-idx]"); if (el && SPLIT) prefetchBill(BILLS[+el.dataset.idx]); };
   document.addEventListener("pointerover", pre, { passive: true });
@@ -5726,37 +5784,6 @@ function showHowSec(id) {
 // Committees that cover the same subject under different names (Senate name -> Assembly name, subject).
 const COMM_PAIRS = STATE.commPairs;
 const COMM_NOTES = STATE.commNotes;
-// How many committees each house has, and how many committees its bills go through.
-function commCounts(keys) {
-  const NOT_SUBJECT = / · (Rules|Calendar|Calendar and Rules)$/;  // (Tennessee's House: Calendar and Rules)
-  const col = (h) => {
-    const mine = BILLS.filter((b) => b.vers.some((v) => v.p[0] === h));
-    const n = (b) => new Set(b.comms.filter((k) => k[0] === h && !NOT_SUBJECT.test(k))).size;
-    const sent = mine.filter((b) => n(b) > 0), passed = mine.filter((b) => (h === "S" ? b.passedS : b.passedA));
-    return {
-      // Current committees only, when the contacts list them (a few bills carry old committee names).
-      comms: keys.filter((k) => k[0] === h && !NOT_SUBJECT.test(k) && (!Object.keys(DATA.contacts?.committees || {}).length || Object.keys(DATA.contacts.committees).some((c) => c.startsWith(`${h}:${commKey(k.slice(4))}`)))).length,
-      one: pctOf(sent.filter((b) => n(b) === 1).length, sent.length),
-      more: pctOf(sent.filter((b) => n(b) > 1).length, sent.length),
-      passed: passed.length,
-      passedMore: pctOf(passed.filter((b) => n(b) > 1).length, passed.length),
-      passedRules: pctOf(passed.filter((b) => b.comms.includes(`${h} · Rules`)).length, passed.length),
-    };
-  };
-  const S = col("S"), A = col(LOW);
-  // (One house: one column.)
-  const row = (label, f) => `<tr><th scope="row">${label}</th>${UNI ? "" : `<td>${f(S)}</td>`}<td>${f(A)}</td></tr>`;
-  return `<div class="tablewrap"><table class="commcounts">
-    <thead><tr><th></th>${UNI ? "" : `<th>${HOUSE.S}</th>`}<th>${HOUSE[LOW]}</th></tr></thead>
-    <tbody>
-      ${row("Committees that received bills", (x) => num(x.comms))}
-      ${row("Bills sent to just one committee", (x) => `${x.one}%`)}
-      ${row("Bills sent to two or more", (x) => `${x.more}%`)}
-      ${row("Bills that passed: went through two or more committees", (x) => `${x.passedMore}%`)}
-      ${S.passedRules || A.passedRules ? row("Bills that passed: went through Rules", (x) => `${x.passedRules}%`) : ""}
-    </tbody></table></div>
-    <p class="note">${span(DATA.session)} session${DATA.current ? " so far" : ""}. ${S.passedRules || A.passedRules ? "Committee counts leave out Rules. " : ""}${Math.max(S.passedMore, A.passedMore) >= 20 ? "Most bills never leave their first committee, so few are sent to a second; among bills that passed, needing more than one is common." : "Nearly every bill goes to just one committee."}</p>`;
-}
 function renderHowComm() {
   if (later("how", "comm", renderHowComm, "howComm", () => ({ parts: ["stats", "rows"] }))) return;
   const I = DATA.insights || {};
@@ -5782,14 +5809,14 @@ function renderHowComm() {
     g.total = [...g.S, ...g[LOW]].reduce((s, k) => s + counts[k], 0);
   }
   const half = (house, list) => {
-    if (!list.length) return `<div class="ch none"><span class="house">${HOUSE[house]}</span><p class="muted">No matching committee</p></div>`;
+    if (!list.length) return `<div class="ch none"></div>`;
     return list.map((k) => {
       // Some committees go by a longer name in the contacts ("Economic Development, Job Creation, …").
       const all = DATA.contacts?.committees || {}, ck = `${house}:${commKey(name(k))}`;
       const c = all[ck] || Object.entries(all).find(([key]) => key.startsWith(ck))?.[1];
       // Approval rates count bills that start in a committee; Rules only ever sees bills from other committees.
       const p = past[k];
-      const usual = p && p[0] >= 20 && !/^Rules$/.test(name(k)) ? `Usually approves ${pctOf(p[1], p[0])}% of the bills that start here` : "";
+      const usual = p && p[0] >= 20 && !/^Rules$/.test(name(k)) ? `Approves about ${pctOf(p[1], p[0])}%` : "";
       return `<div class="ch"><span class="house">${HOUSE[house]}</span>
         <b>${esc(commPlain(name(k)))}</b>
         ${c?.chair ? `<span>Chair: ${esc(c.chair)}</span>` : ""}
@@ -5801,17 +5828,9 @@ function renderHowComm() {
     const note = COMM_NOTES[g.label.toLowerCase()];
     return `<div class="ccard"><h3>${esc(g.label)}</h3>${note ? `<p class="cnote">${esc(note)}</p>` : ""}<div class="chalves">${UNI ? "" : half("S", g.S)}${half(LOW, g[LOW])}</div></div>`;
   });
+  // (What committees do is in The steps; the cards are each subject's committees, busiest first.)
   $("howComm").innerHTML = `<h2>Committees</h2>
-    ${PRESET?.who ? "" : `<p class="muted">How the committees compare: <button type="button" class="linkish" data-gostat="statComm">Committees, in Statistics</button>.</p>`}
-    <ul class="impact">
-      ${(STATE.commIntro || [
-        ["Every bill starts in a committee on its subject.", "Each house has its own committees, with their own members and chair."],
-        ["The chair decides which bills come up.", "A bill that never gets on the agenda dies there, which is what happens to most bills."],
-        ["Some bills need a second committee.", STATE.secondCommittee],
-      ]).map(([head, text]) => `<li><b>${head}</b> ${text}</li>`).join("")}
-    </ul>
-    ${commCounts(keys)}
-    <p class="muted">${UNI ? "The committees" : `Each subject's ${HOUSE.S} and ${HOUSE[LOW]} committees`}, busiest first. Click the number of bills to see them.</p>
+    ${PRESET?.who ? "" : `<p class="muted"><button type="button" class="linkish" data-gostat="statComm">Committee odds ›</button></p>`}
     <div class="ccards">${cards.join("")}</div>`;
 }
 
@@ -5831,7 +5850,7 @@ function renderHowCal() {
   const bar = (cls, a, z, text) => `<b${cls ? ` class="${cls}"` : ""} style="left:${pos(a)}%;width:${(pos(z) - pos(a)).toFixed(2)}%">${text}</b>`;
   const today = new Date().toISOString().slice(0, 10);
   const now = DATA.current && today < `${Y + YEARS}` ? `<span class="now" style="left:${pos(today)}%;top:${LEG - 4}px;height:${GOV + H - LEG + 8}px"><i>Today</i></span>` : "";
-  const BOTTOM = 262;
+  const BOTTOM = 220;
   $("howCal").innerHTML = `<div class="tl">
     <span class="rl" style="top:${LEG}px">${BODY_CAP.replace(/^The /, "")}</span><span class="rl" style="top:${GOV}px">${EXEC.title}</span>
     <div class="plot">
@@ -5841,11 +5860,22 @@ function renderHowCal() {
       <div class="track gov" style="top:${GOV}px">${cal.gov.map((b) => bar(...b)).join("")}</div>
       ${now}
       <ol>${events.map(([d, side, row, when, text]) => { const x = pos(d);
-        const style = side === "up" ? `top:22px;height:${mid(row) - 22}px` : `top:${mid(row)}px;height:${BOTTOM - mid(row)}px`;
-        return `<li class="${side}${x > 80 ? " right" : ""}" style="left:${x}%;${style}"><div><b>${esc(when)}</b>${esc(text)}</div></li>`; }).join("")}</ol>
+        const style = side === "up" ? `top:66px;height:${mid(row) - 66}px` : `top:${mid(row)}px;height:${BOTTOM - mid(row)}px`;
+        return `<li class="${side}${x > 80 ? " right" : ""}" style="left:${x}%;${style}"><div><b>${esc(withYear(when, d))}</b></div></li>`; }).join("")}</ol>
     </div>
   </div>
-  <p class="note tl-note">${cal.note}</p>`;
+  <ol class="tl-notes">${events.map(([d, , , when, text]) => `<li><b>${esc(withYear(when, d))}</b> ${esc(text)}</li>`).join("")}</ol>
+  ${cal.note ? `<p class="note tl-note">${cal.note}</p>` : ""}`;
+}
+// A calendar label with its year: "April" -> "April 2026", "June 30" -> "June 30, 2026", "September to December" ->
+// "Sept–Dec 2026" (d: the event's day). A label that names a year keeps it.
+const MON_SHORT = { January: "Jan", February: "Feb", March: "Mar", April: "Apr", May: "May", June: "June", July: "July", August: "Aug", September: "Sept", October: "Oct", November: "Nov", December: "Dec" };
+function withYear(when, d) {
+  if (/\b\d{4}\b/.test(when) || !/^[A-Z]/.test(when)) return when;
+  const y = d.slice(0, 4), range = /^([A-Z][a-z]+) (?:to|through) ([A-Z][a-z]+)$/.exec(when);
+  if (range && MON_SHORT[range[1]] && MON_SHORT[range[2]]) return `${MON_SHORT[range[1]]}–${MON_SHORT[range[2]]} ${y}`;
+  if (!Object.keys(MON_SHORT).some((m) => when.startsWith(m))) return when;
+  return /\d$/.test(when) ? `${when}, ${y}` : `${when} ${y}`;
 }
 
 // The data's table of repeated strings (on the public site, the list part's: each later part brings its own).
@@ -6333,23 +6363,28 @@ function renderSessions(raw) {
   const person = pageL ? { name: pageL.name, house: pageL.house, slug: pageL.slug || "" } : PAST_WHO;
   const served = pageL ? new Set((raw.profiles?.[pageL.id]?.history || []).map((h) => h[0]).concat(raw.session))
     : PAST_WHO ? new Set(DATA.peopleNow?.[PAST_WHO.slug]?.served?.concat(LATEST) || PAST_WHO.served || []) : null;
+  const opts = [];
   const html = raw.sessions.filter(({ session }) => !served || served.has(session)).map(({ session, url }) => {
     const label = `${span(session)}${session === LATEST ? " (current)" : session > LATEST ? " (prefiled)" : ""}`;
-    if (session === raw.session) return `<span class="here" aria-current="page">${label}</span>`;
-    if (!url) return `<span class="off">${label}</span>`;
+    if (session === raw.session) { opts.push(`<option value="" selected>${label}</option>`); return `<span class="here" aria-current="page">${label}</span>`; }
+    if (!url) { opts.push(`<option value="" disabled>${label}</option>`); return `<span class="off">${label}</span>`; }
     const external = /^https?:/.test(url) ? ` target="_blank" rel="noopener"` : "";
     let href = external ? url : BASE + url;
     if (person && !external) {
       href = session === LATEST && person.slug && ROOT ? `${ROOT}${person.slug}/`
         : `${href}?who=${encodeURIComponent(person.name)}&h=${person.house}${person.slug ? `&slug=${encodeURIComponent(person.slug)}` : ""}${served ? `&s=${[...served].sort().join(",")}` : ""}`;
     }
+    opts.push(`<option value="${esc(href)}"${external ? " data-ext" : ""}>${label}</option>`);
     return `<a href="${esc(href)}"${external}>${label}</a>`;
-  }).join("");
+  }).join("") + sessionMenu(opts);
   // With a legislator's card on the page, their sessions go in the card instead of the page header.
   if (person && $("personSessions")) { $("personSessions").innerHTML = html; $("sessions").innerHTML = ""; }
   else $("sessions").innerHTML = html;
 }
 
+// On a phone the session buttons are one menu (CSS shows one or the other; wire() follows a choice). The build writes the
+// same (build_data.py's sessions_nav()).
+const sessionMenu = (opts) => (opts.length > 1 ? `<select class="sessmenu" aria-label="Session">${opts.join("")}</select>` : "");
 // The months a bill was first acted on and signed, from its history (again once the rows part brings it).
 function monthsOf(b) {
   let first = "9999", signed = null;
@@ -6358,6 +6393,13 @@ function monthsOf(b) {
     if (!signed && txt.startsWith("SIGNED CHAP")) signed = d;
   }
   b.firstMonth = first.slice(0, 7); b.signedMonth = signed ? signed.slice(0, 7) : null;
+}
+// "2026-11-20 09:21" -> "Nov 20, 9:21 a.m." (the header's "updated"; build_data.py's fmt_updated() writes the same).
+function fmtUpdated(f) {
+  const m = /^(\d{4})-(\d\d)-(\d\d)(?:[ T](\d\d):(\d\d))?/.exec(f || "");
+  if (!m) return f || "";
+  const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][+m[2] - 1];
+  return `${mon} ${+m[3]}${m[4] ? `, ${+m[4] % 12 || 12}:${m[5]} ${+m[4] < 12 ? "a.m." : "p.m."}` : ""}`;
 }
 function hydrate(raw) {
   DATA = raw; TOPICS = raw.topics;
@@ -6376,7 +6418,7 @@ function hydrate(raw) {
   });
 
   document.title = raw.current ? "Albany Bill Tracker" : `Albany Bill Tracker ${span(raw.session)}`;
-  $("sessionLabel").textContent = `New York State Legislature · ${span(raw.session)} session${raw.upcoming ? ` · prefiled bills · updated ${raw.fetched}` : raw.current ? ` · updated ${raw.fetched}` : " (final)"}`;
+  $("sessionLabel").textContent = `New York State Legislature · ${span(raw.session)} session${raw.upcoming ? ` · prefiled bills · updated ${fmtUpdated(raw.fetched)}` : raw.current ? ` · updated ${fmtUpdated(raw.fetched)}` : " (final)"}`;
   $("fetched").textContent = `Data as of ${raw.fetched}`;
   const embedded = document.documentElement.classList.contains("embed");  // (#embed=: only a card is shown)
   if (!embedded) try { renderHowCal(); } catch (e) { console.error(e); }
@@ -6389,7 +6431,7 @@ function hydrate(raw) {
     $("notice").hidden = !parts.length;
   }
   // (Not for prefiled bills: no governor's deadlines or committee meetings before the session opens.)
-  if (raw.current && !raw.upcoming) $("sort").insertAdjacentHTML("beforeend", `<option value="due">${EXEC.title}'s deadline, soonest first</option><option value="meeting">Next committee meeting, soonest first</option>`);
+  if (raw.current && !raw.upcoming) $("sort").insertAdjacentHTML("beforeend", `<option value="due">${EXEC.title}'s deadline</option><option value="meeting">Next committee meeting</option>`);
   // The title goes home: the current session's main page.
   const home = raw.sessions.find((x) => x.session === LATEST)?.url;
   $("homeLink").href = ROOT || (home && /^https?:/.test(home) ? home : BASE || "./");
@@ -6445,6 +6487,7 @@ function hydrate(raw) {
     syncControls();
   }
   if (applyViewLink()) syncControls();
+  syncIssue();  // (the Issue menu shows on every visit, not only when an address names an issue)
   // "Only bills that could affect your county" exists only where bills are tied to counties: a choice saved or linked
   // elsewhere (or before a state picked towns instead) would otherwise filter, and show a chip, with no box to undo it.
   if (state.nearby && (document.querySelector(".field.you").hidden || $("nearby").closest(".hidebox").hidden)) { state.nearby = false; syncControls(); }

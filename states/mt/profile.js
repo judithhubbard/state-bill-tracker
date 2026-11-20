@@ -74,7 +74,7 @@ const STATE = {
   findReps: "https://openstates.org/find_your_legislator/",
   oneNumber: true,
   diesAfterFloor: () => "Bills that didn't pass died when the session adjourned; the Legislature meets again in January of the next odd year.",
-  outOfTimeLine: "Died when the session adjourned",
+  outOfTimeLine: "Died when the session ended",
   // Most bills that die are tabled in committee: the committee votes to set it aside, and it stays there unless the
   // committee takes it from the table (or the full house votes to take it from the committee).
   heldAction: "Tabled in committee",
@@ -115,7 +115,7 @@ const STATE = {
   sessionNotice(raw) {
     const t = isoToday(), y = raw.session, end = STATE.adjourns(y);
     if (t > end && t < STATE.opens(y + 2))
-      return `The ${y} session adjourned ${fmtDate(end)}. Bills that didn't pass both houses died. The Legislature meets again on ${fmtDate(STATE.opens(y + 2))}; bills are drafted and prefiled from the fall before.`;
+      return `The ${y} session ended ${fmtDate(end).replace(/, \d{4}$/, "")}. Bills that didn't pass both houses died. The Legislature meets again on ${fmtDate(STATE.opens(y + 2))}; bills are drafted and prefiled from the fall before.`;
     return "";
   },
   upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're introduced. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,

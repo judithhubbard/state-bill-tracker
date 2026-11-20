@@ -67,14 +67,14 @@ const STATE = {
   findReps: "https://www.oregonlegislature.gov/FindYourLegislator/leg-districts.html",
   oneNumber: true,
   diesAfterFloor: () => "The session has adjourned, so it died. It would have to be introduced again next year.",
-  outOfTimeLine: "Died when the session adjourned",
+  outOfTimeLine: "Died when the session ended",
 
   // Even years' short sessions have far fewer bills: say so, so the counts don't look wrong.
   sessionNotice(raw) {
     const t = isoToday(), y = raw.session, end = STATE.sessionEnds(y);
     const short = y % 2 ? "" : ` It was a short session: 35 days, and each legislator and committee could introduce only a few bills, so there are far fewer bills than in a long session.`;
     if (t > end && t.startsWith(String(y)))
-      return `The ${y} session adjourned ${fmtDate(end)}. Bills that didn't pass both houses died; the ${y + 1} session opens ${fmtDate(STATE.opens(y + 1))}.${short}`;
+      return `The ${y} session ended ${fmtDate(end).replace(/, \d{4}$/, "")}. Bills that didn't pass both houses died; the ${y + 1} session opens ${fmtDate(STATE.opens(y + 1))}.${short}`;
     if (!(y % 2) && t <= end)
       return `${y} is a short session: 35 days, and each legislator and committee can introduce only a few bills.`;
     return "";

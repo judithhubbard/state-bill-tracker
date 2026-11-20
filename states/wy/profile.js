@@ -9,6 +9,9 @@ const STATE = {
   publicSite: "https://statebilltracker.org/wy/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
+  // A floor vote that isn't a passage, named by the converter ("vote to introduce it": the budget session's two-thirds
+  // vote to take up a bill; concurrence, conference reports, veto overrides): "House vote to introduce it".
+  voteWhat: (v) => (v.kind === "F" && v.committee ? `${STATE.houses[v.house]} ${esc(v.committee)}` : ""),
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
   greetings: { S: "Senator", H: "Representative" },
@@ -70,7 +73,7 @@ const STATE = {
   findReps: "https://wyoleg.gov/Legislators",
   oneNumber: true,
   diesAfterFloor: () => "The session has adjourned, so it died. It would have to be introduced again in a later session.",
-  outOfTimeLine: "Died when the session adjourned",
+  outOfTimeLine: "Died when the session ended",
 
   // In budget sessions (even years) a bill other than the budget needs two-thirds of its house to be introduced.
   heldAction: "FAILED INTRODUCTION",
@@ -83,7 +86,7 @@ const STATE = {
     const t = isoToday(), y = raw.session, end = STATE.sessionEnds(y);
     const short = y % 2 ? "" : ` It was a budget session: 20 days, and bills other than the budget needed two-thirds of a house to be introduced, so there are far fewer bills than in a general session.`;
     if (t > end && t.startsWith(String(y)))
-      return `The ${y} session adjourned ${fmtDate(end)}. Bills that didn't pass both houses died; the ${y + 1} session opens ${fmtDate(STATE.opens(y + 1))}.${short}`;
+      return `The ${y} session ended ${fmtDate(end).replace(/, \d{4}$/, "")}. Bills that didn't pass both houses died; the ${y + 1} session opens ${fmtDate(STATE.opens(y + 1))}.${short}`;
     if (!(y % 2) && t <= end)
       return `${y} is a budget session: 20 days, and bills other than the budget need two-thirds of a house to be introduced.`;
     return "";
@@ -101,7 +104,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), "The session adjourns. Bills that didn't pass both houses die."],
         [`${Y}-07-01`, "down", LEG, "July 1", "Many new laws take effect."],
       ],
-      note: "During the session the governor has 3 days (Sundays excepted) to act on a bill; bills that arrive at the end get 15 days after adjournment, and become law unless vetoed. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of each house.",
+      note: "",
     };
   },
   waitingHead: "On the way to the governor",

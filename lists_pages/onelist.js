@@ -28,7 +28,7 @@ const OneList = (() => {
       if (!src) return null;
       const S = BillFacts.runProfile(src, +session, f);
       if (!S) return null;
-      const F = { session: +session, current: !!f.c, upcoming: !!f.u, lastVote: f.v || "", sessionEnd: f.e || {}, timing: (f.t || []).map((v) => ({ lastVote: v })) };
+      const F = { session: +session, current: !!f.c, upcoming: !!f.u, lastVote: f.v || "", lastComm: f.m || "", sessionEnd: f.e || {}, timing: (f.t || []).map((v) => ({ lastVote: v })) };
       const lc = (S.passedBothText || "Passed both houses").replace(/^./, (c) => c.toLowerCase());
       const WR = WatchRules.make(S, () => F, { today: iso, nextMeeting: (b) => WatchRules.nextMeeting(b.agenda, F.current),
         isAmendment: (b) => !!S.amendments && b.topics.includes("const"), toVoters: (b) => !!b.ballot && !(S.amendments && b.topics.includes("const")), passedBothLc: lc });

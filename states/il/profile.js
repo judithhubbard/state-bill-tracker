@@ -69,7 +69,7 @@ const STATE = {
   amended: (b) => b.vers.some((v) => v.actions.some(([, t]) => t === "AMENDATORY VETO")),
   passedBothBy: (session) => STATE.sessionEnds(session),
   passedBothNote: (live, b) => !live ? "Never sent to the governor"
-    : !b ? "Includes bills sent back with the governor's changes"
+    : !b ? ""
     : STATE.amended(b) ? "Sent back with the governor's changes" : "Not yet sent to the governor",
   passedBothGroup: ["Before the General Assembly ends", () => "Bills go to the governor within 30 days of passing both houses. A bill sent back with the governor's changes needs both houses to accept them."],
   passedBothNext(b) {

@@ -89,8 +89,10 @@ const WatchRows = (() => {
     // The status column, as on the state's Bills list: the pips, the status label, then the date of the latest action
     // and the deadline (lists_pages/rows.css). A bill out of time this session is greyed, as there.
     const over = (x.out || x.group === "done") && x.stage <= 2 ? " over" : "", uni = opt.uni ? opt.uni(x) : BillFacts.oneHouse(x.st);
+    // (A deadline the group's heading already gives isn't repeated on each row: opt.groupDay.)
+    const due = x.due && !(opt.groupDay && x.date === opt.groupDay && (x.group === "session" || x.group === "year")) ? x.due : "";
     const when = [x.found && x.last ? `<span>${fullDay(x.last)}</span>` : "",
-      x.due ? `<span class="wr-dl">${h(x.due)}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""].filter(Boolean).join("");
+      due ? `<span class="wr-dl">${h(due)}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""].filter(Boolean).join("");
     const where = `<span class="wr-where bstat">${x.found ? BillFacts.pips(x.stage, uni, over.trim()) + `<span class="stg s${x.stage}${over}">${h(x.label)}</span>` : ""}`
       + `${when ? `<span class="stw">${when}</span>` : ""}${stance}${x.found ? "" : '<span class="wr-todo">Open</span>'}</span>`;
     const back = x.later && x.later[0] > x.session ? `<p class="wr-again">Back in ${h(x.later[2])} as <a href="${h(x.later[3])}#${h(x.later[1])}">${h(numText(x.st, x.later[1]))}</a>${x.laterStar || ""}</p>` : "";
@@ -120,10 +122,27 @@ const WatchRows = (() => {
     // In a list with several states (Your bills), a state's note says which state ("The New Jersey session ends ...").
     if (sub && !opt.oneState && one) { const nm = (opt.stName || ((x) => x.toUpperCase()))(xs[0].st); sub = /^The session/.test(sub) ? sub.replace(/^The session/, `The ${nm} session`) : `${nm}: ${sub}`; }
     if (!sub) sub = NOTES[g] || "";
-    return `<h2 class="wr-ghd">${h(name)} <span class="wr-n">· ${xs.length} bill${xs.length === 1 ? "" : "s"}</span></h2>${sub ? `<p class="wr-gsub">${h(sub)}</p>` : ""}${opt.groupExtra?.(g, xs) || ""}`;
+    // (The heading gives the date: the note doesn't say it again.)
+    if (oneDay && (g === "session" || g === "year")) sub = sub.replace(/^The (?:[A-Z][\w.]*(?: [A-Z][\w.]*)* )?session (?:is scheduled to )?ends? [A-Z][a-z]+ \d+(?:, \d{4})?\. /, "");
+    // The note is behind an ⓘ on the heading (data-wtip opens it: draw()'s listener).
+    const tip = sub ? ` <button type="button" class="wr-tip" data-wtip aria-expanded="false" aria-label="About these bills" title="${h(sub)}">i</button>` : "";
+    return `<h2 class="wr-ghd">${h(name)} <span class="wr-n">· ${xs.length} bill${xs.length === 1 ? "" : "s"}</span>${tip}</h2>${sub ? `<p class="wr-gsub" hidden>${h(sub)}</p>` : ""}${opt.groupExtra?.(g, xs) || ""}`;
   }
+  // The group's single deadline, when its bills share one (the heading gives it).
+  const groupDay = (g, xs) => { const ds = new Set(xs.map((x) => x.date || "")); return ds.size === 1 && (g === "session" || g === "year") ? [...ds][0] : ""; };
   function draw(box, list, opt) {
     box.classList.add("wrows");
+    // A group heading's ⓘ shows its note (once per box).
+    if (!box.dataset.wrTips) {
+      box.dataset.wrTips = "1";
+      box.addEventListener("click", (e) => {
+        const b = e.target.closest?.("[data-wtip]");
+        if (!b) return;
+        e.preventDefault(); e.stopPropagation();
+        const p = b.closest("h2")?.nextElementSibling;
+        if (p?.classList.contains("wr-gsub")) { p.hidden = !p.hidden; b.setAttribute("aria-expanded", String(!p.hidden)); }
+      });
+    }
     let html = "";
     if (opt.byState) {
       const name = opt.stName || ((s) => s), by = new Map();
@@ -135,7 +154,8 @@ const WatchRows = (() => {
     } else {
       html = orderOf(list).map((g) => {
         const xs = list.filter((x) => groupOf(x) === g).sort((a, b) => sortIn(a, b, opt.stName));
-        return xs.length ? `<section class="wr-grp" data-g="${g}">${groupHead(g, xs, opt)}<ol class="wr-list">${xs.map((x) => rowHtml(x, opt)).join("")}</ol></section>` : "";
+        const gd = groupDay(g, xs);
+        return xs.length ? `<section class="wr-grp" data-g="${g}">${groupHead(g, xs, opt)}<ol class="wr-list">${xs.map((x) => rowHtml(x, { ...opt, groupDay: gd })).join("")}</ol></section>` : "";
       }).join("");
     }
     box.innerHTML = html;

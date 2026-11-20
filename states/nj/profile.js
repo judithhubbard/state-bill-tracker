@@ -67,7 +67,7 @@ const STATE = {
   // The line under "Passed both houses", in the stage list and (with the bill) in its row. Most bills
   // here were sent back with the governor's changes (a conditional veto).
   passedBothNote: (live, b) => !live ? "Never sent to the governor"
-    : !b ? "Includes bills sent back with the governor's changes"
+    : !b ? ""
     : b.vers.some((v) => v.actions.some(([, t]) => t === "CONDITIONALLY VETOED")) ? "Sent back with the governor's changes" : "Not yet sent to the governor",
   passedBothGroup: ["By the end of the session", () => "These go to the governor once they pass both houses. Any still waiting die when the two-year session ends in January."],
 
@@ -135,7 +135,7 @@ const STATE = {
     "Passed the Senate or the Assembly, but not both. Both houses have to pass the same text.",
     "Passed both houses. A bill the governor sent back with changes (a conditional veto) waits here until both houses vote to accept them.",
     "Passed both houses and sent to the governor, who has 45 days to sign it, veto it, or send it back with changes.",
-    "Signed into law and given a chapter number.",
+    "Signed by the governor.",
     "Vetoed by the governor. Overriding a veto takes two-thirds of each house, which is rare.",
   ],
   pastStageTips: [
@@ -174,8 +174,8 @@ const STATE = {
     const LEG = 112, GOV = 150, open = STATE.sessionEnds(Y - 2), close = STATE.sessionEnds(Y);
     return {
       leg: [["", open, `${Y}-06-30`, "In session"], ["light", `${Y}-07-01`, `${Y}-08-31`, "Summer"],
-        ["", `${Y}-09-01`, `${Y + 1}-06-30`, "In session"], ["light", `${Y + 1}-07-01`, `${Y + 1}-11-10`, "Campaigns"],
-        ["", `${Y + 1}-11-10`, close, "Rush"]],
+        ["", `${Y}-09-01`, `${Y + 1}-06-30`, "In session"], ["light", `${Y + 1}-07-01`, `${Y + 1}-11-05`, "Campaigns"],
+        ["", `${Y + 1}-11-05`, close, "Last weeks"]],
       gov: [["", open, `${Y + 2}-01-20`, "Signs or vetoes each bill within 45 days, all year"]],
       events: [
         [open, "up", LEG, `January ${Y}`, "Session opens. Committees meet and bills pass all year, except in summer."],
@@ -185,7 +185,7 @@ const STATE = {
         [`${Y + 1}-10-01`, "down", LEG, "July to November", "Hardly any meetings while legislators campaign for the November election."],
         [close, "up", LEG, `January ${Y + 2}`, "The busiest weeks of the session, then it ends. Bills that aren't law die."],
       ],
-      note: "Once a bill reaches the governor, there are 45 days to sign it, veto it, or send it back with changes. Bills passed at the very end have until a week after the session ends; any left unsigned die (a pocket veto).",
+      note: "",
     };
   },
 };

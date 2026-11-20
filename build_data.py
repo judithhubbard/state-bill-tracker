@@ -1209,11 +1209,12 @@ def trends(loaded):
     sessions = sorted(loaded)
     def scan(pattern, nocase):
         rx = re.compile(pattern, re.I if nocase else 0)
-        per, first, now, laws, total = [], None, Counter(), 0, 0
+        per, counts, first, now, laws, total = [], [], None, Counter(), 0, 0
         for sn in sessions:
             recs = loaded[sn][0]
             hits = [r for r in recs if rx.search(r["title"] + " . " + r["summary"][:600])]
             per.append(round(1000 * len(hits) / max(1, len(recs)), 1))
+            counts.append(len(hits))
             total += len(hits)
             laws += sum(r["stage"] == 5 for r in hits)
             for r in hits:
@@ -1226,7 +1227,7 @@ def trends(loaded):
                     if sn == sessions[-1]:
                         now[(v["p"][0], v["sponsor"])] += 1
         lead = [[h, name, c] for (h, name), c in now.most_common(3)]
-        return {"per": per, "bills": total, "laws": laws, "lead": lead,
+        return {"per": per, "n": counts, "bills": total, "laws": laws, "lead": lead,
                 "first": [first[1], first[2], first[0][0], first[0][2]] if first else None}
     out = {"sessions": sessions, "subjects": [], "wording": []}
     for kind, label, pattern, nocase in P.TRENDS:
@@ -1963,6 +1964,10 @@ def main():
             # Date of the last floor vote in either house this session.
             "sessionEnd": {y: d for y, d in SESSION_END.items() if session <= int(y) < session + YEARS},
             "lastVote": max((d for r in recs for i in (1, 2) for d in r["keyDates"][i].split(";")), default=""),
+            # The last committee vote, or the next committee meeting on an agenda (watchrules.js: committees meeting
+            # means the Legislature isn't out, whatever the floor).
+            "lastComm": max([str(v[3])[:10] for r in recs for v in r.get("votes") or [] if v[1] != "F" and v[3]]
+                            + [w[:10] for r in recs for _c, w in agenda_of(r)], default="") if session == current else "",
             "strings": strings,
             # Stored column by column (all titles, then all summaries, ...), which compresses
             # about a fifth smaller than bill by bill; the page turns it back into rows.
@@ -2062,7 +2067,7 @@ def main():
             with open(os.path.join(GITHUB, "data", "v", f"profile.{prof_hash}.js"), "w", encoding="utf-8") as f:
                 f.write(prof_js)
             facts = {"s": prof_hash, "c": session >= current, "u": session > current, "e": data.get("sessionEnd") or {},
-                     "v": data.get("lastVote") or "", "t": [t["lastVote"] for t in (data.get("insights") or {}).get("timing") or [] if t.get("lastVote")]}
+                     "v": data.get("lastVote") or "", "m": data.get("lastComm") or "", "t": [t["lastVote"] for t in (data.get("insights") or {}).get("timing") or [] if t.get("lastVote")]}
             # Each bill's status words, as its state's page words them (lists_pages/billfacts.js, run in Node), for the
             # views that show it without the page.
             labels = bill_labels(session, recs, hist[session], prof_js, facts)
@@ -2109,8 +2114,16 @@ def main():
                                         f"<title>{P.SITE_NAME} {P.session_label(session)}</title>", 1)
         # The header line is written in now, matching what the page sets, so it doesn't change length
         # (and push the title down) when the data arrives.
+        def fmt_updated(f):
+            """"2026-11-20 09:21" -> "Nov 20, 9:21 a.m." (tracker.html's fmtUpdated())."""
+            m = re.match(r"(\d{4})-(\d\d)-(\d\d)(?:[ T](\d\d):(\d\d))?", f or "")
+            if not m:
+                return f or ""
+            mon = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()[int(m.group(2)) - 1]
+            hh = m.group(4)
+            return f"{mon} {int(m.group(3))}" + (f", {int(hh) % 12 or 12}:{m.group(5)} {'a.m.' if int(hh) < 12 else 'p.m.'}" if hh else "")
         label = f"{P.LEGISLATURE} · {P.session_label(session)} session" + (
-            f" · updated {fetched}" if session == current else f" · prefiled bills · updated {fetched}" if session > current else " (final)")
+            f" · updated {fmt_updated(fetched)}" if session == current else f" · prefiled bills · updated {fmt_updated(fetched)}" if session > current else " (final)")
         template = template.replace(f'id="sessionLabel">{P.LEGISLATURE}<', f'id="sessionLabel">{html_escape(label)}<', 1)
         # Party control now (balance.py), on the current session's page only: written in, so nothing moves on load.
         if session == current:
@@ -2128,19 +2141,25 @@ def main():
         latest = max(s for s in SESSIONS if s <= current)
 
         def sessions_nav(base):
-            out = []
+            # (On a phone, one menu instead of the buttons: tracker.html's sessionMenu().)
+            out, opts = [], []
             for s in SESSIONS:
                 label = html_escape(f"{P.session_label(s)}{' (current)' if s == latest else ' (prefiled)' if s > latest else ''}")
                 url = urls.get(str(s))
                 if s == session:
                     out.append(f'<span class="here" aria-current="page">{label}</span>')
+                    opts.append(f'<option value="" selected>{label}</option>')
                 elif not url:
                     out.append(f'<span class="off">{label}</span>')
+                    opts.append(f'<option value="" disabled>{label}</option>')
                 elif re.match(r"https?:", url):
                     out.append(f'<a href="{html_escape(url)}" target="_blank" rel="noopener">{label}</a>')
+                    opts.append(f'<option value="{html_escape(url)}" data-ext>{label}</option>')
                 else:
                     out.append(f'<a href="{html_escape(base + url)}">{label}</a>')
-            return "".join(out)
+                    opts.append(f'<option value="{html_escape(base + url)}">{label}</option>')
+            menu = f'<select class="sessmenu" aria-label="Session">{"".join(opts)}</select>' if len(opts) > 1 else ""
+            return "".join(out) + menu
         nav_marker = '<nav class="sessions" id="sessions" aria-label="Legislative sessions"></nav>'
         with_nav = lambda page, base="": page.replace(nav_marker, nav_marker.replace("></nav>", f">{sessions_nav(base)}</nav>"), 1)
         person_template = template

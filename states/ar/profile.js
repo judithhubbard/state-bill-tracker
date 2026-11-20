@@ -81,7 +81,7 @@ const STATE = {
   findReps: "https://arkleg.state.ar.us/Legislators/List",
   oneNumber: true,
   diesAfterFloor: () => "The session has adjourned, so it died. It would have to be introduced again in a later session.",
-  outOfTimeLine: "Died when the session adjourned",
+  outOfTimeLine: "Died when the session ended",
 
   // Arkansas's committees can recommend that a bill "do not pass", or send it to an interim committee for study, where it
   // dies; most bills that fail are simply never taken up.
@@ -95,7 +95,7 @@ const STATE = {
     const t = isoToday(), y = raw.session, end = STATE.sessionEnds(y);
     const fiscal = y % 2 ? "" : " It was a fiscal session: 30 days for the budget's appropriation bills; any other bill needed two-thirds of each house to be introduced, so there are far fewer bills than in a regular session.";
     if (t > end && t.startsWith(String(y)))
-      return `The ${y} session adjourned ${fmtDate(end)}. Bills that didn't pass both houses died; the ${y + 1} ${y % 2 ? "fiscal" : "regular"} session opens ${fmtDate(STATE.opens(y + 1))}.${fiscal}`;
+      return `The ${y} session ended ${fmtDate(end).replace(/, \d{4}$/, "")}. Bills that didn't pass both houses died; the ${y + 1} ${y % 2 ? "fiscal" : "regular"} session opens ${fmtDate(STATE.opens(y + 1))}.${fiscal}`;
     if (!(y % 2) && t <= end)
       return `${y} is a fiscal session: 30 days for the budget's appropriation bills; any other bill needs two-thirds of each house to be introduced.`;
     return "";

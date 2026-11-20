@@ -33,6 +33,9 @@
 .wrows .wr-grp:first-child h2.wr-ghd { margin-top: 4px; }
 .wrows .wr-n { font: 600 13px/1 var(--body); letter-spacing: 0; color: var(--ink-2); margin-left: 4px; text-transform: none; }
 .wrows .wr-gsub { margin: 0 0 8px; color: var(--ink-2); font-size: 13.5px; }
+.wrows .wr-gsub[hidden] { display: none; }
+.wrows .wr-tip { appearance: none; display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; padding: 0; margin: 0 0 0 4px; border-radius: 50%; border: 1px solid var(--ink-2); background: none; color: var(--ink-2); font: italic 700 10px/1 Georgia, serif; vertical-align: 1px; cursor: help; text-transform: none; letter-spacing: 0; }
+.wrows .wr-tip[aria-expanded="true"] { background: var(--ink-2); color: var(--sheet); }
 .wrows .wr-list { list-style: none; margin: 0 0 12px; padding: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; }
 .wrows .wr-state { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; margin: 0 0 12px; }
 .wrows .wr-state .wr-list { border: 0; margin: 0; }

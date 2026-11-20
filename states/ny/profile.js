@@ -127,7 +127,7 @@ const STATE = {
     "Passed the Senate or the Assembly, but not both. Both houses have to pass the same text.",
     "Passed both houses and waiting for the governor's office to request it. Her 10-day clock starts only when it's delivered.",
     "Delivered to the governor. She has 10 days, not counting Sundays, to sign or veto it.",
-    "Signed into law and given a chapter number.",
+    "Signed by the governor.",
     "Vetoed by the governor. The Legislature can override a veto with two-thirds of each house, but rarely does.",
   ],
   pastStageTips: [

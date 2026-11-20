@@ -68,7 +68,7 @@ const STATE = {
   findReps: "https://le.utah.gov/GIS/findDistrict.jsp",
   oneNumber: true,
   diesAfterFloor: () => "The session has adjourned, so it died. It would have to be introduced again in a later session.",
-  outOfTimeLine: "Died when the session adjourned",
+  outOfTimeLine: "Died when the session ended",
 
   // Each house's Rules Committee decides which bills go to a committee for a hearing, and later which reach the floor.
   gates: { H: "Rules", S: "Rules" },
@@ -81,7 +81,7 @@ const STATE = {
   sessionNotice(raw) {
     const t = isoToday(), y = raw.session, end = STATE.sessionEnds(y);
     if (t > end && t.startsWith(String(y)))
-      return `The ${y} session adjourned ${fmtDate(end)}. Bills that didn't pass both houses died; the ${y + 1} session opens ${fmtDate(STATE.opens(y + 1))}.`;
+      return `The ${y} session ended ${fmtDate(end).replace(/, \d{4}$/, "")}. Bills that didn't pass both houses died; the ${y + 1} session opens ${fmtDate(STATE.opens(y + 1))}.`;
     return "";
   },
   upcomingNotice: (raw, cur) => `The ${raw.session} session opens ${fmtDate(STATE.opens(raw.session))}. Bills appear here as they're filed. Bills you star now stay on your watchlist when the session opens.${cur?.url ? ` <a href="${esc(cur.url)}">Back to the ${span(LATEST)} session</a>` : ""}`,

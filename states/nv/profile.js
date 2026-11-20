@@ -105,7 +105,7 @@ const STATE = {
   findReps: "https://openstates.org/find_your_legislator/",
   oneNumber: true,
   diesAfterFloor: () => "Bills that didn't pass died when the session adjourned; a special session takes up only the bills it was called for.",
-  outOfTimeLine: "Died when the session adjourned",
+  outOfTimeLine: "Died when the session ended",
   heldTip: "Heard by a committee that never voted on it. Nevada's committees don't vote bills down; a bill they don't approve by the deadline dies there.",
   heldNote: "heard by a committee that never voted on it.",
   // A bill that missed a deadline (Joint Standing Rule 14.3) or lost its floor vote is dead for the session: its status

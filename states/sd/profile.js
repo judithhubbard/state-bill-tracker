@@ -74,7 +74,7 @@ const STATE = {
   findReps: "https://sdlegislature.gov/Legislators/Find",
   oneNumber: true,
   diesAfterFloor: () => "The session has adjourned, so it died. It would have to be introduced again in a later session.",
-  outOfTimeLine: "Died when the session adjourned",
+  outOfTimeLine: "Died when the session ended",
 
   // There are only 40 legislative days, so deferring a bill to the 41st kills it.
   heldLabel: "Deferred to the 41st day",

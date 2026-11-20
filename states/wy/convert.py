@@ -340,6 +340,18 @@ def load_session(session):
                     out.append(x)
             return out
 
+        def motion(act, h):
+            """What a floor vote other than a third reading was on, from its action ("H Failed Introduction", "S
+            Concur:Passed", "S COW:Failed", "Veto Override"): the page names it (profile.js's voteWhat). None for a
+            passage."""
+            other = HOUSE["S" if h == "H" else "H"]
+            for pat, what in ((r"Introduc", "vote to introduce it"), (r"Concur", f"vote to agree to the {other}'s changes"),
+                              (r"JCC", "vote on the conference report"), (r"Override", "vote to override the veto"),
+                              (r"COW", "Committee of the Whole vote")):
+                if re.search(pat, act, re.I) and not re.search(r"3rd Reading", act, re.I):
+                    return what
+            return None
+
         votes = []
         for r in roll_calls(b):
             # The action names its house ("S Introduced ...", "H02 - Appropriations: ..."); the chamber field is sometimes wrong.
@@ -355,7 +367,7 @@ def load_session(session):
             cname = committee(act) if is_comm else None
             both = bool(re.search(r"JCC", act))
             names_ = [[seat(h, x, is_comm, cname, both), "N"] for x in no] + [[seat(h, x, is_comm, cname, both), "A"] for x in nv]
-            votes.append([h, "C" if is_comm else "F", proper(cname) if cname else None, (r.get("voteDate") or "")[:10],
+            votes.append([h, "C" if is_comm else "F", proper(cname) if cname else None if is_comm else motion(act, h), (r.get("voteDate") or "")[:10],
                           int(r.get("yesVotesCount") or 0), int(r.get("noVotesCount") or len(no)), names_])
         votes.sort(key=lambda v: v[3])
         action_dates = [s[0] for s in steps if s[0]]

@@ -160,7 +160,7 @@ const STATE = {
     "Passed the Assembly or the Senate, but not both. Both houses have to pass the same text; if the second house amends it, the first has to agree.",
     "Passed both houses and on its way to the governor.",
     "Passed both houses and sent to the governor, who has 12 days to sign or veto it (longer at the end of each year).",
-    "Signed into law and given a chapter number.",
+    "Signed by the governor.",
     "Vetoed by the governor. Overriding a veto takes two-thirds of each house, which almost never happens.",
   ],
   pastStageTips: [

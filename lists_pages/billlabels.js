@@ -22,7 +22,7 @@ const input = JSON.parse(fs.readFileSync(0, "utf8"));
 const f = input.facts || {};
 const S = BillFacts.runProfile(input.profile, +input.session, f);
 if (!S) { console.error("billlabels.js: the profile didn't run"); process.exit(1); }
-const F = { session: +input.session, current: !!f.c, upcoming: !!f.u, lastVote: f.v || "", sessionEnd: f.e || {}, timing: (f.t || []).map((v) => ({ lastVote: v })) };
+const F = { session: +input.session, current: !!f.c, upcoming: !!f.u, lastVote: f.v || "", lastComm: f.m || "", sessionEnd: f.e || {}, timing: (f.t || []).map((v) => ({ lastVote: v })) };
 const today = WatchRules.localToday;
 const WR = WatchRules.make(S, () => F, { today });
 const fmtDate = (d) => (d ? new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
