@@ -430,6 +430,14 @@ def tally_text(t):
     return f", {t[0]}-{t[1]}" if t else ""
 
 
+def no_steps_day(session, b):
+    """The day for a bill with no steps shown yet: a numbered draft not yet introduced (SB 32 of 2027, numbered in November
+    2026 with only "(LC) Draft Delivered to Requester") is dated by its last drafting step, not the session's first day,
+    which for the next session is in the future; never later than today."""
+    drafted = max(((s.get("timeStamp") or "")[:10] for s in (b.get("draft") or {}).get("billStatuses") or []), default="")
+    return min(drafted or f"{session}-01-01", date.today().isoformat())
+
+
 def record(session, k, b):
     p = k
     origin = p[0]
@@ -816,8 +824,8 @@ def record(session, k, b):
         # alone made "Establish compensation for wrongful conviction" (HB 93 of 2025) "nearly the same" as HB 72 (militia pay).
         "simText": f"{title} {subject_names(b)}",
         "comm": comm_now if stage == 0 else None,
-        "first": min(action_dates, default=f"{session}-01-01"),
-        "last": max(action_dates, default=f"{session}-01-01"),
+        "first": min(action_dates, default=no_steps_day(session, b)),
+        "last": max(action_dates, default=no_steps_day(session, b)),
         "cosp": len(cos),
         "keyDates": [
             dates(lambda x: x[3] == "reported", "first"),
