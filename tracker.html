@@ -5874,15 +5874,15 @@ function renderHowPic() {
   const govPart = (id, g) => {
     const R = 24, out = [];
     out.push(arrow(id, g.gx, g.gy, g.lx, g.ly, R, R + 2), arrow(id, g.gx, g.gy, g.vx, g.vy, R, 18));
-    out.push(`<path class="ar dash" d="${g.over}" marker-end="url(#${id})"/>`);
+    const O = wrapWords(over.t, g.wrapOver);
+    out.push(`<path class="ar dash" d="${g.over(O.length)}" marker-end="url(#${id})"/>`);
     if (dies) out.push(arrow(id, g.gx, g.gy, g.dx, g.dy, R, 16));
     out.push(chip(g.sx, g.sy, "Signs it", "tag sign", 70));
-    let y = g.sy + 36;
+    let y = g.sy + 32;
     for (const u of lawLines) { const L = wrapWords(u.text, g.wrapLaw); out.push(note(g.sx, y, L, u.tip)); y += L.length * 15 + 6; }
     out.push(node(g.gx, g.gy, R, "g", "gov"), node(g.lx, g.ly, R + 2, "l", "law"), node(g.vx, g.vy, 18, "v", "no"));
     out.push(text(g.glx, g.gly, EXEC.The, "lb", g.ganchor || "middle"));
     out.push(text(g.llx, g.lly, "Becomes law", "lb law"));
-    const O = wrapWords(over.t, g.wrapOver);
     out.push(text(g.vx, g.vy + 36, "Vetoes it", "vl"), text(g.vx, g.vy + 52, O, "sm", "middle", over.tip));
     if (dies) {
       const D = wrapWords(dies.text, g.wrapDies), dy = g.dly === "above" ? g.dy - 22 - (D.length - 1) * 15 : g.dy + 36;
@@ -5895,7 +5895,7 @@ function renderHowPic() {
   const wideSvg = () => {
     const id = "hp-ah-w", W = 860, cy = 160, out = [];
     const lanes = UNI ? [{ name: H[0], top: 96 }] : [{ name: H[0], top: 14 }, { name: H[1], top: 170 }];
-    const xs = relay ? [86, 186, 286] : [110, 230, 350], bandW = relay ? 480 : 410;
+    const xs = relay ? [66, 156, 246] : [90, 200, 310], bandW = relay ? 506 : 380;
     for (const L of lanes) {
       L.y = L.top + 64;
       out.push(`<rect class="band" x="0" y="${L.top}" width="${bandW}" height="136" rx="12"/>`, text(16, L.top + 24, L.name, "lane", "start"));
@@ -5911,22 +5911,27 @@ function renderHowPic() {
     }
     const g = { gx: 580, gy: cy, lx: 800, ly: cy, vx: 690, vy: 292, glx: 580, gly: cy + 44, llx: 800, lly: cy - 38,
       sx: 700, sy: cy - 10, dx: 700, dy: 62, dly: "above", wrapLaw: 22, wrapOver: 30, wrapDies: 40,
-      over: `M708 288 Q 800 280 800 ${cy + 33}` };
+      // The override: out of the veto's right side, then up into the law's bottom, with one rounded corner.
+      over: () => `M710 292 H788 Q800 292 800 280 V${cy + 34}` };
     if (UNI) {
       out.push(arrow(id, xs[2], lanes[0].y, g.gx, g.gy, 22, 24));
     } else if (relay) {
-      const [a, b] = lanes, x4 = 430;
-      // Crossing: each house's vote leads to the other house's committee and vote.
+      const [a, b] = lanes, x4 = 366, x5 = 456;
+      // Crossing: each house's vote leads to the other house's committee, then that house's vote.
       out.push(curve(id, xs[2] + 24, a.y, x4 - 27, b.y, true), curve(id, xs[2] + 24, b.y, x4 - 27, a.y, true));
       out.push(chip((xs[2] + x4) / 2, cy - 10, "to the other house", "tag", 132));
       for (const L of lanes) {
-        out.push(arrow(id, x4, L.y, g.gx, g.gy, 22, 24));
-        out.push(node(x4, L.y, 22, "m", "vote"), text(x4, L.y + 40, "Committee, vote", "lb"));
+        const V = voteLabel(L.name);
+        out.push(arrow(id, x4, L.y, x5, L.y, 22, 22), arrow(id, x5, L.y, g.gx, g.gy, 22, 24));
+        out.push(node(x4, L.y, 22, "m", "comm"), text(x4, L.y + 40, "Committee", "lb"));
         if (stop2) out.push(chip(x4, L.y + 48, stop2, "pill"));
+        out.push(node(x5, L.y, 22, "m", "vote"), text(x5, L.y + 40, V[0], "lb"));
+        if (V[1]) out.push(text(x5, L.y + 56, V[1], "lb"));
       }
     } else {
       const jx = 455;
-      for (const L of lanes) out.push(arrow(id, xs[2], L.y, jx, cy, 22, 24));
+      // Each house's vote curves into the join's left side, clear of its words under the node.
+      for (const L of lanes) out.push(curve(id, xs[2] + 23, L.y, jx - 29, cy, true));
       out.push(arrow(id, jx, cy, g.gx, g.gy, 24, 24));
       out.push(node(jx, cy, 24, "m", "join"), text(jx, cy + 44, ["Both houses pass", "the same text"], "lb"));
     }
@@ -5941,7 +5946,7 @@ function renderHowPic() {
     const cols = UNI ? [{ name: H[0], x: cx, l: 70, w: 200 }] : [{ name: H[0], x: 86, l: 2, w: 166 }, { name: H[1], x: 254, l: 172, w: 166 }];
     const ys = [70, 162, 278];
     const two = cols.some((C) => voteLabel(C.name).length > 1), vEnd = ys[2] + (two ? 62 : 48);
-    const bandH = relay ? 494 + (two ? 14 : 0) : vEnd + 10;
+    const y4 = 430 + (two ? 14 : 0), y5 = y4 + 116, bandH = relay ? y5 + (two ? 62 : 48) + 10 : vEnd + 10;
     for (const C of cols) out.push(`<rect class="band" x="${C.l}" y="0" width="${C.w}" height="${bandH}" rx="12"/>`, text(C.x, 24, C.name, "lane"));
     for (const C of cols) {
       const x = C.x, V = voteLabel(C.name);
@@ -5957,14 +5962,17 @@ function renderHowPic() {
       gy = vEnd + 80;
       out.push(arrow(id, cx, vEnd + 14, cx, gy, 0, 24));
     } else if (relay) {
-      const [a, b] = cols, y4 = 430 + (two ? 14 : 0);
+      const [a, b] = cols;
       out.push(curve(id, a.x, vEnd, b.x, y4 - 25), curve(id, b.x, vEnd, a.x, y4 - 25));
       out.push(chip(cx, (vEnd + y4 - 25) / 2 - 10, "to the other house", "tag", 132));
-      gy = y4 + 160;
+      gy = y5 + 150;
       for (const C of cols) {
-        out.push(arrow(id, C.x, y4 + (stop2 ? 72 : 46), cx, gy, 0, 24));
-        out.push(node(C.x, y4, 21, "m", "vote"), text(C.x, y4 + 38, "Committee, vote", "lb"));
+        const V = voteLabel(C.name);
+        out.push(arrow(id, C.x, y4 + (stop2 ? 72 : 46), C.x, y5, 0, 21), arrow(id, C.x, y5 + (two ? 62 : 48), cx, gy, 0, 24));
+        out.push(node(C.x, y4, 21, "m", "comm"), text(C.x, y4 + 38, "Committee", "lb"));
         if (stop2) out.push(chip(C.x, y4 + 45, stop2, "pill"));
+        out.push(node(C.x, y5, 21, "m", "vote"), text(C.x, y5 + 38, V[0], "lb"));
+        if (V[1]) out.push(text(C.x, y5 + 54, V[1], "lb"));
       }
     } else {
       const jy = vEnd + 54;
@@ -5973,10 +5981,11 @@ function renderHowPic() {
       gy = jy + 110;
       out.push(arrow(id, cx, jy, cx, gy, 24, 24));
     }
-    const ly = gy + 200;
+    const ly = gy + 214;
     const g = { gx: cx, gy, lx: cx, ly, vx: 286, vy: gy + 84, glx: cx + 34, gly: gy + 5, ganchor: "start", llx: cx, lly: ly + 46,
       sx: cx, sy: gy + 56, dx: 56, dy: gy + 84, dly: "below", wrapLaw: 22, wrapOver: 15, wrapDies: 17,
-      over: `M${286 - 19} ${gy + 90} Q 215 ${gy + 130} ${cx + 28} ${ly - 6}` };
+      // The override: straight down from under the veto's words, then left into the law's side, with one rounded corner.
+      over: (k) => `M286 ${gy + 84 + 56 + k * 15} V${ly - 12} Q286 ${ly} 274 ${ly} H${cx + 32}` };
     out.push(govPart(id, g));
     return `<svg class="tall" viewBox="0 0 ${W} ${ly + 60}" role="img" aria-label="${esc(label())}">${defs(id)}${out.join("")}</svg>`;
   };

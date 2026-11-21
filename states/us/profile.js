@@ -41,7 +41,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 10 days: becomes law", tip: "Sundays excepted." }, { dies: "Not signed while Congress is away: pocket veto", tip: "If Congress has adjourned and can't receive a veto, an unsigned bill dies, with no veto to override." }],
+  unsigned: [{ law: "Not signed in 10 days: becomes law", tip: "Sundays excepted." }, { dies: "Not signed when Congress adjourns: pocket veto", tip: "If Congress adjourns before the 10 days are up, so the President can't send a veto back, the bill dies, with no veto to override. In practice that means the end of a session: during shorter breaks, Congress names someone to receive vetoes." }],
   override: "Two-thirds can override",
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "senator", H: "representative" },
