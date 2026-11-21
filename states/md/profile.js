@@ -94,7 +94,7 @@ const STATE = {
         [due, "down", LEG, MD(due), "The governor's last vetoes; bills not vetoed become law."],
         [`${Y}-10-01`, "down", LEG, "October 1", "Most new laws take effect."],
       ],
-      note: "Bills passed at the end of the session go to the governor within 20 days, and the governor has 30 days to act.",
+      note: "The governor has 6 days (Sundays excepted) to act during the session; bills passed at its end go to the governor within 20 days, and the governor then has 30 days.",
     };
   },
   waitingHead: "On the way to the governor",
