@@ -4720,17 +4720,19 @@ async function publishAction(btn) {
     }
   } catch (e) { btn.disabled = false; pubSay(e.message, true); }
 }
-// Lists this browser follows (Follow on /list/; lists_pages/common.js keeps them under "abt:follows": {slug: {title,
-// known: ["nj:2026:A1234", ...]}}) that have this state's bills: one line, linking to each and to Your bills.
+// Lists this browser made in the list maker (lists_pages/named.js keeps them under "abt:lists": {slug: {title, bills:
+// ["ny:2025:A1234", ...]}}) and lists it follows (Follow on /list/; common.js keeps them under "abt:follows": {slug:
+// {title, known: [...]}}) that have this state's bills: one line, each linking to its tab on Your bills (#tab=<slug>).
 function followedHere() {
   if (!ROOT) return "";
-  let f = {};
-  try { f = JSON.parse(localStorage.getItem("abt:follows") || "{}") || {}; } catch (e) {}
-  const pre = `${STATE.code}:`;
-  const here = Object.entries(f).map(([slug, v]) => [slug, v?.title, (v?.known || []).filter((k) => String(k).startsWith(pre)).length]).filter((x) => x[2]);
-  if (!here.length) return "";
-  return `<p class="muted wfollow">Lists you follow: ${here.map(([slug, title, n]) => `<a href="${esc(listUrl(slug))}">${esc(title || "A shared list")}</a> (${num(n)} bill${n === 1 ? "" : "s"} here)`).join(" · ")}`
-    + ` · <a href="${esc(siteTop())}your-bills/">Your bills ›</a></p>`;
+  const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (e) { return {}; } };
+  const pre = `${STATE.code}:`, count = (xs) => (xs || []).filter((k) => String(k).startsWith(pre)).length;
+  const link = ([slug, title, n]) => `<a href="${esc(siteTop())}your-bills/#tab=${encodeURIComponent(slug)}">${esc(title || "A shared list")}</a> (${num(n)})`;
+  const made = Object.entries(read("abt:lists")).map(([slug, v]) => [slug, v?.title, count(v?.bills)]).filter((x) => x[2]);
+  const follow = Object.entries(read("abt:follows")).map(([slug, v]) => [slug, v?.title, count(v?.known)]).filter((x) => x[2] && !made.some((m) => m[0] === x[0]));
+  const parts = [made.length ? `Your lists with ${esc(stateName())} bills: ${made.map(link).join(" · ")}` : "",
+    follow.length ? `Lists you follow: ${follow.map(link).join(" · ")}` : ""].filter(Boolean);
+  return parts.length ? `<p class="muted wfollow">${parts.join(" · ")} ›</p>` : "";
 }
 
 // Bills starred in this state's other sessions (the Watchlist tab counts this session's): "3 more in 2023–24 ›", to
