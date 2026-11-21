@@ -13,7 +13,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 6 days: becomes law", tip: "Sundays excepted. Bills passed at the end of the session, as most are, reach the governor within 20 days and get 30 days." }],
+  unsigned: [{ law: "Not signed in 6 days: becomes law", tip: "Sundays excepted. Bills presented in the session's last 6 days or after it, as most are, get 30 days; they reach the governor within 20 days of its end." }],
   override: { t: "Three-fifths can override", tip: "Three-fifths of each house's members." },
   titles: { S: "Sen.", H: "Del." },
   memberWords: { S: "state senator", H: "delegate" },
@@ -45,16 +45,27 @@ const STATE = {
     const [y, m, d] = STATE.opens(year).split("-").map(Number), t = new Date(y, m - 1, d + 89);
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   },
-  // Bills passed at the end of the session are presented to the governor within 20 days of adjournment, and the governor
-  // has 30 days after that to sign or veto them (Art. II, sec. 17): late May at the latest.
-  govDeadline(iso) {
-    if (!iso) return null;
-    const y = +iso.slice(0, 4), [a, b, c] = STATE.sessionEnds(y).split("-").map(Number), t = new Date(a, b - 1, c + 50);
+  // "If any Bill presented to the Governor while the General Assembly is in session is not returned by the Governor
+  // with objections within six days (Sundays excepted), the Bill shall be a law ..." and "Any Bill presented to the
+  // Governor within six days (Sundays excepted), prior to adjournment of any session of the General Assembly, or after
+  // such adjournment, shall become law without the Governor's signature unless it is vetoed by the Governor within 30
+  // days after its presentment" (Art. II, sec. 17(b), (c)). Bills passed in a session are presented "no later than 20
+  // days after adjournment" (Art. III, sec. 30), so the last possible day is 50 days after the session ends.
+  plusDays(iso, n) {
+    const [y, m, d] = iso.split("-").map(Number), t = new Date(y, m - 1, d + n);
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   },
-  dueLabel: () => "Governor's last day to act (about 50 days after the session ends)",
+  govDeadline(iso) {
+    if (!iso) return null;
+    const [y, m, d] = iso.split("-").map(Number), t = new Date(y, m - 1, d);
+    let n = 6;
+    while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
+    const six = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    return six < STATE.sessionEnds(y) ? six : STATE.plusDays(iso, 30);
+  },
+  dueLabel: () => "Governor's decision due (6 days during the session, Sundays excepted; 30 days for bills presented at its end)",
 
-  passedBothBy: (session) => STATE.govDeadline(STATE.sessionEnds(session)),
+  passedBothBy: (session) => STATE.plusDays(STATE.sessionEnds(session), 50),
   passedBothNote: (live) => live ? "On the way to the governor" : "No action recorded",
   passedBothGroup: ["Before the governor's deadline", () => "Bills that pass both houses go to the governor, who signs most of them at bill signings in April and May."],
   passedBothNext: () => ({
@@ -84,7 +95,7 @@ const STATE = {
 
   calendarDays: 0,
   calendar(Y, end1, end2, MD) {
-    const LEG = 112, open = STATE.opens(Y), adj = STATE.sessionEnds(Y), due = STATE.govDeadline(adj);
+    const LEG = 112, open = STATE.opens(Y), adj = STATE.sessionEnds(Y), due = STATE.plusDays(adj, 50);
     return {
       leg: [["", open, adj, "90-day session"]],
       gov: [["light", open, adj, "Signs bills"], ["", adj, due, "Bill signings, vetoes"]],
@@ -94,7 +105,7 @@ const STATE = {
         [due, "down", LEG, MD(due), "The governor's last vetoes; bills not vetoed become law."],
         [`${Y}-10-01`, "down", LEG, "October 1", "Most new laws take effect."],
       ],
-      note: "The governor has 6 days (Sundays excepted) to act during the session; bills passed at its end go to the governor within 20 days, and the governor then has 30 days.",
+      note: "The governor has 6 days (Sundays excepted) to act during the session, and 30 days for bills presented in its last 6 days or after it ends.",
     };
   },
   waitingHead: "On the way to the governor",

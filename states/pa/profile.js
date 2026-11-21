@@ -13,7 +13,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 10 days: becomes law", tip: "Sundays excepted; 30 days after the session ends." }],
+  unsigned: [{ law: "Not signed in 10 days: becomes law", tip: "For a bill still waiting when the session ends: 30 days after that." }],
   override: "Two-thirds can override",
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
@@ -43,18 +43,24 @@ const STATE = {
   sessionEnds: (session) => `${session + 1}-11-30`,
   // A full-time Legislature: it can vote until the session ends.
   floorVotesEnd: false,
-  // The governor has 10 days, Sundays excepted, while the Legislature is in session, and 30 days after it adjourns
-  // for good (Art. IV, sec. 15).
+  // "If any bill shall not be returned by the Governor within ten days after it shall have been presented to him, the
+  // same shall be a law ..., unless the General Assembly, by their adjournment, prevent its return, in which case it
+  // shall be a law, unless he shall file the same, with his objections, in the office of the Secretary of the
+  // Commonwealth, and give notice thereof by public proclamation within thirty days after such adjournment" (Art. IV,
+  // sec. 15). Ten calendar days: unlike most states' constitutions, Pennsylvania's doesn't except Sundays, and a last
+  // day on a weekend or holiday still counts (Attorney General's opinion, 1974, 68 Pa. D. & C.2d 43). When the ten days
+  // run past the session's end, the governor has 30 days from that adjournment, not from the bill's arrival. (Jubelirer v. Department of State, 2004: a recess can count as an
+  // adjournment too; recesses aren't known here, so only the session's end is used.)
   govDeadline(iso) {
     if (!iso) return null;
     const ymd = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
-    const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
-    let n = 10;
-    while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
+    const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c + 10);
     const end = STATE.sessionEnds(a % 2 ? a : a - 1);
-    return ymd(t) <= end ? ymd(t) : ymd(new Date(a, b - 1, c + 30));
+    if (ymd(t) <= end) return ymd(t);
+    const [x, y, z] = end.split("-").map(Number);
+    return ymd(new Date(x, y - 1, z + 30));
   },
-  dueLabel: () => "Governor's decision due (10 days, Sundays excepted; 30 after the session ends)",
+  dueLabel: () => "Governor's decision due (10 days; 30 days after the session ends)",
 
   passedBothBy: (session) => STATE.sessionEnds(session),
   passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
@@ -94,7 +100,7 @@ const STATE = {
         [`${Y}-06-30`, "down", LEG, "June 30", "The budget is due before the fiscal year starts July 1 (it's often late)."],
         [close, "down", LEG, MD(close), "The session ends. Bills that didn't become law die."],
       ],
-      note: "The governor has 10 days (Sundays excepted) to act, or 30 days after the session ends.",
+      note: "The governor has 10 days to act, or 30 days after the session ends.",
     };
   },
   waitingHead: "On the way to the governor",
@@ -124,7 +130,7 @@ const STATE = {
     "A committee reported it, and it waits for the full House or Senate. Bills are considered three times; most go to Appropriations before the third.",
     "Passed the House or the Senate, but not both. Both houses have to pass the same text.",
     "Passed both houses. The presiding officers sign it, then it goes to the governor.",
-    "Presented to the governor, who has 10 days (Sundays excepted) to sign or veto it.",
+    "Presented to the governor, who has 10 days to sign or veto it.",
     "Signed into law (an Act), or became law without the governor's signature.",
     "Vetoed by the governor. Overriding a veto takes two-thirds of each house.",
   ],

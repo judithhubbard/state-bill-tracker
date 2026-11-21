@@ -13,7 +13,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 5 days: becomes law", tip: "Sundays and holidays excepted; 15 days after the session adjourns." }],
+  unsigned: [{ law: "Not signed in 5 days: becomes law", tip: "Sundays and holidays excepted; 15 days if the session adjourns first." }],
   override: "Two-thirds can override",
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
@@ -58,14 +58,34 @@ const STATE = {
   },
   opens: (year) => STATE.wedAfterFirstMonday(year, year % 2 ? 1 : 2),
   sessionEnds: (year) => STATE.wedAfterFirstMonday(year, year % 2 ? 6 : 5),
-  // The governor has 5 days (Sundays and holidays excepted) during the session; a bill presented after it adjourns,
-  // or too late to return, gets 15 days (Art. IV, sec. 15).
+  // The state's legal holidays in the months of a regular session (C.G.S. sec. 1-4: New Year's Day, Martin Luther King
+  // Day, Lincoln's Birthday, Washington's Birthday, Memorial Day; a fixed date on a Sunday is kept the Monday after, on a
+  // Saturday the Friday before), and Good Friday, which the governor proclaims each year.
+  holidays(y) {
+    const ymd = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    const fixed = (m, d) => { const t = new Date(y, m - 1, d); t.setDate(d + (t.getDay() === 0 ? 1 : t.getDay() === 6 ? -1 : 0)); return ymd(t); };
+    const monday = (m, from) => { const t = new Date(y, m - 1, from); t.setDate(from + ((1 - t.getDay() + 7) % 7)); return ymd(t); };
+    // Easter (the anonymous Gregorian computus), then the Friday before it.
+    const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const em = Math.floor((h + l - 7 * m + 114) / 31), ed = ((h + l - 7 * m + 114) % 31) + 1;
+    const lastMonMay = new Date(y, 4, 31); lastMonMay.setDate(31 - ((lastMonMay.getDay() + 6) % 7));
+    return new Set([fixed(1, 1), monday(1, 15), fixed(2, 12), monday(2, 15), ymd(new Date(y, em - 1, ed - 2)), ymd(lastMonMay)]);
+  },
+  // "In case the governor shall not transmit the bill to the secretary, either with his approval or with his objections,
+  // within five calendar days, Sundays and legal holidays excepted, after the same shall have been presented to him, it
+  // shall be a law at the expiration of that period; except that, if the general assembly shall then have adjourned any
+  // regular or special session, the bill shall be a law unless the governor shall, within fifteen calendar days after
+  // the same has been presented to him, transmit it to the secretary with his objections" (Art. IV, sec. 15). "Then" is
+  // the end of the five days: a bill presented in the session's last days, whose five days run past adjournment, gets
+  // the fifteen days too, counted from presentment, as does one presented after.
   govDeadline(iso) {
     if (!iso) return null;
     const ymd = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
-    const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
+    const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c), off = STATE.holidays(a);
     let n = 5;
-    while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
+    while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0 && !off.has(ymd(t))) n--; }
     return ymd(t) <= STATE.sessionEnds(a) ? ymd(t) : ymd(new Date(a, b - 1, c + 15));
   },
   dueLabel: () => "Governor's decision due (5 days during the session, 15 after it)",
@@ -104,7 +124,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), "The session adjourns at midnight. Bills that didn't pass both houses die."],
         [`${Y}-10-01`, "down", LEG, "October 1", "Most new laws take effect."],
       ],
-      note: "The governor has 5 days (Sundays and holidays excepted) to act during the session, and 15 days for bills that arrive after it adjourns.",
+      note: "The governor has 5 days (Sundays and holidays excepted) to act during the session, and 15 days if it adjourns before then.",
     };
   },
   waitingHead: "On the way to the governor",

@@ -17,4 +17,5 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   title and prime sponsor. Legislators (`contacts.py`): the member and committee feeds (phones, offices; majority chairs);
   emails from Open States (owner's decision 2026-10-31: the Senate's pages hide them behind an anti-collection script).
   The 2,572 municipalities by district (`towns.py`); townships that share a name carry their county. Full-time
-  Legislature (`floorVotesEnd: false`); the session ends November 30 of the even year; governor 10 days, Sundays excepted.
+  Legislature (`floorVotesEnd: false`); the session ends November 30 of the even year; governor 10 days (calendar days: Art. IV, sec. 15
+  excepts no Sundays), or 30 days after the session ends for a bill still waiting then.

@@ -52,12 +52,20 @@ const STATE = {
   },
   sessionEnds: (session) => `${session + 1}-12-31`,
   floorVotesEnd: false,
-  // The governor has 10 days to sign or veto a bill while the General Assembly is in session, and 30 days after it
-  // adjourns (Art. II, sec. 22). Local bills, constitutional amendments and redistricting acts don't go to the governor.
+  // "If any bill shall not be returned by the Governor within 10 days after it shall have been presented to him, the
+  // same shall be a law ... unless the General Assembly shall have adjourned: (a) For more than 30 days jointly ...; or
+  // (b) Sine die in which case it shall become a law unless, within 30 days after such adjournment, it is returned by
+  // the Governor with objections" (Art. II, sec. 22(7)). Ten calendar days; when they run past the session's end, the
+  // governor has 30 days from that adjournment. (Adjournments of more than 30 days within the session count too; they
+  // aren't known here.) Local bills, constitutional amendments and redistricting acts don't go to the governor.
   govDeadline(iso) {
     if (!iso) return null;
+    const ymd = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
     const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c + 10);
-    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    const end = STATE.sessionEnds(a % 2 ? a : a - 1);
+    if (ymd(t) <= end) return ymd(t);
+    const [x, y, z] = end.split("-").map(Number);
+    return ymd(new Date(x, y - 1, z + 30));
   },
   dueLabel: () => "Governor's decision due (10 days during the session, 30 after it adjourns)",
 

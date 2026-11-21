@@ -13,7 +13,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 5 days: becomes law", tip: "Sundays excepted; 10 days after the Legislature adjourns." }],
+  unsigned: [{ law: "Not signed in 5 days: becomes law", tip: "Sundays excepted; 10 days after the Legislature adjourns, also not counting Sundays." }],
   override: { t: "Two-thirds can override", tip: "Two-thirds of the members present in each house." },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
@@ -62,7 +62,8 @@ const STATE = {
   sessionEnds: (year) => STATE.dated[year] || STATE.plusDays(STATE.opens(year), 85),
   // The governor has 5 days (Sundays excepted) after a bill is presented while the Legislature is in session; a bill it
   // can't be returned to because the Legislature adjourned becomes law unless vetoed within 10 days (Sundays excepted)
-  // after adjournment (Constitution, Art. IV, sec. 10). There's no pocket veto: a bill the governor doesn't act on
+  // after adjournment: "filed, with his objections, in the office of the secretary of state within ten days after such
+  // adjournment (Sundays excepted) or become a law" (Constitution, Art. IV, sec. 10). There's no pocket veto: a bill the governor doesn't act on
   // becomes law.
   govDeadline(iso) {
     if (!iso) return null;
@@ -127,7 +128,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), "The session adjourns sine die. Bills that didn't pass both houses die."],
         [`${Y}-07-01`, "down", LEG, "July 1", "Most new laws take effect, and the state's budget year starts."],
       ],
-      note: "The governor has 5 days (Sundays excepted) to act during the session, and 10 days after it adjourns.",
+      note: "The governor has 5 days to act during the session, and 10 days after it adjourns, Sundays excepted in both.",
     };
   },
   waitingHead: "On the way to the governor",
