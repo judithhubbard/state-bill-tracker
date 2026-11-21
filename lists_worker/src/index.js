@@ -142,16 +142,14 @@ export default {
       if (parts[0] === "admin") {
         const token = (req.headers.get("Authorization") || "").replace(/^Bearer /, "");
         if (!env.ADMIN_TOKEN || !same(token, env.ADMIN_TOKEN)) return fail(req, 401, "Not authorized.");
-        // Everything kept (lists, codes, view counts; not the daily rate counters), for the weekly backup.
+        // Everything kept (lists, codes, view counts; not the daily rate counters), for the daily backup
+        // (tools/lists_backup.py), a page at a time: ?cursor= the last page's "cursor", until it's null. (One request
+        // may make at most 1,000 KV calls on the free plan, so 200 keys a page, not all of them at once.)
         if (parts[1] === "export" && req.method === "GET") {
           const out = {};
-          let cursor;
-          do {
-            const page = await env.LISTS.list({ cursor });
-            for (const k of page.keys) if (!k.name.startsWith("rate:")) out[k.name] = await getJSON(env, k.name);
-            cursor = page.list_complete ? null : page.cursor;
-          } while (cursor);
-          return reply(req, { exported: new Date().toISOString(), keys: out });
+          const page = await env.LISTS.list({ cursor: url.searchParams.get("cursor") || undefined, limit: 200 });
+          for (const k of page.keys) if (!k.name.startsWith("rate:")) out[k.name] = await getJSON(env, k.name);
+          return reply(req, { exported: new Date().toISOString(), keys: out, cursor: page.list_complete ? null : page.cursor });
         }
         if (parts[1] === "codes" && req.method === "POST") {
           const body = await req.json().catch(() => ({}));

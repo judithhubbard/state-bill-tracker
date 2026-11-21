@@ -1,11 +1,15 @@
-# A weekly copy of the shared watchlists (the state-lists Worker's storage), kept as an encrypted download on this run
-# for 90 days. The repository is public, so the copy is encrypted (AES-256, key in the LISTS_BACKUP_KEY secret and the
-# owner's ~/.state_lists_backup_key). To read one: download the artifact, then
-#   openssl enc -d -aes-256-cbc -pbkdf2 -in lists.json.enc -out lists.json -pass file:$HOME/.state_lists_backup_key
+# A daily copy of the shared watchlists (everything the state-lists Worker keeps in its KV namespace, STATE_LISTS: lists
+# with their edit keys, invite codes, view counts), kept as an encrypted download on the run for 90 days (the longest
+# GitHub keeps a public repository's artifacts). The repository is public, so the copy is never uploaded or logged
+# unencrypted: AES-256 with a passphrase in the LISTS_BACKUP_KEY secret (the owner's copy: ~/.state_lists_backup_key);
+# without it the backups can't be read. Restoring: tools/lists_backup.py's notes (download, then
+#   openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in lists.json.enc -out lists.json -pass file:$HOME/.state_lists_backup_key
+# and its "restore" command). Copies made before 2026-11-21 were encrypted without "-iter 200000": leave it out for those.
+# Secrets: LISTS_ADMIN_TOKEN (the Worker's ADMIN_TOKEN, ~/.state_lists_admin) and LISTS_BACKUP_KEY.
 name: Back up shared lists
 on:
   schedule:
-    - cron: "17 7 * * 1"
+    - cron: "17 7 * * *"
   workflow_dispatch:
 permissions:
   contents: read
@@ -14,19 +18,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v7
       - name: Export and encrypt
         env:
           LISTS_ADMIN_TOKEN: ${{ secrets.LISTS_ADMIN_TOKEN }}
           LISTS_BACKUP_KEY: ${{ secrets.LISTS_BACKUP_KEY }}
         run: |
           set -euo pipefail
-          curl -sSf -H "Authorization: Bearer $LISTS_ADMIN_TOKEN" https://state-lists.lists-worker.workers.dev/admin/export -o lists.json
-          python3 -c "import json; d = json.load(open('lists.json')); print(len(d['keys']), 'keys exported')"
-          printf '%s' "$LISTS_BACKUP_KEY" > key.txt
-          openssl enc -aes-256-cbc -pbkdf2 -salt -in lists.json -out lists.json.enc -pass file:key.txt
-          rm -f lists.json key.txt
+          if [ -z "$LISTS_ADMIN_TOKEN" ] || [ -z "$LISTS_BACKUP_KEY" ]; then echo "::error::LISTS_ADMIN_TOKEN or LISTS_BACKUP_KEY secret missing"; exit 1; fi
+          umask 077
+          python3 tools/lists_backup.py export "$RUNNER_TEMP/lists.json"
+          printf '%s' "$LISTS_BACKUP_KEY" > "$RUNNER_TEMP/key.txt"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in "$RUNNER_TEMP/lists.json" -out lists.json.enc -pass "file:$RUNNER_TEMP/key.txt"
+          # Check the copy opens with the key before keeping it.
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in lists.json.enc -pass "file:$RUNNER_TEMP/key.txt" | cmp - "$RUNNER_TEMP/lists.json"
+          rm -f "$RUNNER_TEMP/lists.json" "$RUNNER_TEMP/key.txt"
       - uses: actions/upload-artifact@v4
         with:
           name: shared-lists-${{ github.run_id }}
           path: lists.json.enc
           retention-days: 90
+          if-no-files-found: error

@@ -249,7 +249,7 @@ opened (`later()`, `STALE`, `showView()`).
 - **Workers:** `state-lists` (`lists_worker/`, KV namespace STATE_LISTS bound as `LISTS`; secret `ADMIN_TOKEN`; every
   profile's `listsApi`); `state-cron` (`cron_worker/`, no timer). Never deploy as, or bind to, the live NY site's
   `albany-lists` / `albany-cron` or its LISTS namespace. `lists_admin.py` manages lists and codes (token from
-  `LISTS_ADMIN_TOKEN` or `~/.state_lists_admin`); `lists-backup.yml` exports and encrypts weekly (`LISTS_BACKUP_KEY`).
+  `LISTS_ADMIN_TOKEN` or `~/.state_lists_admin`); `lists-backup.yml` exports (`tools/lists_backup.py`, paged `/admin/export`) and encrypts daily (`LISTS_BACKUP_KEY`), kept 90 days; restore steps in `tools/lists_backup.py`.
 - **Keys** (names only): GitHub secrets `NYSENATE_API_KEY`, `OPENSTATES_API_KEY`, `UTAH_API_TOKEN`, `INDIANA_API_KEY`,
   `LEGISCAN_API_KEY`, `LISTS_ADMIN_TOKEN`, `LISTS_BACKUP_KEY`; on the owner's computer `~/.nysenate_api_key`,
   `~/.openstates_api_key`, `~/.utah_api_token`, `~/.indiana_api_key`, `~/.legiscan_api_key`, `~/.state_lists_admin`,
