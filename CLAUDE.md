@@ -408,6 +408,10 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     2023-24 veto-day bills passed; their official pages say "Held by Governor" and "Died Upon Conclusion of the 131st" (32,
     pocket vetoes) or nothing (3). Read the official page (states/me/laws.py) and re-read robots.txt rather than trusting an
     old note that it bars everything. The check LOOKs at laws whose history ends with the governor holding them.
+  - (2026-11-21) Messages that arrive after the action: NY's veto messages reach the Senate API days or weeks after the
+    veto (S1239 of 2025, "VETOED MEMO.19" on 2026-11-20, had none that day). fetch_bills.py --if-changed still downloads
+    them (the updates list counts "Bill Veto" updates). The check LOOKs at vetoes 2 weeks to a year old with no message,
+    in any state whose vetoes carry them (pocket vetoes left out: NY's say "no veto message issued").
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.

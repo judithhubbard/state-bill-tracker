@@ -157,6 +157,20 @@ def check(state):
         if undated:
             say(state, "LOOK", f"{s}: {len(undated)} of {sum(r['stage'] in (5, 6) for r in recs)} laws and vetoes with no date "
                                f"for the governor's action, e.g. {undated[:4]}")
+        # A veto message that never arrived: New York's memos come from the Senate API's vetoMessages, often days after
+        # the veto (S1239 of 2025, vetoed 2026-11-20 as "VETOED MEMO.19", had none that day), and a run that kept the
+        # last copy (fetch_bills.py --if-changed) would keep showing none. In a state whose vetoes carry messages, the
+        # vetoes of the last year more than 14 days old without one. (A state's own gaps, vetoes the files give no
+        # message for, show here too; this is to read over, not a failure. Pocket vetoes are left out: New York's say
+        # "no veto message issued", as A8883 of 2025's.)
+        if any(r.get("vetoMemo") for rs in loaded.values() for r in rs):
+            today = date.today()
+            late = [r["nums"][0] for r in recs if r["stage"] == 6 and r["keyDates"][6]
+                    and today - timedelta(days=365) <= date.fromisoformat(r["keyDates"][6][:10]) <= today - timedelta(days=14)
+                    and not (r.get("vetoMemo") or {}).get("text")
+                    and not any(re.search(r"pocket veto", t, re.I) for v in r["vers"] for _, t in v["actions"])]
+            if late:
+                say(state, "LOOK", f"{s}: {len(late)} bills vetoed 2 weeks to a year ago with no veto message, e.g. {late[:4]}")
         # A veto that stood, whose last action reads as an override: NH's SB 434 of 2026, overridden by the Senate and
         # sustained by the House, showed "VETO OVERRIDDEN" (one house's override sorted after the other's sustaining vote).
         def last_line(r):

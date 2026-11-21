@@ -8,7 +8,10 @@ Usage: python3 fetch_bills.py [session_year] [--if-changed]   (default 2025, i.e
   --if-changed: when the saved copy (data/bills_<session>.json, with the Senate memos it was made with in
   data/senate_memos_<session>.json) is there and the API lists no bill updated since it was made
   (/api/3/bills/updates/<from>/<to>), the bills aren't downloaded again (publish.yml keeps the copy in its cache); "What
-  it does" is still written again, with the Assembly memos as they are now.
+  it does" is still written again, with the Assembly memos as they are now. The updates list counts the governor's
+  veto and approval messages too, which arrive days after the action (scope "Bill Veto", from VETOMSG files: S8432 of
+  2025, vetoed 2025-12-19, its message processed 2026-01-01; checked 2026-11-21), so a message that arrives later is
+  downloaded on the next run.
 API key comes from the NYSENATE_API_KEY environment variable, or else ~/.nysenate_api_key.
 """
 import json, os, re, sys, time, urllib.request, urllib.parse
