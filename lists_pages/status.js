@@ -9,8 +9,8 @@
 const WKEY = (st) => `abt:${st}:watch`;
 const baseNum = (n) => n.replace(/[A-Z]$/, "");
 const spaced = (n) => n.replace(/^([A-Z]+)(\d)/, "$1 $2");
-// Maine's records are "HLD307" (the house that has the paper, then its LD number), shown "LD 307".
-const numText = (st, n) => (st === "me" ? spaced(n).replace(/^[HS]LD /, "LD ") : spaced(n));
+// A bill number as shown ("HB 1005"; Maine's "HLD307" is "LD 307"): billfacts.js's, put before this file.
+const numText = BillFacts.numText;
 function readWatch(st) {
   try { const o = JSON.parse(localStorage.getItem(WKEY(st)) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; }
 }

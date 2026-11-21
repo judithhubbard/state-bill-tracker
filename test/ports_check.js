@@ -6,6 +6,8 @@
 //   first     build_data.py's split_payload() puts the titles and histories of the list's first FIRST_ROWS bills in the
 //             list part; tracker.html's sortBills() ("recent", the list's first order) must put no other bill in its
 //             first PAGE (else the first screen shows rows without titles until the rows part comes).
+//   numbers   issues_site.py's shown() (the issue pages' bill numbers, written in Python) against billfacts.js's numText()
+//             (every other page's).
 // (build_data.py's api_names() is the only copy now: the page reads apiName. The profile's settings are read by running
 // it: lists_pages/profilefacts.js.)
 // Usage: node test/ports_check.js SITE   (a folder build_site.sh wrote; each state's current session)
@@ -84,6 +86,33 @@ for (const st of fs.readdirSync(site).sort()) {
   const rowsIn = new Set(list.rowsIn || []);
   const missing = sortBills(bills).slice(0, PAGE).filter((b) => !rowsIn.has(b.j));
   if (missing.length) fail(st, `${missing.length} of the list's first ${PAGE} bills have no title in the list part (first: ${cols[17][missing[0].j][0][0]})`);
+}
+// numbers: issues_site.py's shown() (the issue pages, written in Python) against billfacts.js's numText() (every other
+// page), over each built state's bill numbers and a few made-up ones (Maine's "HLD307" among them).
+{
+  const bctx = vm.createContext({});
+  vm.runInContext(fs.readFileSync(path.join(REPO, "lists_pages", "billfacts.js"), "utf8") + "\n;globalThis.BillFacts = BillFacts;", bctx);
+  const pairs = [["me", "HLD307"], ["me", "SLD1"], ["me", "SP12"], ["ny", "S1234A"], ["us", "HR8070"], ["co", "SB26-135"], ["ne", "LB525A"], ["wy", "SF0001"]];
+  for (const st of fs.readdirSync(site).sort()) {
+    const dir = path.join(site, st, "data");
+    if (!/^[a-z]{2}$/.test(st) || !fs.existsSync(dir)) continue;
+    for (const f of fs.readdirSync(dir).filter((x) => /^status_\d+\.json$/.test(x))) {
+      const d = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
+      for (const r of Object.values(d.bills || {}).slice(0, 400)) pairs.push([st, r[0]]);
+      for (const a of Object.keys(d.alias || {}).slice(0, 100)) pairs.push([st, a]);
+    }
+  }
+  const py = require("child_process").spawnSync("python3", ["-c",
+    "import json, sys; sys.path.insert(0, sys.argv[1]); import issues_site; print(json.dumps([issues_site.shown(n, (), st) for st, n in json.load(sys.stdin)]))", REPO],
+    { input: JSON.stringify(pairs), encoding: "utf8", maxBuffer: 1 << 28 });
+  if (py.status) fail("numbers", `issues_site.py's shown() didn't run: ${py.stderr.slice(-300)}`);
+  else {
+    const theirs = JSON.parse(py.stdout);
+    const bad = pairs.filter(([st, n], i) => bctx.BillFacts.numText(st, n) !== theirs[i]);
+    bad.slice(0, 3).forEach(([st, n]) => fail("numbers", `${st} ${n}: billfacts.js ${JSON.stringify(bctx.BillFacts.numText(st, n))}, issues_site.py ${JSON.stringify(theirs[pairs.findIndex((p) => p[0] === st && p[1] === n)])}`));
+    if (bad.length > 3) fail("numbers", `... and ${bad.length - 3} more`);
+    console.log(`ports_check: ${pairs.length} bill numbers shown the same way by billfacts.js and issues_site.py: ${bad.length ? "NO" : "yes"}`);
+  }
 }
 console.log(`ports_check: ${checked} states, ${fails ? `${fails} FAIL` : "no differences"}`);
 process.exit(fails ? 1 : 0);

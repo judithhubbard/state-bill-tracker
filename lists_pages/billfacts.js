@@ -15,6 +15,7 @@
 //   BillFacts.hash(num): which piece or shard holds a bill (FNV-1a of its number without the version letter; build_data.py's
 //     shard_of() is the same, and test/hash_check.py checks the two agree).
 //   BillFacts.runProfile(src, session, F): a state's profile.js run outside its page (/your-bills/, the build).
+//   BillFacts.numText(st, num): a bill number as shown ("HB 1005", Maine's "LD 307").
 const BillFacts = (() => {
   const commPlain = (n) => (n || "").replace(/ And /g, " and ").replace(/ Committee$/, "");
   const BALLOT_MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December";
@@ -256,6 +257,10 @@ const BillFacts = (() => {
     const tip = String(pipTip(uni, st, now)).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
     return `<span class="pips s${k}${uni ? " uni" : ""}${more ? ` ${more}` : ""}" aria-hidden="true" title="${tip}">${out}</span>`;
   }
-  return { make, words, nextStep, newsDay, isNew, ROUTINE, WEIGHT, weightOf, hash, runProfile, commPlain, pips, pipTip, oneHouse };
+  // A bill number as people write it: "HB1005" -> "HB 1005". Maine's records are "HLD307"/"SLD307" (the house that has
+  // the paper, then its LD number), shown "LD 307". (The one copy in the pages; issues_site.py's shown() writes the same
+  // in Python, and test/ports_check.js checks the two agree.)
+  const numText = (st, n) => { const s = String(n || "").replace(/^([A-Z]+)(\d)/, "$1 $2"); return st === "me" ? s.replace(/^[HS]LD /, "LD ") : s; };
+  return { make, words, nextStep, newsDay, isNew, ROUTINE, WEIGHT, weightOf, hash, runProfile, commPlain, pips, pipTip, oneHouse, numText };
 })();
 if (typeof module !== "undefined") module.exports = BillFacts;

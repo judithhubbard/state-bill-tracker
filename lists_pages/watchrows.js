@@ -17,8 +17,8 @@ const WatchRows = (() => {
   const NOTES = {};
   const h = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const today = () => WatchRules.localToday();
-  // Maine's records are "HLD307" (the house that has the paper, then its LD number), shown "LD 307".
-  const numText = (st, n) => { const s = String(n || "").replace(/^([A-Z]+)(\d)/, "$1 $2"); return st === "me" ? s.replace(/^[HS]LD /, "LD ") : s; };
+  // A bill number as shown (Maine's "HLD307" is "LD 307").
+  const numText = BillFacts.numText;  // (billfacts.js, put before this file in every page that has it)
   // A day as a row shows it: "Dec 1", with the year when it isn't this one.
   const day = (d) => { const t = new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)); return t.toLocaleDateString("en-US", { month: "short", day: "numeric", ...(d.slice(0, 4) === today().slice(0, 4) ? {} : { year: "numeric" }) }); };
   const fullDay = (d) => (d ? new Date(`${d.slice(0, 10)}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
