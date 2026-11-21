@@ -38,6 +38,7 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
 from states.mo import profile as P
+from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
 OTHER = {"S": "H", "H": "S"}
@@ -1100,6 +1101,7 @@ def load_session(session):
     paths = [os.path.join(folder(session), "state", n) for n in ("house.json", "senate.json")] + [os.path.join(P.DATA, "last_checked")]
     times = [os.path.getmtime(x) for x in paths if os.path.exists(x)]
     fetched = datetime.fromtimestamp(max(times), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M") if times else ""
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 

@@ -18,6 +18,7 @@ the chair doesn't hear dies there. Votes are tallies only (the roll calls' membe
 import glob, importlib, json, os, re
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from states.undated import settle
 
 P = importlib.import_module("states.in.profile")  # "in" is a Python keyword, so no import statement
 
@@ -319,6 +320,7 @@ def load_session(session):
         index[p] = len(recs)
         recs.append(rec)
     json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 

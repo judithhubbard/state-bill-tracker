@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 
 from stages import rank
 from . import profile as P
+from states.undated import settle
 
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 
@@ -551,4 +552,5 @@ def load_session(session):
         for p in members:
             index[p] = len(recs)
         recs.append(rec)
+    settle(recs, [], (path,))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}

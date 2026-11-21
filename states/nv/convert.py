@@ -33,6 +33,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from states.nv import profile as P
+from states.undated import settle
 
 HOUSE = {"S": "Senate", "A": "Assembly"}
 CHAMBER = {"Senate": "S", "Assembly": "A"}
@@ -401,6 +402,7 @@ def load_session(session):
             texts[p] = {"statement": what, "label": "From the Legislative Counsel's Digest."}
     with open(os.path.join(P.DATA, f"texts_{session}.json"), "w", encoding="utf-8") as f:
         json.dump(texts, f, ensure_ascii=False)
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 
@@ -410,14 +412,6 @@ def adjourned(session):
     while t.weekday() != 0:
         t = t.replace(day=t.day + 1)
     return date.fromordinal(t.toordinal() + 119).isoformat()
-
-
-def unread_day(session):
-    """A listed bill whose page isn't read yet (a run cut short): the day the bill list was read, not the session's first
-    day, which for the next session's prefiled bills is months away (AB 69-80 of 2027 showed a last action on February 1,
-    2027, in November 2026)."""
-    listed = (load(session, "state") or {}).get("lists") or ""
-    return min(f"{session}-02-01", listed or date.today().isoformat())
 
 
 def record(session, p, row, lst):
@@ -731,8 +725,8 @@ def record(session, p, row, lst):
         "chapter": chapter, "veto": None, "memo": "", "vetoMemo": None,
         "simText": f"{title} {sim_text(long_title)} {'' if amendment else what[:600]}",
         "comm": comm_now if stage == 0 else None,
-        "first": min(action_dates, default=pg["intro"] or unread_day(session)),
-        "last": max(action_dates, default=pg["intro"] or unread_day(session)),
+        "first": min(action_dates, default=pg["intro"] or f"{session}-02-01"),
+        "last": max(action_dates, default=pg["intro"] or f"{session}-02-01"),
         "cosp": len(cos),
         "keyDates": [
             dates(lambda s: s[3] == "reported", "first"),

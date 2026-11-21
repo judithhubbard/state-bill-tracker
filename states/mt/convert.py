@@ -37,6 +37,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from states.mt import profile as P
+from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
 _CACHE, _PARTIES, _KEYS = {}, {}, {}
@@ -862,6 +863,7 @@ def load_session(session):
         except ValueError:
             when = ""
     # No "What it does": the data has no summary of what a bill does, only its short title.
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, when, {"SENATE": [], "ASSEMBLY": []}
 
 

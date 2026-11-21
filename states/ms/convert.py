@@ -38,6 +38,7 @@ from zoneinfo import ZoneInfo
 
 from fetch_contacts import name_key
 from states.ms import profile as P
+from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
 OTHER = {"S": "H", "H": "S"}
@@ -576,6 +577,7 @@ def load_session(session):
         }
         index[p] = len(recs)
         recs.append(rec)
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 

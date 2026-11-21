@@ -419,8 +419,11 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     year's. The "on the floor but referred to a committee" check caught it.
   - (2026-11-21) A record's fallback date in the future: a bill listed but with no history yet (NV's prefiled bills whose
     pages a run didn't reach, AB 69-80 of 2027; MT's SB 32 of 2027, numbered with only drafting steps) was dated the
-    session's first day, months ahead. Many converters still default to `f"{session}-01-01"`; date such a bill by what
-    the record has (the list's read day, the last drafting step), never after today. And a source's typo a month ahead:
+    session's first day, months ahead. Every converter's load_session() now ends with `settle()` (states/undated.py): a bill
+    with no dated history line and a future "first"/"last" takes the UTC day its own file (bills/AB69.html) or else the
+    session's bill list was last written, today only when no file is found. Not today itself: that moved the bill's date
+    every day (sorts, status files, shards). A new converter must call it too. (A fetcher that rewrites its list every run,
+    as NV's does, moves such a bill's day with each run until its own page is read.) And a source's typo a month ahead:
     MA's histories sign H4716, H4721, H5685 and S3097 "2026-11-30" (the session laws say October 30): a line dated after
     its file was read takes the law's date, else the read day. The "in the future" check catches both.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.

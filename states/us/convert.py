@@ -41,6 +41,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from states.us import profile as P
+from states.undated import settle
 
 # The 117th Congress (2021-22) onward, to the current one (the 120th from January 3, 2027). The 117th is older than the
 # shared window's 2023 (states/window.py) but was kept from the start, as California's and Illinois's 2021 are: it gives
@@ -901,6 +902,7 @@ def load_session(session):
     paths = glob.glob(os.path.join(folder(congress), "*.zip")) + glob.glob(os.path.join(folder(congress), "updates", "*.xml"))
     newest = max((os.path.getmtime(p) for p in paths), default=0)
     fetched = datetime.fromtimestamp(newest, ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M") if newest else ""
+    settle(recs, folder(congress))  # bills with no history yet: never dated in the future (states/undated.py)
     out = (recs, index, fetched, {"SENATE": [], "ASSEMBLY": []})
     _CACHE[session] = out
     return out

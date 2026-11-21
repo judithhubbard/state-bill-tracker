@@ -21,6 +21,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from . import profile as P
+from states.undated import settle
 
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 HOUSE = {"H": "House", "S": "Senate"}
@@ -415,6 +416,7 @@ def load_session(session):
         }
         index[p] = len(recs)
         recs.append(rec)
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 

@@ -29,6 +29,7 @@ its committees, titles, topics, links), and passes it to `load_session()`. What'
 """
 import glob, html, json, os, re
 from collections import defaultdict
+from states.undated import settle
 
 # The shared step vocabulary a state's decode() returns: (house, kind, text, extra).
 #   refer (extra: comm), report (a committee approved it; extra comm), subreport (a subcommittee did), held (set aside
@@ -578,6 +579,7 @@ def load_session(R, session):
     R.checks[session] = dict(check)
     os.makedirs(R.data_dir, exist_ok=True)
     json.dump(texts, open(os.path.join(R.data_dir, f"texts_{session}.json"), "w"), ensure_ascii=False)
+    settle(recs, S.folder)  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched(S.folder)
 
 

@@ -46,6 +46,7 @@ from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from states.mn import profile as P
+from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
 LIST_HOUSE = {"HOUSE": "H", "SENATE": "S"}
@@ -1224,6 +1225,7 @@ def load_session(session):
     json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     path = os.path.join(folder(session), "list.json")
     fetched = datetime.fromtimestamp(os.path.getmtime(path), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M") if os.path.exists(path) else ""
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     _LOADED[session] = (recs, index, fetched, {"SENATE": [], "ASSEMBLY": []})
     return _LOADED[session]
 

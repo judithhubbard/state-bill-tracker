@@ -27,6 +27,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from states.sc import profile as P
+from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
 CH = {"House": "H", "Senate": "S"}
@@ -487,6 +488,7 @@ def load_session(session):
         if what:
             texts[k] = {"statement": what, "label": "From the bill's official title."}
     json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 

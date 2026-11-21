@@ -38,6 +38,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from states.id import profile as P
+from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
 OTHER = {"S": "H", "H": "S"}
@@ -403,6 +404,7 @@ def load_session(session):
         recs.append(rec)
     # No "What it does": the one-line description (the summary here) only names what the bill touches; the sponsor's
     # Statement of Purpose, the plain account, is a PDF (not downloaded).
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 

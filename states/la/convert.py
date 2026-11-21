@@ -53,6 +53,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from states.la import profile as P
+from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
 OTHER = {"S": "H", "H": "S"}
@@ -972,6 +973,7 @@ def load_session(session):
     paths = [os.path.join(folder(session), n) for n in ("state.json", "list.json")]
     times = [os.path.getmtime(x) for x in paths if os.path.exists(x)]
     fetched = datetime.fromtimestamp(max(times), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M") if times else ""
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     _CACHE[k] = (recs, index, fetched, {"SENATE": [], "ASSEMBLY": []})
     return _CACHE[k]
 

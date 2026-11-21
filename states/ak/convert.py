@@ -24,6 +24,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from states.ak import profile as P
+from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
@@ -572,6 +573,7 @@ def load_session(session):
     # No "What it does": the only plain-language account is each sponsor's statement, an advocate's case for the bill as
     # introduced (HB 57 of 2025's is about phones in classrooms; the law became the education funding bill), with
     # letterheads and staff contacts mixed in. The official title (the summary) says what the bill touches.
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 

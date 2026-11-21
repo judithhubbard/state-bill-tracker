@@ -12,6 +12,7 @@ import glob, importlib, json, os, re
 from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from states.undated import settle
 
 P = importlib.import_module("states.or.profile")
 
@@ -367,6 +368,7 @@ def load_session(session):
         }
         index[p] = len(recs)
         recs.append(rec)
+    settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 
