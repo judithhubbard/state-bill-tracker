@@ -145,6 +145,7 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
 | `test/issues/get.py`, `check.py` | by hand, after an issue rule change | samples of matches to read |
 | `test/consistency.js` | by hand, against a local build (`ONLY="ne co va us tn nv nd de" SITE_BASE=http://localhost:8766/ ./build_site.sh DIR`, served) | FAIL when a bill's status words, watchlist group and deadline, or "New" differ between views; ends "`N problem(s)`" |
 | `test/hash_check.py SITE` | by hand, after touching `shard_of()` or `BillFacts.hash()` | FAIL on bill numbers the two place differently |
+| `node test/deadlines.js` | in check.sh; daily in publish.yml | FAIL when a state's `govDeadline()` gives another day than its constitution's rule for a case in its table; KNOWN for recorded differences not yet fixed |
 | `test/cache_key_check.py [st]` | in check.sh (Wyoming) and weekly in cache-check.yml | FAIL on a file the build imports (every state) or opens (one state's build, audit hook) that `state_hash.py`'s lists leave out, or that compute() reads but only `page_files()` lists |
 | `test/cache_same.sh st ...` | weekly in cache-check.yml (WY, SD, RI, from publish's `built/cache`); by hand | FAIL when a build from the cache differs from one with `BUILD_CACHE=off` |
 

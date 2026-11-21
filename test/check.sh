@@ -22,6 +22,10 @@ node --check "$TMP/main.js" && for f in states/*/profile.js; do node --check "$f
 DUPES=$(grep -oE '^(async )?function [A-Za-z0-9_]+' tracker.html | awk '{print $NF}' | sort | uniq -d)
 if [ -n "$DUPES" ]; then echo "Functions declared twice: $DUPES"; exit 1; fi
 
+# Each state's governor's deadline against its constitution's rule (test/deadlines.js; under a second).
+node test/deadlines.js > "$TMP/deadlines.txt" || { grep -v '^KNOWN' "$TMP/deadlines.txt"; exit 1; }
+tail -1 "$TMP/deadlines.txt"
+
 # Every file the build reads is in the build cache's key (state_hash.py), so the cache can't go stale (about 30 s).
 python3 test/cache_key_check.py wy
 

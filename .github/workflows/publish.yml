@@ -443,6 +443,11 @@ jobs:
         if: ${{ github.event.schedule == '50 10 * * *' || inputs.checks }}
         run: python3 check_site.py
 
+      # Each state's governor's deadline (profile.js's govDeadline()) against its constitution's rule (test/deadlines.js).
+      - name: Check the governor's deadlines
+        if: ${{ always() && (github.event.schedule == '50 10 * * *' || inputs.checks) }}
+        run: node test/deadlines.js
+
       # Every state against the "Data traps found so far" list in CLAUDE.md.
       - name: Check every state for the known data traps
         if: ${{ always() && (github.event.schedule == '50 10 * * *' || inputs.checks) }}
