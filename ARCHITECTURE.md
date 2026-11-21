@@ -90,6 +90,15 @@ download.yml (GitHub, every 2 h)       publish.yml (after each quick-lane downlo
    (`<script id="sankey">`), `states/<st>/profile.js` (`<script id="state-profile">`, via `state_profile_js()`) and, on
    the public site, `lists_pages/named.js` (`github_page()`). The data tag `#bill-data` names the part files
    (`data-src`, `data-parts`, `data-shards`, `data-texts`); `frame_tabs()` and `sessions_nav()` pre-draw the frame.
+   On the public site `github_page()` then moves the styles and shared scripts out of each page into files named by
+   their contents (`asset_file()`): `/assets/app.<hash>.css` (tracker.html's styles with rows.css, a `<link>` in the
+   head), `/assets/lib.<hash>.js` (named.js, watchrules.js, billfacts.js, watchrows.js, sankey.js) and
+   `/assets/app.<hash>.js` (the main script), ordinary blocking `<script src>` tags where the inline ones were (so the
+   order is unchanged), preloaded from the head. The state's profile, `#page-names` (the two names the build writes in:
+   `SITE_TITLE`, `LEGISLATURE_NAME`) and the data tag stay in the page. The files are the same for every state:
+   build_site.sh moves each state's `assets/` to the site's top, one copy, kept by browsers for good (`_headers`). A
+   page is about 40 KB instead of 580 KB; a change to tracker.html uploads three new files plus the small pages. The
+   Claude copies keep everything inline.
 5. Writes `index.html` (current session), `<year>.html` (others), `/<slug>/index.html` per legislator,
    `/watchlist/index.html`.
 

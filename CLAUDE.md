@@ -578,7 +578,9 @@ Read README.md for what each script downloads. This file covers how to change th
     browser by `unpack()`). These are the Claude copies. They have no ROOT, so public-only features are off.
   - with `--github DIR`: the public site. `index.html` is the current session and `<year>.html` the
     past ones; legislator pages go at `/<slug>/` and the watchlist at `/watchlist/`. `github_page()` adds the
-    document head, icons and the analytics tags. Each session's data is split so a visitor downloads only what they
+    document head, icons and the analytics tags, and moves the styles and shared scripts into /assets/app.<hash>.css,
+    lib.<hash>.js and app.<hash>.js (`asset_file()`, one copy for every state; ARCHITECTURE.md step 4): the main script
+    must stay the same in every state, so per-state words go in the page (`#page-names`, the profile), never in the script. Each session's data is split so a visitor downloads only what they
     look at (`split_payload()`, 2026-11-18), in files named by a hash of their contents, `data/v/<session>.<hash>.<part>.json`,
     which build_site.sh's `_headers` lets browsers keep for a year. The page's data tag names them: `data-src` (the list
     part, preloaded), `data-parts` ("rows:<hash> stats:<hash> ..."), `data-shards` (one hash per shard) and `data-v`,

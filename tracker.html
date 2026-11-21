@@ -1435,6 +1435,8 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 
 <script type="application/json" id="bill-data"></script>
 <script id="state-profile"></script>
+<!-- The two names the build writes in for each state (the main script, the same in every state, reads them). -->
+<script id="page-names">const SITE_TITLE = "Albany Bill Tracker", LEGISLATURE_NAME = "New York State Legislature";</script>
 <script>
 // Stage wording. "live" is the open session; "final" is a finished one.
 // pipe = stage boxes, long = bill status and history, chart = stats panel bars.
@@ -6661,8 +6663,8 @@ function hydrate(raw) {
     return b;
   });
 
-  document.title = raw.current ? "Albany Bill Tracker" : `Albany Bill Tracker ${span(raw.session)}`;
-  $("sessionLabel").textContent = `New York State Legislature · ${span(raw.session)} session${raw.upcoming ? ` · prefiled bills · updated ${fmtUpdated(raw.fetched)}` : raw.current ? ` · updated ${fmtUpdated(raw.fetched)}` : " (final)"}`;
+  document.title = raw.current ? SITE_TITLE : `${SITE_TITLE} ${span(raw.session)}`;
+  $("sessionLabel").textContent = `${LEGISLATURE_NAME} · ${span(raw.session)} session${raw.upcoming ? ` · prefiled bills · updated ${fmtUpdated(raw.fetched)}` : raw.current ? ` · updated ${fmtUpdated(raw.fetched)}` : " (final)"}`;
   $("fetched").textContent = `Data as of ${raw.fetched}`;
   const embedded = document.documentElement.classList.contains("embed");  // (#embed=: only a card is shown)
   if (!embedded) try { renderHowPic(); } catch (e) { console.error(e); }

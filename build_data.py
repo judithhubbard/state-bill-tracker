@@ -153,8 +153,28 @@ def state_words():
     return "Bills in Congress" if P.STATE_NAME == "Congress" else f"{P.STATE_NAME} bills"
 
 
+def asset_file(text, kind, ext):
+    """Writes text as <GITHUB>/assets/<kind>.<hash>.<ext> and returns its address on the site, /assets/<name>.
+    tracker.html's styles and scripts are the same in every state, so each name is the same for all of them: build_site.sh
+    moves each state's assets/ to the site's top (one copy for the site, kept by browsers for good: _headers), and a page
+    is only its own markup and data tags. Named by their contents, as the data files are."""
+    from urllib.parse import urljoin, urlparse
+    name = f"{kind}.{hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}.{ext}"
+    folder = os.path.join(GITHUB, "assets")
+    path = os.path.join(folder, name)
+    if not os.path.exists(path):
+        os.makedirs(folder, exist_ok=True)
+        with open(path + f".{os.getpid()}", "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(path + f".{os.getpid()}", path)
+    # (The site's top is one level above the state's folder: SITE_URL is SITE_BASE/<state>/.)
+    return urlparse(urljoin(P.SITE_URL, "../assets/" + name)).path
+
+
 def github_page(html, meta=""):
-    """Claude artifacts get a document skeleton added when published; GitHub Pages doesn't. meta: page_meta()'s tags."""
+    """Claude artifacts get a document skeleton added when published; GitHub Pages doesn't. meta: page_meta()'s tags.
+    The page's styles and shared scripts go in files (asset_file()); the state's profile, the data tag and the page's
+    markup stay in it. The Claude copies keep everything inline."""
     import site_meta
     from urllib.parse import urljoin
     # The links to the front page and About show from the start (the page would set them once loaded: they mustn't
@@ -165,15 +185,34 @@ def github_page(html, meta=""):
     html = html.replace(nav, f'<nav class="home-link" id="siteNav" aria-label="Site"><a id="siteHome" href="{html_escape(urljoin(P.SITE_URL, "../"))}">&larr; State Bill Tracker</a>'
                         f'<a id="siteYours" href="{html_escape(urljoin(P.SITE_URL, "../your-bills/"))}">Your bills</a>'
                         f'<a id="siteAboutTop" href="{html_escape(urljoin(P.SITE_URL, "../about/"))}">About</a></nav>', 1)
-    # The named lists' button and menu (lists_pages/named.js), on the public site only: tracker.html's listButton().
-    named = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lists_pages", "named.js")).read()
-    html = html.replace('<script id="state-profile">', f'<script>\n{named}</script>\n<script id="state-profile">', 1)
     split = html.index('<div class="wrap">')
+    # tracker.html's styles (with rows.css), in the head as before: a file now, render-blocking like the inline styles.
+    s0 = html.index("<style>")
+    assert s0 < split, "tracker.html's styles moved: update github_page()"
+    s1 = html.index("</style>", s0) + len("</style>")
+    css = asset_file(html[s0 + len("<style>"):s1 - len("</style>")], "app", "css")
+    # The shared scripts before the state's profile (named.js, the named lists' button and menu, on the public site only:
+    # tracker.html's listButton(); watchrules.js, billfacts.js, watchrows.js; sankey.js) as one file, and the main script
+    # after it as another. Both are ordinary (blocking) scripts where the inline ones were, so everything runs in the same
+    # order; the head preloads them, so they download alongside the page.
+    named = open(os.path.join(HERE, "lists_pages", "named.js")).read()
+    r0 = html.index('<script id="watch-rules">\n')
+    p0 = html.index('<script id="state-profile">\n', r0)
+    libs = [named] + [m.group(1) for m in re.finditer(r'<script id="(?:watch-rules|sankey)">\n(.*?)</script>', html[r0:p0], re.S)]
+    assert len(libs) == 3, "the shared scripts before the profile changed: update github_page()"
+    lib = asset_file("\n;\n".join(libs), "lib", "js")
+    m0 = html.index("<script>\n// Stage wording", p0)
+    m1 = html.index("</script>", m0)
+    assert "<script" not in html[m1:], "a script after tracker.html's main script: update github_page()"
+    app = asset_file(html[m0 + len("<script>\n"):m1], "app", "js")
+    body = (html[split:r0] + f'<script src="{lib}"></script>\n' + html[p0:m0] + f'<script src="{app}"></script>' + html[m1 + len("</script>"):])
+    head = (html[:s0] + f'<link rel="stylesheet" href="{css}">' + html[s1:split])
+    preload = f'<link rel="preload" href="{lib}" as="script">\n<link rel="preload" href="{app}" as="script">\n'
     return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-            + ROBOTS_META + meta + site_meta.support_meta() +
+            + ROBOTS_META + meta + preload + site_meta.support_meta() +
             '<style>body { margin: 0; } [hidden] { display: none !important; }</style>\n'
-            + analytics_tags() + html[:split] + '\n</head>\n<body>\n' + html[split:] + '\n</body>\n</html>\n')
+            + analytics_tags() + head + '\n</head>\n<body>\n' + body + '\n</body>\n</html>\n')
 
 
 def assembly_resolver(session):

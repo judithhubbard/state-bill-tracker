@@ -77,6 +77,13 @@ for s in $STATES; do
     skip) continue ;;
   esac
   cp -R "$BUILT/$s" "$OUT/$s"
+  # The page's styles and scripts (build_data.py's asset_file(): the same in every state, named by their contents) go once
+  # to the site's top, /assets/, where every state's pages load them; a state kept from an older build brings its own.
+  if [ -d "$OUT/$s/assets" ]; then
+    mkdir -p "$OUT/assets"
+    for f in "$OUT/$s/assets/"*; do [ -e "$OUT/assets/${f##*/}" ] || mv "$f" "$OUT/assets/"; done
+    rm -rf "$OUT/$s/assets"
+  fi
 done
 echo "rebuilt:${REBUILT:- none}"
 # The national issue pages (/issues/), from each built state's data/issues_<session>.json; issues/summary.json feeds the front page.
@@ -217,8 +224,10 @@ PY
 mkdir -p "$OUT/welcome/ny" && cp lists_pages/welcome-ny.html "$OUT/welcome/ny/index.html"
 # Each state's bill data (data/v/<session>.<hash>.<part>.json: the list, rows, stats ... parts and the bills' shards,
 # build_data.py's split_payload()) is named by its contents, so a browser can keep it for good; a new build gives the page
-# new names, and the old files go (each state's folder is replaced whole). Everything else is checked on each visit.
+# new names, and the old files go (each state's folder is replaced whole). So are the pages' styles and scripts (/assets/).
+# Everything else is checked on each visit.
 printf '/:state/data/v/*\n  Cache-Control: public, max-age=31536000, immutable\n' > "$OUT/_headers"
+printf '/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n' >> "$OUT/_headers"
 if [ "${LAUNCHED:-0}" = 1 ]; then
   printf 'User-agent: *\nAllow: /\n' > "$OUT/robots.txt"
 else
