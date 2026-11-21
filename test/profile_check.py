@@ -2,7 +2,8 @@
 """Settings each state writes twice, in profile.py (the build) and profile.js (its pages and /your-bills/), must agree:
 the lower house's letter and name (LOWER, LOWER_NAME / houses), the session's length (YEARS / years), the members' titles
 (TITLES / titles), the session's label (session_label() / sessionLabel(), for every year 2017-2028) and each year's last
-session day (SESSION_ENDS / dated: a day, or {end}). Missing settings fall back as the build and the page fall back
+session day (SESSION_ENDS / dated: a day, or {end}); and the state's name (STATE_NAME) as home.html's and common.js's NAMES
+write it. Missing settings fall back as the build and the page fall back
 (build_data.py's LOW, TITLES, YEARS; tracker.html's TITLE, YEARS). The profile.js side is read by running it
 (lists_pages/profilefacts.js). Fails on any difference.
 
@@ -53,7 +54,26 @@ def check(st):
                 out.append(f"last session day of {y}: profile.js dated {dated.get(int(y))}, profile.py SESSION_ENDS {d}")
         for y in sorted(set(dated) - {int(y) for y in ends}):
             out.append(f"last session day of {y}: profile.js dated {dated[y]}, not in profile.py's SESSION_ENDS")
+    # The state's name, as the front page (home.html's NAMES) and the list pages (lists_pages/common.js's NAMES) write it.
+    if st != "us":
+        for f, key in (("home.html", st.upper()), ("lists_pages/common.js", st)):
+            got = page_names(f).get(key)
+            if got != P.STATE_NAME:
+                out.append(f"name: {f} {got!r}, profile.py STATE_NAME {P.STATE_NAME!r}")
     return out
+
+
+_NAMES = {}
+
+
+def page_names(f):
+    """A page's table of state names ({code: name}, "const NAMES = {...};")."""
+    if f not in _NAMES:
+        import re
+        src = open(os.path.join(REPO, f), encoding="utf-8").read()
+        m = re.search(r"\nconst NAMES = \{(.*?)\};\n", src, re.S)
+        _NAMES[f] = dict(re.findall(r'\b([A-Za-z]{2}): "([^"]+)"', m.group(1))) if m else {}
+    return _NAMES[f]
 
 
 def main(states):
