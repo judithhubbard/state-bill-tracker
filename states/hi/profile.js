@@ -9,6 +9,12 @@ const STATE = {
   publicSite: "https://statebilltracker.org/hi/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
+  // The picture at the top of How (tracker.html's renderHowPic()): how bills move ("twins": the same bill filed in
+  // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
+  // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
+  tracks: "relay",
+  unsigned: [{ law: "Not signed in time: becomes law", tip: "For most bills the deadline is the 45th day after the session ends, not counting weekends and holidays (mid-July). The governor has to list the bills to be vetoed 10 days before." }],
+  override: { t: "Two-thirds can override", tip: "Two-thirds of each house's members (17 senators, 34 representatives)." },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
   greetings: { S: "Senator", H: "Representative" },

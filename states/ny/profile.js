@@ -9,6 +9,12 @@ const STATE = {
   publicSite: "https://statebilltracker.org/ny/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", A: "Assembly" },
+  // The picture at the top of How (tracker.html's renderHowPic()): how bills move ("twins": the same bill filed in
+  // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
+  // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
+  tracks: "twins",
+  unsigned: [{ law: "Not signed in 10 days: becomes law", tip: "Sundays excepted, while the Legislature is in session." }, { dies: "Not signed 30 days after the session: pocket veto", tip: "For bills delivered after the Legislature's final adjournment, at the end of the year, the governor has 30 days. One left unsigned dies, with no veto to override." }],
+  override: "Two-thirds can override",
   // How a session is written: 2025–26.
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
   // The governor's office, wherever it's the one to contact.

@@ -838,6 +838,38 @@ a.phone:hover { text-decoration-color: currentColor; }
 .outcomes .field { max-width: 280px; }
 .howview { display: grid; gap: 14px; }
 .howsec { display: grid; gap: 14px; }
+/* How's picture (renderHowPic()): one lane per house. Under 600px the lanes turn into columns. */
+.howpic { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; container-type: inline-size; max-width: 900px; }
+.howpic h2 { margin: 0 0 2px; }
+.howpic .cap { margin: 0 0 12px; font-size: 14px; color: var(--ink-2); max-width: 60ch; }
+.howpic .hpdefs { position: absolute; }
+.howpic svg.wide, .howpic svg.tall { width: 100%; height: auto; }
+.howpic svg.wide { display: block; }
+.howpic svg.tall { display: none; max-width: 400px; margin: 0 auto; }
+@container (max-width: 600px) { .howpic svg.wide { display: none; } .howpic svg.tall { display: block; } }
+@media (max-width: 520px) { .howpic { padding: 14px 12px; } }
+.howpic .band { fill: var(--paper); }
+.howpic .lane { font: 700 12px var(--body); letter-spacing: .07em; text-transform: uppercase; fill: var(--ink-2); }
+.howpic .lb { font: 700 14px var(--display); fill: var(--ink); }
+.howpic .lb.law { fill: var(--law-c); font-size: 15px; }
+.howpic .sm { font: 12px var(--body); fill: var(--ink-2); }
+.howpic .bg { fill: var(--sheet); }
+.howpic .ar { fill: none; stroke: var(--refer); stroke-width: 2; stroke-linecap: round; }
+.howpic .ar.dash { stroke-dasharray: 4 4; }
+.howpic .ah { fill: var(--refer); }
+.howpic .node circle { stroke-width: 1.5; }
+.howpic .node use { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.howpic .m circle { fill: var(--st-1); stroke: var(--move); } .howpic .m { color: var(--st-1-ink); }
+.howpic .g circle { fill: var(--st-3); stroke: var(--gold); } .howpic .g { color: var(--st-3-ink); }
+.howpic .l circle { fill: var(--st-5); stroke: var(--law-bar); } .howpic .l { color: var(--st-5-ink); }
+.howpic .v circle { fill: var(--st-6); stroke: var(--veto); } .howpic .v { color: var(--st-6-ink); }
+.howpic .x circle { fill: var(--st-0); stroke: var(--refer); } .howpic .x { color: var(--st-0-ink); }
+.howpic .pill rect { fill: var(--st-0); } .howpic .pill text { font: 600 12px var(--body); fill: var(--st-0-ink); }
+.howpic .tag rect { fill: var(--sheet); } .howpic .tag text { font: 600 12px var(--body); fill: var(--ink-2); }
+.howpic .tag.sign text { font: 700 13px var(--body); fill: var(--law-c); }
+.howpic .vl { font: 700 13px var(--body); fill: var(--veto); }
+.howpic tspan.tip { font: 700 13px var(--body); fill: var(--ink-2); cursor: help; }
+.howpic tspan.tip:hover, .howpic tspan.tip.open { fill: var(--navy); }
 table.commcounts { border-collapse: collapse; font-size: 14px; }
 table.commcounts th, table.commcounts td { padding: 5px 12px; border-bottom: 1px solid var(--rule); text-align: right; }
 table.commcounts th[scope="row"], table.commcounts thead th:first-child { text-align: left; font-weight: 500; }
@@ -5779,6 +5811,201 @@ function showHowSec(id) {
   try { localStorage.setItem(STORE + "howsec", id); } catch (e) {}
 }
 
+// "How a bill becomes law in <state>": a picture at the top of How's steps, one lane per house, drawn from the profile:
+// STATE.houses, STATE.tracks ("twins": the same bill filed in both houses moves in each until both pass the same text;
+// "relay": one bill goes house to house; one house draws one lane), STATE.unsigned (what a bill the governor doesn't sign
+// does: "law" lines under "Signs it", a "dies" line on its own branch), STATE.override and STATE.trackVote (Nebraska).
+// The "N in 10 stop here" pills are the Statistics tab's odds (all finished sessions); it's drawn without them until the
+// stats part is in. Wide boxes draw the lanes as rows; under 600px they turn into columns, top to bottom.
+function renderHowPic() {
+  if (later("how", "pic", renderHowPic, null)) return;
+  const sec = $("howSteps");
+  if (!sec) return;
+  let box = $("howPic");
+  if (!box) { sec.insertAdjacentHTML("afterbegin", `<div class="howpic" id="howPic"></div>`); box = $("howPic"); }
+  if (!partReady("stats")) need("stats").then(renderHowPic, () => {});
+  const o = (partReady("stats") && DATA.insights?.odds?.all) || {};
+  const n = (k) => (o[k] || [0, 0])[0];
+  const stopText = (a, b) => {
+    if (!n(a) || !n(b)) return "";
+    const t = Math.round((1 - n(b) / n(a)) * 10);
+    return t >= 10 ? "Nearly all stop here" : t < 1 ? "" : `${t} in 10 stop here`;
+  };
+  const stop1 = stopText("intro", "floor"), stop2 = stopText("house", "both");
+  const H = Object.values(STATE.houses), relay = STATE.tracks === "relay";
+  const items = (STATE.unsigned || []).map((u) => ({ dies: !!u.dies, text: u.dies || u.law, tip: u.tip || "" }));
+  const lawLines = items.filter((u) => !u.dies), dies = items.find((u) => u.dies);
+  const over = typeof STATE.override === "string" ? { t: STATE.override } : STATE.override || { t: "Two-thirds can override" };
+
+  // Words split at a colon, then at spaces, to lines of at most `max` letters.
+  const wrapWords = (s, max) => s.split(/(?<=:) /).flatMap((part) => {
+    const out = [];
+    for (const w of part.split(" ")) {
+      if (out.length && (out[out.length - 1] + " " + w).length <= max) out[out.length - 1] += " " + w;
+      else out.push(w);
+    }
+    return out;
+  });
+  const voteLabel = (name) => (UNI && STATE.trackVote ? STATE.trackVote : wrapWords(`${name} votes`, 15));
+  const wide = (s) => s.length * 5.8;
+  // SVG pieces, each returned as markup.
+  const node = (x, y, r, kind, icon) =>
+    `<g class="node ${kind}"><circle cx="${x}" cy="${y}" r="${r}"/><use href="#hp-${icon}" x="${x - r * 0.6}" y="${y - r * 0.6}" width="${r * 1.2}" height="${r * 1.2}"/></g>`;
+  // Lines of text; a tip's small "i" follows the last one (mouse and tap: the picture's label has the same words for
+  // screen readers).
+  const text = (x, y, lines, cls, anchor = "middle", tip = "") => [].concat(lines).map((s, i, all) =>
+    `<text class="${cls}" x="${x}" y="${y + i * 15}" text-anchor="${anchor}">${esc(s)}${tip && i === all.length - 1 ? ` <tspan class="tip" aria-hidden="true" data-tip="${esc(tip)}">ⓘ</tspan>` : ""}</text>`).join("");
+  const chip = (x, y, s, cls, w) => { w = w || s.length * 6.6 + 16;
+    return `<g class="${cls}"><rect x="${x - w / 2}" y="${y}" width="${w}" height="20" rx="10"/><text x="${x}" y="${y + 14}" text-anchor="middle">${esc(s)}</text></g>`; };
+  // Centered lines with a box of the card's color behind them (they sit on an arrow), and a tip after them.
+  const note = (x, y, lines, tip, cls = "sm") => {
+    const w = Math.max(...lines.map(wide)) + (tip ? 24 : 8);
+    return `<rect class="bg" x="${x - w / 2}" y="${y - 12}" width="${w}" height="${lines.length * 15 + 4}"/>${text(x, y, lines, cls, "middle", tip)}`;
+  };
+  const arrow = (id, x1, y1, x2, y2, r1, r2, cls = "") => {
+    const d = Math.hypot(x2 - x1, y2 - y1), ux = (x2 - x1) / d, uy = (y2 - y1) / d;
+    return `<path class="ar ${cls}" d="M${x1 + ux * r1} ${y1 + uy * r1} L${x2 - ux * (r2 + 3)} ${y2 - uy * (r2 + 3)}" marker-end="url(#${id})"/>`;
+  };
+  const curve = (id, x1, y1, x2, y2, horiz) => `<path class="ar" d="M${x1} ${y1} ${horiz ? `C${(x1 + x2) / 2} ${y1} ${(x1 + x2) / 2} ${y2}` : `C${x1} ${(y1 + y2) / 2} ${x2} ${(y1 + y2) / 2}`} ${x2} ${y2}" marker-end="url(#${id})"/>`;
+  const defs = (id) => `<defs><marker id="${id}" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path class="ah" d="M0 0L10 5L0 10z"/></marker></defs>`;
+
+  // The governor's part: governor at (gx, gy), law at (lx, ly), the veto branch on one side, the "dies unsigned" branch
+  // (where the state has one) on the other.
+  const govPart = (id, g) => {
+    const R = 24, out = [];
+    out.push(arrow(id, g.gx, g.gy, g.lx, g.ly, R, R + 2), arrow(id, g.gx, g.gy, g.vx, g.vy, R, 18));
+    out.push(`<path class="ar dash" d="${g.over}" marker-end="url(#${id})"/>`);
+    if (dies) out.push(arrow(id, g.gx, g.gy, g.dx, g.dy, R, 16));
+    out.push(chip(g.sx, g.sy, "Signs it", "tag sign", 70));
+    let y = g.sy + 36;
+    for (const u of lawLines) { const L = wrapWords(u.text, g.wrapLaw); out.push(note(g.sx, y, L, u.tip)); y += L.length * 15 + 6; }
+    out.push(node(g.gx, g.gy, R, "g", "gov"), node(g.lx, g.ly, R + 2, "l", "law"), node(g.vx, g.vy, 18, "v", "no"));
+    out.push(text(g.glx, g.gly, EXEC.The, "lb", g.ganchor || "middle"));
+    out.push(text(g.llx, g.lly, "Becomes law", "lb law"));
+    const O = wrapWords(over.t, g.wrapOver);
+    out.push(text(g.vx, g.vy + 36, "Vetoes it", "vl"), text(g.vx, g.vy + 52, O, "sm", "middle", over.tip));
+    if (dies) {
+      const D = wrapWords(dies.text, g.wrapDies), dy = g.dly === "above" ? g.dy - 22 - (D.length - 1) * 15 : g.dy + 36;
+      out.push(node(g.dx, g.dy, 16, "x", "no"), text(g.dx, dy, D, "sm", "middle", dies.tip));
+    }
+    return out.join("");
+  };
+
+  // Wide: lanes are rows, read left to right.
+  const wideSvg = () => {
+    const id = "hp-ah-w", W = 860, cy = 160, out = [];
+    const lanes = UNI ? [{ name: H[0], top: 96 }] : [{ name: H[0], top: 14 }, { name: H[1], top: 170 }];
+    const xs = relay ? [86, 186, 286] : [110, 230, 350], bandW = relay ? 480 : 410;
+    for (const L of lanes) {
+      L.y = L.top + 64;
+      out.push(`<rect class="band" x="0" y="${L.top}" width="${bandW}" height="136" rx="12"/>`, text(16, L.top + 24, L.name, "lane", "start"));
+    }
+    for (const L of lanes) {
+      const y = L.y, V = voteLabel(L.name);
+      out.push(arrow(id, xs[0], y, xs[1], y, 22, 22), arrow(id, xs[1], y, xs[2], y, 22, 22));
+      out.push(node(xs[0], y, 22, "m", "file"), text(xs[0], y + 40, "Filed", "lb"));
+      out.push(node(xs[1], y, 22, "m", "comm"), text(xs[1], y + 40, "Committee", "lb"));
+      if (stop1) out.push(chip(xs[1], y + 48, stop1, "pill"));
+      out.push(node(xs[2], y, 22, "m", "vote"), text(xs[2], y + 40, V[0], "lb"));
+      if (V[1]) out.push(text(xs[2], y + 56, V[1], UNI ? "sm" : "lb"));
+    }
+    const g = { gx: 580, gy: cy, lx: 800, ly: cy, vx: 690, vy: 292, glx: 580, gly: cy + 44, llx: 800, lly: cy - 38,
+      sx: 700, sy: cy - 10, dx: 700, dy: 62, dly: "above", wrapLaw: 22, wrapOver: 30, wrapDies: 40,
+      over: `M708 288 Q 800 280 800 ${cy + 33}` };
+    if (UNI) {
+      out.push(arrow(id, xs[2], lanes[0].y, g.gx, g.gy, 22, 24));
+    } else if (relay) {
+      const [a, b] = lanes, x4 = 430;
+      // Crossing: each house's vote leads to the other house's committee and vote.
+      out.push(curve(id, xs[2] + 24, a.y, x4 - 27, b.y, true), curve(id, xs[2] + 24, b.y, x4 - 27, a.y, true));
+      out.push(chip((xs[2] + x4) / 2, cy - 10, "to the other house", "tag", 132));
+      for (const L of lanes) {
+        out.push(arrow(id, x4, L.y, g.gx, g.gy, 22, 24));
+        out.push(node(x4, L.y, 22, "m", "vote"), text(x4, L.y + 40, "Committee, vote", "lb"));
+        if (stop2) out.push(chip(x4, L.y + 48, stop2, "pill"));
+      }
+    } else {
+      const jx = 455;
+      for (const L of lanes) out.push(arrow(id, xs[2], L.y, jx, cy, 22, 24));
+      out.push(arrow(id, jx, cy, g.gx, g.gy, 24, 24));
+      out.push(node(jx, cy, 24, "m", "join"), text(jx, cy + 44, ["Both houses pass", "the same text"], "lb"));
+    }
+    out.push(govPart(id, g));
+    const top = UNI && !dies ? 82 : 0, bottom = 360;
+    return `<svg class="wide" viewBox="0 ${top} ${W} ${bottom - top}" role="img" aria-label="${esc(label())}">${defs(id)}${out.join("")}</svg>`;
+  };
+
+  // Tall (phone): lanes are columns, read top to bottom.
+  const tallSvg = () => {
+    const id = "hp-ah-t", W = 340, cx = 170, out = [];
+    const cols = UNI ? [{ name: H[0], x: cx, l: 70, w: 200 }] : [{ name: H[0], x: 86, l: 2, w: 166 }, { name: H[1], x: 254, l: 172, w: 166 }];
+    const ys = [70, 162, 278];
+    const two = cols.some((C) => voteLabel(C.name).length > 1), vEnd = ys[2] + (two ? 62 : 48);
+    const bandH = relay ? 494 + (two ? 14 : 0) : vEnd + 10;
+    for (const C of cols) out.push(`<rect class="band" x="${C.l}" y="0" width="${C.w}" height="${bandH}" rx="12"/>`, text(C.x, 24, C.name, "lane"));
+    for (const C of cols) {
+      const x = C.x, V = voteLabel(C.name);
+      out.push(arrow(id, x, ys[0] + 46, x, ys[1], 0, 21), arrow(id, x, ys[1] + (stop1 ? 72 : 46), x, ys[2], 0, 21));
+      out.push(node(x, ys[0], 21, "m", "file"), text(x, ys[0] + 38, "Filed", "lb"));
+      out.push(node(x, ys[1], 21, "m", "comm"), text(x, ys[1] + 38, "Committee", "lb"));
+      if (stop1) out.push(chip(x, ys[1] + 45, stop1, "pill"));
+      out.push(node(x, ys[2], 21, "m", "vote"), text(x, ys[2] + 38, V[0], "lb"));
+      if (V[1]) out.push(text(x, ys[2] + 54, V[1], UNI ? "sm" : "lb"));
+    }
+    let gy;
+    if (UNI) {
+      gy = vEnd + 80;
+      out.push(arrow(id, cx, vEnd + 14, cx, gy, 0, 24));
+    } else if (relay) {
+      const [a, b] = cols, y4 = 430 + (two ? 14 : 0);
+      out.push(curve(id, a.x, vEnd, b.x, y4 - 25), curve(id, b.x, vEnd, a.x, y4 - 25));
+      out.push(chip(cx, (vEnd + y4 - 25) / 2 - 10, "to the other house", "tag", 132));
+      gy = y4 + 160;
+      for (const C of cols) {
+        out.push(arrow(id, C.x, y4 + (stop2 ? 72 : 46), cx, gy, 0, 24));
+        out.push(node(C.x, y4, 21, "m", "vote"), text(C.x, y4 + 38, "Committee, vote", "lb"));
+        if (stop2) out.push(chip(C.x, y4 + 45, stop2, "pill"));
+      }
+    } else {
+      const jy = vEnd + 54;
+      for (const C of cols) out.push(arrow(id, C.x, vEnd, cx, jy, 0, 24));
+      out.push(node(cx, jy, 24, "m", "join"), text(cx + 34, jy - 4, ["Both houses pass", "the same text"], "lb", "start"));
+      gy = jy + 110;
+      out.push(arrow(id, cx, jy, cx, gy, 24, 24));
+    }
+    const ly = gy + 200;
+    const g = { gx: cx, gy, lx: cx, ly, vx: 286, vy: gy + 84, glx: cx + 34, gly: gy + 5, ganchor: "start", llx: cx, lly: ly + 46,
+      sx: cx, sy: gy + 56, dx: 56, dy: gy + 84, dly: "below", wrapLaw: 22, wrapOver: 15, wrapDies: 17,
+      over: `M${286 - 19} ${gy + 90} Q 215 ${gy + 130} ${cx + 28} ${ly - 6}` };
+    out.push(govPart(id, g));
+    return `<svg class="tall" viewBox="0 0 ${W} ${ly + 60}" role="img" aria-label="${esc(label())}">${defs(id)}${out.join("")}</svg>`;
+  };
+
+  // The words a screen reader gets.
+  function label() {
+    const s1 = stop1 ? ` (${stop1.toLowerCase()})` : "";
+    const start = UNI ? `A bill is filed in the ${H[0]} and goes to a committee${s1}, then ${voteLabel(H[0]).join(", ").replace(/^The /, "the ")}.`
+      : relay ? `A bill is filed in the ${H[0]} or the ${H[1]}, goes to a committee${s1}, and that house votes. Then the other house does the same${stop2 ? ` (${stop2.toLowerCase()})` : ""}.`
+      : `The same bill is filed in the ${H[0]} and the ${H[1]}. Each goes to a committee${s1} and its house votes, until both pass the same text.`;
+    const un = items.map((u) => `${u.text}.${u.tip ? ` ${u.tip}` : ""}`).join(" ");
+    return `${start} ${EXEC.The} signs it, and it becomes law, or vetoes it. ${over.t}.${over.tip ? ` ${over.tip}` : ""} ${un}`.trim();
+  }
+
+  const cap = UNI ? `${STATE.name}'s ${H[0]} has one house, so a bill takes one track.`
+    : relay ? "A bill starts in either house. If that house passes it, it goes to the other house and starts again in a committee."
+    : "Many bills are filed in both houses at once, word for word. The two copies move side by side until both houses pass the same text.";
+  box.innerHTML = `<h2>How a bill becomes law in ${esc(STATE.name)}</h2><p class="cap">${cap}</p>
+    <svg width="0" height="0" class="hpdefs" aria-hidden="true">
+      <symbol id="hp-file" viewBox="0 0 24 24"><circle cx="8" cy="7" r="3"/><path d="M2.5 20c0-3.2 2.4-5.5 5.5-5.5s5.5 2.3 5.5 5.5"/><path d="M15 5h6v11h-6z"/><path d="M17 8.5h2M17 11.5h2"/></symbol>
+      <symbol id="hp-comm" viewBox="0 0 24 24"><circle cx="5.5" cy="8" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="18.5" cy="8" r="2"/><path d="M3 13h18v3H3z"/><path d="M6 16v4M18 16v4"/></symbol>
+      <symbol id="hp-vote" viewBox="0 0 24 24"><path d="M4 12h16v8H4z"/><path d="M8.5 12h7"/><path d="M8.5 3h7v9h-7z"/><path d="M10.2 7.4l1.3 1.3 2.3-2.6"/></symbol>
+      <symbol id="hp-join" viewBox="0 0 24 24"><path d="M5 4h8v10H5z"/><path d="M11 10h8v10h-8z"/><path d="M13.3 15.2l1.4 1.4 2.4-2.7"/></symbol>
+      <symbol id="hp-gov" viewBox="0 0 24 24"><path d="M14.5 4.5l5 5L9 20H4v-5z"/><path d="M12.5 6.5l5 5"/></symbol>
+      <symbol id="hp-law" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 13.5l2.3 2.3 4.2-4.6"/></symbol>
+      <symbol id="hp-no" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></symbol>
+    </svg>${wideSvg()}${tallSvg()}`;
+}
+
 // The Committees section: what committees do, the few every bill may meet, and each subject's
 // Senate and Assembly committees side by side with their chairs and this session's numbers.
 // Committees that cover the same subject under different names (Senate name -> Assembly name, subject).
@@ -6421,6 +6648,7 @@ function hydrate(raw) {
   $("sessionLabel").textContent = `New York State Legislature · ${span(raw.session)} session${raw.upcoming ? ` · prefiled bills · updated ${fmtUpdated(raw.fetched)}` : raw.current ? ` · updated ${fmtUpdated(raw.fetched)}` : " (final)"}`;
   $("fetched").textContent = `Data as of ${raw.fetched}`;
   const embedded = document.documentElement.classList.contains("embed");  // (#embed=: only a card is shown)
+  if (!embedded) try { renderHowPic(); } catch (e) { console.error(e); }
   if (!embedded) try { renderHowCal(); } catch (e) { console.error(e); }
   if (!embedded) try { renderHowComm(); } catch (e) { console.error(e); }
   // (Inside a list page's frame only the watchlist is shown: no How tab, introduction or notices.)

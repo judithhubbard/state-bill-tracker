@@ -11,6 +11,12 @@ const STATE = {
   publicSite: "https://statebilltracker.org/ma/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
+  // The picture at the top of How (tracker.html's renderHowPic()): how bills move ("twins": the same bill filed in
+  // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
+  // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
+  tracks: "relay",
+  unsigned: [{ law: "Not signed in 10 days: becomes law" }, { dies: "Not signed when the session ends: pocket veto", tip: "If the two-year session ends before the 10 days are up, an unsigned bill dies, with no veto to override." }],
+  override: "Two-thirds can override",
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
   greetings: { S: "Senator", H: "Representative" },

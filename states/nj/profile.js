@@ -7,6 +7,12 @@ const STATE = {
   publicSite: "https://statebilltracker.org/nj/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", A: "Assembly" },
+  // The picture at the top of How (tracker.html's renderHowPic()): how bills move ("twins": the same bill filed in
+  // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
+  // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
+  tracks: "twins",
+  unsigned: [{ law: "Not signed in 45 days: becomes law" }, { dies: "Not signed when the session ends: pocket veto", tip: "Bills passed in the session's last days have until a week after it ends. One left unsigned dies, with no veto to override." }],
+  override: { t: "Two-thirds can override", tip: "27 senators and 54 Assembly members." },
   // How a session is written: 2026–27.
   sessionLabel: (s) => `${s}–${String(s + 1).slice(2)}`,
   // The governor's office, wherever it's the one to contact.

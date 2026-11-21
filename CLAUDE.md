@@ -129,7 +129,8 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   `outOfTimeLine`, `sessionNotice`, `waitingHead`, `govYearsNote`, `partySource`, `openUntil`, `heldLabel`/`heldTip`/
   `heldNote`, `routine`, `oneNumber`, `continuedTo`, `requestsBills` (New York only), `townWord`/`findReps`,
   `stageText`/`stageTips`/`pastStageTips`/`outOfTime`, `commPairs`/`commNotes`/`moneyCommittees`/`secondCommittee`,
-  `calendar`/`calendarDays`; and write how.html and weighin.html. Then run the review: record every tab, Statistics
+  `calendar`/`calendarDays`, `tracks`/`unsigned`/`override` (How's picture, `renderHowPic()`: "twins" or "relay"; what a bill the
+  governor doesn't sign does, as `law` and `dies` lines with a tip; Nebraska's `trackVote`); and write how.html and weighin.html. Then run the review: record every tab, Statistics
   section, How section, bill panels at each stage and a watchlist, and grep the text for other states' names and rules.
 - **Years kept (2026-11-16): every state keeps the same window,** `states/window.py`: this year and the four before, never
   before 2023 (`first_year()` = max(2023, year - 4): 2023-26 now, 2023-27 in 2027, 2024-28 in 2028). A two-year session
@@ -825,7 +826,9 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
     `shared-list-added`, `action-logged`, `county/`, `error/`, `visit/first`, `visit/returning`,
     `watchlist/`.
 - **How a bill becomes law:** subtabs via `showHowSec()` (sections are `.howsec`; links use
-  `data-how="<id>"`). The Committees tab is `renderHowComm()`: it pairs Senate and Assembly
+  `data-how="<id>"`). The steps open with a picture (`renderHowPic()`, 2026-11-20, approved by the owner): one lane per
+  house, twins or house to house (`STATE.tracks`), the governor's branches (`STATE.unsigned`, `STATE.override`), and "N in 10
+  stop here" pills from the stats part's odds (drawn without them until it's in); under 600px the lanes become columns. The Committees tab is `renderHowComm()`: it pairs Senate and Assembly
   committees by name, or through `COMM_PAIRS` when the names differ, with notes in `COMM_NOTES`.
   "N bills" links set `state.comm` and open the Bills tab.
 - **Similar bills:** `similar_bills()` in build_data.py (TF-IDF on title, summary and the law

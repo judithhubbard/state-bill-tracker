@@ -10,6 +10,12 @@ const STATE = {
   publicSite: "https://statebilltracker.org/wi/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", A: "Assembly" },
+  // The picture at the top of How (tracker.html's renderHowPic()): how bills move ("twins": the same bill filed in
+  // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
+  // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
+  tracks: "relay",
+  unsigned: [{ law: "Not signed in 6 days: becomes law", tip: "Sundays excepted." }, { dies: "Not signed when the session ends: pocket veto", tip: "If the Legislature's final adjournment keeps the governor from returning a bill, an unsigned bill dies, with no veto to override." }],
+  override: "Two-thirds can override",
   titles: { S: "Sen.", A: "Rep." },
   memberWords: { S: "state senator", A: "state representative" },
   greetings: { S: "Senator", A: "Representative" },

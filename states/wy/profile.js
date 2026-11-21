@@ -9,6 +9,12 @@ const STATE = {
   publicSite: "https://statebilltracker.org/wy/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
+  // The picture at the top of How (tracker.html's renderHowPic()): how bills move ("twins": the same bill filed in
+  // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
+  // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
+  tracks: "relay",
+  unsigned: [{ law: "Not signed in 3 days: becomes law", tip: "Sundays excepted; 15 days after the session for bills that arrive at the end." }],
+  override: "Two-thirds can override",
   // A floor vote that isn't a passage, named by the converter ("vote to introduce it": the budget session's two-thirds
   // vote to take up a bill; concurrence, conference reports, veto overrides): "House vote to introduce it".
   voteWhat: (v) => (v.kind === "F" && v.committee ? `${STATE.houses[v.house]} ${esc(v.committee)}` : ""),

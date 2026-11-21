@@ -9,6 +9,12 @@ const STATE = {
   publicSite: "https://statebilltracker.org/ri/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
+  // The picture at the top of How (tracker.html's renderHowPic()): how bills move ("twins": the same bill filed in
+  // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
+  // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
+  tracks: "twins",
+  unsigned: [{ law: "Not signed in 6 days: becomes law", tip: "Sundays excepted." }],
+  override: { t: "Three-fifths can override", tip: "Three-fifths of the members present in each house." },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
   greetings: { S: "Senator", H: "Representative" },

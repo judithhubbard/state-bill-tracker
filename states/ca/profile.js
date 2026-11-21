@@ -7,6 +7,12 @@ const STATE = {
   publicSite: "https://statebilltracker.org/ca/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", A: "Assembly" },
+  // The picture at the top of How (tracker.html's renderHowPic()): how bills move ("twins": the same bill filed in
+  // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
+  // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
+  tracks: "relay",
+  unsigned: [{ law: "Not signed in 12 days: becomes law", tip: "Bills passed at the end of each year have until mid-October in the first year and September 30 in the second." }],
+  override: "Two-thirds can override",
   titles: { S: "Sen.", A: "Asm." },
   memberWords: { S: "state senator", A: "Assembly member" },
   greetings: { S: "Senator", A: "Assemblymember" },
