@@ -50,7 +50,7 @@ def delegation(session):
 
 # Each year's last day (sine die), as profile.js's STATE.dated (add each year's to both). The governor has 10 days after
 # it to sign bills still on the desk; unsigned ones die (a pocket veto: Constitution, sec. 125).
-SESSION_ENDS = {2024: "2024-05-09", 2025: "2025-05-14", 2026: "2026-04-09"}
+SESSION_ENDS = {2023: "2023-06-06", 2024: "2024-05-09", 2025: "2025-05-14", 2026: "2026-04-09"}
 
 # A member who moved from one house to the other keeps one record, under the newer house: Matt Woods represented House
 # District 13 until he won Senate District 5 (a special election after Greg Reed left), so his House votes of 2024-25

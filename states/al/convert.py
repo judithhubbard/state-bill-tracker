@@ -48,7 +48,7 @@ from states.al import profile as P
 HOUSE = {"S": "Senate", "H": "House"}
 OTHER = {"S": "H", "H": "S"}
 SEATS = {"S": 35, "H": 105}
-_PARTIES, _CACHE = {}, {}
+_PARTIES, _CACHE, _OLD = {}, {}, {}
 CODE = {"N": "N", "A": "B", "P": "B"}  # abstain and pass are both "didn't vote yes or no"; yes is left out
 
 
@@ -270,7 +270,61 @@ def kind_of(t):
     return "other", 8
 
 
-PHASE_FINAL = {"concur", "conf", "ccr", "govamend", "execconcur", "enroll", "enrolled", "signature", "sent", "sos",
+def old_wording(t, l):
+    """A line in ALISON's older wording (2023 and before) in the newer wording kind_of() reads, or None to drop it.
+    2023's history says "Introduced and Referred" / "Referred to Committee" (the committee in its own field), "Reported
+    Favorably", "Read Second Time in House of Origin", "On Third Reading in ...", "Read a Third Time and Pass [as
+    Amended]" (also "Read A Third Time And Passed As Amended", and "Read Again ..." after a reconsideration), "Adopt" and
+    "Table" (amendments, named in amdSub), "Indefinitely Postpone", "Executive Amendment", "Sent to Governor on May 25,
+    2023 at 12:00 PM" and "Assigned Act No. 2023-291."; read as other lines, every bill that passed only its first house
+    showed as on that house's floor (HB 47 of 2023). Its passage lines say "Pass" even for a lost vote (SB 181 of 2023,
+    11-20): the tally decides."""
+    house = l.get("body") or ""
+    comm = (l.get("committee") or "").strip()
+    y, n = l.get("yeas"), l.get("nays")
+    tally = f", {y}-{n}" if y is not None and n is not None else ""
+    if re.fullmatch(r"Read First Time in (?:House of Origin|Second House)|Pending", t):
+        return None  # the referral that follows says it; "Pending" is a prefiled bill's status
+    if re.fullmatch(r"Introduced and Referred|Referred to Committee", t, re.I):
+        return f"Read for the first time and referred to the {house} Committee on {comm}" if comm and house else t
+    if re.fullmatch(r"Re-?referred to Committee", t, re.I):
+        return "Re-referred to Committee"
+    if re.fullmatch(r"Reported Favorably|Reported Out of Committee in (?:House of Origin|Second House)", t):
+        return "Reported Out of Committee"
+    if re.fullmatch(r"Read Second Time in (?:House of Origin|Second House)", t):
+        return "Read for the Second Time and placed on the Calendar"
+    if re.fullmatch(r"On Third Reading in (?:House of Origin|Second House)", t):
+        return "Third Reading in " + t.split(" in ", 1)[1]
+    m = re.fullmatch(r"Read (Again )?a Third Time and Pass(?:ed)?( as Amended)?", t, re.I)
+    if m:
+        lost = y is not None and n is not None and int(y) <= int(n)
+        return f"Motion to Read {m.group(1) or ''}a Third Time and Pass{' as Amended' if m.group(2) else ''} - {'Lost' if lost else 'Adopted'}"
+    if t in ("Adopt", "Table"):
+        if l.get("amdSub"):
+            return ("Amendment adopted" if t == "Adopt" else "Amendment tabled") + tally
+        return ("Motion adopted" if t == "Adopt" else "Motion to table") + tally
+    if t == "AMD/SUB":
+        return f"Amendment offered{' in the ' + comm + ' Committee' if comm else ''}"
+    if t == "No Recommendation":
+        return f"Reported without a recommendation{' by the ' + comm + ' Committee' if comm else ''}"
+    if t == "Rejected" and comm:
+        return f"Rejected by the {comm} Committee"
+    if t == "Reconsider":
+        return "Motion to reconsider"  # a vote taken again follows ("Read Again ..."), which decides
+    if t == "Indefinitely Postpone":
+        return "Currently Indefinitely Postponed"
+    if t == "Substitute a Companion Bill":
+        return "Its companion bill was taken up instead"
+    if t == "Executive Amendment":
+        return "Pending with Executive Amendment"
+    if re.match(r"Sent to Governor on ", t):
+        return "Delivered to Governor"
+    if re.fullmatch(r"Assigned Act No\. \d{4}-\d+\.?", t):
+        return "Enacted"
+    return t
+
+
+PHASE_FINAL = {"concur","conf", "ccr", "govamend", "execconcur", "enroll", "enrolled", "signature", "sent", "sos",
                "signed", "enacted", "pocket", "veto"}
 
 
@@ -297,6 +351,7 @@ def load_session(session):
     lines = (load(session, "history.json", {}) or {}).get("lines") or []
     texts = load(session, "texts.json", {}) or {}
     votes = load(session, "votes.json", {}) or {}
+    _OLD[session] = any((l.get("matter") or "").strip() == "Introduced and Referred" for l in lines)  # old_wording()
     by = defaultdict(list)
     for i, l in enumerate(lines):
         by[l["instrumentNbr"]].append((i, l))
@@ -357,13 +412,22 @@ def record(session, b, tx, hist, votes, find, parties, house_names):
     const = is_const(b, tx)
     local = is_local(b, tx)
     rows = []
+    old = _OLD.get(session)
     for i, l in hist:
         t = re.sub(r"\s+", " ", l.get("matter") or "").strip()
+        if old:
+            t = old_wording(t, l)
+            if t is None:
+                continue
         k, r = kind_of(t)
         if k == "skip":
             continue
         h = (l.get("body") or HOUSE[origin])[0]
         phase = 2 if k in PHASE_FINAL else (0 if h == origin else 1)
+        if old:
+            # The older lines are in order within a day (a reconsideration between a passage and the vote taken again),
+            # except the governor's: the executive amendment before the houses' votes on it.
+            r = (19 if k == "govamend" else r) if phase == 2 else 0
         rows.append(((l.get("calendarDate") or "")[:10], phase, r, i, h, k, t, l))
     rows.sort()
     steps = []  # (date, house or "G", wording, kind)
@@ -476,6 +540,8 @@ def record(session, b, tx, hist, votes, find, parties, house_names):
         if k == "companion":
             steps.append((d, h, re.sub(r"(\b[HS]B)(\d+)", r"\1 \2", t), "companion"))
             continue
+        if k == "concur" and govamend and old:
+            k = "execconcur"  # 2023's "Concur In and Adopt" after the governor's "Executive Amendment"
         if k == "concur":
             rc = roll_call(votes, h, n, house_names) if n else None
             if rc:
@@ -525,6 +591,8 @@ def record(session, b, tx, hist, votes, find, parties, house_names):
             steps.append((d, h, "Sent for the presiding officer's signature", "signature"))
             continue
         if k == "sent":
+            if old and not enrolled and origin not in passed:
+                continue  # 2023's governor's list names HB 58, never out of committee: not this bill's
             if not const:
                 sent = True
             steps.append((d, "G", "DELIVERED TO GOVERNOR", "sent"))

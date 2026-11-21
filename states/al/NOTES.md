@@ -51,3 +51,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   districts by city, town or county (`states/al/towns.py`, from the Census Bureau's 2024 district files). Shared change
   made for Alabama: the "reintroduce it in January" ask (`reintroAsk()`) names the month the next session opens
   (`STATE.opens()`, March in 2027), where a state has `opens`.
+- **2023 (added by the window 2026-11-16; read 2026-11-21):** ALISON's 2023 history is in its older wording ("Introduced
+  and Referred" with the committee in its own field, "Reported Favorably", "Read a Third Time and Pass", "Indefinitely
+  Postpone", "Sent to Governor on May 25, 2023 at 12:00 PM", "Assigned Act No. 2023-291.", "Executive Amendment"), which
+  the converter had read as other lines: bills that passed one house showed as on its floor (46 failed the "refers them
+  to a committee" check). `old_wording()` puts each in the newer wording for a year whose history has "Introduced and
+  Referred"; within a day the older lines keep their file order (a "Reconsider" sits between a passage and "Read Again a
+  Third Time and Pass"). Its passage lines say "Pass" for lost votes too (SB 181, 11-20): the tally decides. The governor's
+  list names HB 58, never out of committee (dropped). Last day June 6, 2023; four local bills delivered June 1 and never
+  numbered (HB 411, 449, 506, 508) are pocket vetoes. Totals: 396 laws, 4 pocket vetoes.

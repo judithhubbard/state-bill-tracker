@@ -51,7 +51,7 @@ const STATE = {
   // A regular session a year: 30 legislative days within 105 calendar days, from the first Tuesday of February; in an
   // election year (2026, 2030) from the second Tuesday of January, and in the year after one (2027) from the first
   // Tuesday of March (Constitution, sec. 48.01). `dated` holds each year's last day (add each year's).
-  dated: { 2024: "2024-05-09", 2025: "2025-05-14", 2026: "2026-04-09" },
+  dated: { 2023: "2023-06-06", 2024: "2024-05-09", 2025: "2025-05-14", 2026: "2026-04-09" },
   nth(year, month, weekday, nth) {
     const t = new Date(year, month - 1, 1); t.setDate(1 + ((weekday - t.getDay() + 7) % 7) + 7 * (nth - 1));
     return `${year}-${String(month).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
