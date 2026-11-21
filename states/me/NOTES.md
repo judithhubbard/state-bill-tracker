@@ -36,8 +36,10 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   runs. **The pages corrected 2023-24's totals:** 32 of the 36 veto-day bills LegiScan calls "Passed" (LD 1152, 1177, 444
   ...) were "Held by Governor, May 22, 2024" and "Died Upon Conclusion of the 131st, Dec 4, 2024", pocket vetoes, not laws
   (`died` in `decode_bill()`: a hold and a veto, the veto dated the Legislature's end); 3 (LD 25, 2205, 2210) have pages
-  with no governor's action and no chapter, so they show as passed both houses with "No governor's action or chapter is
-  recorded on the Legislature's page" (`silent`). LD 2015 of 2023 (Resolve chapter 86, "Emergency Finally Passed") has a
+  with no governor's action and no chapter; the Law and Legislative Reference Library's legislative histories
+  (lldc.mainelegislature.org/Open/Meta/LegHist/131/lh131-LD-0025.pdf) say "Enacted, Held by Governor 05/22/24", so they're
+  pocket vetoes too (`HELD_FIX` in convert.py, 2026-11-21). Any other bill like them still shows "No governor's action or
+  chapter is recorded on the Legislature's page" (`silent`). LD 2015 of 2023 (Resolve chapter 86, "Emergency Finally Passed") has a
   chapter and no governor's action: a law dated its final passage. LD 1610 of 2023 (the Pine Tree Power initiative, "IB,
   Chapter 2", veto sustained) no longer carries a "Became law" line. Vetoes: "having been returned by
   the Governor, together with objections" (the reconsideration day), "...become a law notwithstanding" an override; "HELD BY

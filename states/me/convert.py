@@ -65,6 +65,11 @@ ENACT = re.compile(r"^(?:Subsequently,?\s*)?PASSAGE TO BE ENACTED\b|\bPASSED TO 
                    r"\b(?:INSISTED on|RECEDED and CONCURRED (?:to|with)) (?:PASSAGE TO BE ENACTED|FINAL PASSAGE)\b", re.I)
 FAIL_ENACT = re.compile(r"\bFAILED (?:PASSAGE TO BE ENACTED|FINAL PASSAGE|ENACTMENT|PASSAGE TO BE ENGROSSED)\b", re.I)
 VETO_RETURN = re.compile(r"having been returned by the Governor,? together with (?:its|his|her)?\s*objections", re.I)
+# Enacted on veto day (May 10, 2024) and held by the governor until the 131st Legislature ended: pocket vetoes, like the 32
+# others whose bill pages say so. Their bill pages name no governor's action; the Law Library's legislative histories say
+# "Final Disposition: Enacted, Held by Governor 05/22/24" (LD 2205: "Emergency Finally Passed, Held by Governor").
+HELD_FIX = {(2023, n): {"gov": "Held by Governor", "date": "2024-05-22", "final": "Died Upon Conclusion of the 131st",
+                        "final_date": "2024-12-04"} for n in ("LD25", "LD2205", "LD2210")}
 OVERRIDE = re.compile(r"vote of the (?:House|Senate) that the (?:Bill|Resolve) become (?:a )?law", re.I)
 ROLL = re.compile(r"ROLL CALL (?:NO\.|Number)\s*(\d+)V?\b", re.I)
 
@@ -256,6 +261,11 @@ def decode_bill(b, kind, facts=None):
     if enact_lines and kind == "bill" and enacted["S"] and enacted["H"]:
         i = enact_lines[-1]
         f = facts_of(b, facts)
+        # Bills whose bill page says nothing of the governor, but whose history in the Law and Legislative Reference
+        # Library ("History and Final Disposition", lldc.mainelegislature.org/Open/Meta/LegHist/131/lh131-LD-0025.pdf) does.
+        fix = HELD_FIX.get(((b.get("session") or {}).get("year_start"), b.get("bill_number")))
+        if fix and not f.get("gov") and not f.get("chapter"):
+            f = {**f, **fix}
         gov, series, num = f.get("gov") or "", f.get("series") or "", f.get("chapter")
         vetoed = any(x[1] == "veto" for line in out for x in line)
         overridden = any(x[1] == "override" for line in out for x in line)
