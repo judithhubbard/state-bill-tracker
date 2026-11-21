@@ -17,7 +17,7 @@ Usage: python3 build_data.py            builds every session found in data/
                                         states/<state>/; its data is in the profile's DATA
                                         folder and its pages go in site/<state>/
 """
-import base64, glob, gzip, importlib, json, os, re, sys
+import base64, glob, gzip, hashlib, importlib, json, os, re, sys
 from fetch_contacts import committee_key, name_key, senate_url
 from collections import Counter, defaultdict
 from stages import STAGE_LABEL, rank
@@ -43,6 +43,42 @@ TEMPLATE = os.path.join(HERE, "tracker.html")
 SITE = os.path.join(HERE, "site", P.SITE_DIR)
 # Published URL of each session's page, filled in after the first publish of each.
 URLS_FILE = os.path.join(HERE, "artifact_urls.json")
+
+# Results of the slow, pure steps (issue matching, similar bills ...), kept between builds and keyed by everything they're
+# worked out from, so a build whose data or rules haven't changed reuses them: BUILD_CACHE/<state>/ (build_site.sh keeps it
+# in $BUILT/cache, which publish.yml carries from run to run; locally .build-cache/). A missing or unreadable cache only
+# makes the build slower.
+CACHE_DIR = os.path.join(os.environ.get("BUILD_CACHE") or os.path.join(HERE, ".build-cache"), STATE)
+
+
+def file_hash(*paths):
+    h = hashlib.sha256()
+    for p in paths:
+        with open(p, "rb") as f:
+            h.update(f.read())
+        h.update(b"\0")
+    return h.hexdigest()[:16]
+
+
+def cached_json(name, version):
+    """The saved results under name if they were made by this version of the code, else {}."""
+    try:
+        with gzip.open(os.path.join(CACHE_DIR, name + ".json.gz"), "rt", encoding="utf-8") as f:
+            saved = json.load(f)
+        return saved["m"] if saved.get("v") == version else {}
+    except (OSError, ValueError, KeyError, EOFError):
+        return {}
+
+
+def save_cached_json(name, version, results):
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        tmp = os.path.join(CACHE_DIR, f"{name}.json.gz.{os.getpid()}")
+        with gzip.open(tmp, "wt", encoding="utf-8", compresslevel=3) as f:
+            json.dump({"v": version, "m": results}, f, separators=(",", ":"), ensure_ascii=False)
+        os.replace(tmp, os.path.join(CACHE_DIR, name + ".json.gz"))
+    except OSError as e:
+        print(f"   (cache {name} not saved: {e})")
 # Sessions whose first copy is still downloading (data/<state>/incomplete_<session>: an older year added back to the
 # window, states/window.py) are left out until it's finished.
 SESSIONS = importlib.import_module("states.window").shown(P.DATA, C.sessions())
@@ -770,14 +806,8 @@ def write_compare(done, hist, current, insight):
     of them law]}, "cfate": {how it died in committee: [bills]}, "fate": {where it died: [died, back next session, later
     law]} (when the next session is downloaded), "left": {"shell", "narrow", "const"}}]}."""
     loaded, hist_ = without_shells(done, hist)
-    js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
-    pick = lambda pat: (m.group(1) if (m := re.search(pat, js)) else None)
-    exits = re.search(r'\n  oddsExits: \["([^"]*)", "([^"]*)"\]', js)
-    chart = {"uni": LOW == "L" or bool(pick(r'\n  passedBothText: "([^"]*)"')),
-             "passedBoth": pick(r'\n  passedBothText: "([^"]*)"') or "Passed both houses",
-             "exits": [exits.group(1), exits.group(2)] if exits else None,
-             "heldLabel": pick(r'\n  heldLabel: "([^"]*)"'), "exec": "the President" if STATE == "us" else "the governor",
-             "linked": any(e[0] < s for s in loaded for d in hist_[s].values() for e in d.values())}
+    # (The chart's wording comes from profile.js: save_compare(), each build.)
+    chart = {"linked": any(e[0] < s for s in loaded for d in hist_[s].values() for e in d.values())}
     sessions, check = [], defaultdict(lambda: [0, 0])
     for s in sorted(loaded):
         if s >= current or s == CURRENT:
@@ -826,9 +856,21 @@ def write_compare(done, hist, current, insight):
         mine = [sum(check[(s, p)][j] for s in insight["pastSessions"]) for j in (0, 1)]
         if mine != list(v):
             print(f"compare: {p} is {mine}, the Statistics tab says {v}", file=sys.stderr)
-    out = {"state": STATE, "name": "Congress" if STATE == "us" else P.STATE_NAME, "years": YEARS, "chart": chart, "sessions": sessions}
+    return {"state": STATE, "name": "Congress" if STATE == "us" else P.STATE_NAME, "years": YEARS, "chart": chart, "sessions": sessions}
+
+
+def save_compare(out):
+    """write_compare()'s numbers, with the chart's wording from the state's profile.js, into data/compare.json."""
+    js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
+    pick = lambda pat: (m.group(1) if (m := re.search(pat, js)) else None)
+    exits = re.search(r'\n  oddsExits: \["([^"]*)", "([^"]*)"\]', js)
+    chart = {"uni": LOW == "L" or bool(pick(r'\n  passedBothText: "([^"]*)"')),
+             "passedBoth": pick(r'\n  passedBothText: "([^"]*)"') or "Passed both houses",
+             "exits": [exits.group(1), exits.group(2)] if exits else None,
+             "heldLabel": pick(r'\n  heldLabel: "([^"]*)"'), "exec": "the President" if STATE == "us" else "the governor",
+             "linked": out["chart"]["linked"]}
     with open(os.path.join(GITHUB, "data", "compare.json"), "w", encoding="utf-8") as f:
-        json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
+        json.dump({**out, "chart": chart}, f, separators=(",", ":"), ensure_ascii=False)
 
 
 def profiles(session, recs, legs, party_of):
@@ -1275,17 +1317,12 @@ def bill_texts(session, recs):
     return out
 
 
-def write_issues(session, recs, texts, page, current, party_of=None, labels=None):
-    """A session's bills on each national issue (issues.py), into data/issues_<session>.json for issues_site.py, which
-    builds the issue pages from every state's files, by calendar year: {"state", "name", "session", "years" (P.YEARS),
-    "upcoming", "label", "page", "total" (bills counted, for scale), "active" ({year: bills introduced or acted on}), "bills": [[issue ids, {issue: [filters]}, number,
-    title, stage, last action's date, "const" or "", year introduced (the session's first year at the earliest, so a
-    bill prefiled in December counts in its session's year), date it became law or "", {issue: the sentence that
-    matched} for titles under eight words, the record's other numbers, the sponsors' party (sponsor_class(): "D", "R", "B"
-    or ""), the status words (bill_labels())], ...]}. Local bills for one
-    place and placeholder bills are left out, as in the statistics."""
-    import issues
-    bills, total, active = [], 0, {}
+def issue_inputs(session, recs, texts, party_of=None):
+    """What write_issues() reads from a session's records: {"total", "active", "rows": [[record index, head (title and
+    summary), body ("What it does"), number, title, stage, last action's date, "const" or "", year introduced, date it
+    became law or "", whether the title is under eight words, the other numbers, the sponsors' party]]}. Worked out with
+    the data (and kept with it, data_bundle()); the matching itself is redone when issues.py changes."""
+    rows, total, active = [], 0, {}
     for i, r in enumerate(recs):
         if r.get("narrow") == "place" or r.get("shell"):
             continue
@@ -1298,39 +1335,69 @@ def write_issues(session, recs, texts, page, current, party_of=None, labels=None
         key = re.sub(r"[A-Z]$", "", r["nums"][0])
         t = texts.get(key) or []
         head = f"{r['title']}. {r['summary'] or ''}"
-        body = " ".join(x for i, x in enumerate(t[:5]) if i in (0, 3, 4) and isinstance(x, str))
-        found = issues.issues_of(head, body)
-        if not found:
-            continue
-        both = f"{head} {body}"
+        body = " ".join(x for j, x in enumerate(t[:5]) if j in (0, 3, 4) and isinstance(x, str))
         intro = max(session, int((r["first"] or str(session))[:4]))
         law = ""
         if r["stage"] == 5:
             law = (r["keyDates"][5].split(";")[-1] if len(r["keyDates"]) > 5 else "") or r["last"] or ""
-        bills.append([found, {i: issues.filters_of(i, both) for i in found if issues.BY_ID[i].get("filters")},
-                      r["nums"][0], r["title"], r["stage"], r["last"] or "", "const" if "const" in (r["topics"] or []) else "",
-                      intro, law,
+        rows.append([i, head, body, r["nums"][0], r["title"], r["stage"], r["last"] or "",
+                     "const" if "const" in (r["topics"] or []) else "", intro, law, len(r["title"].split()) < 8,
+                     r["nums"][1:], sponsor_class(r, party_of or {})])
+    return {"total": total, "active": active, "rows": rows}
+
+
+def write_issues(session, inputs, page, current, labels=None):
+    """A session's bills on each national issue (issues.py), into data/issues_<session>.json for issues_site.py, which
+    builds the issue pages from every state's files, by calendar year: {"state", "name", "session", "years" (P.YEARS),
+    "upcoming", "label", "page", "total" (bills counted, for scale), "active" ({year: bills introduced or acted on}), "bills": [[issue ids, {issue: [filters]}, number,
+    title, stage, last action's date, "const" or "", year introduced (the session's first year at the earliest, so a
+    bill prefiled in December counts in its session's year), date it became law or "", {issue: the sentence that
+    matched} for titles under eight words, the record's other numbers, the sponsors' party (sponsor_class(): "D", "R", "B"
+    or ""), the status words (bill_labels())], ...]}. Local bills for one
+    place and placeholder bills are left out, as in the statistics."""
+    import issues
+    # Matching is most of a state's build time, and a bill's matches depend only on its text and issues.py's rules: each
+    # bill's are kept (cached_json(), keyed by its title, summary and "What it does"), so only new or changed texts
+    # (or a change to issues.py) are matched again.
+    version = file_hash(os.path.join(HERE, "issues.py"))
+    memo = cached_json(f"issues_{session}", version)
+    seen = {}
+
+    def match(head, body):
+        k = hashlib.sha1(f"{head}\0{body}".encode("utf-8")).hexdigest()[:20]
+        if k not in memo:
+            found = issues.issues_of(head, body)
+            both = f"{head} {body}"
+            memo[k] = [found, {i: issues.filters_of(i, both) for i in found if issues.BY_ID[i].get("filters")},
+                       {i: issues.excerpt(i, head, body) for i in found}]
+        seen[k] = memo[k]
+        return memo[k]
+    bills = []
+    for i, head, body, num, title, stage, last, const, intro, law, short, others, party in inputs["rows"]:
+        found, filters, excerpts = match(head, body)
+        if not found:
+            continue
+        bills.append([found, filters, num, title, stage, last, const, intro, law,
                       # Under a bare title ("Wages"), the sentence that matched, so readers see why the bill is there.
-                      {i: issues.excerpt(i, head, body) for i in found} if len(r["title"].split()) < 8 else {},
+                      excerpts if short else {},
                       # The record's other numbers (New York's identical Assembly and Senate bills are one record).
-                      r["nums"][1:],
-                      sponsor_class(r, party_of or {}),
+                      others, party,
                       labels[i][0] if labels else ""])
     out = {"state": STATE, "name": P.STATE_NAME, "session": session, "years": getattr(P, "YEARS", 2),
            "upcoming": session > current,
-           "label": P.session_label(session), "page": page, "total": total, "active": active, "bills": bills}
+           "label": P.session_label(session), "page": page, "total": inputs["total"], "active": inputs["active"], "bills": bills}
     with open(os.path.join(GITHUB, "data", f"issues_{session}.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, separators=(",", ":"), ensure_ascii=False)
+    # Only this build's bills are kept, so the cache doesn't grow.
+    save_cached_json(f"issues_{session}", version, seen)
 
 
 # The page's names for a record's key dates (tracker.html's KEY_DATES; keyDates has all but the first, intro).
 KEY_DATES = ["intro", "floor", "passS", "passA", "died", "deliv", "signed", "vetoed"]
 
 
-def bill_labels(session, recs, hist_s, profile_js, facts):
-    """Each record's [status words, flags, latest day with news], worked out by the code the state's page runs
-    (lists_pages/billlabels.js: billfacts.js, watchrules.js and the profile, in Node) from the bill as the page sees it."""
-    import subprocess
+def label_inputs(session, recs, hist_s):
+    """Each record as the page sees it, for bill_labels()."""
     bills = []
     for i, r in enumerate(recs):
         kd = [r["first"] or ""] + list(r["keyDates"] or [])
@@ -1341,6 +1408,21 @@ def bill_labels(session, recs, hist_s, profile_js, facts):
                       "vers": [{"p": v["p"], "committee": v["committee"] or "", "statusDesc": v["statusDesc"] or "", "sponsor": v["sponsor"] or "",
                                 "actions": [[a[0], a[1]] for a in v["actions"]]} for v in r["vers"]],
                       "dates": dates, "earlier": sorted((e for e in hist_s[i].values() if e[0] < session), key=lambda e: (e[0], str(e[1])))})
+    return bills
+
+
+def bill_labels(session, bills, profile_js, facts):
+    """Each record's [status words, flags, latest day with news], worked out by the code the state's page runs
+    (lists_pages/billlabels.js: billfacts.js, watchrules.js and the profile, in Node) from the bill as the page sees it
+    (label_inputs()). The answers are kept (cached_json()), keyed by all it reads, today's date included (the rules read
+    it), so an unchanged state isn't run through Node again."""
+    import subprocess
+    js = [os.path.join(HERE, "lists_pages", f) for f in ("billlabels.js", "billfacts.js", "watchrules.js")]
+    key = hashlib.sha256(json.dumps([profile_js, session, facts, bills, today_here()], ensure_ascii=False).encode("utf-8")).hexdigest()[:20]
+    version = file_hash(*js)
+    saved = cached_json(f"labels_{session}", version)
+    if saved.get("key") == key and len(saved.get("out") or []) == len(bills):
+        return saved["out"]
     # In batches (each bill's words are its own), and a batch Node crashes on is run once more: one run with a whole
     # session's histories (Illinois, New York: ~10,000 bills) sometimes died in Node itself ("double free or corruption")
     # on the publish runners, 2026-11-19 and -20, failing that state's build.
@@ -1355,10 +1437,35 @@ def bill_labels(session, recs, hist_s, profile_js, facts):
         else:
             raise SystemExit(f"lists_pages/billlabels.js failed: {run.stderr[-2000:]}")
         out += json.loads(run.stdout)
+    save_cached_json(f"labels_{session}", version, {"key": key, "out": out})
     return out
 
 
-def write_status(session, recs, page, live, facts=None, agenda_of=None, later_of=None, labels=None):
+def status_inputs(session, recs, agenda_of=None, later_of=None):
+    """What write_status() reads from a session's records: {"rows": [[record index, number, its row's first seven
+    columns, the day it went to the governor, its committee meetings ([[when, committee]], all of them: write_status()
+    keeps those still to come), "b"/"v" flags, its later version]], "alias"}. Kept with the data (data_bundle())."""
+    base = lambda n: re.sub(r"[A-Z]$", "", n)
+    rows, alias, taken = [], {}, {}
+    for i, r in enumerate(recs):
+        lead = base(r["nums"][0])
+        # (Nebraska's "LB525A", the appropriation for LB 525, has the same key: the bill numbered exactly so keeps it.)
+        if lead in taken and taken[lead] == lead and r["nums"][0] != lead:
+            continue
+        taken[lead] = r["nums"][0]
+        acts = [a for v in r["vers"] for a in v["actions"] if a[0] == r["last"]]
+        deliv = (r["keyDates"][4] or "").split(";")[-1] if r["stage"] == 4 and len(r["keyDates"]) > 4 else ""
+        meets = [[w, c] for c, w in (agenda_of(r) if agenda_of else [])]
+        flags = ("b" if r.get("budget") else "") + ("v" if r.get("ballot") else "")
+        later = later_of(i) if later_of else None
+        rows.append([i, lead, [r["nums"][0], r["title"][:140], r["stage"], r["last"] or "", (acts[-1][1] if acts else "")[:120],
+                               r["comm"] or "", "const" if "const" in (r["topics"] or []) else ""], deliv, meets, flags, later])
+        for n in r["nums"][1:]:
+            alias[base(n)] = lead
+    return {"rows": rows, "alias": alias}
+
+
+def write_status(session, inputs, page, live, facts=None, labels=None):
     """Where each bill is, for the front page's "Your bills" (home.html) and /your-bills/, which show the bills a visitor
     starred on any state's page or on the front page: data/status_<session>.json, {"page", "live" (the session isn't
     over), "bills": {number without its amendment letter: [number, title, stage, last action's date, the last action,
@@ -1370,29 +1477,18 @@ def write_status(session, recs, page, live, facts=None, agenda_of=None, later_of
     with news (an action that isn't paperwork; left empty when it's the last action's day, "-" when there's none)]}, "alias": {the record's other
     numbers: its first}}; the columns after the seventh are left off from the last one that's empty. The watchlist keys
     bills as "<session>:<number without the letter>". facts: the session's facts the rules read (write_status_shards())."""
-    base = lambda n: re.sub(r"[A-Z]$", "", n)
     from datetime import date, timedelta
     soon = (date.today() - timedelta(days=1)).isoformat()
-    bills, alias = {}, {}
-    for i, r in enumerate(recs):
-        lead = base(r["nums"][0])
-        # (Nebraska's "LB525A", the appropriation for LB 525, has the same key: the bill numbered exactly so keeps it.)
-        if lead in bills and bills[lead][0] == lead and r["nums"][0] != lead:
-            continue
-        acts = [a for v in r["vers"] for a in v["actions"] if a[0] == r["last"]]
-        deliv = (r["keyDates"][4] or "").split(";")[-1] if r["stage"] == 4 and len(r["keyDates"]) > 4 else ""
-        meets = [[w, c] for c, w in (agenda_of(r) if agenda_of else []) if w >= soon]
+    bills, alias = {}, inputs["alias"]
+    for i, lead, row, deliv, meets, flags, later in inputs["rows"]:
+        meets = [m for m in meets if m[0] >= soon]
         lab = labels[i] if labels else ["", "", ""]
-        flags = ("b" if r.get("budget") else "") + ("v" if r.get("ballot") else "") + lab[1]
-        later = later_of(i) if later_of else None
-        news = "" if lab[2] == (r["last"] or "") else lab[2] or "-"  # ("-": nothing but paperwork)
+        flags += lab[1]
+        news = "" if lab[2] == row[3] else lab[2] or "-"  # ("-": nothing but paperwork)
         extra = [deliv, meets, flags, later or "", lab[0], news]
         while extra and not extra[-1]:
             extra.pop()
-        bills[lead] = [r["nums"][0], r["title"][:140], r["stage"], r["last"] or "", (acts[-1][1] if acts else "")[:120],
-                       r["comm"] or "", "const" if "const" in (r["topics"] or []) else "", *extra]
-        for n in r["nums"][1:]:
-            alias[base(n)] = lead
+        bills[lead] = [*row, *extra]
     with open(os.path.join(GITHUB, "data", f"status_{session}.json"), "w", encoding="utf-8") as f:
         json.dump({"session": session, "page": page, "live": live, "bills": bills, "alias": alias, **({"facts": facts} if facts else {})},
                   f, separators=(",", ":"), ensure_ascii=False)
@@ -1770,7 +1866,9 @@ def last_checked():
     return t.astimezone(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
 
 
-def main():
+def compute():
+    """Everything a build works out from the state's data (not from the page's code): per session a core dict that
+    finish() (in main()) turns into the files. On the public site it's kept between builds (data_bundle())."""
     loaded = {s: C.load_session(s) for s in SESSIONS}
     # A number with no title and no dates is a placeholder the source lists before a bill exists: left out. One with
     # dates but no title yet (OH SB 342 of 2023, IL SB 4214 of 2025) gets a stand-in title.
@@ -1847,9 +1945,8 @@ def main():
             if kind != P.session_kind(current):
                 insight_of[kind] = {**insights(done, hist, ref), "trends": insight["trends"], "topicRing": insight["topicRing"]}
     # Each finished session's odds chart, for /compare/ (compare_site.py).
-    if GITHUB:
-        os.makedirs(os.path.join(GITHUB, "data"), exist_ok=True)
-        write_compare(done, hist, current, insight)
+    compare_out = write_compare(done, hist, current, insight) if GITHUB else None
+    cores = {}
 
     # Current legislators for past sessions' pages (profile card and the sessions they served in).
     legs_now = legislators(current)
@@ -2007,71 +2104,39 @@ def main():
         # bill data and loaded when someone opens a bill.
         texts = bill_texts(session, recs)
         data["hasText"] = bool(texts)
-        tpayload = json.dumps(texts, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/") if texts else ""
-        payload = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
+        stages = Counter(r["stage"] for r in recs)
+        reintro = sum(1 for i in range(len(recs)) if any(k[0] < session for k in hist[session][i]))
+        core = {"n": len(recs), "fetched": fetched,
+                "report": [f"{session}: {len(recs)} bills, {reintro} with earlier versions, {sum(1 for r in recs if not r['topics'])} untagged",
+                           f"   stages: {({STAGE_LABEL[k]: stages[k] for k in sorted(stages)})} delegation: {names}"]}
         if GITHUB:
-            # On GitHub Pages the data is a separate file the page fetches, so the
-            # per-legislator pages can share it.
-            os.makedirs(os.path.join(GITHUB, "data"), exist_ok=True)
-            # Tab and home-screen icons, at the site's root.
-            for name in os.listdir(os.path.join(HERE, "static")):
-                with open(os.path.join(HERE, "static", name), "rb") as src, open(os.path.join(GITHUB, name), "wb") as dst:
-                    dst.write(src.read())
             # In parts and shards (split_payload()), under names that change with their contents (data/v/), so they can
-            # be cached for good; a rebuild replaces the state's whole folder, so old ones don't pile up.
-            profile_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
-            lst, parts_, shards_ = split_payload(data, session >= current,
-                                                 {k: re.search(rf"\b{k}\b", profile_js) is not None for k in ("endedNote", "heldAction")})
+            # be cached for good; a rebuild replaces the state's whole folder, so old ones don't pile up. Which of the
+            # profile's settings read a bill's history (hooks) changes what the shards hold: a data bundle made with
+            # other hooks isn't used (data_bundle()).
+            hooks = profile_hooks()
+            lst, parts_, shards_ = split_payload(data, session >= current, hooks)
             dump = lambda part_: json.dumps(part_, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
-            texts_ = {"list": dump(lst), **{kind: dump(part_) for kind, part_ in parts_.items()},
-                      **{f"s{k}": dump(part_) for k, part_ in enumerate(shards_)}}
-            names_ = {kind: hashed_name(session, kind, text) for kind, text in texts_.items()}
-            os.makedirs(os.path.join(GITHUB, "data", "v"), exist_ok=True)
-            for kind, text in texts_.items():
-                with open(os.path.join(GITHUB, "data", "v", names_[kind]), "w", encoding="utf-8") as f:
-                    f.write(text)
-            # The page's data tag, from a page in the state's folder (prefix "") or one level down ("../"): the list
-            # part's address, and the other files' hashes (<session>.<hash>.<kind>.json in data-v: tracker.html's
-            # partUrl()); and a preload hint, so the list part starts downloading while the page's script is read.
-            hash_of = lambda kind: names_[kind].split(".")[1]
-            part_list = " ".join(f"{kind}:{hash_of(kind)}" for kind in parts_)
-            shard_list = " ".join(hash_of(f"s{k}") for k in range(len(shards_)))
-            bundle = " ".join(lst.get("bundle") or [])
-            # The text pieces written below, named in the page so it asks only for those (a range of numbers with no
-            # summaries has no piece: Missouri's House bills).
-            text_names = sorted({f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}" for k in texts}) if texts else []
-            def data_tag(prefix, base=""):
-                return (f'<script type="application/json" id="bill-data" data-src="{prefix}data/v/{names_["list"]}" '
-                        f'data-v="{prefix}data/v/" data-session="{session}" data-parts="{part_list}" data-shards="{shard_list}" data-bundle="{bundle}" '
-                        f'data-texts="{prefix}data/{session}-text/" data-text-parts="{" ".join(text_names)}"'
-                        f'{base} data-root="{P.SITE_URL}"></script>')
-            def preload(prefix):
-                return f'<link rel="preload" href="{prefix}data/v/{names_["list"]}" as="fetch" crossorigin="anonymous">\n'
-            if texts:
-                # In pieces of 500 bill numbers (data/<session>-text/A10.json holds A5000-A5499), so opening
-                # a bill loads only its piece.
-                parts = defaultdict(dict)
-                for k, v in texts.items():
-                    parts[f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}"][k] = v
-                os.makedirs(os.path.join(GITHUB, "data", f"{session}-text"), exist_ok=True)
-                for name, part in parts.items():
-                    with open(os.path.join(GITHUB, "data", f"{session}-text", f"{name}.json"), "w", encoding="utf-8") as f:
-                        json.dump(part, f, separators=(",", ":"), ensure_ascii=False)
+            core["hooks"] = hooks
+            core["files"] = {"list": dump(lst), **{kind: dump(part_) for kind, part_ in parts_.items()},
+                             **{f"s{k}": dump(part_) for k, part_ in enumerate(shards_)}}
+            core["parts"], core["shards"], core["bundle"] = list(parts_), len(shards_), lst.get("bundle") or []
+            core["legislators"] = data.get("legislators", [])
+            # What each bill does, in pieces of 500 bill numbers (data/<session>-text/A10.json holds A5000-A5499), so
+            # opening a bill loads only its piece; named in the page so it asks only for those (a range of numbers with
+            # no summaries has no piece: Missouri's House bills).
+            core["texts"] = defaultdict(dict)
+            for k, v in texts.items():
+                core["texts"][f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}"][k] = v
+            core["texts"] = dict(core["texts"])
+            core["text_names"] = sorted({f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}" for k in texts}) if texts else []
             # The session's facts the watchlist's deadline rules read (lists_pages/watchrules.js), for /your-bills/:
-            # {c: current, u: upcoming, e: scheduled last days by year, v: the last floor vote, t: past sessions' last votes}.
-            # The state's profile (its STATE object) as its own file, data/v/profile.<hash>.js, so /your-bills/ loads only
-            # the starred states' rules; its hash is the facts' "s".
-            import hashlib
-            prof_js = state_profile_js(P)
-            prof_hash = hashlib.sha256(prof_js.encode("utf-8")).hexdigest()[:12]
-            with open(os.path.join(GITHUB, "data", "v", f"profile.{prof_hash}.js"), "w", encoding="utf-8") as f:
-                f.write(prof_js)
-            facts = {"s": prof_hash, "c": session >= current, "u": session > current, "e": data.get("sessionEnd") or {},
-                     "v": data.get("lastVote") or "", "m": data.get("lastComm") or "", "t": [t["lastVote"] for t in (data.get("insights") or {}).get("timing") or [] if t.get("lastVote")]}
-            # Each bill's status words, as its state's page words them (lists_pages/billfacts.js, run in Node), for the
-            # views that show it without the page.
-            labels = bill_labels(session, recs, hist[session], prof_js, facts)
-            write_issues(session, recs, texts, urls.get(str(session)) or "./", current, {**other_party, **party_of}, labels)
+            # {c: current, u: upcoming, e: scheduled last days by year, v: the last floor vote, t: past sessions' last votes}
+            # (and "s", the profile's file: finish()).
+            core["facts"] = {"c": session >= current, "u": session > current, "e": data.get("sessionEnd") or {},
+                             "v": data.get("lastVote") or "", "m": data.get("lastComm") or "", "t": [t["lastVote"] for t in (data.get("insights") or {}).get("timing") or [] if t.get("lastVote")]}
+            core["labels"] = label_inputs(session, recs, hist[session])
+            core["issues"] = issue_inputs(session, recs, texts, {**other_party, **party_of})
 
             def later_of(i):
                 newer = [e for e in hist[session][i].values() if e[0] > session and e[2] >= 0 and e[1]]
@@ -2079,157 +2144,285 @@ def main():
                     return None
                 e = max(newer, key=lambda e: e[0])
                 return [e[0], re.sub(r"[A-Z]$", "", e[1].split(" / ")[0])]
-            write_status(session, recs, urls.get(str(session)) or "./", session >= current, facts, agenda_of, later_of, labels)
-        # The template is written with New York's names (title, header and the script that updates them).
-        template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)
-        template = template.replace("How a bill becomes law in New York", f"How a bill becomes law in {P.STATE_NAME}")
-        # A state's own explanation (states/<code>/how.html) replaces New York's sections of the How tab.
-        how = os.path.join(os.path.dirname(P.__file__), "how.html")
-        if os.path.exists(how):
-            start = template.index('    <div class="howsec" id="howSteps">')
-            end = template.index('  </section>', start)
-            template = template[:start] + open(how).read() + template[end:]
-        # And its own Weigh in text (states/<code>/weighin.html): how to weigh in, the governor's office and
-        # who decides at each stage.
-        weighin = os.path.join(os.path.dirname(P.__file__), "weighin.html")
-        if os.path.exists(weighin):
-            start = template.index('    <div class="act-sec">\n      <h2>Residents, organizations and local governments</h2>')
-            end = template.index('  </section>', start)
-            template = template[:start] + open(weighin).read() + template[end:]
-        # The state's page settings and rules, read by the main script as STATE.
-        state_js = state_profile_js(P)
-        # The watchlist's deadline rules (lists_pages/watchrules.js, shared with /your-bills/), just before it.
-        rules_js = open(os.path.join(HERE, "lists_pages", "watchrules.js")).read()
-        # The status words and what a bill's history says (lists_pages/billfacts.js, which the build runs too, for the
-        # other pages), and the watchlist's rows and groups (lists_pages/watchrows.js and rows.css, shared with /your-bills/).
-        rules_js += "\n" + open(os.path.join(HERE, "lists_pages", "billfacts.js")).read()
-        rules_js += "\n" + open(os.path.join(HERE, "lists_pages", "watchrows.js")).read()
-        assert "/*rows.css*/" in template, "tracker.html's styles lost the /*rows.css*/ marker"
-        template = template.replace("/*rows.css*/", open(os.path.join(HERE, "lists_pages", "rows.css")).read(), 1)
-        # The odds chart (lists_pages/sankey.js, shared with /compare/).
-        sankey_js = open(os.path.join(HERE, "lists_pages", "sankey.js")).read()
-        template = template.replace('<script id="state-profile"></script>', f'<script id="watch-rules">\n{rules_js}</script>\n<script id="sankey">\n{sankey_js}</script>\n<script id="state-profile">\n{state_js}</script>', 1)
-        if session != current:
-            template = template.replace(f"<title>{P.SITE_NAME}</title>",
-                                        f"<title>{P.SITE_NAME} {P.session_label(session)}</title>", 1)
-        # The header line is written in now, matching what the page sets, so it doesn't change length
-        # (and push the title down) when the data arrives.
-        def fmt_updated(f):
-            """"2026-11-20 09:21" -> "Nov 20, 9:21 a.m." (tracker.html's fmtUpdated())."""
-            m = re.match(r"(\d{4})-(\d\d)-(\d\d)(?:[ T](\d\d):(\d\d))?", f or "")
-            if not m:
-                return f or ""
-            mon = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()[int(m.group(2)) - 1]
-            hh = m.group(4)
-            return f"{mon} {int(m.group(3))}" + (f", {int(hh) % 12 or 12}:{m.group(5)} {'a.m.' if int(hh) < 12 else 'p.m.'}" if hh else "")
-        label = f"{P.LEGISLATURE} · {P.session_label(session)} session" + (
-            f" · updated {fmt_updated(fetched)}" if session == current else f" · prefiled bills · updated {fmt_updated(fetched)}" if session > current else " (final)")
-        template = template.replace(f'id="sessionLabel">{P.LEGISLATURE}<', f'id="sessionLabel">{html_escape(label)}<', 1)
-        # Party control now (balance.py), on the current session's page only: written in, so nothing moves on load.
-        if session == current:
-            import balance
-            lower = getattr(P, "LOWER_NAME", "Assembly")
-            power = balance.summary_html(STATE, lower)
-            if power:
-                template = template.replace('<p class="power" id="power"></p>',
-                                            f'<p class="power" id="power">{power}<span class="bp-why">{html_escape(balance.meaning(STATE, lower))}</span></p>', 1)
-        # The frame shown while the data loads: the tabs this page will have, and how many bills are coming.
-        template = frame_tabs(template, "past" if session < current else "upcoming" if session > current else "")
-        template = template.replace('id="frameLoad">Loading bills…<', f'id="frameLoad">Loading {len(recs):,} bills…<', 1)
-        # And the session buttons beside the title (renderSessions() draws the same), so the title's block is already
-        # as tall as it will be. (A legislator's page moves them into their card: not there.)
-        latest = max(s for s in SESSIONS if s <= current)
+            core["status"] = status_inputs(session, recs, agenda_of, later_of)
+        else:
+            core["payload"] = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
+            core["tpayload"] = json.dumps(texts, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/") if texts else ""
+        cores[session] = core
+    return {"cores": cores, "compare": compare_out}
 
-        def sessions_nav(base):
-            # (On a phone, one menu instead of the buttons: tracker.html's sessionMenu().)
-            out, opts = [], []
-            for s in SESSIONS:
-                label = html_escape(f"{P.session_label(s)}{' (current)' if s == latest else ' (prefiled)' if s > latest else ''}")
-                url = urls.get(str(s))
-                if s == session:
-                    out.append(f'<span class="here" aria-current="page">{label}</span>')
-                    opts.append(f'<option value="" selected>{label}</option>')
-                elif not url:
-                    out.append(f'<span class="off">{label}</span>')
-                    opts.append(f'<option value="" disabled>{label}</option>')
-                elif re.match(r"https?:", url):
-                    out.append(f'<a href="{html_escape(url)}" target="_blank" rel="noopener">{label}</a>')
-                    opts.append(f'<option value="{html_escape(url)}" data-ext>{label}</option>')
-                else:
-                    out.append(f'<a href="{html_escape(base + url)}">{label}</a>')
-                    opts.append(f'<option value="{html_escape(base + url)}">{label}</option>')
-            menu = f'<select class="sessmenu" aria-label="Session">{"".join(opts)}</select>' if len(opts) > 1 else ""
-            return "".join(out) + menu
-        nav_marker = '<nav class="sessions" id="sessions" aria-label="Legislative sessions"></nav>'
-        with_nav = lambda page, base="": page.replace(nav_marker, nav_marker.replace("></nav>", f">{sessions_nav(base)}</nav>"), 1)
-        person_template = template
-        template = with_nav(template)
-        marker = '<script type="application/json" id="bill-data"></script>'
-        assert marker in template, "template is missing the data marker"
-        # The Claude copies carry the data gzipped and base64-encoded (about a third the size), unpacked in the
-        # browser; GitHub Pages pages load the shared JSON file instead, which the server compresses anyway.
-        packed = base64.b64encode(gzip.compress(payload.encode("utf-8"), 9, mtime=0)).decode("ascii")
+
+def profile_hooks():
+    """Which of the state's settings read a bill's history to word how far it got (split_payload()'s hooks)."""
+    profile_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
+    return {k: re.search(rf"\b{k}\b", profile_js) is not None for k in ("endedNote", "heldAction")}
+
+
+def today_here():
+    from datetime import date
+    return date.today().isoformat()
+
+
+# What compute() works out from the data is kept between builds (BUILD_CACHE/<state>/bundle.pickle.gz), keyed by
+# everything it reads: the state's data files and the build's Python code (state_hash.data_files()), the address the
+# site is built for and today's date (the converters and the statistics read it). A build whose key matches (a change to
+# the page's code: tracker.html, lists_pages/, the state's profile.js, how.html or weighin.html) reuses it and only
+# writes the pages and what depends on the page's code (bill_labels(), the issues and status files). BUILD_CACHE=off
+# turns it off.
+def bundle_key():
+    import state_hash
+    h = hashlib.sha256()
+    h.update(json.dumps([today_here(), STATE, ONLY, os.environ.get("SITE_URL", ""), os.environ.get("SITE_BASE", ""),
+                         os.environ.get("LAUNCHED", "0"), CURRENT]).encode())
+    state_hash.digest(h, state_hash.data_files(STATE))
+    return h.hexdigest()
+
+
+def data_bundle(key):
+    import pickle
+    try:
+        with gzip.open(os.path.join(CACHE_DIR, "bundle.pickle.gz"), "rb") as f:
+            saved = pickle.load(f)
+    except (OSError, EOFError, ValueError, pickle.UnpicklingError, AttributeError, ImportError):
+        return None
+    if saved.get("key") != key:
+        return None
+    hooks = profile_hooks()
+    if any(core.get("hooks") != hooks for core in saved["bundle"]["cores"].values()):
+        return None
+    return saved["bundle"]
+
+
+def save_data_bundle(key, bundle):
+    import pickle
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        tmp = os.path.join(CACHE_DIR, f"bundle.pickle.gz.{os.getpid()}")
+        with gzip.open(tmp, "wb", compresslevel=1) as f:
+            pickle.dump({"key": key, "bundle": bundle}, f, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(tmp, os.path.join(CACHE_DIR, "bundle.pickle.gz"))
+    except OSError as e:
+        print(f"   (data bundle not saved: {e})")
+
+
+def main():
+    current = CURRENT
+    urls = json.load(open(URLS_FILE)) if os.path.exists(URLS_FILE) else {}
+    if GITHUB:
+        urls = {str(s): ("./" if s == current else f"{s}.html") for s in SESSIONS}
+    use_cache = GITHUB and os.environ.get("BUILD_CACHE") != "off"
+    key = bundle_key() if use_cache else None
+    bundle = data_bundle(key) if use_cache else None
+    if bundle:
+        print("data unchanged: pages only (the data from the last build)")
+    else:
+        bundle = compute()
+        if use_cache:
+            save_data_bundle(key, bundle)
+    if GITHUB:
+        os.makedirs(os.path.join(GITHUB, "data"), exist_ok=True)
+        save_compare(bundle["compare"])
+    for session in ONLY:
+        finish(session, bundle["cores"][session], current, urls)
+
+
+def finish(session, core, current, urls):
+    """A session's files from its core (compute()): the data files, and the pages."""
+    fetched = core["fetched"]
+    if GITHUB:
+        # On GitHub Pages the data is a separate file the page fetches, so the
+        # per-legislator pages can share it.
+        os.makedirs(os.path.join(GITHUB, "data"), exist_ok=True)
+        # Tab and home-screen icons, at the site's root.
+        for name in os.listdir(os.path.join(HERE, "static")):
+            with open(os.path.join(HERE, "static", name), "rb") as src, open(os.path.join(GITHUB, name), "wb") as dst:
+                dst.write(src.read())
+        texts_ = core["files"]
+        names_ = {kind: hashed_name(session, kind, text) for kind, text in texts_.items()}
+        os.makedirs(os.path.join(GITHUB, "data", "v"), exist_ok=True)
+        for kind, text in texts_.items():
+            with open(os.path.join(GITHUB, "data", "v", names_[kind]), "w", encoding="utf-8") as f:
+                f.write(text)
+        # The page's data tag, from a page in the state's folder (prefix "") or one level down ("../"): the list
+        # part's address, and the other files' hashes (<session>.<hash>.<kind>.json in data-v: tracker.html's
+        # partUrl()); and a preload hint, so the list part starts downloading while the page's script is read.
+        hash_of = lambda kind: names_[kind].split(".")[1]
+        part_list = " ".join(f"{kind}:{hash_of(kind)}" for kind in core["parts"])
+        shard_list = " ".join(hash_of(f"s{k}") for k in range(core["shards"]))
+        bundle = " ".join(core["bundle"])
+        text_names = core["text_names"]
+        def data_tag(prefix, base=""):
+            return (f'<script type="application/json" id="bill-data" data-src="{prefix}data/v/{names_["list"]}" '
+                    f'data-v="{prefix}data/v/" data-session="{session}" data-parts="{part_list}" data-shards="{shard_list}" data-bundle="{bundle}" '
+                    f'data-texts="{prefix}data/{session}-text/" data-text-parts="{" ".join(text_names)}"'
+                    f'{base} data-root="{P.SITE_URL}"></script>')
+        def preload(prefix):
+            return f'<link rel="preload" href="{prefix}data/v/{names_["list"]}" as="fetch" crossorigin="anonymous">\n'
+        if core["texts"]:
+            os.makedirs(os.path.join(GITHUB, "data", f"{session}-text"), exist_ok=True)
+            for name, part in core["texts"].items():
+                with open(os.path.join(GITHUB, "data", f"{session}-text", f"{name}.json"), "w", encoding="utf-8") as f:
+                    json.dump(part, f, separators=(",", ":"), ensure_ascii=False)
+        # The state's profile (its STATE object) as its own file, data/v/profile.<hash>.js, so /your-bills/ loads only
+        # the starred states' rules; its hash is the facts' "s".
+        prof_js = state_profile_js(P)
+        prof_hash = hashlib.sha256(prof_js.encode("utf-8")).hexdigest()[:12]
+        with open(os.path.join(GITHUB, "data", "v", f"profile.{prof_hash}.js"), "w", encoding="utf-8") as f:
+            f.write(prof_js)
+        facts = {"s": prof_hash, **core["facts"]}
+        # Each bill's status words, as its state's page words them (lists_pages/billfacts.js, run in Node), for the
+        # views that show it without the page.
+        labels = bill_labels(session, core["labels"], prof_js, facts)
+        write_issues(session, core["issues"], urls.get(str(session)) or "./", current, labels)
+        write_status(session, core["status"], urls.get(str(session)) or "./", session >= current, facts, labels)
+    # The template is written with New York's names (title, header and the script that updates them).
+    template = open(TEMPLATE).read().replace("Albany Bill Tracker", P.SITE_NAME).replace("New York State Legislature", P.LEGISLATURE)
+    template = template.replace("How a bill becomes law in New York", f"How a bill becomes law in {P.STATE_NAME}")
+    # A state's own explanation (states/<code>/how.html) replaces New York's sections of the How tab.
+    how = os.path.join(os.path.dirname(P.__file__), "how.html")
+    if os.path.exists(how):
+        start = template.index('    <div class="howsec" id="howSteps">')
+        end = template.index('  </section>', start)
+        template = template[:start] + open(how).read() + template[end:]
+    # And its own Weigh in text (states/<code>/weighin.html): how to weigh in, the governor's office and
+    # who decides at each stage.
+    weighin = os.path.join(os.path.dirname(P.__file__), "weighin.html")
+    if os.path.exists(weighin):
+        start = template.index('    <div class="act-sec">\n      <h2>Residents, organizations and local governments</h2>')
+        end = template.index('  </section>', start)
+        template = template[:start] + open(weighin).read() + template[end:]
+    # The state's page settings and rules, read by the main script as STATE.
+    state_js = state_profile_js(P)
+    # The watchlist's deadline rules (lists_pages/watchrules.js, shared with /your-bills/), just before it.
+    rules_js = open(os.path.join(HERE, "lists_pages", "watchrules.js")).read()
+    # The status words and what a bill's history says (lists_pages/billfacts.js, which the build runs too, for the
+    # other pages), and the watchlist's rows and groups (lists_pages/watchrows.js and rows.css, shared with /your-bills/).
+    rules_js += "\n" + open(os.path.join(HERE, "lists_pages", "billfacts.js")).read()
+    rules_js += "\n" + open(os.path.join(HERE, "lists_pages", "watchrows.js")).read()
+    assert "/*rows.css*/" in template, "tracker.html's styles lost the /*rows.css*/ marker"
+    template = template.replace("/*rows.css*/", open(os.path.join(HERE, "lists_pages", "rows.css")).read(), 1)
+    # The odds chart (lists_pages/sankey.js, shared with /compare/).
+    sankey_js = open(os.path.join(HERE, "lists_pages", "sankey.js")).read()
+    template = template.replace('<script id="state-profile"></script>', f'<script id="watch-rules">\n{rules_js}</script>\n<script id="sankey">\n{sankey_js}</script>\n<script id="state-profile">\n{state_js}</script>', 1)
+    if session != current:
+        template = template.replace(f"<title>{P.SITE_NAME}</title>",
+                                    f"<title>{P.SITE_NAME} {P.session_label(session)}</title>", 1)
+    # The header line is written in now, matching what the page sets, so it doesn't change length
+    # (and push the title down) when the data arrives.
+    def fmt_updated(f):
+        """"2026-11-20 09:21" -> "Nov 20, 9:21 a.m." (tracker.html's fmtUpdated())."""
+        m = re.match(r"(\d{4})-(\d\d)-(\d\d)(?:[ T](\d\d):(\d\d))?", f or "")
+        if not m:
+            return f or ""
+        mon = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()[int(m.group(2)) - 1]
+        hh = m.group(4)
+        return f"{mon} {int(m.group(3))}" + (f", {int(hh) % 12 or 12}:{m.group(5)} {'a.m.' if int(hh) < 12 else 'p.m.'}" if hh else "")
+    label = f"{P.LEGISLATURE} · {P.session_label(session)} session" + (
+        f" · updated {fmt_updated(fetched)}" if session == current else f" · prefiled bills · updated {fmt_updated(fetched)}" if session > current else " (final)")
+    template = template.replace(f'id="sessionLabel">{P.LEGISLATURE}<', f'id="sessionLabel">{html_escape(label)}<', 1)
+    # Party control now (balance.py), on the current session's page only: written in, so nothing moves on load.
+    if session == current:
+        import balance
+        lower = getattr(P, "LOWER_NAME", "Assembly")
+        power = balance.summary_html(STATE, lower)
+        if power:
+            template = template.replace('<p class="power" id="power"></p>',
+                                        f'<p class="power" id="power">{power}<span class="bp-why">{html_escape(balance.meaning(STATE, lower))}</span></p>', 1)
+    # The frame shown while the data loads: the tabs this page will have, and how many bills are coming.
+    template = frame_tabs(template, "past" if session < current else "upcoming" if session > current else "")
+    template = template.replace('id="frameLoad">Loading bills…<', f'id="frameLoad">Loading {core["n"]:,} bills…<', 1)
+    # And the session buttons beside the title (renderSessions() draws the same), so the title's block is already
+    # as tall as it will be. (A legislator's page moves them into their card: not there.)
+    latest = max(s for s in SESSIONS if s <= current)
+
+    def sessions_nav(base):
+        # (On a phone, one menu instead of the buttons: tracker.html's sessionMenu().)
+        out, opts = [], []
+        for s in SESSIONS:
+            label = html_escape(f"{P.session_label(s)}{' (current)' if s == latest else ' (prefiled)' if s > latest else ''}")
+            url = urls.get(str(s))
+            if s == session:
+                out.append(f'<span class="here" aria-current="page">{label}</span>')
+                opts.append(f'<option value="" selected>{label}</option>')
+            elif not url:
+                out.append(f'<span class="off">{label}</span>')
+                opts.append(f'<option value="" disabled>{label}</option>')
+            elif re.match(r"https?:", url):
+                out.append(f'<a href="{html_escape(url)}" target="_blank" rel="noopener">{label}</a>')
+                opts.append(f'<option value="{html_escape(url)}" data-ext>{label}</option>')
+            else:
+                out.append(f'<a href="{html_escape(base + url)}">{label}</a>')
+                opts.append(f'<option value="{html_escape(base + url)}">{label}</option>')
+        menu = f'<select class="sessmenu" aria-label="Session">{"".join(opts)}</select>' if len(opts) > 1 else ""
+        return "".join(out) + menu
+    nav_marker = '<nav class="sessions" id="sessions" aria-label="Legislative sessions"></nav>'
+    with_nav = lambda page, base="": page.replace(nav_marker, nav_marker.replace("></nav>", f">{sessions_nav(base)}</nav>"), 1)
+    person_template = template
+    template = with_nav(template)
+    marker = '<script type="application/json" id="bill-data"></script>'
+    assert marker in template, "template is missing the data marker"
+    # The Claude copies carry the data gzipped and base64-encoded (about a third the size), unpacked in the
+    # browser; GitHub Pages pages load the shared JSON file instead, which the server compresses anyway.
+    if not GITHUB:
+        packed = base64.b64encode(gzip.compress(core["payload"].encode("utf-8"), 9, mtime=0)).decode("ascii")
         html = template.replace(marker, f'<script type="application/octet-stream" id="bill-data" data-enc="gzip64">{packed}</script>')
-        if tpayload:
-            tpacked = base64.b64encode(gzip.compress(tpayload.encode("utf-8"), 9, mtime=0)).decode("ascii")
+        if core["tpayload"]:
+            tpacked = base64.b64encode(gzip.compress(core["tpayload"].encode("utf-8"), 9, mtime=0)).decode("ascii")
             html = html.replace(f'data-enc="gzip64">{packed}</script>',
                                 f'data-enc="gzip64">{packed}</script>\n<script type="application/octet-stream" id="bill-text" data-enc="gzip64">{tpacked}</script>', 1)
-        if GITHUB:
-            out = os.path.join(GITHUB, "index.html" if session == current else f"{session}.html")
-            if session == current:
-                meta = page_meta(f"{state_words()} · State Bill Tracker",
-                                 f"Follow bills in the {P.LEGISLATURE}: where each one is, who decides next, and what to ask them.")
-            else:
-                meta = page_meta(f"{state_words()}, {P.session_label(session)} · State Bill Tracker",
-                                 (f"Bills prefiled so far for the {P.LEGISLATURE}'s {P.session_label(session)} session." if session > current
-                                  else f"Every bill in the {P.LEGISLATURE}'s {P.session_label(session)} session, and where it ended up."),
-                                 f"{session}.html")
-            html = github_page(template.replace(marker, data_tag("")), preload("") + meta)
-            if session == current:
-                for leg in data.get("legislators", []):
-                    page = frame_tabs(person_template, "person").replace(marker, data_tag("../", ' data-base="../"'))
-                    preset = json.dumps({"who": leg["id"]}).replace('"', "&quot;")
-                    page = page.replace(f"<title>{P.SITE_NAME}</title>",
-                                        f'<title>{leg["title"]} {leg["name"]} · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{preset}">', 1)
-                    os.makedirs(os.path.join(GITHUB, leg["slug"]), exist_ok=True)
-                    with open(os.path.join(GITHUB, leg["slug"], "index.html"), "w") as f:
-                        f.write(github_page(page, preload("../") + page_meta(f'{leg["title"]} {leg["name"]} · {state_words()} · State Bill Tracker',
-                                                            f'{leg["title"]} {leg["name"]} in the {P.LEGISLATURE}: bills, committees and how to get in touch.',
-                                                            f'{leg["slug"]}/')))
-                # /watchlist/: the same page, opened to the visitor's own watchlist.
-                page = frame_tabs(with_nav(person_template, "../"), "watch").replace(marker, data_tag("../", ' data-base="../"'))
-                page = page.replace(f"<title>{P.SITE_NAME}</title>",
-                                    f'<title>Watchlist · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{{&quot;watch&quot;: true}}">', 1)
-                os.makedirs(os.path.join(GITHUB, "watchlist"), exist_ok=True)
-                with open(os.path.join(GITHUB, "watchlist", "index.html"), "w") as f:
-                    f.write(github_page(page, preload("../") + page_meta(f"Watchlist · {state_words()} · State Bill Tracker",
-                                                        f"Your own list of {P.LEGISLATURE} bills to follow.", "watchlist/")))
-                # A shared last name gets a page for picking the right person, e.g. /ramos/.
-                by_last = defaultdict(list)
-                for leg in data.get("legislators", []):
-                    by_last[name_key(leg["name"]).split()[-1]].append(leg)
-                for last, legs in by_last.items():
-                    if len(legs) > 1:
-                        os.makedirs(os.path.join(GITHUB, last), exist_ok=True)
-                        with open(os.path.join(GITHUB, last, "index.html"), "w") as f:
-                            f.write(choose_page(legs))
-                print(f"   {len(data.get('legislators', []))} legislator pages")
+    if GITHUB:
+        out = os.path.join(GITHUB, "index.html" if session == current else f"{session}.html")
+        if session == current:
+            meta = page_meta(f"{state_words()} · State Bill Tracker",
+                             f"Follow bills in the {P.LEGISLATURE}: where each one is, who decides next, and what to ask them.")
         else:
-            out = os.path.join(SITE, f"{session}.html")
-            # A Claude artifact page can't be larger than 16 MB.
-            size = len(html.encode("utf-8"))
-            if size > 16_000_000:
-                raise SystemExit(f"{out} is {size / 1e6:.1f} MB, over the 16 MB page limit")
-            if size > 15_300_000:
-                print(f"   warning: {out} is {size / 1e6:.1f} MB, close to the 16 MB page limit")
-        os.makedirs(os.path.dirname(out), exist_ok=True)
-        with open(out, "w") as f:
-            f.write(html)
-        stages = Counter(r["stage"] for r in recs)
-        reintro = sum(1 for i in range(len(recs)) if any(k[0] < session for k in hist[session][i]))
-        print(f"{session}: {len(recs)} bills, {reintro} with earlier versions, "
-              f"{sum(1 for r in recs if not r['topics'])} untagged, {os.path.getsize(out) / 1e6:.1f} MB -> {out}")
-        print("   stages:", {STAGE_LABEL[k]: stages[k] for k in sorted(stages)}, "delegation:", names)
+            meta = page_meta(f"{state_words()}, {P.session_label(session)} · State Bill Tracker",
+                             (f"Bills prefiled so far for the {P.LEGISLATURE}'s {P.session_label(session)} session." if session > current
+                              else f"Every bill in the {P.LEGISLATURE}'s {P.session_label(session)} session, and where it ended up."),
+                             f"{session}.html")
+        html = github_page(template.replace(marker, data_tag("")), preload("") + meta)
+        if session == current:
+            for leg in core["legislators"]:
+                page = frame_tabs(person_template, "person").replace(marker, data_tag("../", ' data-base="../"'))
+                preset = json.dumps({"who": leg["id"]}).replace('"', "&quot;")
+                page = page.replace(f"<title>{P.SITE_NAME}</title>",
+                                    f'<title>{leg["title"]} {leg["name"]} · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{preset}">', 1)
+                os.makedirs(os.path.join(GITHUB, leg["slug"]), exist_ok=True)
+                with open(os.path.join(GITHUB, leg["slug"], "index.html"), "w") as f:
+                    f.write(github_page(page, preload("../") + page_meta(f'{leg["title"]} {leg["name"]} · {state_words()} · State Bill Tracker',
+                                                        f'{leg["title"]} {leg["name"]} in the {P.LEGISLATURE}: bills, committees and how to get in touch.',
+                                                        f'{leg["slug"]}/')))
+            # /watchlist/: the same page, opened to the visitor's own watchlist.
+            page = frame_tabs(with_nav(person_template, "../"), "watch").replace(marker, data_tag("../", ' data-base="../"'))
+            page = page.replace(f"<title>{P.SITE_NAME}</title>",
+                                f'<title>Watchlist · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{{&quot;watch&quot;: true}}">', 1)
+            os.makedirs(os.path.join(GITHUB, "watchlist"), exist_ok=True)
+            with open(os.path.join(GITHUB, "watchlist", "index.html"), "w") as f:
+                f.write(github_page(page, preload("../") + page_meta(f"Watchlist · {state_words()} · State Bill Tracker",
+                                                    f"Your own list of {P.LEGISLATURE} bills to follow.", "watchlist/")))
+            # A shared last name gets a page for picking the right person, e.g. /ramos/.
+            by_last = defaultdict(list)
+            for leg in core["legislators"]:
+                by_last[name_key(leg["name"]).split()[-1]].append(leg)
+            for last, legs in by_last.items():
+                if len(legs) > 1:
+                    os.makedirs(os.path.join(GITHUB, last), exist_ok=True)
+                    with open(os.path.join(GITHUB, last, "index.html"), "w") as f:
+                        f.write(choose_page(legs))
+            print(f"   {len(core['legislators'])} legislator pages")
+    else:
+        out = os.path.join(SITE, f"{session}.html")
+        # A Claude artifact page can't be larger than 16 MB.
+        size = len(html.encode("utf-8"))
+        if size > 16_000_000:
+            raise SystemExit(f"{out} is {size / 1e6:.1f} MB, over the 16 MB page limit")
+        if size > 15_300_000:
+            print(f"   warning: {out} is {size / 1e6:.1f} MB, close to the 16 MB page limit")
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    with open(out, "w") as f:
+        f.write(html)
+    print(f"{core['report'][0]}, {os.path.getsize(out) / 1e6:.1f} MB -> {out}")
+    print(core["report"][1])
 
 
 if __name__ == "__main__":

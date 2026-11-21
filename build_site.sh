@@ -16,6 +16,11 @@ rm -rf "$OUT" && mkdir -p "$OUT"
 # Each state's pages from earlier builds, with the fingerprint they were built from.
 BUILT=${BUILT:-built}
 mkdir -p "$BUILT"
+# What build_data.py worked out from each state's data (and its issue matches and status words), kept with the pages, so a
+# change to the page's code alone (tracker.html, lists_pages/, a profile.js, how.html, weighin.html, issues.py) rewrites
+# the pages without working the data out again (build_data.py's data_bundle()).
+BUILD_CACHE=${BUILD_CACHE:-$(cd "$BUILT" && pwd)/cache}
+export BUILD_CACHE
 # Each state is built on its own (build_one), several at a time (JOBS, default 4: GitHub's runners have 4 cores), the
 # biggest first, so a change to the shared code rebuilds all states in about a quarter of the time. Each leaves its
 # outcome in $BUILT/<state>.result (rebuilt, failed, kept, copy or skip); the pages are copied into $OUT afterwards, in order.

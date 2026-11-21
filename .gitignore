@@ -182,3 +182,5 @@ data/us/*
 !data/us/district_towns.json
 !data/us/district_names.json
 .claude/
+# build_data.py keeps slow steps here between builds (BUILD_CACHE).
+.build-cache/
