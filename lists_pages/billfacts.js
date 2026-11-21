@@ -122,7 +122,7 @@ const BillFacts = (() => {
       if (f.voted) return f.voted;
       if (f.amend && f.second && S.amendmentDone) return S.amendmentDone;
       // A constitutional amendment that needs two passages, with only the first done (New York: the next Legislature votes again).
-      if (f.amend && !f.second) return "Passed once; must pass again next session";
+      if (f.amend && !f.second) return "Passed the first of two rounds";
       if (f.amend || f.ballot) return `${PB}; goes to the voters`;
       return PB;
     }
