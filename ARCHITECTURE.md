@@ -102,6 +102,15 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
   state's folder and New York's (the fallback settings), `SITE_BASE`, `LAUNCHED` and **today's date**, so every state
   rebuilds at least daily. Outcome per state in `built/<st>.result` (rebuilt / failed / copy / skip), log in
   `built/<st>.log`. A failed state keeps its last pages.
+- **What's worked out from the data is kept** (`built/cache/<st>/`, `BUILD_CACHE`; `.build-cache/` for build_data.py
+  run alone): `bundle.pickle.gz`, build_data.py's `compute()` result per session (the split data files, the inputs of
+  the issues, status and status-words files), keyed by `bundle_key()`: `state_hash.data_files()` (the state's data and
+  all the build's Python code), the site's address and today's date. A change to the page's code only (`state_hash.
+  page_files()`: tracker.html, lists_pages/*.js/css, the state's profile.js, how.html, weighin.html, issues.py) matches
+  the key, and the build writes only the pages and page-dependent files ("data unchanged: pages only" in the log):
+  seconds per state instead of minutes. Also kept: each bill's issue matches (`issues_<session>.json.gz`, keyed by its
+  text and issues.py), billlabels.js's answers (`labels_<session>`), and, on a new day or new data, the last bundle's
+  similar bills and split files where their inputs are unchanged. `BUILD_CACHE=off` works everything out.
 - Then, from the built states: `issues_site.py` (/issues/, `issues/summary.json`, `issues/<id>/bills.json`),
   `compare_site.py` (/compare/, `compare/summary.json`), `search_site.py` (`search/<st>.json`, `search/topics.json`),
   `/status.json` (every state's `data/status.json`), the front page (home.html with JSON blocks `#issues`, `#compare`,
@@ -117,8 +126,10 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
 - Triggers: each quick-lane download run (`from_download=true`), by hand (`gh workflow run publish.yml`), and daily at
   10:50 UTC (which also runs the data checks). One publish at a time (`concurrency: site`, queued, never cancelled).
 - Restores every state's cache (one step per state: `check_site.py` fails if a state in states.json has none), the
-  `built/` cache, downloads New York, runs `build_site.sh _site` with `SITE_BASE=https://statebilltracker.pages.dev/`,
-  saves `built/`, and deploys with `wrangler pages deploy` (project `statebilltracker`) only if some state was rebuilt
+  `built/` cache, downloads New York (only when the Senate's API lists a bill updated since the cached copy,
+  `ny-bills-v1-`: `fetch_bills.py --if-changed`), runs `build_site.sh _site` with `SITE_BASE=https://statebilltracker.pages.dev/`,
+  saves `built/` (and deletes all but the newest two `built-pages-` copies: `tools/prune_caches.py`, which download.yml
+  runs for each state's copies too), and deploys with `wrangler pages deploy` (project `statebilltracker`) only if some state was rebuilt
   (or it was started by hand).
 - A state whose build failed fails the run after deploying ("The build failed for: ..."), so GitHub emails the owner.
 

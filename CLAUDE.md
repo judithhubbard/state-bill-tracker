@@ -499,7 +499,8 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   limits are in `.github/states.json`. Test one state without touching the site: `gh workflow run download.yml -f
   states=wi`. `.github/workflows/publish.yml` builds from every state's latest saved copy and deploys after each download run (a `workflow_run` trigger, not a schedule)
   (about 360 deploys a month; Cloudflare's free plan allows 500) and by hand (`gh workflow run publish.yml`, for a design change); it rebuilds only the states whose data, code or
-  settings changed (`state_hash.py`, which includes the date, so each state is rebuilt at least daily) and copies the rest
+  settings changed (`state_hash.py`, which includes the date, so each state is rebuilt at least daily; a change to page code
+  alone reuses what build_data.py worked out from the data, kept in `built/cache/`: ARCHITECTURE.md) and copies the rest
   from the last build (the `built/` folder, kept in its cache; `ONLY="wy sd" ./build_site.sh` builds a few states locally); the data checks run in its 10:50 UTC run or with `-f checks=true`. A new state needs an
   entry in states.json and a restore step in publish.yml (check_site.py fails if one is missing); it needs the
   secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID. The domain stays parked at Porkbun until launch.

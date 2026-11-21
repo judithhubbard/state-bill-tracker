@@ -47,8 +47,9 @@ URLS_FILE = os.path.join(HERE, "artifact_urls.json")
 # Results of the slow, pure steps (issue matching, similar bills ...), kept between builds and keyed by everything they're
 # worked out from, so a build whose data or rules haven't changed reuses them: BUILD_CACHE/<state>/ (build_site.sh keeps it
 # in $BUILT/cache, which publish.yml carries from run to run; locally .build-cache/). A missing or unreadable cache only
-# makes the build slower.
-CACHE_DIR = os.path.join(os.environ.get("BUILD_CACHE") or os.path.join(HERE, ".build-cache"), STATE)
+# makes the build slower. BUILD_CACHE=off works everything out and keeps nothing.
+CACHE_DIR = None if os.environ.get("BUILD_CACHE") == "off" else \
+    os.path.join(os.environ.get("BUILD_CACHE") or os.path.join(HERE, ".build-cache"), STATE)
 
 
 def file_hash(*paths):
@@ -62,6 +63,8 @@ def file_hash(*paths):
 
 def cached_json(name, version):
     """The saved results under name if they were made by this version of the code, else {}."""
+    if not CACHE_DIR:
+        return {}
     try:
         with gzip.open(os.path.join(CACHE_DIR, name + ".json.gz"), "rt", encoding="utf-8") as f:
             saved = json.load(f)
@@ -71,6 +74,8 @@ def cached_json(name, version):
 
 
 def save_cached_json(name, version, results):
+    if not CACHE_DIR:
+        return
     try:
         os.makedirs(CACHE_DIR, exist_ok=True)
         tmp = os.path.join(CACHE_DIR, f"{name}.json.gz.{os.getpid()}")
@@ -79,6 +84,8 @@ def save_cached_json(name, version, results):
         os.replace(tmp, os.path.join(CACHE_DIR, name + ".json.gz"))
     except OSError as e:
         print(f"   (cache {name} not saved: {e})")
+
+
 # Sessions whose first copy is still downloading (data/<state>/incomplete_<session>: an older year added back to the
 # window, states/window.py) are left out until it's finished.
 SESSIONS = importlib.import_module("states.window").shown(P.DATA, C.sessions())
@@ -1866,9 +1873,12 @@ def last_checked():
     return t.astimezone(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
 
 
-def compute():
+def compute(prev=None):
     """Everything a build works out from the state's data (not from the page's code): per session a core dict that
-    finish() (in main()) turns into the files. On the public site it's kept between builds (data_bundle())."""
+    finish() (in main()) turns into the files. On the public site it's kept between builds (data_bundle()). prev: the
+    last build's cores (another day, or other data), whose similar bills and split files are reused where their inputs
+    are the same."""
+    prev = prev or {}
     loaded = {s: C.load_session(s) for s in SESSIONS}
     # A number with no title and no dates is a placeholder the source lists before a bill exists: left out. One with
     # dates but no title yet (OH SB 342 of 2023, IL SB 4214 of 2025) gets a stand-in title.
@@ -1956,8 +1966,10 @@ def compute():
 
     for session in ONLY:
         recs, _, fetched, names = loaded[session]
+        fetched0 = fetched
         # The current session is as fresh as the last successful download (data/<state>/last_checked, written by
-        # download.yml), not its newest bill file: between sessions no bill may change for weeks.
+        # download.yml), not its newest bill file: between sessions no bill may change for weeks. (On the public site
+        # the list part carries FETCHED_MARK, which finish() replaces: last_checked isn't part of the data bundle's key.)
         if session == current:
             fetched = max(fetched or "", last_checked() or "")
         law_count, comm_count = Counter(), Counter()
@@ -2022,7 +2034,11 @@ def compute():
             return 0
 
         rows = []
-        sims = similar_bills(recs)
+        # (The last build's, when every record's words are the same: similar_bills() is a few seconds a session.)
+        sim_in = hashlib.sha256(json.dumps([file_hash(__file__)] + [[r["title"], (r.get("simText") or r["summary"])[:800], r["lawCode"],
+                                             narrow_bill(r), bool(r.get("shell"))] for r in recs]).encode()).hexdigest()
+        was = prev.get(session) or {}
+        sims = was["sims"] if was.get("simIn") == sim_in else similar_bills(recs)
         for i, r in enumerate(recs):
             flags = (r["local"] and 1) | (r["senDeleg"] and 2) | (r["budget"] and 4) | (r["asmDeleg"] and 8) | (r["passedS"] and 16) | (r["passedA"] and 32) | (P.NARROW_KINDS.index(r["narrow"]) << 6 if r["narrow"] != "place" else 512) | (256 if r.get("shell") else 0) | (1024 if r.get("ballot") else 0)
             vers = [[v["p"], S(v["sponsor"]), v["cosp"], S(v["statusDesc"]), S(v["committee"]),
@@ -2048,7 +2064,7 @@ def compute():
             # An upcoming session's page works like the current one (watchlist, filters), marked as prefiled.
             "current": session >= current,
             "upcoming": session > current,
-            "fetched": fetched,
+            "fetched": FETCHED_MARK if GITHUB else fetched,
             "topics": {k: v[0] for k, v in P.TOPICS.items()},
             "lawList": sorted(law_count.items()),
             "commList": sorted(comm_count.items()),
@@ -2106,7 +2122,7 @@ def compute():
         data["hasText"] = bool(texts)
         stages = Counter(r["stage"] for r in recs)
         reintro = sum(1 for i in range(len(recs)) if any(k[0] < session for k in hist[session][i]))
-        core = {"n": len(recs), "fetched": fetched,
+        core = {"n": len(recs), "fetched": fetched0,
                 "report": [f"{session}: {len(recs)} bills, {reintro} with earlier versions, {sum(1 for r in recs if not r['topics'])} untagged",
                            f"   stages: {({STAGE_LABEL[k]: stages[k] for k in sorted(stages)})} delegation: {names}"]}
         if GITHUB:
@@ -2115,12 +2131,20 @@ def compute():
             # profile's settings read a bill's history (hooks) changes what the shards hold: a data bundle made with
             # other hooks isn't used (data_bundle()).
             hooks = profile_hooks()
-            lst, parts_, shards_ = split_payload(data, session >= current, hooks)
-            dump = lambda part_: json.dumps(part_, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
             core["hooks"] = hooks
-            core["files"] = {"list": dump(lst), **{kind: dump(part_) for kind, part_ in parts_.items()},
-                             **{f"s{k}": dump(part_) for k, part_ in enumerate(shards_)}}
-            core["parts"], core["shards"], core["bundle"] = list(parts_), len(shards_), lst.get("bundle") or []
+            core["simIn"], core["sims"] = sim_in, sims
+            # (The last build's files, when the data and hooks are the same: often so on a new day.)
+            core["splitIn"] = hashlib.sha256(json.dumps([file_hash(__file__), data, hooks, session >= current], separators=(",", ":"),
+                                                        ensure_ascii=False).encode("utf-8")).hexdigest()
+            if was.get("splitIn") == core["splitIn"] and was.get("files"):
+                for k in ("files", "parts", "shards", "bundle"):
+                    core[k] = was[k]
+            else:
+                lst, parts_, shards_ = split_payload(data, session >= current, hooks)
+                dump = lambda part_: json.dumps(part_, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
+                core["files"] = {"list": dump(lst), **{kind: dump(part_) for kind, part_ in parts_.items()},
+                                 **{f"s{k}": dump(part_) for k, part_ in enumerate(shards_)}}
+                core["parts"], core["shards"], core["bundle"] = list(parts_), len(shards_), lst.get("bundle") or []
             core["legislators"] = data.get("legislators", [])
             # What each bill does, in pieces of 500 bill numbers (data/<session>-text/A10.json holds A5000-A5499), so
             # opening a bill loads only its piece; named in the page so it asks only for those (a range of numbers with
@@ -2152,6 +2176,10 @@ def compute():
     return {"cores": cores, "compare": compare_out}
 
 
+# The data's "fetched" in the list part until finish() writes it in (the last download's time, which changes every run).
+FETCHED_MARK = "\0fetched\0"
+
+
 def profile_hooks():
     """Which of the state's settings read a bill's history to word how far it got (split_payload()'s hooks)."""
     profile_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
@@ -2179,18 +2207,18 @@ def bundle_key():
 
 
 def data_bundle(key):
+    """(The kept bundle if it's for this key and the profile's hooks, else None; the kept one's cores whatever its key.)"""
     import pickle
     try:
         with gzip.open(os.path.join(CACHE_DIR, "bundle.pickle.gz"), "rb") as f:
             saved = pickle.load(f)
-    except (OSError, EOFError, ValueError, pickle.UnpicklingError, AttributeError, ImportError):
-        return None
-    if saved.get("key") != key:
-        return None
+        cores = saved["bundle"]["cores"]
+    except (OSError, EOFError, ValueError, KeyError, TypeError, pickle.UnpicklingError, AttributeError, ImportError):
+        return None, {}
     hooks = profile_hooks()
-    if any(core.get("hooks") != hooks for core in saved["bundle"]["cores"].values()):
-        return None
-    return saved["bundle"]
+    if saved.get("key") != key or any(core.get("hooks") != hooks for core in cores.values()):
+        return None, cores
+    return saved["bundle"], cores
 
 
 def save_data_bundle(key, bundle):
@@ -2210,13 +2238,13 @@ def main():
     urls = json.load(open(URLS_FILE)) if os.path.exists(URLS_FILE) else {}
     if GITHUB:
         urls = {str(s): ("./" if s == current else f"{s}.html") for s in SESSIONS}
-    use_cache = GITHUB and os.environ.get("BUILD_CACHE") != "off"
+    use_cache = bool(GITHUB and CACHE_DIR)
     key = bundle_key() if use_cache else None
-    bundle = data_bundle(key) if use_cache else None
+    bundle, prev = data_bundle(key) if use_cache else (None, {})
     if bundle:
         print("data unchanged: pages only (the data from the last build)")
     else:
-        bundle = compute()
+        bundle = compute(prev)
         if use_cache:
             save_data_bundle(key, bundle)
     if GITHUB:
@@ -2228,7 +2256,7 @@ def main():
 
 def finish(session, core, current, urls):
     """A session's files from its core (compute()): the data files, and the pages."""
-    fetched = core["fetched"]
+    fetched = max(core["fetched"] or "", last_checked() or "") if session == current else core["fetched"]
     if GITHUB:
         # On GitHub Pages the data is a separate file the page fetches, so the
         # per-legislator pages can share it.
@@ -2237,7 +2265,7 @@ def finish(session, core, current, urls):
         for name in os.listdir(os.path.join(HERE, "static")):
             with open(os.path.join(HERE, "static", name), "rb") as src, open(os.path.join(GITHUB, name), "wb") as dst:
                 dst.write(src.read())
-        texts_ = core["files"]
+        texts_ = {**core["files"], "list": core["files"]["list"].replace(json.dumps(FETCHED_MARK), json.dumps(fetched, ensure_ascii=False), 1)}
         names_ = {kind: hashed_name(session, kind, text) for kind, text in texts_.items()}
         os.makedirs(os.path.join(GITHUB, "data", "v"), exist_ok=True)
         for kind, text in texts_.items():
