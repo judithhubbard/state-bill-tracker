@@ -3874,34 +3874,38 @@ function renderPersonStats(L) {
 // the decision's due date is last, in gold.
 function historyBlock(b) {
   const D = b.dates, people = votePeople();
-  // [day, words, the house a passage was in]; rank orders one day's lines: introduced, committee votes, the rest.
+  // [day, words, the house a passage was in, rank]. Within a day, rank orders the lines: introduced (0), committee votes
+  // (1), the floor (2: passages and other floor votes, in the votes' own order), sent to the governor (3), the governor's
+  // action (4), then a veto's override vote and the law it made (5). (WY's HB 126 of 2026: its House vote agreeing to the
+  // Senate's changes and its enrollment are on one day; floor votes once shared the governor's rank and came after.)
+  const after = (d) => !!D.vetoed && d >= D.vetoed;
   const items = [
     [D.intro, "Introduced", null, 0],
     [D.floor, "Approved by committee and sent to the floor", "floor"],
     ...D.passSAll.map((d, i) => [d, i ? "Passed the Senate again" : "Passed the Senate", "S"]),
     ...D.passAAll.map((d, i) => [d, i ? `Passed the ${HOUSE[LOW]} again` : `Passed the ${HOUSE[LOW]}`, LOW]),
     [D.died, "Sent back to committee for the new year (had to pass again)"],
-    [D.deliv, `Sent to ${EXEC.the}`],
-    [D.signed, `${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}`],
-    [D.vetoed, `Vetoed${b.veto ? `, Memo ${b.veto}` : ""}`],
-  ].filter(([d]) => d).map(([d, l, house, rank = 2]) => ({ d, html: esc(l), house, rank }));
-  for (const v of b.votes) {
+    [D.deliv, `Sent to ${EXEC.the}`, null, 3],
+    [D.signed, `${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}`, null, after(D.signed) ? 5 : 4],
+    [D.vetoed, `Vetoed${b.veto ? `, Memo ${b.veto}` : ""}`, null, 4],
+  ].filter(([d]) => d).map(([d, l, house, rank = 2], i) => ({ d, html: esc(l), house, rank, seq: 1000 + i }));
+  b.votes.forEach((v, seq) => {
     const other = [...v.notYes.values()].filter((c) => c !== "N").length;
     const theirs = people.map((L) => { const x = voteOf(v, L); return x ? `${L.title} ${esc(shortName(L.name))}: <b class="v${x === "Yes" ? "y" : x === "No" ? "n" : "o"}">${x}</b>` : ""; }).filter(Boolean).join(" · ");
     const tally = `<b>${v.yes}–${v.no}</b>${other ? ` <span class="muted">(${other} not voting)</span>` : ""}${theirs ? `<br><span class="theirs">${theirs}</span>` : ""}`;
     const step = v.kind === "F" && v.yes > v.no && !STATE.voteWhat?.(v) && items.find((x) => x.house === v.house && x.d === v.date && !x.voted);
-    if (step) { step.voted = true; step.html += ` <span class="tally">· ${tally}</span>`; continue; }
+    if (step) { step.voted = true; step.seq = seq; step.html += ` <span class="tally">· ${tally}</span>`; return; }
     // (A state can name the vote itself: Nebraska's floor rounds, STATE.voteWhat.)
     const what = STATE.voteWhat?.(v) || (v.kind === "F" ? `${HOUSE[v.house]} floor` : `${HOUSE[v.house]} ${esc(v.committee || "")}${/ommittee$/.test(v.committee || "") ? "" : " Committee"}`);  // (Tennessee's subcommittees)
     // The committee vote that sent the bill to the floor joins that line: "Approved by the Assembly Appropriations
     // Committee and sent to the floor · 11–3", not two lines for one step.
     const sent = v.kind !== "F" && v.yes > v.no && !STATE.voteWhat?.(v) && items.find((x) => x.house === "floor" && x.d === v.date && !x.voted);
-    if (sent) { sent.voted = true; sent.rank = 1; sent.html = `Approved by the ${what} and sent to the floor <span class="tally">· ${tally}</span>`; continue; }
+    if (sent) { sent.voted = true; sent.rank = 1; sent.seq = seq; sent.html = `Approved by the ${what} and sent to the floor <span class="tally">· ${tally}</span>`; return; }
     // A committee vote says what happened: "Approved by the Senate Labor Committee · 3–1", "Voted down in the ...".
     const html = v.kind === "F" ? `${what}: ${tally}` : `${v.yes > v.no ? "Approved by" : "Voted down in"} the ${what} <span class="tally">· ${tally}</span>`;
-    items.push({ d: v.date || "", html, rank: v.kind === "F" ? 1.5 : 1 });
-  }
-  items.sort((x, y) => x.d.localeCompare(y.d) || x.rank - y.rank);
+    items.push({ d: v.date || "", html, seq, rank: v.kind !== "F" ? 1 : after(v.date || "") ? 5 : 2 });
+  });
+  items.sort((x, y) => x.d.localeCompare(y.d) || x.rank - y.rank || x.seq - y.seq);
   if (DATA.current && b.stage === 4 && b.due) items.push({ d: b.due, html: esc(STATE.dueLabel(b.due)), est: true });
   return `<div class="keydates votes history"><h4>History</h4><ol>${items.map((x) =>
     `<li><time>${fmtDate(x.d)}</time><span${x.est ? ' class="est"' : ""}>${x.html}</span></li>`).join("")}</ol></div>`;
