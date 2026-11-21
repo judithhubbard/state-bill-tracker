@@ -1906,7 +1906,7 @@ function renderTopics() {
 
 // The row's progress pips (lists_pages/billfacts.js, styled by rows.css, as in every bill row on the site). One house
 // (UNI): five steps, with no "passed one house". A bill out of time is grey, as its label.
-const track = (b) => BillFacts.pips(b.stage, UNI, statusParts(b)[2].trim());
+const track = (b) => { const [t, , over] = statusParts(b); return BillFacts.pips(b.stage, UNI, over.trim(), t, STATE.code); };
 
 // "Energy And Telecommunications" -> "Energy and Telecommunications".
 const commPlain = (n) => (n || "").replace(/ And /g, " and ").replace(/ Committee$/, "");

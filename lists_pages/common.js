@@ -84,7 +84,7 @@ function billRow(x) {
     + `<span class="num">${esc(numText(x.st, x.full))}${yr}</span><span class="tt">${esc(x.title)}</span>`
     + (x.note ? `<span class="note">${esc(x.note)}</span>` : "")
     + `<span class="where">${x.stance ? `<span class="stance ${x.stance}">${x.stance === "oppose" ? "Oppose" : "Support"}</span>` : ""}`
-    + (x.found ? `${BillFacts.pips(x.stage, BillFacts.oneHouse(x.st), "mini")}<span class="stg s${x.stage}">${esc(x.label)}</span>${x.last ? `<span>${fmtDay(x.last)}</span>` : ""}` : "")
+    + (x.found ? `${BillFacts.pips(x.stage, BillFacts.oneHouse(x.st), "mini", x.label, x.st)}<span class="stg s${x.stage}">${esc(x.label)}</span>${x.last ? `<span>${fmtDay(x.last)}</span>` : ""}` : "")
     + `<span class="todo">Open on ${x.st === "us" ? "the Congress page" : `${esc(stName(x.st))}'s page`} ›</span></span></a>${x.star || ""}</li>`;
 }
 

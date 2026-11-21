@@ -330,14 +330,17 @@ def css():
     return tokens() + CSS_PARTS + rows
 
 
-def pips(stage, st):
-    """A bill's progress as small pips, as BillFacts.pips(stage, uni, "mini") draws them (lists_pages/billfacts.js):
-    six steps, five in Nebraska's one house, filled up to its stage."""
+def pips(stage, st, now=""):
+    """A bill's progress as small pips, as BillFacts.pips(stage, uni, "mini", now, st) draws them (lists_pages/billfacts.js):
+    six steps, five in Nebraska's one house, filled up to its stage, with the same hover tip naming the steps."""
     uni = st == "ne"
     n, k = (5 if uni else 6), int(stage or 0)
     filled = n if k >= 5 else k if uni and k >= 3 else k + 1
     cells = "".join('<i class="on"></i>' if i < filled else "<i></i>" for i in range(n))
-    return f'<span class="pips s{k}{" uni" if uni else ""} mini" aria-hidden="true">{cells}</span>'
+    steps = (["In committee", "On the floor", "Passed"] if uni else ["In committee", "On the floor", "Passed one house", "Passed both houses"]) \
+        + ["President" if st == "us" else "Governor", "Law"]
+    tip = " → ".join(steps) + (f"; now: {now}" if now else "")
+    return f'<span class="pips s{k}{" uni" if uni else ""} mini" aria-hidden="true" title="{e(tip)}">{cells}</span>'
 
 
 def day(d):
@@ -596,7 +599,7 @@ def bill_items(iid, st, mine):
         fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
         why = (b[9].get(iid) if len(b) > 9 else "") or ""
         items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}" data-k="{f["session"]}|{e(b[2])}|{e(b[5] or "")}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else (), st))}</a>'
-                     f'<span class="tags">{party_tag(party(b))}{pips(b[4], st)}<span class="stg s{b[4]}">{e(stage_text(b) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span>'
+                     f'<span class="tags">{party_tag(party(b))}{pips(b[4], st, stage_text(b) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}<span class="stg s{b[4]}">{e(stage_text(b) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span>'
                      + (f'<span class="stw">{day(b[5])}</span>' if b[5] else "") + '</span>'
                      f'<span class="t">{e(b[3])}</span>'
                      + (f'<span class="why">{e(why)}</span>' if why and why.lower() not in b[3].lower() else "")

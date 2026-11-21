@@ -93,7 +93,7 @@ const WatchRows = (() => {
     const due = x.due && !(opt.groupDay && x.date === opt.groupDay && (x.group === "session" || x.group === "year")) ? x.due : "";
     const when = [x.found && x.last ? `<span>${fullDay(x.last)}</span>` : "",
       due ? `<span class="wr-dl">${h(due)}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""].filter(Boolean).join("");
-    const where = `<span class="wr-where bstat">${x.found ? BillFacts.pips(x.stage, uni, over.trim()) + `<span class="stg s${x.stage}${over}">${h(x.label)}</span>` : ""}`
+    const where = `<span class="wr-where bstat">${x.found ? BillFacts.pips(x.stage, uni, over.trim(), x.label, x.st) + `<span class="stg s${x.stage}${over}">${h(x.label)}</span>` : ""}`
       + `${when ? `<span class="stw">${when}</span>` : ""}${stance}${x.found ? "" : '<span class="wr-todo">Open</span>'}</span>`;
     const back = x.later && x.later[0] > x.session ? `<p class="wr-again">Back in ${h(x.later[2])} as <a href="${h(x.later[3])}#${h(x.later[1])}">${h(numText(x.st, x.later[1]))}</a>${x.laterStar || ""}</p>` : "";
     if (!x.found) {

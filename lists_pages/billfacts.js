@@ -163,13 +163,19 @@ const BillFacts = (() => {
   // filled up to its stage, in the colors of its status label (lists_pages/rows.css's .pips). Nebraska is the one
   // legislature with one house (oneHouse(), for the pages that show several states; a state's page reads its profile).
   const oneHouse = (st) => st === "ne";
-  // (more: other classes, "mini" for the compact rows, "over" for a bill out of time.)
-  function pips(stage, uni, more) {
+  // (more: other classes, "mini" for the compact rows, "over" for a bill out of time. now: the row's status label, and
+  // st the state's code, for the hover tip naming the steps: "In committee → ... → Law; now: Passed Senate". The pips
+  // stay aria-hidden: the label beside them says the same to a screen reader.)
+  const steps = (uni, st) => [...(uni ? ["In committee", "On the floor", "Passed"] : ["In committee", "On the floor", "Passed one house", "Passed both houses"]),
+    st === "us" ? "President" : "Governor", "Law"];
+  const pipTip = (uni, st, now) => `${steps(uni, st).join(" → ")}${now ? `; now: ${now}` : ""}`;
+  function pips(stage, uni, more, now, st) {
     const n = uni ? 5 : 6, k = +stage || 0, filled = k >= 5 ? n : uni && k >= 3 ? k : k + 1;
     let out = "";
     for (let i = 0; i < n; i++) out += i < filled ? '<i class="on"></i>' : "<i></i>";
-    return `<span class="pips s${k}${uni ? " uni" : ""}${more ? ` ${more}` : ""}" aria-hidden="true">${out}</span>`;
+    const tip = String(pipTip(uni, st, now)).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    return `<span class="pips s${k}${uni ? " uni" : ""}${more ? ` ${more}` : ""}" aria-hidden="true" title="${tip}">${out}</span>`;
   }
-  return { make, words, nextStep, newsDay, isNew, ROUTINE, hash, runProfile, commPlain, pips, oneHouse };
+  return { make, words, nextStep, newsDay, isNew, ROUTINE, hash, runProfile, commPlain, pips, pipTip, oneHouse };
 })();
 if (typeof module !== "undefined") module.exports = BillFacts;
