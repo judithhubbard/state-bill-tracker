@@ -36,6 +36,10 @@ jobs:
   site:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    # (actions: write, to delete older saved copies of the pages and New York's bills: tools/prune_caches.py.)
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -368,6 +372,13 @@ jobs:
             data/bills_*.json
             data/senate_memos_*.json
           key: ny-bills-v1-${{ github.run_id }}
+      - name: Drop older copies of New York's bills
+        if: steps.ny.outputs.fresh == 'yes'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 tools/prune_caches.py ny-bills-v1- "ny-bills-v1-${{ github.run_id }}"
 
       # Each state's pages from the last build: a state whose data and code haven't changed isn't rebuilt (state_hash.py).
       - name: Restore the last build's pages
@@ -395,6 +406,14 @@ jobs:
         with:
           path: built
           key: built-pages-${{ github.run_id }}
+      # Only the newest copy is restored; older ones (all but the one before) would fill the 10 GB of caches.
+      - name: Drop older copies of the pages
+        if: steps.build.outputs.rebuilt == 'yes'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 tools/prune_caches.py built-pages- "built-pages-${{ github.run_id }}"
 
       # Only when some state was rebuilt (each is at least daily, since the date is part of its fingerprint), or by hand.
       - name: Put it on Cloudflare Pages

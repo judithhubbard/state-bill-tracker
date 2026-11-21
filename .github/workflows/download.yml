@@ -105,6 +105,10 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # (actions: write, to delete the state's older saved copies: tools/prune_caches.py.)
+    permissions:
+      contents: read
+      actions: write
     # One run at a time per state; a newer one waits rather than overlapping the last.
     concurrency:
       group: download-${{ matrix.key }}
@@ -171,6 +175,15 @@ jobs:
         with:
           path: ${{ matrix.path }}
           key: ${{ matrix.key }}-${{ github.run_id }}
+      # Only the newest copy is ever restored: the older ones (all but the one before this) are deleted, so they don't
+      # fill the repository's 10 GB of caches and push other states' copies out.
+      - name: Drop older copies
+        if: always() && steps.changed.outputs.any == 'yes'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 tools/prune_caches.py "${{ matrix.key }}-" "${{ matrix.key }}-${{ github.run_id }}"
 
   # Publish as soon as the downloads are done, not when the run ends: the "next" job below keeps the run open until two
   # hours after it began, and a publish triggered by the run's end waited for that. Not after the slow lane (its data goes
