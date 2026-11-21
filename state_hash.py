@@ -46,6 +46,9 @@ def _all(state):
         yield os.path.join(HERE, f), False
     for f in PAGE_CODE:
         yield os.path.join(HERE, f), True
+    # The tab and home-screen icons, which build_data.py copies into each state's folder.
+    for p in sorted(glob.glob(os.path.join(HERE, "static", "*"))):
+        yield p, True
     for s in sorted({state, "ny"}):
         for d, dirs, names in os.walk(os.path.join(HERE, "states", s)):
             dirs[:] = sorted(x for x in dirs if x != "__pycache__")

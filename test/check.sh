@@ -2,7 +2,8 @@
 # Quick check after editing tracker.html or build_data.py:
 #   1. the page's main script parses (a duplicate name or stray bracket breaks the whole page),
 #   2. the current session's page builds,
-#   3. headless Chrome clicks every button, tab and filter and reports script errors.
+#   3. headless Chrome clicks every button, tab and filter and reports script errors,
+#   and every file the build reads is in the build cache's key (test/cache_key_check.py).
 # Usage: test/check.sh [session]   (default: the newest session in data/)
 set -e
 cd "$(dirname "$0")/.."
@@ -20,6 +21,9 @@ node --check "$TMP/main.js" && for f in states/*/profile.js; do node --check "$f
 # Top-level functions declared twice silently replace each other (no error), so look for them.
 DUPES=$(grep -oE '^(async )?function [A-Za-z0-9_]+' tracker.html | awk '{print $NF}' | sort | uniq -d)
 if [ -n "$DUPES" ]; then echo "Functions declared twice: $DUPES"; exit 1; fi
+
+# Every file the build reads is in the build cache's key (state_hash.py), so the cache can't go stale (about 30 s).
+python3 test/cache_key_check.py wy
 
 python3 build_data.py "$SESSION" > "$TMP/build.log" 2>&1 || { tail -20 "$TMP/build.log"; exit 1; }
 echo "Built site/$SESSION.html."

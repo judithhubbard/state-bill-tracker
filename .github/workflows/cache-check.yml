@@ -1,0 +1,59 @@
+# Once a week: the build cache gives the same pages as a build without it (test/cache_same.sh), for a few small states,
+# from the cache the last publish left (built/cache) and their saved downloads; and every file the build reads is in the
+# cache's key (test/cache_key_check.py). A difference fails the run, so GitHub emails the owner: some file the build reads
+# isn't in state_hash.py's lists, and the site may be showing pages worked out from old data or code.
+# Run by hand: gh workflow run cache-check.yml
+name: Check the build cache
+on:
+  schedule:
+    - cron: "20 13 * * 0"                           # Sundays, after the day's 10:50 UTC publish
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  same:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Restore South Dakota
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/sd"
+          key: sd-data-v1-latest
+          restore-keys: sd-data-v1-
+      - name: Restore Wyoming
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/wy"
+          key: wy-data-v1-latest
+          restore-keys: wy-data-v1-
+      - name: Restore the LegiScan states
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/legiscan
+            data/tn
+            data/ok
+            data/me
+            data/ri
+            data/vt
+          key: legiscan-data-v1-latest
+          restore-keys: legiscan-data-v1-
+      # (Restored, never saved: this run changes no cache.)
+      - name: Restore the last build's pages
+        uses: actions/cache/restore@v4
+        with:
+          path: built
+          key: built-pages-latest
+          restore-keys: built-pages-
+      - name: Every file the build reads is in its key
+        run: python3 test/cache_key_check.py wy
+      - name: The cached build is the same as one without the cache
+        env:
+          SITE_BASE: https://statebilltracker.pages.dev/
+          CACHE_FROM: built/cache
+        run: test/cache_same.sh wy sd ri
