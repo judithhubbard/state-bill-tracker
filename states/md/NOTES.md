@@ -5,7 +5,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
 - **Maryland (started 2026-10-31):** `python3 states/md/fetch.py` reads each regular session's bill list
   (https://mgaleg.maryland.gov/<year>RS/misc/billsmasterlist/legislation.json; no robots.txt: sponsors, committees, the date
   and result of each reading in each house, the Department of Legislative Services' synopsis ("What it does"), chapter
-  number and status) and the members' pages (district, party, committees with "(Chair)", Annapolis phone, email).
+  number and status) and the members' pages (district, party, committees with "(Chair)", Annapolis phone, email). Each
+  house's member list is read every run, each member's page once a day (members_read.json: the day each was read) and at
+  once for a member the list names for the first time (2026-11-21: a second run the same day makes 2 requests, not 189).
   `states/md/convert.py` builds each bill's steps from those dates; there are no votes. Every bill the General Assembly passes gets a chapter number unless vetoed, so
   after mid-June a passed bill without one is vetoed (some vetoed bills' statuses show a later motion on the veto).
   Constitutional amendments pass once by three-fifths and go to the voters at the next even-year election

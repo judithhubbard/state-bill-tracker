@@ -11,8 +11,8 @@ robots.txt; see the state-survey-2026-10-31 memory).
   Maryland Constitution, Chapter 3 of 2025 Special Session"; the bill list still says "Vetoed"). Into
   data/md/governor_<year>.json; a decided bill's page is read once, a vetoed one weekly while it can be overridden, an
   undecided one daily; at most GOV_MINUTES of a run, the rest on later runs.
-- The members: each house's member list and each member's page (district, county, party, committees, Annapolis phone,
-  email), into data/md/members.json; then states/md/contacts.py.
+- The members: each house's member list (every run) and each member's page (district, county, party, committees, Annapolis
+  phone, email; once a day, and at once for a new member), into data/md/members.json; then states/md/contacts.py.
 Usage: python3 states/md/fetch.py
 """
 import html, json, os, re, sys, time, urllib.request
@@ -26,7 +26,7 @@ AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/
 TODAY = date.today()
 INCOMPLETE = []
 START = time.time()
-GOV_MINUTES = float(os.environ.get("MD_GOV_MINUTES", 11))  # of the state's 20-minute run; the members' pages take about 4
+GOV_MINUTES = float(os.environ.get("MD_GOV_MINUTES", 11))  # of the state's 20-minute run; the members' pages take about 2, once a day
 
 
 def get(url):
@@ -65,20 +65,32 @@ def member(code, house):
 
 
 def members():
-    out = []
-    for house, path in (("S", "senate"), ("H", "house")):
-        page = get(f"{SITE}/mgawebsite/Members/Index/{path}") or ""
+    """Each house's member list is read every run; a member's own page at most once a day (the day each was last read is
+    in members_read.json), and at once for a member the list names for the first time (a new member, or one who changed
+    house)."""
+    path, stamps_path = os.path.join(DATA, "members.json"), os.path.join(DATA, "members_read.json")
+    old = {(m["house"], m["code"]): m for m in (json.load(open(path)) if os.path.exists(path) else [])}
+    read = json.load(open(stamps_path)) if os.path.exists(stamps_path) else {}
+    out, stamps, fetched = [], {}, 0
+    for house, where in (("S", "senate"), ("H", "house")):
+        page = get(f"{SITE}/mgawebsite/Members/Index/{where}") or ""
         for code in sorted(set(re.findall(r"/mgawebsite/Members/Details/([\w-]+)", page))):
-            m = member(code, house)
+            key = f"{house}:{code}"
+            m = old.get((house, code)) if read.get(key) == TODAY.isoformat() else None
+            if not m:
+                m, fetched = member(code, house) or old.get((house, code)), fetched + 1  # (a page that fails: the last copy, read again next run)
             if m:
                 out.append(m)
+                stamps[key] = read.get(key) if m is old.get((house, code)) else TODAY.isoformat()
     if len(out) < 180:
         print(f"members: only {len(out)}; kept the last copy")
-        if not os.path.exists(os.path.join(DATA, "members.json")):  # only a list never read holds the state off
+        if not os.path.exists(path):  # only a list never read holds the state off
             INCOMPLETE.append("members")
         return
-    json.dump(out, open(os.path.join(DATA, "members.json"), "w"), indent=1, ensure_ascii=False)
-    print(f"members: {len(out)}")
+    if out != list(old.values()):
+        json.dump(out, open(path, "w"), indent=1, ensure_ascii=False)
+    json.dump(stamps, open(stamps_path, "w"), indent=0, sort_keys=True)
+    print(f"members: {len(out)} ({fetched} member pages read; the others were read earlier today)")
 
 
 def history(page):
