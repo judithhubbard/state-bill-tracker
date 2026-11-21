@@ -1592,7 +1592,7 @@ def write_status_shards(session, bills, alias, page, live, facts=None):
 
 # On the public site each session's data is split so that a visitor downloads only what they look at (data/v/, each
 # file named by a hash of its contents, so browsers keep them for good: build_site.sh's _headers):
-#   <session>.<hash>.list.json: what the first view and the filters need: every bill's numbers, stage, topics,
+#   <session>.<hash>.list.json.gz (gzipped: hashed_name()): what the first view and the filters need: every bill's numbers, stage, topics,
 #     committees, sponsors, dates, places, parties and agendas, the titles and histories of the bills the list shows
 #     first (FIRST_ROWS); legislators, contacts.
 #   .rows.json: every bill's title, history and what else only its row, its panel and some filters read (ROW_COLS: the
@@ -1891,8 +1891,15 @@ def frame_tabs(page, kind):
 
 
 def hashed_name(session, kind, text):
+    """<session>.<hash>.<kind>.json.gz: the parts are stored gzipped (-9: gz_part()), since Cloudflare's own compression of
+    JSON on the way out is weaker (brotli at a low setting: NJ's list part 140 KB, gzip -9 122 KB). A .gz file goes out as
+    application/gzip, which Cloudflare leaves alone, and the page unpacks it (tracker.html's getJson())."""
     import hashlib
-    return f"{session}.{hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}.{kind}.json"
+    return f"{session}.{hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}.{kind}.json.gz"
+
+
+def gz_part(text):
+    return gzip.compress(text.encode("utf-8"), 9, mtime=0)
 
 
 def state_profile_js(P):
@@ -2314,10 +2321,10 @@ def finish(session, core, current, urls):
         names_ = {kind: hashed_name(session, kind, text) for kind, text in texts_.items()}
         os.makedirs(os.path.join(GITHUB, "data", "v"), exist_ok=True)
         for kind, text in texts_.items():
-            with open(os.path.join(GITHUB, "data", "v", names_[kind]), "w", encoding="utf-8") as f:
-                f.write(text)
+            with open(os.path.join(GITHUB, "data", "v", names_[kind]), "wb") as f:
+                f.write(gz_part(text))
         # The page's data tag, from a page in the state's folder (prefix "") or one level down ("../"): the list
-        # part's address, and the other files' hashes (<session>.<hash>.<kind>.json in data-v: tracker.html's
+        # part's address, and the other files' hashes (<session>.<hash>.<kind>.json.gz in data-v: tracker.html's
         # partUrl()); and a preload hint, so the list part starts downloading while the page's script is read.
         hash_of = lambda kind: names_[kind].split(".")[1]
         part_list = " ".join(f"{kind}:{hash_of(kind)}" for kind in core["parts"])

@@ -6189,7 +6189,7 @@ const LIST_READY = new Promise((ok) => (LIST_IN = ok));
 const PART_GOT = {}, PART_GETTING = {}, SHARD_GETTING = {};
 const partReady = (k) => !SPLIT || !!PART_GOT[k] || !(SPLIT.hashes[k] || SPLIT.bundle.has(k));
 const partsReady = (ks) => ks.every(partReady);
-const partUrl = (kind, hash) => `${SPLIT.v}${SPLIT.session}.${hash}.${kind}.json`;
+const partUrl = (kind, hash) => `${SPLIT.v}${SPLIT.session}.${hash}.${kind}.json.gz`;
 const LOADING_HTML = `<p class="muted dload">Loading…</p>`;
 const DETAILS_ERROR = `<p class="muted dload">This part of the data couldn't be loaded. Reload the page to try again.</p>`;
 function readParts(at) {
@@ -6208,6 +6208,13 @@ function rename() {
     if (at("parts") != null) Object.assign(SPLIT, readParts(at), { v: SPLIT.v });
   })());
 }
+// The data parts are gzipped files (build_data.py's hashed_name(): Cloudflare's own compression is weaker), unpacked
+// here; a reply that arrives already unpacked (a server that sent it with Content-Encoding: gzip) is read as it is.
+async function readJson(r) {
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return JSON.parse(new TextDecoder().decode(bytes));
+  return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).json();
+}
 // One file, as JSON. A request that fails on the way (a dropped connection) is tried twice more before the page gives
 // up. (url is a function: a rename changes it.)
 async function getJson(url, priority = "high", tries = 3) {
@@ -6215,7 +6222,7 @@ async function getJson(url, priority = "high", tries = 3) {
     const r = await fetch(url(), { priority });
     if (r.status === 404 && !RENAMED) { await rename(); return getJson(url, priority, tries); }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return await r.json();
+    return await readJson(r);
   } catch (e) { if (tries <= 1) throw e; await new Promise((ok) => setTimeout(ok, 1500)); return getJson(url, priority, tries - 1); }
 }
 function loadFailed(e) {

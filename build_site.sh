@@ -226,7 +226,7 @@ PY
 # Where albanybilltracker.org's forwarding pages send New York's visitors, with their saved settings in the address
 # (/welcome/ny/#d=...&to=/ny/...): lists_pages/welcome-ny.html saves them here and goes on to the page.
 mkdir -p "$OUT/welcome/ny" && cp lists_pages/welcome-ny.html "$OUT/welcome/ny/index.html"
-# Each state's bill data (data/v/<session>.<hash>.<part>.json: the list, rows, stats ... parts and the bills' shards,
+# Each state's bill data (data/v/<session>.<hash>.<part>.json.gz, gzipped: the list, rows, stats ... parts and the bills' shards,
 # build_data.py's split_payload()) is named by its contents, so a browser can keep it for good; a new build gives the page
 # new names, and the old files go (each state's folder is replaced whole). So are the pages' styles and scripts (/assets/).
 # Everything else is checked on each visit.
