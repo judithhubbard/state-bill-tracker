@@ -55,15 +55,17 @@ const STATE = {
     const [y, m, d] = iso.split("-").map(Number), t = new Date(y, m - 1, d + n);
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   },
-  govDeadline(iso) {
-    if (!iso) return null;
+  // Maryland's records don't say when a bill reached the governor, so a bill waiting on the governor gets the last possible
+  // day (govLastDay: 50 days after the session ends), shown as "at the latest".
+  govDeadline(iso, session) {
+    if (!iso) return session ? STATE.govLastDay(+session) : null;
     const [y, m, d] = iso.split("-").map(Number), t = new Date(y, m - 1, d);
     let n = 6;
     while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
     const six = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
     return six < STATE.sessionEnds(y) ? six : STATE.plusDays(iso, 30);
   },
-  dueLabel: () => "Governor's decision due (6 days during the session, Sundays excepted; 30 days for bills presented at its end)",
+  dueLabel: () => "The governor's last day to act (bills passed at the session's end reach the governor within 20 days, then get 30)",
 
   passedBothBy: (session) => STATE.plusDays(STATE.sessionEnds(session), 50),
   // The last day the governor can act on a bill passed at the end: presented within 20 days, then 30 (Art. II §17(c), Art. III §30).
