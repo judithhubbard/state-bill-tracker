@@ -399,6 +399,11 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     paperwork they hide ("Subcommittee: ...", floor amendments filed; IA's HF 29 of 2025), so status rows on /your-bills/,
     /list/ and the front page had a date and no wording (523 IA, 257 HI bills). "last" is now the latest shown line's day;
     the check counts bills whose last action's day has no history line.
+  - (2026-11-21) An official bill page silent on the outcome: Maine's pages for LD 25, 2205 and 2210 of 2023-24 name no
+    governor's action, chapter or final disposition; the Law and Legislative Reference Library's legislative history says
+    "Enacted, Held by Governor 05/22/24" (pocket vetoes). When the legislature's own page is silent, look for a second
+    official source (a state law library, the session laws, the journal) before showing "no outcome recorded"; states/me/laws.py
+    now reads the Law Library's history for such bills itself. The "on the governor's desk in a finished session" count finds them.
   - (2026-11-19) An aggregator's "Passed" on bills the governor held until the Legislature ended: LegiScan calls 36 of Maine's
     2023-24 veto-day bills passed; their official pages say "Held by Governor" and "Died Upon Conclusion of the 131st" (32,
     pocket vetoes) or nothing (3). Read the official page (states/me/laws.py) and re-read robots.txt rather than trusting an

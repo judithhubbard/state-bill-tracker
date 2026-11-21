@@ -19,7 +19,7 @@ waits as long again) it stops and keeps what it has: the next run goes on from t
 
 Usage: python3 states/me/laws.py [--minutes 8]
 """
-import argparse, html, json, os, re, sys, time, urllib.error, urllib.request
+import argparse, html, json, os, re, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from datetime import date
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -31,6 +31,10 @@ from states.me import profile as P
 
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 PAGE = "https://legislature.maine.gov/legis/bills/display_ps.asp?LD={ld}&snum={snum}"
+# When a finished session's bill page says nothing of the outcome (LD 25, 2205 and 2210 of 2023-24: no governor's action,
+# no chapter, no final disposition), the Law and Legislative Reference Library's legislative history of the bill does:
+# "Final Disposition: Enacted, Held by Governor 05/22/24". One PDF a bill, read once (no robots.txt on that site).
+HISTORY = "https://lldc.mainelegislature.org/Open/Meta/LegHist/{snum}/lh{snum}-LD-{ld:0>4}.pdf"
 PATH = os.path.join(P.DATA, "laws.json")
 GAP = 1.5
 SERIES = {"ACTPUB": "Public Law", "ACTPS": "Private and Special Law", "RESLV": "Resolve", "IB": "Initiated Bill"}
@@ -78,11 +82,37 @@ def parse(page):
     return out
 
 
+def silent(x):
+    """A page read that named no governor's action, no chapter and no final disposition."""
+    return bool(x and x.get("checked") and not x.get("gov") and not x.get("chapter") and not x.get("final"))
+
+
+def library(pdf):
+    """A legislative history PDF -> {"lib": "Enacted, Held by Governor 05/22/24", "gov": "Held by Governor",
+    "date": "2024-05-22"} (the governor's part only when it names one)."""
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
+        f.write(pdf)
+        f.flush()
+        text = subprocess.run(["pdftotext", f.name, "-"], capture_output=True, text=True).stdout
+    # Its font's "ti" ligature comes out as one unknown character ("Disposi\ufffdon").
+    text = re.sub(r"\s+", " ", text)
+    m = re.search(r"Final Disposi.{0,3}on: (.+?)(?: Original Bill|$)", text)
+    if not m:
+        return {}
+    out = {"lib": m.group(1).strip()[:200]}
+    g = re.search(r"(Held by Governor|Signed by Governor|Law Without Governor's Signature|Veto(?:ed)?(?: Sustained| Overridden)?)"
+                  r",? (\d{2})/(\d{2})/(\d{2})", out["lib"], re.I)
+    if g:
+        out["gov"] = g.group(1)
+        out["date"] = f"20{g.group(4)}-{g.group(2)}-{g.group(3)}"
+    return out
+
+
 def done(x):
     """The page has said all it will: a law's signing and chapter, or an end that isn't a law (a sustained veto, a bill
     that died held by the governor)."""
     return bool(x and ((x.get("chapter") and x.get("date") and x.get("gov")) or
-                       re.match(r"Died|Veto Sustained", x.get("final") or "")))
+                       re.match(r"Died|Veto Sustained", x.get("final") or "") or x.get("lib")))
 
 
 def read():
@@ -170,6 +200,24 @@ def main():
         if slow >= 10:
             print("me laws: the site is answering slowly; stopping for this run", file=sys.stderr)
             break
+    save(cache)
+    # Finished sessions' bills whose page said nothing: the Law Library's history, once each.
+    from states.me import convert as C
+    ended = {str(s) for s in C.sessions() if s + 1 < date.today().year}
+    for sess, laws in sorted(cache.items()):
+        for ld, x in sorted(laws.items()):
+            if sess not in ended or not silent(x) or x.get("lib") is not None or time.time() > stop or errors >= 3:
+                continue
+            time.sleep(max(0.0, last + GAP - time.time()))
+            last = time.time()
+            try:
+                req = urllib.request.Request(HISTORY.format(snum=snum(int(sess)), ld=ld), headers={"User-Agent": AGENT})
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    x.update(library(r.read()) or {"lib": ""})
+                print(f"me laws: LD {ld} of {sess}: the Law Library says {x.get('lib') or 'nothing'}", file=sys.stderr)
+            except Exception as e:
+                print(f"me laws: LD {ld} of {sess}'s history: {e}", file=sys.stderr)
+                errors += 1
     save(cache)
     left = len(todo) - n
     print(f"me laws: read {n} pages ({got} with the signing and chapter); {left} left for later runs", file=sys.stderr)
