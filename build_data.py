@@ -190,7 +190,13 @@ def github_page(html, meta=""):
     s0 = html.index("<style>")
     assert s0 < split, "tracker.html's styles moved: update github_page()"
     s1 = html.index("</style>", s0) + len("</style>")
-    css = asset_file(html[s0 + len("<style>"):s1 - len("</style>")], "app", "css")
+    # The fonts are the site's own (site_fonts.py): their rules lead the styles, and the files go in assets/fonts/, beside
+    # the styles' file (fonts/... from /assets/app.<hash>.css). tracker.html's Google Fonts lines are for the Claude copies.
+    import site_fonts
+    google = site_fonts.google_link(html)
+    assert google.end() <= s0, "tracker.html's Google Fonts lines moved: update github_page()"
+    site_fonts.install(os.path.join(GITHUB, "assets", "fonts"))
+    css = asset_file(site_fonts.css("fonts/", state=True) + html[s0 + len("<style>"):s1 - len("</style>")], "app", "css")
     # The shared scripts before the state's profile (named.js, the named lists' button and menu, on the public site only:
     # tracker.html's listButton(); watchrules.js, billfacts.js, watchrows.js; sankey.js) as one file, and the main script
     # after it as another. Both are ordinary (blocking) scripts where the inline ones were, so everything runs in the same
@@ -206,7 +212,7 @@ def github_page(html, meta=""):
     assert "<script" not in html[m1:], "a script after tracker.html's main script: update github_page()"
     app = asset_file(html[m0 + len("<script>\n"):m1], "app", "js")
     body = (html[split:r0] + f'<script src="{lib}"></script>\n' + html[p0:m0] + f'<script src="{app}"></script>' + html[m1 + len("</script>"):])
-    head = (html[:s0] + f'<link rel="stylesheet" href="{css}">' + html[s1:split])
+    head = (html[:google.start()] + html[google.end():s0] + f'<link rel="stylesheet" href="{css}">' + html[s1:split])
     preload = f'<link rel="preload" href="{lib}" as="script">\n<link rel="preload" href="{app}" as="script">\n'
     return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
@@ -1587,7 +1593,7 @@ def write_status_shards(session, bills, alias, page, live, facts=None):
 
 # On the public site each session's data is split so that a visitor downloads only what they look at (data/v/, each
 # file named by a hash of its contents, so browsers keep them for good: build_site.sh's _headers):
-#   <session>.<hash>.list.json: what the first view and the filters need: every bill's numbers, stage, topics,
+#   <session>.<hash>.list.json.gz (gzipped: hashed_name()): what the first view and the filters need: every bill's numbers, stage, topics,
 #     committees, sponsors, dates, places, parties and agendas, the titles and histories of the bills the list shows
 #     first (FIRST_ROWS); legislators, contacts.
 #   .rows.json: every bill's title, history and what else only its row, its panel and some filters read (ROW_COLS: the
@@ -1887,8 +1893,15 @@ def frame_tabs(page, kind):
 
 
 def hashed_name(session, kind, text):
+    """<session>.<hash>.<kind>.json.gz: the parts are stored gzipped (-9: gz_part()), since Cloudflare's own compression of
+    JSON on the way out is weaker (brotli at a low setting: NJ's list part 140 KB, gzip -9 122 KB). A .gz file goes out as
+    application/gzip, which Cloudflare leaves alone, and the page unpacks it (tracker.html's getJson())."""
     import hashlib
-    return f"{session}.{hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}.{kind}.json"
+    return f"{session}.{hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}.{kind}.json.gz"
+
+
+def gz_part(text):
+    return gzip.compress(text.encode("utf-8"), 9, mtime=0)
 
 
 def state_profile_js(P):
@@ -2329,10 +2342,10 @@ def finish(session, core, current, urls):
         names_ = {kind: hashed_name(session, kind, text) for kind, text in texts_.items()}
         os.makedirs(os.path.join(GITHUB, "data", "v"), exist_ok=True)
         for kind, text in texts_.items():
-            with open(os.path.join(GITHUB, "data", "v", names_[kind]), "w", encoding="utf-8") as f:
-                f.write(text)
+            with open(os.path.join(GITHUB, "data", "v", names_[kind]), "wb") as f:
+                f.write(gz_part(text))
         # The page's data tag, from a page in the state's folder (prefix "") or one level down ("../"): the list
-        # part's address, and the other files' hashes (<session>.<hash>.<kind>.json in data-v: tracker.html's
+        # part's address, and the other files' hashes (<session>.<hash>.<kind>.json.gz in data-v: tracker.html's
         # partUrl()); and a preload hint, so the list part starts downloading while the page's script is read.
         hash_of = lambda kind: names_[kind].split(".")[1]
         part_list = " ".join(f"{kind}:{hash_of(kind)}" for kind in core["parts"])

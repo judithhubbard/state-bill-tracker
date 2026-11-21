@@ -1,5 +1,5 @@
 """Download every state's published bill data and bill texts from statebilltracker.pages.dev into cache/."""
-import json, os, re, sys, urllib.request
+import gzip, json, os, re, sys, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 BASE = "https://statebilltracker.pages.dev/"
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".issues-cache")
@@ -27,13 +27,16 @@ def page_data(url):
     if not at("src"):
         return None
     base = url.rsplit("/", 1)[0] + "/"
-    load = lambda path: json.loads(get(base + path) or b"null")
+    # (The parts are gzipped files, .json.gz, since 2026-11-21.)
+    unz = lambda b: gzip.decompress(b) if b and b[:2] == b"\x1f\x8b" else b
+    load = lambda path: json.loads(unz(get(base + path)) or b"null")
+    ext = ".json.gz" if at("src").endswith(".gz") else ".json"
     d = load(at("src"))
     if not d or not d.get("cols"):
         return d
     v, session = at("v"), at("session")
     hashes = dict(x.split(":") for x in (at("parts") or "").split())
-    piece = lambda kind: load(f"{v}{session}.{hashes[kind]}.{kind}.json") if kind in hashes else None
+    piece = lambda kind: load(f"{v}{session}.{hashes[kind]}.{kind}{ext}") if kind in hashes else None
     T = d["strings"]
     index = {t: i for i, t in enumerate(T)}
 
@@ -72,7 +75,7 @@ def page_data(url):
         for vers, cs in zip(cols[17], cos["cos"]):
             for ver, c in zip(vers, cs):
                 ver[6] = [f(x) for x in c]
-    shards = [load(f"{v}{session}.{h}.s{k}.json") for k, h in enumerate((at("shards") or "").split())]
+    shards = [load(f"{v}{session}.{h}.s{k}{ext}") for k, h in enumerate((at("shards") or "").split())]
     # A past session's page has no shards: one file, "more", holds every bill's details as one shard.
     more = piece("more")
     if more:

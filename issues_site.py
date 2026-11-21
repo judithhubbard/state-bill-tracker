@@ -18,7 +18,7 @@ Usage: python3 issues_site.py SITE_DIR
 import html, json, os, re, sys
 
 import issues
-import site_meta
+import site_fonts, site_meta
 
 # States whose legislatures publish titles only (no summaries or "What it does"): matched on fewer words.
 TITLES_ONLY = {"ak", "ar", "ma", "me", "ms", "mt", "nd", "ne", "nh", "ok", "vt"}
@@ -369,6 +369,8 @@ HEAD = """<!DOCTYPE html>
 <body>
 <main>
 """
+# (The site's own fonts in place of Google's: site_fonts.py.)
+HEAD = site_fonts.swap_google(HEAD, braces=True)
 
 e = html.escape
 

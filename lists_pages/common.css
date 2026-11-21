@@ -5,8 +5,8 @@
   --law-mark: #f0a00c; --new-ink: #8a5300; --veto-ink: #a3302a;
   --st-0: #e8edf0; --st-0-ink: #46575c; --st-1: #dcecee; --st-1-ink: #18464c; --st-3: #fbefd6; --st-3-ink: #7a4f06;
   --st-5: #dcf1e4; --st-5-ink: #14613a; --st-6: #fae1df; --st-6-ink: #9a2b24;
-  --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
-  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --display: "Archivo", "Archivo Fallback", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", "Public Sans Fallback", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {

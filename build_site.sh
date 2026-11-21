@@ -79,9 +79,11 @@ for s in $STATES; do
   cp -R "$BUILT/$s" "$OUT/$s"
   # The page's styles and scripts (build_data.py's asset_file(): the same in every state, named by their contents) go once
   # to the site's top, /assets/, where every state's pages load them; a state kept from an older build brings its own.
+  # (File by file, assets/fonts/ too: a state from an older build may bring fonts the others don't have.)
   if [ -d "$OUT/$s/assets" ]; then
-    mkdir -p "$OUT/assets"
-    for f in "$OUT/$s/assets/"*; do [ -e "$OUT/assets/${f##*/}" ] || mv "$f" "$OUT/assets/"; done
+    (cd "$OUT/$s/assets" && find . -type f) | while read -r f; do
+      if [ ! -e "$OUT/assets/$f" ]; then mkdir -p "$(dirname "$OUT/assets/$f")"; mv "$OUT/$s/assets/$f" "$OUT/assets/$f"; fi
+    done
     rm -rf "$OUT/$s/assets"
   fi
 done
@@ -112,9 +114,9 @@ if [ -n "$FAILED" ]; then echo "build failed for:$FAILED"; fi
 python3 - "$OUT" <<'PY'
 import html, importlib, json, os, re, sys
 sys.path.insert(0, ".")
-import balance, front_page, site_meta
+import balance, front_page, site_fonts, site_meta
 out = sys.argv[1]
-page = open("home.html").read()
+page = site_fonts.swap_google(open("home.html").read())
 # Link previews and the canonical link (site_meta.py: the public address once LAUNCHED=1, else the preview's).
 desc = re.search(r'<meta name="description" content="([^"]*)">\n', page)
 page = page.replace(desc.group(0), desc.group(0) + site_meta.tags("State Bill Tracker", html.unescape(desc.group(1)), site_meta.root()) + site_meta.analytics(), 1)
@@ -185,12 +187,14 @@ cp static/favicon.ico static/favicon-32.png static/apple-touch-icon.png "$OUT/"
 # The link preview image every page names (og:image; made by tools/og_image.sh), and the page for addresses that aren't
 # there (Cloudflare Pages serves 404.html with status 404, instead of the front page).
 cp tools/og-image.png "$OUT/og-image.png"
-cp notfound.html "$OUT/404.html"
+python3 -c 'import sys, site_fonts; open(sys.argv[1], "w").write(site_fonts.swap_google(open("notfound.html").read()))' "$OUT/404.html"
+# The fonts (site_fonts.py), for every page (the state pages' builds put them in too).
+python3 -c 'import sys, site_fonts; site_fonts.install(sys.argv[1])' "$OUT/assets/fonts"
 # The About page, with its link preview tags and the visit counter (after launch).
 mkdir -p "$OUT/about"
 python3 - "$OUT/about/index.html" <<'PY'
-import sys, site_meta
-page = open("about.html").read()
+import sys, site_fonts, site_meta
+page = site_fonts.swap_google(open("about.html").read())
 meta = site_meta.tags("About · State Bill Tracker", "Why State Bill Tracker was built, where its data comes from, and how to reach it.",
                       site_meta.root() + "about/") + site_meta.analytics()
 open(sys.argv[1], "w").write(page.replace("<!--meta-->\n", meta, 1).replace("SUPPORT_URL", site_meta.SUPPORT))
@@ -201,7 +205,7 @@ PY
 # the link preview tags, the visit counter, the lists Worker's address (LISTS_API, default the state-lists Worker), the
 # contributions link and, for the editor's search, the states with "Find a bill" data (search/<st>.json, written above).
 python3 - "$OUT" <<'PY'
-import os, sys, site_meta
+import os, sys, site_fonts, site_meta
 css, js, named, embed, rules, one = (open(f"lists_pages/{f}").read() for f in ("common.css", "common.js", "named.js", "embed.js", "watchrules.js", "onelist.js"))
 # The watchlist's rows (watchrows.js, rows.css: the same as each state's Watchlist tab) go with the shared script and styles,
 # after the status words and "New" (billfacts.js) and the starred bills and status reader (status.js), shared with the front page.
@@ -212,7 +216,7 @@ searchable = " ".join(sorted(f[:-5] for f in os.listdir(os.path.join(sys.argv[1]
 for src, path, title, desc in (("yourbills.html", "your-bills", "Your bills · State Bill Tracker", "The bills you follow in every state and Congress."),
                                ("list.html", "list", "Shared list · State Bill Tracker", "A list of bills shared on State Bill Tracker."),
                                ("edit.html", "lists/edit", "Edit a list · State Bill Tracker", "Make a list of bills from any state or Congress and share it.")):
-    page = open(os.path.join("lists_pages", src)).read()
+    page = site_fonts.swap_google(open(os.path.join("lists_pages", src)).read())
     meta = site_meta.tags(title, desc, site_meta.root() + path + "/", canonical=False) + site_meta.analytics()
     page = (page.replace("<!--meta-->\n", meta, 1).replace("/*common.css*/", css, 1).replace("/*common.js*/", js, 1).replace("/*named.js*/", named, 1)
             .replace("/*embed.js*/", embed, 1).replace("/*watchrules.js*/", rules, 1).replace("/*onelist.js*/", one, 1).replace("LISTS_API_URL", api).replace("SUPPORT_URL", site_meta.SUPPORT).replace("SEARCH_STATES", searchable))
@@ -222,7 +226,7 @@ PY
 # Where albanybilltracker.org's forwarding pages send New York's visitors, with their saved settings in the address
 # (/welcome/ny/#d=...&to=/ny/...): lists_pages/welcome-ny.html saves them here and goes on to the page.
 mkdir -p "$OUT/welcome/ny" && cp lists_pages/welcome-ny.html "$OUT/welcome/ny/index.html"
-# Each state's bill data (data/v/<session>.<hash>.<part>.json: the list, rows, stats ... parts and the bills' shards,
+# Each state's bill data (data/v/<session>.<hash>.<part>.json.gz, gzipped: the list, rows, stats ... parts and the bills' shards,
 # build_data.py's split_payload()) is named by its contents, so a browser can keep it for good; a new build gives the page
 # new names, and the old files go (each state's folder is replaced whole). So are the pages' styles and scripts (/assets/).
 # Everything else is checked on each visit.

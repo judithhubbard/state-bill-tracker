@@ -29,8 +29,8 @@
   --pip-off: #e4eaed;
   --chip: #eaf0f2;
   --focus: #00a3ab;
-  --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
-  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --display: "Archivo", "Archivo Fallback", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", "Public Sans Fallback", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --badge-ink: #ffffff;
   /* Colors mean the same on every page: blue and red only for party (muted), green for became law, red-brown for
@@ -1109,7 +1109,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .wlhead .wlline { margin: 0; font: 700 22px var(--display); font-stretch: 85%; }
 .wlhead .wlline a { font: 600 14px var(--body); text-decoration: none; white-space: nowrap; }
 .wlhead .wlline a:hover { text-decoration: underline; }
-.wlhead .wlsep { color: var(--ink-2); font-weight: 400; margin: 0 4px; }
+.wlhead .wlsep { color: var(--ink-2); font-family: var(--body); font-weight: 400; margin: 0 4px; }
 .wrows .wr-btns .watchbtn { margin: 0; }
 .wr-emb > .wcard.inplace { border: 0; border-radius: 0; box-shadow: none; padding: 2px 0 0; background: none; }
 .wr-emb > .wcard.inplace .wbody { padding-bottom: 4px; }
@@ -1511,10 +1511,12 @@ let DATA = null, BILLS = [], TOPICS = {}, STAGES = [], LATEST = 0, TEXT = STAGE_
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// (One formatter for every date: toLocaleDateString() sets one up on each call, and the list formats thousands.)
+const DATE_FMT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
 const fmtDate = (d) => {
   if (!d) return "";
   const [y, m, day] = d.split("-").map(Number);
-  return new Date(y, m - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return DATE_FMT.format(new Date(y, m - 1, day));
 };
 const num = (n) => n.toLocaleString("en-US");
 const fmtMonth = (d) => (d ? new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "");
@@ -5134,7 +5136,7 @@ function fillStaleSelects() {
   }
 }
 
-let RENDER_LATER = false, SEARCH_LATER = false;
+let RENDER_LATER = false, SEARCH_LATER = false, DRAWN = false;
 function render() { keepFocus(drawAll); }
 function drawAll() {
   // A filter that reads a part not in yet (a text search, the vote filter ...) waits for it: the list says "Loading…"
@@ -5155,11 +5157,14 @@ function drawAll() {
   // A bill in a shared list's page shows only its card: nothing else is drawn (the list, its filters and counts are most
   // of a page's work).
   if (EMBED) return renderWatchView();
-  fillSelects();
+  // On the first draw the filters' menus and counts, the topics' counts and the Watchlist tab (when hidden: its badge)
+  // wait until the list has been painted; later draws do everything at once (keepFocus() needs them redrawn here).
+  const side = () => { fillSelects(); renderWatchView(); renderTopics(); };
+  if (!DRAWN && $("view-watch").hidden) painted().then(side);
+  else side();
+  DRAWN = true;
   syncViewHash();
-  renderWatchView();
   renderPipeline();
-  renderTopics();
   renderActive();
   renderList();
   renderStats();
@@ -6110,7 +6115,7 @@ const LIST_READY = new Promise((ok) => (LIST_IN = ok));
 const PART_GOT = {}, PART_GETTING = {}, SHARD_GETTING = {};
 const partReady = (k) => !SPLIT || !!PART_GOT[k] || !(SPLIT.hashes[k] || SPLIT.bundle.has(k));
 const partsReady = (ks) => ks.every(partReady);
-const partUrl = (kind, hash) => `${SPLIT.v}${SPLIT.session}.${hash}.${kind}.json`;
+const partUrl = (kind, hash) => `${SPLIT.v}${SPLIT.session}.${hash}.${kind}.json.gz`;
 const LOADING_HTML = `<p class="muted dload">Loading…</p>`;
 const DETAILS_ERROR = `<p class="muted dload">This part of the data couldn't be loaded. Reload the page to try again.</p>`;
 function readParts(at) {
@@ -6129,6 +6134,13 @@ function rename() {
     if (at("parts") != null) Object.assign(SPLIT, readParts(at), { v: SPLIT.v });
   })());
 }
+// The data parts are gzipped files (build_data.py's hashed_name(): Cloudflare's own compression is weaker), unpacked
+// here; a reply that arrives already unpacked (a server that sent it with Content-Encoding: gzip) is read as it is.
+async function readJson(r) {
+  const bytes = new Uint8Array(await r.arrayBuffer());
+  if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) return JSON.parse(new TextDecoder().decode(bytes));
+  return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).json();
+}
 // One file, as JSON. A request that fails on the way (a dropped connection) is tried twice more before the page gives
 // up. (url is a function: a rename changes it.)
 async function getJson(url, priority = "high", tries = 3) {
@@ -6136,7 +6148,7 @@ async function getJson(url, priority = "high", tries = 3) {
     const r = await fetch(url(), { priority });
     if (r.status === 404 && !RENAMED) { await rename(); return getJson(url, priority, tries); }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return await r.json();
+    return await readJson(r);
   } catch (e) { if (tries <= 1) throw e; await new Promise((ok) => setTimeout(ok, 1500)); return getJson(url, priority, tries - 1); }
 }
 function loadFailed(e) {
