@@ -907,13 +907,11 @@ def write_compare(done, hist, current, insight):
 
 def save_compare(out):
     """write_compare()'s numbers, with the chart's wording from the state's profile.js, into data/compare.json."""
-    js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
-    pick = lambda pat: (m.group(1) if (m := re.search(pat, js)) else None)
-    exits = re.search(r'\n  oddsExits: \["([^"]*)", "([^"]*)"\]', js)
-    chart = {"uni": LOW == "L" or bool(pick(r'\n  passedBothText: "([^"]*)"')),
-             "passedBoth": pick(r'\n  passedBothText: "([^"]*)"') or "Passed both houses",
-             "exits": [exits.group(1), exits.group(2)] if exits else None,
-             "heldLabel": pick(r'\n  heldLabel: "([^"]*)"'), "exec": "the President" if STATE == "us" else "the governor",
+    st = profile_settings()
+    chart = {"uni": LOW == "L" or bool(st["passedBothText"]),
+             "passedBoth": st["passedBothText"] or "Passed both houses",
+             "exits": st["oddsExits"],
+             "heldLabel": st["heldLabel"], "exec": "the President" if STATE == "us" else "the governor",
              "linked": out["chart"]["linked"]}
     with open(os.path.join(GITHUB, "data", "compare.json"), "w", encoding="utf-8") as f:
         json.dump({**out, "chart": chart}, f, separators=(",", ":"), ensure_ascii=False)
@@ -1687,8 +1685,9 @@ def _last_name(n):
 
 
 def api_names(legislators, cols, T):
-    """The legislators, each with apiName: the name the bill data uses for them, as tracker.html's setupLegislators()
-    works it out (the sponsor name most often on bills from their seat that shares their last name, else their name)."""
+    """The legislators, each with apiName: the name the bill data uses for them (the sponsor name most often on bills
+    from their seat that shares their last name, else their name). The one copy: tracker.html's setupLegislators()
+    reads it, on the public site and the Claude copies alike."""
     named = defaultdict(dict)
     for vers in cols[17]:
         for v in vers:
@@ -2209,6 +2208,9 @@ def compute(prev=None):
                 return [e[0], re.sub(r"[A-Z]$", "", e[1].split(" / ")[0])]
             core["status"] = status_inputs(session, recs, agenda_of, later_of)
         else:
+            # (The name each legislator goes by in the bill data, as on the public site: api_names(), the one copy.)
+            if data.get("legislators"):
+                data["legislators"] = api_names(data["legislators"], data["cols"], data["strings"])
             core["payload"] = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
             core["tpayload"] = json.dumps(texts, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/") if texts else ""
         cores[session] = core
@@ -2219,10 +2221,26 @@ def compute(prev=None):
 FETCHED_MARK = "\0fetched\0"
 
 
+_PROFILE_SETTINGS = None
+
+
+def profile_settings():
+    """The state's profile.js settings the build reads (lists_pages/profilefacts.js: the profile run in Node, as its page
+    runs it, not read with regular expressions): {hooks, passedBothText, heldLabel, oddsExits, ...}."""
+    global _PROFILE_SETTINGS
+    if _PROFILE_SETTINGS is None:
+        import subprocess
+        run = subprocess.run(["node", os.path.join(HERE, "lists_pages", "profilefacts.js"), os.path.join(os.path.dirname(P.__file__), "profile.js")],
+                             capture_output=True, text=True)
+        if run.returncode:
+            raise SystemExit(f"lists_pages/profilefacts.js failed: {run.stderr[-2000:]}")
+        _PROFILE_SETTINGS = json.loads(run.stdout)
+    return _PROFILE_SETTINGS
+
+
 def profile_hooks():
     """Which of the state's settings read a bill's history to word how far it got (split_payload()'s hooks)."""
-    profile_js = open(os.path.join(os.path.dirname(P.__file__), "profile.js")).read()
-    return {k: re.search(rf"\b{k}\b", profile_js) is not None for k in ("endedNote", "heldAction")}
+    return dict(profile_settings()["hooks"])
 
 
 def today_here():

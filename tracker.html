@@ -6542,17 +6542,10 @@ function sessionNotice(raw) {
 // Legislators for the Sponsor box. The current session lists every sitting member with
 // contact details; older sessions use the sponsor names found in their bills.
 function setupLegislators(raw) {
-  const named = {}; // house:district -> sponsor name as the bill data spells it
-  for (const b of BILLS) for (const v of b.vers) if (v.sponsor && v.district) {
-    const k = `${v.p[0]}:${v.district}`;
-    (named[k] ||= {})[v.sponsor] = (named[k][v.sponsor] || 0) + 1;
-  }
   if (raw.legislators && raw.legislators.length) {
-    LEGS = raw.legislators.map((L) => {
-      const names = Object.entries(named[L.id] || {}).filter(([n]) => lastName(n) === lastName(L.name)).sort((a, b) => b[1] - a[1]);
-      // (On the public site the build has worked it out: its list part leaves out the sponsors' districts.)
-      return { ...L, apiName: L.apiName ?? (names.length ? names[0][0] : L.name), label: `${L.title} ${L.name}` };
-    });
+    // apiName, the name the bill data uses for each (the sponsor name most often on bills from their seat that shares
+    // their last name, else their name), is worked out by the build for every page (build_data.py's api_names()).
+    LEGS = raw.legislators.map((L) => ({ ...L, apiName: L.apiName ?? L.name, label: `${L.title} ${L.name}` }));
   } else {
     const seen = {};
     for (const b of BILLS) for (const v of b.vers) if (v.sponsor) seen[`${v.p[0]}:${v.sponsor}`] = v.p[0];
