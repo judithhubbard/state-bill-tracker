@@ -65,7 +65,8 @@ def main(out):
                 pass
             rows, tags, words = [], {}, {}
             for key, b in d["bills"].items():
-                for i in on.get(key, set()) | on.get(re.sub(r"[A-Z]$", "", b[0]), set()):
+                # (Sorted, so the file is the same from build to build: a set's order changes with each run.)
+                for i in sorted(on.get(key, set()) | on.get(re.sub(r"[A-Z]$", "", b[0]), set())):
                     tags.setdefault(i, []).append(len(rows))
                 row = [b[0], short(b[1]), b[2], words.setdefault(b[11] if len(b) > 11 else "", len(words))]
                 if key in others:
