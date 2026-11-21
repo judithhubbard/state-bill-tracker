@@ -605,7 +605,7 @@ Read README.md for what each script downloads. This file covers how to change th
       and `ROW_COLS`. Constitutional amendments keep every field there (`STATE.amendmentFinal` can read a summary,
       votes or other sessions, for the row), as do law codes naming the bills a chapter amendment changes (other law
       codes aren't published: nothing shows them). Each legislator carries `apiName`, the name the bill data uses for
-      them, worked out by the build (`api_names()`, as `setupLegislators()` does), so the sponsors' districts it's read
+      them, worked out by the build (`api_names()`, the one copy: `setupLegislators()` reads it), so the sponsors' districts it's read
       from aren't published.
     - The **rows part** is every bill's title, history and `ROW_COLS` (laws, committees, co-sponsor count, program,
       law, parties, main topic; each version's co-sponsor count, status and committee): `b.rowIn`. Any other list of
@@ -690,7 +690,8 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
   just before the main script (`<script id="state-profile">`). tracker.html keeps short aliases
   (`STAGE_TEXT`, `HOUSE`, `GOV_REACH`, `span`, `LISTS_API`, `PUBLIC_SITE` …), so it can't run unbuilt.
 - **Constants:** `STAGE_TEXT` (stage names, live vs. final sessions), `STAGE_TIPS`, and
-  `PLAIN` / `plainAction()` (plain-language wording for actions).
+  `plainAction()` (plain-language wording for actions: lists_pages/billfacts.js's, with its `PLAIN` list; the build
+  writes each bill's latest news in those words into the status rows).
 - **Bills list:** `matches()` (filters), `sortBills()`, `renderPipeline()` ("Where it is now"),
   `renderList()`, `billRow()`, `statusText()`, `track()` (the progress bar in each row),
   `fillDetail()` (the panel that opens under a bill, indented under its title: What you can do, What it does, History
@@ -790,7 +791,7 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
     (`embedCard()`, "More about this bill" open), hides the header, tabs and footer (`html.embed`), draws nothing else
     (`drawAll()`), doesn't fetch the rows part on its own, and opens links it doesn't handle in the whole window. "Who
     decides" counts committee meetings from `meetingDays` in the stats part (build_data.py's `meeting_days()`, a port of
-    `walkCommittees()`/`meetings()`: keep them in step), so an opened bill never needs the rows part. Measured 2026-11-18
+    `walkCommittees()`/`meetings()`: test/ports_check.js fails when they differ), so an opened bill never needs the rows part. Measured 2026-11-18
     (slow 4G, 4x CPU, phone, cold cache): first bill 1.3-1.7 s after the list shows, another of the same state 0.1-0.8 s;
     the list itself shows after 6-7 s, almost all of it the states' whole status files (NY's is 517 KB).
   - Your bills as one list (2026-11-19): every tab of /your-bills/ draws its bills from all states and sessions as one

@@ -45,57 +45,62 @@ dropping a final letter that isn't a version letter.
 Also new: the words depend on the day (a session's bills die, an election passes), so a state page and the build agree
 only on the day the build ran (it runs daily).
 
-## 6. Python ports of page logic (medium: kept in step by hand)
+## Done 2026-11-21 (items 6-13)
 
-- build_data.py `meeting_days()` ↔ tracker.html `walkCommittees()` / `meetings()` (the comment says "Keep the two in step").
-- build_data.py `api_names()` ↔ tracker.html `setupLegislators()`.
-- build_data.py `split_payload()`'s first 150 rows ↔ `sortBills()`'s "recent" order (if they differ, the first screen
-  shows rows without titles until the rows part arrives).
-- build_data.py reads profile.js with regular expressions: `write_compare()` (`oddsExits` and other chart settings) and
-  the `endedNote` / `heldAction` hook check before `split_payload()`. A profile written differently (a getter, another
-  spacing) is silently missed.
+Where the build (Python) and the pages (JavaScript) must each have a copy, a test now fails when they disagree; all of
+these run in `test/check.sh`:
+- `test/ports_check.js SITE` (check.sh builds wy's public pages for it): tracker.html's own functions, extracted from
+  the file and run in Node, against what the build wrote (items 6 and 9).
+- `test/profile_check.py`: profile.py against profile.js and the pages' state-name tables (items 7 and 13).
+- `test/tokens_check.py`: every page's color tokens (item 11).
+- `lists_pages/profilefacts.js` runs a state's profile.js (`BillFacts.runProfile()`) and prints its settings as JSON: the
+  build (`profile_settings()`) and profile_check.py read the profile through it, never with regular expressions.
 
-Fix: generate the JS side's inputs at build time where possible (the build already computes `meetingDays`); for the
-profile, a small Node run that loads profile.js and prints the settings as JSON instead of regexes.
+6. **Python ports of page logic.**
+   - `api_names()`: the one copy. The Claude copies get `apiName` from the build too, and tracker.html's
+     `setupLegislators()` no longer works it out (it reads `L.apiName`, else the name).
+   - The profile read with regular expressions (`save_compare()`'s chart wording, `profile_hooks()`): now
+     `profile_settings()`, from profilefacts.js. The same answers for all 51 profiles (checked before the switch).
+   - `meeting_days()` ↔ `walkCommittees()`/`meetings()`, and the list part's first rows ↔ `sortBills()` "recent": left as
+     two copies (the build has to write the days and choose the rows; the page needs the walk for each bill's
+     `meetingsSkipped()`, and its own sort), checked by ports_check.js (every committee's days, and that the list's first
+     `PAGE` bills all have their titles in the list part). meetings()'s own walk over every bill stays for past sessions,
+     whose pages have no `meetingDays`.
+7. **profile.py and profile.js.** Left as two copies (the build is Python, the page JavaScript; a JSON file read by both
+   would mean rewriting 51 profiles), checked by profile_check.py: houses and the lower house's name, years, titles (each
+   house's), the session label for 2017-2028, SESSION_ENDS against `dated`. All agree.
+8. **Plain wording of the last action: one copy.** tracker.html's `plainAction()` (with `PLAIN`, `STATE.actionWords`),
+   `newsWhat()` and the news weights (`WEIGHT`, `weightOf`) moved to billfacts.js (`BillFacts.make(S).plainAction()`,
+   `.newsWhat()`, `.latestNews()`; tracker.html keeps aliases). The build writes each bill's latest news in those words
+   into the status row's action column (billlabels.js's 4th answer), and /your-bills/, its "New since you last looked" and
+   the front page's Your bills show it as written, with the news's day. status.js's `plainAct()` (New York's patterns
+   only) is gone. **A real disagreement fixed**: on ct, nh, ks, al that column changed for 14,237 rows ("REFERRED TO
+   HEALTH" was "Sent to the Health Committee" there and "Referred to the Health Committee" on the state's page; CT's
+   "File no." paperwork line is now "Placed on floor"; Congress's "Became Public Law 119-21" is "Signed by the President",
+   as on its page). Left: the state's tab names the most important action since the visitor last looked (any day);
+   the build can't know that day, so the row names the most important one on the latest day with news. They differ
+   only when someone hasn't looked for several days of news.
+9. **Bill numbers as text: one JS copy,** `BillFacts.numText()` (watchrows.js and status.js read it). issues_site.py's
+   `shown()` stays (the issue pages are written in Python): ports_check.js compares the two over every built state's
+   numbers. states/me/profile.js `ld()` isn't a copy (it strips the letters for Maine's addresses).
+10. **Number search: one copy,** status.js's `BillSearch` (`fold`, `STOP`, `WORDY`, `numParts`, `stem`, `prepRow`,
+    `numbersIn`, `numScore`), used by home.html and edit.html. Left: each page's own state-name parsing, which differs on
+    purpose (the editor reads a code before "." or ":" in pasted lines; the front page knows "u.s."). 14 queries typed into
+    both pages read the same before and after.
+11. **Colors.** The odds chart's `.sankey` rules are one file, lists_pages/sankey.css (tracker.html's `/*sankey.css*/`,
+    read by compare_site.py). The tokens stay in each page (a shared tokens file would change every page's stylesheet
+    for no visible gain); tokens_check.py fails when a token two pages define differs (53 shared, the teal in 7 files;
+    build_data.py's chooser page calls it `--link`). It found tracker.html's `--dem`, `--rep`, `--ind`, unused there and
+    different from the front page's: removed. `--pty-d`/`--pty-r` are two different colors under one name (tracker.html's
+    party chips, home.html's party badges), listed in the test as each page's own.
+12. **ⓘ tips: left as they are.** The three don't copy one another's code; they behave differently (tracker.html's
+    floating box, which works inside long panels on a phone; the list pages' hover tooltip; the issue page's note that
+    opens below), so making them one would change what visitors see. Worth doing only as a design decision.
+13. **Data tables.** issues_site.py reads home.html's `GRID` (one copy; the issue pages byte for byte the same).
+    The state names (home.html's and common.js's `NAMES`) are checked against each profile.py's `STATE_NAME` by
+    profile_check.py.
 
-## 7. Settings written in both profile.py and profile.js (medium)
-
-- Each year's last session day: `P.SESSION_ENDS` (al, fl, hi, ia) and `STATE.dated` in profile.js. They agree today
-  (checked 2026-11-19; Hawaii's `dated` holds objects with `end`).
-- `LOWER`/`houses`, `YEARS`/`years`, `TITLES`/`titles`, session labels (`session_label()` / `sessionLabel`).
-
-Fix: one source per fact (JSON beside the profile, read by both), or a data_check test comparing them.
-
-## 8. Plain wording of the last action (medium)
-
-- tracker.html `plainAction()` / `PLAIN` and `STATE.actionWords` (Congress).
-- lists_pages/common.js `plainAct()` and home.html `plainAct()` (identical copies), with New York's patterns only
-  ("REFERRED TO", "DELIVERED TO GOVERNOR"), so other states' actions pass through as written and Congress says
-  "governor" if a line matches.
-
-Now one copy (lists_pages/status.js, 2026-11-19), still with New York's patterns only. Fix: the status row carries the
-state page's own plain wording (`plainAction()`), written at build time.
-
-## 9. Bill numbers as text (low-medium)
-
-Maine's "HLD307" → "LD 307" and the space after the letters: status.js `numText()` (the front page and the list pages,
-since 2026-11-19), watchrows.js `numText()`, issues_site.py (in the link text), states/me/profile.js `ld()`. Agree today.
-Fix: one JS copy (status.js's, read by watchrows.js); issues_site.py writes the display number into bills.json.
-
-## 10. Number search (low-medium)
-
-home.html `numScore()` and the state-name parsing in its search, and lists_pages/edit.html `numScore()`, `stateIn()`,
-`numbersIn()`: same code, two copies. Fix: move to status.js (already on both pages).
-
-## 11. Colors (low: agree today)
-
-- The teal (`--navy: #00777e`, dark `#4cc3be`) is written in tracker.html, home.html, lists_pages/common.css,
-  about.html, notfound.html, lists_pages/welcome-ny.html and build_data.py (the legislator chooser page,
-  `choose_page()`): 7 files.
-- issues_site.py reads home.html's `:root` tokens (`tokens()`): one source, good.
-- compare_site.py's `TOKENS` and `CSS` copy tracker.html's odds-chart colors and `.sankey` rules (agree today).
-
-Fix: one tokens file (lists_pages/tokens.css) spliced into every page at build time, as rows.css is.
+Still copies, outside this list: issues_site.py's `pips()` (item 11a) has no test against `BillFacts.pips()`.
 
 ## 11a. A bill row's look (done 2026-11-20, with the "A · Tidied" bill design)
 
@@ -112,19 +117,6 @@ HTML is `BillFacts.pips()` (lists_pages/billfacts.js) in every page's script. Le
   parts are shared.
 - tracker.html still has `.lineage .oc*` colors for "This bill in other sessions" (an outcome per session, not a bill's
   status label).
-
-## 12. ⓘ tips (low: different behavior, same look intended)
-
-- tracker.html `TIP()`, `TIPI()`, `TIPR()`: a button whose text shows in one floating `#tipbox` (`showTip()`).
-- lists_pages/common.js `infoTip()` with common.css `.info`: hover/focus CSS tooltip.
-- issues_site.py: a `#partyInfo` button that opens a note below.
-
-Fix: one component in common.js + common.css, used by tracker.html too.
-
-## 13. Data tables in two languages (low: agree today)
-
-- The tile map's `GRID`: home.html and issues_site.py (50 states, checked identical 2026-11-19).
-- State names: common.js `NAMES` (lowercase keys), home.html `NAMES` (uppercase), each `P.STATE_NAME`.
 
 ---
 

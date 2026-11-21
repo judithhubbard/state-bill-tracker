@@ -1708,7 +1708,7 @@ def api_names(legislators, cols, T):
 
 # tracker.html's walkCommittees() and meetings(), worked out here for the public site: the days each committee approved a
 # bill ("S:education": [...]), which "who decides" counts (meetingsSkipped()). In the stats part, so an opened bill doesn't
-# need every bill's history (the rows part) for it. Keep the two in step.
+# need every bill's history (the rows part) for it. Keep the two in step: test/ports_check.js fails when they differ.
 _SENT_TO = re.compile(r"^(?:REPORTED (?:AND )?|COMMITTEE DISCHARGED AND )?(?:REFERRED|COMMITTED|RECOMMITTED|AMEND(?: \(T\))? AND RECOMMIT) TO (.+?)(?: \d+[A-Z]?)?$")
 _comm_key = lambda n: re.sub(r"[^a-z]", "", (n or "").lower().replace("and", ""))
 

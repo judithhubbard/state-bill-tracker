@@ -153,6 +153,7 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
 | `test/site_check.js` (site-check.yml, 11:30 UTC) | daily, against the live site | freshness (8 h quick lane, 30 h others), bill counts, script errors, phone-width overflow, axe-core, keyboard; ends "`N problems:`" |
 | `test/issues/get.py`, `check.py` | by hand, after an issue rule change | samples of matches to read |
 | `test/consistency.js` | by hand, against a local build (`ONLY="ne co va us tn nv nd de" SITE_BASE=http://localhost:8766/ ./build_site.sh DIR`, served) | FAIL when a bill's status words, watchlist group and deadline, or "New" differ between views; ends "`N problem(s)`" |
+| `test/ports_check.js SITE`, `test/profile_check.py`, `test/tokens_check.py` | in `test/check.sh` | FAIL when the build's Python copies of page logic, profile.py and profile.js, or the pages' shared color tokens disagree (notes/duplication.md) |
 | `test/hash_check.py SITE` | by hand, after touching `shard_of()` or `BillFacts.hash()` | FAIL on bill numbers the two place differently |
 | `node test/deadlines.js` | in check.sh; daily in publish.yml | FAIL when a state's `govDeadline()` gives another day than its constitution's rule for a case in its table; KNOWN for recorded differences not yet fixed |
 | `test/cache_key_check.py [st]` | in check.sh (Wyoming) and weekly in cache-check.yml | FAIL on a file the build imports (every state) or opens (one state's build, audit hook) that `state_hash.py`'s lists leave out, or that compute() reads but only `page_files()` lists |
@@ -221,11 +222,13 @@ opened (`later()`, `STALE`, `showView()`).
 - `lists_pages/billfacts.js` (`BillFacts`): **the status words** (`words(S, f)`), the facts they need from a bill's
   history (`make(S, opt).factsOf(b)`: ended mid-session, carried over, amendments and second passage, sent to the voters,
   the session's bills died), an amendment's next step (`nextStep`), "New" (`newsDay`, `isNew`), the bill-number hash
-  (`hash`, = build_data.py's `shard_of()`), and `runProfile` (a profile outside its page). On state pages, the list pages,
+  (`hash`, = build_data.py's `shard_of()`), `runProfile` (a profile outside its page), an action in plain words
+  (`make(S).plainAction()`, `newsWhat()`, `latestNews()`: the build writes the last into the status rows) and a bill
+  number as shown (`numText`). On state pages, the list pages,
   the front page, and in the build (`lists_pages/billlabels.js`, run by `bill_labels()` in build_data.py).
 - `lists_pages/status.js` (the front page and the list pages): watchlist storage (`WKEY`, `readWatch`, `writeWatch`,
   `entryOf`), the status reader (`statusIndex`, `statusOf`, `pieceOf`, `wholeStatus`, `rowOf`: a status row's columns by
-  name), `fmtDay`, `plainAct`.
+  name), `fmtDay`, `numText`, and the number search (`BillSearch`: home.html's and the list editor's).
 - `lists_pages/common.js` (/your-bills/, /list/, /lists/edit/): state names `NAMES`, `esc`, `countUse`, `infoTip`,
   `allStarred`, `lookUp`, `billRow`, the lists Worker (`api`, `myList`, `readFollows`, `readNamed`).
 - `lists_pages/watchrules.js` (`WatchRules`): deadlines and groups; read by tracker.html, onelist.js and the build.
@@ -312,6 +315,6 @@ opened (`later()`, `STALE`, `showView()`).
 - **Wrong governor or leader.** `governors.in_office()` reads `P.GOVERNORS` by date; never the list's last entry.
 - **Issue page counts wrong.** `issues.py` rules → `write_issues()` → `issues_site.py`. Check with `test/issues/get.py`.
 - **Search doesn't find a bill.** `search_site.py` reads only live sessions' `status_<session>.json`; home.html's
-  `parse()`/`numScore()` match numbers.
+  `parse()` and status.js's `BillSearch.numScore()` match numbers.
 - **The build is near the file limit.** build_site.sh prints the count; shards (`SHARD_GZ`) and status pieces
   (`STATUS_GZ`) are the files that grow.
