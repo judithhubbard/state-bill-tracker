@@ -66,6 +66,8 @@ const STATE = {
   dueLabel: () => "Governor's decision due (6 days during the session, Sundays excepted; 30 days for bills presented at its end)",
 
   passedBothBy: (session) => STATE.plusDays(STATE.sessionEnds(session), 50),
+  // The last day the governor can act on a bill passed at the end: presented within 20 days, then 30 (Art. II §17(c), Art. III §30).
+  govLastDay: (session) => STATE.plusDays(STATE.sessionEnds(session), 50),
   passedBothNote: (live) => live ? "On the way to the governor" : "No action recorded",
   passedBothGroup: ["Before the governor's deadline", () => "Bills that pass both houses go to the governor, who signs most of them at bill signings in April and May."],
   passedBothNext: () => ({

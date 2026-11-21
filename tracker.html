@@ -3018,8 +3018,10 @@ function govTiming(I) {
   // By year: bar length is how many bills the governor decided; green signed, red vetoed.
   const years = (I.govYears || []).filter(([y]) => y >= "2017");
   const maxY = Math.max(1, ...years.map(([, , s, v]) => s + v));
-  // "(so far)" only while this year's bills can still reach the governor.
-  const govDone = STATE.sessionEnds && STATE.govDeadline && isoToday() > (STATE.govDeadline(STATE.sessionEnds(DATA.session)) || "9999");
+  // "(so far)" only while this year's bills can still reach the governor: until the governor's deadline for a bill passed
+  // at the session's end (STATE.govLastDay where that's later: Maryland's can be presented up to 20 days after the end).
+  const lastGovDay = STATE.govLastDay ? STATE.govLastDay(DATA.session) : STATE.sessionEnds && STATE.govDeadline && STATE.govDeadline(STATE.sessionEnds(DATA.session));
+  const govDone = isoToday() > (lastGovDay || "9999");
   // A vetoed bill counts as a veto even when the legislature overrode it (o of the v).
   const yearRows = years.map(([y, who, s, v, o]) => vrow(`${y}${+y === new Date().getFullYear() && !govDone ? " (so far)" : ""} · ${who}`, "",
     [[((s + v) / maxY) * 100, "v"], [(s / maxY) * 100, "l"]], `<b class="big">${num(s + v)}</b> decisions · ${pctOf(v, s + v)}% vetoed`
