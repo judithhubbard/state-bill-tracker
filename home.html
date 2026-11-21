@@ -1391,7 +1391,7 @@ async function drawMine() {
       return { last, fresh, st, session: +session, full, title, stage, label,
         href: `${st}/${page}#${full}`, seen: `${st}|${k}|${last}`, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
         + `<span class="num">${esc(numText(st, full))}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh && !action ? '<span class="new">New</span>' : ""}</span>`
-        + (fresh && action ? `<span class="what"><b>New:</b> ${esc(plainAct(action))}</span>` : "")
+        + (fresh && action ? `<span class="what"><b>New:</b> ${esc(action)}</span>` : "")
         + `<span class="where">${BillFacts.pips(stage, BillFacts.oneHouse(st), "mini", label, st)}<span class="stg s${stage}">${esc(label)}</span>${last ? `<span>${fmtDay(last)}</span>` : ""}</span></a>`
         + `${starBtn(st, +session, full, last, numText(st, full))}</li>` };
     }));

@@ -6,7 +6,9 @@
 //   BillFacts.make(S, opt): the readings that need a bill's history, for one session of one state (S: its profile; opt:
 //     {WR (watchrules.js's rules), facts() ({session, current, upcoming}), today(), fmtDate(d)}): .factsOf(b) gives the
 //     facts words() reads, and the page's own helpers (endedOf, isAmendment, secondPassage, toVoters, votersDone,
-//     ballotLine, continuedTo, billsDied, gateBack).
+//     ballotLine, continuedTo, billsDied, gateBack), and the plain words for an action (.plainAction(t, d, acts, short),
+//     .newsWhat(t, d, b), .latestNews(b): the build writes the last into the status rows, so "New: ..." reads the same
+//     on /your-bills/ and the front page as on the state's page).
 //   BillFacts.words(S, f): the status words from those facts.
 //   BillFacts.nextStep(S, f): what comes next for an amendment or a measure sent to the voters (the watchlist's "due" line).
 //   BillFacts.newsDay(actions, routine): the latest day with an action that isn't paperwork; isNew(seen, day): "New".
@@ -100,8 +102,86 @@ const BillFacts = (() => {
       x.voted = b.stage === 3 ? tryIt(() => votersDone(b), "") : "";
       return x;
     }
-    return { factsOf, isAmendment, toVoters, secondPassage, ballotLine, votersDone, continuedTo, endedOf, billsDied, gateBack, commPlain };
+    // An action in plain words. The API's action log is in capitals with abbreviations: "ORDERED TO THIRD READING RULES
+    // CAL.897". d is the action's date and acts the other actions of its bill or version, for a state's own wording of a
+    // step that depends on when it happened (S.actionWords: New York's second-year reset); short asks for a few words
+    // (row, news). (The state's page words every action with it; the build words each bill's latest news with it, for
+    // the views that show a bill without its page: newsWhat().)
+    const HOUSE_WORDS = Object.values(S.houses || {}).map((h) => h.toLowerCase()).join("|");
+    const EXEC_THE = (S.executive && S.executive.the) || "the governor";
+    function plainAction(t, d, acts, short) {
+      const own = d && S.actionWords?.(t, d, acts || [], short);
+      if (own) return own;
+      // Actions already written in plain English (Virginia's) are kept as written unless a rule below fits.
+      const written = /[a-z]/.test(t || "");
+      let s = (t || "").toLowerCase()
+        .replace(/\b([sa])(\d+[a-z]?)\b/g, (m, h, n) => h.toUpperCase() + n.toUpperCase())
+        .replace(/\bcal\.(\d+)/g, "calendar $1").replace(/\bchap\.(\d+)/g, "chapter $1")
+        .replace(/\b(memo|veto)\.(\d+)/g, "$1 $2").replace(new RegExp(`\\b(${HOUSE_WORDS}|governor|rules)\\b`, "g"), (w) => w[0].toUpperCase() + w.slice(1))
+        .replace(/\bthird reading (Rules) calendar/, "third reading, $1 calendar");
+      // The state's shorthand, in plain words.
+      const cap = (c) => c.replace(/\b[a-z]/g, (x) => x.toUpperCase()).replace(/ (And|Of|The|For|On)\b/g, (m, w) => ` ${w.toLowerCase()}`);
+      const comm = (c) => (/^rules$/i.test(c) ? "the Rules Committee" : /^calendar$/i.test(c) ? "the floor calendar" : `the ${cap(c)} Committee`);
+      const PLAIN = [
+        [/^reported (?:referred|and committed) to (.+)$/, (m, c) => `Approved by committee; sent to ${comm(c)}`],
+        [/^reported$/, () => "Approved by committee"],
+        [/^reported with committee amendments$/, () => "Approved with changes"],
+        [/^reported as a committee substitute$/, () => "Approved as a rewritten bill"],
+        [/^reported to calendar for consideration$/, () => "Sent to the floor calendar for consideration"],
+        [/^committee discharged and committed to (.+)$/, (m, c) => `Taken out of committee; sent to ${comm(c)}`],
+        [/^(?:re-)?referred to (.+)$/, (m, c) => `Referred to ${comm(c)}`],
+        [/^committed to (.+)$/, (m, c) => `Sent to ${comm(c)}`],
+        [/^recommitted to (.+)$/, (m, c) => `Sent back to ${comm(c)}`],
+        [/^held for consideration in (.+)$/, (m, c) => `Held in ${comm(c)} (not advanced)`],
+        [/^Rules report calendar (\d+)/, (m, n) => `Approved by the Rules Committee (calendar ${n})`],
+        [/^(?:ordered|advanced) to third reading,? (?:Rules )?calendar (\d+)/, (m, n) => `Placed on the floor calendar for a vote (calendar ${n})`],
+        [/^(?:ordered|advanced) to third reading$/, () => "Placed on the floor calendar for a vote"],
+        [/^3rd reading calendar (\d+)/, (m, n) => `On the floor calendar for a vote (calendar ${n})`],
+        [/^(1st|2nd) report cal(?:endar|\.)?.*$/, (m, n) => `${n === "1st" ? "First" : "Second"} report to the floor`],
+        [/^amend(?: \(t\))? and recommit to (.+)$/, (m, c) => `Amended by the sponsor; back to ${comm(c)}`],
+        [/^amended(?: \(t\))? on third reading (\w+)$/, (m, n) => `Amended while on the floor calendar (${n.toUpperCase()})`],
+        [/^print number (\w+)$/, (m, n) => `New version printed (${n.toUpperCase()})`],
+        [/^substituted by ([A-Z]+\d\w*)$/, (m, n) => `Replaced by the other house's version, ${n}`],
+        [/^substituted for ([A-Z]+\d\w*)$/, (m, n) => `Took the place of this house's own version, ${n}`],
+        [/^passed (Senate|Assembly|House)$/, (m, h) => `Passed the ${h}`],
+        [/^repassed (Senate|Assembly|House)$/, (m, h) => `Passed the ${h} again`],
+        [/^delivered to (Senate|Assembly|House)$/, (m, h) => `Sent to the ${h}`],
+        [/^returned to (Senate|Assembly|House)$/, (m, h) => `Sent back to the ${h} after passing`],
+        [/^delivered to Governor$/, () => `Sent to ${EXEC_THE}`],
+        [/^died in (Senate|Assembly|House)$/, (m, h) => `Died in the ${h}`],
+        [/^signed chapter (\d+)$/, (m, n) => `Signed into law (chapter ${n})`],
+        [/^vetoed memo (\d+)$/, (m, n) => `Vetoed (memo ${n})`],
+        [/^approval memo (\d+)$/, (m, n) => `Governor's signing memo (memo ${n})`],
+        [/^(?:recommit, )?enacting clause stricken$/, () => "Withdrawn by the sponsor"],
+      ];
+      let ruled = false;
+      for (const [re, fn] of PLAIN) if (re.test(s)) { s = s.replace(re, fn); ruled = true; break; }
+      if (written && !ruled && !/^(?:re-)?referred to /.test(s)) return t;
+      // Committee names after "referred to" and similar read as names.
+      s = s.replace(/^((?:re-)?referred to|recommitted to|committed to|reported and committed to|reference changed to|held for consideration in|amend and recommit to) (.+)$/, (m, v, c) => `${v} ${c.replace(/\b[a-z]/g, (x) => x.toUpperCase()).replace(/ And /g, " and ")}`);
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+    // The main thing that happened to a bill, for "New: ..." ("Signed into law"). (The passage that made it pass both
+    // houses says so, as the bill's status does, not "Passed Senate".)
+    const PB = S.passedBothText || "Passed both houses";
+    const newsWhat = (t, d, b) => (b && b.stage >= 3 && /^(?:RE)?PASSED\b/.test(t) && d === [b.dates.passS, b.dates.passA].sort().pop() ? PB
+      : plainAction(t, d, b ? acts(b) : [], true).replace(/; back to .*$/, "").replace(/ \((?:calendar|chapter|memo) \d+\)$/, ""));
+    // A bill's latest news in those words: of the actions on its latest day with news (newsDay()), the most important
+    // (WEIGHT), as the state's Watchlist tab names a bill's news; "" when there's none. (What the views without the
+    // page show after "New:": the build writes it into the status row.)
+    function latestNews(b, routine = S.routine || ROUTINE) {
+      const all = acts(b), day = newsDay(all, routine);
+      if (!day) return "";
+      const top = all.filter(([d, t]) => d === day && !routine.test(t)).sort((x, y) => weightOf(x[1]) - weightOf(y[1]))[0];
+      return top ? newsWhat(top[1], top[0], b) : "";
+    }
+    return { factsOf, isAmendment, toVoters, secondPassage, ballotLine, votersDone, continuedTo, endedOf, billsDied, gateBack, commPlain,
+      plainAction, newsWhat, latestNews };
   }
+  // Which news matters most, so a "New: ..." names the step that matters.
+  const WEIGHT = [/^SIGNED/, /^VETOED/, /^DELIVERED TO GOVERNOR/, /^(RE)?PASSED/, /^SUBSTITUTED/, /ENACTING CLAUSE STRICKEN/, /^DIED/,
+    /THIRD READING|^REPORTED|RULES REPORT|DISCHARGED/, /^AMEND/, /HELD/, /REFERRED|COMMITTED/];
+  const weightOf = (t) => { const i = WEIGHT.findIndex((re) => re.test(t)); return i < 0 ? WEIGHT.length : i; };
   // The status words. f: factsOf()'s, or the same fields from a status row.
   function words(S, f) {
     const T = S.stageText || {}, PB = S.passedBothText || "Passed both houses";
@@ -176,6 +256,6 @@ const BillFacts = (() => {
     const tip = String(pipTip(uni, st, now)).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
     return `<span class="pips s${k}${uni ? " uni" : ""}${more ? ` ${more}` : ""}" aria-hidden="true" title="${tip}">${out}</span>`;
   }
-  return { make, words, nextStep, newsDay, isNew, ROUTINE, hash, runProfile, commPlain, pips, pipTip, oneHouse };
+  return { make, words, nextStep, newsDay, isNew, ROUTINE, WEIGHT, weightOf, hash, runProfile, commPlain, pips, pipTip, oneHouse };
 })();
 if (typeof module !== "undefined") module.exports = BillFacts;

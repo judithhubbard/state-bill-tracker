@@ -1456,7 +1456,7 @@ def label_inputs(session, recs, hist_s):
 
 
 def bill_labels(session, bills, profile_js, facts):
-    """Each record's [status words, flags, latest day with news], worked out by the code the state's page runs
+    """Each record's [status words, flags, latest day with news, that news in plain words], worked out by the code the state's page runs
     (lists_pages/billlabels.js: billfacts.js, watchrules.js and the profile, in Node) from the bill as the page sees it
     (label_inputs()). The answers are kept (cached_json()), keyed by all it reads, today's date included (the rules read
     it), so an unchanged state isn't run through Node again."""
@@ -1512,8 +1512,8 @@ def status_inputs(session, recs, agenda_of=None, later_of=None):
 def write_status(session, inputs, page, live, facts=None, labels=None):
     """Where each bill is, for the front page's "Your bills" (home.html) and /your-bills/, which show the bills a visitor
     starred on any state's page or on the front page: data/status_<session>.json, {"page", "live" (the session isn't
-    over), "bills": {number without its amendment letter: [number, title, stage, last action's date, the last action,
-    committee, "const" or "", and what the watchlist's deadline rules (lists_pages/watchrules.js) read: the day it went
+    over), "bills": {number without its amendment letter: [number, title, stage, last action's date, the latest news in
+    plain words (bill_labels(): as the state's Watchlist tab says it after "New:"; "" when there's none), committee, "const" or "", and what the watchlist's deadline rules (lists_pages/watchrules.js) read: the day it went
     to the governor (stage 4), its committee meetings to come ([[when, committee]]), flags ("b" a budget bill, "v" sent
     to the voters; and bill_labels()'s: "e" ended before the session did, "a" an amendment that doesn't go to the governor,
     "2" its second passage, "d" decided by the voters, "r" a veto that can still be overridden), its version in the newest
@@ -1532,6 +1532,9 @@ def write_status(session, inputs, page, live, facts=None, labels=None):
         extra = [deliv, meets, flags, later or "", lab[0], news]
         while extra and not extra[-1]:
             extra.pop()
+        # (The latest news in the state page's own words, bill_labels()'s: what "New:" says on the pages without it.)
+        if labels:
+            row = [*row[:4], lab[3] if len(lab) > 3 else "", *row[5:]]
         bills[lead] = [*row, *extra]
     with open(os.path.join(GITHUB, "data", f"status_{session}.json"), "w", encoding="utf-8") as f:
         json.dump({"session": session, "page": page, "live": live, "bills": bills, "alias": alias, **({"facts": facts} if facts else {})},

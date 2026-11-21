@@ -4,7 +4,8 @@
 // build_data.py's bill_labels() runs it: stdin {profile (profile.js's text), session, facts ({c, u, e, v, t}: the facts
 // /status.json carries), bills: [the page's shape: stage, comm, passedIn, topics, ballot, title, summary, nums,
 // vers [{p, committee, statusDesc, actions}], dates {passS, passA, ...}, earlier [[session, numbers, stage]]]};
-// stdout [[words, flags, newsDay], ...] in the same order. flags: "e" ended before the session did, "a" a constitutional
+// stdout [[words, flags, newsDay, news], ...] in the same order (news: that day's news in plain words, as the state's
+// Watchlist tab says it after "New:", BillFacts.make().latestNews()). flags: "e" ended before the session did, "a" a constitutional
 // amendment that doesn't go to the governor, "2" its second (or only) passage, "d" the voters have decided it, "r" a
 // veto the Legislature can still override.
 "use strict";
@@ -35,6 +36,8 @@ const out = input.bills.map((b) => {
   let veto = false;
   try { veto = !!S.vetoReturns?.(b)?.live; } catch (e) {}
   const flags = (x.stops ? "e" : "") + (x.amend ? "a" : "") + (x.second ? "2" : "") + (x.voted ? "d" : "") + (veto ? "r" : "");
-  return [BillFacts.words(S, x), flags, BillFacts.newsDay((b.vers || []).flatMap((v) => v.actions || []), routine)];
+  let news = "";
+  try { news = BF.latestNews(b, routine); } catch (e) {}
+  return [BillFacts.words(S, x), flags, BillFacts.newsDay((b.vers || []).flatMap((v) => v.actions || []), routine), news];
 });
 process.stdout.write(JSON.stringify(out));

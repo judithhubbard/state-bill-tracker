@@ -118,7 +118,7 @@ const OneList = (() => {
     Opener.wire(box, (id) => box._onOpen?.(id, box._rows?.get(id)));
     const rows = list.map((x) => (x.later && x.later[0] > x.session
       ? { ...x, laterStar: star(x.st, x.later[0], x.later[1], `${nameOf({ ...x, full: x.later[1] })} (${x.later[2]})`).replace('class="star"', 'class="star inline"') } : x));
-    WatchRows.draw(box, rows, { ...opt, stName, newText: (x) => `${plainAct(x.action || "")}${x.last ? ` (${fmtDay(x.last)})` : ""}`,
+    WatchRows.draw(box, rows, { ...opt, stName, newText: (x) => `${x.action || ""}${x.news ? ` (${fmtDay(x.news)})` : ""}`,
       buttons: (x) => star(x.st, x.session, x.full || x.num, nameOf(x)),  // (the list button is in the opened card)
       onRow: (id, x) => { byId.set(id, x); Opener.row(id, { st: x.st, session: x.session, page: x.page, full: x.full, stance: x.stance, href: x.href, name: nameOf(x), mine: !!opt.mine }); } });
     box._rows = byId;

@@ -335,8 +335,8 @@ function seeStar(x) {
 // "New since you last looked", at the top (watchrows.js's box, as on each state's Watchlist tab).
 function drawNews() {
   const fresh = ITEMS.filter(freshStar).sort((a, b) => String(b.last).localeCompare(String(a.last)));
-  $("news").innerHTML = WatchRows.newsHtml(fresh.map((x) => ({ key: x.key, kind: x.stage === 5 ? "ok" : x.stage === 6 ? "no" : "", what: plainAct(x.action || ""),
-    num: `${x.st === "us" ? "" : `${stName(x.st)} `}${WatchRows.numText(x.st, x.full || x.num)}`, title: x.title, date: fmtDay(x.last) })));
+  $("news").innerHTML = WatchRows.newsHtml(fresh.map((x) => ({ key: x.key, kind: x.stage === 5 ? "ok" : x.stage === 6 ? "no" : "", what: x.action || "",
+    num: `${x.st === "us" ? "" : `${stName(x.st)} `}${WatchRows.numText(x.st, x.full || x.num)}`, title: x.title, date: fmtDay(x.news || x.last) })));
   const t = TABS.get("starred");
   if (t) { t.fresh = fresh.length; drawStrip(); }
 }
