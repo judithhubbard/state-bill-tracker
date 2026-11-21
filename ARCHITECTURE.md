@@ -99,6 +99,10 @@ download.yml (GitHub, every 2 h)       publish.yml (after each quick-lane downlo
    build_site.sh moves each state's `assets/` to the site's top, one copy, kept by browsers for good (`_headers`). A
    page is about 40 KB instead of 580 KB; a change to tracker.html uploads three new files plus the small pages. The
    Claude copies keep everything inline.
+   - **Fonts** are the site's own (`site_fonts.py`, files in `fonts/`, made by `tools/subset_fonts.py`; OFL licenses
+     beside them): every source page keeps its Google Fonts lines (for the Claude copies and for viewing unbuilt), and
+     the build swaps them for `@font-face` rules (`site_fonts.swap_google()`; on state pages at the top of app.css),
+     files at `/assets/fonts/<name>.<hash>.woff2`.
 5. Writes `index.html` (current session), `<year>.html` (others), `/<slug>/index.html` per legislator,
    `/watchlist/index.html`.
 

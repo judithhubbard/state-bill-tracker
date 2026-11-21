@@ -190,7 +190,13 @@ def github_page(html, meta=""):
     s0 = html.index("<style>")
     assert s0 < split, "tracker.html's styles moved: update github_page()"
     s1 = html.index("</style>", s0) + len("</style>")
-    css = asset_file(html[s0 + len("<style>"):s1 - len("</style>")], "app", "css")
+    # The fonts are the site's own (site_fonts.py): their rules lead the styles, and the files go in assets/fonts/, beside
+    # the styles' file (fonts/... from /assets/app.<hash>.css). tracker.html's Google Fonts lines are for the Claude copies.
+    import site_fonts
+    google = site_fonts.google_link(html)
+    assert google.end() <= s0, "tracker.html's Google Fonts lines moved: update github_page()"
+    site_fonts.install(os.path.join(GITHUB, "assets", "fonts"))
+    css = asset_file(site_fonts.css("fonts/", state=True) + html[s0 + len("<style>"):s1 - len("</style>")], "app", "css")
     # The shared scripts before the state's profile (named.js, the named lists' button and menu, on the public site only:
     # tracker.html's listButton(); watchrules.js, billfacts.js, watchrows.js; sankey.js) as one file, and the main script
     # after it as another. Both are ordinary (blocking) scripts where the inline ones were, so everything runs in the same
@@ -206,7 +212,7 @@ def github_page(html, meta=""):
     assert "<script" not in html[m1:], "a script after tracker.html's main script: update github_page()"
     app = asset_file(html[m0 + len("<script>\n"):m1], "app", "js")
     body = (html[split:r0] + f'<script src="{lib}"></script>\n' + html[p0:m0] + f'<script src="{app}"></script>' + html[m1 + len("</script>"):])
-    head = (html[:s0] + f'<link rel="stylesheet" href="{css}">' + html[s1:split])
+    head = (html[:google.start()] + html[google.end():s0] + f'<link rel="stylesheet" href="{css}">' + html[s1:split])
     preload = f'<link rel="preload" href="{lib}" as="script">\n<link rel="preload" href="{app}" as="script">\n'
     return ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
             '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'

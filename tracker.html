@@ -29,8 +29,8 @@
   --pip-off: #e4eaed;
   --chip: #eaf0f2;
   --focus: #00a3ab;
-  --display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
-  --body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --display: "Archivo", "Archivo Fallback", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", "Public Sans Fallback", "Segoe UI", system-ui, -apple-system, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --dem: #1f5bb5; --rep: #b3261e; --ind: #5f6b7a; --badge-ink: #ffffff;
   /* Colors mean the same on every page: blue and red only for party (muted), green for became law, red-brown for
@@ -1126,7 +1126,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .wlhead .wlline { margin: 0; font: 700 22px var(--display); font-stretch: 85%; }
 .wlhead .wlline a { font: 600 14px var(--body); text-decoration: none; white-space: nowrap; }
 .wlhead .wlline a:hover { text-decoration: underline; }
-.wlhead .wlsep { color: var(--ink-2); font-weight: 400; margin: 0 4px; }
+.wlhead .wlsep { color: var(--ink-2); font-family: var(--body); font-weight: 400; margin: 0 4px; }
 .wrows .wr-btns .watchbtn { margin: 0; }
 .wr-emb > .wcard.inplace { border: 0; border-radius: 0; box-shadow: none; padding: 2px 0 0; background: none; }
 .wr-emb > .wcard.inplace .wbody { padding-bottom: 4px; }
