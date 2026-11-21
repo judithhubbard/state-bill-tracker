@@ -199,9 +199,10 @@ def load_session(session):
     docs = {d["BillNumber"]: d for d in load(session, "documents.json", [])
             if (re.match(r"(?:An Act|Resolve)\b", text(d.get("Title")), re.I) or PROPOSAL.match(text(d.get("Title"))))
             and re.match(r"[HS]\d+$", d.get("BillNumber") or "")}
-    hist = {}
+    hist, read_day = {}, {}
     for f in glob.glob(os.path.join(folder(session), "bills", "*.json")):
         hist[os.path.basename(f)[:-5]] = sorted(json.load(open(f)), key=lambda a: (a.get("Date") or "")[:10])
+        read_day[os.path.basename(f)[:-5]] = datetime.fromtimestamp(os.path.getmtime(f), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d")
     for acts in hist.values():
         for a in acts:
             m = re.match(r"Referred to the committee on (.+?)(?:, acting concurrently)?$", text(a.get("Action")), re.I)
@@ -266,17 +267,23 @@ def load_session(session):
         nums = [p] + sorted((b for b in group[p] if b != p), key=lambda b: (b[0], int(b[1:])))
         d = docs[p]
         origin = p[0]
+        law = next((laws[b] for b in nums if b in laws), None)
         steps = []
         for b in reversed(nums):  # the earlier drafts' steps first, then the bill's own
             for a in hist.get(b, []):
                 for h, t in decode(a.get("Action"), a.get("Branch")):
-                    steps.append(((a.get("Date") or "")[:10], h, t, text(a.get("Action")), b))
+                    when = (a.get("Date") or "")[:10]
+                    if when > read_day.get(b, when):
+                        # A date after the history was read: "Signed by the Governor, Chapter 264 of the Acts of 2026"
+                        # on 2026-11-30 for H4716 (and H4721, H5685, S3097), read in November; the session laws say
+                        # October 30. The law's date for a signing, else the day the history was read.
+                        when = law[1] if t == "SIGNED" and law and law[1] <= read_day[b] else read_day[b]
+                    steps.append((when, h, t, text(a.get("Action")), b))
         steps.sort(key=lambda s: s[0])
         own = [s for s in steps if s[4] == p]
         texts = [s[2] for s in own]
         passed = {s[1] for s in own if s[2].startswith("PASSED")}
         last_sent = max((i for i, t in enumerate(texts) if t == "DELIVERED TO GOVERNOR"), default=-1)
-        law = next((laws[b] for b in nums if b in laws), None)
         if "SIGNED" in texts or law:
             stage = 5
         elif "VETOED" in texts:

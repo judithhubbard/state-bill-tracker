@@ -24,3 +24,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   enactment). Bills each branch passed in its own version are stage 2, "In conference: each house passed its own version"
   or "Passed each house in a different version". Found by the pre-launch check: H5576, S2619 and 11 more of 2025-26 in
   conference; H1999, H4049, S2922 of 2023-24 amended by the second branch and never concurred in.
+- **Dates after the file was read (2026-11-21):** the histories of H4716, H4721, H5685 and S3097 (chapters 261-264 of
+  2026) say "Signed by the Governor" on 2026-11-30; the session laws, first also "Nov 30 2026", now say October 30. A
+  history line dated after its bill's file was read takes the law's date for a signing, else the read day (`read_day` in
+  `load_session()`); the session laws' own future dates were already capped the same way.

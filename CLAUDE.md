@@ -412,6 +412,17 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     veto (S1239 of 2025, "VETOED MEMO.19" on 2026-11-20, had none that day). fetch_bills.py --if-changed still downloads
     them (the updates list counts "Bill Veto" updates). The check LOOKs at vetoes 2 weeks to a year old with no message,
     in any state whose vetoes carry them (pocket vetoes left out: NY's say "no veto message issued").
+  - (2026-11-21) A year the window added back, in an older wording the converter was never written for: ALISON's 2023
+    history ("Introduced and Referred", "Read a Third Time and Pass", "Assigned Act No. 2023-291.") was read as other
+    lines, so 46 bills that passed one house showed as on its floor; its "Pass" lines include lost votes (SB 181, 11-20).
+    `old_wording()` in states/al/convert.py. When the window adds a year, list its history wordings against the newest
+    year's. The "on the floor but referred to a committee" check caught it.
+  - (2026-11-21) A record's fallback date in the future: a bill listed but with no history yet (NV's prefiled bills whose
+    pages a run didn't reach, AB 69-80 of 2027; MT's SB 32 of 2027, numbered with only drafting steps) was dated the
+    session's first day, months ahead. Many converters still default to `f"{session}-01-01"`; date such a bill by what
+    the record has (the list's read day, the last drafting step), never after today. And a source's typo a month ahead:
+    MA's histories sign H4716, H4721, H5685 and S3097 "2026-11-30" (the session laws say October 30): a line dated after
+    its file was read takes the law's date, else the read day. The "in the future" check catches both.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.
