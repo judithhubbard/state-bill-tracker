@@ -1528,10 +1528,12 @@ let DATA = null, BILLS = [], TOPICS = {}, STAGES = [], LATEST = 0, TEXT = STAGE_
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+// (One formatter for every date: toLocaleDateString() sets one up on each call, and the list formats thousands.)
+const DATE_FMT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
 const fmtDate = (d) => {
   if (!d) return "";
   const [y, m, day] = d.split("-").map(Number);
-  return new Date(y, m - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return DATE_FMT.format(new Date(y, m - 1, day));
 };
 const num = (n) => n.toLocaleString("en-US");
 const fmtMonth = (d) => (d ? new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, 1).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "");
@@ -5208,7 +5210,7 @@ function fillStaleSelects() {
   }
 }
 
-let RENDER_LATER = false, SEARCH_LATER = false;
+let RENDER_LATER = false, SEARCH_LATER = false, DRAWN = false;
 function render() { keepFocus(drawAll); }
 function drawAll() {
   // A filter that reads a part not in yet (a text search, the vote filter ...) waits for it: the list says "Loading…"
@@ -5229,11 +5231,14 @@ function drawAll() {
   // A bill in a shared list's page shows only its card: nothing else is drawn (the list, its filters and counts are most
   // of a page's work).
   if (EMBED) return renderWatchView();
-  fillSelects();
+  // On the first draw the filters' menus and counts, the topics' counts and the Watchlist tab (when hidden: its badge)
+  // wait until the list has been painted; later draws do everything at once (keepFocus() needs them redrawn here).
+  const side = () => { fillSelects(); renderWatchView(); renderTopics(); };
+  if (!DRAWN && $("view-watch").hidden) painted().then(side);
+  else side();
+  DRAWN = true;
   syncViewHash();
-  renderWatchView();
   renderPipeline();
-  renderTopics();
   renderActive();
   renderList();
   renderStats();
