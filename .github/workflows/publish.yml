@@ -331,7 +331,19 @@ jobs:
           key: ny-memos-v1-latest
           restore-keys: ny-memos-v1-
 
+      # The current session's bills as last downloaded (with the Senate memos they came with): fetch_bills.py
+      # --if-changed downloads them again (about 3 minutes) only when the Senate's API lists a bill updated since.
+      - name: Restore New York's bills
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/bills_*.json
+            data/senate_memos_*.json
+          key: ny-bills-v1-latest
+          restore-keys: ny-bills-v1-
+
       - name: Download New York
+        id: ny
         env:
           NYSENATE_API_KEY: ${{ secrets.NYSENATE_API_KEY }}
         run: |
@@ -339,7 +351,23 @@ jobs:
           git clone -q --depth 1 https://github.com/judithhubbard/ny-bill-tracker.git "$RUNNER_TEMP/ny"
           cp "$RUNNER_TEMP"/ny/data/*.json "$RUNNER_TEMP"/ny/data/*.json.gz data/
           NY=$(python3 -c "import datetime; y = datetime.date.today().year; print(y if y % 2 else y - 1)")
-          python3 fetch_bills.py "$NY" || { echo "New York's bills didn't download: left out"; rm -f "data/bills_$NY.json"; }
+          before=$(cat "data/senate_memos_$NY.json" 2>/dev/null | md5sum)
+          if python3 fetch_bills.py "$NY" --if-changed; then
+            # The page's "updated" time: when the bills were last checked (build_data.py's last_checked()).
+            date -u +%Y-%m-%dT%H:%M:%SZ > data/last_checked
+            if [ "$(cat "data/senate_memos_$NY.json" 2>/dev/null | md5sum)" != "$before" ]; then echo "fresh=yes" >> "$GITHUB_OUTPUT"; fi
+          else
+            echo "New York's bills didn't download: left out"; rm -f "data/bills_$NY.json"
+          fi
+
+      - name: Keep New York's bills for the next run
+        if: steps.ny.outputs.fresh == 'yes'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data/bills_*.json
+            data/senate_memos_*.json
+          key: ny-bills-v1-${{ github.run_id }}
 
       # Each state's pages from the last build: a state whose data and code haven't changed isn't rebuilt (state_hash.py).
       - name: Restore the last build's pages

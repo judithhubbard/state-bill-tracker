@@ -4,14 +4,20 @@ and save a slimmed copy (no full text or memos) to data/bills_<session>.json, an
 and summary of provisions from the sponsor's memo, Senate bills only: the API has no Assembly memos) to
 data/texts_<session>.json, which build_data.py shows as "What it does".
 
-Usage: python3 fetch_bills.py [session_year]   (default 2025, i.e. the 2025-26 session)
+Usage: python3 fetch_bills.py [session_year] [--if-changed]   (default 2025, i.e. the 2025-26 session)
+  --if-changed: when the saved copy (data/bills_<session>.json, with the Senate memos it was made with in
+  data/senate_memos_<session>.json) is there and the API lists no bill updated since it was made
+  (/api/3/bills/updates/<from>/<to>), the bills aren't downloaded again (publish.yml keeps the copy in its cache); "What
+  it does" is still written again, with the Assembly memos as they are now.
 API key comes from the NYSENATE_API_KEY environment variable, or else ~/.nysenate_api_key.
 """
 import json, os, re, sys, time, urllib.request, urllib.parse
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-SESSION = int(sys.argv[1]) if len(sys.argv) > 1 else 2025
+IF_CHANGED = "--if-changed" in sys.argv
+_args = [a for a in sys.argv[1:] if not a.startswith("--")]
+SESSION = int(_args[0]) if _args else 2025
 KEY = os.environ.get("NYSENATE_API_KEY") or open(os.path.expanduser("~/.nysenate_api_key")).read().strip()
 BASE = f"https://legislation.nysenate.gov/api/3/bills/{SESSION}"
 PAGE = 200
@@ -141,7 +147,39 @@ def slim(b):
     }
 
 
+SENATE_MEMOS = os.path.join(os.path.dirname(OUT), f"senate_memos_{SESSION}.json")
+NY_TIME = "%Y-%m-%dT%H:%M:%S"
+
+
+def updated_since(since):
+    """How many bill updates the API has processed since since (New York time, NY_TIME), or None if it can't say."""
+    now = datetime.now(ZoneInfo("America/New_York")).strftime(NY_TIME)
+    q = urllib.parse.urlencode({"key": KEY, "limit": 1})
+    try:
+        with urllib.request.urlopen(f"https://legislation.nysenate.gov/api/3/bills/updates/{since}/{now}?{q}", timeout=60) as r:
+            d = json.load(r)
+    except Exception as e:
+        print(f"  updates not read ({e}); downloading everything", file=sys.stderr)
+        return None
+    return d.get("total") if d.get("success") else None
+
+
 def main():
+    if IF_CHANGED:
+        try:
+            saved = json.load(open(SENATE_MEMOS))
+            bills = json.load(open(OUT))["bills"]
+        except (OSError, ValueError, KeyError):
+            saved = bills = None
+        # (From an hour before the last download began, so an update processed while it ran isn't missed.)
+        n = updated_since(saved["asOf"]) if saved and bills and saved.get("session") == SESSION else None
+        if n == 0:
+            print(f"No bill updated since {saved['asOf']}: kept the {len(bills)} bills downloaded then", file=sys.stderr)
+            write_texts(bills, saved["memos"])
+            return
+        if n:
+            print(f"{n} bill updates since {saved['asOf']}", file=sys.stderr)
+    began = datetime.now(ZoneInfo("America/New_York"))
     first = get(1)
     total = first["total"]
     if total == 0:
@@ -163,6 +201,16 @@ def main():
         json.dump({"session": SESSION, "fetched": datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M ET"), "bills": out}, f)
     os.replace(tmp, OUT)
     print(f"wrote {len(out)} bills to {OUT}", file=sys.stderr)
+    from datetime import timedelta
+    with open(SENATE_MEMOS + ".tmp", "w") as f:
+        json.dump({"session": SESSION, "asOf": (began - timedelta(hours=1)).strftime(NY_TIME), "memos": memos}, f, ensure_ascii=False)
+    os.replace(SENATE_MEMOS + ".tmp", SENATE_MEMOS)
+    write_texts(out, memos)
+
+
+def write_texts(out, memos):
+    """What each bill does (data/texts_<session>.json), from the Senate sponsors' memos (memos: print number with its
+    version -> memo) and the Assembly's."""
     # The Assembly sponsors' memos, downloaded from nyassembly.gov by states/ny/memos.py (on GitHub, into its own saved
     # copy): each Assembly bill's memo for its current version, else for the newest earlier one until that's read.
     asm = {}
