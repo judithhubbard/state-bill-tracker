@@ -13,7 +13,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 14 days: becomes law", tip: "Sundays excepted." }, { dies: "Not signed when the session ends: pocket veto", tip: "If the Legislature adjourns for good before the 14 days are up, an unsigned bill dies, with no veto to override." }],
+  unsigned: [{ law: "Not signed in 14 days: becomes law", tip: "Counted from the hour it arrives, weekends included." }, { dies: "Not signed when the session ends: pocket veto", tip: "If the Legislature adjourns for good before the 14 days are up, an unsigned bill dies, with no veto to override." }],
   override: "Two-thirds can override",
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
@@ -49,16 +49,16 @@ const STATE = {
   sessionEnds: (session) => `${session + 1}-12-31`,
   // A full-time Legislature: it can vote until the session ends.
   floorVotesEnd: false,
-  // The governor has 14 days, Sundays excepted, after a bill is presented; a bill not returned becomes law, unless the
-  // Legislature has adjourned for good (Michigan Constitution, Art. IV, sec. 33).
+  // The governor has 14 days "measured in hours and minutes from the time of presentation" (Sundays count; the 1908
+  // constitution's "Sundays excepted" was dropped); a bill not returned becomes law, unless the Legislature has adjourned
+  // for good (Michigan Constitution, Art. IV, sec. 33).
   govDeadline(iso) {
     if (!iso) return null;
     const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
-    let n = 14;
-    while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
+    t.setDate(t.getDate() + 14);
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   },
-  dueLabel: () => "Governor's decision due (14 days after it reached the governor, Sundays excepted)",
+  dueLabel: () => "Governor's decision due (14 days after it reached the governor)",
 
   passedBothBy: (session) => STATE.sessionEnds(session),
   passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
@@ -98,7 +98,7 @@ const STATE = {
         [`${Y + 1}-11-03`, "up", LEG, "November", "Election; the lame-duck session follows."],
         [close, "down", LEG, MD(close), "The session ends. Bills that didn't pass both houses die."],
       ],
-      note: "The governor has 14 days (Sundays excepted) to act on a bill.",
+      note: "The governor has 14 days to act on a bill.",
     };
   },
   waitingHead: "On the way to the governor",
@@ -128,7 +128,7 @@ const STATE = {
     "A committee reported it, and it waits for the full House (second and third reading) or Senate (the Committee of the Whole, then third reading).",
     "Passed the House or the Senate, but not both. Both houses have to pass the same text.",
     "Passed both houses. The presiding officers sign it, then it goes to the governor.",
-    "Presented to the governor, who has 14 days (Sundays excepted) to sign or veto it.",
+    "Presented to the governor, who has 14 days to sign or veto it.",
     "Signed into law (a public act), or became law without the governor's signature.",
     "Vetoed by the governor. Overriding a veto takes two-thirds of each house.",
   ],

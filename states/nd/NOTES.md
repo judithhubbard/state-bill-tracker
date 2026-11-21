@@ -38,8 +38,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   North Dakota are tagged "const" (one passage by a majority of each house's members, then the voters at the election the
   resolution names: `amendmentOnce`, `ballotLine()`); other resolutions are left out. Earlier assembly linked by title,
   or same prime sponsor with half the title words shared, never to a law (`earlier()`). Hearings come from each bill's
-  Hearings (named committee); `agendas()` lists upcoming ones. Governor 3 days (Sundays excepted) in session, 15 after
-  adjournment; item vetoes on appropriations; override two-thirds of each house's members. Between sessions the current
+  Hearings (named committee); `agendas()` lists upcoming ones. Governor 3 legislative days in session (taken as weekdays), 15
+  days, Saturdays and Sundays excepted, from delivery after adjournment (Art. V, sec. 9; until 2026-11-21 the profile
+  excepted only Sundays and gave 15 calendar days from adjournment); item vetoes on appropriations; override two-thirds of each house's members. Between sessions the current
   page reads like a finished one (`STATE.between()`, a getter for `stageText.live`). Shared hooks added for North Dakota:
   `STATE.oddsExits` (the Statistics chart's first two exits, without the committee breakdown), `STATE.fateLabels`, and
   `STATE.endedNote(b)` (a bill voted down or withdrawn mid-session: its status and "what's next" say so). Contacts: members

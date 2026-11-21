@@ -74,7 +74,9 @@ const STATE = {
   govDeadline(iso) {
     if (!iso) return null;
     const end = STATE.sessionEnds(+iso.slice(0, 4)), six = STATE.plusWeekdays(iso, 6);
-    return six <= end ? six : STATE.plusDays(end > iso ? end : iso, 10);
+    // The ten days run from the adjournment, whenever the bill arrived (a delivery after them is a special session's).
+    const after = STATE.plusDays(end, 10);
+    return six <= end || iso > after ? six : after;
   },
   dueLabel: () => "Governor's decision due (6 days during the session, Sundays excepted; 10 days after it ends, or it dies)",
 

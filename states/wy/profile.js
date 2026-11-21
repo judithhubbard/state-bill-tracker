@@ -62,7 +62,9 @@ const STATE = {
     const plus = (from, n, sundays) => { const [a, b, c] = from.split("-").map(Number), t = new Date(a, b - 1, c);
       while (n > 0) { t.setDate(t.getDate() + 1); if (sundays || t.getDay() !== 0) n--; } return ymd(t); };
     const end = STATE.sessionEnds(+iso.slice(0, 4)), three = plus(iso, 3, false);
-    return three <= end ? three : plus(end > iso ? end : iso, 15, true);
+    // The fifteen days run from the adjournment, whenever the bill arrived (a delivery after them is a special session's).
+    const after = plus(end, 15, true);
+    return three <= end || iso > after ? three : after;
   },
   dueLabel: () => "Governor's decision due (3 days during the session, 15 days after it)",
 

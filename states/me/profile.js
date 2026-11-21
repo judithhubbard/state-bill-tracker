@@ -67,17 +67,28 @@ const STATE = {
   sessionEnds: (session) => STATE.plusDays(STATE.convenes(session + 1), -1),
   // The governor has 10 days, Sundays excepted, to sign or veto a bill; one she doesn't act on becomes law. When the
   // Legislature adjourns first, she can hold it until three days after it meets again; if the Legislature doesn't meet
-  // again, a held bill doesn't become law (Constitution of Maine, Art. IV, Part 3, sec. 2).
-  govDeadline(iso) {
-    if (!iso) return null;
+  // again, a held bill doesn't become law (Constitution of Maine, Art. IV, Part 3, sec. 2). Only a session's final
+  // adjournment keeps a bill from being returned, not a break before veto day (Opinion of the Justices, 2015 ME 107): the
+  // first session's end holds bills until three days after the second session opens (61 bills of June 2025 were due
+  // January 10, 2026: the governor's release of January 7, 2026), and the second session's last meeting (veto day) ends
+  // the Legislature, so a bill held then has no deadline and dies unless signed.
+  tenDays(iso) {
     const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
     let n = 10;
     while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   },
+  govDeadline(iso) {
+    if (!iso) return null;
+    const a = +iso.slice(0, 4), ten = STATE.tenDays(iso);
+    if (a % 2) return ten <= STATE.adjourns(a) ? ten : STATE.plusDays(STATE.opens(a + 1), 3);
+    return ten <= (STATE.vetoDays[a] || STATE.adjourns(a)) ? ten : null;
+  },
+  // The last day the governor acts on the second session's bills (for Statistics' "so far").
+  govLastDay: (session) => STATE.tenDays(STATE.vetoDays[session + 1] || STATE.adjourns(session + 1)),
   dueLabel: () => "Governor's decision due (10 days, Sundays excepted, after it's enacted)",
 
-  passedBothBy: (session) => STATE.govDeadline(STATE.vetoDays[session + 1] || STATE.adjourns(session + 1)),
+  passedBothBy: (session) => STATE.govLastDay(session),
   passedBothNote: (live) => live ? "Waiting for the governor" : "No governor's action recorded",
   passedBothGroup: ["Before the governor's deadline", () => "Bills enacted by both houses go to the governor, who has 10 days (Sundays excepted) to act."],
   passedBothNext: () => ({
@@ -114,7 +125,7 @@ const STATE = {
     const LEG = 112, o1 = STATE.opens(Y), a1 = STATE.adjourns(Y), o2 = STATE.opens(Y + 1), a2 = STATE.adjourns(Y + 1), v2 = STATE.vetoDays[Y + 1];
     return {
       leg: [["", o1, a1, "First session"], ["light", a1, o2, "Interim"], ["", o2, a2, "Second session"], ["light", a2, STATE.sessionEnds(Y), "Interim"]],
-      gov: [["light", o1, STATE.govDeadline(a1), "Acts on bills"], ["light", o2, STATE.govDeadline(v2 || a2), "Acts on bills"]],
+      gov: [["light", o1, STATE.tenDays(a1), "Acts on bills"], ["light", o2, STATE.tenDays(v2 || a2), "Acts on bills"]],
       events: [
         [o1, "up", LEG, MD(o1), "The first session gets under way (the Legislature convened in December)."],
         [a1, "down", LEG, MD(a1), "The first session ends. Bills carried over stay alive."],

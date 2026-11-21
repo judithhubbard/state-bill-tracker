@@ -13,7 +13,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 10 days: becomes law", tip: "Sundays excepted, also after the session ends." }],
+  unsigned: [{ law: "Not signed in 10 days: becomes law", tip: "Sundays excepted; for bills that arrive at the end, 10 days after the session ends." }],
   override: { t: "A majority can override", tip: "A majority of each house's members (20 senators, 51 representatives). A veto after the session's last day stands." },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
@@ -68,10 +68,14 @@ const STATE = {
   },
   sessionEnds: (year) => STATE.dated[year] || (year % 2 ? `${year}-03-30` : `${year}-04-15`),
   // The governor has 10 days (Sundays excepted) after a bill is delivered to sign or veto it; a bill not returned by then
-  // becomes law without a signature, also after the session ends (no pocket veto). A veto after the last day stands
-  // (Constitution, sec. 88).
+  // becomes law without a signature, also after the session ends (no pocket veto). When the adjournment (sine die) comes
+  // before the 10 days are up, or the bill arrives after it, the 10 days (Sundays excepted, Ky. Court of Appeals, 1956)
+  // run from the adjournment. A veto after the last day stands (Constitution, sec. 88).
   govDeadline(iso) {
-    return iso ? STATE.plusWeekdays(iso, 10) : null;
+    if (!iso) return null;
+    const end = STATE.sessionEnds(+iso.slice(0, 4)), ten = STATE.plusWeekdays(iso, 10), after = STATE.plusWeekdays(end, 10);
+    // A delivery after those days is a special session's.
+    return ten <= end || iso > after ? ten : after;
   },
   dueLabel: () => "Governor's decision due (10 days, Sundays excepted, or it becomes law without a signature)",
 
@@ -122,7 +126,7 @@ const STATE = {
         [due, "up", LEG, MD(due), "The governor's last day on the final bills. A veto now stands."],
         [`${Y}-07-01`, "down", LEG, "July 1", "The budget year starts. Most new laws take effect 90 days after the session ends."],
       ],
-      note: "The governor has 10 days (Sundays excepted) to act on a bill.",
+      note: "The governor has 10 days (Sundays excepted) to act on a bill, and 10 days after the session ends for bills that arrive at the end.",
     };
   },
   waitingHead: "On the way to the governor",

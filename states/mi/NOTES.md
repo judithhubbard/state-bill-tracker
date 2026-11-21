@@ -22,4 +22,5 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   gophouse or "rep..."/"senator..." sites = Republican; Open States for any other). Committees: the House's from www.house.mi.gov
   (each standing committee's page; the site omits its DigiCert intermediate certificate: `ca_bundle()` adds it, as for
   Illinois), the Senate's chairs and meeting times from senate.michigan.gov's committee list. Cities and townships by district (`towns.py`).
-  Full-time Legislature; governor 14 days, Sundays excepted.
+  Full-time Legislature; governor 14 days, Sundays included (Art. IV, sec. 33: "measured in hours and minutes"; the profile
+  excepted Sundays until 2026-11-21).

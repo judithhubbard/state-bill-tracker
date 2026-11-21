@@ -57,15 +57,17 @@ const STATE = {
     return `${session + 2}-01-${String(1 + ((9 - jan1) % 7) + 7).padStart(2, "0")}`;
   },
   // The governor has 45 days after a bill is presented (NJ Constitution, Art. V, sec. I, para. 14).
-  // The data has no presentation date, so this counts from the day it passed both houses. When the
-  // session ends first, the governor has until the seventh day after, or the bill dies (a pocket veto).
+  // The data has no presentation date, so this counts from the day it passed both houses. A bill passed
+  // 45 to 10 days before the session ends has to be returned by the day before it ends (noon), or it
+  // becomes law (para. 14(c)(2)); one passed in the last 10 days has until the seventh day after, or the
+  // bill dies (a pocket veto, para. 14(c)(3)).
   govDeadline(iso, session) {
     if (!iso) return null;
     const ymd = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
     const [y, m, d] = iso.split("-").map(Number);
     const [ey, em, ed] = STATE.sessionEnds(session).split("-").map(Number);
-    const due = ymd(new Date(y, m - 1, d + 45)), last = ymd(new Date(ey, em - 1, ed + 7));
-    return due < last ? due : last;
+    const left = Math.round((new Date(ey, em - 1, ed) - new Date(y, m - 1, d)) / 864e5);
+    return ymd(left < 10 ? new Date(ey, em - 1, ed + 7) : left <= 45 ? new Date(ey, em - 1, ed - 1) : new Date(y, m - 1, d + 45));
   },
 
   // Bills that passed both houses go straight to the governor; any others die when the session ends.
@@ -78,7 +80,7 @@ const STATE = {
   passedBothGroup: ["By the end of the session", () => "These go to the governor once they pass both houses. Any still waiting die when the two-year session ends in January."],
 
   // The governor's deadline in a bill's key dates (from govDeadline()).
-  dueLabel: () => "Governor's decision due (estimated: 45 days after it passed both houses, or a week after the session ends)",
+  dueLabel: () => "Governor's decision due (estimated: 45 days after it passed both houses, or by the session's end)",
   // Wording on the Weigh in and Statistics tabs. "Passed both houses" here means sent back with the
   // governor's changes (bills that pass both houses go straight to the governor).
   waitingHead: "Sent back with the governor's changes",

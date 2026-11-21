@@ -67,13 +67,14 @@ const STATE = {
   },
   sessionEnds: (year) => STATE.dated[year] || STATE.plusDays(STATE.opens(year), 59),
   // The governor has 7 consecutive days after a bill is presented to sign or veto it; if the Legislature adjourns sine
-  // die (or recesses more than 30 days) within those 7 days, or the bill is presented after, 15 days from presentation.
+  // die (or recesses more than 30 days) within those 7 days or on the seventh, or the bill is presented after, 15 days
+  // from presentation.
   // A bill not acted on becomes law without a signature (Constitution, Art. III, sec. 8). The presiding officers present
   // passed bills in batches, often weeks or months after the session.
   govDeadline(iso) {
     if (!iso) return null;
     const seven = STATE.plusDays(iso, 7), end = STATE.sessionEnds(Number(iso.slice(0, 4)));
-    return seven <= end ? seven : STATE.plusDays(iso, 15);
+    return seven < end ? seven : STATE.plusDays(iso, 15);
   },
   dueLabel: () => "Governor's decision due (7 days during the session, 15 after it, or it becomes law without a signature)",
 

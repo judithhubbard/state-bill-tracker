@@ -13,7 +13,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 3 days: becomes law", tip: "Sundays excepted; 15 days after the session adjourns." }],
+  unsigned: [{ law: "Not signed in 3 days: becomes law", tip: "3 legislative days; once the session has adjourned, 15 weekdays after the bill arrives." }],
   override: { t: "Two-thirds can override", tip: "Two-thirds of each house's members." },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
@@ -63,26 +63,26 @@ const STATE = {
   sessionEnds: (session) => STATE.adjourns(session),
   // Bills that didn't pass die when the regular session adjourns; nothing waits for a second year.
   floorVotesEnd: false,
-  // The governor has 3 days (Sundays excepted) after a bill is presented while the Legislative Assembly is in session, and
-  // 15 days after it adjourns (Constitution, Art. V, sec. 9). Bills reach the governor a day or two after they pass.
+  // The governor has 3 legislative days after a bill is delivered while the Legislative Assembly is in session (taken as
+  // weekdays, its usual week), and 15 days, Saturdays and Sundays excepted, after delivery when it isn't (Constitution,
+  // Art. V, sec. 9; holidays count). A bill whose 3 days outrun the adjournment gets the 15 days, as the Legislative
+  // Council's newsletter counts bills after adjournment ("15 days from the date of delivery"). Bills reach the governor a
+  // day or two after they pass.
   govDeadline(iso) {
     if (!iso) return null;
-    const ymd = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
-    const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
-    const end = STATE.adjourns(a % 2 ? a : a - 1);
-    if (iso > end && iso <= STATE.plusDays(end, 15)) return STATE.plusDays(end, 15);
-    let n = 3;
-    while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
-    const due = ymd(t);
-    return due > end && iso <= end ? STATE.plusDays(end, 15) : due;
+    const weekdays = (from, n) => { const [a, b, c] = from.split("-").map(Number), t = new Date(a, b - 1, c);
+      while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() % 6) n--; }
+      return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; };
+    const a = +iso.slice(0, 4), end = STATE.adjourns(a % 2 ? a : a - 1), three = weekdays(iso, 3);
+    return iso <= end && three <= end ? three : weekdays(iso, 15);
   },
-  dueLabel: () => "Governor's decision due (3 days during the session, Sundays excepted; 15 days after it adjourns)",
+  dueLabel: () => "Governor's decision due (3 legislative days during the session; 15 weekdays after it adjourns)",
 
-  passedBothBy: (session) => STATE.plusDays(STATE.adjourns(session), 15),
+  passedBothBy: (session) => STATE.govDeadline(STATE.adjourns(session)),
   passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
   passedBothGroup: ["Waiting to go to the governor", () => "Bills that pass both houses are signed by the Speaker and the Senate's presiding officer and sent to the governor, usually within a few days."],
   passedBothNext: () => ({
-    what: "the Speaker and the Senate's presiding officer sign it, and it goes to the governor, who has 3 days (Sundays excepted), or 15 days once the session has adjourned, to sign it or veto it. The governor can veto items in an appropriation bill. A bill the governor doesn't act on becomes law.",
+    what: "the Speaker and the Senate's presiding officer sign it, and it goes to the governor, who has 3 legislative days, or 15 weekdays once the session has adjourned, to sign it or veto it. The governor can veto items in an appropriation bill. A bill the governor doesn't act on becomes law.",
     gov: ["sign it", "veto it"],
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
@@ -134,7 +134,7 @@ const STATE = {
     const LEG = 112, o1 = STATE.opens(Y), a1 = STATE.adjourns(Y);
     return {
       leg: [["", o1, a1, "80-day session"], ["light", a1, `${Y + 1}-12-31`, "Interim (no regular session)"]],
-      gov: [["light", o1, STATE.plusDays(a1, 15), "Acts on bills"]],
+      gov: [["light", o1, STATE.govDeadline(a1), "Acts on bills"]],
       events: [
         [o1, "up", LEG, MD(o1), "The session opens; most bills must be filed in its first weeks."],
         [a1, "down", LEG, MD(a1), "The session adjourns. Bills that didn't pass both houses die."],
@@ -142,7 +142,7 @@ const STATE = {
         [`${Y}-08-01`, "down", LEG, "August 1", "Most new laws take effect."],
         [`${Y + 1}-12-01`, "up", LEG, "December", "The next assembly's organizational session; bills are prefiled."],
       ],
-      note: "The governor has 3 days (Sundays excepted) to act during the session, and 15 days after it adjourns for bills that arrive at the end.",
+      note: "The governor has 3 legislative days to act during the session, and 15 weekdays for bills that arrive at the end or after it.",
     };
   },
   waitingHead: "On the way to the governor",
@@ -179,7 +179,7 @@ const STATE = {
     "Reported by its committee, with either recommendation. Every bill gets a vote of the full house; one that fails is dead unless the vote is reconsidered.",
     "Passed the House or the Senate, but not both. Both houses have to pass the same text.",
     "Passed both houses. The Speaker and the Senate's presiding officer sign it, and it goes to the governor.",
-    "Sent to the governor, who has 3 days (Sundays excepted) during the session, or 15 days after it adjourns.",
+    "Sent to the governor, who has 3 legislative days during the session, or 15 weekdays after it adjourns.",
     "Signed into law, or became law without the governor's signature or over a veto: a chapter of the Session Laws.",
     "Vetoed by the governor. Overriding takes two-thirds of each house's members.",
   ],

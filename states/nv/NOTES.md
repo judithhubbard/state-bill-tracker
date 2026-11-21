@@ -67,7 +67,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   from it; Assembly members and senators take office the day after the election. Leaders: Speaker Steve Yeager, Senate
   Majority Leader Nicole Cannizzaro (the Lieutenant Governor presides over the Senate); the 84th session chooses its own:
   update `LEADERS`. Governor Joe Lombardo (R) ran again in November 2026; if a new governor takes office January 4, 2027,
-  add them to `GOVERNORS` and legislatures.json. Governor 5 days (Sundays excepted) in session, 10 days after
-  adjournment; a bill not acted on becomes law. The governor's phones and contact page are from gov.nv.gov (checked by
+  add them to `GOVERNORS` and legislatures.json. Governor 5 days (Sundays excepted) in session, 10 days
+  (Sundays excepted; calendar days in the profile until 2026-11-21) after adjournment; a bill not acted on becomes law.
+  The governor's phones and contact page are from gov.nv.gov (checked by
   program 2026-11-09, not by the owner). Places (`towns.py`, run once): cities, Census-designated places (most of the
   Las Vegas valley) and counties, separate Senate and Assembly lists.

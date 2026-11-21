@@ -15,7 +15,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 6 days: becomes law", tip: "Sundays excepted; 40 days after the session ends for bills that arrive in its last days." }],
+  unsigned: [{ law: "Not signed in 6 days: becomes law", tip: "6 calendar days; 40 days after the session ends for bills that arrive in its last days." }],
   override: "Two-thirds can override",
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
@@ -53,14 +53,14 @@ const STATE = {
   dated: { 2023: "2023-03-29", 2024: "2024-03-28", 2025: "2025-04-04", 2026: "2026-04-02" },
   adjourns: (year) => STATE.dated[year] || `${year}-04-03`,
   sessionEnds: (session) => STATE.adjourns(session + 1),
-  // The governor has 6 days (Sundays excepted) during the session, and 40 days after it ends for bills received in its
-  // last days (Georgia Constitution, Art. V, sec. II, para. IV).
+  // The governor has 6 days (calendar days: "6 consecutive days", georgia.gov's Life of a Law) during the session, and
+  // 40 days after it ends for bills whose 6 days it cuts short or that arrive after it (Georgia Constitution, Art. III,
+  // sec. V, para. XIII(a)).
   govDeadline(iso) {
     if (!iso) return null;
     const ymd = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
     const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
-    let n = 6;
-    while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
+    t.setDate(t.getDate() + 6);
     const end = STATE.adjourns(a);
     if (ymd(t) <= end) return ymd(t);
     const [x, y, z] = end.split("-").map(Number);
@@ -116,7 +116,7 @@ const STATE = {
         [a2, "down", LEG, MD(a2), "Sine die: bills that didn't pass both houses die."],
         [`${Y}-07-01`, "down", LEG, "July 1", "Most new laws take effect."],
       ],
-      note: "The governor has 6 days (Sundays excepted) to act during the session, and 40 days after it ends for bills that arrive in its last days.",
+      note: "The governor has 6 days to act during the session, and 40 days after it ends for bills that arrive in its last days.",
     };
   },
   waitingHead: "On the way to the governor",

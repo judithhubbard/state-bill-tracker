@@ -42,12 +42,13 @@ const STATE = {
   },
 
   // The session opens the second Monday of January and runs until it adjourns sine die, set by the Legislature (in recent
-  // years from April to late June; the past ones are from the bills' last floor votes).
+  // years from April to late June). `dated` holds each year's sine die day, from the Legislature's session summaries
+  // (azleg.gov, alispdfs/<leg>/<session>/House/SummaryComplete.pdf; add each year's); a year without one is taken as June 30.
   opens(year) {
     const t = new Date(year, 0, 1); t.setDate(1 + ((1 - t.getDay() + 7) % 7) + 7);
     return `${year}-01-${String(t.getDate()).padStart(2, "0")}`;
   },
-  dated: {},
+  dated: { 2023: "2023-07-31", 2024: "2024-06-15", 2025: "2025-06-27", 2026: "2026-06-13" },
   sessionEnds: (year) => STATE.dated[year] || `${year}-06-30`,
   // The governor has 5 days (Sundays excepted) during the session, and 10 days (Sundays excepted) after it adjourns
   // (Arizona Constitution, Art. V, sec. 7).
@@ -57,7 +58,9 @@ const STATE = {
     const plus = (from, n) => { const [a, b, c] = from.split("-").map(Number), t = new Date(a, b - 1, c);
       while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; } return ymd(t); };
     const end = STATE.sessionEnds(+iso.slice(0, 4)), five = plus(iso, 5);
-    return five <= end ? five : plus(end > iso ? end : iso, 10);
+    // The ten days run from the adjournment, whenever the bill arrived (a delivery after them is a special session's).
+    const after = plus(end, 10);
+    return five <= end || iso > after ? five : after;
   },
   dueLabel: () => "Governor's decision due (5 days during the session, 10 after it, Sundays excepted)",
 

@@ -69,9 +69,22 @@ const STATE = {
   originWord: "the deadline",
   // The governor has 12 days. Bills presented in the first year's last 12 days have until 30 days after it; in the
   // second year, bills that reach the governor near the end have until September 30 (Constitution, Art. IV, sec. 10).
+  // A 12th day on a Saturday, Sunday or holiday moves to the next day that isn't one (sec. 10(b)(5)); the holidays are
+  // those the Legislature's calendar and state offices observe (New Year's Day, Martin Luther King Jr. Day, Presidents'
+  // Day, Cesar Chavez Day, Memorial Day, July 4, Labor Day, Veterans Day, Thanksgiving and Christmas; Gov. Code sec. 6700
+  // lists a few more that offices don't close for).
+  holiday(iso) {
+    const [y, m, d] = iso.split("-").map(Number), t = new Date(y, m - 1, d), w = t.getDay(), n = Math.ceil(d / 7);
+    const last = new Date(y, m - 1, d + 7).getMonth() !== m - 1;
+    return w === 0 || w === 6 || ["01-01", "03-31", "07-04", "11-11", "12-25"].includes(iso.slice(5)) ||
+      (w === 1 && ((m === 1 && n === 3) || (m === 2 && n === 3) || (m === 5 && last) || (m === 9 && n === 1))) ||
+      (w === 4 && m === 11 && n === 4);
+  },
   govDeadline(iso, session) {
     if (!iso) return null;
-    const y = +iso.slice(0, 4), twelve = STATE.plus(iso, 12);
+    const y = +iso.slice(0, 4);
+    let twelve = STATE.plus(iso, 12);
+    while (STATE.holiday(twelve)) twelve = STATE.plus(twelve, 1);
     if (y === session) { const last = STATE.lastDay(y); return twelve <= last ? twelve : STATE.plus(last, 30); }
     return twelve < `${y}-09-01` ? twelve : `${y}-09-30`;
   },

@@ -69,14 +69,15 @@ const STATE = {
     wed.setDate(end.getDate() + ((3 - end.getDay() + 7) % 7 || 7) + 35);
     return `${wed.getFullYear()}-${String(wed.getMonth() + 1).padStart(2, "0")}-${String(wed.getDate()).padStart(2, "0")}`;
   },
-  // The governor has 7 days for a bill presented while the session has more than 7 days to run; otherwise
-  // 30 days after adjournment (Constitution of Virginia, Art. V, sec. 6).
+  // The governor has 7 days for a bill presented while the session has 7 or more days to run (the 7th can be the last
+  // day); with "fewer than seven days remaining", or after it, 30 days after adjournment (Constitution of Virginia,
+  // Art. V, sec. 6).
   govDeadline(iso, session) {
     if (!iso) return null;
     const ymd = (dt) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
     const [y, m, d] = iso.split("-").map(Number), [ey, em, ed] = STATE.sessionEnds(session).split("-").map(Number);
     const seven = ymd(new Date(y, m - 1, d + 7)), end = STATE.sessionEnds(session);
-    return seven < end ? seven : ymd(new Date(ey, em - 1, ed + 30));
+    return seven <= end ? seven : ymd(new Date(ey, em - 1, ed + 30));
   },
   dueLabel: () => "Governor's decision due (7 days after it reached the governor, or 30 days after the session adjourned)",
 

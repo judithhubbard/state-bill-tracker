@@ -35,7 +35,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Jason White; the Lieutenant Governor, Delbert Hosemann, presides over the Senate and refers its bills (not a senator: his
   phone and email from ltgovhosemann.ms.gov, checked by program 2026-11-08). The governor's phone and email are from
   governorreeves.ms.gov/contact/ (checked by program 2026-11-08, not by the owner). Governor 5 days (Sundays excepted) in
-  session, 15 after adjournment; partial vetoes of appropriations; override two-thirds of each house. Earlier years linked
+  session; a bill the adjournment keeps from being returned has 15 days, Sundays excepted, from presentment (sec. 72; until
+  2026-11-21 the profile gave 15 calendar days from the adjournment); partial vetoes of appropriations; override two-thirds of each house. Earlier years linked
   by identical short title and principal author (or a title one bill had in each year), never laws or appropriations.
   Places (`towns.py`, run once): cities, towns, villages and counties, separate Senate (52) and House (122) districts, from
   the Census Bureau's 2024 files, which predate the districts redrawn for the November 2025 special elections (How's

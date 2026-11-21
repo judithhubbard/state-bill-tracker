@@ -79,7 +79,10 @@ const STATE = {
     while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
     const due = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
     const end = STATE.adjourns(a);
-    return iso <= end && due > end ? STATE.plusDays(end, 15) : due;
+    // No bill becomes law after the adjournment unless signed within 15 days after it, whenever it arrived (a delivery
+    // after them is a special session's).
+    const after = STATE.plusDays(end, 15);
+    return due <= end || iso > after ? due : after;
   },
   dueLabel: () => "Governor's decision due (5 days, Sundays excepted; 15 days after the session ends)",
 

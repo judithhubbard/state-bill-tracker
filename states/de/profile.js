@@ -65,17 +65,22 @@ const STATE = {
   },
   sessionEnds: (session) => `${session + 1}-06-30`,
   floorVotesEnd: false,
-  // The governor has 10 days (Sundays excepted) after a bill is presented; after the General Assembly's final
-  // adjournment, 30 days, and a bill not signed by then doesn't become law (a pocket veto). Constitution, Art. III, sec. 18.
-  // Bills are presented when the General Assembly sends them, often weeks or months after they pass.
+  // The governor has 10 days (Sundays excepted) after a bill is presented. When the 10 days run past the General
+  // Assembly's final adjournment (election day of its second year, when its term ends; the June 30 recess isn't one), or
+  // the bill is presented after it, the governor has until 30 days after it, and a bill not signed by then doesn't become
+  // law (a pocket veto). Constitution, Art. III, sec. 18. Bills are presented when the General Assembly sends them, often
+  // weeks or months after they pass.
   govDeadline(iso) {
     if (!iso) return null;
     const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
     let n = 10;
     while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
-    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    const ten = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    const final = STATE.election(a % 2 ? a + 1 : a), after = STATE.plusDays(final, 30);
+    // A presentation after those 30 days is the next General Assembly's.
+    return ten <= final || iso > after ? ten : after;
   },
-  dueLabel: () => "Governor's decision due (10 days after it's presented, Sundays excepted)",
+  dueLabel: () => "Governor's decision due (10 days after it's presented, Sundays excepted; 30 days after the term ends)",
 
   passedBothBy: (session) => STATE.plusDays(STATE.election(session + 1), 30),
   passedBothNote: (live) => live ? "Not yet acted on by the governor" : "No action by the governor recorded",

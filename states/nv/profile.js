@@ -13,7 +13,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 5 days: becomes law", tip: "Sundays excepted; 10 days after the Legislature adjourns." }],
+  unsigned: [{ law: "Not signed in 5 days: becomes law", tip: "Sundays excepted; 10 days after the Legislature adjourns, Sundays excepted too." }],
   override: "Two-thirds can override",
   titles: { S: "Sen.", A: "Asm." },
   memberWords: { S: "state senator", A: "Assembly member" },
@@ -69,22 +69,23 @@ const STATE = {
   originDeadline: (b) => b.topics.includes("const") || b.vers.some((v) => v.actions.some(([, x]) => /^Exempt from the session's deadlines|^Granted a waiver/.test(x))) ? null : STATE.day(DATA.session, 79),
   originWord: "the deadline to pass its own house",
   // The governor has 5 days (Sundays excepted) after a bill is delivered during the session; when the Legislature
-  // adjourns first, 10 days after it adjourns (Art. 4, sec. 35). A bill not acted on becomes law.
+  // adjourns first, 10 days after it adjourns, Sundays excepted too (Art. 4, sec. 35). A bill not acted on becomes law.
+  plusSundays(iso, n) {
+    const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
+    while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  },
   govDeadline(iso) {
     if (!iso) return null;
-    const ymd = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
-    const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
-    const end = STATE.adjourns(a % 2 ? a : a - 1);
-    if (iso >= end) return STATE.plusDays(end, 10) < isoToday() ? null : STATE.plusDays(end, 10);
-    let n = 5;
-    while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
-    const due = ymd(t), last = due > end ? STATE.plusDays(end, 10) : due;
+    const a = +iso.slice(0, 4), end = STATE.adjourns(a % 2 ? a : a - 1), after = STATE.plusSundays(end, 10);
+    if (iso >= end) return after < isoToday() ? null : after;
+    const due = STATE.plusSundays(iso, 5), last = due > end ? after : due;
     // Past due with no decision recorded (convert.py says "The records show no decision by the governor"): no deadline.
     return last < isoToday() ? null : last;
   },
   dueLabel: () => "Governor's decision due (5 days during the session, Sundays excepted; 10 days after it adjourns)",
 
-  passedBothBy: (session) => STATE.plusDays(STATE.adjourns(session), 10),
+  passedBothBy: (session) => STATE.plusSundays(STATE.adjourns(session), 10),
   passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
   passedBothGroup: ["Waiting to go to the governor", () => "Bills that pass both houses are enrolled and delivered to the governor, usually within a few days."],
   passedBothNext: () => ({
@@ -152,7 +153,7 @@ const STATE = {
     const LEG = 112, o1 = STATE.opens(Y), a1 = STATE.adjourns(Y), c1 = STATE.day(Y, 68), h1 = STATE.day(Y, 79), c2 = STATE.day(Y, 102), h2 = STATE.day(Y, 109);
     return {
       leg: [["", o1, a1, "120-day session"], ["light", a1, `${Y + 1}-12-31`, "Interim (no regular session)"]],
-      gov: [["light", o1, STATE.plusDays(a1, 10), "Acts on bills"]],
+      gov: [["light", o1, STATE.plusSundays(a1, 10), "Acts on bills"]],
       events: [
         [o1, "up", LEG, MD(o1), "The session opens. Most bills were prefiled; members' bills must be filed in the first weeks."],
         [c1, "down", LEG, MD(c1), "Deadline: a bill has to pass a committee in its own house (day 68)."],

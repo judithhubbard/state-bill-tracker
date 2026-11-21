@@ -11,7 +11,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   history (each line also says where the bill went: house, Committee/Floor/Desk, committee code) and spells out the
   committee abbreviations; "From committee chair, with author's amendments" is not a committee vote. Only regular-session
   AB and SB bills are shown. Joint authors are all primes. Deadlines (`originBy()`, `lastDay()` in states/ca/profile.js)
-  were fitted to the 2021-26 floor votes; the governor has 12 days, or 30 days after the first year's last day, or
+  were fitted to the 2021-26 floor votes; the governor has 12 days (a 12th day on a weekend or
+  holiday moves to the next working day, Art. IV, sec. 10(b)(5)), or 30 days after the first year's last day, or
   until September 30. `states/ca/contacts.py` reads the Senate's senator, committee and leadership pages and the
   Assembly's member-data API; each member carries `dataName`, the name the database uses ("Limón"), to tie votes and
   authors to seats ("S:21", "A:30"). "Where you live" picks a county (`states/ca/towns.py`, run once: the Senate's

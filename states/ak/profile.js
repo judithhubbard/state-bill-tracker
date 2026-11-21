@@ -53,12 +53,13 @@ const STATE = {
   adjourns: (year) => STATE.dated[year] || STATE.plusDays(STATE.opens(year), 120),
   sessionEnds: (session) => STATE.adjourns(session + 1),
   // The governor has 15 days (Sundays excepted) after delivery while the Legislature is in session, and 20 days (Sundays
-  // excepted) when it has adjourned (Art. II, sec. 17). Bills are often delivered weeks or months after they pass.
+  // excepted) when it isn't, between sessions too, January before the session opens included (Art. II, sec. 17). Bills
+  // are often delivered weeks or months after they pass.
   govDeadline(iso) {
     if (!iso) return null;
     const ymd = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
     const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
-    let n = iso <= STATE.adjourns(a) ? 15 : 20;
+    let n = iso >= STATE.opens(a) && iso <= STATE.adjourns(a) ? 15 : 20;
     while (n > 0) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
     return ymd(t);
   },

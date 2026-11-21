@@ -61,5 +61,8 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   plantations, unorganized territories and counties (Census county-subdivision files). Leaders: President Mattie Daughtry,
   Speaker Ryan Fecteau (the 133rd Legislature convenes December 2, 2026 and elects new ones: change `LEADERS`). Governor
   Janet Mills is term-limited: add the new governor (January 2027) to `GOVERNORS` and states/legislatures.json. Each session's
-  last day is `STATE.dated`, the veto day `STATE.vetoDays` (add each year's). The governor's contact page and phone haven't
+  last day is `STATE.dated`, the veto day `STATE.vetoDays` (add each year's). Governor's deadline (`govDeadline()`, 2026-11-21): 10 days,
+  Sundays excepted; a bill whose 10 days pass the first session's end is held until 3 days after the second session opens;
+  one whose 10 days pass veto day has no deadline (it dies unless signed); the break before veto day doesn't hold bills
+  (Opinion of the Justices, 2015 ME 107). The governor's contact page and phone haven't
   been checked by the owner.

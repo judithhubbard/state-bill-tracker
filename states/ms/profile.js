@@ -13,7 +13,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 5 days: becomes law", tip: "Sundays excepted; 15 days after the Legislature adjourns." }],
+  unsigned: [{ law: "Not signed in 5 days: becomes law", tip: "Sundays excepted; 15 days if the Legislature adjourns first." }],
   override: "Two-thirds can override",
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
@@ -61,23 +61,25 @@ const STATE = {
   sessionDays: (year) => (year % 4 === 0 ? 125 : 90),
   sessionEnds: (year) => STATE.dated[year] || STATE.plusDays(STATE.opens(year), STATE.sessionDays(year) - 1),
   // The governor has 5 days (Sundays excepted) after a bill is presented while the Legislature is in session; a bill it
-  // can't be returned to because the Legislature adjourned becomes law unless vetoed within 15 days after adjournment
-  // (Constitution, sec. 72). A bill the governor doesn't act on becomes law.
+  // can't be returned to because the Legislature adjourned becomes law unless vetoed within 15 days (Sundays excepted)
+  // after it was presented (Constitution, sec. 72). A bill the governor doesn't act on becomes law.
   govDeadline(iso) {
     if (!iso) return null;
     const [a, b, c] = iso.split("-").map(Number), t = new Date(a, b - 1, c);
     for (let n = 5; n > 0;) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
     const five = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
     const end = STATE.sessionEnds(a);
-    return five <= end ? five : STATE.plusDays(end > iso ? end : iso, 15);
+    if (five <= end) return five;
+    for (let n = 10; n > 0;) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0) n--; }
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   },
-  dueLabel: () => "Governor's decision due (5 days during the session, Sundays excepted; 15 days after it adjourns)",
+  dueLabel: () => "Governor's decision due (5 days during the session, 15 at its end; Sundays excepted)",
 
   passedBothBy: (session) => STATE.govDeadline(STATE.sessionEnds(session)),
   passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
   passedBothGroup: ["Before the governor's deadline", () => "Bills that pass both houses are enrolled, signed by the Speaker and the Lieutenant Governor, and sent to the governor."],
   passedBothNext: () => ({
-    what: "it's enrolled, signed by the Speaker and the Lieutenant Governor, and sent to the governor, who has 5 days (Sundays excepted) to sign it or veto it, or 15 days after the session adjourns; the governor can veto parts of an appropriation bill. A bill the governor doesn't act on becomes law.",
+    what: "it's enrolled, signed by the Speaker and the Lieutenant Governor, and sent to the governor, who has 5 days (Sundays excepted) to sign it or veto it, or 15 days if the session adjourns first; the governor can veto parts of an appropriation bill. A bill the governor doesn't act on becomes law.",
     gov: ["sign it", "veto it"],
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
@@ -120,7 +122,7 @@ const STATE = {
 
   calendarDays: 0,
   calendar(Y, end1, end2, MD) {
-    const LEG = 112, open = STATE.opens(Y), adj = STATE.sessionEnds(Y), due = STATE.plusDays(adj, 15);
+    const LEG = 112, open = STATE.opens(Y), adj = STATE.sessionEnds(Y), due = STATE.govDeadline(adj);
     return {
       leg: [["", open, adj, `${STATE.sessionDays(Y)}-day session`]],
       gov: [["light", open, adj, "5 days a bill"], ["", adj, due, "15 days"]],
@@ -130,7 +132,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), "The session adjourns sine die. Bills that didn't pass both houses die."],
         [`${Y}-07-01`, "down", LEG, "July 1", "Most new laws take effect, and the state's budget year starts."],
       ],
-      note: "The governor has 5 days (Sundays excepted) to act during the session, and 15 days after it adjourns.",
+      note: "The governor has 5 days (Sundays excepted) to act during the session, and 15 for bills that arrive at its end.",
     };
   },
   waitingHead: "On the way to the governor",
@@ -160,7 +162,7 @@ const STATE = {
     "A committee reported it, and it's on the House or Senate calendar for a vote before the floor deadline.",
     "Passed the House or the Senate, but not both. Both houses have to pass the same text.",
     "Passed both houses. It's enrolled, signed by the Speaker and the Lieutenant Governor, and sent to the governor.",
-    "Sent to the governor, who has 5 days (Sundays excepted) to sign or veto it, or 15 days after the session adjourns; if the governor does neither, it becomes law.",
+    "Sent to the governor, who has 5 days (Sundays excepted) to sign or veto it, or 15 days if the session adjourns first; if the governor does neither, it becomes law.",
     "Became law: signed, or became law without the governor's signature or over a veto. Laws are chapters of the year's session laws.",
     "Vetoed by the governor. Overriding a veto takes two-thirds of each house.",
   ],

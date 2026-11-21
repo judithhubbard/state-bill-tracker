@@ -18,4 +18,5 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (26 and 28 from subdistricts 26A/26B): seats "S:12", "H:12a"/"H:12b" (New Jersey's scheme), one district list for both
   houses. Members' phones are the House's and Senate's switchboards. One session a year from the second Tuesday of
   January (40 days in odd years, 35 in even), plus a veto day near the end of March (`vetoDay()`); each year's last
-  regular day is in `STATE.dated` (add each year's). Governor 5 days, Sundays excepted, in session; 15 after.
+  regular day is in `STATE.dated` (add each year's). Governor 5 days, not counting Saturdays, Sundays or holidays (Art. IV, sec. 4 as amended in 2002; until 2026-11-21 the
+  profile excepted only Sundays), in session; 15 calendar days after the last regular day (counted from it, not from delivery).

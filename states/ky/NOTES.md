@@ -47,7 +47,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   "and", so they're matched in lower case). Earlier years linked by the same title and prime sponsor, or the same LRC
   summary word for word, one bill in each year, never laws or appropriations. Governor (Andy Beshear, D, term-limited;
   the next takes office in December 2027: add to `GOVERNORS` and legislatures.json) 10 days, Sundays excepted, in and after
-  the session (no pocket veto: a bill not returned becomes law); line-item vetoes on appropriations; override a majority of
+  the session, from delivery or, for a bill the sine die adjournment keeps from being returned, from the adjournment (sec.
+  88; until 2026-11-21 the profile counted from delivery only) (no pocket veto: a bill not returned becomes law); line-item vetoes on appropriations; override a majority of
   each house's members ("majority"; the Republican supermajority overrides most vetoes). The governor's contact page
   (ppc.ky.gov's constituent services form) and main line (502) 564-2611 are from governor.ky.gov's footer (checked by
   program 2026-11-08, not by the owner). Most members list only "LRC: 502-564-8100", the LRC's message line for every member:

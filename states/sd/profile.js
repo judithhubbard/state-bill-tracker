@@ -13,7 +13,7 @@ const STATE = {
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.
   tracks: "relay",
-  unsigned: [{ law: "Not signed in 5 days: becomes law", tip: "Sundays excepted; 15 days after the session for bills that arrive at the end." }],
+  unsigned: [{ law: "Not signed in 5 days: becomes law", tip: "Weekdays, not counting holidays; 15 days after the session for bills that arrive at the end." }],
   override: { t: "Two-thirds can override", tip: "On veto day, after the session." },
   titles: { S: "Sen.", H: "Rep." },
   memberWords: { S: "state senator", H: "state representative" },
@@ -55,17 +55,22 @@ const STATE = {
   },
   sessionEnds: (year) => STATE.dated[year] || STATE.plusDays(STATE.opens(year), 58),
   vetoDay: (year) => STATE.plusDays(STATE.sessionEnds(year), 18),
-  // The governor has 5 days (Sundays excepted) during the session; a bill presented in the session's last days gets 15
-  // days after adjournment (Art. IV, sec. 4).
+  // The governor has 5 days, not counting Saturdays, Sundays or holidays, during the session; a bill presented within 5
+  // days of the session's last regular day (when it recesses until veto day) gets 15 days after it (Art. IV, sec. 4, as
+  // amended in 2002). Holidays in the session's months: Martin Luther King Jr. Day and the third Monday in February (SDCL 1-5-1).
   govDeadline(iso) {
     if (!iso) return null;
     const ymd = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
-    const plus = (from, n, sundays) => { const [a, b, c] = from.split("-").map(Number), t = new Date(a, b - 1, c);
-      while (n > 0) { t.setDate(t.getDate() + 1); if (sundays || t.getDay() !== 0) n--; } return ymd(t); };
+    const holiday = (t) => { const s = ymd(t), y = t.getFullYear();
+      return s.endsWith("-01-01") || s === STATE.nth(y, 1, 1, 3) || s === STATE.nth(y, 2, 1, 3); };
+    const plus = (from, n, every) => { const [a, b, c] = from.split("-").map(Number), t = new Date(a, b - 1, c);
+      while (n > 0) { t.setDate(t.getDate() + 1); if (every || (t.getDay() % 6 && !holiday(t))) n--; } return ymd(t); };
     const end = STATE.sessionEnds(+iso.slice(0, 4)), five = plus(iso, 5, false);
-    return five <= end ? five : plus(end > iso ? end : iso, 15, true);
+    // The fifteen days run from the adjournment, whenever the bill arrived (a delivery after them is a special session's).
+    const after = plus(end, 15, true);
+    return five <= end || iso > after ? five : after;
   },
-  dueLabel: () => "Governor's decision due (5 days during the session, 15 days after it)",
+  dueLabel: () => "Governor's decision due (5 weekdays during the session, 15 days after it)",
 
   passedBothBy: (session) => STATE.govDeadline(STATE.sessionEnds(session)),
   passedBothNote: (live) => live ? "Not yet sent to the governor" : "Never sent to the governor",
@@ -107,7 +112,7 @@ const STATE = {
         [veto, "up", LEG, MD(veto), "Veto day: the Legislature returns to consider the governor's vetoes."],
         [`${Y}-07-01`, "down", LEG, "July 1", "Most new laws take effect."],
       ],
-      note: "The governor has 5 days (Sundays excepted) to act during the session, and 15 days after it adjourns for bills that arrive at the end.",
+      note: "The governor has 5 weekdays (not counting holidays) to act during the session, and 15 days after it adjourns for bills that arrive at the end.",
     };
   },
   waitingHead: "On the way to the governor",
@@ -137,7 +142,7 @@ const STATE = {
     "A committee recommended it, and it's on the House or Senate calendar for a vote.",
     "Passed the House or the Senate, but not both. Both houses have to pass the same text.",
     "Passed both houses. The Speaker and the Senate President sign it, then it goes to the governor.",
-    "Sent to the governor, who has 5 days (Sundays excepted) during the session or 15 days after it.",
+    "Sent to the governor, who has 5 weekdays during the session or 15 days after it.",
     "Signed into law (or became law without the governor's signature, or over a veto).",
     "Vetoed by the governor. Overriding a veto takes two-thirds of each house.",
   ],

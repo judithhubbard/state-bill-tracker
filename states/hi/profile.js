@@ -65,13 +65,25 @@ const STATE = {
     const t = new Date(year, 0, 1); t.setDate(1 + ((3 - t.getDay() + 7) % 7) + 14);
     return `${year}-01-${String(t.getDate()).padStart(2, "0")}`;
   },
-  // Weekdays after a day, leaving out Hawaii's state holidays in May to July (Memorial Day, Kamehameha Day, July 4).
+  // Weekdays after a day, leaving out Hawaii's state holidays (HRS sec. 8-1: New Year's Day, Martin Luther King Jr. Day,
+  // Presidents' Day, Prince Kuhio Day, Good Friday, Memorial Day, Kamehameha Day, July 4, Statehood Day, Labor Day,
+  // general election day in even years, Veterans' Day, Thanksgiving, Christmas), each observed on the Friday before when
+  // it falls on a Saturday and the Monday after when on a Sunday (sec. 8-2), as the state's holiday lists show them.
   workdays(iso, n) {
     const [y] = iso.split("-").map(Number);
     const obs = (t) => { if (t.getDay() === 6) t.setDate(t.getDate() - 1); if (t.getDay() === 0) t.setDate(t.getDate() + 1); return t; };
-    const lastMon = new Date(y, 5, 0); lastMon.setDate(lastMon.getDate() - ((lastMon.getDay() + 6) % 7));
     const fmt = (t) => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
-    const hol = new Set([fmt(lastMon), fmt(obs(new Date(y, 5, 11))), fmt(obs(new Date(y, 6, 4)))]);
+    const nth = (y, m, w, k) => { const t = new Date(y, m, 1); t.setDate(1 + ((w - t.getDay() + 7) % 7) + 7 * (k - 1)); return t; };
+    const lastMon = (y) => { const t = new Date(y, 5, 0); t.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return t; };
+    const easter = (y) => { const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4,
+      f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4),
+      k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+      return new Date(y, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1); };
+    const year = (y) => [obs(new Date(y, 0, 1)), nth(y, 0, 1, 3), nth(y, 1, 1, 3), obs(new Date(y, 2, 26)),
+      new Date(easter(y).getTime() - 2 * 864e5), lastMon(y), obs(new Date(y, 5, 11)), obs(new Date(y, 6, 4)), nth(y, 7, 5, 3),
+      nth(y, 8, 1, 1), ...(y % 2 ? [] : [new Date(nth(y, 10, 1, 1).getTime() + 864e5)]), obs(new Date(y, 10, 11)),
+      nth(y, 10, 4, 4), obs(new Date(y, 11, 25))];
+    const hol = new Set([...year(y), ...year(y + 1)].map(fmt));
     let d = iso, k = 0;
     while (k < n) {
       d = STATE.plusDays(d, 1);
