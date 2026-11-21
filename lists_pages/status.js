@@ -53,3 +53,42 @@ function rowOf(r) {
     label: label || "", news: news === "-" ? "" : news || last || "" };
 }
 const fmtDay = (d) => (d ? new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
+// Finding a bill by number or words, in search/<st>.json (search_site.py): the front page's "Find a bill" and the list
+// editor's search share these.
+const BillSearch = (() => {
+  const fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const STOP = new Set("a an the of to and or for in on by with at from as is be into its it this that act bill relating relates concerning regarding".split(" "));
+  // Two-letter codes that are also everyday words count as a state only when typed in capitals ("IN", "OR").
+  const WORDY = new Set(["in", "or", "me", "hi", "ok", "de", "la", "pa", "ma", "co", "al", "id", "oh", "us", "ga", "mo", "ne", "nd", "md"]);
+  // A bill number split into its letters and its number without leading zeros or the amendment letter ("S1234A" -> S, 1234).
+  const numParts = (n) => { const m = String(n).toUpperCase().replace(/[^A-Z0-9]/g, "").match(/^([A-Z]*)0*(\d+)[A-Z]?$/); return m ? [m[1], m[2]] : null; };
+  const stem = (w) => (w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
+  // A search file's bill row made searchable: its title folded (low) and its numbers' parts (np).
+  function prepRow(r) {
+    r.low = " " + fold(String(r[1] || "")).replace(/[^a-z0-9]+/g, " ") + " ";
+    r.np = [r[0], ...(Array.isArray(r[4]) ? r[4] : [])].map((n) => [n, numParts(n)]).filter((x) => x[1]);
+    return r;
+  }
+  // Bill numbers in text: letters (dots and spaces allowed) followed by digits, or digits alone. [numbers, the rest].
+  function numbersIn(text) {
+    const nums = [];
+    const rest = text.replace(/\b((?:[A-Za-z]\.?\s?){0,6}?)\s*(\d{1,5}[A-Za-z]?)\b/g, (all, letters, digits) => {
+      const p = numParts(letters.replace(/[.\s]/g, "") + digits);
+      if (p) nums.push(p);
+      return " ";
+    });
+    return [nums, rest];
+  }
+  // How well a bill's numbers match: 3 exactly, 2 the same number with letters written another way ("HB" for "H", "LD"
+  // for Maine's "HLD"), 1 the number alone (no letters typed). [score, the number that matched].
+  function numScore(r, nums) {
+    let best = 0, which = null;
+    for (const [n, [P, D]] of r.np) for (const [qp, qd] of nums) {
+      if (D !== qd) continue;
+      const s = !qp ? 1 : P === qp ? 3 : P.replace(/B$/, "") === qp.replace(/B$/, "") || (qp.length >= 2 && P.endsWith(qp)) ? 2 : 0;
+      if (s > best) { best = s; which = n; }
+    }
+    return [best, which];
+  }
+  return { fold, STOP, WORDY, numParts, stem, prepRow, numbersIn, numScore };
+})();

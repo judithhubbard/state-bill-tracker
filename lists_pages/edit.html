@@ -318,16 +318,10 @@ const onList = (st, session, num) => L.bills.some((c) => c.replace(/^-/, "") ===
 
 // ---- Finding bills: the front page's search data (search/<st>.json), one state at a time as needed ----
 const SEARCH = {}, READY = {};
-const fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-const STOP = new Set("a an the of to and or for in on by with at from as is be into its it this that act bill relating relates concerning regarding".split(" "));
-const WORDY = new Set(["in", "or", "me", "hi", "ok", "de", "la", "pa", "ma", "co", "al", "id", "oh", "us", "ga", "mo", "ne", "nd", "md"]);
-const numParts = (n) => { const m = String(n).toUpperCase().replace(/[^A-Z0-9]/g, "").match(/^([A-Z]*)0*(\d+)[A-Z]?$/); return m ? [m[1], m[2]] : null; };
-const stem = (w) => (w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
+// (The number search and the words' folding: status.js's BillSearch, shared with the front page's "Find a bill".)
+const { fold, STOP, WORDY, stem, numbersIn, numScore } = BillSearch;
 function prep(d) {
-  for (const s of d.s || []) for (const r of s.b || []) {
-    r.low = " " + fold(String(r[1] || "")).replace(/[^a-z0-9]+/g, " ") + " ";
-    r.np = [r[0], ...(Array.isArray(r[4]) ? r[4] : [])].map((n) => [n, numParts(n)]).filter((x) => x[1]);
-  }
+  for (const s of d.s || []) for (const r of s.b || []) BillSearch.prepRow(r);
   return d;
 }
 function loadSt(st) {
@@ -354,26 +348,6 @@ function stateIn(text) {
     return [lc, t.slice(0, m.index) + " " + t.slice(m.index + 3).replace(/^[.:]/, "")];
   }
   return ["", t];
-}
-// Bill numbers in text: letters (dots and spaces allowed) followed by digits.
-function numbersIn(text) {
-  const nums = [];
-  const rest = text.replace(/\b((?:[A-Za-z]\.?\s?){0,6}?)\s*(\d{1,5}[A-Za-z]?)\b/g, (all, letters, digits) => {
-    const p = numParts(letters.replace(/[.\s]/g, "") + digits);
-    if (p) nums.push(p);
-    return " ";
-  });
-  return [nums, rest];
-}
-// How well a bill's numbers match: 3 exactly, 2 the letters written another way ("HB" for "H"), 1 the number alone.
-function numScore(r, nums) {
-  let best = 0, which = null;
-  for (const [n, [P, D]] of r.np) for (const [qp, qd] of nums) {
-    if (D !== qd) continue;
-    const s = !qp ? 1 : P === qp ? 3 : P.replace(/B$/, "") === qp.replace(/B$/, "") || (qp.length >= 2 && P.endsWith(qp)) ? 2 : 0;
-    if (s > best) { best = s; which = n; }
-  }
-  return [best, which];
 }
 const PAGE = 30;
 let HITS = [], LIMIT = PAGE, LOADING = 0, PARSED = null;
