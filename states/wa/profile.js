@@ -130,7 +130,7 @@ const STATE = {
         [o2, "up", LEG, MD(o2), "The second session starts where the first left off."],
         [a2, "down", LEG, MD(a2), "The 60-day session ends. Bills that didn't pass both houses die."],
       ],
-      note: "During a session the governor has five days (Sundays excepted) to act on a bill; bills that arrive at the end get 20 days after the session ends. The governor can veto whole sections of a bill. Overriding a veto takes two-thirds of each house. Most new laws take effect 90 days after the session ends.",
+      note: "The governor has 5 days (Sundays excepted) to act during a session, and 20 days after it ends for bills that arrive at the end.",
     };
   },
   waitingHead: "On the way to the governor",

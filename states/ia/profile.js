@@ -156,7 +156,7 @@ const STATE = {
         [e2, "down", LEG, MDt(e2), "The last session ends. Bills that didn't pass both houses die."],
         [el, "up", LEG, MDt(el), "Election day: every House seat and half the Senate's."],
       ],
-      note: "Each session has \"funnel\" deadlines set by the joint rules: about the sixth week, a bill has to be out of committee in its own house, and about the tenth week out of committee in the other house; bills from the appropriations, ways and means and government oversight committees, and the leaders', are exempt. The governor has 3 days (Sundays excepted) for a bill sent during the session, and 30 days after it for the rest; a bill not signed by then doesn't become law. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of each house's members. The budget year starts July 1, when most new laws take effect.",
+      note: "The governor has 3 days (Sundays excepted) to act on a bill sent during the session, and 30 days after it for the rest.",
     };
   },
   waitingHead: "Waiting for the governor",

@@ -98,7 +98,7 @@ const STATE = {
         [`${Y + 1}-11-03`, "up", LEG, "November", "Election; the lame-duck session follows."],
         [close, "down", LEG, MD(close), "The session ends. Bills that didn't pass both houses die."],
       ],
-      note: "The governor has 14 days (Sundays excepted) to sign or veto a bill, and can veto items in a spending bill. Overriding a veto takes two-thirds of each house. A law takes effect 91 days after the session's year ends, unless two-thirds of each house give it immediate effect.",
+      note: "The governor has 14 days (Sundays excepted) to act on a bill.",
     };
   },
   waitingHead: "On the way to the governor",

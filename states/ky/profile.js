@@ -122,7 +122,7 @@ const STATE = {
         [due, "up", LEG, MD(due), "The governor's last day on the final bills. A veto now stands."],
         [`${Y}-07-01`, "down", LEG, "July 1", "The budget year starts. Most new laws take effect 90 days after the session ends."],
       ],
-      note: "The governor has 10 days (Sundays excepted) to sign or veto a bill; a bill not acted on becomes law without a signature. The governor can veto items in an appropriation bill. Overriding a veto takes a majority of each house's members (20 senators, 51 representatives); the General Assembly breaks for about ten days before its last two so it can take up vetoes. A veto after the last day stands.",
+      note: "The governor has 10 days (Sundays excepted) to act on a bill.",
     };
   },
   waitingHead: "On the way to the governor",

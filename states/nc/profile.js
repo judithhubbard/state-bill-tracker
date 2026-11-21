@@ -101,7 +101,7 @@ const STATE = {
         [`${Y}-07-01`, "down", LEG, "July 1", "The two-year budget is due before the fiscal year starts."],
         [close, "down", LEG, MD(close), "The two-year session ends. Bills that didn't become law die."],
       ],
-      note: "The governor has 10 days to act on a public bill while the General Assembly is in session, and 30 days after it adjourns. Local bills and constitutional amendments don't go to the governor. Overriding a veto takes three-fifths of each house's members present and voting.",
+      note: "The governor has 10 days to act while the General Assembly is in session, and 30 days after it adjourns.",
     };
   },
   waitingHead: "On the way to the governor",

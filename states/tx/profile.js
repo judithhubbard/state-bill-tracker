@@ -114,7 +114,7 @@ const STATE = {
         [due, "down", GOV, MD(due), "Last day for the governor to act."],
         [`${Y + 1}-11-09`, "up", LEG, "November", "Bills for the next session can be filed."],
       ],
-      note: "The governor has 10 days, not counting Sundays, to sign or veto a bill during the session; bills passed in its last days have until 20 days after it ends. A veto after the session ends can't be overridden. Most new laws take effect September 1. The governor can call special sessions of up to 30 days on topics he chooses.",
+      note: "The governor has 10 days (Sundays excepted) to act during the session, and 20 days after it ends for bills passed in its last days.",
     };
   },
   waitingHead: "On the way to the governor",

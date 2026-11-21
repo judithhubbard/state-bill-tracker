@@ -115,7 +115,7 @@ const STATE = {
         [f, "down", LEG, MD(f), "Formal sessions end. After this, bills pass only if no member objects."],
         [e, "down", LEG, MD(e), "The General Court ends. Bills that didn't become law die."],
       ],
-      note: "The governor has 10 days to sign or veto a bill, or to send it back with amendments; items in spending bills can be vetoed one by one. Overriding a veto takes two-thirds of each house. Most new laws take effect 90 days after they're signed; an emergency preamble makes one take effect at once.",
+      note: "The governor has 10 days to act on a bill.",
     };
   },
   waitingHead: "On the way to the governor",

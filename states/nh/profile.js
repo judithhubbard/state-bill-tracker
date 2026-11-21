@@ -116,7 +116,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), `The last floor votes on bills (the session must end by June 30).${Y % 2 ? " Bills a committee kept over carry to next year." : " The General Court ends with the year."}`],
         [`${Y}-10-15`, "down", LEG, "Fall", "Veto day: the House and Senate vote on overriding the governor's vetoes."],
       ],
-      note: "The governor has 5 days (Sundays excepted) after a bill is presented to sign or veto it; a bill the governor doesn't act on becomes law. There's no line-item veto. Overriding a veto takes two-thirds of the members present in each house.",
+      note: "The governor has 5 days (Sundays excepted) to act once a bill is presented.",
     };
   },
   waitingHead: "On the way to the governor",

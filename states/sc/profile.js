@@ -150,7 +150,7 @@ const STATE = {
         [e2, "down", LEG, MDt(e2), "The last regular day. Bills that didn't pass both houses die."],
         [el, "up", LEG, MDt(el), "Election day: all 124 House seats (and, in presidential years, all 46 Senate seats)."],
       ],
-      note: "A bill that hasn't passed its own house by April 10 needs two-thirds of the other house to be taken up that year. The fiscal year starts July 1, so the budget passes in May or June. The governor has 5 days (Sundays excepted) after a bill is ratified, and can veto items in an appropriation bill. Overriding a veto takes two-thirds of the members present in each house.",
+      note: "The governor has 5 days (Sundays excepted) to act once a bill is ratified.",
     };
   },
   waitingHead: "Waiting for the governor",

@@ -119,7 +119,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), "The session adjourns sine die. Bills that didn't pass both houses die."],
         [effective, "down", LEG, MD(effective), "Laws without an emergency clause or another date take effect on the 91st day after adjournment."],
       ],
-      note: "During the session the governor has 5 days (Sundays excepted) to act on a bill; after the session adjourns, 20 days. A bill the governor doesn't act on becomes law. The governor can veto items in an appropriation bill. Overriding a veto takes a majority of each house's members (51 in the House, 18 in the Senate).",
+      note: "The governor has 5 days (Sundays excepted) to act during the session, and 20 days after it adjourns.",
     };
   },
   waitingHead: "On the way to the governor",

@@ -145,7 +145,7 @@ const STATE = {
         [d2.end, "down", LEG, MDt(d2.end), "The last session ends. Bills that didn't pass both houses die."],
         [el, "up", LEG, MDt(el), "Election day: every House seat and about half the Senate's."],
       ],
-      note: "The governor names the bills to be vetoed by the 35th working day after the session (the intent-to-veto list, in late June) and decides by the 45th (mid-July). Each session has deadlines set by the leaders: bills must clear their committees (\"decking\") and pass their own house (\"first crossover\") by early March, and pass the other house's committees and floor (\"second crossover\") by early April; then conference committees work out the differences. The budget year starts July 1. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of each house's members.",
+      note: "The governor has until the 45th working day after the session (mid-July) to act, and must name the bills to be vetoed by the 35th (late June).",
     };
   },
   waitingHead: "Waiting for the governor",

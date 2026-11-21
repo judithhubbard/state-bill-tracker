@@ -94,7 +94,7 @@ const STATE = {
         [due, "down", LEG, MD(due), "The governor's last vetoes; bills not vetoed become law."],
         [`${Y}-10-01`, "down", LEG, "October 1", "Most new laws take effect."],
       ],
-      note: "Bills passed at the end of the session go to the governor within 20 days, and the governor has 30 days to sign or veto them. The governor can veto items in the budget. Overriding a veto takes three-fifths of each house; vetoes of bills from the end of a session are taken up at the next one.",
+      note: "Bills passed at the end of the session go to the governor within 20 days, and the governor has 30 days to act.",
     };
   },
   waitingHead: "On the way to the governor",

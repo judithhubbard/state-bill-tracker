@@ -121,7 +121,7 @@ const STATE = {
         [o2, "up", LEG, MD(o2), "The second session: budget changes, carried-over bills and emergency bills."],
         [a2, "down", LEG, MD(a2), "The second session ends; lawmakers return later for vetoes. Bills not enacted die."],
       ],
-      note: "The governor has 10 days (Sundays excepted) to sign or veto a bill; one she doesn't act on becomes law. Overriding a veto takes two-thirds of the members present in each house. Laws without an emergency clause take effect 90 days after the session adjourns.",
+      note: "The governor has 10 days (Sundays excepted) to act on a bill.",
     };
   },
   waitingHead: "On the way to the governor",

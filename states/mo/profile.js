@@ -121,7 +121,7 @@ const STATE = {
         [`${Y}-08-28`, "down", LEG, "Aug. 28", "Most new laws take effect."],
         [veto, "up", LEG, MD(veto), "The veto session: overriding a veto takes two-thirds of each house's members."],
       ],
-      note: "The governor has 15 days to sign or veto a bill delivered during the session, and until mid-July (45 days after May 30) for bills passed at the end; a bill not acted on becomes law without a signature. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of each house's members (23 senators, 109 representatives), usually at the veto session in September.",
+      note: "The governor has 15 days to act on a bill delivered during the session, and until mid-July for bills passed at the end.",
     };
   },
   waitingHead: "On the way to the governor",

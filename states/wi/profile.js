@@ -103,7 +103,7 @@ const STATE = {
         [`${Y}-06-30`, "down", LEG, "June 30", "The two-year budget is due before the fiscal year starts July 1."],
         [close, "down", LEG, MD(close), "The last general-business floor period ends; bills still pending fail."],
       ],
-      note: "The governor has 6 days (Sundays excepted) to sign or veto a bill, and can veto parts of a spending bill. Overriding a veto takes two-thirds of each house. A new law takes effect the day after it's published, unless it says otherwise.",
+      note: "The governor has 6 days (Sundays excepted) to act on a bill.",
     };
   },
   waitingHead: "On the way to the governor",

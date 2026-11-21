@@ -103,7 +103,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), `The session adjourns (it must by ${Y % 2 ? "April 29" : "March 14"}). Bills that didn't pass both houses die.`],
         [`${Y}-07-01`, "down", LEG, "Jul 1", "Most new laws take effect July 1."],
       ],
-      note: "The governor has 7 days after a bill is presented to sign or veto it; a bill the governor doesn't act on becomes law. There's no line-item veto. Overriding a veto takes a majority of each house's members (51 in the House, 26 in the Senate), and the General Assembly can do it until the end of its next regular session.",
+      note: "The governor has 7 days to act once a bill is presented.",
     };
   },
   waitingHead: "On the way to the governor",

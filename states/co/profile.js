@@ -93,7 +93,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), "The session adjourns. Bills that didn't pass both houses die."],
         [STATE.plusDays(adj, 91), "down", LEG, MD(STATE.plusDays(adj, 91)), "Most new laws take effect, 90 days after the session ends."],
       ],
-      note: "During the session the governor has 10 days (Sundays excepted) to act on a bill; bills that arrive at the end get 30 days after adjournment, and become law unless vetoed. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of each house.",
+      note: "The governor has 10 days (Sundays excepted) to act during the session, and 30 days after it ends for bills passed at the end.",
     };
   },
   waitingHead: "On the way to the governor",

@@ -175,7 +175,7 @@ const STATE = {
         [intro2, "down", LEG, `January ${Y + 1}`, "The 10-day limit on new bills again."],
         [a2, "down", LEG, MDY(a2), "The Legislature ends. Every bill still pending is indefinitely postponed."],
       ],
-      note: "The governor has 5 days (Sundays excepted) to act on a bill; a bill not returned becomes law. The governor can veto items in appropriation bills. Overriding a veto takes three-fifths of the senators (30 of 49). Laws without an emergency clause take effect three calendar months after the session adjourns.",
+      note: "The governor has 5 days (Sundays excepted) to act on a bill.",
     };
   },
   waitingHead: "On the way to the governor",

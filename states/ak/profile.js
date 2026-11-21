@@ -113,7 +113,7 @@ const STATE = {
         [a2, "down", LEG, MD(a2), "The session adjourns. Bills that didn't pass both houses die, unless a special session takes them up."],
         [`${Y}-07-01`, "down", LEG, "July 1", "The state's budget year starts."],
       ],
-      note: "Bills reach the governor when the Legislature transmits them, often through the summer. The governor then has 15 days, or 20 after the Legislature adjourns (Sundays excepted), and can veto or reduce items in an appropriation bill. Overriding a veto takes the House and Senate meeting together: two-thirds of the 60 members (40), or three-fourths (45) for an appropriation bill. Laws take effect 90 days after the governor acts, unless the bill says otherwise.",
+      note: "Bills reach the governor when the Legislature sends them, often in the summer; the governor then has 15 days to act, or 20 after the Legislature adjourns (Sundays excepted).",
     };
   },
   waitingHead: "On the way to the governor",

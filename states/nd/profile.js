@@ -142,7 +142,7 @@ const STATE = {
         [`${Y}-08-01`, "down", LEG, "August 1", "Most new laws take effect."],
         [`${Y + 1}-12-01`, "up", LEG, "December", "The next assembly's organizational session; bills are prefiled."],
       ],
-      note: "During the session the governor has 3 days (Sundays excepted) to sign or veto a bill; for bills that arrive at the end, 15 days after adjournment. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of each house's members. Laws take effect August 1 unless the bill says otherwise (an emergency clause, passed by two-thirds, makes it effective at once).",
+      note: "The governor has 3 days (Sundays excepted) to act during the session, and 15 days after it adjourns for bills that arrive at the end.",
     };
   },
   waitingHead: "On the way to the governor",

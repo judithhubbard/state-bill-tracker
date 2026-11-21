@@ -132,7 +132,7 @@ const STATE = {
         ...(adj < last ? [] : [[last, "down", LEG, MD(last), "The 105th calendar day: the latest the session can run."]]),
         [`${Y}-10-01`, "down", LEG, "October 1", "The state's budget year starts."],
       ],
-      note: "During the session the governor has 6 days (Sundays excepted) to sign or veto a bill, or to send it back with an amendment; a bill not acted on becomes law. After the session ends, a bill not signed within 10 days dies (a pocket veto). The governor can veto items in an appropriation bill. Overriding a veto takes a majority of each house's members (18 senators, 53 representatives).",
+      note: "The governor has 6 days (Sundays excepted) to act during the session, and 10 days after it ends.",
     };
   },
   waitingHead: "On the way to the governor",

@@ -195,7 +195,7 @@ const STATE = {
         [`${Y}-11-20`, "down", GOV, "November–December", "Most vetoes come now, though the governor acts on bills all year."],
         [`${Y + 1}-12-31`, "down", LEG, `December 31, ${Y + 1}`, "Bills not passed by both houses die."],
       ],
-      note: "Once a bill reaches her desk, the governor has 10 days, not counting Sundays, to sign or veto it.",
+      note: "The governor has 10 days (Sundays excepted) to act on a bill.",
     };
   },
 };

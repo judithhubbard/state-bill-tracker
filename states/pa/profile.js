@@ -94,7 +94,7 @@ const STATE = {
         [`${Y}-06-30`, "down", LEG, "June 30", "The budget is due before the fiscal year starts July 1 (it's often late)."],
         [close, "down", LEG, MD(close), "The session ends. Bills that didn't become law die."],
       ],
-      note: "The governor has 10 days (Sundays excepted) to sign or veto a bill, or 30 days after the session ends, and can veto items in a spending bill. Overriding a veto takes two-thirds of each house. Most new laws take effect 60 days after they're signed.",
+      note: "The governor has 10 days (Sundays excepted) to act, or 30 days after the session ends.",
     };
   },
   waitingHead: "On the way to the governor",

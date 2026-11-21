@@ -159,7 +159,7 @@ const STATE = {
         [a2, "down", LEG, MD(a2), "The constitutional deadline. Bills that didn't pass both houses die."],
         [`${Y}-08-01`, "up", LEG, "Aug 1", "Most new laws take effect August 1; budget laws July 1."],
       ],
-      note: "The governor has 3 days (Sundays excepted) to act on a bill during the session; for bills passed in the last 3 days, 14 days after adjournment, and a bill not signed by then doesn't become law. The governor can veto items in appropriation bills. Overriding a veto takes two-thirds of each house (45 senators, 90 representatives). The budget for the two years starting July 1 passes in the odd year; the even year usually brings a bonding (capital investment) bill.",
+      note: "The governor has 3 days (Sundays excepted) to act during the session, and 14 days after it adjourns for bills passed in its last 3 days.",
     };
   },
   waitingHead: "On the way to the governor",

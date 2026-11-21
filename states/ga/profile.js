@@ -116,7 +116,7 @@ const STATE = {
         [a2, "down", LEG, MD(a2), "Sine die: bills that didn't pass both houses die."],
         [`${Y}-07-01`, "down", LEG, "July 1", "Most new laws take effect."],
       ],
-      note: "During the session the governor has 6 days (Sundays excepted) to act on a bill; bills that arrive in the last days get 40 days after the session ends. The governor can veto items in the budget. Overriding a veto takes two-thirds of each house. Most new laws take effect July 1.",
+      note: "The governor has 6 days (Sundays excepted) to act during the session, and 40 days after it ends for bills that arrive in its last days.",
     };
   },
   waitingHead: "On the way to the governor",

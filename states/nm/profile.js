@@ -143,7 +143,7 @@ const STATE = {
         [due, "down", LEG, MD(due), "The governor's last day on the final bills. A bill not signed by now is vetoed (a pocket veto)."],
         [`${Y}-07-01`, "up", LEG, "July 1", "The budget year starts; laws without an emergency clause take effect 90 days after the session (mid-May or mid-June)."],
       ],
-      note: "During the session the governor has 3 days (Sundays excepted) to act on a bill, or it becomes law. Most bills pass in the last days, and for those the governor has 20 days after the session ends: a bill not signed by then is vetoed (a pocket veto). The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of each house.",
+      note: "The governor has 3 days (Sundays excepted) to act during the session, and 20 days after it ends for bills passed in its last days.",
     };
   },
   waitingHead: "On the way to the governor",

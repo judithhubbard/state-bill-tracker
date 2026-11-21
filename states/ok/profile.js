@@ -129,7 +129,7 @@ const STATE = {
         [a2, "down", LEG, MD(a2), "The second session ends. Bills that didn't pass both houses die."],
         [`${Y}-11-01`, "down", LEG, "Nov 1", "Most new laws take effect November 1."],
       ],
-      note: "The governor has 5 days (Sundays excepted) to sign or veto a bill while the Legislature meets; a bill not acted on becomes law. After the session ends, the governor has 15 days, and a bill not signed dies (a pocket veto). Overriding a veto takes two-thirds of each house's members (32 senators and 68 representatives), or three-fourths (36 and 76) for a bill with an emergency clause.",
+      note: "The governor has 5 days (Sundays excepted) to act while the Legislature meets, and 15 days after the session ends.",
     };
   },
   waitingHead: "On the way to the governor",

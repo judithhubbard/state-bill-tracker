@@ -159,7 +159,7 @@ const STATE = {
         [d2.veto, "up", LEG, MDt(d2.veto), "The last veto session. Bills that didn't pass both houses die."],
         [el, "up", LEG, MDt(el), "Election day: all 125 House seats (and, every four years, all 40 Senate seats)."],
       ],
-      note: "Most bills have to pass their own house by \"turnaround\" in late February, unless they're in an exempt committee (Appropriations, Ways and Means, Taxation, Federal and State Affairs and a few others). The fiscal year starts July 1. The governor has 10 days after a bill is presented, and can veto items in an appropriation bill. Overriding a veto takes two-thirds of the members of each house.",
+      note: "The governor has 10 days to act once a bill is presented.",
     };
   },
   waitingHead: "Waiting for the governor",

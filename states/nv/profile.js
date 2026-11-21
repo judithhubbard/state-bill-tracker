@@ -163,7 +163,7 @@ const STATE = {
         [`${Y}-07-01`, "up", LEG, "July 1", "The two-year budget starts."],
         [`${Y}-10-01`, "down", LEG, "October 1", "Most new laws take effect."],
       ],
-      note: "During the session the governor has 5 days (Sundays excepted) to sign or veto a bill; after it adjourns, 10 days. A bill the governor doesn't act on becomes law. A veto during the session goes back to the bill's house; one after it goes to the next session. Overriding a veto takes two-thirds of each house. Bills that spend money or affect revenue are exempt from the deadlines.",
+      note: "The governor has 5 days (Sundays excepted) to act during the session, and 10 days after it adjourns.",
     };
   },
   waitingHead: "On the way to the governor",

@@ -106,7 +106,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), "The last floor votes, usually in June, after the budget. Bills that didn't pass both houses die."],
         [`${Y}-07-01`, "down", LEG, "Jul 1", "The state's budget year starts; many new laws take effect."],
       ],
-      note: "The governor has 6 days (Sundays excepted) after a bill is sent to sign or veto it; a bill the governor doesn't act on becomes law. Overriding a veto takes three-fifths of the members present in each house.",
+      note: "The governor has 6 days (Sundays excepted) to act once a bill is sent.",
     };
   },
   waitingHead: "On the way to the governor",

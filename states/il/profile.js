@@ -141,7 +141,7 @@ const STATE = {
         [`${Y + 1}-11-01`, "up", LEG, "November", "Veto session (after the election)."],
         [close, "down", LEG, MD(close), "The General Assembly ends. Bills that didn't pass both houses die."],
       ],
-      note: "Bills go to the governor within 30 days of passing; the governor then has 60 days to sign, veto, or send a bill back with changes (an amendatory veto), which both houses can accept. Overriding a veto takes three-fifths of each house. New laws usually take effect January 1.",
+      note: "Bills go to the governor within 30 days of passing, and the governor has 60 days to act.",
     };
   },
   waitingHead: "Sent back with the governor's changes",

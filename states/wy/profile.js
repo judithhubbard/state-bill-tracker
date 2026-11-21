@@ -110,7 +110,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), "The session adjourns. Bills that didn't pass both houses die."],
         [`${Y}-07-01`, "down", LEG, "July 1", "Many new laws take effect."],
       ],
-      note: "",
+      note: "The governor has 3 days (Sundays excepted) to act during the session, and 15 days after it adjourns for bills that arrive at the end.",
     };
   },
   waitingHead: "On the way to the governor",

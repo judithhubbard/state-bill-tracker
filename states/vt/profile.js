@@ -111,7 +111,7 @@ const STATE = {
         [a2, "down", LEG, MD(a2), "The second-year session ends. Bills that didn't pass both houses die."],
         [`${Y}-07-01`, "down", LEG, "Jul 1", "Most new laws take effect July 1."],
       ],
-      note: "Bills are delivered to the governor in batches, often weeks after they pass. The governor has 5 days (Sundays excepted) after a bill is delivered to sign or veto it; a bill the governor doesn't act on becomes law. The General Assembly usually returns for a day in June to take up vetoes: overriding one takes two-thirds of the members present in each house.",
+      note: "Bills reach the governor in batches, often weeks after they pass; the governor then has 5 days (Sundays excepted) to act.",
     };
   },
   waitingHead: "On the way to the governor",

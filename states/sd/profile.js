@@ -107,7 +107,7 @@ const STATE = {
         [veto, "up", LEG, MD(veto), "Veto day: the Legislature returns to consider the governor's vetoes."],
         [`${Y}-07-01`, "down", LEG, "July 1", "Most new laws take effect."],
       ],
-      note: "During the session the governor has 5 days (Sundays excepted) to act on a bill; bills that arrive at the end get 15 days after adjournment, and become law unless vetoed. The governor can veto items in an appropriation bill. Overriding a veto takes two-thirds of each house.",
+      note: "The governor has 5 days (Sundays excepted) to act during the session, and 15 days after it adjourns for bills that arrive at the end.",
     };
   },
   waitingHead: "On the way to the governor",

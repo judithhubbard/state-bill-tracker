@@ -186,7 +186,7 @@ const STATE = {
         [el, "up", LEG, MDt(el), "Election day: all 435 House seats and a third of the Senate."],
         [end, "down", LEG, MDt(end), "The Congress ends. Bills that haven't become law die."],
       ],
-      note: "Congress has no fixed deadlines for passing bills: the schedule is set by each house's leaders, around recesses. The fiscal year starts October 1. The President has 10 days (Sundays excepted) after a bill is presented. Overriding a veto takes two-thirds of each house.",
+      note: "The President has 10 days (Sundays excepted) to act once a bill is presented.",
     };
   },
   waitingHead: "Waiting for the President",

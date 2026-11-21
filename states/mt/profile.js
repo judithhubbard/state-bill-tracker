@@ -140,7 +140,7 @@ const STATE = {
         [`${Y}-10-01`, "down", LEG, "October 1", "Most new laws take effect."],
         [`${Y + 1}-11-15`, "up", LEG, "Fall", "Legislators elected in November request bill drafts for the next session."],
       ],
-      note: "The governor has 10 days after a bill is delivered to sign it, veto it, or return it with proposed amendments, which the Legislature adopts or rejects before the bill goes back. A bill the governor doesn't act on becomes law. Overriding a veto takes two-thirds of the members present in each house; after the session, the Secretary of State polls the legislators by mail, and it takes two-thirds of each house's members.",
+      note: "The governor has 10 days to act once a bill is delivered.",
     };
   },
   waitingHead: "On the way to the governor",

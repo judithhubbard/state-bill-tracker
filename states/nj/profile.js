@@ -191,7 +191,7 @@ const STATE = {
         [`${Y + 1}-10-01`, "down", LEG, "July to November", "Hardly any meetings while legislators campaign for the November election."],
         [close, "up", LEG, `January ${Y + 2}`, "The busiest weeks of the session, then it ends. Bills that aren't law die."],
       ],
-      note: "",
+      note: "The governor has 45 days to act; bills passed at the very end have until a week after the session ends.",
     };
   },
 };

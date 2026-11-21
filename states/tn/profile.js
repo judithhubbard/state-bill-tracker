@@ -127,7 +127,7 @@ const STATE = {
         [a2, "down", LEG, MD(a2), "The second session ends. Bills that didn't pass both houses die."],
         [`${Y}-07-01`, "down", LEG, "Jul 1", "Most new laws take effect July 1."],
       ],
-      note: "The governor has 10 days (Sundays excepted) after a bill arrives to sign or veto it; a bill the governor doesn't act on becomes law. The governor can reduce or strike items in spending bills. Overriding a veto takes a majority of each house's members (17 in the Senate, 50 in the House).",
+      note: "The governor has 10 days (Sundays excepted) to act once a bill arrives.",
     };
   },
   waitingHead: "On the way to the governor",

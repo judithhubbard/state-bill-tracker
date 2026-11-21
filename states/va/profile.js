@@ -150,7 +150,7 @@ const STATE = {
         [`${Y}-07-01`, "down", LEG, "July 1", "Most new laws take effect."],
         [`${Y}-11-17`, "up", LEG, "November", "Bills for next year's session can be filed."],
       ],
-      note: "The governor can sign a bill, veto it, or send it back with amendments: within 7 days during the session, or 30 days after it adjourns for bills that arrive in its last week. Overriding a veto takes two-thirds of the members present in each house.",
+      note: "The governor has 7 days to act during the session, and 30 days after it ends for bills passed in its last week.",
     };
   },
   waitingHead: "Sent back with the governor's amendments",

@@ -142,7 +142,7 @@ const STATE = {
         [adj, "down", LEG, MD(adj), "The session ends (sine die). Bills that didn't pass both houses die."],
         [`${Y}-07-01`, "down", LEG, "July 1", "The budget year starts; most new laws take effect."],
       ],
-      note: "The governor has 7 days to act on a bill presented during the session, and 15 days on one presented after it (most are); a bill not acted on becomes law without a signature. The governor can veto items in an appropriation bill. A veto goes to the next regular session, which can override it by two-thirds of each house.",
+      note: "The governor has 7 days to act on a bill presented during the session, and 15 days on one presented after it, as most are.",
     };
   },
   waitingHead: "On the way to the governor",

@@ -135,7 +135,7 @@ const STATE = {
         [last2, "down", LEG, "August 31", "Last floor votes of the session. Bills that didn't pass die."],
         [`${Y + 1}-09-30`, "down", GOV, "September 30", "Last day for the governor to act."],
       ],
-      note: "Once a bill reaches the governor, there are 12 days to sign or veto it; for bills passed at the end of each year, until mid-October (first year) or September 30 (second year). Overriding a veto takes two-thirds of each house, which almost never happens. New laws usually take effect January 1.",
+      note: "The governor has 12 days to act; bills passed at the end of each year have until mid-October (first year) or September 30 (second year).",
     };
   },
   waitingHead: "On the way to the governor",

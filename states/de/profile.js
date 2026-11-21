@@ -140,7 +140,7 @@ const STATE = {
         [`${Y + 1}-06-30`, "down", LEG, "June 30", "The last session day. Bills that didn't pass both houses die."],
         [el, "down", LEG, MD(el), "Election day: the next General Assembly's members take office."],
       ],
-      note: "The fiscal year starts July 1, so the budget, the capital (bond) bill and grants-in-aid pass by June 30. The governor has 10 days (Sundays excepted) once a bill is presented, and can veto items in an appropriation bill. Overriding a veto takes three-fifths of each house's members.",
+      note: "The governor has 10 days (Sundays excepted) to act once a bill is presented.",
     };
   },
   waitingHead: "Waiting for the governor",
