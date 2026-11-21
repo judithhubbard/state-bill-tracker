@@ -18,7 +18,7 @@ import datetime, glob, hashlib, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 # The page's code: what build_data.py reads only to write the pages, the issues file and the status words (bill_labels()).
 PAGE_CODE = ["tracker.html", "issues.py"] + [os.path.join("lists_pages", f) for f in (
-    "named.js", "watchrules.js", "sankey.js", "watchrows.js", "rows.css", "billfacts.js", "billlabels.js", "profilefacts.js")]
+    "named.js", "watchrules.js", "sankey.js", "watchrows.js", "rows.css", "sankey.css", "billfacts.js", "billlabels.js", "profilefacts.js")]
 PAGE_IN_STATE = ("profile.js", "how.html", "weighin.html")
 
 

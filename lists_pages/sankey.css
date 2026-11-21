@@ -1,0 +1,18 @@
+.sankey { overflow-x: auto; margin: 6px 0 14px; }
+.sankey svg { display: block; width: 100%; min-width: 640px; max-width: 1000px; height: auto; }
+.sankey .sk-node { fill: var(--move); }
+.sankey .sk-go { fill: var(--move); opacity: .28; }
+.sankey .sk-out { fill: var(--refer); opacity: .45; }
+.sankey .sk-exit { fill: var(--refer); }
+.sankey .sk-c0 { fill: var(--refer); }
+.sankey .sk-c1 { fill: var(--move-2); }
+.sankey .sk-c2 { fill: var(--ink-2); }
+.sankey .sk-c3 { fill: var(--move); }
+.sankey .sk-c4 { fill: var(--ink); }
+.sankey .sk-law { fill: var(--law-bar); opacity: .45; }
+.sankey .sk-lawn { fill: var(--law-bar); }
+.sankey .sk-veto { fill: var(--veto); opacity: .4; }
+.sankey .sk-veton { fill: var(--veto); }
+.sankey .sk-l { font: 12px var(--body); fill: var(--ink-2); }
+.sankey .sk-b { font-weight: 600; fill: var(--ink); }
+.sankey .sk-p { font: 700 11.5px var(--body); fill: var(--ink); }

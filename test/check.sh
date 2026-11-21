@@ -33,6 +33,8 @@ python3 test/cache_key_check.py wy
 # profile.py against profile.js (test/profile_check.py, about 10 s); the build's ports of page logic against tracker.html
 # (test/ports_check.js), on a public build of one small state (from the build cache, .build-cache/, after the first time).
 python3 test/profile_check.py
+# The color tokens pages share have the same values everywhere (test/tokens_check.py).
+python3 test/tokens_check.py
 PUB=${PUB_STATE:-wy}
 if [ -n "$(ls "data/$PUB" 2>/dev/null | grep -v district_towns.json)" ]; then
   SITE_URL=http://localhost:8765/ python3 build_data.py --state "$PUB" --github "$TMP/pub/$PUB" > "$TMP/pub.log" 2>&1 || { tail -20 "$TMP/pub.log"; exit 1; }

@@ -2389,6 +2389,9 @@ def finish(session, core, current, urls):
     rules_js += "\n" + open(os.path.join(HERE, "lists_pages", "watchrows.js")).read()
     assert "/*rows.css*/" in template, "tracker.html's styles lost the /*rows.css*/ marker"
     template = template.replace("/*rows.css*/", open(os.path.join(HERE, "lists_pages", "rows.css")).read(), 1)
+    # The odds chart's styles (lists_pages/sankey.css, shared with /compare/, as its drawing, sankey.js, is).
+    assert "/*sankey.css*/\n" in template, "tracker.html's styles lost the /*sankey.css*/ marker"
+    template = template.replace("/*sankey.css*/\n", open(os.path.join(HERE, "lists_pages", "sankey.css")).read(), 1)
     # The odds chart (lists_pages/sankey.js, shared with /compare/).
     sankey_js = open(os.path.join(HERE, "lists_pages", "sankey.js")).read()
     template = template.replace('<script id="state-profile"></script>', f'<script id="watch-rules">\n{rules_js}</script>\n<script id="sankey">\n{sankey_js}</script>\n<script id="state-profile">\n{state_js}</script>', 1)

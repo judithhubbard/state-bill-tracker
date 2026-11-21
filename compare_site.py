@@ -28,26 +28,8 @@ TOKENS = """
 :root[data-theme="dark"] { --move: #8fb5b8; --move-2: #c6dedf; --refer: #4d5d60; --law-bar: #1f8a50; --veto: #ee7d70; --stall: #6f7d80; }
 """
 
-CSS = """
-.sankey { overflow-x: auto; margin: 6px 0 14px; }
-.sankey svg { display: block; width: 100%; min-width: 640px; max-width: 1000px; height: auto; }
-.sankey .sk-node { fill: var(--move); }
-.sankey .sk-go { fill: var(--move); opacity: .28; }
-.sankey .sk-out { fill: var(--refer); opacity: .45; }
-.sankey .sk-exit { fill: var(--refer); }
-.sankey .sk-c0 { fill: var(--refer); }
-.sankey .sk-c1 { fill: var(--move-2); }
-.sankey .sk-c2 { fill: var(--ink-2); }
-.sankey .sk-c3 { fill: var(--move); }
-.sankey .sk-c4 { fill: var(--ink); }
-.sankey .sk-law { fill: var(--law-bar); opacity: .45; }
-.sankey .sk-lawn { fill: var(--law-bar); }
-.sankey .sk-veto { fill: var(--veto); opacity: .4; }
-.sankey .sk-veton { fill: var(--veto); }
-.sankey .sk-l { font: 12px var(--body); fill: var(--ink-2); }
-.sankey .sk-b { font-weight: 600; fill: var(--ink); }
-.sankey .sk-p { font: 700 11.5px var(--body); fill: var(--ink); }
-.big { font-size: 17px; color: var(--ink); margin: 0 0 18px; max-width: 760px; }
+# The odds chart's styles: lists_pages/sankey.css (the state pages' too).
+CSS = "\n" + open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lists_pages", "sankey.css"), encoding="utf-8").read() + """.big { font-size: 17px; color: var(--ink); margin: 0 0 18px; max-width: 760px; }
 table.cmp { min-width: 640px; }
 table.cmp th { vertical-align: bottom; }
 table.cmp th button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; }
