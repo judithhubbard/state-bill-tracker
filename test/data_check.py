@@ -365,6 +365,24 @@ def check(state):
         ayes = [r["nums"][0] for r in recs for v in r["votes"] if any(c == "Y" for _, c in v[6]) and sum(1 for _, c in v[6] if c == "Y") != v[4]]
         if ayes:
             say(state, "FAIL", f"{s}: {len(ayes)} votes naming yes votes name a different number than their tally, e.g. {ayes[:4]}")
+        # A committee vote that says the opposite of the committee's report: MD's voting record on an unfavorable report
+        # counts the yeas for the motion to kill the bill (HB 344 of 2026: 17-0, read at first as "Approved by"). A bill
+        # its first committee voted down whose votes there all have more ayes than noes, or one it approved whose votes
+        # there all have more noes (2026-11-22).
+        ckey = lambda n: re.sub(r"[^a-z]", "", (n or "").lower().replace("and", ""))
+        upside = []
+        for r in recs:
+            if not r.get("firstComms") or r["commFate"] not in ("passed", "defeated"):
+                continue
+            h, cname = r["firstComms"][0][0], r["firstComms"][0][1]
+            cv = [v for v in r["votes"] if v[1] == "C" and v[0] == h and ckey(v[2]) == ckey(cname) and v[4] + v[5]]
+            if cv and (all(v[4] > v[5] for v in cv) if r["commFate"] == "defeated" else all(v[5] > v[4] for v in cv)):
+                upside.append(r["nums"][0])
+        if upside:
+            with_c = sum(1 for r in recs if any(v[1] == "C" for v in r["votes"]))
+            say(state, "FAIL" if len(upside) > 0.01 * max(1, with_c) else "LOOK",
+                f"{s}: {len(upside)} bills whose first committee's votes say the opposite of its report (an unfavorable "
+                f"report's yeas read as approval?), e.g. {upside[:4]}")
         # Votes on a day the bill's history has no line for: a roll call matched to the wrong bill or day (KS's override
         # votes filed under HB 2315; a PDF's date read wrongly). Each floor vote should fall on a day of the bill's history.
         fl_all = [(r, v) for r in recs for v in r["votes"] if v[1] == "F" and v[3]]

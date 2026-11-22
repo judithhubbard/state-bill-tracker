@@ -78,3 +78,35 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   sessions' bills (HB 2101 of 2026) have no roll calls here. Tested 2026-11-22 on 29 PDFs of 2023-26 (every group's names
   matched its count once "- COPY -" was dropped; the six third readings matched their bills, every name tied to a seat).
   Before: no votes at all. Shows once the first copy is in (GitHub Actions).
+- **Committee votes member by member (2026-11-22).** Each standing committee's voting record on a bill is a one-page
+  text PDF linked from the bill's page, named for the bill and the committee: /<year>RS/votes_comm/sb0448_b&t.pdf,
+  /votes_comm/hb0141_app.pdf (mgaleg.maryland.gov/robots.txt answered 404, an IIS "File or directory not found" page, on
+  2026-11-22: no robots.txt). A checkmark grid: "Budget and Taxation Committee", "Bill/Resolution Number: SB 448", "Voting
+  Record - 2026 Regular Session", "Vote Date: 2/25/2026" (the committee's own day, usually the day before the bill list's
+  report date), "Final Action: FAV" (FWA with amendments, UNF unfavorable, WDR the sponsor's withdrawal), each member's mark
+  under Yea, Nay, Abstain, Excused or Absent, and a Totals line. A joint referral's second committee has its own record
+  (HB 141 of 2026: _gvc, _app, _fin). File names (`COMM_ABBR` in fetch.py, read off 2023-26 bill pages): b&t, eee, fin,
+  jpr (Senate); app, ecm, ent, hgo (through 2025), hlt and gvc (from 2026), jud, hru, w&m (House). The Senate's Rules and
+  Executive Nominations committees post none (SB 844 of 2026: no link; sb0844_rul.pdf 404). The names are predictable, so
+  bill pages aren't read for them: fetch.py's `committee_votes()` (after the floor roll calls, at most MD_COMM_MINUTES, 10,
+  of what's left of the run) asks for each committee the bill list shows reporting a bill (favorable, with amendments or
+  unfavorable; withdrawn bills have a record too, of the withdrawal, not asked), each once, as text, into
+  data/md/votes/<year>/committee.json; a 404 is noted in committee_state.json and asked again weekly while this year's
+  session can still post it (through June); "complete" once every record wanted has been asked. About 2,400-2,850 a year
+  (25-60 KB each), 10,000 for 2023-26: a first copy takes many runs. Never marks the state incomplete. convert.py's
+  `committee_votes()` uses a session's records once that first copy is complete and its floor votes are in (so a session
+  never shows committee votes without floor votes, which data_check reads as missing roll calls; MD_VOTES_PARTIAL=1 for
+  tests), each as kind "C", named as the bill list names the committee, dated by the Vote Date. A record whose own bill
+  number or year isn't the file's is left out. Names only when every row has exactly one mark, each column's marks add up
+  to its total and no seat is named twice; else the tally alone. Codes: Nay N, Abstain B, Excused E, Absent A. Traps:
+  (1) a long name's title wraps around its mark ("Rosapepe, J., Vice" / mark / "Chair"): the mark belongs to the row above.
+  (2) "Chair generally does not vote": the chair has no mark and isn't in the totals; listed as B (present, not voting),
+  since a member left out of the list reads as a yes. (3) An unfavorable report's record counts the votes for the motion to
+  kill the bill (HB 344 of 2026: 17-0): its yeas are votes against the bill, so yes and no are swapped (shows as "Voted
+  down ... 0-17"); test/data_check.py now checks every state for committee votes that say the opposite of the committee's
+  report (it also found 3 Colorado bills, HB24-1218, HB24-1310 and SB26-97, whose 9-0 votes to postpone indefinitely read
+  as approval: LOOK, not looked into). (4) Names are written without accents and by the whole surname ("Pena-Melnyk, J.",
+  "White Holland, J.", "Palakovich Carr, J.", "Lewis Young, K."), where the bill list's names are "Peña-Melnyk", "Holland",
+  "Carr", "Young": `vote_seat()` (shared with the floor votes) folds accents and ties a surname to the one member of the
+  house whose full name ends with it. Tested 2026-11-22 on 17 records of 2023-26 (every one read, every column added up;
+  every name tied to a seat except two former delegates, Jacobs and Otto). Before: no committee votes.

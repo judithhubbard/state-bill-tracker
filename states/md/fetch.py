@@ -17,7 +17,10 @@ robots.txt; see the state-survey-2026-10-31 memory).
   phone, email; once a day, and at once for a new member), into data/md/members.json; then states/md/contacts.py.
 - The floor roll calls (`roll_calls()`, last, in what's left of the run): each house's numbered vote PDFs
   (/<year>RS/votes/senate/0234.pdf, /votes/house/), each once, as text, into data/md/votes/<year>/<house>.json.
-Usage: python3 states/md/fetch.py [--votes YEAR]   (--votes: only that year's roll calls, for testing)
+- The committee votes (`committee_votes()`, after them): each committee's voting record on each bill it reported
+  (/<year>RS/votes_comm/hb0141_app.pdf), each once, as text, into data/md/votes/<year>/committee.json.
+Usage: python3 states/md/fetch.py [--votes YEAR | --committee YEAR]   (only that year's roll calls or committee votes,
+for testing)
 """
 import html, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 from datetime import date, datetime, timedelta
@@ -403,6 +406,110 @@ def roll_calls(y, deadline):
               + ("" if st["ended"] else "; more on later runs"))
 
 
+# ---- Committee votes -----------------------------------------------------------------------------------------------
+# Each standing committee's voting record on a bill is a one-page PDF, linked from the bill's page and named for the bill
+# and the committee: /<year>RS/votes_comm/sb0448_b&t.pdf, /votes_comm/hb0141_app.pdf (no robots.txt). A checkmark grid:
+# the committee, the bill, "Vote Date: 2/25/2026", "Final Action: FAV" (FWA, UNF, WDR), each member's mark under Yea,
+# Nay, Abstain, Excused or Absent, and a Totals line. A joint referral's second committee has its own. The names are
+# predictable, so the bill pages aren't read: each committee the bill list shows reporting a bill (favorably or not) is
+# asked once (a bill withdrawn by its sponsor has a record too, of the withdrawal: not asked). Each PDF (25-60 KB) is
+# kept as text (pdftotext -layout, about 3 KB) in data/md/votes/<year>/committee.json {"HB141_app": text}; the ones
+# that answered 404 are in committee_state.json, asked again weekly while this year's session can still post them.
+COMM_MINUTES = float(os.environ.get("MD_COMM_MINUTES", 10))
+# Each committee's file name, as the bill pages link them (checked 2026-11-22 on 2023-26 pages). The Senate's Rules and
+# Executive Nominations committees post none (SB 844 of 2026: "Favorable Report by Rules", no record linked).
+COMM_ABBR = {
+    ("S", "Budget and Taxation"): "b&t", ("S", "Education, Energy, and the Environment"): "eee", ("S", "Finance"): "fin",
+    ("S", "Judicial Proceedings"): "jpr", ("H", "Appropriations"): "app", ("H", "Economic Matters"): "ecm",
+    ("H", "Environment and Transportation"): "ent", ("H", "Health and Government Operations"): "hgo",
+    ("H", "Health"): "hlt", ("H", "Government, Labor, and Elections"): "gvc", ("H", "Judiciary"): "jud",
+    ("H", "Rules and Executive Nominations"): "hru", ("H", "Ways and Means"): "w&m",
+}
+
+
+def committee_keys(bills):
+    """The committee records to ask for: "HB141_app" for each committee the bill list shows reporting the bill
+    (favorable, with amendments, or unfavorable), primary and secondary, in each house."""
+    out = []
+    for b in bills:
+        n = b.get("BillNumber", "")
+        if n[:2] not in ("HB", "SB"):
+            continue
+        origin = n[0]
+        for side, o, h in (("HouseOfOrigin", "Origin", origin), ("OppositeHouse", "Opposite", "S" if origin == "H" else "H")):
+            rep = str(b.get(f"ReportAction{side}") or "").strip()
+            if not (rep.startswith("Favorable") or rep == "Unfavorable"):
+                continue
+            for which in ("Primary", "Secondary"):
+                abbr = COMM_ABBR.get((h, str(b.get(f"Committee{which}{o}") or "").strip()))
+                if abbr:
+                    out.append(f"{n[:2]}{int(n[2:])}_{abbr}")
+    return list(dict.fromkeys(out))
+
+
+def committee_votes(y, bills, deadline):
+    """Year y's committee voting records, each once (a 404 again weekly while this year's session can post it). Never
+    marks Maryland incomplete; committee_state.json's "complete" says every record wanted has been asked once."""
+    if not shutil.which("pdftotext"):
+        return
+    folder = os.path.join(DATA, "votes", str(y))
+    os.makedirs(folder, exist_ok=True)
+    tpath, spath = os.path.join(folder, "committee.json"), os.path.join(folder, "committee_state.json")
+    try:
+        texts = json.load(open(tpath))
+    except (OSError, ValueError):
+        texts = {}
+    try:
+        state = json.load(open(spath))
+    except (OSError, ValueError):
+        state = {}
+    missing = state.setdefault("missing", {})
+    live = y == TODAY.year and TODAY.month <= 6
+    week = (TODAY - timedelta(days=7)).isoformat()
+    want = committee_keys(bills)
+    todo = [k for k in want if k not in texts and (k not in missing or (live and missing[k] < week))]
+    got = failed = 0
+
+    def save():
+        json.dump(texts, open(tpath + ".tmp", "w"), ensure_ascii=False)
+        os.replace(tpath + ".tmp", tpath)
+        json.dump(state, open(spath + ".tmp", "w"), indent=0, sort_keys=True)
+        os.replace(spath + ".tmp", spath)
+
+    asked = 0
+    for k in todo:
+        if time.time() > deadline or failed >= 5:
+            break
+        bill, abbr = k.split("_", 1)
+        m = re.match(r"([A-Z]+)(\d+)$", bill)
+        code, pdf = vote_pdf(f"{SITE}/{y}RS/votes_comm/{m.group(1).lower()}{int(m.group(2)):04d}_{abbr}.pdf")
+        asked += 1
+        if code == 200 and pdf and pdf[:5] == b"%PDF-":
+            try:
+                t = subprocess.run(["pdftotext", "-layout", "-enc", "UTF-8", "-", "-"], input=pdf, capture_output=True,
+                                   timeout=60).stdout.decode("utf-8", "replace")
+            except (OSError, subprocess.SubprocessError):
+                continue
+            texts[k] = t
+            missing.pop(k, None)
+            got, failed = got + 1, 0
+            if got % 100 == 0:
+                save()
+        elif code == 404 or code == 200:  # (a page that isn't a PDF: as missing)
+            missing[k] = TODAY.isoformat()
+            failed = 0
+        else:
+            failed += 1  # failing: the rest next run
+    left = sum(1 for k in want if k not in texts and k not in missing)
+    was = state.get("complete")
+    state["complete"] = bool(was or left == 0)
+    if asked or state["complete"] != was:
+        save()
+    if todo:
+        print(f"{y} committee votes: {got} read now, {len(texts)} in all, {len(missing)} not posted"
+              + (f"; {left} left for later runs" if left else ""))
+
+
 def sessions():
     """The years of the shared window (states/window.py: this year and the four before, not before 2023), the current
     one first; a year's session from the second Wednesday of January. Each is one file, so a year the window adds back
@@ -415,6 +522,10 @@ def main():
     os.makedirs(DATA, exist_ok=True)
     if sys.argv[1:2] == ["--votes"]:
         roll_calls(int(sys.argv[2]), time.time() + VOTE_MINUTES * 60)
+        return
+    if sys.argv[1:2] == ["--committee"]:
+        y = int(sys.argv[2])
+        committee_votes(y, json.load(open(os.path.join(DATA, f"legislation_{y}RS.json"))), time.time() + COMM_MINUTES * 60)
         return
     for y in sessions():
         path = os.path.join(DATA, f"legislation_{y}RS.json")
@@ -468,6 +579,16 @@ def main():
             roll_calls(y, deadline)
         except Exception as e:  # noqa: BLE001
             print(f"{y}: roll calls failed ({type(e).__name__}: {e})")
+    # Then the committee votes, in what's left (at most COMM_MINUTES): this year's first.
+    deadline = min(time.time() + COMM_MINUTES * 60, START + limit - 180 if limit else float("inf"))
+    for y in sessions():
+        path = os.path.join(DATA, f"legislation_{y}RS.json")
+        if y > TODAY.year or time.time() > deadline or not os.path.exists(path):
+            continue
+        try:  # never holds the run back
+            committee_votes(y, json.load(open(path)), deadline)
+        except Exception as e:  # noqa: BLE001
+            print(f"{y}: committee votes failed ({type(e).__name__}: {e})")
     marker = os.path.join(DATA, "incomplete")
     if INCOMPLETE:
         open(marker, "w").write(" ".join(INCOMPLETE) + "\n")
