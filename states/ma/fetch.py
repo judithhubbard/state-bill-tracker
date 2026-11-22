@@ -8,6 +8,7 @@ robots.txt allows everything; see the state-survey-2026-10-31 memory).
   read once; the current one's bills are read again when the list shows a change, or every run for bills with
   recent activity.
 - The members (with emails and phones), committees, leadership and session laws.
+- The Senate's roll calls (API) and the House's (the House Journal's yearly PDF of them: states/ma/house_votes.py).
 - Committee hearings and the bills on their agendas (hearings(): data/ma/hearings.json, <session>/agendas.json).
 Three requests at a time. Usage: python3 states/ma/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029)
 """
@@ -220,11 +221,15 @@ def hearings():
 def main():
     os.makedirs(DATA, exist_ok=True)
     sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
-    from states.ma import contacts
+    from states.ma import contacts, house_votes
     for s in range(FIRST, CURRENT + 1, 2):
         session(s)
         if os.path.exists(os.path.join(DATA, str(s), "documents.json")):  # (not a new court with nothing listed yet)
             rollcalls(s)
+            try:  # the House's roll calls by member (states/ma/house_votes.py): never hold the run back
+                house_votes.fetch(s, os.path.join(DATA, str(s)))
+            except Exception as e:
+                print(f"{s}: House roll calls: stopped ({type(e).__name__}: {e}); kept the last copy", flush=True)
         if s < CURRENT and not os.path.exists(os.path.join(DATA, str(s), "member_details.json")):
             contacts.details(s)
     try:

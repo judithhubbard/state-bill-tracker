@@ -83,8 +83,33 @@ def build(year):
             "leaders": leaders, "assemblyMembers": {}, "kept": []}
 
 
+def roster_check(people):
+    """Where the Senate's own roster (members/s_roster.txt, from s_roster.pdf: "Johnny L. DuPree   District 45 ...",
+    "Vacant   District 34") and the seats disagree: a list of lines. The member files went stale in 2025 (convert.py's
+    FORMER and ADDED); this says when they, or those corrections, need another look."""
+    path = os.path.join(P.DATA, "members", "s_roster.txt")
+    if not os.path.exists(path):
+        return []
+    roster = {}
+    for line in open(path, encoding="utf-8", errors="replace"):
+        m = re.match(r"(\S.*?)\s+District (\d+)\b", line)
+        if m:
+            roster[int(m.group(2))] = m.group(1).strip()
+    if len(roster) < 45:  # not the layout this reads
+        return [f"the Senate roster wasn't read ({len(roster)} districts)"]
+    words = lambda s: {w for w in re.findall(r"[a-z]{3,}", s.lower().replace("-", " "))}
+    out = []
+    for d in range(1, 53):
+        who, seat = roster.get(d), people.get(f"S:{d}")
+        if who is None or (who == "Vacant") != (seat is None) or seat and not words(who) & words(seat["name"]):
+            out.append(f"S:{d}: roster {who or 'missing'}, seat {seat['name'] if seat else 'vacant'}")
+    return out
+
+
 def main(year):
     out = build(year)
+    for line in roster_check(out["people"]):
+        print(f"Senate roster disagrees: {line}", file=sys.stderr)
     if len(out["people"]) < 160:
         raise SystemExit(f"only {len(out['people'])} legislators; kept the last contacts")
     path = os.path.join(P.DATA, f"contacts_{year}.json")

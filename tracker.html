@@ -3122,9 +3122,24 @@ function voteOf(v, L) {
   const code = v.notYes.get(L.id);
   if (code) return VOTE_WORDS[code] || code;
   // A vote known only by its tally (Kansas's and Missouri's roll calls not read yet, Illinois's House): with no names,
-  // someone not named can't be called a yes unless everyone voted yes.
-  if (!v.notYes.size && (v.no > 0 || v.yes < LEGS.filter((x) => x.house === v.house).length)) return null;
+  // someone not named can't be called a yes unless everyone voted yes: no noes, and the yeas fill the committee or the
+  // house. A committee member on a vote with no noes and fewer yeas (some away, unnamed: most states' unanimous committee
+  // votes name nobody) voted yes if they were there.
+  if (!v.notYes.size && (v.no > 0 || v.yes < voteBody(v))) return v.kind === "C" && !v.no && v.yes ? "Yes, if present" : null;
   return "Yes";
+}
+// How many members could vote: the committee's members (as the contacts list them now) or the house's.
+function voteBody(v) {
+  if (v.kind === "C") return (DATA.contacts?.committees || {})[`${v.house}:${commKey(v.committee || "")}`]?.members?.length || Infinity;
+  return LEGS.filter((x) => x.house === v.house).length;
+}
+// Who isn't named on a vote's line: "all members present voted yes" (a committee's vote with no noes and no names) or
+// "all others voted yes" (a vote naming its noes and no one else, every seat counted). "" when the record can't say.
+function othersYes(v) {
+  if (v.kind === "R" || !v.yes) return "";
+  if (!v.notYes.size) return v.kind === "C" && !v.no ? "all members present voted yes" : "";
+  const codes = [...v.notYes.values()];
+  return codes.every((c) => c === "N") && codes.length === v.no && v.yes + v.no >= voteBody(v) ? "all others voted yes" : "";
 }
 // The legislators whose votes matter here: the page's legislator, else your senator and Assembly member.
 function votePeople() {
@@ -4130,8 +4145,9 @@ function historyBlock(b) {
   b.votes.forEach((v, seq) => {
     if (v.kind === "R") { items.push({ d: v.date || "", html: reportLine(v, people), seq, rank: 1 }); return; }
     const other = [...v.notYes.values()].filter((c) => c !== "N").length;
-    const theirs = people.map((L) => { const x = voteOf(v, L); return x ? `${L.title} ${esc(shortName(L.name))}: <b class="v${x === "Yes" ? "y" : x === "No" ? "n" : "o"}">${x}</b>` : ""; }).filter(Boolean).join(" · ");
-    const tally = `<b>${v.yes}–${v.no}</b>${other ? ` <span class="muted">(${other} not voting)</span>` : ""}${theirs ? `<br><span class="theirs">${theirs}</span>` : ""}`;
+    const theirs = people.map((L) => { const x = voteOf(v, L); return x ? `${L.title} ${esc(shortName(L.name))}: <b class="v${x.startsWith("Yes") ? "y" : x === "No" ? "n" : "o"}">${x}</b>` : ""; }).filter(Boolean).join(" · ");
+    const rest = othersYes(v);
+    const tally = `<b>${v.yes}–${v.no}</b>${other ? ` <span class="muted">(${other} not voting)</span>` : ""}${rest ? `, ${rest}` : ""}${theirs ? `<br><span class="theirs">${theirs}</span>` : ""}`;
     const step = v.kind === "F" && v.yes > v.no && !STATE.voteWhat?.(v) && items.find((x) => x.house === v.house && x.d === v.date && !x.voted);
     if (step) { step.voted = true; step.seq = seq; step.html += ` <span class="tally">· ${tally}</span>`; return; }
     // (A state can name the vote itself: Nebraska's floor rounds, STATE.voteWhat.)

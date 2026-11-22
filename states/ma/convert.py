@@ -6,7 +6,8 @@ into one ("Accompanied H4321"): such a bill is an earlier version of the one it 
 the record carries every number and takes its stage from the last. A study order ("Accompanied a study order") ends a
 bill in committee. Each branch first passes a bill "to be engrossed"; both then enact it, and the Senate lays it before
 the governor. Votes: the tallies are in the history lines ("154 YEAS to 3 NAYS"); the Senate's members' votes come from
-the roll calls the lines cite ("see Roll Call #215"); the House's aren't in the API.
+the roll calls the lines cite ("see Roll Call #215"); the House's from the House Journal's yearly file of its roll calls
+(states/ma/house_votes.py), which the lines cite too ("See YEA and NAY No. 117").
 
 Constitutional amendments the Legislature proposes are "Proposal for a legislative amendment to the Constitution"
 documents (other resolutions and orders are left out). They go to a joint committee, then to the joint session of both
@@ -21,6 +22,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from states.ma import profile as P
+from states.ma import house_votes as HV
 from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
@@ -258,10 +260,15 @@ def load_session(session):
         if final(law) in group and b not in group[final(law)]:
             group[final(law)].append(b)
 
-    member_names = {m["MemberCode"]: m["Name"] for m in load(session, "member_details.json", [])}
+    details = load(session, "member_details.json", [])
+    member_names = {m["MemberCode"]: m["Name"] for m in details}
 
-    def member(code):
-        return seat_of.get(code) or f"S?{member_names.get(code, code)}"
+    def member(code, h="S"):
+        return seat_of.get(code) or f"{h}?{member_names.get(code, code)}"
+
+    # The House's roll calls by member (states/ma/house_votes.py), each name matched to a member of the session.
+    house_calls = load(session, "house_rollcalls.json", {}).get("calls") or {}
+    house_member = HV.matcher([m for m in details if m.get("Branch") == "House"])
 
     recs, index = [], {}
     for p in sorted(group, key=lambda b: (b[0], int(b[1:]))):
@@ -375,6 +382,17 @@ def load_session(session):
             if h == "S" and rc and rc.group(1) in rollcalls:
                 r = rollcalls[rc.group(1)]
                 names = [[member(c), "N"] for c in r.get("Nays") or []] + [[member(c), "A"] for c in r.get("Absent") or []]
+            # "(See YEA and NAY No. 117)", "(See YEA and NAY, No. 127)", "(See YEA and NAY in Supplement, No. 25)".
+            yn = re.search(r"YEA and NAY\b[^()]{0,20}?No\.?\s*(\d+)", a, re.I)
+            if h == "H" and yn and yn.group(1) in house_calls:
+                # The same roll call: on the line's day, with its tally or on this bill. The roll call's own totals win
+                # where the line's differ (H5151 of 2025-26's "121 YEAS" for the roll call's 129; S3106's 139 for 149).
+                r = house_calls[yn.group(1)]
+                if not r.get("bad") and r["date"] == dd and ((r["yeas"], r["nays"]) == v or r["bill"] in nums):
+                    v = (r["yeas"], r["nays"])
+                    code = {"N": "N", "X": "A", "P": "B"}  # not voting, present: "P" answers neither yea nor nay
+                    names = [[member(c, "H") if c else f"H?{n}", code[x]] for n, x in r["votes"] if x in code
+                             for c in [house_member(n)]]
             votes.append([h, "F", None, dd, v[0], v[1], names])
         chap = law[0] if law else next((re.search(r"Chapter (\d+)", s[3]).group(1) for s in own if s[2] == "SIGNED" and re.search(r"Chapter (\d+)", s[3])), None)
         action_dates = [s[0] for s in steps if s[0]]

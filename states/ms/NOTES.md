@@ -30,8 +30,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   that year's h_auth.xml / s_auth.xml. Contacts: the member files (district, party, Capitol/business/home/cell phones,
   room, committees with "C" chair and "V" vice chair); emails are user names, completed with "@house.ms.gov" /
   "@senate.ms.gov", the domains the Legislature's own stylesheets add (members/dtds_xslts/house.xslt and senate.xslt,
-  checked 2026-11-08). Sen. Chris Johnson's file says District 44 (Polk's); his counties put him in 45
-  (`C.DISTRICT_FIX`); contacts.py reports any seat claimed twice. Senate Districts 24 and 26 are vacant (November 2026). Leaders: Speaker
+  checked 2026-11-08). Sen. Chris Johnson is in District 44 (moved to 45 by `C.DISTRICT_FIX` until 2026-11-22, when the
+  Senate's roster showed the files were stale: below); contacts.py reports any seat claimed twice. Leaders: Speaker
   Jason White; the Lieutenant Governor, Delbert Hosemann, presides over the Senate and refers its bills (not a senator: his
   phone and email from ltgovhosemann.ms.gov, checked by program 2026-11-08). The governor's phone and email are from
   governorreeves.ms.gov/contact/ (checked by program 2026-11-08, not by the owner). Governor 5 days (Sundays excepted) in
@@ -110,11 +110,22 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Younger", "Briggs"/"W. Briggs Hopson III"). Tested 2026-11-22 on 49 roll calls of 12 bills (2024-26): all parsed, all
   added up (one by the seat count), none under another bill; non-yes names not tied to a seat were former members (Horhn,
   Branning, Jordan) and the members below.
-- **The member files look out of date (found 2026-11-22).** ss_membs.xml (Last-Modified 2025-07-01, before the
-  November 2025 special elections in the redrawn districts) and the member files list Sens. David Parker (2), John Polk
-  (44), Robin Robinson (42) and Reps. Jonathan Lancaster (22), Orlando Paden (26), who aren't in 2026's author lists
-  (s_auth.xml, h_auth.xml); those lists have Sens. Johnny DuPree, Theresa Gillespie Isom, Kamesha Mumford, Don Hartness,
-  Justin Pope and Reps. Justin Crosby, Otha Williams, who aren't in the member files but vote in 2026's roll calls (so
-  they match no seat: "S?Hartness"). Not checked against the Senate's and House's own pages: if they confirm it, the
-  contacts and "Find your legislators" show former members for some seats. data_check's "names voting in the last four
-  months ... aren't tied to a seat" LOOK lists them.
+- **The member files are out of date (found and corrected 2026-11-22).** ss_membs.xml (Last-Modified 2025-07-01,
+  before the November 2025 special elections in the redrawn districts) and hr_membs.xml (2025-10-14) list Sens. David
+  Parker (2), John Polk (44), Robin Robinson (42) and Reps. Jonathan Lancaster (22), Orlando Paden (26), who aren't in
+  2026's author lists; those lists have Sens. Johnny DuPree, Theresa Gillespie Isom, Kamesha Mumford, Don Hartness,
+  Justin Pope and Reps. Justin Crosby, Otha Williams, who had no member file but vote in 2026's roll calls ("S?Hartness").
+  Confirmed against the chambers' own rosters: billstatus.ls.state.ms.us/members/s_roster.pdf (the page
+  legislature.ms.gov/legislators/senate-roster/ shows; Last-Modified 2026-11-17, text) and h_roster.pdf (a scan dated
+  July 7, 2026; read here by eye and OCR, not by the program). They also show Sens. Jeff Tate (33) and Juan Barnett (34)
+  gone ("Vacant") and Reps. Bo Brown (70) and Price Wallace (77) not on the House's list (both authored 2026 bills).
+  legislature.ms.gov has no robots.txt; its member pages (/legislators/senators/) are an iframe of /member/?chamber=S,
+  which answered 500 to the site's requests. convert.py's `FORMER` drops those nine; `ADDED` gives the seven new members
+  as the rosters do (district, party, email, Capitol phone and room, counties, the Senate's committees; the House roster
+  lists no committees, and no phone or room for Crosby and Williams), used only while no member file has the slug.
+  `current_members()` also reads only the files the lists link (a file a list drops stays on disk). fetch.py saves the
+  Senate roster's text weekly (members/s_roster.txt) and contacts.py prints "Senate roster disagrees: ..." for any
+  district where it and the seats differ (none on 2026-11-22: 50 senators, 120 representatives). The House roster is a
+  scan: check it by hand after elections (h_roster.pdf's Last-Modified). The Census district files (towns.py) still
+  predate the 2025 maps. data_check's "names voting in the last four months ... aren't tied to a seat" LOOK now lists
+  the four who left after the 2026 session.
