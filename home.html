@@ -404,6 +404,12 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 /* The title, and "Your bills" at its right; the list drops down over the page, so opening it moves nothing. */
 .top { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; flex-wrap: wrap; margin: 0 0 18px; }
 .top h1 { margin: 0; }
+/* The links at the top right, as on every state page; "Your bills" (when there are any) under them. */
+.topr { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-left: auto; }
+.sitenav { display: flex; flex-wrap: wrap; gap: 4px 16px; font: 600 13px/1.2 var(--body); }
+.sitenav a { color: var(--navy); text-decoration: none; }
+.sitenav a:hover, .sitenav a:focus-visible { text-decoration: underline; }
+@media (max-width: 600px) { .topr { margin-left: 0; align-items: flex-start; } }
 .mine { position: relative; }
 .minebar { font: inherit; font-size: 15px; font-weight: 600; color: var(--navy); background: var(--sheet); border: 1px solid var(--rule);
   border-radius: 999px; padding: 5px 14px 5px 12px; cursor: pointer; }
@@ -519,10 +525,13 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
 <main>
   <div class="top">
   <h1>State Bill Tracker</h1>
+  <div class="topr">
+  <nav class="sitenav" aria-label="Site"><a href="compare/">Compare states</a><a href="your-bills/">Your bills</a><a href="about/">About</a></nav>
   <section class="mine" id="mine" hidden>
     <button type="button" class="minebar" id="mineBar" aria-expanded="false" aria-controls="mineList"><span class="mstar" aria-hidden="true">★</span> Your bills <span class="cnt" id="mineCount"></span></button>
     <div id="mineList" hidden></div>
   </section>
+  </div>
   </div>
   <p class="tagline">Follow bills in every state legislature and Congress.</p>
   <div class="show" id="controls" hidden>
@@ -1124,6 +1133,7 @@ function lawsView() {
       const close = st === pinned ? ` · <a href="#" data-unpin>Close</a>` : "";
       if (!c) return `<h3>${esc(name)}</h3><p>No finished session on the site yet.${close}</p>`;
       return `<h3>${esc(name)}</h3><p>${esc(c.label)} session${st === "us" ? " (not counted with the states)" : ""}${close}</p>${nums(c)}`
+        + (c.note ? `<p class="hint">${esc(c.note)}</p>` : "")
         + `<p><a href="${esc(page)}#stats">${esc(name)}'s statistics</a> · ${end}</p>`;
     },
     legend: `<span class="key"><i class="sq g1"></i>Under 10% became law</span><span class="key"><i class="sq g2"></i>10&ndash;24%</span>`

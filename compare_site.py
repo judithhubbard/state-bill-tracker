@@ -87,13 +87,21 @@ def load(site):
     return out
 
 
+# What a state's numbers can't show, beside its name (and in the front page's panel).
+NOTES = {
+    "mn": "Most Minnesota laws pass inside a few large omnibus bills, so many bills whose text became law count here as not passing.",
+    "mo": "Missouri often passes several bills' contents together as one bill, so many bills whose text became law count here as not passing.",
+}
+
+
 def latest(d):
     """A state's latest finished session's numbers, for the front page."""
     s = d["sessions"][-1]
     n = lambda k: (s["odds"].get(k) or [0, 0])[0]
     return {"name": d["name"], "label": s["label"], "session": s["session"], "years": d["years"], "kind": s.get("kind") or "",
             "uni": d["chart"]["uni"], "intro": n("intro"), "floor": n("floor"), "house": n("house"), "both": n("both"),
-            "law": (s["odds"].get("intro") or [0, 0])[1], "vetoed": n("vetoed"), "overridden": n("overridden")}
+            "law": (s["odds"].get("intro") or [0, 0])[1], "vetoed": n("vetoed"), "overridden": n("overridden"),
+            **({"note": NOTES[d["state"]]} if d["state"] in NOTES else {})}
 
 
 SCRIPT = r"""
@@ -145,7 +153,7 @@ const lengthText = (d, list) => (d.years === 2 && !/–|-/.test(list[0].label) ?
 function tr(r, all) {
   const { d, list } = r, picked = [A.value, B.value].includes(d.state);
   const ph = `<small class="ph">${esc(all ? r.sessText : yearsText(d, list))}</small>`;
-  const name = all ? `<td class="st">${esc(d.name)}${ph}</td>` : `<td class="st"><a href="../${d.state}/#stats">${esc(d.name)}</a>${ph}${d.state === "us" ? "<small>Not counted with the states</small>" : ""}</td>`;
+  const name = all ? `<td class="st">${esc(d.name)}${ph}</td>` : `<td class="st"><a href="../${d.state}/#stats">${esc(d.name)}</a>${d.note ? itip(d.note) : ""}${ph}${d.state === "us" ? "<small>Not counted with the states</small>" : ""}</td>`;
   return `<tr>${name}<td class="sess">${esc(all ? r.sessText : yearsText(d, list))}${all ? "" : itip(lengthText(d, list))}</td>`
     + `<td class="n">${num(r.intro)}</td>${cell("", r.comm, r.intro)}${cell("house", r.house, r.intro)}${cell("law", r.law, r.intro)}`
     + `<td class="n">${num(r.vetoes)}${r.over ? `<small>${num(r.over)} overridden</small>` : ""}</td>`
@@ -271,6 +279,9 @@ def page(states):
 
 def main(site):
     states = load(site)
+    for d in states:
+        if d["state"] in NOTES:
+            d["note"] = NOTES[d["state"]]
     os.makedirs(os.path.join(site, "compare"), exist_ok=True)
     with open(os.path.join(site, "compare", "index.html"), "w", encoding="utf-8") as f:
         f.write(page(states))
