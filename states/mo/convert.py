@@ -30,8 +30,11 @@ text (journals/senate/DAY56.txt.gz: "On motion of Senator Trent, SS No. 2 for HC
 time and passed by the following vote: YEAS—Senators Bean Beck ..."), matched to the passage by day and bill number.
 The House's roll calls member by member from the House Journal's text (journals/house/jrn024.txt.gz, `house_rolls()`),
 matched by day, bill and the export's tally (since 2026-11-22; the journals were downloaded before that but not read, so
-House floor votes showed tallies only). Committee tallies (House committees
-only) come from the exports.
+House floor votes showed tallies only). Committee tallies (House committees only) come from the exports, with members'
+names from the House Journal's committee reports ("Ayes (6): Casteel, ... Noes (1): Kimble / Absent (3): ...",
+`house_committee_reports()`) matched by bill, day and tally (2026-11-22). Senate committees' votes come only from their
+"Bill Votes" reports (senate/committee_votes/<voteId>.txt, `senate_vote_report()`: a grid of YES, NO, ABSENT, ABSTAIN and
+PRESENT), tied to the history's "Voted Do Pass S <committee>" line (else the report line) of that bill and committee.
 """
 import gzip, html as H_, json, os, re
 import xml.etree.ElementTree as ET
@@ -521,6 +524,169 @@ def house_rolls(session):
     return out
 
 
+C_REPORT = re.compile(r"Mr\.\s+Speaker:\s+Your\s+((?:Special\s+|Joint\s+|Interim\s+)?Committee\s+on\s+[^,]+?),\s+to\s+which\s+(?:was|were)\s+"
+                      r"(?:referred|recommitted|re-referred)\s+([^:]+?),\s+begs\s+leave\s+to\s+report\s+([^:]+?)\s+by\s+the\s+"
+                      r"following\s+vote:", re.S)
+C_GROUP = re.compile(r"\b(Ayes|Noes|Present|Absent with leave|Absent|Vacancies)\s*\((\d+)\)(?::\s*)?")
+C_CODES = {"Ayes": "Y", "Noes": "N", "Present": "P", "Absent with leave": "E", "Absent": "A", "Vacancies": "V"}
+
+
+def _comm_names(chunk):
+    """"Casteel, Mansur, Smith (46), Van Schoiack and Woods" -> ["Casteel", "Mansur", "Smith 46", "Van Schoiack", "Woods"]."""
+    chunk = re.sub(r"\s+", " ", chunk).strip().rstrip(".")
+    out = []
+    for n in re.split(r",\s*|\s+and\s+", chunk):
+        n = re.sub(r"\s*\((\d{1,3})\)$", r" \1", n.strip())
+        if n:
+            out.append(n)
+    return out
+
+
+def house_committee_reports(session):
+    """Every committee report with its vote in the year's House Journal (2026-11-22): "Mr. Speaker: Your Committee on
+    Commerce, to which was referred HB 1664, HB 1610, HB 1645 and HB 2182, begs leave to report it has examined the same
+    and recommends that it Do Pass with House Committee Substitute by the following vote: / Ayes (6): Casteel, ... /
+    Noes (1): Kimble / Absent (3): Butz, Gragg and Peters" -> [{date, committee, bills, printed, ok, Y, N, P, A, E}];
+    "ok" when every group's names add up to its printed count."""
+    key = (session, "creports")
+    if key in _CACHE:
+        return _CACHE[key]
+    out = []
+    d = os.path.join(folder(session), "journals", "house")
+    for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        try:
+            s = gzip.open(os.path.join(d, f), "rt", encoding="utf-8", errors="replace").read()
+        except OSError:
+            continue
+        s = s.replace("’", "'").replace("\f", "\n")
+        m = H_DAY.search(s[:5000])
+        if not m:
+            continue
+        try:
+            day = datetime.strptime(m.group(1).title(), "%B %d, %Y").date().isoformat()
+        except ValueError:
+            continue
+        # Page headers ("976 Journal of the House", "Twenty-seventh Day–Wednesday, February 25, 2026 977") out.
+        s = "\n".join(ln for ln in s.split("\n") if not re.search(r"Journal of the House\s*$|^\s*\d+\s+Journal of the House|"
+                                                                  r"Day\s*[–—-]\s*\w+day,\s+\w+ \d+, \d{4}\s+\d*\s*$", ln))
+        reps = list(C_REPORT.finditer(s))
+        for i, r in enumerate(reps):
+            end = reps[i + 1].start() if i + 1 < len(reps) else len(s)
+            body = s[r.end():end]
+            # The groups run to the first line that isn't one or a continuation (the next committee's heading, a section).
+            stop = re.search(r"\n\s*\n\s*\n|\n\s*(?:Committee on|Special Committee|Joint Committee)[^\n]*reporting|"
+                             r"\n\s{3,}[A-Z][A-Z ,'&-]{6,}\n", body)
+            body = body[:stop.start()] if stop else body[:3000]
+            groups = list(C_GROUP.finditer(body))
+            if not groups or groups[0].group(1) != "Ayes" or body[:groups[0].start()].strip():
+                continue
+            names, printed = {}, {}
+            for k, g in enumerate(groups):
+                code = C_CODES[g.group(1)]
+                chunk = body[g.end():groups[k + 1].start() if k + 1 < len(groups) else len(body)]
+                names[code] = _comm_names(chunk) if code != "V" else []
+                printed[code] = int(g.group(2))
+            bills = set()
+            for ref in REF.finditer(r.group(2)):
+                bills |= {f"{re.sub(r's$', '', ref.group(1))}{n}" for n in re.findall(r"\d+", ref.group(2))}
+            ok = all(len(names.get(c, [])) == printed[c] for c in printed if c != "V")
+            out.append({"date": day, "committee": re.sub(r"\s+", " ", r.group(1)), "bills": bills, "printed": printed,
+                        "ok": ok, "fail": bool(re.search(r"Do Not Pass", r.group(3), re.I)),
+                        **{c: names.get(c, []) for c in "YNPAE"}})
+    _CACHE[key] = out
+    return out
+
+
+def find_committee_report(session, key, day, used, tally, committee):
+    """The House Journal's report of that committee on that bill within three days, with the export's tally (ayes, noes,
+    present) and names that add up; a report already used isn't used again."""
+    best = None
+    for i, r in enumerate(house_committee_reports(session)):
+        if ("C", i) in used or not r["ok"] or key not in r["bills"]:
+            continue
+        try:
+            gap = abs((date.fromisoformat(r["date"]) - date.fromisoformat(day)).days)
+        except ValueError:
+            continue
+        if gap > 3 or tally is None or (r["printed"].get("Y", 0), r["printed"].get("N", 0)) != tuple(tally[:2]):
+            continue
+        if len(tally) > 2 and r["printed"].get("P", 0) != tally[2]:
+            continue
+        same = norm(committee or "") and norm(committee or "") in norm(r["committee"])
+        rank = (not same, gap)
+        if best is None or rank < best[0]:
+            best = (rank, i, r)
+    if best:
+        used.add(("C", best[1]))
+        return best[2]
+    return None
+
+
+def committee_listed(session, r):
+    """A House committee report's members who didn't vote yes, as [[seat, code]] (present ones "B": abstained)."""
+    return [[house_seat(session, n), {"P": "B"}.get(c, c)] for c in ("N", "P", "E", "A") for n in r[c]]
+
+
+S_COLS = (("YES", "Y"), ("NO", "N"), ("ABSENT", "A"), ("ABSTAIN", "B"), ("PRESENT", "B"))
+
+
+def senate_vote_report(text):
+    """One Senate committee "Bill Votes" report (fetch.py's senate/committee_votes/<voteId>.txt) -> {committee, bill, date,
+    motion, Y, N, A, B (names)} from its first grid (the vote to pass the bill out; a second grid is the consent
+    vote), or None when the grid can't be read: every member's row must have exactly one X, under a column's heading."""
+    lines = (text or "").replace("\f", "\n").split("\n")
+    nonblank = [ln for ln in lines if ln.strip()]
+    if not nonblank:
+        return None
+    committee = nonblank[0].strip()
+    t = "\n".join(lines)
+    b = re.search(r"BILL NO:\s+(SB|HB|SJR|HJR)\s+(\d+)", t)
+    d = re.search(r"\(Executive Session\)\s+(\d{1,2})/(\d{1,2})/(\d{4})", t)
+    if not b or not d:
+        return None
+    head = next((i for i, ln in enumerate(lines) if re.match(r"\s*NAME\s+YES\s+NO\s+ABSENT\s+ABSTAIN\s+PRESENT\s*$", ln)), None)
+    if head is None:
+        return None
+    motion = " ".join(ln.strip() for ln in lines[t[:d.end()].count("\n") + 1:head] if ln.strip())
+    cols = [(m.start() + len(m.group(0)) / 2, code) for name, code in S_COLS
+            for m in [re.search(rf"\b{name}\b", lines[head])]]
+    out = {"committee": committee, "bill": b.group(1) + b.group(2), "date": f"{d.group(3)}-{int(d.group(1)):02d}-{int(d.group(2)):02d}",
+           "motion": motion, "Y": [], "N": [], "A": [], "B": []}
+    for ln in lines[head + 1:]:
+        if not ln.strip():
+            continue
+        m = re.match(r"\s*(\S.*?)(\s{2,}.*)?$", ln)
+        rest = m.group(2) or ""
+        xs = [m.start(2) + x.start() for x in re.finditer(r"\bX\b", rest)] if m.group(2) else []
+        if not xs:
+            break  # the grid ends (a label for the next grid, the comments)
+        if len(xs) != 1 or re.sub(r"\bX\b", "", rest).strip():
+            return None
+        code = min(cols, key=lambda c: abs(c[0] - xs[0]))[1]
+        out[code].append(m.group(1).strip())
+    if not out["Y"] and not out["N"]:
+        return None
+    return out
+
+
+def senate_committee_votes(session):
+    """Every Senate committee vote report read for the year, by bill: {"SB869": [report, ...]}."""
+    key = (session, "scvotes")
+    if key not in _CACHE:
+        out = defaultdict(list)
+        d = os.path.join(folder(session), "senate", "committee_votes")
+        for f in sorted(os.listdir(d), key=lambda x: int(re.sub(r"\D", "", x) or 0)) if os.path.isdir(d) else []:
+            try:
+                r = senate_vote_report(open(os.path.join(d, f), encoding="utf-8", errors="replace").read())
+            except OSError:
+                continue
+            if r:
+                r["id"] = f
+                out[r["bill"]].append(r)
+        _CACHE[key] = dict(out)
+    return _CACHE[key]
+
+
 def find_house_roll(session, key, day, used, tally):
     """The House Journal's roll call that day on that bill with the House export's tally (ayes, noes), names whole."""
     for i, r in enumerate(house_rolls(session)):
@@ -632,14 +798,54 @@ class Walk:
         self.add(d, h, "REPORTED", "reported")
         self.add(d, h, f"The {c + ' ' if c else ''}Committee voted do pass{what}{to}" + (f", {tally[0]}-{tally[1]}" if tally else ""), "report")
         if tally and c:
-            self.cvotes.append([h, "C", c, d, tally[0], tally[1], []])
+            self.cvotes.append([h, "C", c, d, tally[0], tally[1], self.committee_roll(d, h, tally, c)])
+        elif h == "S" and not tally:
+            self.senate_committee_vote(d, c)
         self.comm[h] = None
 
     def commfail(self, d, h, tally=None):
         c = self.comm.get(h)
         self.add(d, h, f"The {c + ' ' if c else ''}Committee voted it down" + (f", {tally[0]}-{tally[1]}" if tally else ""), "commfail")
         if tally and c:
-            self.cvotes.append([h, "C", c, d, tally[0], tally[1], []])
+            self.cvotes.append([h, "C", c, d, tally[0], tally[1], self.committee_roll(d, h, tally, c)])
+        elif h == "S" and not tally:
+            self.senate_committee_vote(d, c, failed=True)
+
+    def senate_committee_vote(self, d, c, failed=False):
+        """A Senate committee's vote on the bill, member by member, from its "Bill Votes" report (the Senate's histories
+        and the House's exports give no tallies for them): the latest report of this committee on this bill from the two
+        weeks up to the history's line, not used before. Added as a kind "C" vote on the report's own day, yeas left out."""
+        best = None
+        for r in senate_committee_votes(self.session).get(self.key, []):
+            if ("SC", r["id"]) in self.used or (c and norm(c) != norm(comm_name(r["committee"]))):
+                continue
+            try:
+                gap = (date.fromisoformat(d) - date.fromisoformat(r["date"])).days
+            except ValueError:
+                continue
+            if 0 <= gap <= 14 and (len(r["Y"]) > len(r["N"])) != failed and (best is None or r["date"] > best["date"]):
+                best = r
+        STATS["senate committee lookups"] += 1
+        if not best:
+            return
+        self.used.add(("SC", best["id"]))
+        STATS["senate committee matched"] += 1
+        listed = [[senate_seat(self.session, n), code] for code in ("N", "A", "B") for n in best[code]]
+        STATS["senate committee unmatched names"] += sum("?" in m for m, _ in listed)
+        self.cvotes.append(["S", "C", c or comm_name(best["committee"]), best["date"], len(best["Y"]), len(best["N"]), listed])
+
+    def committee_roll(self, d, h, tally, c):
+        """The House committee's vote by member from the House Journal's report, when one matches (else [])."""
+        if h != "H":
+            return []
+        STATS["house committee votes"] += 1
+        r = find_committee_report(self.session, self.key, d, self.used, tally, c)
+        if not r:
+            return []
+        STATS["house committee matched"] += 1
+        listed = committee_listed(self.session, r)
+        STATS["house committee unmatched names"] += sum("?" in m for m, _ in listed)
+        return listed
 
     def passage(self, d, h, tally=None, amended=False, conference=False):
         self.where = h
@@ -927,6 +1133,10 @@ def walk_senate_page(w, actions, house_tallies):
             w.add(d, h, "Placed on the informal calendar" if "informal" in tl else "Placed on the calendar", "calendar")
             continue
         if re.match(r"(?:(?:h|s)cs(?:#\d+)? )?voted do pass", tl):
+            m = re.match(r"(?:(?:h|s)cs(?:#\d+)? )?voted do pass (S|H) (.+?)(?: \([\w.]+\))?$", t, re.I)
+            if m and m.group(1).upper() == "S":
+                # The committee's own vote, member by member, from its "Bill Votes" report (the report line follows).
+                w.senate_committee_vote(d, comm_name(m.group(2)))
             continue
         m = re.match(r"(SCS )?reported from (S|H) (.+?)(?: w/SCS)?(?: - Consent)?$", t, re.I)
         if m:
