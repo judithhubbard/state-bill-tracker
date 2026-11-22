@@ -56,6 +56,8 @@ Senate standing committees, 31 joint and interim ones) with contact staff and it
 "Chairperson", "Vice Chair", "Ranking Minority Member", "Pro Tempore", "Member"). The active members include the
 Lieutenant Governor (the Senate's presiding officer, no district) and the Secretary of the Senate. Past members'
 records have no names: departed sponsors are known only by the bills' sponsor surname and roll calls' names.
+And data/al/<this year>/agendas.json, every full run: the committee meetings from yesterday to three weeks ahead with
+the bills on their agendas (`agendas()`, one request).
 
 Local bills, most of the volume in many years' Acts: the subject is a county, the byline has "(N & P)" or the history
 has the house's local legislation committee ("Jefferson County Legislation"); local constitutional amendments are
@@ -85,7 +87,8 @@ Usage: python3 states/al/fetch.py [year]   (default: every year above; a single 
 """
 import gzip, json, os, re, sys, time, urllib.error, urllib.request
 from collections import Counter
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
 
@@ -494,6 +497,63 @@ def session(year):
     save(state, state_path)
 
 
+# Committee agendas ------------------------------------------------------------------------------------------------
+
+AGENDA_DAYS = 21  # how far ahead
+CANCELED = re.compile(r"cancel", re.I)
+
+
+def agendas():
+    """The committee meetings from yesterday to three weeks ahead and the bills on their agendas (ALISON's "Today's
+    Schedule" page asks the same endpoint for `meetings` with their `agendaItems`), one request, into
+    data/al/<year>/agendas.json: {"HB61": [["House Economic Development and Tourism", "2026-02-04T14:30:00"], ...]}.
+    Meetings are in UTC ("2026-03-03T16:30:00.000Z"), saved as Montgomery's time. Canceled meetings say so in their
+    description or location ("CANCELED", "**MEETING CANCELED**", "Cancelled") and are left out. A failed request
+    keeps the last file: agendas never hold the state back."""
+    zone = ZoneInfo("America/Chicago")
+    query = ("query { meetings(where: { startDate: { gte: %s, lte: %s } }) { data { id startDate location title "
+             "description body committeeName status agendaItems { instrumentNbr } } count } }"
+             % (q((TODAY - timedelta(days=1)).isoformat()), q((TODAY + timedelta(days=AGENDA_DAYS + 1)).isoformat())))
+    try:
+        answer = gql(query, "agendas")
+    except Refused as e:
+        print(f"agendas: {e}; the last copy is kept", flush=True)
+        return
+    meets = (((answer or {}).get("data") or {}).get("meetings") or {}).get("data")
+    if meets is None:
+        print("agendas: no answer; the last copy is kept", flush=True)
+        return
+    out, n = {}, 0
+    for m in meets:
+        if CANCELED.search(" ".join(m.get(k) or "" for k in ("title", "description", "location"))):
+            continue
+        items = [a.get("instrumentNbr") or "" for a in m.get("agendaItems") or []]
+        items = [i for i in items if BILL.match(i)]
+        if not items or not m.get("startDate"):
+            continue
+        try:
+            when = datetime.fromisoformat(m["startDate"].replace("Z", "+00:00")).astimezone(zone)
+        except ValueError:
+            continue
+        name = re.sub(r"\s+", " ", m.get("committeeName") or "").strip()
+        c = re.fullmatch(r"(.+?) \((House|Senate|Joint)\)", name)
+        if c:
+            name = f"{c.group(2)} {c.group(1)}"
+        elif name or m.get("title"):
+            house = m.get("body") if m.get("body") in ("House", "Senate", "Joint") else "Joint"
+            name = name or re.sub(r"\s+(Standing\s+)?Meeting$", "", (m.get("title") or "").strip())
+            name = name if name.startswith(house) else f"{house} {name}"
+        n += 1
+        entry = [name, when.strftime("%Y-%m-%dT%H:%M:00")]
+        for i in items:
+            if entry not in out.setdefault(i, []):
+                out[i].append(entry)
+    folder = os.path.join(DATA, str(YEAR))
+    os.makedirs(folder, exist_ok=True)
+    save(out, os.path.join(folder, "agendas.json"))
+    print(f"agendas: {len(out)} bills on {n} meetings (of {len(meets)} meetings)", flush=True)
+
+
 # Members and committees -------------------------------------------------------------------------------------------
 
 def members():
@@ -599,6 +659,7 @@ def main():
     try:
         if not ONLY:
             members()
+            agendas()
         for year in years:  # the current year first
             if out_of_time():
                 break

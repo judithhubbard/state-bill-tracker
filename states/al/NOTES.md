@@ -60,3 +60,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Third Time and Pass"). Its passage lines say "Pass" for lost votes too (SB 181, 11-20): the tally decides. The governor's
   list names HB 58, never out of committee (dropped). Last day June 6, 2023; four local bills delivered June 1 and never
   numbered (HB 411, 449, 506, 508) are pocket vetoes. Totals: 396 laws, 4 pocket vetoes.
+- **Committee agendas (2026-11-22):** `agendas()` in states/al/fetch.py (every full run, after the members) asks ALISON's
+  GraphQL endpoint for `meetings` from yesterday to 22 days ahead with their `agendaItems` (the query the site's "Today's
+  Schedule" page sends; one request) and writes data/al/<year>/agendas.json ({"HB61": [["House Economic Development and
+  Tourism", "2026-02-04T14:30:00"]]}); `agendas()` in convert.py keeps meetings from today on. Times come in UTC and are
+  saved as Montgomery's (America/Chicago). "Judiciary (Senate)" becomes "Senate Judiciary"; canceled meetings say so in
+  the description or location ("CANCELED", "**MEETING CANCELED**", "Cancelled") and are left out; only HB/SB items are
+  kept (Rules agendas also list resolutions; "SCF" items are calendars). A meeting's status is "Released" once posted,
+  "Closed" after it. Tested by running it as of 2026-03-03 (past meetings come back the same way): 106 meetings, 344
+  bills, every key a 2026 record. Not yet seen live in a session. A failed request keeps the last file.

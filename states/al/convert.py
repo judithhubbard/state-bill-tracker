@@ -835,3 +835,19 @@ def parties(session, recs):
     if session not in _PARTIES:
         load_session(session)
     return {k: v for k, v in _PARTIES.get(session, {}).items() if v in ("D", "R")}
+
+
+def agendas(session):
+    """Bills on upcoming committee agendas: {"HB61": [["House Economic Development and Tourism", "2026-02-04T14:30:00"]]},
+    from data/al/<year>/agendas.json (states/al/fetch.py's agendas()), meetings from today on."""
+    try:
+        data = json.load(open(os.path.join(folder(session), "agendas.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    today = date.today().isoformat()
+    out = {}
+    for bill, meets in data.items():
+        keep = [m for m in meets if m[1][:10] >= today]
+        if keep:
+            out[bill] = sorted(keep, key=lambda m: m[1])
+    return out
