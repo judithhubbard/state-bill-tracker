@@ -43,3 +43,13 @@ Moved from CLAUDE.md (2026-11-19). Each state's own notes: states/tn, ok, me, ri
   on when each bill's full record is next read (the getBill allowance above): a newly posted hearing changes the bill's
   change_hash, so it is read as a minor change, paced through the day. Tennessee's House hearings are missing from LegiScan
   after January 2026.
+  The bill histories as a second source (2026-11-22): `Rules.history_meetings(b)` gives (standing, dropped, named), from
+  the history: meetings the bill is set for that nothing later undid, added where the calendar has none (with the time
+  another bill's calendar gives that meeting, else the day alone); meetings the history says it was taken off, dropped
+  from the calendar's entries (LegiScan's calendar keeps postponed and canceled hearings); and every committee the
+  history ever set it for on each day, so a calendar entry that day naming another committee is left out (LegiScan
+  mislabels some). `Rules.agenda_name()` gives both sources one spelling. Tennessee uses all three (its histories carry
+  every placement, "Placed on s/c cal Cities & Counties Subcommittee for 3/18/2026", which fills in the missing House
+  hearings), Rhode Island the second ("Meeting postponed (04/22/2025)"). Oklahoma, Maine and Vermont have nothing to add:
+  their histories name no upcoming committee meetings (Oklahoma's and Vermont's calendar lines are floor calendars, "Direct
+  to Calendar", "Entered on Notice Calendar"; Maine's "Work Session Held" is after the fact).

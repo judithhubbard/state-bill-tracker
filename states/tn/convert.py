@@ -144,6 +144,97 @@ def decode(a, h, b, kind):
     return [(h, None, a, {})]
 
 
+# ---- Committee meetings named in the history (agendas) ----
+
+# A bill set for a committee meeting: the House "Placed on s/c cal Cities & Counties Subcommittee for 3/18/2026",
+# "Placed on cal. Judiciary Committee for 3/25/2026", "Action Def. in s/c Health Subcommittee to 3/24/2026", "Action def.
+# in Judiciary Committee to 4/02/2025"; the Senate "Placed on Senate Finance, Ways, and Means Committee calendar for
+# 4/21/2026", "Action deferred in Senate Judiciary Committee to 3/24/2026", "Rule #83(8) Suspended, to be heard in Senate
+# Finance, Ways, and Means Committee for 4/15/2024". Floor calendars ("Placed on Senate Consent Calendar for ...", "H.
+# Placed on Regular Calendar for ...") aren't committee meetings.
+SET_FOR = [
+    ("H", re.compile(r"Placed on s/c cal\.? (.+?) for (\d+/\d+/\d+)$")),
+    (None, re.compile(r"Placed on cal\.? (.+?) for (\d+/\d+/\d+)$")),
+    ("S", re.compile(r"Placed on Senate (.+?(?:Committee|Subcommittee)) calendar for (\d+/\d+/\d+)$")),
+    (None, re.compile(r"Rule #\S+ Suspended, to be heard in (.+?) (?:for|on) (\d+/\d+/\d+)\b")),
+    (None, re.compile(r"Action def(?:erred|\.)? in (?:s/c )?(.+?) to (\d+/\d+/\d+)$", re.I)),
+]
+# Lines that don't change where a bill is set to be heard.
+QUIET = re.compile(r"Sponsor|Amendment|Fiscal|Caption|Engrossed|Filed for intro|Comp\. became", re.I)
+
+
+def set_for(a, h):
+    """A history line setting the bill for a committee meeting -> (house, committee as written, "YYYY-MM-DD"), else None."""
+    for house, rx in SET_FOR:
+        m = rx.match(a.strip())
+        if not m:
+            continue
+        name = m.group(1).strip()
+        if re.match(r"(?:Senate |H\. )?(?:Consent|Regular|Message|Local|Final|Appropriations)\b|cal\b", name, re.I) or "Extraordinary" in name:
+            return None
+        house = "S" if re.match(r"Senate\b", name) else house or ("S" if h == "S" else "H")
+        mo, dd, yy = m.group(2).split("/")
+        try:
+            from datetime import date
+            day = date(int(yy) + (2000 if len(yy) == 2 else 0), int(mo), int(dd)).isoformat()
+        except ValueError:
+            return None
+        return house, name, day
+    return None
+
+
+def meeting_name(house, name):
+    """The committee as the page names it: "House Judiciary", "House Cities and Counties Subcommittee", "Senate Finance,
+    Ways and Means", "Senate Finance, Ways and Means Revenue Subcommittee" (comm()'s spelling, the site's committee names)."""
+    name = re.sub(r"^(?:House|Senate)\s+", "", L.text(name))
+    # LegiScan's calendar: "Revenue Subcommittee of Finance, Ways & Means".
+    name = re.sub(r"^Revenue Subcommittee of Finance, Ways (?:&|and) Means$", "Revenue Subcommittee", name)
+    return f"{HOUSE[house]} {comm(name)}"
+
+
+def history_meetings(b):
+    """What the history says of the bill's committee meetings (legiscan_convert's Rules.history_meetings()): (standing,
+    dropped, named), the first two [(committee, day)], named {day: {committees}}. A setting
+    stands until a later line moves the bill or takes it off the meeting: another setting (a new date, a deferral, the
+    next committee), "Taken off notice", "Meeting Canceled", a committee's report or vote, a referral or subcommittee
+    assignment elsewhere, a floor calendar. Lines about sponsors and amendments don't. Dropped: settings undone before
+    their day, or taken off notice or canceled (LegiScan's calendar keeps those hearings: 218 of 2025-26's)."""
+    out, dropped, named = {}, set(), {}
+
+    def undo(x, a):
+        for k in out:
+            if x.get("date", "") < k[1] or re.match(r"Taken off notice|Meeting Canceled", a, re.I):
+                dropped.add(k)
+    for x in b.get("history") or []:
+        a, h = L.text(x.get("action")), x.get("chamber") or ""
+        s = set_for(a, h)
+        if s:
+            k = (meeting_name(s[0], s[1]), s[2])
+            named.setdefault(k[1], set()).add(k[0])
+            if k not in out:
+                # (a deferral and the placement for the same meeting come as two lines: one setting; settings written
+                # the same day all stand: the Senate's Finance, Ways and Means places bills on two days' calendars at
+                # once, "for 4/20/2026" and "for 4/21/2026")
+                if any(d != x.get("date") for d in out.values()):
+                    undo(x, a)
+                    out = {}
+                out[k] = x.get("date")
+            dropped.discard(k)
+            continue
+        if not a or QUIET.match(a):
+            continue
+        m = re.match(r"(?:Passed on Second Consideration, |Received from House, |Re-?)?(?:ref(?:er)?\.?(?: to)?|Assigned to s/c) (.+)$", a, re.I)
+        if m and out:
+            # A referral to the committee it's set for (the Senate sometimes places a bill on a committee's calendar
+            # before its referral line) leaves it.
+            to = meeting_name("S" if h == "S" else "H", m.group(1))
+            if any(n == to for n, _ in out):
+                continue
+        undo(x, a)
+        out = {}
+    return list(out), sorted(dropped - set(out)), named
+
+
 def summary_text(b):
     return L.text(b.get("description"))
 
@@ -185,6 +276,13 @@ class Tennessee(L.Rules):
 
     def comm_name(self, name):
         return name
+
+    def history_meetings(self, b):
+        return history_meetings(b)
+
+    def agenda_name(self, name):
+        m = re.match(r"(House|Senate)\s+(.+)$", name)
+        return meeting_name(m.group(1)[0], m.group(2)) if m else name
 
     def committee_vote(self, desc):
         m = re.match(r"(?:HOUSE |SENATE )?(.+?(?:COMMITTEE|SUBCOMMITTEE)):", desc or "")

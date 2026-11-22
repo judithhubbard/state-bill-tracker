@@ -246,6 +246,25 @@ class Rules:
         None to leave it out."""
         return None
 
+    def history_meetings(self, b):
+        """What the bill's own history says of its committee meetings (`agendas()`), as (standing, dropped, named):
+        - standing: meetings it's set for that nothing later undid, [(committee with its house, "YYYY-MM-DD")], past ones
+          too: Tennessee's "Placed on s/c cal Cities & Counties Subcommittee for 3/18/2026" (LegiScan's calendar lacks
+          its House hearings);
+        - dropped: meetings the calendar may still list that the history says it was taken off, [(committee, day)],
+          committee None for any that day: Tennessee's "Taken off notice ...", "Meeting Canceled", Rhode Island's
+          "Meeting postponed (04/22/2025)";
+        - named: {day: {committees}}, every meeting the history ever set it for: a calendar entry that day naming another
+          committee is left out (LegiScan labels about one in seven of Tennessee's 2025-26 hearings with the wrong
+          committee, "Senate Revenue Subcommittee of Finance, Ways & Means" for bills the history places before State and
+          Local Government).
+        Names go through `agenda_name()`. Default: nothing."""
+        return [], [], {}
+
+    def agenda_name(self, name):
+        """A meeting's committee as the page shows it, the same for both sources (`agendas()`). Default: as given."""
+        return name
+
     def number(self, b):
         """The record's number for a bill: its first letter must be the house where it started (the page reads the house
         from it). Default: LegiScan's number, "HB0005" -> "HB5". Maine's LDs carry no house: "LD1328" -> "HLD1328"."""
@@ -686,13 +705,18 @@ def agendas(R, session, today=None):
     (`hearing_name()`), else `R.hearing_committee(b, entry)` (Maine's say only "Hearing": the committee the bill was last
     referred to by then). Where a committee's agenda was revised (Oklahoma's "2ND REVISED"), only the latest revision's
     entry for that day is kept. LegiScan's calendar has no cancellations: a meeting dropped from the committee's notice
-    disappears from the bill's calendar when the bill is next read."""
+    disappears from the bill's calendar when the bill is next read.
+    Then the meetings the history names (`R.history_meetings(b)`: Tennessee's "Placed on cal. ... for 3/18/2026"), where
+    the calendar has none for that committee and day; they take the time another bill's calendar gives that meeting, else
+    none ("T00:00:00", shown as the day alone). Both sources' names go through `R.agenda_name()`. Calendar entries the
+    history says the bill was taken off, or that name another committee than the history's for that day, are left out."""
     from datetime import date
     today = today or date.today().isoformat()
     folder = R.session_folders().get(session)
     out = {}
     if not folder:
         return out
+    found, times = [], {}
     for b in bills(folder):
         if not R.include(b):
             continue
@@ -704,12 +728,31 @@ def agendas(R, session, today=None):
             name = hearing_name(x.get("description")) or R.hearing_committee(b, x)
             if not name:
                 continue
+            name = R.agenda_name(name)
             t = x.get("time") or "00:00"
             t = t if re.match(r"\d\d:\d\d$", t) else "00:00"
             k = (name, day)
             rank = (revision(x.get("description")), t)
             if k not in best or rank > best[k][0]:
                 best[k] = (rank, [name, f"{day}T{t}:00"])
+        standing, dropped, named = R.history_meetings(b)
+        named = {d: {R.agenda_name(n) for n in ns} for d, ns in named.items()}
+        for k in list(best):
+            if named.get(k[1]) and k[0] not in named[k[1]]:
+                del best[k]
+        for name, day in dropped:
+            # (None: every committee's meeting that day)
+            for k in [k for k in best if k[1] == day and (name is None or k[0] == R.agenda_name(name))]:
+                del best[k]
+        for k, (_, e) in best.items():
+            if not e[1].endswith("T00:00:00"):
+                times.setdefault(k, e[1])
+        heard = [(R.agenda_name(name), day) for name, day in standing if len(day) == 10 and day >= today]
+        found.append((R.number(b), best, heard))
+    for num, best, heard in found:
+        for k in heard:
+            if k not in best:
+                best[k] = (None, [k[0], times.get(k, f"{k[1]}T00:00:00")])
         if best:
-            out[R.number(b)] = sorted((v[1] for v in best.values()), key=lambda e: e[1])
+            out[num] = sorted((v[1] for v in best.values()), key=lambda e: e[1])
     return out
