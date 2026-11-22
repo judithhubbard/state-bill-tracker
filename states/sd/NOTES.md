@@ -49,3 +49,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   members and committees; no bills on 2026-11-22); fetch.py reads it every run and saves it once it has a bill, and an
   empty list before the session convenes never holds the state back. convert.py's `sessions()` shows this year's and
   next year's session from its first bill (past years still need over 100).
+- **Floor calendars (2026-11-22, states/floorcal.py):** `agendas()` in fetch.py no longer skips the two FullBody
+  "committees" (House of Representatives, SessionCommitteeId 1266 in 2026; Senate 1288): their documents are each floor
+  day's calendar, posted before the day (two more list requests a run, plus one per calendar in the window).
+  `floor_bills()` keeps the bills under "SECOND READING OF HOUSE/SENATE BILLS AND JOINT RESOLUTIONS" and "SECOND READING
+  AND CONSIDERATION OF CONSENT CALENDAR ITEMS" (South Dakota's passage vote is on second reading), not committee reports,
+  motions, commemorations or conferences; they go in agendas.json as ["House floor", when, "floor"], a vote set for that
+  day (91% of Senate and 93% of House listings had a vote that day or the next; the rest were tabled or deferred).
+  Tested on nine saved calendars of Feb 23-Mar 2, 2026 (127 bills, all records' numbers but SJR 508, a joint resolution
+  the converter leaves out).

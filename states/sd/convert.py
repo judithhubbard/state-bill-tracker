@@ -20,6 +20,7 @@ from states import letters as L
 from states.sd import profile as P
 from states.sd.contacts import seats
 from states.undated import settle
+from states import floorcal
 
 HOUSE = {"S": "Senate", "H": "House"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
@@ -363,13 +364,16 @@ def earlier(session, d, p):
 
 def agendas(session):
     """Bills on upcoming committee agendas, from agendas.json (states/sd/fetch.py's agendas(): each committee's agenda
-    documents): {"HB1055": [["House Judiciary", "2027-01-16T10:00:00"]]}. Only meetings today or later."""
+    documents): {"HB1055": [["House Judiciary", "2027-01-16T10:00:00"]]}. Only meetings today or later. The House's
+    and Senate's own calendars come in the same file as floor days: ["House floor", when, "floor"] (states/floorcal.py),
+    bills listed for second reading, South Dakota's passage vote."""
     today = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
     try:
         data = json.load(open(os.path.join(folder(session), "agendas.json")))
     except (OSError, ValueError):
         return {}
-    out = {k: sorted(m for m in v if m[1][:10] >= today) for k, v in data.items()}
+    since = lambda m: floorcal.since(P.TIMEZONE) if m[2:3] == ["floor"] else today
+    out = {k: sorted(m for m in v if m[1][:10] >= since(m)) for k, v in data.items()}
     return {k: v for k, v in out.items() if v}
 
 
