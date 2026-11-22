@@ -96,5 +96,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   kind: "markup" (the House's Markup, the Senate's Business Meeting or Executive Session) or "hearing"; canceled and
   postponed meetings are left out, times are Eastern (`STATE.meetZone` "ET"). The page says "Markup (committee vote): ..."
   or "Hearing: ..." where a state's says "On the agenda: ...". The DEMO_KEY allows only 10 requests an hour (enough to
-  test, not to run). On 2026-11-22 (the Thanksgiving recess) none of the meetings read named a bill: the Senate's six
-  scheduled meetings are nominations, briefings and an oversight hearing.
+  test, not to run). On 2026-11-22 (the Thanksgiving recess) no meeting still to come named a bill: the
+  House's committee calendar (docs.house.gov) had no meetings posted from November 23 to December 4, and the Senate's five
+  (senate.gov's hearings.xml) were nominations, closed briefings and a hearing on caregivers and AI.
