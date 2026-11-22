@@ -5321,7 +5321,9 @@ function syncControls() {
 }
 
 function wire() {
-  if (ROOT) {
+  // (Not "if (ROOT)": wire() runs before the data tag sets ROOT. loadIssues() does nothing on Claude copies, and the
+  // menu stays hidden there: syncIssue().)
+  {
     // The menu's issues are fetched once it's in view (a native menu opened before they arrive can't show them).
     if ("IntersectionObserver" in window) {
       const seen = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { seen.disconnect(); painted().then(() => loadIssues()); } });
