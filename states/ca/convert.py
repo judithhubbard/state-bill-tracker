@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 
 from . import profile as P
 from states.undated import settle
+from states import floorcal
 
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 HOUSE = {"A": "Assembly", "S": "Senate"}
@@ -468,7 +469,8 @@ def load_session(session):
 
 
 def agendas(session):
-    """Bills set for committee hearings: bill -> [["Assembly Appropriations", "2026-08-14T00:00:00"], ...]."""
+    """Bills set for committee hearings: bill -> [["Assembly Appropriations", "2026-08-14T00:00:00"], ...], and floor
+    calendars (states/floorcal.py)."""
     comms = committees(session)
     out = defaultdict(list)
     for r in rows(session, "COMMITTEE_HEARING"):
@@ -479,7 +481,23 @@ def agendas(session):
         entry = [f"{HOUSE[h]} {name}", f"{iso(r[3])}T00:00:00"]
         if entry not in out[m[1] + m[2]]:
             out[m[1] + m[2]].append(entry)
+    # Floor calendars: the Daily File (DAILY_FILE table: bill, file location, item, file date), from today on. A bill on
+    # a third reading file, the concurrence or unfinished business file or the consent calendar's second day can be
+    # taken up that day, but bills often wait on a file for days or weeks: "listed". Second reading, the inactive file,
+    # bills held at the desk and governor's vetoes aren't up for a vote.
+    since = floorcal.since(P.TIMEZONE)
+    for r in rows(session, "DAILY_FILE"):
+        m = NUM.match(r[0] or "")
+        if not m or len(r) < 5 or r[1] not in FLOOR_FILES or iso(r[4]) < since:
+            continue
+        floorcal.add(out, m[1] + m[2], floorcal.entry(HOUSE[r[1][0]], f"{iso(r[4])}T00:00:00", listed=True))
     return dict(out)
+
+
+# The Daily File's locations where a bill can come up for a vote (LOCATION_CODE): third reading (Assembly bills, Senate
+# bills), concurrence in the other house's amendments (Assembly) and unfinished business (Senate), the consent
+# calendar's second day.
+FLOOR_FILES = {"AF0240", "AF0250", "AF0180", "AF0280", "AF0290", "SF0430", "SF0450", "SF0390", "SF0490", "SF0510", "SF0511"}
 
 
 # ---- Sponsors' parties, from the current legislators (filled by load_session).
