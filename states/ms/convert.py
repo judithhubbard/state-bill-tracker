@@ -575,8 +575,11 @@ def load_session(session):
                       "actions": [[s[0], s[2]] for s in steps],
                       "link": bill_link(key, session)}],
         }
+        if place == "committee" and stage in (0, 2) and comm and not died:
+            _IN_COMM.setdefault(session, {})[p] = (where_h, comm)
         index[p] = len(recs)
         recs.append(rec)
+    _IN_COMM.setdefault(session, {})
     settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
@@ -587,6 +590,7 @@ def bill_link(key, session):
 
 
 _TITLES = {}
+_IN_COMM = {}  # session -> {bill: (house, committee)} for bills in a committee now and not dead (agendas())
 
 
 def _titles(session):
@@ -624,19 +628,48 @@ def earlier(session, x, p, law=False):
     return out
 
 
+def comm_key(c):
+    """A committee name for matching the House's schedule to the bills' committees: "Judiciary, Division A",
+    "Judiciary A" and "JUDICIARY A COMMITTEE" are one."""
+    c = comm_name(c).lower().replace("division ", "")
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", re.sub(r"\bcommittee\b", "", c))).strip()
+
+
 def agendas(session):
     """Bills on upcoming Senate committee agendas (states/ms/fetch.py's agendas(): the Senate's agendas PDF), today or
-    later: {"SB2328": [["Senate Judiciary, Division A", "2027-02-04T08:30:00"], ...]}. The House posts no agendas."""
+    later: {"SB2328": [["Senate Judiciary, Division A", "2027-02-04T08:30:00"], ...]}. The House posts no agendas, only
+    when its committees meet (fetch.py's house_schedule()): each such meeting is given to every bill in that House
+    committee that hasn't died, with the kind "meets" (the page says the committee meets and the bill could come up, not
+    that it's on the agenda) and a note when there's no clock time: ["House Judiciary A", "2027-01-20T00:00:00", "meets",
+    "after the House adjourns"]. Only meetings in the session's own year count."""
+    today = date.today().isoformat()
+    out = {}
     try:
         data = json.load(open(os.path.join(folder(session), "agendas.json")))
     except (OSError, ValueError):
-        return {}
-    today = date.today().isoformat()
-    out = {}
+        data = {}
     for bill, meets in data.items():
         keep = [m for m in meets if m[1][:10] >= today]
         if keep:
             out[bill] = keep
+    try:
+        house = json.load(open(os.path.join(folder(session), "house_meetings.json")))
+    except (OSError, ValueError):
+        house = []
+    house = [m for m in house if m[1][:10] >= today and m[1][:4] == str(session)]
+    if house:
+        if session not in _IN_COMM:
+            load_session(session)
+        by_comm = {}
+        for name, when, note in house:
+            by_comm.setdefault(comm_key(name), []).append((name, when, note))
+        for bill, (h, comm) in _IN_COMM[session].items():
+            for name, when, note in by_comm.get(comm_key(comm), []) if h == "H" else []:
+                if any(m[1][:10] == when[:10] and m[0] == f"House {comm}" for m in out.get(bill, [])):
+                    continue
+                out.setdefault(bill, []).append([f"House {comm}", when, "meets"] + ([note] if note else []))
+    for meets in out.values():
+        meets.sort(key=lambda m: m[1])
     return out
 
 

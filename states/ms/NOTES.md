@@ -62,3 +62,22 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   an interim hearing's (presenters and topics, no meeting lines: nothing read). The Archive's February and March 2026
   copies held only the heading ("Updated: February 3, 2026"), so whether the Senate kept it up in 2026 is unknown:
   check in January 2027. Untested live.
+- **House committee meetings ("committee meets", 2026-11-22).** The House publishes when its committees meet but not
+  which bills they'll take up. `house_schedule()` in fetch.py (every run, one request; billstatus.ls.state.ms.us has no
+  robots.txt, checked again 2026-11-22) reads /htms/h_sched.htm (one page, rewritten as meetings are set: a day line
+  "TUESDAY, DECEMBER 08, 2026", then rows of time, room and committee, with "Standing Meeting", "Full Committee" or
+  "Subcommittee 1" under the name) into data/ms/<this year>/house_meetings.json, `[["Judiciary A", "2027-01-20T10:00:00",
+  ""], ["Rules", "2027-01-21T00:00:00", "after the House adjourns"]]`: yesterday to three weeks ahead; "WNM" (won't meet)
+  and subcommittees left out; times written "AA+05" (after adjournment), "AR", "BC" are T00:00:00 with a note.
+  `agendas()` in convert.py gives each meeting in the session's year to every bill now in that House committee that
+  hasn't died (`_IN_COMM`, filled by load_session(); names matched by `comm_key()`: "Judiciary, Division A" = "Judiciary
+  A"), as `["House Judiciary A", when, "meets"(, note)]`. The page keeps them apart from real agendas: the row tag says
+  "House Judiciary A meets Tue, Jan 20" (outlined), the panel "The House Judiciary A Committee meets Tue, Jan 20, 10:00 AM;
+  this bill could come up.", the pipeline has its own line, "Committee meets soon", and they're not in "On an upcoming
+  committee agenda" or a legislator's "Coming up in committee"; on the watchlist the deadline reads "Committee meets
+  Jan 20". The How page's "About this data" says the House doesn't publish which bills its committees will consider.
+  Tested on the live page (one interim meeting, Management, December 8, 2026) and Internet Archive copies from 2025 (the
+  page's present layout; 2024's plain-text layout isn't read): January 23, 2025 gave 3 meetings (two "will not meet"
+  left out) and, with 2025's bills in committee, 189 bills; March 31, 2025, 2 meetings, 41 bills. January check: the
+  log's "house schedule: N House committee meetings", and that names match (a schedule name no bill's committee matches
+  simply attaches to nothing).

@@ -36,7 +36,7 @@ Congress is handled separately.
 | MI | www.legislature.mi.gov/Committees/Meetings + /Committees/Meeting?meetingID=N | HTML (canceled meetings struck through) | yes | ~1-3 weeks | no robots.txt; the Legislature's 1 request/s kept | done (archived Feb 2025 list, past meeting pages; joint resolutions left out) |
 | MN | House www.house.mn.gov/Schedules/All; Senate www.mnsenate.gov/api/schedule/range/<from>/<to> | HTML / JSON | yes | a few days | house.mn.gov bars only /Fiscal2/; mnsenate.gov has no robots.txt | done (March 2026 pages: 233 bills, all matched) |
 | MO | Senate www.senate.mo.gov/hearingsschedule/hrings.htm; House: the `<Hearings>` blocks in the House XML exports already downloaded | HTML; XML | yes | about a week | Senate robots bars only /Trade/, /DistrictWebApps/; house.mo.gov itself not read | done (archived Feb and Apr 2026 Senate pages: 450 and 204 bills, all matched) |
-| MS | Senate: legislature.ms.gov/calendars-and-schedules/senate-committee-agenda/, which links one PDF the Senate rewrites; House: billstatus.ls.state.ms.us/htms/h_sched.htm (times and rooms only) | PDF (pdftotext) | Senate yes; House no | 1-2 days | no robots.txt | Senate done (two archived 2025 copies: 73 bills); **House: no agendas with bills published** |
+| MS | Senate: legislature.ms.gov/calendars-and-schedules/senate-committee-agenda/, which links one PDF the Senate rewrites; House: billstatus.ls.state.ms.us/htms/h_sched.htm (times and rooms only) | PDF (pdftotext) | Senate yes; House no | 1-2 days | no robots.txt | Senate done (two archived 2025 copies: 73 bills); **House: no agendas with bills published**, so its meetings are shown as "the committee meets" on every bill in that committee (h_sched.htm, HTML, every run; tested on 2025 archived copies) |
 | NC | www.ncleg.gov/LegislativeCalendar/<m>/<yyyy> | HTML (chamber, committee, CANCELLED/UPDATED, bill links) | yes | weeks | robots bars only /WHPTest/, /Ethics/; Crawl-delay 2 kept | done (June 2025: 135 of 141 matched; the rest are confirmation resolutions the converter doesn't keep) |
 | NM | www.nmlegis.gov/Calendar/Session (fallback: /Calendar/Session_Archive?Year=YYYY): committee agenda PDFs and daily schedules | PDF (pdftotext) | yes | 1-3 days | robots bars only /*.axd | done (as of 2026-02-04: 88 bills, all matched; tested by the archive path) |
 | OK | each bill's LegiScan `calendar` (already downloaded) | JSON | per bill | as LegiScan has them | (the LegiScan route, states/LEGISCAN.md) | done (2026's saved calendars: 886 bills, all matched; only the latest "REVISED" agenda is kept) |
@@ -85,7 +85,7 @@ By state:
 - **MD**: compare mgaleg.maryland.gov/mgawebsite/Meetings/Week. Check that ys=2027rs works.
 - **MI**: compare www.legislature.mi.gov/Committees/Meetings and a few meeting pages. Bill ranges ("HBs 4001-4003") read only the first number.
 - **MN**: compare www.house.mn.gov/Schedules/All and www.mnsenate.gov/schedule/senate/upcoming-all. Check the House page's size in session, and that canceled meetings drop out.
-- **MS**: the riskiest reader. The Archive's 2026 copies of the Senate PDF held only a heading. Check that the PDF lists "S. B. No." bills under committee headings, and that the file isn't always empty while meetings are posted.
+- **MS**: the riskiest reader. The Archive's 2026 copies of the Senate PDF held only a heading. Check that the PDF lists "S. B. No." bills under committee headings, and that the file isn't always empty while meetings are posted. House: the log's "house schedule: N House committee meetings" should be over 0 once committees meet; open a House bill in committee and check it says "The House ... Committee meets ...; this bill could come up" and is under "Committee meets soon", not "On an upcoming committee agenda".
 - **NC**: compare www.ncleg.gov/LegislativeCalendar/1/2027 with the file. Check how the "UPDATED" and "Joint ..." names read.
 - **NM**: check whether /Calendar/Session links /Agendas/Standing/*.pdf during session. The tested path is the archive fallback.
 - **PA**: check that `<parss:Bills>` is filled on both feeds, and how a canceled meeting appears.
@@ -98,9 +98,10 @@ By state:
 
 ## Known gaps
 
-- Georgia: blocked (above).
-- Mississippi House: it publishes no bills with its meeting times.
+- Georgia: blocked (above). Rechecked 2026-11-22 from a GitHub runner: house.ga.gov, senate.ga.gov and www.legis.ga.gov all time out there; the chamber sites have been retired since 2025 (states/ga/NOTES.md).
+- Mississippi House: it publishes no bills with its meeting times; the page says only that a bill's committee meets (kind "meets", states/ms/NOTES.md).
 - Tennessee House: missing from LegiScan since February 2026, and the official site bars robots.
+- Open States (2026-11-22, research only, the owner's decision): its /events had 6 Georgia and 11 Tennessee meetings, all November-December 2026 interim ones with no bills, read from the same gated (GA) or robots-barred (TN, wapp.capitol.tn.gov) pages. The API returns only recent and upcoming events and no creation time, so lead time and bill match rates can only be measured by polling it during the 2027 sessions.
 - Kansas: hearings only.
 - Michigan and Kentucky: joint resolutions are left out. Michigan's are lettered ("HJRA"), and build_data.py drops a final capital when looking up agendas, so all of them would hit the same key; that needs a build_data.py change.
 - Massachusetts: a past hearing later moved to a future date would be missed.
