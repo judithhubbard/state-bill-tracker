@@ -71,3 +71,42 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   legislature's budget office, and these come from agencies). Coverage: about one bill in five has a fiscal note (2 of 9
   versions pages sampled, one chosen for having one); a first copy is about 2,100 pages plus 400 notes, about 11 runs.
   Before this, only 2023's 515 passed bills had "What it does" (0 of 1,051 in 2025-26). Never holds North Dakota back.
+- **Committee votes by member (2026-11-22):** every committee report ("Reported back, do pass, place on calendar 11 2 1")
+  is now a committee vote (kind "C", the committee named as in the referral, "Industry and Business"), from its tally;
+  member by member once the bill's Legislative History is read. Sources looked at: the API (roll_call.json is floor votes
+  only: its 16 "Committee Report" roll calls are floor votes on reports), the bill pages (hearings, testimony, versions,
+  actions: no minutes linked), the committee pages and hearing index (none), the journals (tallies only). The minutes
+  are only in the Legislative Council library's history of each bill, a PDF compiled after the session
+  (/sites/default/files/resource/69-2025/library/hb1001.pdf, listed on /research-and-archives/history; special sessions'
+  bills too): each meeting's minutes with every roll call ("Senators  Vote" / "Senator Jeff Barta  Y" ... / "Motion passed
+  5-0-0."), then the report, testimony and versions. robots.txt (re-read 2026-11-22) is Drupal's stock one: Disallow /core/,
+  /profiles/, /admin/, /search/, /user/..., /media/oembed, /survey/ and some README files; no crawl delay; nothing read
+  here is barred. The files are big (median 3.5 MB; budget bills to 56 MB, mostly scanned testimony; about 7 GB an
+  assembly), so `histories()` in fetch.py reads only bills with a report the tally can't name everyone in (a no, an
+  absence, or a do-not-pass: about 85% of bills), each once, at most ND_HISTORY_MB (1,500) a run within the time limit,
+  and keeps only the minutes' text (minutes/HB1001.txt, a few KB) and minutes.json; a 404 (not compiled yet) is asked
+  again weekly while the assembly is live, monthly after; nothing here marks the state incomplete. So a live session
+  shows committee votes by tally only until the library compiles its histories (2025's are dated August-October 2026).
+  `committee_vote()` in convert.py takes, of the bill's roll calls in the report's house and committee (divisions of
+  Appropriations are other committees) on the report's day or the three weeks before, one whose names add up to the
+  report's tally exactly (yes, no, absent), the report's own motion first, then the latest; names are matched within the
+  house's members of the assembly (whole name, then first and last, then a last name one member has), members who left
+  as "H?Olson" as on floor votes. Measured on 26 sample bills (2023 and 2025): 30 of 49 reports matched with names listed,
+  16 more matched with no one to list (unanimous, all present), 3 not (below: SB 2200's, HB 1339's, HB 1442's). Traps:
+  - A do-not-pass report is a vote for a motion against the bill: "Y" on "Do Not Pass" is against it. Read as given, the
+    page would say "Approved by the House Education Committee and sent to the floor · 10-4" for a bill the committee
+    recommended against. The converter turns it round (yes and no are for and against the bill; the motion's yes voters
+    are listed "N"). data_check LOOKs at committee votes that carried on a day the committee recommended against the bill.
+  - A bill's history carrying another bill's roll call: SB 2200 of 2023's has the Senate Appropriations Committee's "Roll
+    Call Vote - DO PASS SB 2211" (16-0-0, the same tally as SB 2200's report). Roll calls whose motion or result names
+    another bill are left out.
+  - A roll call whose codes disagree with its own result: HB 1339 of 2023, House Energy and Natural Resources, lists Kasper
+    "N" under "13-0-1 Motion carried" (the report says 13 0 1). Names that don't add up to the report's tally aren't used.
+  - A roll call with no codes in the text: HB 1442 of 2025's (House Industry, Business and Labor, "Motion passed 13-0-1")
+    lists the members with an empty Vote column. Left as the tally.
+  - Joint committees (the special sessions' Joint Policy and Joint Appropriations): "2026 JOINT STANDING COMMITTEE
+    MINUTES", each house's members voting apart on each motion ("Roll Call Vote" / "Representatives" / ... then "Senators"
+    / ...), the heading naming "Policy Committee"; read as each house's vote of "Joint Policy".
+  - A roll call can run across a page break, with the page's header ("House Agriculture Committee / SB 2250 / 03/13/25 /
+    Page 2") inside the list; and the result line's wording varies ("Motion passed 5-0-0.", "10-4-0 Motion Carries", "VOTE:
+    YES - 6 NO - 0 Absent - 0 Motion PASSED"): the names decide, not the wording.
