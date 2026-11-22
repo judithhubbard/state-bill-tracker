@@ -146,7 +146,7 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
   10:50 UTC (which also runs the data checks). One publish at a time (`concurrency: site`, queued, never cancelled).
 - Restores every state's cache (one step per state, New York's included: `check_site.py` fails if a state in
   states.json has none) and the `built/` cache, runs `build_site.sh _site` with `SITE_BASE=https://statebilltracker.pages.dev/`,
-  saves `built/` (and deletes all but the newest two `built-pages-` copies: `tools/prune_caches.py`, which download.yml
+  notes each state's bill counts in `built/freshness.json` (`check_site.py --record`, for the daily check), saves `built/` (and deletes all but the newest two `built-pages-` copies: `tools/prune_caches.py`, which download.yml
   runs for each state's copies too), and deploys with `wrangler pages deploy` (project `statebilltracker`) only if some state was rebuilt
   (or it was started by hand).
 - After deploying, every run (rebuilt or not): `tools/agenda_seen.py` logs, per state, when each bill first showed up on
@@ -167,7 +167,7 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
 | `test/check.sh` | by hand, after editing tracker.html or build_data.py | terminal. Builds **New York** (`data/bills_*.json`), parses scripts, finds duplicate functions, clicks every control in headless Chrome (`test/crawl.js`) |
 | `test/same.sh [commit]` | by hand, for changes that shouldn't change what visitors see | terminal; compares snapshots (`test/snapshot.js`) |
 | `test/data_check.py [st ...]` | by hand after any converter change; daily in publish.yml | FAIL/LOOK lines, ends "`N problem(s)`"; nonzero exit fails the run |
-| `check_site.py` | daily in publish.yml | contacts fresh and plentiful, NJ/CA texts present, VA date rule, publish.yml restores every state |
+| `check_site.py` | daily in publish.yml | contacts fresh and plentiful, NJ/CA texts present, VA date rule, publish.yml restores every state; each state's data still updating (`freshness()`): last successful download (`data/<st>/last_checked`; warn over 26 h, FAIL over 48 h; New York's is `check_fresh.py`'s), the Download step failing in each of a job's last 6-12 runs (FAIL) or half of them (warn), a live session's bill count down 2% and 5 bills from the last build of an earlier day (FAIL; `built/freshness.json`, written by `check_site.py --record` after every build), and, in session only (floor votes this year, before the day past same-parity years' last big floor-vote days say it ends), no new bill action for more than max(14, the state's usual quiet spell + 7) days (FAIL; half that warns). Warnings go to the run's summary only. Test with `CHECK_DATA`, `CHECK_BUILT`, `CHECK_TODAY` |
 | `test/site_check.js` (site-check.yml, 11:30 UTC) | daily, against the live site | freshness (8 h quick lane, 30 h others), bill counts, script errors, phone-width overflow, axe-core, keyboard; ends "`N problems:`" |
 | `test/issues/get.py`, `check.py` | by hand, after an issue rule change | samples of matches to read |
 | `test/consistency.js` | by hand, against a local build (`ONLY="ne co va us tn nv nd de" SITE_BASE=http://localhost:8766/ ./build_site.sh DIR`, served) | FAIL when a bill's status words, watchlist group and deadline, or "New" differ between views; ends "`N problem(s)`" |

@@ -108,8 +108,10 @@ notes before changing its code. Shared notes on the LegiScan states are in state
 - **Maine (built 2026-11-08 from LegiScan)**: see states/me/NOTES.md.
 - **Fewer yearly chores (2026-10-29):** Virginia's computed session dates and crossover: see states/va/NOTES.md.
   `check_site.py` runs last in publish.yml (daily) and fails the run (GitHub
-  emails) when legislators are stale or too few, New Jersey's bill texts are missing, or Virginia's date rule stops
-  fitting the floor votes. Still by hand: a new governor (`GOVERNORS`) every four years, next January 2030.
+  emails) when legislators are stale or too few, New Jersey's bill texts are missing, Virginia's date rule stops
+  fitting the floor votes, or a state's data stops updating (2026-11-22, `freshness()`: no successful download for 2 days,
+  the download failing every run, a live session losing bills since the day before, or, in session only, no new bill
+  action for two weeks or more; milder cases are warnings in the run's summary). Still by hand: a new governor (`GOVERNORS`) every four years, next January 2030.
 - **Tabs (2026-11-19):** a state's page has Bills, Watchlist, Statistics and How laws are made. The Weigh in tab is gone
   (the owner's decision): "Find your legislators" (`#whereBox`, `renderMyReps()`, drawn when opened; "Where you live"
   until 2026-11-20; the names link to their pages) is a line under the title on every tab, the only place to pick a
