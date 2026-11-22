@@ -238,6 +238,9 @@ def check(state):
             # 2025: fine when the record's own bill is named anywhere.)
             anywhere = {(m.group(1)[0].upper(), m.group(3)) for m in re.finditer(
                 r"\b(House|Senate|Assembly)\s+(Bill|Joint Resolution|File)\s+(?:No\.\s*)?0*(\d+)", r["vetoMemo"]["text"], re.I)}
+            # (Or abbreviated: NH's one letter for two bills, "I have vetoed HB 1491 and SB 661", 2026.)
+            anywhere |= {(m.group(1).upper(), m.group(2)) for m in re.finditer(
+                r"\b([HSA])\.?\s?B\.?\s?0*(\d+)\b", r["vetoMemo"]["text"])}
             if got and not got & own and not anywhere & own:
                 wrong.append(r["nums"][0])
         if wrong:

@@ -138,7 +138,7 @@ def term_now():
     return first_year(TODAY.year)
 
 
-def request(url, label, headers=None):
+def request(url, label, headers=None, data=None):
     """GET url, at least the crawl delay after the last request; (body, response headers), or (None, None) after three
     tries. Refused on 401/403/429; a 404 is None at once; a 304 is (b"", headers)."""
     for attempt in range(3):
@@ -149,7 +149,7 @@ def request(url, label, headers=None):
             time.sleep(wait)
         STATS["requests"] += 1
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": AGENT, "Accept-Encoding": "gzip", **(headers or {})})
+            req = urllib.request.Request(url, data=data, headers={"User-Agent": AGENT, "Accept-Encoding": "gzip", **(headers or {})})
             with urllib.request.urlopen(req, timeout=180) as r:
                 body = r.read()
                 if r.headers.get("Content-Encoding") == "gzip":
@@ -911,6 +911,16 @@ def main():
                 sql_run(rp, term)
             if not out_of_time():
                 analyses(rp, text_years(), limit)
+            if not out_of_time() and not texts_only:
+                # Veto messages, from the House and Senate Journals the Docket names (states/nh/vetoes.py); never
+                # holds New Hampshire back.
+                try:
+                    from states.nh import vetoes
+                    vetoes.fetch(rp, request, SITE, AGENT)
+                except Refused:
+                    raise
+                except Exception as e:
+                    print(f"veto messages: failed ({type(e).__name__}: {e})", flush=True)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
     write_texts(text_years())

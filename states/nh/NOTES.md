@@ -49,3 +49,25 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   data/nh/2027/, and convert.py's `sessions()` shows this or next year from its first numbered bill (not 100 LSRs). In
   December, before the session, `missing()` counts the last biennium's per-term files, so the new term's never hold New
   Hampshire off the site.
+- **Veto messages (2026-11-22):** from the House and Senate Journals on gc.nh.gov (crawl delay 11 s; www.governor.nh.gov
+  still answers 403 and isn't read): `states/nh/vetoes.py`, called by fetch.py each run (at most 12 requests a run, after
+  everything else; never holds New Hampshire back). Which journals: those a vetoed bill's Docket lines name on or after the
+  veto ("Vetoed by Governor Ayotte 03/27/2026  HJ 10  P. 2", "Veto Sustained ... HJ 17  P. 12", the Senate's "... Veto
+  Overridden ...; 08/19/2026;  SJ 15"): 13 for 2023-26. A journal's file name carries its date, so each body's list for a
+  year comes from its Calendars & Journals page (/house/calendars_journals/, /senate/calendars_journals/): the page, a
+  post choosing Journals, and a post choosing the year (one post choosing both keeps the newest year's list: the first
+  try listed 2026's journals for every year), kept in data/nh/journals/lists.json and asked again at most once a day,
+  only when a journal named isn't on it. PDFs: `/house/calendars_journals/viewer.aspx?fileName=journals\2026\HJ 10 April
+  9, 2026.pdf`, `/senate/calendars_journals/viewer.aspx?fileName=Journals\2026\SJ 15.pdf`; their text (pdftotext, else
+  pypdf) is kept as data/nh/journals/HJ-2026-10.txt, each read once. The House prints "GOVERNOR'S VETO MESSAGE ON HB
+  349-FN", the Senate "VETO MESSAGE" / its date / "Governor's Veto Message Regarding Senate Bill 627"; each journal also
+  prints the other house's bills it takes up (SJ 15 has HB 2026's). The message runs to "Respectfully submitted" (or "The
+  question being ..."); running heads ("9 APRIL 2026 HOUSE RECORD", "SENATE JOURNAL 19 AUGUST 2026") are dropped and
+  words broken at a line's end joined; paragraphs by `letters.wrapped()`. `message()` gives a record the one printed for
+  its number in a journal of the veto's year or the next (numbers start over each biennium), the Senate's dated within 10
+  days of the veto; stage 6 and overridden laws. Tested 2026-11-22 (7 journals read, 13 requests at 11 s, then the rest
+  left for later runs): 2025 12 of 12 vetoes and 2026 32 of 32 have their message; 2023's and 2024's journals (HJ 17-18 of
+  2023, HJ 16-17 of 2024, SJ 21 of 2023, SJ 18 of 2024) come over the next runs. Vetoes not yet taken up (the Docket names
+  no journal) get theirs once a house prints it: weeks later in session, months for summer vetoes (the fall veto day). One
+  letter can cover two bills (SB 661 and HB 1491 of 2026, "I have vetoed HB 1491 and SB 661"): data_check's "veto messages
+  name other bills" check now counts abbreviated numbers as naming the bill.

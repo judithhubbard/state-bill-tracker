@@ -547,6 +547,10 @@ def load_session(session):
                       "actions": [[s[0], s[2] if s[2].isupper() else s[3]] for s in steps],
                       "link": bill_link(p, session, lsr, carried)}],
         }
+        # The governor's veto message, from the House or Senate Journal that printed it (states/nh/vetoes.py).
+        if rec["keyDates"][6] and stage in (5, 6):
+            from states.nh import vetoes
+            rec["vetoMemo"] = vetoes.message(p, rec["keyDates"][6][:10])
         index[p] = len(recs)
         recs.append(rec)
     settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
