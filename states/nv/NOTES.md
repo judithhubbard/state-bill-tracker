@@ -72,3 +72,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   The governor's phones and contact page are from gov.nv.gov (checked by
   program 2026-11-09, not by the owner). Places (`towns.py`, run once): cities, Census-designated places (most of the
   Las Vegas valley) and counties, separate Senate and Assembly lists.
+- **Emails after the election (2026-11-22):** Open States' current people file lists the members-elect since the November
+  2026 election, so 16 members of the 2025 Legislature who sit until February lost their emails (46 of 62). contacts.py's
+  `keep_emails()` keeps a seat's email from the last contacts file, else from states/nv/emails_2025.json (60 members'
+  emails as Open States gave them on 2026-11-09), when the seat's member has the same name. 2 members had none even then.

@@ -121,11 +121,30 @@ def build(session):
             "leaders": leaders, "assemblyMembers": {}, "kept": []}
 
 
+def keep_emails(session, out, path):
+    """A sitting member's email that Open States' current file no longer gives: after the November 2026 election it lists
+    the members-elect, so 16 members of 2025 who sit until February lost theirs (2026-11-22). Kept from the last contacts
+    file, else from states/nv/emails_<session>.json (seat -> [name, email], as Open States gave them before the
+    election), when the seat's member has the same name."""
+    kept = {}
+    seed = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"emails_{session}.json")
+    if os.path.exists(seed):
+        kept.update({sid: tuple(v) for sid, v in json.load(open(seed)).items()})
+    try:
+        kept.update({sid: (p["name"], p["email"]) for sid, p in json.load(open(path))["people"].items() if p.get("email")})
+    except (OSError, ValueError, KeyError):
+        pass
+    for sid, p in out["people"].items():
+        if not p["email"] and sid in kept and name_key(kept[sid][0]) == p["key"]:
+            p["email"] = kept[sid][1]
+
+
 def main(session):
     out = build(session)
     if len(out["people"]) < 55:
         raise SystemExit(f"{session}: only {len(out['people'])} legislators; kept the last contacts")
     path = os.path.join(P.DATA, f"contacts_{session}.json")
+    keep_emails(session, out, path)
     json.dump(out, open(path, "w"), indent=1, ensure_ascii=False)
     ppl = list(out["people"].values())
     comms = list(out["senateCommittees"].values()) + list(out["assemblyCommittees"].values())
