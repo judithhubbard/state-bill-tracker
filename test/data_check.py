@@ -15,6 +15,11 @@ STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "hi"
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
+# Contact fields a state's allowed sources don't have (see its NOTES.md): Illinois's member files have no emails or member
+# ids and www.ilga.gov turns programs away; Hawaii's and Ohio's legislators' pages turn programs away and Open States'
+# file has no phones; New Hampshire's member list leaves 142 representatives without a phone; Florida's members' phones
+# come from their pages, read over several runs.
+CONTACT_GAPS = {"il": ("email or form", "page"), "hi": ("phone",), "oh": ("phone",), "nh": ("phone",), "fl": ("phone",)}
 # Each legislature's seats (states/legislatures.json), to check votes against the size of their house.
 LEGISLATURES = json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"]
 # The topics every state uses, with the same names, so states can be compared ("Shared conventions" in CLAUDE.md).
@@ -105,6 +110,21 @@ def check(state):
         tails = sorted({c for r in recs for c in r["comms"] if re.search(r"\b(?:failed|roll call|yeas|nays|pursuant to)\b|;", c, re.I)})
         if tails:
             say(state, "FAIL", f"{s}: {len(tails)} committee names carry a motion's wording, e.g. {tails[:3]}")
+        # A summary line that is the title again with a stock tail: Iowa's was the official title, whose only difference
+        # from the title is ", and including effective date provisions" (2026-11-22).
+        norm_t = lambda t: re.sub(r"[^a-z0-9 ]", "", (t or "").lower()).split()
+        echo = [r["nums"][0] for r in recs if r["summary"] and (st := norm_t(r["title"])) and len(st) >= 3
+                and (sm := norm_t(r["summary"]))[:len(st)] == st and len(sm) - len(st) <= 8]
+        if echo:
+            say(state, "FAIL" if len(echo) > 0.05 * len(recs) else "LOOK",
+                f"{s}: {len(echo)} summary lines are the title with a few words added, e.g. {echo[:4]}")
+        # A doubled word in history lines: Congress.gov's "Referred to the The Subcommittee on ..." (states/us/convert.py
+        # drops it; billfacts.js's plainAction() made its own "the The Committee On ..." of written-out referrals, fixed
+        # 2026-11-22).
+        doubled = [r["nums"][0] for r in recs for v in r["vers"] for _, t in v["actions"] if re.search(r"\bthe the\b", t, re.I)]
+        if doubled:
+            say(state, "FAIL" if len(doubled) > 0.001 * len(recs) else "LOOK",
+                f"{s}: {len(doubled)} history lines with \"the the\", e.g. {doubled[:4]}")
         # Committee pass rates that look wrong (sponsors' amendments read as committee votes).
         fate = collections.Counter(r["commFate"] for r in recs)
         say(state, "LOOK", f"{s}: first committee: {fate['passed']} approved, {fate['held']} held, {fate['defeated']} voted down, "
@@ -288,6 +308,35 @@ def check(state):
         big = [r["nums"][0] for r in recs for v in r["votes"] if v[1] == "F" and seats.get(v[0]) and v[4] + v[5] > seats[v[0]]]
         if big:
             say(state, "FAIL", f"{s}: {len(big)} floor votes have more ayes and noes than their house has seats, e.g. {big[:4]}")
+        # Votes that never arrived: CO's download read committee votes first, and about 900 voice votes it couldn't save
+        # took every run's time (2026-11-22), so the live site had 1,226 committee votes and no floor vote. A state with
+        # roll calls should have a floor vote for most bills that passed a house.
+        # (A session with no votes at all counts too when another session of the state has floor votes: CO's 2025.)
+        passed = [r for r in recs if r["passedS"] or r["passedA"]]
+        if passed and (any(r["votes"] for r in recs) or any(v[1] == "F" for x in loaded.values() for r in x for v in r["votes"])):
+            with_floor = sum(1 for r in passed if any(v[1] == "F" for v in r["votes"]))
+            share = with_floor / len(passed)
+            if len(passed) >= 30 and share < 0.2:
+                say(state, "FAIL", f"{s}: only {with_floor} of {len(passed)} bills that passed a house have a floor vote "
+                                   f"({sum(1 for r in recs for v in r['votes'] if v[1] == 'C')} committee votes): floor votes missing?")
+            elif share < 0.6:
+                say(state, "LOOK", f"{s}: {with_floor} of {len(passed)} bills that passed a house have a floor vote")
+        # Roll calls without the members' names in one house: PA's Senate floor votes named members on about a third of
+        # split votes, the House on nearly all (2026-11-22). A house's split floor votes (ayes and noes both) should name
+        # members as often as the other house's.
+        split_named = {}
+        for h in ("S", getattr(P, "LOWER", "A")):
+            fl = [v for r in recs for v in r["votes"] if v[0] == h and v[1] == "F" and v[4] and v[5]]
+            if len(fl) >= 20:
+                split_named[h] = (sum(1 for v in fl if v[6]) / len(fl), len(fl))
+        if len(split_named) == 2:
+            (a, na), (b, nb) = split_named.values()
+            if max(a, b) >= 0.8 and min(a, b) < 0.5:
+                say(state, "FAIL", f"{s}: split floor votes naming members: " +
+                    ", ".join(f"{h} {100 * x:.0f}% of {n}" for h, (x, n) in split_named.items()) + " (one house's names missing?)")
+            elif min(a, b) < 0.8:
+                say(state, "LOOK", f"{s}: split floor votes naming members: " +
+                    ", ".join(f"{h} {100 * x:.0f}% of {n}" for h, (x, n) in split_named.items()))
         # Roll calls filed under the wrong bill: KS's roll-call records name their bill, and two 2026 Senate line-item override
         # votes on the budget (HB 2513) say HB 2315, a bill that never left committee. Floor votes on a bill that never
         # left committee. (Only a LOOK: WY's budget sessions vote on introducing a bill, two-thirds needed, and the bills that
@@ -427,6 +476,24 @@ def check(state):
         if apart:
             say(state, "LOOK", f"{s}: {len(apart)} of {len(found)} laws' summaries share almost no words with their title "
                                f"(a summary of a version another bill's contents replaced?), e.g. {apart[:4]}")
+
+    # Contacts that lost a field: South Dakota's API emptied the 2026 members' emails and phones after the November
+    # election, and Open States' file (Nevada's emails) moved to the members-elect, so the next download's contacts had
+    # none (2026-11-22). The current session's and the newest file: each of email or contact form, phone and page link
+    # for most members, except what the state's sources don't have (CONTACT_GAPS, each in the state's NOTES.md).
+    for path in sorted({os.path.join(P.DATA, f"contacts_{cur}.json")} | set(sorted(glob.glob(os.path.join(P.DATA, "contacts_*.json")))[-1:])):
+        if not os.path.exists(path):
+            continue
+        people = list(json.load(open(path))["people"].values())
+        have = {"email or form": sum(1 for p in people if p.get("email") or p.get("form")),
+                "phone": sum(1 for p in people if p.get("phone")), "page": sum(1 for p in people if p.get("url"))}
+        for field, n in have.items():
+            if not people or field in CONTACT_GAPS.get(state, ()):
+                continue
+            if n < 0.5 * len(people):
+                say(state, "FAIL", f"{os.path.basename(path)}: {field} for only {n} of {len(people)} legislators")
+            elif n < 0.9 * len(people):
+                say(state, "LOOK", f"{os.path.basename(path)}: {field} for {n} of {len(people)} legislators")
 
     # Legislators: degrees in names, odd spacing, duplicate phones, missing parties or phones.
     for path in sorted(glob.glob(os.path.join(P.DATA, "contacts_*.json")))[-1:]:
