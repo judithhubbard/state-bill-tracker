@@ -680,7 +680,8 @@ def check(state):
         # (A third item is the meeting's kind: Congress's "markup" or "hearing", or "meets" for a meeting that names no bills,
         # given to every bill in that committee (the Mississippi House), which may have a fourth, a note on the time.)
         # A floor calendar's day (kind "floor") names the house as its committee, "Senate floor" (one of the state's houses),
-        # with a fourth item "listed" when the calendar lists bills that can come up that day rather than a vote set for it.
+        # with a fourth item "listed" when the calendar lists bills that can come up that day rather than a vote set for it,
+        # or "likely" for a day guessed from the bill's history where no calendar is read (states/floorcal.py's likely()).
         houses = set(getattr(P, "HOUSES", {}).values()) if isinstance(getattr(P, "HOUSES", None), dict) else set()
         try:
             js = open(os.path.join(HERE, "states", state, "profile.js")).read()
@@ -688,7 +689,7 @@ def check(state):
             houses |= set(re.findall(r'"([^"]+)"', m.group(1))) if m else set()
         except OSError:
             pass
-        floor_ok = lambda e: (len(e) in (3, 4) and e[2] == "floor" and (len(e) < 4 or e[3] in ("", "listed"))
+        floor_ok = lambda e: (len(e) in (3, 4) and e[2] == "floor" and (len(e) < 4 or e[3] in ("", "listed", "likely"))
                               and re.fullmatch(r"(.+) floor", e[0] or "") and (not houses or e[0][:-6] in houses))
         bad = [(k, e) for k, es in ag.items() for e in es
                if not (isinstance(e, (list, tuple)) and 2 <= len(e) <= 4 and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?", e[1] or "")
@@ -697,7 +698,7 @@ def check(state):
                             and (len(e) < 3 or e[2] in ("", "markup", "hearing", "meets")) and (len(e) < 4 or e[2] == "meets")))]
         if bad:
             say(state, "FAIL", f"{s}: {len(bad)} agenda entries aren't [\"House Committee\", \"YYYY-MM-DDTHH:MM:SS\"(, kind)]"
-                               f" or [\"Senate floor\", \"YYYY-MM-DDTHH:MM:SS\", \"floor\"(, \"listed\")]: {bad[:3]}")
+                               f" or [\"Senate floor\", \"YYYY-MM-DDTHH:MM:SS\", \"floor\"(, \"listed\" or \"likely\")]: {bad[:3]}")
         # Floor calendars: each bill named is a record's number (above); one still in committee in the house whose calendar
         # names it would be a misread (a committee calendar read as the floor's). LOOK at the count.
         flo = {k: [e for e in es if len(e) > 2 and e[2] == "floor"] for k, es in ag.items()}
@@ -707,8 +708,17 @@ def check(state):
             early = sorted(k for k in flo if k in rec_of and rec_of[k]["stage"] == 0)
             days = {(e[0], e[1][:10]) for es in flo.values() for e in es}
             listed = sum(1 for es in flo.values() if all(len(e) > 3 and e[3] == "listed" for e in es))
+            likely = sum(1 for es in flo.values() if all(len(e) > 3 and e[3] == "likely" for e in es))
+            # A likely vote (no calendar: the next weekday after the bill's reading) on a weekend, or for a bill past the
+            # floor (passed both houses), would be a misread history. (Not in a replay, FLOOR_TODAY: the stages are today's.)
+            from datetime import date as _date
+            odd = sorted(k for k, es in flo.items() for e in es if len(e) > 3 and e[3] == "likely"
+                         and (_date.fromisoformat(e[1][:10]).weekday() >= 5 or (k in rec_of and rec_of[k]["stage"] >= 3 and not os.environ.get("FLOOR_TODAY"))))
+            if odd:
+                say(state, "FAIL", f"{s}: {len(odd)} likely floor votes on a weekend or for bills past the floor: {odd[:5]}")
             say(state, "LOOK", f"{s}: {len(flo)} bills on {len(days)} house floor calendars"
                                + (f" ({listed} only listed as able to come up, not set for a vote)" if listed else "")
+                               + (f" ({likely} likely votes guessed from the bills' histories, no calendar)" if likely else "")
                                + (f"; {len(early)} of them still in committee now: {early[:5]}" if early else ""))
         ag = {k: [e for e in es if not (len(e) > 2 and e[2] == "floor")] for k, es in ag.items()}
         ag = {k: es for k, es in ag.items() if es}

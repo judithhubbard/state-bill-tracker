@@ -77,3 +77,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   tested on the Internet Archive's copies of two agenda pages (House ACT subcommittee, February 18, 2025: HB2043 and
   HB2060; Senate Agriculture, February 8, 2023: SB561), whose keys match the records; robots.txt allows /committees/
   (fetch.py's docstring, checked 2026-11-09). Check it in the first January run (see the January plan in the report).
+
+- **Likely floor votes (2026-11-22):** no floor calendar is read, so `likely_votes()` in convert.py (states/floorcal.py's
+  `likely_from_records()`) gives a bill whose last step is "Read the second time" (then only amendments, "Reported by the
+  Clerk" or "On 3rd reading") the next weekday as a "likely" floor day, in the House of Delegates or the Senate (the
+  other house once it passed one); "Laid over on ... reading" moves it to the weekday after that line. Replayed over
+  2024-26 (2,436 predictions): the vote came that day 89.2%, laid over that day 2.7%, later 4.7%, earlier 2.3% (Saturday
+  sessions near the end), never 1.0%. `agendas()` now returns these even when agendas.json is missing.

@@ -42,3 +42,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
   (`STATE.originDeadline`), and after it the bill can't pass that year. Virginia's floor leaders and members' first
   years come from the houses' sites (contacts.py).
+
+- **Likely floor votes (2026-11-22):** the LIS files have no floor calendar (the API that has one needs a key we don't
+  use yet), so `likely_votes()` in convert.py guesses the day from HISTORY.CSV: a bill whose last line in its house is
+  the second reading ("Read second time and engrossed"; the Senate's "Constitutional reading dispensed (on 2nd
+  reading)"), followed only by amendments, engrossment and the like, gets the next weekday as a "likely" floor day
+  (states/floorcal.py); a "Passed by for the day" moves it to the next weekday after that line. Measured on 2024-26
+  (notes/agendas-survey.md, "Likely floor votes"): of 6,234 second readings that were a bill's latest step, the third
+  reading came the next session day 91.6%, two days later 7.3%, three 0.8%, four or more 0.3%; replayed evening by
+  evening, the vote came on the predicted day 92.2%, the bill was passed by for the day then 6.5% (the next evening
+  predicts again), later 0.8%, never 0.4%. Floor days are weekdays (a Saturday or Sunday 1-3 times a session). Lines of
+  bills continued from the last session (dated then) are left out. Not handled: a second reading on the session's last
+  day or on crossover day (the next weekday is past the deadline; rare).

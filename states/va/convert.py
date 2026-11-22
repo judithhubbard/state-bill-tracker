@@ -483,7 +483,42 @@ def agendas(session):
         b = num(r["Bill_no"])
         if entry not in out[b]:
             out[b].append(entry)
+    likely_votes(session, out)
     return dict(out)
+
+
+# Likely floor votes (states/floorcal.py's likely()). Virginia's floor calendars aren't in the LIS files, but a bill is
+# read three times on separate days and the passage vote ("Read third time and passed House") follows the second reading
+# ("Read second time and engrossed"; the Senate's "Constitutional reading dispensed (on 2nd reading)") on the next day
+# the house meets, a weekday. Replaying 2024-26 evening by evening (6,234 second readings that were a bill's latest step
+# in its house): the vote came the next weekday 92.2% of the time, the bill was "Passed by for the day" then 6.5% (a new
+# prediction, from that line), later 0.8%, never 0.4%. So a bill read the second time, or put off, gets the next weekday,
+# until a third reading, a passage, or any step but those in BETWEEN appears.
+SECOND = re.compile(r"Read second time|Constitutional reading dispensed\b.*\(on 2nd reading\)", re.I)
+PUT_OFF = re.compile(r"Passed by for the day\b", re.I)
+BETWEEN = re.compile(r"Engross|amendment|substitute|Rules suspended|Impact statement|Placed on Calendar|printed|reading waived|"
+                     r"Moved from Uncontested Calendar|Emergency clause|Floor Offered|Passed by temporarily|Pending question|"
+                     r"Motion to recommit to committee rejected", re.I)
+
+
+def likely_votes(session, out):
+    """Add each bill's likely floor vote to out ({bill: [entries]})."""
+    from states import floorcal
+    since, cut = floorcal.since(P.TIMEZONE), floorcal.replay()
+    hist = defaultdict(list)
+    for r in rows(session, "HISTORY.CSV"):
+        d, day = r["History_description"], iso(r["History_date"])
+        # (A session's file also has the lines of bills continued from the last one, dated then: left out.)
+        if day and day[:4] >= str(session) and d[1:2] == " " and d[:1] in HOUSE and not (cut and day >= cut):
+            hist[num(r["Bill_id"])].append((day, d[:1], d[2:].strip()))
+    for b, acts in hist.items():
+        i = max((k for k, a in enumerate(acts) if SECOND.search(a[2])), default=None)
+        if i is None or not re.match(r"(HB|SB)\d", b):
+            continue
+        house, after = acts[i][1], acts[i + 1:]
+        # (A step on a later day decides; History.csv lists each bill's lines in order.)
+        if all(h == house and (PUT_OFF.search(t) or BETWEEN.search(t)) for _, h, t in after):
+            floorcal.likely(out, b, HOUSE[house], max([acts[i][0]] + [d for d, _, t in after if PUT_OFF.search(t)]), since)
 
 
 # ---- Sponsors' parties, from the current legislators (filled by load_session).
