@@ -14,7 +14,8 @@ the rest; Open States has only the short titles. Each is read once, and again af
 (it stops after RUN_LIMIT seconds, leaving time for the next step), those that went furthest first.
 Usage: python3 states/az/azleg.py
 """
-import glob, html, json, os, re, sys, time, urllib.error, urllib.request
+import glob, html, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
+from datetime import date, timedelta
 
 SITE = "https://www.azleg.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "az", "azleg"))
@@ -123,8 +124,148 @@ def resolutions():
     print(f"azleg.gov: {done} resolution titles read, {len(todo) - done} left", flush=True)
 
 
+AGENDA_LIMIT = 14 * 60  # agenda PDFs read in one run: about 7 (the listing takes one request too)
+
+
+def agenda_rows(listing):
+    """The standing committees' agendas (/standing-committee) -> [{"day", "committee", "id", "revised", "cancelled",
+    "time", "pdf"}], one row per meeting: "03 - 24 - 2026", the committee's name and id, the Revised and Cancelled
+    check boxes, "2:00 P.M. or upon recess or adjournment of Floor" (or "CANCELLED"), /agendas/0324012170130.pdf."""
+    out = []
+    for row in re.findall(r"<tr[^>]*>(<td>\d\d - \d\d - \d{4}</td\s*>.*?)</tr>", listing, re.S):
+        cells = re.findall(r"<td[^>]*>(.*?)</td\s*>", row, re.S)
+        pdf = re.search(r"href=\"?(/agendas/[\w.-]+\.pdf)", row, re.I)
+        if len(cells) < 7 or not pdf:
+            continue
+        m, d, y = re.findall(r"\d+", cells[0])[:3]
+        name = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", cells[1]))).strip()
+        cid = re.search(r"committeeId=(\d+)", cells[1])
+        when = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", cells[4]))).strip()
+        out.append({"day": f"{y}-{m}-{d}", "committee": name, "id": cid.group(1) if cid else "",
+                    "revised": "Revised" in cells[2], "cancelled": "Cancelled" in cells[3] or when.upper().startswith("CANCEL"),
+                    "time": when, "pdf": pdf.group(1)})
+    return out
+
+
+def agenda_bills(text):
+    """An agenda PDF's text (pdftotext -layout) -> (house, [bill numbers]). The heading names the house ("ARIZONA HOUSE OF
+    REPRESENTATIVES", "ARIZONA STATE SENATE"); each bill heads its row ("HB2313", "SCR1001")."""
+    head = text[:1500].upper()
+    house = "House" if "HOUSE OF REPRESENTATIVES" in head else "Senate" if "SENATE" in head else ""
+    bills = []
+    for kind, n in re.findall(r"(?m)^\s*(HB|SB|HCR|SCR|HJR|SJR|HCM|SCM|HR|SR)\s?(\d{4})\b", text):
+        if f"{kind}{n}" not in bills:
+            bills.append(f"{kind}{n}")
+    return house, bills
+
+
+def clock(when):
+    """"2:00 P.M. or upon recess ..." -> "14:00:00"; no time -> "00:00:00"."""
+    t = re.match(r"(\d+):(\d\d)\s*([AP])\.?\s*M", when or "", re.I)
+    if not t:
+        return "00:00:00"
+    return f"{int(t.group(1)) % 12 + (12 if t.group(3).upper() == 'P' else 0):02d}:{t.group(2)}:00"
+
+
+def agendas():
+    """Bills on standing committee agendas from yesterday to three weeks ahead, into data/az/<year>/agendas.json: bill ->
+    [["House Education", "2026-02-17T14:00:00"], ...]. The list of every standing committee's agendas
+    (/standing-committee, one request a run) names each meeting's day, time, Cancelled box and agenda PDF
+    (/agendas/<...>.pdf, on www.azleg.gov, which robots.txt allows; apps.azleg.gov isn't read). Each PDF is read with
+    pdftotext and kept as text in data/az/azleg/agendas/: once, again when the list shows it revised or with a new time,
+    and again after twelve hours while the meeting is ahead (revisions keep the address). At the crawl delay only a few
+    PDFs fit in a run (AGENDA_LIMIT), the soonest unread first. A failure keeps the last files."""
+    started = time.time()
+    folder = os.path.join(DATA, "agendas")
+    os.makedirs(folder, exist_ok=True)
+    seen_path = os.path.join(folder, "read.json")
+    try:
+        seen = json.load(open(seen_path))
+    except (OSError, ValueError):
+        seen = {}
+    listing = get("/standing-committee")
+    if not listing:
+        print("azleg.gov: agenda list unreadable; kept the last agendas", flush=True)
+        return
+    today = date.today()
+    first, last = (today - timedelta(days=1)).isoformat(), (today + timedelta(days=21)).isoformat()
+    rows = [r for r in agenda_rows(listing) if first <= r["day"] <= last and not r["cancelled"]]
+
+    def text_path(r):
+        return os.path.join(folder, os.path.basename(r["pdf"]) + ".txt")
+
+    def need(r):
+        k = seen.get(r["pdf"])
+        if not k or not os.path.exists(text_path(r)):
+            return (0, r["day"])
+        if k.get("revised") != r["revised"] or k.get("time") != r["time"]:
+            return (1, r["day"])
+        if r["day"] >= today.isoformat() and time.time() - k.get("read", 0) > 12 * 3600:
+            return (2, str(k.get("read", 0)))
+        return None
+
+    todo = []
+    if shutil.which("pdftotext"):
+        todo = sorted((need(r), r["pdf"], r) for r in rows if need(r))
+    else:
+        print("azleg.gov: no pdftotext; agendas not read", flush=True)
+    read = 0
+    for _, _, r in todo:
+        if time.time() - started + DELAY > AGENDA_LIMIT:
+            break
+        wait = _last[0] + DELAY - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        _last[0] = time.time()
+        try:
+            with urllib.request.urlopen(urllib.request.Request(SITE + r["pdf"], headers={"User-Agent": AGENT}), timeout=120) as resp:
+                body = resp.read()
+            txt = subprocess.run(["pdftotext", "-layout", "-", "-"], input=body, capture_output=True, timeout=60).stdout
+            txt = txt.decode("utf-8", "replace")
+        except Exception as e:
+            print(f"{r['pdf']}: {e}", flush=True)
+            continue
+        if not txt.strip():
+            continue
+        open(text_path(r) + ".tmp", "w", encoding="utf-8").write(txt)
+        os.replace(text_path(r) + ".tmp", text_path(r))
+        seen[r["pdf"]] = {"read": int(time.time()), "revised": r["revised"], "time": r["time"]}
+        read += 1
+    seen = {k: v for k, v in seen.items() if time.time() - v.get("read", 0) < 60 * 86400}
+    json.dump(seen, open(seen_path + ".tmp", "w"), indent=0, sort_keys=True)
+    os.replace(seen_path + ".tmp", seen_path)
+    for f in glob.glob(os.path.join(folder, "*.pdf.txt")):  # texts of agendas no longer listed or read
+        if time.time() - os.path.getmtime(f) > 60 * 86400:
+            os.remove(f)
+    by_year, n = {}, 0
+    for r in rows:
+        if not os.path.exists(text_path(r)):
+            continue
+        house, bills = agenda_bills(open(text_path(r), encoding="utf-8").read())
+        name = r["committee"] if r["committee"].startswith("Joint") else f"{house or 'Joint'} {r['committee']}"
+        entry = [name, f"{r['day']}T{clock(r['time'])}"]
+        n += 1
+        out = by_year.setdefault(int(r["day"][:4]), {})
+        for b in bills:
+            if entry not in out.setdefault(b, []):
+                out[b].append(entry)
+    for y in sorted(set(by_year) | {today.year}):
+        ydir = os.path.join(os.path.dirname(DATA), str(y))
+        os.makedirs(ydir, exist_ok=True)
+        path = os.path.join(ydir, "agendas.json")
+        json.dump(by_year.get(y, {}), open(path + ".tmp", "w"), ensure_ascii=False)
+        os.replace(path + ".tmp", path)
+    left = len(todo) - read
+    print(f"azleg.gov: agendas: {sum(len(v) for v in by_year.values())} bills on {n} of {len(rows)} meetings ahead; "
+          f"{read} PDFs read now" + (f", {left} left for later runs" if left > 0 else ""), flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
+    try:  # the agendas first: they change daily in session, and the weekly committee pages could use up the run
+        agendas()
+    except Exception as e:  # never breaks the run
+        print(f"azleg.gov: agendas failed ({type(e).__name__}); kept the last files", flush=True)
     for body in ("H", "S"):
         keep(f"roster_{body}", f"/memberroster/?body={body}")
     listing = keep("standing_committees", "/standing-committees/")

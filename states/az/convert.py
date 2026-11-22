@@ -403,7 +403,15 @@ def load_session(session):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming standing committee agendas (states/az/azleg.py's agendas(), from www.azleg.gov's agenda PDFs):
+    bill -> [["House Education", "2026-02-17T14:00:00"], ...], meetings from today on."""
+    try:
+        got = json.load(open(os.path.join(folder(session), "agendas.json")))
+    except (OSError, ValueError):
+        return {}
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
+    out = {k: [e for e in v if e[1][:10] >= today] for k, v in got.items()}
+    return {k: v for k, v in out.items() if v}
 
 
 def parties(session, recs):
