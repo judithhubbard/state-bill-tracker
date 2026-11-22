@@ -26,3 +26,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   "Omnibus water bill-construction" share titles). Governor 3 days, Sundays excepted, in session; 15 days after
   adjournment. The governor's phone and contact page (governor.wyo.gov/contact/governor) haven't been checked by the
   owner. A new governor takes office January 4, 2027 (Gordon is term-limited): add them to `GOVERNORS`.
+- **Member pages (2026-11-22):** contacts link each member's page on wyoleg.gov, built from the member list's `legID`
+  (the site's own route, `/Legislators/:year/:chamber/:legID`, from its Angular bundle; the page is drawn in the
+  browser, so its address can't be checked by reading it). Until then no member had an official page link.

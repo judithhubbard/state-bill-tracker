@@ -33,7 +33,9 @@ def build(year):
             people[sid] = {
                 "name": m["name"], "key": name_key(m["name"]), "id": m.get("voteName") or m["name"].split()[-1],
                 "party": PARTY.get(m.get("party"), m.get("party") or ""), "email": m.get("eMail") or None, "form": None,
-                "phone": ph or None, "phones": [["Phone", ph]] if ph else [], "url": None, "image": None, "office": "",
+                "phone": ph or None, "phones": [["Phone", ph]] if ph else [], "image": None, "office": "",
+                # The member's page (wyoleg.gov's route /Legislators/:year/:chamber/:legID).
+                "url": f"https://wyoleg.gov/Legislators/{year}/{h}/{m['legID']}" if m.get("legID") else None,
                 "position": m.get("leadershipPosition") or None, "places": m.get("county") or "",
                 "dataName": m.get("voteName") or m["name"],
             }
