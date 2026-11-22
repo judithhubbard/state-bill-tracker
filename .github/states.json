@@ -82,8 +82,8 @@
    "paths": [
     "data/oh"
    ],
-   "minutes": 40,
-   "run": "python3 states/oh/fetch.py"
+   "minutes": 50,
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/oh/fetch.py"
   },
   {
    "name": "Massachusetts",
