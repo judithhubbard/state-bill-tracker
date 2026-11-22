@@ -315,6 +315,8 @@ def head(url):
     a GET gets; Colorado's redirect to signed addresses that answer HEAD 403)."""
     r = None
     for method, extra in (("HEAD", {}), ("GET", {"Range": "bytes=0-0"})):
+        if method == "GET":
+            pace(url)  # (the second request keeps the host's Crawl-delay too)
         try:
             r = urllib.request.urlopen(urllib.request.Request(url, method=method, headers={**UA, **extra}), timeout=10)
             break
