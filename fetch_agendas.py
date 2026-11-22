@@ -3,17 +3,19 @@
 Senate agendas come from the Open Legislation API; Assembly agendas from the committee agenda
 pages on nyassembly.gov, which list upcoming meetings only. Writes data/agendas_<session>.json:
 {"S1234": [["Senate Health", "2026-01-20T10:30:00"], ...]} keyed by bill number without
-amendment letter.
+amendment letter, plus the Senate's floor calendars from today on (senate_floor(): ["Senate floor", day, "floor"]).
 
 Usage: python3 fetch_agendas.py [session_year]   (default 2025)
 API key from NYSENATE_API_KEY, or else ~/.nysenate_api_key."""
 import datetime, html, json, os, re, sys, time, urllib.parse, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from states import floorcal  # noqa: E402
 
 
-def get(path, key):
-    q = urllib.parse.urlencode({"key": key, "limit": 1000})
+def get(path, key, **extra):
+    q = urllib.parse.urlencode({"key": key, "limit": 1000, **extra})
     for attempt in range(4):
         try:
             with urllib.request.urlopen(f"https://legislation.nysenate.gov/api/3/{path}?{q}", timeout=120) as r:
@@ -74,6 +76,29 @@ def assembly(out):
         problem(f"The Assembly agenda page lists {len(set(links))} meetings, but no bills could be read from them. Its layout may have changed (fetch_agendas.py).")
 
 
+def senate_floor(out, key, session):
+    """Senate floor calendars (states/floorcal.py), from today on: each calendar's active lists (the main one, released
+    the evening before, and any supplemental ones) name the bills the Senate takes up that day, so each is a vote set for
+    the day: ["Senate floor", "2026-05-13T00:00:00", "floor"]. The calendar's third reading section (several hundred
+    bills, some waiting for months) is left out. One request for the year's calendars, then one per calendar still to
+    come (usually none or one)."""
+    since = floorcal.since("America/New_York")
+    n = 0
+    for year in (session, session + 1):
+        for cal in get(f"calendars/{year}", key)["items"]:
+            if (cal.get("calDate") or "") < since:
+                continue
+            full = get(f"calendars/{year}/{cal['calendarNumber']}", key, full="true")
+            for al in ((full.get("activeLists") or {}).get("items") or {}).values():
+                day = al.get("calDate") or full.get("calDate")
+                for b in (al.get("entries") or {}).get("items", []):
+                    if (b.get("billType") or {}).get("resolution") or not day:
+                        continue
+                    floorcal.add(out, b["basePrintNo"], floorcal.entry("Senate", f"{day}T00:00:00"))
+                    n += 1
+    print(f"Senate floor: {n} bill listings on active lists from {since}", file=sys.stderr)
+
+
 def main():
     session = int(sys.argv[1]) if len(sys.argv) > 1 else 2025
     key = os.environ.get("NYSENATE_API_KEY") or open(os.path.expanduser("~/.nysenate_api_key")).read().strip()
@@ -90,6 +115,10 @@ def main():
                         entry = [name, when]
                         if when and entry not in out.setdefault(p, []):
                             out[p].append(entry)
+    try:
+        senate_floor(out, key, session)
+    except SystemExit as e:
+        print(f"Senate floor calendars didn't download: {e}", file=sys.stderr)
     try:
         assembly(out)
     except Exception as e:
