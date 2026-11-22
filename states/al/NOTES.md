@@ -33,7 +33,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   of decades ago; names that don't resolve are dropped when a list is longer than the house. "What it does": the act's
   summary for a law ("From the act's summary."), else the Legislative Services Agency's synopsis of the bill as introduced,
   its "This bill would ..." sentences first (`synopsis_text()`); HB 66 of 2024's summary has a replacement character for an
-  apostrophe. Topics from the Legislature's subjects (`SUBJECT_TOPICS`; a county is "local") and committees. Titles are
+  apostrophe. Bills first read after they were engrossed (the endpoint gives only the newest text, which has no synopsis)
+  get it from their introduced PDF (2026-11-22: fetch.py's `intro_pdfs()`, once a bill, general bills that aren't laws
+  with an act summary; 76 such bills in 2026, more in finished years, read as each run's time allows). Checked on HB 1,
+  HB 37, HB 97, HB 123 and SB 26 of 2026. Shows after the next download runs. Topics from the Legislature's subjects (`SUBJECT_TOPICS`; a county is "local") and committees. Titles are
   the short titles; the summary is the official "Relating to ..." title. Bill links: ALISON has no page per bill, so the
   newest text PDF, the introduced PDF and the Secretary of State's act page. Earlier years linked by identical short title
   (four words or more), never laws or appropriations. Governor (Kay Ivey, term-limited; a new governor takes office in

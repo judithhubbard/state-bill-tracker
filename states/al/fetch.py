@@ -46,7 +46,10 @@ this year and the four before, not before 2023)
   existing law ... This bill would ..."), and the act's title ("Relating to vaccines; to amend Section 22-8-4 ...").
   Only introduced texts have a synopsis, so a bill first read after it was engrossed or enrolled has none: in a
   finished year about half the bills (every law; their actSummary in bills.json covers about three in four), and local
-  bills seldom have one. Each introduced version's PDF (introducedFileUrl, not read) has it.
+  bills seldom have one. Each introduced version's PDF (introducedFileUrl) has it: `intro_pdfs()` reads it, once, for
+  each bill with no synopsis in any version read, that isn't a law with an act summary or a local bill, and keeps its
+  text (pdftotext, lines joined as the endpoint's fullText is) as the bill's INTRODUCED text ("introPdf" in
+  texts_raw.json.gz lists those asked: a PDF with no synopsis isn't asked again).
 - state.json: when each part was last read, roll calls the server had no record of, and "finished" once the year's
   bills, histories and BIRs have been read after the session (from August 1 of the year) and every roll call and text.
 And into data/al/members/ (weekly): members.json, every member record (the current ones have house, district, the
@@ -85,7 +88,7 @@ history, the members); it is removed when nothing is missing. Roll calls and tex
 the state incomplete. A request that fails where a last copy exists keeps that copy and doesn't count.
 Usage: python3 states/al/fetch.py [year]   (default: every year above; a single year leaves the marker alone)
 """
-import gzip, json, os, re, sys, time, urllib.error, urllib.request
+import gzip, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -463,14 +466,75 @@ def read_texts(s, folder, bills):
     return not left
 
 
+def intro_pdfs(folder):
+    """The introduced PDF's text for bills with no synopsis yet (see the module's docstring), as the run's time allows.
+    Never holds the year back: what isn't read now is read next run."""
+    if not shutil.which("pdftotext"):
+        print("introduced PDFs: pdftotext isn't installed", flush=True)
+        return
+    raw_path = os.path.join(folder, "texts_raw.json.gz")
+    try:
+        with gzip.open(raw_path, "rt", encoding="utf-8") as f:
+            raw = json.load(f)
+        bills = (load(os.path.join(folder, "bills.json"), {}) or {}).get("bills") or []
+    except (OSError, ValueError):
+        return
+    texts, asked = raw.setdefault("texts", {}), raw.setdefault("introPdf", {})
+    todo = []
+    for b in bills:
+        k, url = b.get("instrumentNbr"), b.get("introducedFileUrl")
+        have = texts.get(k) or {}
+        if not url or k in asked or "INTRODUCED" in have or b.get("actSummary"):
+            continue
+        parts = text_parts(have) if have else {}
+        if parts.get("synopsis") or parts.get("local_notice"):
+            continue
+        todo.append((k, url))
+    got = 0
+    for k, url in todo:
+        if out_of_time():
+            break
+        time.sleep(1)
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": AGENT}), timeout=60) as r:
+                pdf = r.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                asked[k] = TODAY.isoformat()
+            continue
+        except Exception:  # noqa: BLE001 (tried again next run)
+            continue
+        asked[k] = TODAY.isoformat()
+        if pdf[:5] != b"%PDF-":
+            continue
+        try:
+            t = subprocess.run(["pdftotext", "-enc", "UTF-8", "-", "-"], input=pdf, capture_output=True,
+                               timeout=60).stdout.decode("utf-8", "replace")
+        except (OSError, subprocess.SubprocessError):
+            continue
+        # As the endpoint gives a text: each page's lines joined, a page to a line.
+        full = "\n".join(re.sub(r"\s*\n\s*", " ", pg).strip() for pg in t.split("\f") if pg.strip())
+        if version_of(full) == "INTRODUCED":
+            texts.setdefault(k, {})["INTRODUCED"] = full
+            got += 1
+    if todo:
+        tmp = raw_path + ".tmp"
+        with gzip.open(tmp, "wt", encoding="utf-8") as f:
+            json.dump(raw, f, ensure_ascii=False)
+        os.replace(tmp, raw_path)
+        write_texts(folder, raw)
+        print(f"{os.path.basename(folder)} introduced PDFs: {got} read of {len(todo)} bills with no synopsis", flush=True)
+
+
 def session(year):
     s = f"{year}RS"
     folder = os.path.join(DATA, str(year))
     state_path = os.path.join(folder, "state.json")
     state = load(state_path, {})
     if state.get("finished"):
+        intro_pdfs(folder)
         write_texts(folder)
-        print(f"{year}: finished and fully read; nothing to download", flush=True)
+        print(f"{year}: finished and fully read; nothing else to download", flush=True)
         return
     os.makedirs(folder, exist_ok=True)
     bills = read_bills(s, folder, state)
@@ -489,6 +553,8 @@ def session(year):
     votes_done = read_votes(s, folder, state, wanted) if not out_of_time() else False
     save(state, state_path)
     texts_done = read_texts(s, folder, bills) if not out_of_time() else False
+    if not out_of_time():
+        intro_pdfs(folder)
     after = TODAY.isoformat() >= finished_by(year)
     if after and votes_done and texts_done and all(state.get(k, "") >= finished_by(year)
                                                    for k in ("bills", "history", "birs")):
