@@ -22,3 +22,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Full-time Legislature (`floorVotesEnd: false`); governor 10 days, Sundays excepted. Separate Senate (33) and House
   (99) districts by city, village or county (`states/oh/towns.py`). The governor's phone and address are from the
   governor's contact page, checked by the owner 2026-10-31 (governor.ohio.gov answers automated requests "not found"). Built only once data/oh/incomplete is gone.
+- **Next General Assembly (2026-11-22):** the API answers 500 for the 137th until it's set up, and bills are introduced
+  only after it convenes (January 4, 2027), so it's read from January; until March 1 a list never read doesn't hold Ohio
+  back, and its contacts wait until its legislators and committees are listed. The General Assembly just ended is read
+  again until April 1 for bills still waiting on enrollment or the governor (the list's revno may not change).

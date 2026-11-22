@@ -25,3 +25,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   day (840 meetings of 2025-26 listed, 22 canceled left out): 2026-02-02 to 02-23 gave 93 meetings and 283 bills, every
   one matched a record; live, no meetings ahead. Untested: the page in January 2027 (whether StartDate in the new
   biennium lists 2027-28's meetings), and an "eItems" naming a substitute amendment rather than the bill.
+- **Next session (2026-11-22):** docs.legis answers 404 for /2027/ (bills, legislators, committees) on 2026-11-22; the
+  session is read from January (it convenes January 4, 2027). Its missing list, members and committees don't hold
+  Wisconsin back until April 1 (bill pages never read still do), and convert.py's `sessions()` shows it from its first
+  bill (past sessions still need over 1,000).

@@ -59,8 +59,11 @@ def folder(congress):
 
 
 def sessions():
+    # A new Congress from its first House or Senate bill, read from the sitemap before its first zips (fetch.py).
     return sorted(P.session_of_congress(c) for c in CONGRESSES
-                  if glob.glob(os.path.join(folder(c), "BILLSTATUS-*-hr.zip")))
+                  if glob.glob(os.path.join(folder(c), "BILLSTATUS-*-hr.zip"))
+                  or glob.glob(os.path.join(folder(c), "updates", f"BILLSTATUS-{c}hr*.xml"))
+                  or glob.glob(os.path.join(folder(c), "updates", f"BILLSTATUS-{c}s[0-9]*.xml")))
 
 
 def text(x):

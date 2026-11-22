@@ -501,11 +501,16 @@ def session(year):
         os.makedirs(os.path.join(folder, sub), exist_ok=True)
     live = year >= CURRENT
 
-    listing = bill_list(year)
+    # The session just ended, until February: bills whose feed entry changes (the governor's last actions) are read again.
+    ending = year == CURRENT - 2 and date.today() < date(CURRENT, 2, 1)
+
+    listing = got = bill_list(year)
     if not listing:
-        print(f"{year}: no bill list; kept the last copy")
+        print(f"{year}: no bill list" + (" (no bills filed yet)" if got == {} else "") + "; kept the last copy")
         listing = load(os.path.join(folder, "list.json"), {}) or {}
-        if not listing:  # only a list never read holds the state off the site
+        # Only a list never read holds the state off the site; a new session's empty feed (it answers with no items
+        # until the first bills are filed, late January) doesn't.
+        if not listing and not (got == {} and live):
             INCOMPLETE.add(f"{year}:list")
     else:
         save(os.path.join(folder, "list.json"), listing)
@@ -519,9 +524,13 @@ def session(year):
         if not os.path.exists(path_of(num)):
             todo.append(num)
             continue
-        if not live:
+        if not live and not ending:
             continue
         old = load(path_of(num)) or {}
+        if ending and not live:
+            if old.get("listAction") != entry["lastAction"] or old.get("listDate") != entry["date"]:
+                todo.append(num)
+            continue
         if (old.get("listAction") != entry["lastAction"] or old.get("listDate") != entry["date"]
                 or entry["date"] >= recent or not old.get("history")):
             todo.append(num)

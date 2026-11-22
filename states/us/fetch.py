@@ -115,6 +115,10 @@ def bills(congress):
     os.makedirs(os.path.join(folder, "updates"), exist_ok=True)
     st = state(congress)
     current = congress == max(C.CONGRESSES)
+    # The Congress just ended is read like the current one until March 1: the President's actions on its last bills
+    # (ten days, Sundays excepted, after they're presented) come in through January.
+    newest = P.session_of_congress(max(C.CONGRESSES))
+    live = current or (congress == max(C.CONGRESSES) - 1 and NOW.date() < date(newest, 3, 1))
     for t in TYPES:
         name = f"BILLSTATUS-{congress}-{t}.zip"
         path = os.path.join(folder, name)
@@ -123,7 +127,7 @@ def bills(congress):
         if os.path.exists(path) and ours:
             theirs = head(url)
             ours_t = datetime.fromisoformat(ours)
-            if not theirs or (theirs - ours_t).days < (7 if current else 30):
+            if not theirs or (theirs - ours_t).days < (7 if live else 30):
                 continue
         print(f"{congress} {t}: downloading {name}")
         data, lm = get(url)
@@ -146,19 +150,20 @@ def bills(congress):
                 del upd[f]
         save_state(congress, st)
         time.sleep(2)
-    if not current:
+    if not live:
         return
-    # Files changed since each zip was made: the sitemap's lastmod is later than the zip's and than our copy's.
+    # Files changed since each zip was made: the sitemap's lastmod is later than the zip's and than our copy's. A new
+    # Congress's files are read from its sitemaps before its first zips are built (every file then counts as changed).
     upd = st.setdefault("updates", {})
     n = 0
     for t in TYPES:
-        if t not in st.get("zips", {}):
+        if t not in st.get("zips", {}) and not current:
             continue
-        raw, _ = get(f"{SITEMAP}/{congress}{t}/sitemap.xml")
+        raw, _ = get(f"{SITEMAP}/{congress}{t}/sitemap.xml", tries=1 if t not in st.get("zips", {}) else 3)
         if not raw:
             continue
         ns = {"s": "http://www.sitemaps.org/schemas/sitemap/0.9"}
-        zip_t = st["zips"][t]
+        zip_t = st.get("zips", {}).get(t, "")
         for u in ET.fromstring(raw).findall("s:url", ns):
             loc, lastmod = u.findtext("s:loc", "", ns), u.findtext("s:lastmod", "", ns)
             f = loc.rsplit("/", 1)[-1]

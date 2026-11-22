@@ -144,4 +144,11 @@ def main(session):
 
 if __name__ == "__main__":
     for s in ([int(sys.argv[1])] if len(sys.argv) > 1 else C.sessions()):
-        main(s)
+        try:
+            main(s)
+        except SystemExit:
+            # A new Congress's members may not be in congress-legislators yet when its first bills are: until
+            # March, too few members leaves its contacts unwritten without failing the run.
+            if s != max(C.sessions()) or datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat() >= f"{s}-03-01":
+                raise
+            print(f"{s}: too few members of the new Congress listed yet; no contacts written")

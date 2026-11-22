@@ -31,3 +31,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   1107) with the date set back; the live run's timing in session is untested (agendas are posted a few days ahead). Not
   used: `Documents/Schedule` (the site's upcoming-meetings list: agendas' DocumentIds with SessionCommitteeId; in
   November only interim meetings), which could replace the 32 committee requests once its session shape is seen.
+- **Next session (2026-11-22):** the API lists next year's session from about November (2027's, SessionId 174, with its
+  members and committees; no bills on 2026-11-22); fetch.py reads it every run and saves it once it has a bill, and an
+  empty list before the session convenes never holds the state back. convert.py's `sessions()` shows this year's and
+  next year's session from its first bill (past years still need over 100).

@@ -82,8 +82,11 @@ def session(session):
     os.makedirs(os.path.join(folder, "bills"), exist_ok=True)
     items = get(f"{base}/legislation/")
     if not items:
-        print(f"{session}: no legislation list (the API didn't answer); kept the last copy")
-        if not os.path.exists(os.path.join(folder, "legislation.json")):  # only a list never read holds the state off
+        print(f"{session}: no legislation list (the API didn't answer, or no bills yet); kept the last copy")
+        # Only a list never read holds the state off, and not a new General Assembly's in its first two months (the
+        # API answers 500 for one it hasn't set up, and bills are introduced only after it convenes).
+        if not os.path.exists(os.path.join(folder, "legislation.json")) \
+                and not (session == CURRENT and TODAY < TODAY.replace(year=session, month=3, day=1)):
             INCOMPLETE.add(session)
         return
     bills = {i["number"].upper(): i for i in items if wanted(i)}
@@ -94,12 +97,16 @@ def session(session):
     except (OSError, ValueError):
         revs = {}
     live = session >= CURRENT
+    # The General Assembly just ended, until April: its last bills reach the governor in January, and the list's revno
+    # may not change for that, so bills still waiting on enrollment or the governor are read again.
+    ending = session == CURRENT - 2 and TODAY < TODAY.replace(year=CURRENT, month=4, day=1)
 
     def one(b):
         f = os.path.join(folder, "bills", f"{b}.json")
         old = json.load(open(f)) if os.path.exists(f) else None
         rev = str(bills[b].get("revno"))
-        if old and not live and revs.get(b) == rev:
+        if old and not live and revs.get(b) == rev \
+                and not (ending and waiting(old["versions"], old.get("actions") or [])):
             return b, True  # a finished General Assembly's bill, unchanged
         actions = get(f"{base}/legislation/{b.lower()}/actions/")
         # The list's revno doesn't change when a bill is enrolled or sent to the governor (HB 13 of the 136th: enrolled
@@ -140,7 +147,7 @@ def session(session):
         data = get(f"{base}/{name}/")
         if data:
             save(os.path.join(folder, f"{name}.json"), data)
-    if live:
+    if live and os.path.exists(os.path.join(folder, "committees.json")):  # a new General Assembly's may not be listed yet
         members = {}
         for c in json.load(open(os.path.join(folder, "committees.json"))):
             m = get(f"https://search-prod.lis.state.oh.us{c['link']}members/") if c.get("link") else None
@@ -206,6 +213,8 @@ def main():
 if __name__ == "__main__":
     main()
     from states.oh import contacts  # the legislators, committees and Open States' emails just downloaded
-    contacts.main(CURRENT)
+    # A new General Assembly's contacts once its legislators and committees are listed (until then the last file stands).
+    if all(os.path.exists(os.path.join(P.DATA, str(CURRENT), f"{n}.json")) for n in ("legislators", "committees")):
+        contacts.main(CURRENT)
     from states.oh import texts  # "What it does", from the long titles
     texts.main()

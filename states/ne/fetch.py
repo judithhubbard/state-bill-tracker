@@ -836,6 +836,8 @@ def never_downloaded(yrs):
         folder = os.path.join(DATA, str(year))
         listing = load(os.path.join(folder, "list.json"))
         if not listing or not listing.get("bills"):
+            if listing and year == TODAY.year and "LB1" in listing.get("nomatch", {}):
+                continue  # a new Legislature with no bill introduced yet (LB 1 looked up, not there): nothing missing
             out.append(f"{year}:list")
             continue
         nomatch = listing.get("nomatch", {})

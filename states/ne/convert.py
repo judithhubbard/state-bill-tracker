@@ -56,8 +56,9 @@ def sessions():
     out = []
     for f in sorted(os.listdir(P.DATA)) if os.path.isdir(P.DATA) else []:
         if re.fullmatch(r"\d{4}", f) and os.path.exists(os.path.join(P.DATA, f, "list.json")) \
-                and os.path.isdir(os.path.join(P.DATA, f, "bills")):
-            out.append(int(f))
+                and os.path.isdir(os.path.join(P.DATA, f, "bills")) \
+                and any(n.endswith(".html") for n in os.listdir(os.path.join(P.DATA, f, "bills"))):
+            out.append(int(f))  # a new Legislature from its first bill page (the fetcher makes its folder on January 5)
     return out
 
 

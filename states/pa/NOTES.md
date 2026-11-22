@@ -28,3 +28,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   A feed that fails keeps the last file; convert.py's `agendas()` keeps meetings from today on. Tested against an archived
   House feed of 2026-03-20 (27 bills on 24 meetings, all matched to 2025-26 records); untested against live session
   feeds and against the Senate feed with bills (the same format, by its schema). Joint hearings name one committee.
+- **Next session (2026-11-22):** bills are introduced only once a session convenes (January 5, 2027); its bill history
+  file answers 404 until then. From January fetch.py asks for it every run; a missing or bill-less file doesn't hold
+  Pennsylvania back until March 1, and the session just ended is read again until February 1.
