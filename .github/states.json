@@ -429,7 +429,7 @@
     "data/ia"
    ],
    "minutes": 110,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/openstates_bulk.py ia && python3 states/ia/openstates.py && python3 states/ia/fetch.py && python3 states/ia/contacts.py",
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null) && python3 states/openstates_bulk.py ia && python3 states/ia/openstates.py && python3 states/ia/fetch.py && python3 states/ia/contacts.py",
    "note": "The first copy from Open States (2023-24 from its bulk file, states/ia/bulk.json; 2025-26 from the API, OPENSTATES_API_KEY, at most 100 requests a day), then legis.iowa.gov, a request every 6 seconds, for every bill that changed and, in the requests left, the official record of the rest; a run ends at once if the site's bot check appears (the owner's choice, 2026-11-13; on GitHub it appears after about 45 requests). contacts.py builds the contacts after it."
   },
   {

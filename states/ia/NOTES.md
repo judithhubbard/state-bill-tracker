@@ -80,3 +80,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   `main()` reads EARLY_TEXTS (8) texts of the current General Assembly each run right after the bills that moved and the
   members, before the backfill: laws and vetoes first (the list's last action), then the bills that moved most recently.
   About 380 laws and vetoes of 2025-26: a few days of runs. Not run from the owner's computer; shows as the runs read them.
+- **Veto letters (2026-11-22):** the governor's letter on each veto and item veto is posted with the enrolled bill at
+  /docs/publications/LGE/<ga>/Attachments/<HF383>_GovLetter.pdf (the address the "Bills Vetoed by Governor" and "Bills Item
+  Vetoed by Governor" lists link; no table needed). states/ia/vetoes.py: fetch.py reads up to 4 a run (after the bills that
+  moved, before members), each once, a 404 again a week later; the bills are those whose list.json last action is "Vetoed
+  by Governor" or "Item vetoed, signed by Governor" (2023-24: SF 388, HF 2539, item veto SF 563; 2025-26: 7 vetoes, 5 item
+  vetoes). Some PDFs carry an old OCR layer: run-together words ("ofveterans", "2782,an Act") are read again by OCR
+  (`garbled()`), "1 hereby" is fixed. Only three were read by hand (HF 383, SF 388, HF 2782); the rest fill in on the runs.
