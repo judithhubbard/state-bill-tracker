@@ -253,6 +253,49 @@ def members():
         time.sleep(1)
 
 
+FLOOR_URL = "https://docs.house.gov/floor/Download.aspx?file=/billsthisweek/{d}/{d}.xml"
+
+
+def floor_items(xml):
+    """A House weekly floor schedule's bills: [{"num": "H.R. 7254", "category": ..., "removed": bool}], or None when the
+    answer isn't a schedule (a week not posted answers 200 with a "File Not Found" page)."""
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        return None
+    if root.tag != "floorschedule":
+        return None
+    return [{"num": " ".join((it.findtext("legis-num") or "").split()), "category": cat.get("type", ""),
+             "removed": bool(it.get("remove-date"))}
+            for cat in root.iter("category") for it in cat.iter("floor-item")]
+
+
+def floor():
+    """The House floor schedule for this week and next (docs.house.gov's weekly "bills this week" XML, posted about five
+    days ahead and revised through the week; two small requests a run; its 39 MB RSS index is never read), into
+    data/us/floor.json: {"weeks": {"2026-11-16": [items]}, "fetched"}. Weeks already over are dropped; a week that isn't
+    posted (or fails) keeps its last copy."""
+    from datetime import timedelta
+    today = datetime.now(timezone.utc).astimezone(__import__("zoneinfo").ZoneInfo("America/New_York")).date()
+    monday = today - timedelta(days=today.weekday())
+    path = os.path.join(DATA, "floor.json")
+    try:
+        old = json.load(open(path)).get("weeks", {})
+    except (OSError, ValueError):
+        old = {}
+    weeks = {w: items for w, items in old.items() if w >= monday.isoformat()}
+    for wk in (monday, monday + timedelta(days=7)):
+        body, _ = get(FLOOR_URL.format(d=wk.strftime("%Y%m%d")))
+        items = floor_items(body) if body else None
+        if items is not None:
+            weeks[wk.isoformat()] = items
+        time.sleep(1)
+    tmp = path + ".tmp"
+    json.dump({"weeks": weeks, "fetched": NOW.strftime("%Y-%m-%dT%H:%M:%SZ")}, open(tmp, "w"), indent=0)
+    os.replace(tmp, path)
+    print(f"House floor schedule: {', '.join(f'{w} ({len(i)} items)' for w, i in sorted(weeks.items())) or 'none posted'}")
+
+
 def main():
     sys.stdout.reconfigure(line_buffering=True)
     start = time.time()
@@ -264,6 +307,10 @@ def main():
         vetoes()
     except Exception as e:  # noqa: BLE001
         print(f"veto messages: failed ({type(e).__name__}: {e})")
+    try:  # never holds the run back
+        floor()
+    except Exception as e:  # noqa: BLE001
+        print(f"House floor schedule: failed ({type(e).__name__}: {e})")
     votes(start + VOTE_MINUTES * 60 + (time.time() - start))
     marker = os.path.join(DATA, "incomplete")
     if missing:
