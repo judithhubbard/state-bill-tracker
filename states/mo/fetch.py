@@ -67,6 +67,9 @@ House summaries (about 1,700 a year, 9 hours each: these fill in over a few days
 bills a year, two pages each, plus journals and members) takes about 1½ hours in all, alongside. After the first copy a
 run reads the House lists and whatever changed, and the Senate list: a few minutes out of session.
 
+Committee agendas (agendas(), after both houses' work): the Senate's hearing schedule (/hearingsschedule/hrings.htm,
+one request a run) and the House's hearings from its exports, into data/mo/<year>/agendas.json.
+
 Not downloaded: the bill texts, fiscal notes, amendments, witness forms and committee minutes (PDFs); the House's
 roll-call PDFs (the same votes as the journals, one file per vote: 362 in 2025 at 20 seconds each); the House's member
 pages (house.mo.gov, barred). Committee votes by member are only in minutes. PDF work needs pdftotext (poppler-utils);
@@ -81,7 +84,7 @@ Usage: python3 states/mo/fetch.py [year]   (default: every year above; a single 
 import gzip, hashlib, html, io, json, os, re, shutil, subprocess, sys, tempfile, threading, time, urllib.error
 import urllib.request, zipfile
 from collections import Counter
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
 
@@ -759,6 +762,144 @@ def senate_main(years):
         raise
 
 
+# ---------------------------------------------------------------- committee agendas
+
+AGENDA_DAYS = 21  # how far ahead to keep hearings
+AGENDA_BILL = re.compile(r"\b(SB|HB|SJR|HJR)\s*(\d+)\b")
+
+
+def clock(t):
+    """ "8:00am", "8:45 a.m.", "4:30 PM or upon adjournment", "12:00 Noon" -> "08:00:00"; "" when there's no time."""
+    m = re.match(r"\s*(\d{1,2})(?::(\d\d))?\s*(a\.?m|p\.?m|noon)", t or "", re.I)
+    if not m:
+        return ""
+    h = int(m.group(1)) % 12 + (0 if m.group(3).lower().startswith("a") else 12)
+    return f"{h:02d}:{m.group(2) or '00'}:00"
+
+
+def bills_named(t):
+    """ "HCS HBs 1826, 2560, 2349 & 2194" -> ["HB1826", "HB2560", "HB2349", "HB2194"]; "SB 1653, 1194" -> ["SB1653",
+    "SB1194"]; "SS SCS SB 12" -> ["SB12"] (the bill, not its substitute's prefix)."""
+    out, kind = [], None
+    for word in re.findall(r"[A-Za-z]+|\d+", t):
+        if word.isdigit():
+            if kind and kind + word not in out:
+                out.append(kind + word)
+        elif re.fullmatch(r"(SB|HB|SJR|HJR)s?", word):
+            kind = word.rstrip("s")
+        elif not re.fullmatch(r"[HS]C?S|SS|HS|and", word):
+            kind = None
+    return out
+
+
+def senate_hearings(page, today):
+    """The Senate's hearing schedule (/hearingsschedule/hrings.htm): [("Senate Education", "2026-02-24T08:00:00",
+    ["SB1617", ...])]. Each hearing, between <hr /> lines: "Committee: <a ...>Education, Senator Rick Brattin,
+    Chairman</a>", "Date: Tuesday, February 24" (no year: the one nearest today), "Time: 8:00am", the bills heard (links
+    whose text is "SB 1617" or "HB 1740") and an "Executive Session:" list ("SB 1653, 1194<br>SB 1404"), whose bills
+    the committee may vote on. A hearing marked canceled or postponed is left out."""
+    out = []
+    for block in re.split(r"<hr\s*/?>", page)[1:]:
+        name = re.search(r"Committee:\s*<a[^>]*>(.*?)</a>", block, re.S)
+        day = re.search(r"<b>Date:</b>(.*?)</td>", block, re.S)
+        if not name or not day:
+            continue
+        head = text(block[:day.end() + 200])
+        if re.search(r"cancel|postpone", head, re.I):
+            continue
+        try:
+            md = datetime.strptime(re.sub(r"^\w+,\s*", "", text(day.group(1)).strip()), "%B %d")
+        except ValueError:
+            continue
+        d = min((date(y, md.month, md.day) for y in (today.year - 1, today.year, today.year + 1)),
+                key=lambda x: abs((x - today).days))
+        tm = re.search(r"<b>Time:</b>(.*?)</td>", block, re.S)
+        when = f"{d.isoformat()}T{clock(text(tm.group(1)) if tm else '') or '00:00:00'}"
+        bills = []
+        for link in re.findall(r"<a [^>]*>([^<]*)</b>", block):
+            if re.match(r"\s*(?:[HS]CS\s+|SS\s+)*(SB|HB|SJR|HJR)s?\s*\d", link):
+                bills += [k for k in bills_named(link) if k not in bills]
+        ex = re.search(r"Executive Session:(.*?)</td>", block, re.S | re.I)
+        for line in re.split(r"<br\s*/?>", ex.group(1) if ex else ""):
+            line = text(line).strip()
+            if not line:
+                continue
+            if not re.match(r"(?:[HS]CS\s+|SS\s+)*(SB|HB|SJR|HJR)s?\s*\d", line):
+                break  # the notes after the list ("Amended to remove SB1130")
+            bills += [k for k in bills_named(line) if k not in bills]
+        name = re.sub(r",\s*(?:Senator|Sen\.|Representative|Rep\.)\s.*$", "", text(name.group(1)).strip(), flags=re.S)
+        joint = re.match(r"Joint Committee on (?:the )?(.+)$", name)
+        out.append((f"Joint {joint.group(1)}" if joint else f"Senate {name}", when, bills))
+    return out
+
+
+def house_hearings(year):
+    """The House committees' hearings from the House's exports already downloaded: each House bill's XML
+    (house/bills/<HB1607>.xml) and SenateActList.xml (Senate bills in the House) list their <Hearings>:
+    CommitteeName ("Emerging Issues"), NoticeDate, NoticeTime ("1900-01-01T00:00:00" when the time is AltTime's "4:30
+    PM or upon adjournment (whichever is later)"), Location and Comments. [("House Emerging Issues", "2026-01-20T16:30:00",
+    ["HB1607"])], canceled ones left out."""
+    out = []
+    docs = [os.path.join(folder(year, "house", "bills"), f) for f in sorted(os.listdir(folder(year, "house", "bills")))
+            ] if os.path.isdir(folder(year, "house", "bills")) else []
+    docs.append(folder(year, "house", "SenateActList.xml"))
+    for path in docs:
+        try:
+            page = read_text(path) or ""
+        except ValueError:  # a file that isn't UTF-8: left out
+            continue
+        bills = re.split(r"<BillInformation>", page)[1:] if "<BillInformation>" in page else []
+        for b in bills:
+            num = re.search(r"<BillNumber>\s*((?:HB|SB|HJR|SJR)\d+)\s*</BillNumber>", b)
+            if not num:
+                continue
+            for h in re.findall(r"<Hearings>(.*?)</Hearings>", b, re.S):
+                f = lambda tag: html.unescape((re.search(rf"<{tag}>(.*?)</{tag}>", h, re.S) or [None, ""])[1]).strip()
+                if not f("NoticeDate") or re.match(r"cancel|postpone", f("Comments"), re.I):
+                    continue
+                t = f("NoticeTime")[11:19]
+                t = t if t and t != "00:00:00" else clock(f("AltTime")) or "00:00:00"
+                out.append((f"House {f('CommitteeName')}", f"{f('NoticeDate')[:10]}T{t}", [num.group(1)]))
+    return out
+
+
+def agendas():
+    """Bills on upcoming committee hearings, into data/mo/<year>/agendas.json: {"SB1617": [["Senate Education",
+    "2026-02-24T08:00:00"]], "HB1607": [["House Emerging Issues", "2026-01-20T16:30:00"]]}: the Senate's hearing
+    schedule (one request) and the House's hearings from its exports (no request). Today to three weeks ahead. Never
+    fails the run: when the Senate's page can't be read, its hearings are kept from the last file."""
+    path = folder(YEAR, "agendas.json")
+    if not os.path.isdir(folder(YEAR)):
+        return
+    try:
+        last = load(path) or {}
+        page = None
+        try:
+            page = request(f"{SENATE}/hearingsschedule/hrings.htm", "Senate hearings", must=b"Hearing Schedule")
+        except Refused as e:
+            log(f"agendas: the Senate refused the hearing schedule ({e})")
+        if page is not None:
+            senate = senate_hearings(page, TODAY)
+        else:
+            senate = [(c, w, [k]) for k, v in last.items() for c, w in v if c.startswith("Senate ")]
+            log("agendas: the Senate's hearing schedule couldn't be read; kept its last hearings")
+        house = house_hearings(YEAR)
+        out, n = {}, 0
+        end = (TODAY + timedelta(days=AGENDA_DAYS)).isoformat()
+        for name, when, bills in senate + house:
+            if not TODAY.isoformat() <= when[:10] <= end:
+                continue
+            n += 1
+            for k in bills:
+                if [name, when] not in out.setdefault(k, []):
+                    out[k].append([name, when])
+        save(out, path)
+        log(f"agendas: {len(out)} bills on upcoming hearings ({sum(w[:10] >= TODAY.isoformat() for _c, w, _b in senate)}"
+            f" Senate hearings listed)")
+    except Exception as e:  # anything unexpected: the agendas never stop the run
+        log(f"agendas: stopped ({type(e).__name__}: {e}); kept the last file")
+
+
 # ---------------------------------------------------------------- the run
 
 def years_wanted():
@@ -823,6 +964,8 @@ def main():
         t.start()
     for t in threads:
         t.join()
+    if not ONLY and not out_of_time():
+        agendas()
     missing = never_downloaded(years)
     read = ", ".join(f"{v} {k}" for k, v in sorted(STATS.items()) if not k.startswith("http"))
     log(f"run: {STATS[HOUSE]} House and {STATS[SENATE]} Senate requests"

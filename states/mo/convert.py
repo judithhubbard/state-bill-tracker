@@ -1157,7 +1157,11 @@ def parties(session, recs):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee hearings (states/mo/fetch.py's agendas(): data/mo/<year>/agendas.json)."""
+    try:
+        return json.load(open(os.path.join(folder(session), "agendas.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
 
 
 if __name__ == "__main__":

@@ -56,3 +56,22 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   item vetoes on appropriations; override two-thirds of each house's members (23, 109). The governor's phone and contact
   page are from governor.mo.gov/contact-us (checked by program 2026-11-13, not by the owner). Places (`towns.py`): cities,
   towns, villages, Census-designated places and counties, separate Senate (34) and House (163) lists; St. Louis city once.
+
+- **Committee hearings (2026-11-22):** `agendas()` in states/mo/fetch.py, run after both houses' work, writes
+  data/mo/<year>/agendas.json ({"SB1617": [["Senate Education", "2026-02-24T08:00:00"]], "HB1607": [["House Emerging
+  Issues", "2026-01-20T16:30:00"]]}), which convert.py's `agendas()` returns as it is. Two sources, both official:
+  the Senate's hearing schedule, www.senate.mo.gov/hearingsschedule/hrings.htm (one request a run; robots.txt bars only
+  /Trade/ and /DistrictWebApps/), HTML blocks between <hr /> lines: "Committee: <a>Education, Senator Rick Brattin,
+  Chairman</a>" (-> "Senate Education"; "Joint Committee on X" -> "Joint X"), "Date: Tuesday, February 24" (no year:
+  the nearest to today), "Time: 8:00am" ("10:30 a.m. or Upon Adjournment of ..." reads as 10:30), the bills heard as
+  links ("SB 1617", "HCS HBs 1826, 2560, 2349 & 2194": every number; `bills_named()`) and the "Executive Session:" list
+  ("SB 1653, 1194<br>SB 1404", up to the first note line); a block headed "Hearing Canceled: ..." is left out. The House:
+  no request, since its exports already carry each bill's hearings (<Hearings> in house/bills/<HB>.xml and, for
+  Senate bills in House committees, in SenateActList.xml: CommitteeName, NoticeDate, NoticeTime, or AltTime "4:30 PM or
+  upon adjournment" when NoticeTime is midnight), read again when the bill's LastTimeRun changes (house.mo.gov's own
+  hearing pages are barred: Crawl-delay 120, and "?" addresses). Today to three weeks ahead. When the Senate page can't
+  be read, the last file's Senate hearings are kept. Tested on Wayback Machine copies of hrings.htm (2026-02-24: 17
+  hearings, 2026-04-16: 10, 3 of them canceled) with the copied 2026 House exports, today set to each day: 450 and 204
+  bills, all matching records but one concurrent resolution (SCR 21, now left out); live on 2026-11-22: "no hearings
+  scheduled". Untested live: a session-time hrings.htm read by this code, and whether a House XML's LastTimeRun changes
+  as soon as a hearing is added (if not, House hearings show up late).
