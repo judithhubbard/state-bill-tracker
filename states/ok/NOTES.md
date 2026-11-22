@@ -44,3 +44,10 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   Kevin Stitt is term-limited: the new governor takes office January 11, 2027 (add to `GOVERNORS` and
   states/legislatures.json). The governor's contact page and phone haven't been checked by the owner.
 - **Committee agendas (2026-11-22):** from each bill's LegiScan `calendar` (its hearings: date, time, room, description), read with the bill (no queries of their own): `agendas()` calls legiscan_convert.agendas() (states/LEGISCAN.md). Today's and later meetings only. LegiScan's calendar has no cancellations; an entry dropped from a notice goes when the bill is next read, which within the daily getBill allowance can be hours after the change. Revised agendas ("2ND REVISED") keep only the latest revision for that committee and day. Tested against 2026's saved calendars (886 bills, all matched). January check: House and Senate entries both appear.
+- **Veto messages (2026-11-22):** LegiScan has none. `states/ok/vetoes.py` (run last in the legiscan job) reads the
+  governor's yearly veto page on oklahoma.gov (robots.txt "Allow: /"), weekly through the next year, into
+  data/ok/vetoes_<year>.html: each veto under a "House Bill 3660 Veto Message" heading with a paragraph of his reasons
+  (the headings' links to the Secretary of State's letters lead to that office's home page now). `veto_reasons()` in
+  convert.py reads it; legiscan_convert.py's `Rules.veto_memo()` is the hook (None for the other LegiScan states). Only
+  2026's page is in `PAGES`: 2025's (gov--stitt-s-2025-veto-list.html) is laid out differently and 2023-24's weren't
+  found; add each year's page by hand. 33 of 2026's vetoes matched on 2026-11-22. Shows after the next legiscan run.

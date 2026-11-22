@@ -31,12 +31,13 @@ Concurrent resolutions proposing amendments pass each house by two-thirds and go
 Members' floor votes are PDFs (not downloaded) and the history lines carry no tallies, so there are no votes here.
 There are no plain-language summaries: the long title, in sentence case, is the summary; no "What it does".
 """
-import functools, glob, json, os, re
+import functools, glob, html, json, os, re
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fetch_contacts import name_key
+from states import letters as L
 from states.ms import profile as P
 from states.undated import settle
 
@@ -370,6 +371,49 @@ VOTE_NOTE = {"Three/Fifths": "Passing it takes three-fifths of each house.",
              "Two/Thirds": "Passing it takes two-thirds of each house."}
 
 
+MONTH_DAY = re.compile(r"(January|February|March|April|May|June|July|August|September|October|November|December) (\d{1,2}), (\d{4})")
+
+
+def veto_message(session, key):
+    """The governor's veto message (vetoes/<HB0895>.htm, a Word page; fetch.py's veto_messages()) -> {year, signer,
+    text}: its paragraphs after "GOVERNOR'S VETO MESSAGE FOR HOUSE BILL 895", up to the signature, or None."""
+    try:
+        page = open(os.path.join(folder(session), "vetoes", f"{key}.htm"), encoding="cp1252", errors="replace").read()
+    except OSError:
+        return None
+    paras = [re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", x))).strip()
+             for x in re.findall(r"(?is)<p\b[^>]*>(.*?)</p>", page)]
+    paras = [x for x in paras if x and x != "\xa0"]
+    # (A suffrage bill's veto comes as a notice, "MESSAGE FROM THE GOVERNOR ... has vetoed the following Senate Bill", with
+    # no reasons: left out.)
+    start = next((i + 1 for i, x in enumerate(paras) if re.match(r"GOVERNOR\W?S\W? (?:PARTIAL )?VETO MESSAGE", x, re.I)), None)
+    if start is None:
+        return None
+    body, day = [], ""
+    for x in paras[start:]:
+        d = MONTH_DAY.search(x)
+        if re.match(r"(?:Respectfully|Sincerely)|(?:TATE|Tate) REEVES|GOVERNOR$", x) or (d and len(x) < 60):
+            day = day or (d and " ".join(d.groups())) or ""
+            if body:
+                break
+            continue
+        x = re.sub(r"^1 am\b", "I am", x)  # (an OCR'd "I")
+        if body and not re.search(r"[.:;!?\"\u201d)]$", body[-1]):
+            body[-1] += " " + x  # a paragraph the page breaks mid-sentence ("... WITH THE" / "PRACTITIONER AFTER THE ...")
+        else:
+            body.append(x)
+    if not day:
+        d = MONTH_DAY.search(" ".join(paras))
+        day = " ".join(d.groups()) if d else ""
+    iso = datetime.strptime(day, "%B %d %Y").date().isoformat() if day else f"{session}-04-30"
+    # The bill's long title, quoted in full ("I am returning House Bill 895: "AN ACT TO AMEND ... FOR RELATED
+    # PURPOSES.""), is already the page's title: left out.
+    body = [re.sub(r"(Bill \d+)\s*:?\s*[\"\u201c]?\s*AN ACT\b.*?RELATED PURPOSES\.?\s*[\"\u201d]?", r"\1.", x, flags=re.S)
+            for x in body]
+    s = L.cut(body)
+    return {"year": int(iso[:4]), "signer": P.governor_on(iso), "text": s} if s else None
+
+
 def load_session(session):
     """Read one year's bills and return (records, bill number -> record index, fetched time, delegation)."""
     cur = current_members()
@@ -545,6 +589,9 @@ def load_session(session):
         veto_day = dates(lambda s: s[3] == "vetoed", "first")
         override_day = dates(lambda s: s[3] == "override", "last")
         summary = " ".join(t for t in (long_s, VOTE_NOTE.get(x["vote"], "") if not amendment else "") if t)
+        vmemo = veto_message(session, key) if stage == 6 or (stage == 5 and partial) else None
+        if vmemo and stage == 5:
+            vmemo["kind"] = "line-item"  # signed with parts vetoed
         rec = {
             "nums": [p], "base": [p], "prev": earlier(session, x, p, law),
             "title": title, "summary": summary, "act": "", "lawCode": "", "law": None, "laws": [],
@@ -555,7 +602,7 @@ def load_session(session):
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
             "chapter": int(chapter) if chapter.isdigit() and stage == 5 else None,
-            "veto": None, "memo": "", "vetoMemo": None,
+            "veto": None, "memo": "", "vetoMemo": vmemo,
             "simText": f"{x['short']} {x['long'].lower()}",
             "comm": comm if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),

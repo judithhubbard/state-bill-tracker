@@ -49,3 +49,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2027. The governor's phone and contact page are from gov.mt.gov/contact (checked by program 2026-11-09, not by the owner).
   Places (`towns.py`, run once): cities, towns, Census-designated places and counties, separate Senate (50) and House
   (100) lists (Senate District n is House Districts 2n-1 and 2n).
+- **Veto letters (looked into 2026-11-22; not read):** api.legmt.gov's documents/v1/documents/getBillOther lists each vetoed bill's "VetoLetter" (and the override poll, "PollingResult") with a docs.legmt.gov download-ticket link, but the letters are scans with no text layer (HB 182 of 2025). They need OCR, the owner's decision; at the crawl delay of 10 s, two requests a veto.

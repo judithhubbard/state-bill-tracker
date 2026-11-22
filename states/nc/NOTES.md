@@ -19,7 +19,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   when a law is summarized part by part, else up to 8 parts), else the newest bill summary, never an amendment's alone,
   and none when its title shares no words with the bill's current one (rewritten bills); it keeps the overview, the
   analysis when the overview is short and the effective date, without current law, tables or staff credits; the label
-  names the version. Counties and places by district (`towns.py`).
+  names the version. From 2026-11-14 to 2026-11-22 the reader failed on every run (`part_key()` compared a number with a word when a law's parts mixed "Sec. 1D.10" with "Sec. A" or a plain title: TypeError) and read no summaries; its tokens are now tagged, and "Subpart II-B" sorts after "Part II". Checked on six bills of 2025 (H562, H1003, H1012, H1035, H1040, H1089). Counties and places by district (`towns.py`).
 - **Committee agendas (2026-11-22):** `agendas()` in fetch.py reads the Legislative Calendar's month pages
   (https://www.ncleg.gov/LegislativeCalendar/<m>/<yyyy>: this month's, and the next one's when three weeks ahead falls in
   it; Crawl-delay 2, its own fetch `calendar_page()` that never stops the run) after the bills and contacts, before the

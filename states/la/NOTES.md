@@ -58,6 +58,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   the owner). Places (`towns.py`): cities, towns, villages, Census-designated places and parishes, separate Senate and House
   lists ("Albany town" is a real Louisiana town, not New York leaking in).
 
+- **Veto messages (2026-11-22):** the "HB1194 Veto Message" documents fetch.py already reads (`wanted_docs()`, into
+  docs/<id>.txt: scans with an OCR layer) are shown: convert.py's `veto_message()` keeps the letter from "Dear Speaker
+  ...:" to "For Louisiana," without the "RECEIVED" stamp's fragments (lines with under three letters), the second page's
+  header (its date, "House Bill 1194 Veto Message") and a line-item veto's list of lines struck ("Veto No. 1: Delete
+  Lines 1 through 3 on Page 95 of 268"); a line-item veto is `kind: "line-item"` on the law. Checked on HB 1194 and HB 1
+  of 2026 (the two the local copy has; the cache has the rest: 31 in 2024, 18 in 2025, 9 in 2026). Needs only a rebuild.
 - **Committee agendas (2026-11-22):** `agendas()` in states/la/fetch.py, run after the bills, documents and committees,
   writes data/la/<year>/agendas.json ({"HB165": [["House Committee on Appropriations", "2026-04-27T09:00:00"]]}; next
   year's file too for prefiled bills); convert.py's `agendas()` words the names as the histories do ("House

@@ -32,6 +32,9 @@ congress-legislators/; GitHub Pages, no robots.txt): legislators-current.json an
 committee-membership-current.json daily, legislators-historical.json (13 MB: every member since 1789) weekly, into
 data/us/members/. contacts.py builds each Congress's contacts from them.
 
+Veto messages: the House documents the President's messages are printed as, from GovInfo (`vetoes()`; a Senate bill's
+message is printed only in the Congressional Record, not read).
+
 data/us/incomplete lists what was never downloaded (a Congress's zip, the members); it is removed when nothing is
 missing. A list that fails where a last copy exists keeps that copy.
 Usage: python3 states/us/fetch.py [--votes-minutes N] [congress ...]   (default: the 117th to the current one)
@@ -209,6 +212,28 @@ def votes(deadline):
     print(f"roll calls: {n} read this run, {left} left for later runs")
 
 
+def vetoes():
+    """The President's veto messages the House printed as documents (BILLSTATUS names each: "printed as a House document
+    (118-26)"), from GovInfo, https://www.govinfo.gov/content/pkg/CDOC-<congress>hdoc<n>/html/CDOC-<congress>hdoc<n>.htm
+    (allowed: robots.txt bars only /core/, /profiles/ ...), each once, into data/us/<congress>/vetoes/hdoc<n>.htm. A few a
+    Congress; one a second. A message that fails is tried again next run and never holds the copy back."""
+    for congress in CONGRESSES:
+        docs = C.veto_docs(congress)
+        n = 0
+        for doc in sorted(docs):
+            path = C.veto_file(congress, doc)
+            if os.path.exists(path):
+                continue
+            pkg = f"CDOC-{congress}hdoc{doc}"
+            data, _ = get(f"https://www.govinfo.gov/content/pkg/{pkg}/html/{pkg}.htm")
+            time.sleep(1)
+            if data and b"VETO MESSAGE" in data.upper():
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                save(path, data)
+                n += 1
+        print(f"{congress}: {len(docs)} veto messages printed as House documents, {n} read this run")
+
+
 def members():
     os.makedirs(os.path.join(DATA, "members"), exist_ok=True)
     for name, days in (("legislators-current", 0), ("committees-current", 0), ("committee-membership-current", 0),
@@ -235,6 +260,10 @@ def main():
     for congress in CONGRESSES:
         bills(congress)
     members()
+    try:  # never holds the run back
+        vetoes()
+    except Exception as e:  # noqa: BLE001
+        print(f"veto messages: failed ({type(e).__name__}: {e})")
     votes(start + VOTE_MINUTES * 60 + (time.time() - start))
     marker = os.path.join(DATA, "incomplete")
     if missing:

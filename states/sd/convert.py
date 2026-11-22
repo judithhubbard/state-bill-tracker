@@ -16,6 +16,7 @@ import glob, html, json, os, re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from states import letters as L
 from states.sd import profile as P
 from states.sd.contacts import seats
 from states.undated import settle
@@ -96,6 +97,45 @@ def decode(a):
 
 def is_amendment(d):
     return d.get("BillType") in ("HJR", "SJR") and bool(re.search(r"amend(?:ment|ing)? .*constitution|constitutional amendment", text(d.get("Title")), re.I))
+
+
+KIND_WORDS = {"HB": "House Bill", "SB": "Senate Bill", "HJR": "House Joint Resolution", "SJR": "Senate Joint Resolution"}
+MONTH_DAY = re.compile(r"(January|February|March|April|May|June|July|August|September|October|November|December) (\d{1,2}), (\d{4})")
+
+
+def veto_message(session, p, b):
+    """The governor's veto letter, from the journal the "Vetoed by the Governor" action names (journals/<id>.html,
+    fetch.py's veto_journals()) -> {year, signer, text} or None: the letter in that journal that returns this bill
+    ("I respectfully return to you House Bill 1132 with my VETO"), from "Dear ..." to "Sincerely,"."""
+    m = re.match(r"([A-Z]+)(\d+)$", p)
+    bill = re.compile(rf"\b{KIND_WORDS.get(m.group(1), m.group(1))} {int(m.group(2))}\b", re.I)
+
+    def names(y):  # the letter's first paragraphs name the bill and the veto ("I have VETOED House Bill 1138")
+        return bill.search(y) and re.search(r"\bveto", y, re.I)
+    for a in b.get("ActionLog") or []:
+        if not (re.match(r"Vetoed by the Governor", a.get("StatusText") or "") and a.get("DocumentId")):
+            continue
+        try:
+            page = open(os.path.join(folder(session), "journals", f"{a['DocumentId']}.html"), encoding="utf-8").read()
+        except OSError:
+            continue
+        paras = [re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", x))).strip()
+                 for x in re.findall(r"(?is)<p\b[^>]*>(.*?)</p>", page)]
+        paras = [x for x in paras if x]
+        for i, x in enumerate(paras):
+            if not re.match(r"Dear\b", x) or not any(names(y) for y in paras[i + 1:i + 3]):
+                continue
+            body = []
+            for y in paras[i + 1:]:
+                if re.match(r"(?:Sincerely|Respectfully)\b", y):
+                    break
+                body.append(y)
+            d = next((MONTH_DAY.search(y) for y in reversed(paras[max(0, i - 8):i]) if MONTH_DAY.search(y)), None)
+            day = datetime.strptime(" ".join(d.groups()), "%B %d %Y").date().isoformat() if d else (a.get("ActionDate") or "")[:10]
+            text_ = L.cut(body)
+            if text_:
+                return {"year": int(day[:4]), "signer": P.governor_on(day), "text": text_}
+    return None
 
 
 def load_session(session):
@@ -255,7 +295,7 @@ def load_session(session):
             "senDeleg": False, "asmDeleg": False, "budget": bool(re.search(r"general appropriations act", raw_title, re.I)),
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
-            "chapter": None, "veto": None, "memo": "", "vetoMemo": None,
+            "chapter": None, "veto": None, "memo": "", "vetoMemo": veto_message(session, p, b) if stage == 6 else None,
             "simText": f"{title} {' '.join(keywords)}",
             "comm": comm if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),

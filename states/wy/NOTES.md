@@ -41,3 +41,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   browser, so its address can't be checked by reading it). Until then no member had an official page link.
 - This year's session (or next year's, numbered before it convenes) is shown from its first bill (`sessions()` in
   convert.py, 2026-11-22; older ones need more than 100); BillInformation/2027 was an empty list on 2026-11-22.
+- **Veto messages (looked into 2026-11-22; not read):** each vetoed bill's JSON links its letter (vetoes[].vetoLinkPath, "Governor's Veto Message" / "Governor's Line Item Veto Message": wyoleg.gov/2026/Veto/SF0101-Veto.pdf), but the PDFs are scans with no text layer (SF 101 of 2026, HB 4 of 2024's line-item message). They need OCR, the owner's decision.

@@ -11,11 +11,13 @@ robots.txt; see the state-survey-2026-10-31 memory).
   Maryland Constitution, Chapter 3 of 2025 Special Session"; the bill list still says "Vetoed"). Into
   data/md/governor_<year>.json; a decided bill's page is read once, a vetoed one weekly while it can be overridden, an
   undecided one daily; at most GOV_MINUTES of a run, the rest on later runs.
+- The governor's veto letters (/<year>RS/veto_letters/sb0448.pdf, linked from each vetoed bill's page; text PDFs),
+  each once, as text (pdftotext -layout) into data/md/vetoes/<year>/<SB448>.txt (`veto_letters()`).
 - The members: each house's member list (every run) and each member's page (district, county, party, committees, Annapolis
   phone, email; once a day, and at once for a new member), into data/md/members.json; then states/md/contacts.py.
 Usage: python3 states/md/fetch.py
 """
-import html, json, os, re, sys, time, urllib.request
+import html, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
@@ -38,6 +40,52 @@ def get(url):
         except Exception:
             time.sleep(10 * (attempt + 1))
     return None
+
+
+def get_bytes(url):
+    """A file's bytes, or None (a 404 at once)."""
+    for attempt in range(3):
+        time.sleep(0.5)
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": AGENT}), timeout=180) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            time.sleep(10 * (attempt + 1))
+        except Exception:
+            time.sleep(10 * (attempt + 1))
+    return None
+
+
+def veto_letters(y):
+    """The governor's letter on each bill of year y's session that governor_<y>.json shows vetoed, once each."""
+    if not shutil.which("pdftotext"):
+        return
+    try:
+        have = json.load(open(os.path.join(DATA, f"governor_{y}.json")))
+    except (OSError, ValueError):
+        return
+    folder = os.path.join(DATA, "vetoes", str(y))
+    todo = [n for n, g in sorted(have.items()) if any(re.search(r"Vetoed by the Governor", l[2]) for l in g.get("lines") or [])
+            and not os.path.exists(os.path.join(folder, f"{n}.txt"))]
+    got = 0
+    for n in todo:
+        m = re.match(r"([A-Z]+)(\d+)$", n)
+        pdf = get_bytes(f"{SITE}/{y}RS/veto_letters/{m.group(1).lower()}{int(m.group(2)):04d}.pdf")
+        if not pdf or pdf[:5] != b"%PDF-":
+            continue
+        try:
+            t = subprocess.run(["pdftotext", "-layout", "-enc", "UTF-8", "-", "-"], input=pdf, capture_output=True,
+                               timeout=60).stdout.decode("utf-8", "replace")
+        except (OSError, subprocess.SubprocessError):
+            continue
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, f"{n}.txt"), "w", encoding="utf-8") as f:
+            f.write(t)  # (empty for a scan: not asked for again)
+        got += 1
+    if todo:
+        print(f"{y}: veto letters: {got} of {len(todo)} read now")
 
 
 def plain(s):
@@ -289,6 +337,11 @@ def main():
             path = os.path.join(DATA, f"legislation_{y}RS.json")
             if os.path.exists(path):
                 governor(y, json.load(open(path)), only)
+    for y in sessions():
+        try:  # never holds the run back
+            veto_letters(y)
+        except Exception as e:  # noqa: BLE001
+            print(f"{y}: veto letters failed ({type(e).__name__}: {e})")
     members()
     sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
     from states.md import contacts

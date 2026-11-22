@@ -14,9 +14,13 @@ its operations; www.legis.ga.gov's robots.txt has no rules).
 - The members (GetMembersBySession, then GetMember for addresses, phones, emails, titles and committee roles) and
   committees (GetCommitteesBySession, then GetCommitteeForSession for members and roles) into members.json and
   committees.json; a finished session's once.
+- The governor's veto messages: gov.georgia.gov posts one PDF a year, "Veto Messages and Signing Statement" (every veto
+  with its reasons), linked from /executive-action/legislation/vetoed-legislation/<year> (robots.txt bars only /core/,
+  /profiles/, /admin/ and the like). `veto_messages()` reads the index, each year's page until its PDF is there, and the
+  PDF once, as text (pdftotext -layout), into data/ga/vetoes/<year>.txt. Never holds the copy back.
 Three requests at a time. Usage: python3 states/ga/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029)
 """
-import json, os, re, sys, time, urllib.request
+import html, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
@@ -205,6 +209,63 @@ def people(year, sid, folder, live):
         print(f"{year}: {len(out)} {name}", flush=True)
 
 
+GOV = "https://gov.georgia.gov"
+
+
+def gov_get(path, binary=False):
+    """A page (text) or file (bytes) from the governor's site, or None; two seconds between requests."""
+    time.sleep(2)
+    try:
+        req = urllib.request.Request(GOV + path, headers={"User-Agent": AGENT})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            data = r.read()
+            return data if binary else data.decode("utf-8", "replace")
+    except (urllib.error.URLError, OSError) as e:
+        print(f"veto messages: {path}: {e}", flush=True)
+        return None
+
+
+def veto_messages(first):
+    """Each year's "Veto Messages" PDF from the governor's site (see the module's docstring), once."""
+    if not shutil.which("pdftotext"):
+        print("veto messages: pdftotext isn't installed", flush=True)
+        return
+    folder = os.path.join(DATA, "vetoes")
+    want = [y for y in range(first, YEAR + 1) if not os.path.exists(os.path.join(folder, f"{y}.txt"))]
+    if not want:
+        return
+    index = gov_get("/executive-action/legislation/vetoed-legislation")
+    if not index:
+        return
+    pages = {}
+    for href in dict.fromkeys(re.findall(r'href="(/executive-action/legislation/vetoed-legislation/[^"#?]+)"', index)):
+        m = re.search(r"/(\d{4})(?:-vetoed-legislation)?$", href)  # "/2025", "/2022-vetoed-legislation" (not special sessions)
+        if m:
+            pages[int(m.group(1))] = href
+    got = 0
+    for y in want:
+        if y not in pages:
+            continue
+        page = gov_get(pages[y])
+        links = [html.unescape(h) for h in re.findall(r'href="(/document/[^"]*veto-messages[^"]*/download)"', page or "")]
+        if not links:
+            continue  # not posted yet (it comes after the governor's last day to act, in May)
+        pdf = gov_get(links[0], binary=True)
+        if not pdf or pdf[:5] != b"%PDF-":
+            continue
+        try:
+            t = subprocess.run(["pdftotext", "-layout", "-enc", "UTF-8", "-", "-"], input=pdf, capture_output=True,
+                               timeout=120).stdout.decode("utf-8", "replace")
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if "VETO" in t:
+            os.makedirs(folder, exist_ok=True)
+            with open(os.path.join(folder, f"{y}.txt"), "w", encoding="utf-8") as f:
+                f.write(t)
+            got += 1
+    print(f"veto messages: {got} of {len(want)} years read now", flush=True)
+
+
 def begun(year):
     """Whether a session has convened (the second Monday of January of its first year)."""
     return date.today() >= date(year, 1, 1 + (0 - date(year, 1, 1).weekday()) % 7 + 7)
@@ -233,6 +294,10 @@ def main():
         contacts.main(CURRENT)
     except (SystemExit, OSError) as e:
         print(e)
+    try:  # never holds the copy back
+        veto_messages(FIRST)
+    except Exception as e:  # noqa: BLE001
+        print(f"veto messages: failed ({type(e).__name__}: {e})", flush=True)
     marker = os.path.join(DATA, "incomplete")
     # A session not yet begun (listed early, members not named yet) is read when it's there but never holds Georgia back.
     undone = {g for g in INCOMPLETE if begun(int(g.split(":")[0]))}

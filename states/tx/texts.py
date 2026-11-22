@@ -3,10 +3,12 @@
 Organization's "Background and Purpose" or the Senate Research Center's "Author's / Sponsor's Statement of Intent",
 written when a committee reports a bill. Bills no committee reported have no analysis.
 
-The current session only (each analysis is a large file, about a second to download); analyses already read are
-kept in data/tx/<code>/analyses.json by address (a version's analysis doesn't change). Writes
+Each analysis is a large file, about a second to download; analyses already read are kept in
+data/tx/<code>/analyses.json by address (a version's analysis doesn't change). fetch.py runs it for the current session,
+then (2026-11-22) for each earlier session in the window with a few minutes' budget a run (`minutes`), so a past
+session's first copy (about 2,000 analyses) fills in over a few runs; once read, a session needs no downloads. Writes
 data/tx/texts_<session>.json in the shape build_data.py's bill_texts() reads.
-Usage: python3 states/tx/texts.py [session]   (fetch.py runs it for the current session)
+Usage: python3 states/tx/texts.py [session] [minutes]
 """
 import html, json, os, re, subprocess, sys, time
 import xml.etree.ElementTree as ET
@@ -75,7 +77,7 @@ def get(url):
     return None
 
 
-def main(session):
+def main(session, minutes=None):
     path = os.path.join(P.DATA, P.code_of(session), "analyses.json")
     try:
         cache = json.load(open(path))
@@ -87,13 +89,19 @@ def main(session):
     # Each bill's latest analysis; an earlier one when the latest says nothing (its statement only repeats the caption).
     todo = sorted({us[0] for us in urls.values()} - set(cache))
     todo += sorted({u for us in urls.values() if not cache.get(us[0], "x") for u in us[1:2]} - set(cache) - set(todo))
+    start, done = time.time(), 0
     with ThreadPoolExecutor(6) as pool:
-        for k, (url, page) in enumerate(zip(todo, pool.map(get, todo))):
-            if page:
-                cache[url] = statement(page)
-            if k % 200 == 199:
-                json.dump(cache, open(path, "w"), ensure_ascii=False)
+        for i in range(0, len(todo), 60):  # in batches, so a time budget can stop between them
+            if minutes is not None and time.time() - start > minutes * 60:
+                break
+            batch = todo[i:i + 60]
+            for url, page in zip(batch, pool.map(get, batch)):
+                if page:
+                    cache[url] = statement(page)
+            done += len(batch)
+            json.dump(cache, open(path, "w"), ensure_ascii=False)
     json.dump(cache, open(path, "w"), ensure_ascii=False)
+    left = len(todo) - done
     out = {}
     for p, us in urls.items():
         url = next((u for u in us if cache.get(u)), None)
@@ -102,8 +110,10 @@ def main(session):
             v = re.search(r"([HSEF])\.htm$", url, re.I)
             out[p] = {"statement": text, "label": f"From {LABEL.get(v.group(1).upper() if v else '', 'the')} bill analysis."}
     json.dump(out, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
-    print(f"texts_{session}.json: {len(out)} bill analyses ({len(todo)} downloaded now)")
+    print(f"texts_{session}.json: {len(out)} bill analyses ({done} downloaded now"
+          + (f", {left} left for later runs)" if left else ")"))
 
 
 if __name__ == "__main__":
-    main(int(sys.argv[1]) if len(sys.argv) > 1 else P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year))
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year),
+         float(sys.argv[2]) if len(sys.argv) > 2 else None)

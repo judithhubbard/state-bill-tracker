@@ -51,7 +51,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   amendment replaced the bill); vote tables, testifier lists and the section-by-section part are dropped. Otherwise it's
   the introducer's statement of intent, labelled as such (kept: the owner's decision 2026-11-14; about 98% of bills have
   one or the other). Committee statements
-  are re-read when the bill is placed on General File again; A bills have none. The first copy is about 2,700 PDFs (about
+  are re-read when the bill is placed on General File again; A bills have none. Committee votes (2026-11-22): the same statement's "Roll Call Vote - Final Committee Action" ("Aye: 7 Senators Bosn, DeBoer, ...", "Nay: 1 Senator McKinney", "Absent:", "Present Not Voting:"; senators who share a surname are "Cavanaugh, M.") is the committee's vote to advance the bill, dated by its "Placed on General File" line (`committee_roll()` in convert.py; only bills advanced: committees vote in executive session and publish no vote on bills they hold). Checked on the 14 statements the local copy has; needs only a rebuild. The first copy is about 2,700 PDFs (about
   3 hours at the crawl delay) and never marks the state incomplete; the summary line is the one-line title. Earlier Legislature linked by the same title (six words or more) and
   introducer, never laws or appropriations. Contacts: 49 senators with Capitol room, phone, email, photo; 14 standing
   committees and the Executive Board with chairs and vice chairs (meeting days shortened by `meets()`); Speaker John Arch

@@ -75,3 +75,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
 - A General Assembly of this year or later is shown from its first bill (`sessions()` in convert.py, 2026-11-22; older
   ones need more than 500), so the 92nd's prefiled bills show as they're read (about 43 a run); its disposition lists
   weren't up on 2026-11-22 ("92: not listed yet").
+- **Texts before the backfill (2026-11-22):** the bot check ends each GitHub run after about 45 requests, and the
+  histories' backfill took all of them, so fetch.py never reached the texts (the LSA's explanations, "What it does"). Now
+  `main()` reads EARLY_TEXTS (8) texts of the current General Assembly each run right after the bills that moved and the
+  members, before the backfill: laws and vetoes first (the list's last action), then the bills that moved most recently.
+  About 380 laws and vetoes of 2025-26: a few days of runs. Not run from the owner's computer; shows as the runs read them.

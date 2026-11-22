@@ -175,6 +175,11 @@ class Rules:
         self.parties_ = {}   # session -> {(house, name): "D"/"R"}
         self.checks = {}     # session -> LegiScan's status against the stages here
 
+    def veto_memo(self, session, rec):
+        """The governor's veto message for a vetoed record ({year, signer, text}), from a source of the state's own
+        (LegiScan carries none), or None."""
+        return None
+
     def include(self, b):
         """"bill", "amendment" (a constitutional amendment), or None to leave it out."""
         return "bill" if b.get("bill_type") == "B" else None
@@ -583,6 +588,8 @@ def load_session(R, session):
         }
         if kind == "amendment":
             rec["keyDates"][4] = rec["keyDates"][5] = rec["keyDates"][6] = ""
+        if stage == 6:
+            rec["vetoMemo"] = R.veto_memo(session, rec)
         for n in group:
             index[n] = len(recs)
         recs.append(rec)

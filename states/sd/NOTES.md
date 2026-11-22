@@ -20,6 +20,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   January (40 days in odd years, 35 in even), plus a veto day near the end of March (`vetoDay()`); each year's last
   regular day is in `STATE.dated` (add each year's). Governor 5 days, not counting Saturdays, Sundays or holidays (Art. IV, sec. 4 as amended in 2002; until 2026-11-21 the
   profile excepted only Sundays), in session; 15 calendar days after the last regular day (counted from it, not from delivery).
+- **Veto letters (2026-11-22):** each "Vetoed by the Governor" action names the day's House or Senate Journal
+  (DocumentId), which prints the governor's letter; fetch.py's `veto_journals()` reads that journal once
+  (Documents/<id>.html) into data/sd/<year>/journals/, and convert.py's `veto_message()` takes the letter whose first
+  paragraphs name the bill and the veto ("I respectfully return to you House Bill 1132 with my VETO"), from "Dear ..." to
+  "Sincerely,". All four vetoes of 2025-26 (HB 1132, HB 1169, HB 1077, HB 1138) read on 2026-11-22 (2024 had none: the
+  Legislature's VetoedByGovernor list is empty too). Shows after the next download.
 - **Committee agendas (2026-11-22):** `agendas()` in states/sd/fetch.py, run for this year's session after the bills: for
   each committee in committees.json other than the whole House and Senate (about 32), the API's
   `SessionCommittees/Documents/<SessionCommitteeId>?Type=3&Type=5` (what the committee page's Agendas tab reads: each

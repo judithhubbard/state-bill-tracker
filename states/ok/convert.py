@@ -38,7 +38,7 @@ reading is states/legiscan_convert.py; this file says what's particular to Oklah
   effective date ("Schools; Education Reform Act of 2026; effective date."), kept to be rewritten late in the session.
   Those never moved past a committee are marked `shell`, as Illinois's are.
 """
-import glob, json, os, re, sys
+import glob, html, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 if HERE not in sys.path:
@@ -105,6 +105,29 @@ def after_mods(rest):
         rest = new
 
 
+_REASONS = {}
+
+
+def veto_reasons(year):
+    """{"HB3660": the governor's reasons} from the year's veto page, or {} (none saved)."""
+    if year not in _REASONS:
+        out = {}
+        try:
+            page = open(os.path.join(P.DATA, f"vetoes_{year}.html"), encoding="utf-8", errors="replace").read()
+        except OSError:
+            page = ""
+        for block in re.findall(r'(?s)class="cmp-text">(.*?)</div>', page):
+            x = re.sub(r"<[^>]+>", "", html.unescape(re.sub(r"<br\s*/?>|</p>", "\n", block)))
+            for m in re.finditer(r"(House|Senate) (?:Bill|Joint Resolution) 0*(\d+) Veto Message\s*\n(.*?)"
+                                 r"(?=(?:House|Senate) (?:Bill|Joint Resolution) \d+ Veto Message|\Z)", x, re.S):
+                k = ("HB" if m.group(1) == "House" else "SB") + m.group(2)
+                text_ = "\n".join(re.sub(r"\s+", " ", t).strip() for t in m.group(3).split("\n") if t.strip())
+                if text_ and k not in out:
+                    out[k] = text_
+        _REASONS[year] = out
+    return _REASONS[year]
+
+
 class Oklahoma(L.Rules):
     data_dir = P.DATA
     lower = "H"
@@ -126,6 +149,13 @@ class Oklahoma(L.Rules):
             if odd not in out or (year > odd and size(folder) >= size(out[odd])):  # the even year's folder wins
                 out[odd] = folder
         return dict(sorted(out.items()))
+
+    def veto_memo(self, session, rec):
+        """The governor's reasons as his yearly veto page gives them (states/ok/vetoes.py: data/ok/vetoes_<year>.html;
+        each "House Bill 3660 Veto Message" heading followed by a paragraph or two), for the year of the veto."""
+        day = rec["keyDates"][6] or ""
+        text_ = veto_reasons(int(day[:4])).get(rec["nums"][0]) if day else None
+        return {"year": int(day[:4]), "signer": P.governor_on(day), "text": text_} if text_ else None
 
     def include(self, b):
         n = b.get("bill_number") or ""

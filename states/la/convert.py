@@ -52,6 +52,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from states import letters as L
 from states.la import profile as P
 from states.undated import settle
 
@@ -374,6 +375,43 @@ def tally(t):
 
 
 # ---- One bill ----
+
+MONTH_DAY = re.compile(r"(January|February|March|April|May|June|July|August|September|October|November|December) (\d{1,2}), (\d{4})")
+
+
+def veto_message(session, b):
+    """The governor's veto (or line-item veto) letter, from the "HB1194 Veto Message" document fetch.py already reads
+    (data/la/<year>/docs/<id>.txt: a scan with an OCR text layer, its letterhead and "RECEIVED" stamp garbled) ->
+    {year, signer, text} or None. The letter from "Dear Speaker ...:" to "For Louisiana," (or "Sincerely"), without the
+    stamp's fragments, the page numbers and the second page's header (its date and "House Bill 1194 Veto Message")."""
+    for x in b.get("docs") or []:
+        if not (x.get("doc") and "Veto Message" in (x.get("label") or "")):
+            continue
+        try:
+            raw = open(os.path.join(folder(session), "docs", f"{x['doc']}.txt"), encoding="utf-8", errors="replace").read()
+        except OSError:
+            continue
+        m = re.search(r"(?m)^\s*Dear [^\n]*[:,;]\s*$", raw)
+        if not m:
+            continue
+        body = re.split(r"(?m)^\s*(?:For Louisiana|Sincerely|Respectfully)\b", raw[m.end():])[0]
+        lines = []
+        for ln in body.replace("\f", "\n").split("\n"):
+            t = ln.strip()
+            if t and (len(re.findall(r"[A-Za-z]", t)) < 3 or MONTH_DAY.fullmatch(t)
+                      or re.fullmatch(r"(?:House|Senate) Bill(?: No\.)? \d+ (?:Line Item )?Veto Message", t, re.I)
+                      or re.fullmatch(r"Page \d+( of \d+)?", t)
+                      # A line-item veto's list of lines struck ("Veto No. 1: Delete Lines 1 through 3 on Page 95 of 268")
+                      or re.fullmatch(r"(?:Veto No\. ?\d+ ?:)?\s*(?:Delete Lines? [\d ,]+(?:(?:through|and) \d+ )?on Page \d+ of \d+)?", t)):
+                continue
+            lines.append(t)
+        text_ = L.cut(L.wrapped(lines))
+        d = MONTH_DAY.search(raw[:m.start()])
+        day = datetime.strptime(" ".join(d.groups()), "%B %d %Y").date().isoformat() if d else f"{session}-06-30"
+        if text_:
+            return {"year": int(day[:4]), "signer": P.governor_on(day), "text": text_}
+    return None
+
 
 def record(session, b, parties):
     p = b["key"]
@@ -807,6 +845,9 @@ def record(session, b, parties):
     held = deferred == "involuntary"
     fate = "passed" if reported or passed else "defeated" if held else "held" if deferred else "none"
     local_bill = any(x.get("group") == "Notices" and x.get("label") == "Public Notice" for x in b.get("docs") or [])
+    vmemo = veto_message(session, b) if stage == 6 or (stage == 5 and items) else None
+    if vmemo and stage == 5:
+        vmemo["kind"] = "line-item"
     rec = {
         "nums": [p], "base": [p], "prev": earlier(session, b),
         "title": title, "summary": keyword_text(kw), "act": "", "lawCode": "", "law": None, "laws": [],
@@ -818,7 +859,7 @@ def record(session, b, parties):
         "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
         "stage": stage, "passedIn": passed_in,
         "chapter": chapter if stage == 5 else None,
-        "veto": None, "memo": "", "vetoMemo": None,
+        "veto": None, "memo": "", "vetoMemo": vmemo,
         "simText": f"{keyword_text(kw)} {short}",
         "comm": comm_now if stage == 0 else None,
         "first": min(action_dates, default=f"{session}-03-01"),

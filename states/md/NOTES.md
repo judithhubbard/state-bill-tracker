@@ -15,6 +15,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   and three delegates, some from subdistricts ("44A"): as in New Jersey, a district's senator and all its delegates are its
   legislators ("S:44", "H:44a/b/c"); the towns list (cities, towns, Census-designated communities and counties) gives one
   district list for both houses. `dataName` is the bill list's form ("Ebersole", "Lewis, R."). One 90-day session a year.
+- **Veto letters (2026-11-22):** fetch.py's `veto_letters()` reads the governor's letter for each bill governor_<year>.json
+  shows vetoed, at the address the bill page links (/<year>RS/veto_letters/sb0448.pdf; text PDFs, no robots.txt), once,
+  into data/md/vetoes/<year>/<SB448>.txt (pdftotext -layout); convert.py's `veto_message()` keeps the letter from "Dear
+  President Ferguson:" (or ",") to "Sincerely". A vetoed bill later passed over the veto is a law and doesn't show it.
+  Checked on SB 448 of 2026 and SB 587 of 2025 (two pages). Shows after the next download (the local copy has no
+  governor_<year>.json).
 - **The governor's dates and veto overrides (2026-11-19):** the bill list has no dates for the governor's actions and
   never shows an override: 2025's list, last saved by the General Assembly on 2025-12-01, still says "Vetoed" for the
   bills that became law over the veto in the special session of 2025-12-16 (SB 587, "Chapter 9 of 2025 Special Session";

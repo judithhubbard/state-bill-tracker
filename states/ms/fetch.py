@@ -19,6 +19,8 @@ before 2023) (and next year's once it exists, from November), into data/ms/<year
   rules, Quebec and the like), HR, SR (simple resolutions), SN (Senate nominations) and JR (a joint resolution:
   redistricting, 2026). Only HB, SB, HC and SC are read further; telling amendments from the other concurrent
   resolutions (by title) is the converter's job.
+- vetoes/<HB0895>.htm: the governor's veto message each vetoed bill's history links (<VETOMSG><VETO_OTHER>,
+  /documents/<year>/html/veto/HB0895.htm), once (`veto_messages()`).
 - history/<HB0001>.xml (/<year>/pdf/history/HB/HB0001.xml, the allmsrs entry's ACTIONLINK): short and long titles,
   DISPOSITION ("Law"), vote needed, revenue, effective date, CHAPNUM (chapter of the session laws), committees in each
   house (name, code link "../../House_cmtes/JB.xml", still in it), principal and co-authors (by author link), code
@@ -435,6 +437,35 @@ def session(year):
           flush=True)
 
 
+def veto_messages(year):
+    """The governor's veto message each vetoed bill's history file links (<VETOMSG><VETO_OTHER>
+    ../../../../documents/2026/html/veto/HB0895.htm: the letter as a web page), once each, into vetoes/<HB0895>.htm.
+    Never marks the copy incomplete: what fails is read next run."""
+    folder = os.path.join(DATA, str(year))
+    hist = os.path.join(folder, "history")
+    if not os.path.isdir(hist):
+        return
+    todo = []
+    for name in sorted(os.listdir(hist)):
+        if not name.endswith(".xml"):
+            continue
+        m = re.search(r"<VETO_OTHER>\s*(?:\.\./)*(documents/\d{4}/html/veto/[A-Za-z0-9]+\.htm)\s*</VETO_OTHER>",
+                      open(os.path.join(hist, name), encoding="utf-8", errors="replace").read())
+        if m and not os.path.exists(os.path.join(folder, "vetoes", name[:-4] + ".htm")):
+            todo.append((name[:-4], m.group(1)))
+    got = 0
+    for k, path in todo:
+        if out_of_time():
+            break
+        body, _ = request(f"{SITE}/{path}", f"{year} {k} veto message")
+        if body and b"VETO" in body.upper():
+            os.makedirs(os.path.join(folder, "vetoes"), exist_ok=True)
+            write(body, os.path.join(folder, "vetoes", f"{k}.htm"))
+            got += 1
+    if todo:
+        print(f"{year}: {got} of {len(todo)} veto messages read", flush=True)
+
+
 def member_links(path):
     """A member list's links to members' files ("house/aguirre.xml"; not the Lieutenant Governor's website)."""
     try:
@@ -522,6 +553,9 @@ def main():
             if out_of_time():
                 break
             session(year)
+        for year in years:
+            if not out_of_time():
+                veto_messages(year)
         if not ONLY and not out_of_time():
             agendas(YEAR)
             house_schedule(YEAR)

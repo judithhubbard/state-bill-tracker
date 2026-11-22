@@ -22,6 +22,8 @@ For each two-year session (2023 = 2023-2024, 2025 = 2025-2026; regular session o
 - Each Record of Committee Proceedings the bill pages link to (/<year>/related/records/<house>/<committee>/<id>: the
   committee's hearings and executive sessions on that bill, with each motion's ayes and noes by name) into
   rocp/<id>.json, once.
+- Each governor's veto message the bill pages link to ("Veto Message": /document/vetomessages/<year>/AB1.pdf, text
+  PDFs) into vetoes/<AB1>.txt, once (`veto_messages()`).
 - The members (/<year>/legislators/assembly and /senate: name, district, party, home town, leadership title, Madison
   office, phones, email, website, member id) into members.json, every run; the committees (/<year>/committees/assembly,
   /senate, /joint, then each committee's page: members with "(Chair)" and the like, by member id) into
@@ -30,7 +32,7 @@ data/wi/incomplete lists what was never downloaded (a failed refresh keeps the l
 and journals still to read count only until a run leaves nothing missing); it is removed when nothing is missing.
 Usage: python3 states/wi/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029), through this one)
 """
-import html, json, math, os, re, sys, time, urllib.error, urllib.request
+import html, json, math, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -88,7 +90,7 @@ def progress(label, i, total, got):
               + (f"; failures {dict(FAILS)}" if FAILS else ""), flush=True)
 
 
-def get(path, timeout=30):
+def get(path, timeout=30, binary=False):
     """The page's text; MISSING for a 404, None when it can't be read. Stops the run if the site refuses us. The large
     pages (bill lists, journal indexes, member and committee lists: hundreds of KB, slow from GitHub's machines) are
     given up to three minutes; the thousands of small ones 30 seconds."""
@@ -99,7 +101,8 @@ def get(path, timeout=30):
         try:
             req = urllib.request.Request(SITE + path, headers={"User-Agent": AGENT})
             with urllib.request.urlopen(req, timeout=timeout) as r:
-                return r.read().decode("utf-8", "replace")
+                data = r.read()
+                return data if binary else data.decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return MISSING
@@ -372,7 +375,7 @@ def parse_rocp(page, path):
         if m and motion is None:
             meeting[m.group(1).lower()] = names(m.group(3))
             continue
-        if p.startswith("Moved by"):
+        if p.startswith("Moved "):  # "Moved by ...", or "Moved that ..." at a paper ballot
             motion = {"motion": p}
             meeting["motions"].append(motion)
             continue
@@ -568,7 +571,43 @@ def session(year):
         extra(f"{year}:rocp")
     print(f"{year}: {len(rocps)} committee records ({rgot} of {len(rtodo)} read now)", flush=True)
 
+    veto_messages(year, folder, listing, path_of)
     members_and_committees(year, folder, live)
+
+
+def veto_messages(year, folder, listing, path_of):
+    """The governor's veto message each vetoed (or partly vetoed) bill's page links ("Veto Message",
+    /document/vetomessages/2025/AB1.pdf, which redirects to /2025/related/veto_messages/ab1.pdf: a PDF with text), read
+    once into vetoes/<AB1>.txt (pdftotext -layout: the letters are in two columns, which convert.py puts in order). Never
+    holds the copy back: what isn't read now is read next run."""
+    if not shutil.which("pdftotext"):
+        print(f"{year}: veto messages: pdftotext isn't installed", flush=True)
+        return
+    todo = []
+    for num in listing:
+        b = load(path_of(num)) or {}
+        href = next((d["href"] for d in b.get("links") or [] if d.get("text") == "Veto Message"), None)
+        if href and not os.path.exists(os.path.join(folder, "vetoes", f"{num}.txt")):
+            todo.append((num, href))
+    got = 0
+    for num, href in todo:
+        if out_of_time():
+            break
+        data = get(href, binary=True)
+        if not isinstance(data, bytes) or data[:5] != b"%PDF-":
+            continue
+        try:
+            t = subprocess.run(["pdftotext", "-layout", "-enc", "UTF-8", "-", "-"], input=data, capture_output=True,
+                               timeout=60).stdout.decode("utf-8", "replace")
+        except (OSError, subprocess.SubprocessError):
+            continue
+        # (Saved even when empty: a scanned letter, with no text, isn't asked for again. 2023-24's budget and a few
+        # others are scans.)
+        os.makedirs(os.path.join(folder, "vetoes"), exist_ok=True)
+        with open(os.path.join(folder, "vetoes", f"{num}.txt"), "w", encoding="utf-8") as f:
+            f.write(t)
+        got += 1
+    print(f"{year}: veto messages: {got} of {len(todo)} read now", flush=True)
 
 
 def members_and_committees(year, folder, live):
