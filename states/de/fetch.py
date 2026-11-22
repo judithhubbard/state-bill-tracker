@@ -600,7 +600,12 @@ def main():
             assembly_lists(ga)
         people([ga for ga in gas if os.path.exists(os.path.join(DATA, str(first_year(ga)), "members.json"))])
         if not ONLY:
-            agendas()
+            try:
+                agendas()
+            except Refused:
+                raise
+            except Exception as e:  # never let the agendas stop the bills
+                print(f"agendas: failed ({type(e).__name__}: {e}); the last copy is kept", flush=True)
         for ga in gas:
             assembly(ga)
     except Refused as e:
