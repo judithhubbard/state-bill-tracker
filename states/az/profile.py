@@ -104,5 +104,12 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most across the sessions shown, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Open States' records here
+# carry short titles and almost no summaries, so only the clearest shifts.
+TRENDS = [
+    ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+    ("rise", "Landlords and tenants", r"landlord|tenant", True),
+    ("rise", "Abortion", r"abortion|unborn", True),
+]
 WORDING = []

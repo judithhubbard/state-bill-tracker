@@ -155,5 +155,10 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most across the sessions shown, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Matched on title and summary.
+TRENDS = [
+    ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen|illegal alien|unauthorized alien|undocumented", True),
+    ("spike", "Hurricanes and flooding", r"hurricane|\bflood", True),
+]
 WORDING = []
