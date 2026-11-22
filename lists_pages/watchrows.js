@@ -96,7 +96,8 @@ const WatchRows = (() => {
     const due = x.due && !(opt.groupDay && x.date === opt.groupDay && (x.group === "session" || x.group === "year")) ? x.due : "";
     // (The last action's day is left out when it's the deadline's own day: "Oct 22, 2026 · Floor vote Oct 22" read twice.)
     const sameDay = due && x.last && x.date && String(x.last).slice(0, 10) === String(x.date).slice(0, 10);
-    const when = [x.found && x.last && !sameDay ? `<span>${fullDay(x.last)}</span>` : "",
+    // (With a deadline beside it, the last action's day says what it is: "Last action Oct 22, 2026 · Floor vote Oct 29".)
+    const when = [x.found && x.last && !sameDay ? `<span>${due ? "Last action " : ""}${fullDay(x.last)}</span>` : "",
       due ? `<span class="wr-dl">${h(due)}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""].filter(Boolean).join("");
     const where = `<span class="wr-where bstat">${x.found ? BillFacts.pips(x.stage, uni, over.trim(), x.label, x.st) + `<span class="stg s${x.stage}${over}">${h(x.label)}</span>` : ""}`
       + `${when ? `<span class="stw">${when}</span>` : ""}${stance}${x.found ? "" : '<span class="wr-todo">Open</span>'}</span>`;
