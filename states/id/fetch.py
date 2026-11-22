@@ -45,16 +45,20 @@ per unfinished year and the bills whose status changed: a minute or two out of s
   bills, every run; at the same one request a second. About 2,100 for three years, each about 640 KB (fonts embedded):
   the first copy takes about 40 minutes, over one or two runs.
 
-Not downloaded: the co-sponsor lists, bill texts, committee minutes and agendas (PDFs).
+- agendas.json (data/id/<this year>/, every full run): the bills on committee agendas from yesterday to three weeks
+  ahead (`agendas()`: the agenda PDFs, as text by pdftotext).
+
+Not downloaded: the co-sponsor lists, bill texts, committee minutes (PDFs).
 
 data/id/incomplete says "running" during the first copy, then lists what was never downloaded (a year's list, a listed
 bill's page, the members); it is removed when nothing is missing. A request that fails where a last copy exists keeps
 that copy and doesn't count. The statements of purpose never count.
 Usage: python3 states/id/fetch.py [year]   (default: every year above; a single year leaves the marker alone)
 """
-import gzip, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
+import gzip, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.parse
+import urllib.request
 from collections import Counter
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
 
@@ -306,6 +310,112 @@ def pdf_text(body):
     return out.stdout.decode("utf-8", "replace") if out.returncode == 0 else None
 
 
+AGENDA_DAYS = 21  # how far ahead
+AGENDA_PAGES = ("/sessioninfo/agenda/hagenda/", "/sessioninfo/agenda/sagenda/")  # "House/Senate Committee Agendas"
+# An agenda's file: "260309_hjud_0130PM-Agenda.pdf", "260311_hjud_other_meet_time-Agenda.pdf" (day, committee, time)
+AGENDA_PDF = re.compile(r"""["'](/wp-content/uploads/sessioninfo/\d{4}/[a-z]+/(\d{2})(\d{2})(\d{2})_([a-z]+)_([^"'/]*?)"""
+                        r"""-Agenda\.pdf)["']""", re.I)
+AGENDA_BILL = re.compile(r"^\s{0,12}(HJR|SJR|H|S)\s?0*(\d+)\b(?!\.\d)", re.M)  # "H 681", "S 1296", "HJR 4" at a line's start
+AGENDA_TIME = re.compile(r"\b(\d{1,2}):(\d{2})\s*([AP])\.?\s*M\b", re.I)
+AGENDA_DAY = re.compile(r"\b(January|February|March|April|May|June|July|August|September|October|November|December)"
+                        r"\s+(\d{1,2}),\s+(\d{4})")
+SMALL = {"and", "of", "the", "for"}
+
+
+def agenda_committee(t):
+    """The agenda's heading, "HOUSE JUDICIARY, RULES & ADMINISTRATION COMMITTEE" -> "House Judiciary, Rules and
+    Administration" (the converter's wording of committee names), or ""."""
+    for line in t.splitlines()[:8]:
+        line = line.strip()
+        m = re.match(r"^(HOUSE|SENATE|JOINT)\b(.*?)(?:\s+COMMITTEE)?$", line)
+        if m and line.isupper():
+            words = f"{m.group(1)}{m.group(2)}".replace("&", "and").split()
+            return " ".join(w.lower() if w.lower() in SMALL and i else w.capitalize() for i, w in enumerate(words))
+    return ""
+
+
+def agenda_entry(t, day, slot):
+    """[committee, "2026-03-09T13:30:00"] from an agenda's text, or None. The heading's time ("1:30 P.M.", "1:30 P.M. or
+    Upon Adjournment"), else the file name's ("0130PM"), else none."""
+    name = agenda_committee(t)
+    if not name:
+        return None
+    head = "\n".join(t.splitlines()[:8])
+    d = AGENDA_DAY.search(head)
+    if d:
+        try:
+            day = datetime.strptime(f"{d.group(1)} {d.group(2)} {d.group(3)}", "%B %d %Y").date()
+        except ValueError:
+            pass
+    tm = AGENDA_TIME.search(head) or re.fullmatch(r"(\d{2})(\d{2})([AP])M", slot or "", re.I)
+    clock = "00:00"
+    if tm:
+        h = int(tm.group(1)) % 12 + (12 if tm.group(3).upper() == "P" else 0)
+        clock = f"{h:02d}:{tm.group(2)}"
+    return [name, f"{day.isoformat()}T{clock}:00"]
+
+
+def agendas():
+    """Bills on committee agendas from yesterday to three weeks ahead, into data/id/<this year>/agendas.json: {"H681":
+    [["House Judiciary, Rules and Administration", "2026-03-09T13:30:00"]]}. The agendas are PDFs named by day, committee
+    and time ("260309_hjud_0130PM-Agenda.pdf"), linked from the House and Senate Committee Agendas pages (AGENDA_PAGES)
+    and from each standing committee's page (read here only when those two link none, during January to April); only
+    those dated in the window are read, each time (an amended agenda keeps its name: "AMENDED AGENDA #2"). Bills are the
+    SUBJECT column's "H 681", "S 1296", "HJR 4"; "RS 33000" (a draft at its print hearing) isn't a bill yet. A failure
+    keeps the last file: agendas never hold Idaho back."""
+    if not PDFTOTEXT:
+        print("agendas: pdftotext isn't installed; skipped", flush=True)
+        return
+    first, last = TODAY - timedelta(days=1), TODAY + timedelta(days=AGENDA_DAYS)
+    links = {}
+    try:
+        pages = [request(p, f"agendas {p}") for p in AGENDA_PAGES]
+        if any(p is None for p in pages):
+            print("agendas: an agendas page failed; the last copy is kept", flush=True)
+            return
+        found = [m for p in pages for m in AGENDA_PDF.finditer(p)]
+        if not found and 1 <= TODAY.month <= 4:
+            listing = request(f"/sessioninfo/{YEAR}/standingcommittees/", "agendas: committees", "standingcommittees/")
+            codes = sorted(set(re.findall(rf"/sessioninfo/{YEAR}/standingcommittees/([A-Z]+)/", listing or "")))
+            for code in codes:
+                page = request(f"/sessioninfo/{YEAR}/standingcommittees/{code}/", f"agendas: {code}", "lso-heading")
+                if page is None:
+                    print(f"agendas: committee {code}'s page failed; the last copy is kept", flush=True)
+                    return
+                found += list(AGENDA_PDF.finditer(page))
+        for m in found:
+            try:
+                day = date(2000 + int(m.group(2)), int(m.group(3)), int(m.group(4)))
+            except ValueError:
+                continue
+            if first <= day <= last and "no_meeting" not in m.group(6).lower():
+                links[m.group(1)] = (day, m.group(6))
+        out = {}
+        for path, (day, slot) in sorted(links.items()):
+            body = request(urllib.parse.quote(path), f"agenda {path.rsplit('/', 1)[-1]}", binary=True)
+            if body is None:
+                print(f"agendas: {path} failed; the last copy is kept", flush=True)
+                return
+            t = pdf_text(body) or ""
+            if re.search(r"\bCANCEL+ED\b", "\n".join(t.splitlines()[:12]), re.I):
+                continue
+            entry = agenda_entry(t, day, slot)
+            if not entry:
+                continue
+            body_text = t.split("COMMITTEE MEMBERS")[0]
+            for kind, num in AGENDA_BILL.findall(body_text):
+                key = f"{kind}{int(num)}"
+                if entry not in out.setdefault(key, []):
+                    out[key].append(entry)
+    except Refused as e:
+        print(f"agendas: {e}; the last copy is kept", flush=True)
+        return
+    folder = os.path.join(DATA, str(YEAR))
+    os.makedirs(folder, exist_ok=True)
+    save(out, os.path.join(folder, "agendas.json"))
+    print(f"agendas: {len(out)} bills on {len(links)} agendas", flush=True)
+
+
 def texts_module():
     """states/id/texts.py, loaded by its path (this file runs as a script)."""
     import importlib.util
@@ -481,6 +591,7 @@ def main():
     try:
         if not ONLY:
             members()
+            agendas()
         for year in years:  # the current year first
             if out_of_time():
                 break

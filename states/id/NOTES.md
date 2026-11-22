@@ -66,3 +66,18 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   year's last floor day is in `STATE.dated`: add each year's). The governor's phone and contact page are from
   gov.idaho.gov/contact/ (checked by program 2026-11-08, not by the owner). Leaders from the member list (Speaker Mike
   Moyle, President Pro Tempore Kelly Anthon); the 69th Legislature organizes in December 2026.
+- **Committee agendas (2026-11-22):** `agendas()` in states/id/fetch.py (every full run, after the members) reads the
+  House and Senate Committee Agendas pages (/sessioninfo/agenda/hagenda/ and sagenda/; robots.txt allows them: it bars
+  only the committee calendar's action~ views) for links to the agenda PDFs, named by day, committee and time
+  ("/wp-content/uploads/sessioninfo/2026/standingcommittees/260309_hjud_0130PM-Agenda.pdf",
+  "260311_hjud_other_meet_time-Agenda.pdf"; "no_meeting" files skipped). When those pages link none during January to
+  April it reads each standing committee's page instead (about 25 requests), whose meeting lists link the same files.
+  Each PDF dated yesterday to three weeks ahead is read every run (amended agendas keep the file name: "AMENDED AGENDA
+  #2") with pdftotext: the heading gives the committee ("HOUSE JUDICIARY, RULES & ADMINISTRATION COMMITTEE" -> "House
+  Judiciary, Rules and Administration", the converter's wording), the time ("1:30 P.M. or Upon Adjournment") and the day;
+  the SUBJECT column's "H 681", "S 1296", "HJR 4" are the bills ("RS 33000", a draft at its print hearing, isn't one
+  yet). Into data/id/<this year>/agendas.json; `agendas()` in convert.py keeps meetings from today on. Tested on the
+  2026 committee pages saved here (HJUD, SSTA) with their agenda PDFs for March 9-11, 2026: 4 agendas, 16 bills, all
+  matching 2026 records. Untested: what the two agendas pages look like during a session (on 2026-11-22 they say "No
+  agendas currently available"); if they don't link the PDFs the committee pages are read instead. A failed request
+  keeps the last file; without pdftotext it's skipped.
