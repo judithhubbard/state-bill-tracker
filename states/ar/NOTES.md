@@ -43,3 +43,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
 - Next session's prefiled bills (2026-11-22: 15 bills of 2027R in the live folder, prefiled from mid-November) are shown as
   an upcoming session from the first one: `sessions()` in convert.py asks more than 100 bills only of sessions before
   this year (it hid 2027 at first).
+- **Floor calendars (2026-11-22):** FloorCalendars.txt (already downloaded) lists each bill on each day's House or Senate
+  calendar by its drafting id ("JLL443"), which LegislativeMeasures.txt turns into a bill and session (special sessions'
+  bills aren't on the site). Its section codes aren't documented: `FLOOR_SECTIONS` keeps the ones where 77-100% of the
+  bills listed in 2025-26 had a passage or concurrence vote that day or the next (third reading, concurrence, the
+  appropriation calendars); amendments on second reading, bills just filed or withdrawn and resolutions are left out.
+  Each is "listed" ("On the House calendar Wed, Apr 22"). Tested with FLOOR_TODAY: 2025, 1,176 bills; 2026 (fiscal), 175;
+  all matched to records.
