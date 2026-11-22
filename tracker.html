@@ -1310,6 +1310,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     <div class="act-sec statsec" id="statTiming" hidden></div>
     <div class="act-sec statsec" id="statPersist" hidden></div>
     <div class="act-sec statsec" id="statCosp" hidden></div>
+    <p class="muted legsjump" id="statLegsJump" hidden></p>
     <div class="act-sec statsec" id="statNet" hidden></div>
     <div class="act-sec statsec" id="statWho" hidden></div>
     <div class="act-sec statsec" id="statTrend" hidden></div>
@@ -2288,7 +2289,8 @@ function renderLegs() {
   box.innerHTML = `<div class="legs-head"><h2>${esc(HOUSE[k])}</h2><span class="muted">${num(here.length)} members${split.length ? `: ${split.join(", ")}` : ""}</span>
       <input type="search" id="legsQ" placeholder="Name or district" aria-label="Find a member by name or district" autocomplete="off">${close}</div>
     ${lead && !leadL ? `<p class="muted">${esc(lead.role)}: ${esc(lead.name)}</p>` : ""}
-    <div class="legs-scroll"><table class="legtab"><thead><tr>${NOPARTY ? "" : th("party", "Party")}${th("name", "Name")}${th("district", k === "S" && STATE.townRegions ? esc(STATE.regionWord || "State") : "District")}${th("bills", "Bills", "Bills they sponsor this session")}${th("laws", "Laws", "Their bills that became law this session")}</tr></thead><tbody id="legsRows"></tbody></table></div>`;
+    <div class="legs-scroll"><table class="legtab"><thead><tr>${NOPARTY ? "" : th("party", "Party")}${th("name", "Name")}${th("district", k === "S" && STATE.townRegions ? esc(STATE.regionWord || "State") : "District")}${th("bills", "Bills", "Bills they sponsor this session")}${th("laws", "Laws", "Their bills that became law this session")}</tr></thead><tbody id="legsRows"></tbody></table></div>
+    ${DATA.current && LEGS.length ? `<p class="muted legs-more">Who works with whom: <button type="button" class="linkish" data-gostat="statNet">Partners</button> · <button type="button" class="linkish" data-gostat="statWho">Topics</button>, in Statistics</p>` : ""}`;
   legRows();
 }
 // The rows alone, so typing in the box keeps its place.
@@ -3110,6 +3112,10 @@ function showStatSec(id) {
   for (const b of document.querySelectorAll("#statTabs button")) b.setAttribute("aria-pressed", b.dataset.sec === id);
   try { localStorage.setItem(STORE + "statsec", id); } catch (e) {}
   if (id === "statNet") renderNet();
+  // Partners and Topics lead to the member lists (the header's Senate / Assembly buttons), on the current session's page.
+  const jump = $("statLegsJump"), houses = [...new Set(LEGS.map((L) => L.house))].filter((h) => document.querySelector(`#power [data-legs="${h}"]`));
+  jump.hidden = !["statNet", "statWho"].includes(id) || !houses.length;
+  if (!jump.hidden) jump.innerHTML = `Every member: ${houses.map((h) => `<button type="button" class="linkish" data-openlegs="${h}">${esc(HOUSE[h])}</button>`).join(" · ")}`;
   // The topic choice and the "leave out" box don't apply to these two sections.
   document.querySelector(".stattopic").hidden = ["statWho", "statTrend"].includes(id);
   if (id === "statWho") renderWho();
@@ -5603,6 +5609,8 @@ function wire() {
     if (e.target.closest("[data-impact]")) { showView("how"); showHowSec("impact"); $("view-how").scrollIntoView({ block: "start" }); return; }
     const hs = e.target.closest("[data-how]");
     if (hs) { if ($("view-how").hidden) showView("how"); showHowSec(hs.dataset.how); if (!hs.closest("#howTabs")) $("view-how").scrollIntoView({ block: "start" }); return; }
+    const ol = e.target.closest("[data-openlegs]");
+    if (ol) { if (LEGS_OPEN !== ol.dataset.openlegs) openLegs(ol.dataset.openlegs); $("legsBox").scrollIntoView({ block: "start" }); return; }
     const gs = e.target.closest("[data-gostat]");
     if (gs) { showView("stats"); showStatSec(gs.dataset.gostat); $("view-stats").scrollIntoView({ block: "start" }); return; }
     const cb = e.target.closest("[data-commbills]");
@@ -6900,11 +6908,11 @@ function setupStats() {
   if (STATS_SET) return;
   STATS_SET = true;
   // The current page draws its network live; past pages carry one worked out by the build.
-  // Partners (the co-sponsor network), Topics (who works on what) and Repeat tries aren't shown (2026-11-19: each needed
-  // a paragraph of instructions; repeat tries is one line under the odds chart). Their code stays for legislators' pages.
-  $("statNetBtn").hidden = $("statWhoBtn").hidden = true;
-  // A saved section that isn't shown any more (Partners, Topics, Repeat tries) opens on Odds.
-  try { const s = localStorage.getItem(STORE + "statsec"); if (s && $(s) && !["statNet", "statWho", "statPersist"].includes(s)) statSec = s; } catch (e) {}
+  // Partners (the co-sponsor network) and Topics (who works on what): back on 2026-11-22 (the owner: they were the way to
+  // explore legislators), linked both ways with the header's member lists. Repeat tries stays hidden (one line under Odds).
+  $("statNetBtn").hidden = !((DATA.current && LEGS.length) || DATA.network);
+  $("statWhoBtn").hidden = !(DATA.current && LEGS.length);
+  try { const s = localStorage.getItem(STORE + "statsec"); if (s && $(s) && s !== "statPersist" && !(s === "statNet" && $("statNetBtn").hidden) && !(s === "statWho" && $("statWhoBtn").hidden)) statSec = s; } catch (e) {}
   // "What's changing" needs subjects picked by hand (TRENDS in the state's profile.py).
   if (NOPARTY) document.querySelector('[data-sec="statCosp"]').textContent = "Co-sponsors";
   if (!DATA.insights?.trends?.subjects?.length) { document.querySelector('[data-sec="statTrend"]').hidden = true; if (statSec === "statTrend") statSec = "statOdds"; }
