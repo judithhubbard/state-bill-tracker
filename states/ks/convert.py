@@ -49,6 +49,7 @@ from zoneinfo import ZoneInfo
 
 from states.ks import profile as P
 from states.undated import settle
+from states import floorcal
 
 HOUSE = {"S": "Senate", "H": "House"}
 CH = {"house": "H", "senate": "S"}
@@ -57,6 +58,7 @@ KEPT = re.compile(r"^(HB|SB|HCR|SCR)(\d+)$")
 _CACHE = {}
 _PARTIES = {}
 _HEARD = {}  # session -> {bill: "House Education"}: in a committee that has heard it (load_session())
+_NUMS = {}  # session -> the records' numbers (load_session()): concurrent resolutions other than amendments aren't records
 MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november",
           "december"]
 
@@ -383,6 +385,7 @@ def load_session(session):
             texts[b["BILLNO"]] = {"statement": what[0], "label": what[1]}
     json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
+    _NUMS[session] = {n for r in recs for n in r["nums"]}
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 
@@ -971,6 +974,20 @@ def agendas(session):
             for name, when in meets:
                 if norm(name) == norm(comm) and not any(x[0] == name and x[1][:10] == when[:10] for x in out.get(bill, [])):
                     out.setdefault(bill, []).append([name, when, "meets"])
+    # Floor calendars (fetch.py's floor_calendars(): each house's daily calendar, states/floorcal.py): the bills on its
+    # consent calendar, final action, motions to concur and general orders can come up that day; general orders often
+    # wait for weeks ("listed").
+    # (Concurrent resolutions only when they're records: the constitutional amendments.)
+    since = floorcal.since(P.TIMEZONE)
+    for c in (load(session, "floor", {}) or {}).values():
+        if c["when"][:10] >= since:
+            for bill in c["bills"]:
+                if bill.startswith(("HCR", "SCR")):
+                    if session not in _NUMS:
+                        load_session(session)
+                    if bill not in _NUMS[session]:
+                        continue
+                floorcal.add(out, bill, floorcal.entry(c["house"], c["when"], listed=True))
     out = {k: sorted(v, key=lambda m: m[1]) for k, v in out.items() if v}
     return out
 
