@@ -116,8 +116,11 @@ const WatchRules = (() => {
   // (stage: the bill's; a floor day counts only while it still needs a floor vote, stage 2 or less.)
   function nextMeeting(agenda, current, stage) {
     if (!current || !agenda || !agenda.length) return null;
-    const now = new Date(Date.now() - 6 * 36e5).toISOString().slice(0, 16);
-    return agenda.filter((a) => a.when >= now && !(a.kind === "floor" && stage > 2)).sort((x, y) => (x.when < y.when ? -1 : 1))[0] || null;
+    // A meeting with a time counts until 6 hours after it starts; a day with no time (California's and New York's
+    // calendars, "T00:00:00") counts all that day (it vanished from the morning of the vote).
+    const now = new Date(Date.now() - 6 * 36e5).toISOString().slice(0, 16), day = localToday();
+    const ahead = (w) => (w.slice(11, 16) === "00:00" ? w.slice(0, 10) >= day : w >= now);
+    return agenda.filter((a) => ahead(a.when) && !(a.kind === "floor" && stage > 2)).sort((x, y) => (x.when < y.when ? -1 : 1))[0] || null;
   }
   return { make, nextMeeting, SOON_DAYS, monthDay, shortDay, ORDER, localToday };
 })();

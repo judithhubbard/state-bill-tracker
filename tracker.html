@@ -3088,7 +3088,8 @@ function comingUp(mine) {
     if (!b.agenda.length || !mine(b)) continue;
     for (const a of b.agenda) {
       // (Meetings with no bills named aren't agendas; floor calendars aren't committee meetings.)
-      if (a.when < now || a.when > until || a.kind === "meets" || a.kind === "floor") continue;
+      // (A meeting with no time, "T00:00:00", counts all its day: WatchRules.nextMeeting().)
+      if ((a.when.slice(11, 16) === "00:00" ? a.when.slice(0, 10) < isoToday() : a.when < now) || a.when > until || a.kind === "meets" || a.kind === "floor") continue;
       const k = `${a.when}|${a.committee}`;
       (meets.get(k) || meets.set(k, { ...a, bills: [] }).get(k)).bills.push(b);
     }
