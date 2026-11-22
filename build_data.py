@@ -39,6 +39,20 @@ governors.apply_leaders(P)  # chosen next leaders (LEADERS_NEXT), from their fir
 # The governor's page's folder: /<st>/governor/ (Congress: /us/president/, states/legislatures.json's "executive").
 GOV_SLUG = (json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "states", "legislatures.json")))["states"]
             .get(STATE, {}).get("executive") or "Governor").lower()
+# Governors' (and the President's) photos, from Wikimedia Commons (tools/governor_photos.py, weekly): {state: {full name:
+# {"src", "author", "license", ...}}}. The page shows the photo of whoever is in office on the build day.
+GOV_PHOTOS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "states", "governor_photos.json")
+GOV_PHOTOS = json.load(open(GOV_PHOTOS_PATH)).get(STATE, {}) if os.path.exists(GOV_PHOTOS_PATH) else {}
+
+
+def gov_photo(name):
+    """{"photo": thumbnail address, "photoBy": its credit} for the governor's card, or {} without one."""
+    p = GOV_PHOTOS.get(name)
+    if not p or not p.get("src", "").startswith(("https://upload.wikimedia.org/", "https://thumb.wikimedia.org/")):
+        return {}
+    lic = p.get("license") or ""
+    by = "" if lic.lower() in ("public domain", "cc0") or not p.get("author") else p["author"]
+    return {"photo": p["src"], "photoBy": "Photo: " + ", ".join(x for x in (by, lic, "via Wikimedia Commons") if x)}
 # The code that reads the state's own data and turns it into bill records (C.load_session).
 C = importlib.import_module(f"states.{STATE}.convert")
 
@@ -2220,7 +2234,7 @@ def compute(prev=None):
             "governor": governors.in_office(P)[0],
             # Their full name, party and first day in office, and their page's folder (GOV_SLUG, public site only).
             **({"govPage": f"{GOV_SLUG}/"} if session == current and GITHUB else {}),
-            **({"govNow": {"name": g[0], "party": g[1], "since": governors.in_office(P)[1]}} if session == current and (g := governors.facts_governor(
+            **({"govNow": {"name": g[0], "party": g[1], "since": governors.in_office(P)[1], **gov_photo(g[0])}} if session == current and (g := governors.facts_governor(
                 json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "states", "legislatures.json")))["states"].get(STATE)
                 or {"governor": ["", ""]})) and g[0] else {}),
             # A governor-elect not yet in office: {"name": full name, "start": "YYYY-MM-DD"} (states/legislatures.json).
@@ -2486,6 +2500,22 @@ def finish(session, core, current, urls):
                   "<p>Legislators' photos the Legislature's own files don't include come from Open States' people "
                   "data, which takes most of them from the Legislature's website"
                   + (", and some from Ballotpedia" if photos.uses_ballotpedia(P.DATA) else "") + ".</p>")
+        at = template.index('id="howData"')
+        sec_end = template.index("</section>", at)
+        last = template.rfind("</div>", at, sec_end)
+        notes_end = template.rfind("</div>", at, last)
+        if notes_end > at:
+            template = template[:notes_end] + credit + "\n    " + template[notes_end:]
+    # And the governor's (the President's) photo: its author and license, from Wikimedia Commons.
+    gov_name = governors.facts_governor(json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"].get(STATE)
+                                        or {"governor": ["", ""]})[0]
+    if gov_photo(gov_name) and 'id="howData"' in template:
+        p = GOV_PHOTOS[gov_name]
+        who = "The President" if STATE == "us" else "The governor"
+        by = "" if p.get("license", "").lower() in ("public domain", "cc0") else p.get("author", "")
+        credit = (f"<p>{who}'s photo is from <a href=\"{html_escape(p.get('page') or 'https://commons.wikimedia.org/')}\" "
+                  f"target=\"_blank\" rel=\"noopener\">Wikimedia Commons</a>"
+                  + (f", by {html_escape(by)}" if by else "") + (f" ({html_escape(p['license'])})" if p.get("license") else "") + ".</p>")
         at = template.index('id="howData"')
         sec_end = template.index("</section>", at)
         last = template.rfind("</div>", at, sec_end)
