@@ -459,7 +459,7 @@ def record(congress, p, b):
         if not a["text"]:
             continue
         # (Congress.gov's wording doubles "the" before some subcommittees: "Referred to the The Subcommittee on ...".)
-        a["text"] = re.sub(r"\b([Tt]he) The\b", r"\1", CR_REF.sub("", a["text"]).strip())
+        a["text"] = re.sub(r"\b([Tt]he)\s+The\b", r"\1", CR_REF.sub("", a["text"]).strip())
         k = (a["date"], norm(a["text"]))
         # (The Library's copy of a line sometimes leaves off the end of the Senate's: "Passed Senate with an amendment by
         # Voice Vote." and "... by Voice Vote. (text of amendment ...)". The longer one names the same event.)
@@ -502,7 +502,9 @@ def record(congress, p, b):
     topic_comms = set()
 
     def add(d, h, w, k):
-        steps.append((d, h, w, k))
+        # (Congress.gov doubles "the" before some subcommittees, in every copy of the line: "Referred to the The
+        # Subcommittee on ...".)
+        steps.append((d, h, re.sub(r"\b([Tt]he)\s+The\b", r"\1", w), k))
 
     for a in lines:
         d, t, codes = a["date"], a["text"], a["codes"]
