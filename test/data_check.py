@@ -352,6 +352,30 @@ def check(state):
         if few:
             say(state, "FAIL" if len(few) > 0.01 * sum(len(r["votes"]) for r in recs) else "LOOK",
                 f"{s}: {len(few)} votes list fewer noes than their tally, e.g. {few[:4]}")
+        # Names that can't add up: a roll call's yes votes are left out of its list, so its ayes plus the members it names
+        # (no, absent, excused, abstaining) can't be more than the house's seats; a list that is (a group read twice, a
+        # roll call matched to the wrong vote) would count members who weren't there. And a list that names yes votes
+        # ("Y") must name as many as the tally (2026-11-22, when MS, KY, MA, MI and MD floor votes were read from PDFs).
+        seats_h = LEGISLATURES.get(state, {}).get("seats", {})
+        over = [r["nums"][0] for r in recs for v in r["votes"] if v[1] == "F" and v[6] and seats_h.get(v[0])
+                and v[4] + sum(1 for _, c in v[6] if c != "Y") > seats_h[v[0]]]
+        if over:
+            say(state, "FAIL" if len(over) > 0.005 * max(1, sum(len(r["votes"]) for r in recs)) else "LOOK",
+                f"{s}: {len(over)} floor votes whose ayes plus the members they name are more than the house's seats, e.g. {over[:4]}")
+        ayes = [r["nums"][0] for r in recs for v in r["votes"] if any(c == "Y" for _, c in v[6]) and sum(1 for _, c in v[6] if c == "Y") != v[4]]
+        if ayes:
+            say(state, "FAIL", f"{s}: {len(ayes)} votes naming yes votes name a different number than their tally, e.g. {ayes[:4]}")
+        # Votes on a day the bill's history has no line for: a roll call matched to the wrong bill or day (KS's override
+        # votes filed under HB 2315; a PDF's date read wrongly). Each floor vote should fall on a day of the bill's history.
+        fl_all = [(r, v) for r in recs for v in r["votes"] if v[1] == "F" and v[3]]
+        nohist = sorted({r["nums"][0] for r, v in fl_all
+                         if str(v[3])[:10] not in {str(d)[:10] for x in r["vers"] for d, _ in x["actions"] if d}})
+        if nohist:
+            # (A FAIL over 5%: a day read wrongly for a whole kind of vote. Under it, on 2026-11-22: AK 2023's seven House
+            # votes of 2024-05-16 after histories that end earlier, NY 2021's 57 Assembly votes, a few in CA, CO, MT, NH,
+            # TX, WA; not looked into.)
+            say(state, "FAIL" if len(nohist) > 0.05 * max(1, len({r["nums"][0] for r, _ in fl_all})) else "LOOK",
+                f"{s}: {len(nohist)} bills with a floor vote on a day their history has no line for, e.g. {nohist[:4]}")
         # Two names in one roll call tied to the same seat: a surname that meant different members over the session (NE's
         # "Meyer": Glen Meyer until January 2026, then "Meyer, F." and "Meyer, G." for two members).
         dup = [r["nums"][0] for r in recs for v in r["votes"]

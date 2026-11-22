@@ -140,6 +140,13 @@ if __name__ == "__main__":
         if os.path.isdir(os.path.join(P.DATA, P.code_of(year), "billhistory")):
             journals.main(year)
             journals.senate(year, journals.senate_dates(year))
+    from states.tx import hro  # House committee votes by member, from the House Research Organization's floor reports
+    for year in range(CURRENT, FIRST - 1, -2):  # the current session first; about 120 PDFs a session, read once
+        if os.path.isdir(os.path.join(P.DATA, P.code_of(year), "billhistory")):
+            try:
+                hro.main(year, minutes=8)
+            except Exception as e:  # never holds the run back
+                print(f"floor reports {year}: failed ({type(e).__name__}: {e})")
     from states.tx import vetoes  # the governor's scanned veto proclamations no journal prints (OCR)
     try:
         vetoes.main(minutes=8)

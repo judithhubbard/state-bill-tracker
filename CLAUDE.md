@@ -459,6 +459,26 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     Island's kept hearings the history postpones. The bill's own history ("Placed on s/c cal ... for 3/18/2026", "Taken off
     notice") decides (states/legiscan_convert.py's `history_meetings()` hook). Look in histories for announced meetings when a
     state's agenda source is missing or weak (Tennessee's House hearings were only there).
+  - (2026-11-22, when roll-call PDFs were read in MS, KY, MD, MA, MI and TX's HRO reports) A total that disagrees with its
+    own names: MS's override vote on HB 1924 of 2026 lists seven absent members under "Total--5" (110 + 0 + 5 + 7 = 122, the
+    whole House). Keep names only when every group adds up, or the yeas and nays do and every seat is named once. And the
+    names must add up to the house: the check FAILs when a floor vote's ayes plus the members it names are more than the
+    house's seats, and when a floor vote falls on a day the bill's history has no line for.
+  - A watermark read as a name: MD's reposted roll calls are stamped "- COPY -" under the names (2026 Senate SEQ 6-8, 15).
+    And roll calls dated by a legislative day weeks behind the calendar (MD: a Senate vote of April 10, 2026 is legislative
+    day March 24): match and date by the day the history uses.
+  - A bill's vote file holds every roll call on it: KY's vote_history.pdf lists amendment votes ("HB 1 HFA 6"), "Table",
+    "Suspend the Rules" and "Previous Question" the same day as the passage, and two passages can have one tally on one day
+    (HB 2 of 2026, Senate, April 1). Match on the bill's own number, the motion and the tally; give each roll call to one line.
+  - A name with a comma in a comma-separated list: TX's HRO VOTE lines write "Curry, Garcia, Linda, Olcott" (CSHB 149 of 2025).
+    Join a pair that is a member's name; drop a group whose names don't number its count.
+  - A roll call whose column runs past its heading: the Michigan Senate Journal's Roll Call 217 of 2026 prints two yeas under
+    "Nays—0". When a group has more names than its count and the group before is short by as many, they belong there
+    (states/mi/journals.py). And MI House roll calls name only yeas and nays: the others come from that day's opening roll,
+    kept only when it leaves exactly the right number of members.
+  - A member list the legislature stopped updating: MS's ss_membs.xml (Last-Modified 2025-07-01) and member files still have
+    members the November 2025 special elections replaced, while 2026's author lists and roll calls have the new ones (DuPree,
+    Hartness, Crosby ...). The "names voting in the last four months aren't tied to a seat" LOOK found it.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.

@@ -24,8 +24,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   title starts "Constitution;" are tagged "const" (two-thirds of each house, then the voters: `amendmentOnce`,
   `ballotLine()`); other resolutions are left out. Titles are the short titles; the summary is the long title in sentence
   case (`sentence()`: names restored from the short title's capitalized phrases), plus "Passing it takes three-fifths of
-  each house" when VOTETYPE says so; no "What it does" (there are no summaries). No votes: roll calls are PDFs, and the
-  history lines carry no tallies. Local and private bills (the Local and Private Legislation committees) are narrow kind
+  each house" when VOTETYPE says so; no "What it does" (there are no summaries). Floor votes: from the roll-call PDFs
+  the history lines link (below, 2026-11-22); the history lines carry no tallies. Local and private bills (the Local and Private Legislation committees) are narrow kind
   "place" and topic "local"; "Suffrage; restore to <a person>" bills (20-70 a year) are narrow kind "person". Authors by their author-page slug ("creekmore_iv"), named from the current member files, else
   that year's h_auth.xml / s_auth.xml. Contacts: the member files (district, party, Capitol/business/home/cell phones,
   room, committees with "C" chair and "V" vice chair); emails are user names, completed with "@house.ms.gov" /
@@ -91,3 +91,30 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   simply attaches to nothing).
 - This year's session (or next year's) is shown from its first bill history (`sessions()` in convert.py, 2026-11-22;
   older ones need more than 100); 2027's allmsrs.xml answered 404 on 2026-11-22.
+- **Floor votes member by member (2026-11-22).** Each decisive floor action in a history file (Passed, Failed, Concurred,
+  Conference Report Adopted/Failed, Veto Overridden/Sustained) links its roll call in ACT_VOTE, one PDF per vote
+  (/<year>/pdf/votes/house/0030003.pdf: legislative day and sequence; text, posted the day of the vote; no robots.txt).
+  fetch.py's `roll_calls()` reads each once with pdftotext into data/ms/<year>/rollcalls.json (the text up to the
+  disclaimer), at most 900 a run, the newest year first; a 404 is asked again after a week (HB 1653 of 2026's "Veto Referred
+  To" line links one that doesn't exist). About 1,400-1,750 decisive votes a year (4,713 linked in 2024-26 on 2026-11-08),
+  so a first copy takes several runs; nothing waits on it. convert.py's `roll_vote()` checks the PDF names the same bill
+  ("H. B. No. 1", "H.B. No. 1924", "S. C. R. No. 501") and house, takes the totals ("Yeas--... Total--116.", "Nays--None.",
+  "Nays-0", "Absent or those not voting--", the Senate's "Absent and those not voting----None.", "Voting Present--" or
+  "Present--"), and names members only when every group's names add up to its total, or the yeas and nays do and every
+  seat is named once with the "Vacancies--1" (HB 1924 of 2026's override: seven absent names under "Total--5", 110 + 0 + 5
+  + 7 = 122). Senators who "announced a pair" are in no group: listed as absent. Names: the short name, which is the
+  author page's slug ("Anderson (110th)" = anderson_(110th)), or surname, initials and the district where two share it
+  ("Simmons D. T. (12th)" = simmons_(12th)); "Mr. Speaker" is that year's Speaker (`SPEAKERS`); a name is tied to a current
+  member's seat only when that year's author list has the slug under the same person (surname from the slug, as the
+  short name can be misspelled, "Butler-Washinton"; the first initial or a given name in common, "Chuck"/"Charles
+  Younger", "Briggs"/"W. Briggs Hopson III"). Tested 2026-11-22 on 49 roll calls of 12 bills (2024-26): all parsed, all
+  added up (one by the seat count), none under another bill; non-yes names not tied to a seat were former members (Horhn,
+  Branning, Jordan) and the members below.
+- **The member files look out of date (found 2026-11-22).** ss_membs.xml (Last-Modified 2025-07-01, before the
+  November 2025 special elections in the redrawn districts) and the member files list Sens. David Parker (2), John Polk
+  (44), Robin Robinson (42) and Reps. Jonathan Lancaster (22), Orlando Paden (26), who aren't in 2026's author lists
+  (s_auth.xml, h_auth.xml); those lists have Sens. Johnny DuPree, Theresa Gillespie Isom, Kamesha Mumford, Don Hartness,
+  Justin Pope and Reps. Justin Crosby, Otha Williams, who aren't in the member files but vote in 2026's roll calls (so
+  they match no seat: "S?Hartness"). Not checked against the Senate's and House's own pages: if they confirm it, the
+  contacts and "Find your legislators" show former members for some seats. data_check's "names voting in the last four
+  months ... aren't tied to a seat" LOOK lists them.

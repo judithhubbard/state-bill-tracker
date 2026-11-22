@@ -33,10 +33,15 @@ index headings, and the actions by date. The action lines don't always say which
 Laws and vetoes agree with the LRC's status lists ("Signed By Governor", "Became Law Without Governor's Signature",
 "Enacted Over Governor's Veto"; "Vetoed", "Veto Overridden", "Line Items Vetoed") bill for bill: `checks()` compares them.
 
-Votes: the action lines give floor tallies only (members' votes are in PDFs, not downloaded), so each passage is a tally
-with no names. "What it does" is the LRC's summary of the enacted version for a law, else of the bill as introduced.
+Votes: the action lines give floor tallies ("3rd reading, passed 79-17"); members' votes come from the bill's
+vote_history.pdf (votes/<HB1>.txt, its pdftotext text: `roll_calls()`), each tally taking the bill's own roll call (not an
+amendment's, a motion to table, suspend the rules or move the previous question, or a veto override) in that house that
+day with those ayes and noes, each roll call once (`floor_names()`), and only when every group's surnames add up to its
+total; else the tally alone. Surnames ("Lewis D", "Bratcher S.", "ChambersArmstrong") go to today's member of that house
+with that surname and initial who served in that house that year (their profile's "Service House 2022 - 24, Senate
+2025 - Present": `vote_seat()`), else stay names ("H?Herron", who moved to the Senate). Override votes aren't records. "What it does" is the LRC's summary of the enacted version for a law, else of the bill as introduced.
 """
-import html as H_, json, os, re
+import functools, html as H_, json, os, re
 from collections import Counter, defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -170,6 +175,145 @@ def resolve(h, short, page=None):
     return short, None
 
 
+@functools.lru_cache(maxsize=None)
+def service(number):
+    """A member's years in each house from their profile page (members/profiles/<n>.html: "Service House 2011 - 14,
+    Senate 2015 - Present") -> [(house, first year, last year)]; [] when the page says nothing."""
+    try:
+        page = open(os.path.join(P.DATA, "members", "profiles", f"{number}.html"), encoding="utf-8").read()
+    except OSError:
+        return []
+    t = re.sub(r"\s+", " ", H_.unescape(re.sub(r"<[^>]+>", " ", page)))
+    m = re.search(r"\bService\b(.*?)(?:\bCommittees\b|$)", t)
+    out = []
+    for h, a, b in re.findall(r"\b(House|Senate)\s+(\d{4})\s*-\s*(Present|\d{2,4})", m.group(1) if m else ""):
+        a = int(a)
+        b = 9999 if b == "Present" else int(b) if len(b) == 4 else (a // 100) * 100 + int(b) + (100 if int(b) < a % 100 else 0)
+        out.append(("H" if h == "House" else "S", a, b))
+    return out
+
+
+def vote_seat(session, h, name):
+    """A roll-call name in a house ("Lewis D", "Bratcher S.", "Tackett Laferty", "ChambersArmstrong") -> the seat ("H:34")
+    of the one current member of that house with that surname (and first initial, when given) who served in that house
+    that year (their profile's Service line), else "H?Name" (a member who has left, or changed houses)."""
+    n = re.sub(r"\s+", " ", name).strip()
+    m = re.fullmatch(r"(.+?)\s+([A-Z])\.?", n)
+    last, init = (m.group(1), m.group(2)) if m else (n, "")
+    key = norm(last)
+    hits = []
+    for x in members():
+        if x["house"] != h:
+            continue
+        full = re.sub(r",?\s+(?:Jr|Sr|II|III|IV)\.?$", "", x["name"])
+        words = full.split()
+        # The surname is the name's end: "Chambers Armstrong" and "ChambersArmstrong" both match "Cassie Chambers
+        # Armstrong"; the first initial is the given name's.
+        if not norm(full).endswith(key) or not any(norm("".join(words[i:])) == key for i in range(1, len(words))):
+            continue
+        if init and not words[0].upper().startswith(init):
+            continue
+        hits.append(x)
+    if len(hits) > 1 and not init:
+        return f"{h}?{n}"
+    served = [x for x in hits if any(hh == h and a <= session <= b for hh, a, b in service(x.get("number")))
+              or not service(x.get("number"))]
+    if len(served) == 1:
+        return f"{h}:{served[0]['district']}"
+    return f"{h}?{n}"
+
+
+# ---- Floor roll calls (data/ky/<year>/votes/<HB1>.txt: the bill's vote_history.pdf as pdftotext -layout text) ----
+
+GROUPS = {"YEAS": "Y", "NAYS": "N", "ABSTAINED": "B", "PASSES": "B", "NOT VOTING": "A"}
+GROUP_HEAD = re.compile(r"^\s*(YEAS|NAYS|ABSTAINED|PASSES|NOT VOTING)\s+:\s*(\d+)\s*$")
+TOTAL = re.compile(r"^\s*(YEAS|NAYS|ABSTAINED|PASSES|NOT VOTING):\s*(\d+)\s*$")
+
+
+def roll_calls(session, key):
+    """A bill's floor roll calls: [{house, bill ("HB 1", or "HB 1 HFA 6" for an amendment's), rcs, day, motion, totals
+    {"Y": 79, "N": 17, "B": 1, "A": 3}, names {"Y": [...], ...}}]. Each roll call is a page headed "Commonwealth of
+    Kentucky / House of Representatives" or "COMMONWEALTH OF KENTUCKY SENATE"; the bill (and amendment) and title, "RCS#
+    134" (the Senate's "RSN# 3843"), the date, the motion and time ("Pass 3:51:28 PM", "PASS HB 70", "FINAL PASSAGE OF HB
+    2", "Table", "Suspend the Rules", "Adopt", "Veto Override"), the totals, then each group's surnames in columns."""
+    ck = ("rolls", session, key)
+    if ck in _CACHE:
+        return _CACHE[ck]
+    try:
+        t = open(os.path.join(folder(session), "votes", f"{key}.txt"), encoding="utf-8").read()
+    except OSError:
+        _CACHE[ck] = []
+        return []
+    out = []
+    for block in re.split(r"(?im)^\s*commonwealth of kentucky\b", t)[1:]:
+        lines = block.split("\n")
+        house = "S" if re.match(r"\s*SENATE", lines[0], re.I) else "H"
+        rc = {"house": house, "bill": None, "rcs": None, "day": None, "motion": "", "totals": {}, "names": {}}
+        group = None
+        for line in lines[1:]:
+            if rc["bill"] is None:
+                m = re.match(r"\s*((?:HB|SB|HJR|SJR|HCR|SCR|HR|SR)\s+\d+(?:\s+[A-Z]{2,5}\s+\d+)?)\s{2,}.*\b(?:RCS|RSN)#\s*(\d+)", line)
+                if m:
+                    rc["bill"], rc["rcs"] = re.sub(r"\s+", " ", m.group(1)), int(m.group(2))
+                continue
+            if rc["day"] is None:
+                m = re.fullmatch(r"\s*(\d{1,2})/(\d{1,2})/(\d{4})\s*", line)
+                if m:
+                    rc["day"] = f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+                continue
+            if not rc["motion"] and not rc["totals"]:
+                m = re.match(r"\s*(\S.*?)\s{2,}\d{1,2}:\d\d:\d\d\s*[AP]M\s*$", line)
+                if m:
+                    rc["motion"] = m.group(1)
+                    continue
+            m = GROUP_HEAD.match(line)
+            if m:
+                group = GROUPS[m.group(1)]
+                rc["names"].setdefault(group, [])
+                continue
+            m = TOTAL.match(line)
+            if m:
+                rc["totals"][GROUPS[m.group(1)]] = rc["totals"].get(GROUPS[m.group(1)], 0) + int(m.group(2))
+                continue
+            if group and line.strip():
+                rc["names"][group] += [x.strip() for x in re.split(r"\s{2,}", line.strip()) if x.strip()]
+        if rc["bill"] and rc["day"]:
+            out.append(rc)
+    _CACHE[ck] = out
+    return out
+
+
+def floor_names(session, key, h, d, y, n, used):
+    """The members' votes on one floor vote the history shows as a tally ("3rd reading, passed 79-17"): the bill's own
+    roll call (not an amendment's) in that house that day with those ayes and noes, other than a motion to table,
+    suspend the rules or adopt an amendment. -> [[seat or "H?Name", "N"/"B"/"A"], ...] (yes votes left out), or [] when
+    no roll call matches or its names don't add up to its totals."""
+    bill = re.sub(r"^([A-Z]+)(\d+)$", r"\1 \2", key)
+    hits = [rc for rc in roll_calls(session, key) if rc["house"] == h and rc["day"] == d and rc["bill"] == bill
+            and rc["totals"].get("Y") == y and rc["totals"].get("N") == n
+            and not re.match(r"(?:Table|Suspend|Adopt|Reconsider|Veto Override|Override|Previous Question)", rc["motion"], re.I)
+            and rc["rcs"] not in used]
+    if len(hits) > 1:  # two roll calls with the same tally that day: a passage's, in order (the next tally line takes the next)
+        hits = [rc for rc in hits if re.search(r"pass", rc["motion"], re.I)][:1]
+    if len(hits) != 1:
+        STATS["no roll call read" if not roll_calls(session, key) else "unmatched"] += 1
+        if roll_calls(session, key):
+            UNMATCHED.append((session, key, h, d, y, n))
+        return []
+    rc = hits[0]
+    used.add(rc["rcs"])
+    if any(len(rc["names"].get(g, [])) != c for g, c in rc["totals"].items()):
+        STATS["miscounted"] += 1
+        return []
+    listed = [[vote_seat(session, h, x), g] for g in ("N", "B", "A") for x in rc["names"].get(g, [])]
+    STATS["named"] += 1
+    return listed
+
+
+STATS = Counter()  # how the history's tallies were matched (checks() prints it)
+UNMATCHED = []  # tallies of bills whose roll calls were read that matched none
+
+
 # ---- Wording ----
 
 def comm_name(c):
@@ -237,6 +381,7 @@ def record(session, b, parties):
     sent = law = vetoed = overridden = to_sos = items = False
     vetoed_on = None
     fvotes = []
+    used = set()  # roll calls already given to a tally line (HB 2 of 2026: two Senate votes of 32-5 on April 1)
     chapter = None
     for d, t in b["actions"]:
         m = CHAPTER.search(t)
@@ -339,7 +484,7 @@ def record(session, b, parties):
                 kind = "final"
             else:
                 kind = "pass"
-            fvotes.append([h, "F", None, d, y, n, []])
+            fvotes.append([h, "F", None, d, y, n, floor_names(session, p, h, d, y, n, used)])
             if kind == "pass" and h not in passed:
                 passed.add(h)
                 last_pass[h] = d
@@ -723,6 +868,8 @@ def _agendas_file(session):
 
 def checks(session):
     """Compare laws and vetoes with the LRC's status lists, bill for bill (bills only)."""
+    STATS.clear()
+    del UNMATCHED[:]
     recs = load_session(session)[0]
     lst = listing(session)
     bills = lambda ks: {k for k in ks if re.fullmatch(r"(HB|SB)\d+", k)}
@@ -736,7 +883,8 @@ def checks(session):
             "listed laws not here": sorted(laws - mine_law), "vetoes": len(mine_veto), "official vetoes": len(vetoed),
             "vetoes not on the list": sorted(mine_veto - vetoed), "listed vetoes not here": sorted(vetoed - mine_veto),
             "overridden": len(bills(vr.get("Veto Overridden", []))), "line items": sorted(bills(vr.get("Line Items Vetoed", []))),
-            "amendments to the voters": sorted(const), "routes": {k: len(bills(v)) for k, v in (lst.get("law_routes") or {}).items()}}
+            "amendments to the voters": sorted(const), "routes": {k: len(bills(v)) for k, v in (lst.get("law_routes") or {}).items()},
+            "floor tallies": dict(STATS), "tallies matching no roll call read": UNMATCHED[:10]}
 
 
 if __name__ == "__main__":

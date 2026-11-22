@@ -52,11 +52,11 @@ regenerated often during a session, so a run doesn't re-read everything each tim
 A first copy of three sessions (about 3,800 bills and joint resolutions, plus about 190 member and committee pages)
 takes about 70 minutes at a request a second, so GitHub's runs build it over two; a quiet run takes a few seconds.
 
-Not downloaded: votes member by member, which exist only as PDFs: each bill's vote_history.pdf (/record/26rs/hb1/
-vote_history.pdf: every floor roll call on the bill, names by surname, with text that pdftotext reads), each day's
-House and Senate committee vote PDFs (house_votes/60_comm_votes.pdf, from committee_votes_House.html), and the daily
-floor vote PDFs. robots.txt allows them (apps.legislature.ky.gov has none); none are read yet. Also not read: bill
-texts, fiscal notes and veto messages (PDFs).
+Votes member by member (vote_histories(), after the bills): each voted bill's vote_history.pdf (/record/26rs/hb1/
+vote_history.pdf, linked from its record page: every floor roll call on the bill, House and Senate, names by surname,
+text that pdftotext reads) into <year>/votes/<HB1>.txt, read again when the bill's history gains a tally line. Not
+downloaded: each day's House and Senate committee vote PDFs (house_votes/60_comm_votes.pdf, from
+committee_votes_House.html; scans), the daily floor vote PDFs, bill texts and fiscal notes.
 
 Committee agendas (agendas(), after the bills): the weekly calendar, then each standing committee's meeting-materials
 page and its upcoming meetings' agenda PDFs, into data/ky/<year>/agendas.json (see agendas()).
@@ -659,6 +659,56 @@ def veto_letters(year, minutes=6):
     print(f"{year}: veto letters: {got} of {len(todo)} read now", flush=True)
 
 
+TALLY_LINE = re.compile(r"<li>([^<]*\b\d+-\d+\b[^<]*)</li>")
+
+
+def vote_histories(year, minutes=10):
+    """Each voted bill's vote_history.pdf (/record/26rs/hb1/vote_history.pdf, linked from its record page: every floor
+    roll call on the bill, House and Senate, with members by surname), read with pdftotext -layout into
+    votes/<HB1>.txt. Read again when the bill's history gains a tally line (a new floor vote): votes/state.json keeps
+    each bill's tally lines when its file was read. One request a bill, at most `minutes` a run (a first copy of three
+    years, about 940 bills, takes about 20 minutes, so it's built over two or three runs). Without pdftotext nothing is
+    read and the last files are kept. Never holds Kentucky back."""
+    if not shutil.which("pdftotext"):
+        print(f"{year}: vote histories: pdftotext isn't installed; kept the last files", flush=True)
+        return
+    code = f"{year % 100:02d}rs"
+    folder = os.path.join(DATA, str(year))
+    bills = os.path.join(folder, "bills")
+    out = os.path.join(folder, "votes")
+    seen = load(os.path.join(out, "state.json"), {})
+    todo = []
+    for name in sorted(os.listdir(bills) if os.path.isdir(bills) else []):
+        k = name[:-5]
+        if not re.fullmatch(r"(HB|SB)\d+", k):
+            continue
+        with open(os.path.join(bills, name), encoding="utf-8") as f:
+            page = f.read()
+        if "vote_history.pdf" not in page:
+            continue
+        sig = "|".join(re.sub(r"\s+", " ", t).strip() for t in TALLY_LINE.findall(page))
+        if seen.get(k) != sig or not os.path.exists(os.path.join(out, f"{k}.txt")):
+            todo.append((k, sig))
+    stop_at = time.time() + minutes * 60
+    got = 0
+    for k, sig in todo:
+        if time.time() > stop_at or out_of_time():
+            break
+        body = request(f"{APPS}/record/{code}/{k.lower()}/vote_history.pdf", f"{k} vote history", raw=True)
+        t = pdf_text(body) if body and body[:4] == b"%PDF" else None
+        if not t or not re.search(r"YEAS\s*:", t):
+            continue
+        os.makedirs(out, exist_ok=True)
+        save_text(t, os.path.join(out, f"{k}.txt"))
+        seen[k] = sig
+        got += 1
+        if got % 50 == 0:
+            save(seen, os.path.join(out, "state.json"))
+    if got:
+        save(seen, os.path.join(out, "state.json"))
+    print(f"{year}: vote histories: {got} of {len(todo)} read now", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     # Before the first copy, a run cut off without its summary leaves this, so a partial copy isn't published.
@@ -682,6 +732,15 @@ def main():
         refused = True
     if not ONLY and not refused and not out_of_time():
         agendas()
+    for year in ([] if refused else years):
+        try:
+            vote_histories(year)
+        except Refused as e:
+            print(f"vote histories: stopped, the server refused a request ({e})", flush=True)
+            refused = True
+            break
+        except Exception as e:  # never holds Kentucky back
+            print(f"{year}: vote histories: failed ({type(e).__name__})", flush=True)
     for year in ([] if refused else years):
         try:
             veto_letters(year)

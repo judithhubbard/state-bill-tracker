@@ -8,7 +8,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   number and status) and the members' pages (district, party, committees with "(Chair)", Annapolis phone, email). Each
   house's member list is read every run, each member's page once a day (members_read.json: the day each was read) and at
   once for a member the list names for the first time (2026-11-21: a second run the same day makes 2 requests, not 189).
-  `states/md/convert.py` builds each bill's steps from those dates; there are no votes. Every bill the General Assembly passes gets a chapter number unless vetoed, so
+  `states/md/convert.py` builds each bill's steps from those dates (floor votes: below). Every bill the General Assembly passes gets a chapter number unless vetoed, so
   after mid-June a passed bill without one is vetoed (some vetoed bills' statuses show a later motion on the veto).
   Constitutional amendments pass once by three-fifths and go to the voters at the next even-year election
   (`STATE.amendmentOnce`, `ballotEvenYears`); they get chapter numbers but aren't laws. 47 districts, each with a senator
@@ -52,3 +52,29 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (/2027RS/misc/billsmasterlist/legislation.json answered "[]" on 2026-11-22; prefiled bills are "BillType":
   "Pre-Filed"); legislation_<year>RS.json is written only once it lists a bill, so the session shows as upcoming from its
   first prefiled bill. The bill list never marks Maryland incomplete.
+- **Floor votes member by member (2026-11-22).** Each house posts every recorded vote as a numbered PDF the minute it's
+  taken: https://mgaleg.maryland.gov/<year>RS/votes/senate/0234.pdf and /votes/house/0234.pdf (both paths checked; no
+  robots.txt). Text PDFs: "SEQ NO.", the calendar date and the legislative date, the bill and calendar ("SB 411 Third
+  Reading (SB) Calendar No.84"), the question ("On Third Reading"; "Bill is on Third Reading for Final Passage." for the
+  vote after the other house's amendments; amendments, special orders, committee reports and quorum calls too), the totals
+  line ("42 Yeas 0 Nays 2 Not Voting 0 Excused 3 Absent") and the names in five columns under "Voting Yea", "Voting Nay",
+  "Not Voting", "Excused from Voting" and "Excused (Absent)" ("Mr. President", "Speaker", "Washington, M.", "Lewis Young").
+  Numbers have gaps (2026's Senate starts at 6) and end at about 1,350 (Senate) and 1,750 (House) a session; 2023's exist.
+  `roll_calls()` in fetch.py (last in each run, at most MD_VOTE_MINUTES, 15, of what's left of FETCH_MINUTES) walks each
+  year's numbers from 1, each PDF once (150-300 KB, kept as pdftotext text, about 3 KB, in data/md/votes/<year>/<house>.json),
+  until 30 numbers in a row are missing; while this year's session can vote (through June), each run asks the next three
+  again and numbers missing below the highest once a week (state.json). About 3,100 PDFs a year, 12,000 for 2023-26: a first
+  copy takes several runs. `convert.py` uses a session's votes only once both houses' walks have reached their end (so a
+  partial first copy never shows; MD_VOTES_PARTIAL=1 for tests). It keeps the third-reading roll calls ("On Third Reading")
+  and matches each to the bill list's third reading in that house on its legislative day (the bill list dates readings by
+  the house's legislative day, which runs weeks behind the calendar late in the session: a Senate vote on April 10, 2026 is
+  dated March 24), the day's last when there are two. Names only when every group's count matches the totals line (else the
+  tally alone); "- COPY -" stamped on reposted roll calls isn't a name. Codes: Nay N, Not Voting A, Excused from Voting B,
+  Excused (Absent) E. A name ties to today's member written the same way in the bill list (`dataName`), else the one member of
+  the house with that surname (and initial), only when that session's bill list names a sponsor of the house so (a member
+  who has left or changed houses stays a name, "S?Name"); "Speaker" is Adrienne A. Jones through 2025, Joseline A.
+  Peña-Melnyk from 2026 (`PRESIDING`), "Mr. President" Bill Ferguson. Not kept: the final-passage vote after concurrence and
+  conference reports (the bill list gives them no day, so they'd have no history line) and override votes; special
+  sessions' bills (HB 2101 of 2026) have no roll calls here. Tested 2026-11-22 on 29 PDFs of 2023-26 (every group's names
+  matched its count once "- COPY -" was dropped; the six third readings matched their bills, every name tied to a seat).
+  Before: no votes at all. Shows once the first copy is in (GitHub Actions).
