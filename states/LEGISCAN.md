@@ -14,7 +14,10 @@ Moved from CLAUDE.md (2026-11-19). Each state's own notes: states/tn, ok, me, ri
   300 margin, a Sunday reserve and the master lists still to come, over the days left), status changes and major
   actions first, then new bills, then minor changes paced through the day; Sunday's dataset fills in the rest. In
   session: ~2,000 a month of master lists, the rest for full records, ending near 8,700 at most. A session that
-  hasn't opened (`OPENS`, `begun()`) never marks a state incomplete. `python3 legiscan.py --dry-run [--today=DATE]
+  hasn't opened (`OPENS`, `begun()`) never marks a state incomplete. The next Legislature's session (2026-11-22) is
+  read as soon as LegiScan lists it (`wanted()`: starting no later than next year), its master list once a day until it
+  opens (`MASTERLIST_BEFORE`), and `folders()` shows a session starting this year or later with any bills (older ones
+  need 100); Oklahoma's even-year folder replaces the odd year's only once it has as many bills. `python3 legiscan.py --dry-run [--today=DATE]
   tn ok me ri vt` prints what a run would request, without queries.
   `states/legiscan_convert.py` holds everything shared: `folders()` (regular sessions, keyed by first year), `people()`,
   `person_house()` (from the district "SD-028": LegiScan's `role` is sometimes stale), `load_session(Rules, session)` and

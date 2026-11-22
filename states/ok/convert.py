@@ -38,7 +38,7 @@ reading is states/legiscan_convert.py; this file says what's particular to Oklah
   effective date ("Schools; Education Reform Act of 2026; effective date."), kept to be rewritten late in the session.
   Those never moved past a committee are marked `shell`, as Illinois's are.
 """
-import json, os, re, sys
+import glob, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 if HERE not in sys.path:
@@ -117,11 +117,13 @@ class Oklahoma(L.Rules):
         self.raw_titles = {}
 
     def session_folders(self):
-        """{first (odd) year of the Legislature: folder}: the even year's LegiScan session holds the whole Legislature."""
+        """{first (odd) year of the Legislature: folder}: the even year's LegiScan session holds the whole Legislature,
+        once it has at least as many bills as the odd year's (before then it's the second year's prefiled bills)."""
         out = {}
+        size = lambda f: len(glob.glob(os.path.join(f, "bill", "*.json")))
         for year, folder in L.folders(self.data_dir).items():
             odd = P.session_of(year)
-            if odd not in out or year > odd:  # the even year's folder wins over the odd year's subset
+            if odd not in out or (year > odd and size(folder) >= size(out[odd])):  # the even year's folder wins
                 out[odd] = folder
         return dict(sorted(out.items()))
 
