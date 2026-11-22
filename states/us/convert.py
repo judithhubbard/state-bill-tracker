@@ -458,7 +458,8 @@ def record(congress, p, b):
     for a in acts:
         if not a["text"]:
             continue
-        a["text"] = CR_REF.sub("", a["text"]).strip()
+        # (Congress.gov's wording doubles "the" before some subcommittees: "Referred to the The Subcommittee on ...".)
+        a["text"] = re.sub(r"\b([Tt]he) The\b", r"\1", CR_REF.sub("", a["text"]).strip())
         k = (a["date"], norm(a["text"]))
         # (The Library's copy of a line sometimes leaves off the end of the Senate's: "Passed Senate with an amendment by
         # Voice Vote." and "... by Voice Vote. (text of amendment ...)". The longer one names the same event.)

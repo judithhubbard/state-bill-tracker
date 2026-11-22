@@ -2410,9 +2410,17 @@ function contactBook(b, canMove = true, oppose = false) {
         const signed = !isSponsor && cos(p.house).includes(who(p.name, p.house));
         const ours = p.roles.some((r) => r.startsWith("your "));
         const status = signed ? ` <span class="ours">co-sponsor</span>` : ours && !isSponsor ? ` <span class="muted">not a sponsor or co-sponsor</span>` : "";
-        const name = info.url ? `<a href="${esc(info.url)}" target="_blank" rel="noopener">${title ? `${title} ` : ""}${esc(p.name)}</a>` : `${title ? `${title} ` : ""}${esc(p.name)}`;
+        // The name opens the legislator's page on this site (legLink()'s match); their official page is a small link with
+        // the contact details, so a click on the name doesn't leave the site.
+        const same = LEGS.filter((x) => x.house === p.house && lastName(x.name) === lastName(p.name));
+        const L = LEGS.find((x) => x.house === p.house && (x.apiName === p.name || x.name === p.name)) || (same.length === 1 ? same[0] : null);
+        const label = `${title ? `${title} ` : ""}${esc(p.name)}`;
+        const ourPage = L && ROOT && L.slug ? ROOT + L.slug + "/" : "";
+        const name = ourPage ? `<a href="${esc(ourPage)}">${label}</a>`
+          : info.url ? `<a href="${esc(info.url)}" target="_blank" rel="noopener">${label}</a>` : label;
         const kind = roleKind(p.roles);
-        const reach = [emailHtml(info.email, kind), formHtml(info.form, kind), phonesHtml(info, kind)].filter(Boolean).join(" · ");
+        const reach = [emailHtml(info.email, kind), formHtml(info.form, kind), phonesHtml(info, kind),
+          ourPage && info.url ? `<a href="${esc(info.url)}" target="_blank" rel="noopener">Official page ↗</a>` : ""].filter(Boolean).join(" · ");
         const draft = p.asks.length && (info.email || info.url) ? draftBtn(b, p.house, p.name, p.asks.join("; "), !info.email) + " " : "";
         // Someone with no way to reach them and no decision to make is left out, rather than shown as an empty card.
         if (!reach && !info.url && !p.star) return null;
@@ -3918,7 +3926,8 @@ function sponsorsBlock(b) {
   const page = PRESET?.who && LEG_BY_ID[PRESET.who];
   const rows = b.vers.map((v) => {
     const mine = new Set([...myReps().filter((r) => r.house === v.p[0]).map((r) => r.last), ...(page && page.house === v.p[0] ? [lastName(page.name)] : [])]);
-    const nm = (n) => (mine.has(lastName(n)) ? `<b>${esc(n)}</b>` : esc(n));
+    // Each name opens the legislator's page on this site (legLink(): plain text when there's no page).
+    const nm = (n) => (mine.has(lastName(n)) ? `<b>${legLink(v.p[0], n)}</b>` : legLink(v.p[0], n));
     const leads = [v.sponsor, ...v.cosponsors.slice(0, v.extraPrimes)].filter(Boolean);
     const cos = v.cosponsors.slice(v.extraPrimes);
     // A long list shows its first 20 (your legislators first), the rest folded.
