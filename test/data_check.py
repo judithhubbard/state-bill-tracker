@@ -186,6 +186,37 @@ def check(state):
                     and not any(re.search(r"pocket veto", t, re.I) for v in r["vers"] for _, t in v["actions"])]
             if late:
                 say(state, "LOOK", f"{s}: {len(late)} bills vetoed 2 weeks to a year ago with no veto message, e.g. {late[:4]}")
+        # A veto message filed under the wrong bill (2026-11-22, when messages came from shared documents: GA's yearly
+        # PDF of every veto, SD's journals with several letters, OK's yearly page): one whose veto statement ("I am
+        # returning House Bill 895", "I have VETOED House Bill 1138", "I VETO HOUSE BILL 308", "I respectfully return to
+        # you House Bill 1132") names a bill, never the record's own. (Other bills named in passing, "my veto of House
+        # Bill 3006", "SB 28 (2021)", don't count: most messages say "this bill".) FAIL over 2% of a session's, else LOOK.
+        def named(t):
+            out = set()
+            for m in re.finditer(r"(?i:returning|return to you|am vetoing|have vetoed|I (?:hereby )?veto)\s+(?:herewith\s+)?"
+                                 r"(?:(House|Senate|Assembly)\s+(Bill|Joint Resolution|File)\s+(?:No\.\s*)?0*(\d+)|"
+                                 r"([HSA])\.?\s?([BF]|J\.?R)\.?\s?0*(\d+)\b)", t, re.I):
+                if m.group(1):
+                    out.add((m.group(1)[0].upper(), m.group(3)))
+                else:
+                    out.add((m.group(4), m.group(6)))
+            return out
+        msgs = [r for r in recs if (r.get("vetoMemo") or {}).get("text")]
+        wrong = []
+        for r in msgs:
+            got = named(r["vetoMemo"]["text"])
+            own = {(re.match(r"[A-Z]", n).group(0), str(int(re.search(r"\d+", n).group(0))))
+                   for n in r["nums"] if re.search(r"\d", n)}
+            # (One letter for several bills, "I have decided to veto SENATE BILL 315 ... as well as SENATE BILL 327", NM
+            # 2025: fine when the record's own bill is named anywhere.)
+            anywhere = {(m.group(1)[0].upper(), m.group(3)) for m in re.finditer(
+                r"\b(House|Senate|Assembly)\s+(Bill|Joint Resolution|File)\s+(?:No\.\s*)?0*(\d+)", r["vetoMemo"]["text"], re.I)}
+            if got and not got & own and not anywhere & own:
+                wrong.append(r["nums"][0])
+        if wrong:
+            say(state, "FAIL" if len(wrong) > 0.02 * len(msgs) else "LOOK",
+                f"{s}: {len(wrong)} of {len(msgs)} veto messages name other bills but never their own (filed under the "
+                f"wrong bill?), e.g. {wrong[:4]}")
         # A veto that stood, whose last action reads as an override: NH's SB 434 of 2026, overridden by the Senate and
         # sustained by the House, showed "VETO OVERRIDDEN" (one house's override sorted after the other's sustaining vote).
         def last_line(r):
