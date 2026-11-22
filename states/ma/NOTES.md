@@ -60,7 +60,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   voting), P "B". The file lags the histories: on 2026-11-22 the 2026 file ended at No. 236 while histories cite up to 274.
   Coverage (histories of 2026-10-31): bills' House floor votes naming members, 2023-24 0 -> 89 of 97 (names as written,
   "H?Name", as the Senate's: there's no contacts file for a past court), 2025-26 0 -> 121 of 164, every name tied to a
-  seat (the rest cite roll calls not yet in the 2026 file, or none).
+  seat (the rest cite roll calls not yet in the 2026 file, or none). GitHub's download had none at first: its
+  .github/states.json command didn't install poppler-utils, so every run printed "pdftotext isn't installed" (the data
+  check's "split floor votes naming members: S 100%, H 0%" FAIL, 2026-11-22); the command installs it now.
 - **Committee votes by member (2026-11-22).** Since the 194th General Court's joint rules (2025), committees post their
   votes in the API (robots.txt: "User-agent: * / Disallow:" with nothing barred). GET
   /api/GeneralCourts/<court>/Documents/<bill> carries CommitteeRecommendations[].Votes[]: the question ("Ought to pass",

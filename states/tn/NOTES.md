@@ -59,3 +59,8 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   committees), none with agenda items or bills. Their source is wapp.capitol.tn.gov/apps/schedule/WeeklyView.aspx, whose
   robots.txt is "Disallow: /" for everyone but named search engines, like capitol.tn.gov's. The API returns only recent and
   upcoming events, so 2025-26's House meetings can't be counted or matched from it; it would have to be polled in session.
+- **Phones for a new General Assembly (2026-11-22).** LegiScan's people for the 115th (2027) came with its first prefiled
+  bills, when only 22 of 131 members had a record there, so contacts_2027.json had a phone for 22 (the data check's FAIL).
+  contacts.py now keeps, for a member in the same seat as in the last contacts file (same name), that file's LegiScan id,
+  phone and office until LegiScan lists them: 131 of 131. A member first elected in November 2026 has none until LegiScan
+  or Open States lists them.

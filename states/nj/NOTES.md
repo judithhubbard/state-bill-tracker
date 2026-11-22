@@ -29,4 +29,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (states/floorcal.py), a vote set for that day, so the page says "Senate floor vote Thu, Oct 22" and the card asks your
   own legislators to vote; a session AGENDAS.TXT marks canceled drops its whole day. Simple resolutions (AR, SR) left out.
   2026: 13 sessions, 492 bills (posted 1-6 days ahead); 24 are joint or concurrent resolutions that aren't records (the
-  same kind the committee agendas already had: the data check's "aren't records' numbers" FAIL was there before).
+  same kind the committee agendas already had: the data check's "aren't records' numbers" FAIL was there before). Since
+  2026-11-22 `agendas()` keeps only the session's records (`_main_bills()`, the rule load_session() uses: A and S bills,
+  ACR and SCR constitutional amendments), so those resolutions (37 of 1,077 in 2026: AJR103, ACR144 ...) are left out.

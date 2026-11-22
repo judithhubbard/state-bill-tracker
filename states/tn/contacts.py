@@ -6,7 +6,8 @@
   (data/tn/legiscan/<id>/people/, CC BY 4.0) include members who left; Open States says who serves now.
 - Ids, phones and offices: LegiScan's person record for the same seat and last name ("id" is LegiScan's people_id, which
   the roll calls use; phones are each member's Capitol line, offices in the Cordell Hull Building). A member LegiScan
-  doesn't list yet keeps Open States' email with no phone.
+  doesn't list yet keeps the last session's id, phone and office when the last contacts file has the same person in the
+  same seat (the 115th's LegiScan people, November 2026, had 22 of 131), else Open States' email with no phone.
 - Seat ids "S:18", "H:75" (one member a district in each house; the House and Senate districts differ).
 - Committees: none. Neither LegiScan nor Open States has committee members or chairs, and the General Assembly's site
   (capitol.tn.gov) asks automated readers not to read it.
@@ -70,6 +71,15 @@ def build(session):
         if h and d:
             by_seat.setdefault(f"{h}:{d}", []).append(p)
     now = session >= P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
+    # The last session's contacts: a General Assembly's LegiScan people come with its first bills, before most members
+    # have a record there (the 115th's, November 2026: 22 of 131 with a phone), so a member in the same seat keeps the
+    # last copy's id, phones and office until LegiScan has them.
+    older = sorted(int(m.group(1)) for f in os.listdir(P.DATA) if (m := re.fullmatch(r"contacts_(\d{4})\.json", f))
+                   and int(m.group(1)) < session)
+    try:
+        before = json.load(open(os.path.join(P.DATA, f"contacts_{older[-1]}.json"), encoding="utf-8"))["people"] if older else {}
+    except (OSError, ValueError, KeyError):
+        before = {}
     people = {}
     for o in open_states():
         if not (o.get("current_district") or "").isdigit():
@@ -89,6 +99,12 @@ def build(session):
             "image": None, "office": OFFICE if tel else None, "position": None, "places": "",
             "dataName": L.text(p.get("name") or o["name"]),
         }
+        last_copy = before.get(sid) or {}
+        if last_copy.get("key") == people[sid]["key"]:
+            x = people[sid]
+            x["id"] = x["id"] or last_copy.get("id") or ""
+            if not x["phone"] and last_copy.get("phone"):
+                x["phone"], x["phones"], x["office"] = last_copy["phone"], last_copy.get("phones") or [], last_copy.get("office")
     leaders = {}
     for h, (name, role, _) in (P.LEADERS.items() if now else ()):
         hit = next((x for sid, x in people.items() if sid[0] == h and x["key"] == name_key(name)), None)

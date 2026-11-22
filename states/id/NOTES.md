@@ -30,7 +30,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Nickels", "Office of Administrative Hearings"; titles after a comma: "Senator Ben Toews, Majority Caucus Chair").
   `texts.contacts()` reads them from sop/<key>.txt and `member_named()` in convert.py matches each to the year's members
   (roster(): the title's house and surname, the first name too when two share a surname or there's no title; "Ted Hill"
-  = 2024's "Edward H. Hill"). The first in the bill's own house is its sponsor, through the committee (vers' `via`:
+  = 2024's "Edward H. Hill"; "Steve" = "Steven"; also "Josh Tanner (14)", the surname alone "Den Hartog", surname first
+  "Bernt Treg", "Bruce D.Skaug"). Members the year's committee pages leave out, the Speaker (on no committee) and members
+  who left during the year (the pages are read later), come from that year's and the year before's contacts files
+  (`_served()`; 2026-11-22: Speaker Moyle on 70 statements of 2023-25, Sen. Abby Lee, Reps. Kevin Andrus, Todd Achilles,
+  Sue Chew). Left unmatched: a typo ("Senator Carl Berjke", 2023) and "Representative Tanner" (two, 2025). The first in the bill's own house is its sponsor, through the committee (vers' `via`:
   "Jordan Redman, through the House Health and Welfare Committee"), others there are sponsors too (primes, counted as
   sponsors on legislators' pages and in sponsor_class()); members of the other house named (usually who carries it
   there) are shown ("with Sen. Tammy Nichols", `with`), not counted; untitled names are kept only when they're a
