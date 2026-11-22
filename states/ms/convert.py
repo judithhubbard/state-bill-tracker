@@ -28,7 +28,10 @@ parentheses, none for the governor's steps). The steps:
   override takes both houses). The chapter number (CHAPNUM) is the law's number in the session laws.
 Concurrent resolutions proposing amendments pass each house by two-thirds and go to the voters, never the governor.
 
-Members' floor votes are PDFs (not downloaded) and the history lines carry no tallies, so there are no votes here.
+Floor votes come from the roll calls the history lines link (one PDF per vote, read as text by fetch.py into
+<year>/rollcalls.json): each passage, failed passage, concurrence, conference report and veto vote gets its tally and,
+when every group's names add up to its total, each member's vote (`roll_vote()`; names to seats by `vote_seat()`).
+The history lines themselves carry no tallies. No committee votes: Mississippi publishes none.
 There are no plain-language summaries: the long title, in sentence case, is the summary; no "What it does".
 """
 import functools, glob, html, json, os, re
@@ -201,7 +204,9 @@ def history(session, key):
         d = text(a.findtext("ACT_DESC"))
         n = text(a.findtext("ACT_NUMBER"))
         if d:
-            acts.append((int(n) if n.isdigit() else len(acts) + 1, d, bool(text(a.findtext("ACT_VOTE")))))
+            # (The roll call's PDF, "../../../../2026/pdf/votes/house/0030003.pdf", as "house/0030003".)
+            vm = re.search(r"votes/((?:house|senate)/\d+)\.pdf", text(a.findtext("ACT_VOTE")))
+            acts.append((int(n) if n.isdigit() else len(acts) + 1, d, vm.group(1) if vm else ""))
     auth = root.find("AUTHORS")
     princ = [(text(x.findtext("P_NAME")), slug(x.findtext("P_LINK")), x.findtext("P_LINK") or "") for x in (auth.iter("PRINCIPAL") if auth is not None else ())]
     co = [(text(x.findtext("CO_NAME")), slug(x.findtext("CO_LINK")), x.findtext("CO_LINK") or "") for x in (auth.iter("ADDITIONAL") if auth is not None else ())]
@@ -414,6 +419,180 @@ def veto_message(session, key):
     return {"year": int(iso[:4]), "signer": P.governor_on(iso), "text": s} if s else None
 
 
+# ---- Floor roll calls ----
+
+# Each year's Speaker, who votes as "Mr. Speaker" (by the author page's slug). Philip Gunn to January 2024, Jason White since.
+SPEAKERS = {2023: "gunn", 2024: "white", 2025: "white", 2026: "white", 2027: "white"}
+# The groups of a roll call, as each house writes them, -> the site's codes ("Y" read only to count against the total).
+GROUPS = [(re.compile(r"Yeas\s*-+"), "Y"), (re.compile(r"Nays\s*-+"), "N"),
+          (re.compile(r"Absent (?:or|and) those not voting\s*-+"), "A"), (re.compile(r"(?:Voting )?Present\s*-+"), "B")]
+GROUP_START = re.compile(r"(Yeas|Nays|Absent (?:or|and) those not voting|Voting Present|Present|Vacancies|Necessary for Passage)\s*-+")
+# The decisive votes the history's lines link a roll call to (procedural ones, "Motion to Recommit Lost", "Tabled Failed",
+# aren't the bill's own vote).
+VOTE_KINDS = {"passed", "failed", "concurred", "confadopted", "confreject", "override", "sustained"}
+ROLL_STATS = {}
+
+
+@functools.lru_cache(maxsize=None)
+def roll_texts(session):
+    """data/ms/<year>/rollcalls.json (fetch.py's roll_calls()): "house/0030003" -> the PDF's text."""
+    try:
+        raw = json.load(open(os.path.join(folder(session), "rollcalls.json")))
+    except (OSError, ValueError):
+        return {}
+    return {k: v["text"] for k, v in raw.items() if v.get("text")}
+
+
+def parse_roll(t):
+    """A roll call's text -> {"bill": "HB1", "groups": {"Y": [names], "N": ..., "A": ..., "B": ...}, "totals": {...},
+    "paired": [names]}, or None. Names are as printed: "Anderson (110th)", "Simmons D. T. (12th)", "Mr. Speaker"; a name the
+    layout breaks after a hyphen ("Butler-" / "Washington") is joined. "Total--116." (or "Total--5" without the period)
+    ends a group; "None." and "Nays-0" are empty ones. Senators who "announced a pair" (each would have voted, one yea and
+    one nay) are in no group: they're listed as paired."""
+    t = re.sub(r"-\s*\n\s*", "-", t or "")
+    t = re.sub(r"\s+", " ", t).strip()
+    first = GROUP_START.search(t)
+    if not first:
+        return None
+    head = t[:first.start()]
+    m = re.search(r"\b([HS])\.\s*([BC])\.\s*(?:R\.\s*)?No\.\s*(\d+)", head)
+    if not m:
+        return None
+    out = {"bill": f"{m.group(1)}{m.group(2)}{int(m.group(3))}", "groups": {}, "totals": {}, "paired": [], "head": head}
+    starts = list(GROUP_START.finditer(t))
+    for i, g in enumerate(starts):
+        code = next((c for rx, c in GROUPS if rx.fullmatch(g.group(0).strip()) or rx.match(g.group(0))), None)
+        end = starts[i + 1].start() if i + 1 < len(starts) else len(t)
+        body = t[g.end():end].strip()
+        if code is None:
+            continue
+        # (A pair announcement or a closing note can follow the last group: cut at its sentence.)
+        tot = re.search(r"\.?\s*Total\s*-+\s*(\d+)\.?", body)
+        if tot:
+            names_part = body[:tot.start()]
+            out["totals"][code] = int(tot.group(1))
+        else:
+            z = re.match(r"(None|0)\b\.?", body)
+            names_part = "" if z else body.split(". ")[0]
+            out["totals"][code] = 0 if z else None
+        names = [re.sub(r"\s+", " ", x).strip(" .") for x in names_part.split(",")]
+        out["groups"][code] = [x for x in names if x]
+    for pm in re.finditer(r"(?:Senator|Representative)\s+([A-Z][A-Za-z'.() -]+?),?\s+who would have voted", t[first.start():]):
+        out["paired"].append(pm.group(1).strip())
+    vac = re.search(r"Vacanc(?:y|ies)\s*-+\s*(\d+)", t)
+    out["vacant"] = int(vac.group(1)) if vac else 0
+    out["paired"] = list(dict.fromkeys(x for x in out["paired"] if not any(x in g for g in out["groups"].values())))
+    return out
+
+
+SEATS = {"H": 122, "S": 52}
+# The year the member files (data/ms/members/, the current members) are from.
+MEMBERS_YEAR = date.today().year
+
+
+def roll_adds_up(r, h):
+    """Every group's names are as many as its total, and there are yeas. Or the yeas and nays do, and every seat is
+    named once (with the vacancies): the total under the absent members is the slip (HB 1924 of 2026's override vote,
+    "Absent or those not voting--" seven names, "Total--5", 110 + 0 + 5 + 7 = 122 seats)."""
+    if "Y" not in r["groups"]:
+        return False
+    if all(r["totals"].get(c) is not None and r["totals"][c] == len(xs) for c, xs in r["groups"].items()):
+        return True
+    every = [x for xs in r["groups"].values() for x in xs] + r["paired"]
+    return all(r["totals"].get(c) == len(r["groups"].get(c, [])) for c in ("Y", "N")) and \
+        len(every) == len(set(every)) and len(every) + r.get("vacant", 0) == SEATS[h]
+
+
+def fold(s):
+    return re.sub(r"[^a-z]", "", (s or "").lower())
+
+
+@functools.lru_cache(maxsize=None)
+def vote_seat(session, h, name):
+    """A roll-call name in house h -> the seat of a current member who sat that year ("H:110"), else "H?Name". The name is
+    the member's short name, the author page's slug in lower case with underscores ("Anderson (110th)" =
+    anderson_(110th)), or the surname with initials or a district where two members share it ("Simmons D. T. (12th)" =
+    simmons_(12th)). "Mr. Speaker" is that year's Speaker. A current member counts only when that year's author list
+    has the same slug and name (a seat's earlier holder of the same surname isn't today's member)."""
+    n = re.sub(r"\s+", " ", (name or "").strip())
+    sl = SPEAKERS.get(session) if h == "H" and re.match(r"M(?:r|adam)\.? Speaker", n) else None
+    cur = current_members()
+    year = authors(session, h)
+
+    def words(x):
+        return [w for w in re.sub(r"[^a-z\s-]", " ", (x or "").lower()).split() if w not in ("jr", "sr", "ii", "iii", "iv")]
+
+    def served(s, m):
+        """The slug is in that year's author list under the member's name: the same surname (spelled with or without its
+        hyphen: "Angela Turner Ford" is turner-ford; the slug's, as the short name can be misspelled: "Butler-Washinton") and the same first initial or a given name in common ("Briggs Hopson"
+        = "W. Briggs Hopson III", "Chuck Younger" = "Charles Younger"). In the member files' own year the surname is
+        enough (that year's list says "Tamarra Butler-Washington", her member file "Grace Butler-Washington")."""
+        full = year.get(s)
+        sur = fold(" ".join(w for w in re.sub(r"\s*\(\d+\w*\)", "", s.replace("_", " ")).split()
+                            if not re.fullmatch(r"(?i)jr\.?|sr\.?|ii|iii|iv", w)))
+        if not full or not sur or not fold(" ".join(words(full))).endswith(sur):
+            return False
+        a, b = words(full)[:-1], words(m["name"])[:-1]
+        return session >= MEMBERS_YEAR or bool(a and b and a[0][:1] == b[0][:1]) or \
+            any(x.startswith(y) or y.startswith(x) for x in a for y in b if len(x) > 1 and len(y) > 1)
+
+    cands = []
+    if sl:
+        cands = [(h, sl)]
+    else:
+        cands = [(h, n.lower().replace(" ", "_"))]
+        if cands[0] not in cur:
+            pm = re.match(r"(.+?)(?:\s+((?:[A-Z]\.\s*)+))?(?:\s+\((\d+)(?:st|nd|rd|th)\))?$", n)
+            last, inits, dist = (pm.group(1), pm.group(2) or "", pm.group(3)) if pm else (n, "", None)
+            hits = []
+            for (hh, s), m in cur.items():
+                if hh != h:
+                    continue
+                short = re.sub(r"\s*\(\d+\w*\)$", "", m["short"] or s)
+                parts = [fold(x) for x in re.split(r"[ -]", short) if x]
+                if fold(short) != fold(last) and fold(last) not in parts and fold(short.split()[0] if short else "") != fold(last):
+                    continue
+                if dist and f"({dist}" not in s and str(m["district"]) != dist:
+                    continue
+                if inits and not name_key(m["name"]).startswith(inits.strip()[0].lower()):
+                    continue
+                hits.append((hh, s))
+            cands = hits
+    good = [c for c in cands if c in cur and served(c[1], cur[c])]
+    if len(good) == 1:
+        return f"{h}:{cur[good[0]]['district']}"
+    return f"{h}?{'Mr. Speaker' if sl else n}"
+
+
+def roll_vote(session, key, p, h, d, k):
+    """The floor vote a history line links, as a record's vote: [house, "F", None, day, yeas, nays, [[seat, code], ...]]
+    (yes votes left out; absent and paired "A", voting present "B"), or None when the roll call isn't read yet or isn't
+    this bill's. Names only when every group's names add up to its total; else the tally alone."""
+    st = ROLL_STATS.setdefault(session, {"lines": 0, "read": 0, "wrong": 0, "named": 0, "unparsed": 0})
+    st["lines"] += 1
+    if not key or k not in VOTE_KINDS:
+        return None
+    txt = roll_texts(session).get(key)
+    if not txt:
+        return None
+    st["read"] += 1
+    r = parse_roll(txt)
+    if not r or "Y" not in r["totals"]:
+        st["unparsed"] += 1
+        return None
+    if r["bill"] != re.sub(r"^([HS][BC])0*", r"\1", p) or {"house": "H", "senate": "S"}[key.split("/")[0]] != h:
+        st["wrong"] += 1  # filed under another bill or house
+        return None
+    y, n = r["totals"].get("Y") or 0, r["totals"].get("N") or 0
+    listed = []
+    if roll_adds_up(r, h):
+        st["named"] += 1
+        for code in ("N", "A", "B"):
+            listed += [[vote_seat(session, h, x), code] for x in r["groups"].get(code, [])]
+        listed += [[vote_seat(session, h, x), "A"] for x in r["paired"]]
+    return [h, "F", None, d, y, n, listed]
+
+
 def load_session(session):
     """Read one year's bills and return (records, bill number -> record index, fetched time, delegation)."""
     cur = current_members()
@@ -434,9 +613,13 @@ def load_session(session):
         origin, other = hs, OTHER[hs]
         p = f"{hs}{kind}{num}"
         steps = []  # (date, house, shown text, kind, extra)
+        votes = []
         for d, h, a, vote in dated(session, x["actions"]):
             shown, (k, extra) = decode(session, h, a)
             steps.append((d, h, shown, k, extra))
+            v = roll_vote(session, vote, p, h, d, k) if vote else None
+            if v:
+                votes.append(v)
             if k == "ref" and len(extra) > 1:
                 for c in extra[1:]:
                     steps.append((d, h, f"Also referred to the {HOUSE[h]} {c} Committee, after the first", "ref2", c))
@@ -617,7 +800,7 @@ def load_session(session):
                 (gov_day or override_day or max(action_dates, default="")) if stage == 5 else "",
                 veto_day if stage == 6 or (stage == 5 and veto and not partial) else "",
             ],
-            "votes": [], "firstComms": [(refs[0][0], refs[0][1], fate == "passed")] if refs else [],
+            "votes": votes, "firstComms": [(refs[0][0], refs[0][1], fate == "passed")] if refs else [],
             "vers": [{"p": p, "sponsor": sponsor, "district": district, "cosponsors": cos, "primes": max(1, x["principals"]),
                       "cosp": len(cos), "statusDesc": desc,
                       "committee": comm if place == "committee" and stage in (0, 2) else None,

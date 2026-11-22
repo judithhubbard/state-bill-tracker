@@ -53,8 +53,11 @@ pdftotext), every run. And data/ms/<this year>/house_meetings.json: the House co
 committee schedule (house_schedule(): /htms/h_sched.htm, one request), which names no bills; convert.agendas() gives each
 meeting to the bills in that committee as "the committee meets".
 
-Not downloaded: the floor roll calls, which are PDFs (one per ACT_VOTE; members' votes are only there), the House's
-weekly summaries (PDFs), and bill texts. There are no committee roll calls and no plain-language summaries in the XML:
+And <year>/rollcalls.json: the text of each floor roll call a history file links (an action's ACT_VOTE: one PDF per
+vote, members' votes are only there), read once each with pdftotext (roll_calls(): at most ROLLCALL_MAX a run, the newest
+year first, so a first copy of four years' 9,000-odd roll calls takes several runs).
+
+Not downloaded: the House's weekly summaries (PDFs), and bill texts. There are no committee roll calls and no plain-language summaries in the XML:
 "What it does" can only be the long title.
 
 data/ms/incomplete says "running" during a run, then lists what was never downloaded (a year's list, a listed bill's
@@ -466,6 +469,62 @@ def veto_messages(year):
         print(f"{year}: {got} of {len(todo)} veto messages read", flush=True)
 
 
+ROLLCALL_MAX = 900  # roll calls asked for per run, all years together (about 1.5 s each): a first copy of every year's takes several runs
+ROLLCALL_RETRY = 7  # days before asking again for a roll call the server didn't have (404)
+
+
+def roll_calls(year):
+    """The floor roll calls each history file links (an action's <ACT_VOTE>, ../../../../2026/pdf/votes/house/0030003.pdf:
+    one PDF per vote, posted the day of the vote; the name looks like the legislative day and a sequence number), read
+    once each with pdftotext -layout into <year>/rollcalls.json: {"house/0030003": {"text": ..., "read": "2026-11-22"}},
+    or {"missing": day} for one the server answered 404 (asked again after a week: the "Veto Referred To" line of HB 1653
+    of 2026 links one that doesn't exist). A roll call isn't read again once it's there. Never marks the copy incomplete:
+    what isn't read yet is read on later runs (at most ROLLCALL_MAX a run), the newest year first. Needs pdftotext."""
+    folder = os.path.join(DATA, str(year))
+    hist = os.path.join(folder, "history")
+    pdftotext = shutil.which("pdftotext")
+    if not os.path.isdir(hist) or not pdftotext:
+        if os.path.isdir(hist) and not pdftotext:
+            print(f"{year} roll calls: pdftotext isn't installed (poppler-utils); none read", flush=True)
+        return
+    path = os.path.join(folder, "rollcalls.json")
+    have = load(path, {})
+    links = set()
+    for name in sorted(os.listdir(hist)):
+        if name.endswith(".xml"):
+            body = open(os.path.join(hist, name), encoding="latin-1").read()
+            links.update(re.findall(rf"<ACT_VOTE>\s*(?:\.\./)*{year}/pdf/votes/((?:house|senate)/\d+)\.pdf\s*</ACT_VOTE>", body))
+    retry = (TODAY - timedelta(days=ROLLCALL_RETRY)).isoformat()
+    todo = sorted(k for k in links if k not in have or (have[k].get("missing") and have[k]["missing"] < retry))
+    got = gone = 0
+    for k in todo:
+        if out_of_time() or STATS.get("rollcalls", 0) >= ROLLCALL_MAX:
+            break
+        STATS["rollcalls"] = STATS.get("rollcalls", 0) + 1
+        before = FAILS["HTTP 404"]
+        body, _ = request(f"{SITE}/{year}/pdf/votes/{k}.pdf", f"{year} roll call {k}", end=b"%%EOF")
+        if body is None and FAILS["HTTP 404"] > before:
+            have[k] = {"missing": TODAY.isoformat()}
+            gone += 1
+            continue
+        if not body or body is NOT_MODIFIED or not body.startswith(b"%PDF"):
+            continue
+        with tempfile.TemporaryDirectory() as tmp:
+            pdf = os.path.join(tmp, "v.pdf")
+            write(body, pdf)
+            r = subprocess.run([pdftotext, "-layout", "-enc", "UTF-8", pdf, "-"], capture_output=True)
+        if r.returncode:
+            continue
+        txt = r.stdout.decode("utf-8", "replace")
+        have[k] = {"text": txt.split("DISCLAIMER")[0].strip(), "read": TODAY.isoformat()}
+        got += 1
+        if got % 100 == 0:
+            save(have, path)
+    save(have, path)
+    left = sum(1 for k in links if k not in have)
+    print(f"{year} roll calls: {got} read, {gone} not on the server; {len(links)} linked, {left} still to read", flush=True)
+
+
 def member_links(path):
     """A member list's links to members' files ("house/aguirre.xml"; not the Lieutenant Governor's website)."""
     try:
@@ -556,6 +615,9 @@ def main():
         for year in years:
             if not out_of_time():
                 veto_messages(year)
+        for year in years:
+            if not out_of_time():
+                roll_calls(year)
         if not ONLY and not out_of_time():
             agendas(YEAR)
             house_schedule(YEAR)
