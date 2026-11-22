@@ -72,8 +72,19 @@ one request a run) and the House's hearings from its exports, into data/mo/<year
 
 Not downloaded: the bill texts, fiscal notes, amendments, witness forms and committee minutes (PDFs); the House's
 roll-call PDFs (the same votes as the journals, one file per vote: 362 in 2025 at 20 seconds each); the House's member
-pages (house.mo.gov, barred). Committee votes by member are only in minutes. PDF work needs pdftotext (poppler-utils);
-without it the journals and summaries are skipped, with a note.
+pages (house.mo.gov, barred). Committee votes by member: the House's are in its journals' committee reports ("Ayes (6):
+Casteel, ..."), read by convert.py; the Senate's in each committee's "Bill Votes" reports (`committee_votes()`, below).
+PDF work needs pdftotext (poppler-utils); without it the journals, summaries and Senate committee votes are skipped, with a
+note.
+
+Senate committee votes (2026-11-22): each Senate committee's minutes page (/Committees/CommitteeMinutes?year=2026&ID=160,
+linked from its committee page) lists its "Bill Votes", one PDF each (/Committees/Reports/IndexReports?handler=
+BillVoteReport&year=2026&voteId=6&src=Votes&Type=: committee, bill, the executive session's date, and each member's YES,
+NO, ABSENT, ABSTAIN or PRESENT in a grid, then the motions). Into senate/committee_votes/<voteId>.txt (pdftotext -layout),
+each once; the minutes pages are read daily during the session and weekly otherwise for a live year, once for a past
+one, and the votes they list not yet read come after the Senate's bills and journals each run (about 430 a year, at the Senate's one a second).
+"Reconsidered Consent" reports (src=ReconConsentOnly) aren't read. State in state/senate.json ("minutes": the day each
+year's minutes pages were read).
 
 data/mo/incomplete says "running" during a first copy, then lists what was never downloaded (a year's House bill list
 or zip, a listed House bill, the Senate list, a listed Senate bill's page or actions, the members of either house); it
@@ -689,6 +700,58 @@ def committees(year, sen):
     log(f"{year} Senate committees: {len(out)} ({sum(1 for c in out for m in c['members'] if m['role'] == 'Chair')} chairs)")
 
 
+def committee_votes(year, sen):
+    """The year's Senate committee votes by member: each committee's minutes page (from its saved committee page's link),
+    then each "Bill Votes" report it lists, once, as text into senate/committee_votes/<voteId>.txt."""
+    if not PDFTOTEXT or out_of_time():
+        return
+    base = folder(year, "senate", "committees")
+    ids = set()
+    for f in sorted(os.listdir(base)) if os.path.isdir(base) else []:
+        ids |= set(re.findall(rf"CommitteeMinutes\?year={year}&(?:amp;)?ID=(\d+)", read_text(os.path.join(base, f))))
+    if not ids:
+        return
+    listed_path = folder(year, "senate", "committee_votes.json")
+    listed = load(listed_path, {}) or {}
+    last = sen.get("minutes") or ""
+    if not last or (live(year) and last < (TODAY - timedelta(days=1 if in_session() else MEMBER_DAYS)).isoformat()):
+        ok = True
+        for cid in sorted(ids, key=int):
+            if out_of_time():
+                return
+            page = request(f"{SENATE}/Committees/CommitteeMinutes?year={year}&ID={cid}", f"{year} Senate minutes {cid}",
+                           must=b"Committee Minutes")
+            if page is None:
+                ok = False
+                continue
+            for vid in re.findall(rf"handler=BillVoteReport&(?:amp;)?year={year}&(?:amp;)?voteId=(\d+)&(?:amp;)?src=Votes\b", page):
+                listed[vid] = int(cid)
+        save(listed, listed_path)
+        if ok:
+            sen["minutes"] = TODAY.isoformat()
+    out = folder(year, "senate", "committee_votes")
+    todo = [v for v in sorted(listed, key=int) if not os.path.exists(os.path.join(out, f"{v}.txt"))]
+    if not todo:
+        return
+    log(f"{year} Senate committee votes: {len(todo)} to read")
+    got = 0
+    for v in todo:
+        if out_of_time():
+            break
+        body = request(f"{SENATE}/Committees/Reports/IndexReports?handler=BillVoteReport&year={year}&voteId={v}&src=Votes&Type=",
+                       f"{year} Senate committee vote {v}", must=b"%PDF", binary=True)
+        t = pdf_text(body)
+        if not t:
+            continue
+        if "BILL NO" not in t:
+            with LOCK:
+                FAILS["unexpected committee vote"] += 1  # kept, so it isn't asked again; convert.py leaves it out
+        save_text(t, os.path.join(out, f"{v}.txt"))
+        got += 1
+        STATS["Senate committee votes"] += 1
+    log(f"{year} Senate committee votes: {got} of {len(todo)} read")
+
+
 def senator(sid, page):
     """One senator's fields from the page."""
     body = trim(page)
@@ -754,6 +817,12 @@ def senate_main(years):
             if out_of_time():
                 break
             journals(year, house=False)
+        for year in years:
+            if out_of_time():
+                break
+            sen = load_state(year, "senate")
+            committee_votes(year, sen)
+            save_state(year, "senate", sen)
     except Refused as e:
         REFUSED[SENATE] = str(e)
         log(f"Senate: stopped, the server refused a request ({e})")

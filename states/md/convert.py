@@ -7,6 +7,8 @@ referral, hearing, committee report, second and third reading), how the houses s
 the Governor - Chapter 437", "Vetoed by the Governor (Policy)"). It has no dates for the governor's actions and no votes.
 Floor votes member by member come from each house's numbered roll-call PDFs (data/md/votes/<year>/<house>.json, read by
 fetch.py's roll_calls()): each third reading's roll call, matched by house, bill and legislative day (`floor_vote()`).
+Committee votes member by member come from each committee's voting record on the bill (data/md/votes/<year>/
+committee.json, fetch.py's committee_votes(); `committee_votes()`).
 A committee's unfavorable report kills a bill; most such bills are then withdrawn by their sponsors.
 
 The governor's actions come from each passed bill's page (data/md/governor_<year>.json, from fetch.py): the day the
@@ -15,7 +17,7 @@ governor signed or vetoed it, and any override, which the bill list never shows 
 Maryland Constitution, Chapter 9 of 2025 Special Session"). A bill whose page isn't read yet keeps the old reading, with
 the governor's action on the bill's last day.
 """
-import json, os, re
+import json, os, re, unicodedata
 from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -170,6 +172,15 @@ def parse_roll(t):
 _ROLLS = {}
 
 
+def floor_ready(session):
+    """Whether both houses' walks through the session's roll calls have reached their end (fetch.py's state.json)."""
+    try:
+        st = json.load(open(os.path.join(P.DATA, "votes", str(session), "state.json")))
+    except (OSError, ValueError):
+        st = {}
+    return all(st.get(h, {}).get("ended") for h in ("senate", "house")) or bool(os.environ.get("MD_VOTES_PARTIAL"))
+
+
 def rolls(session):
     """(house, bill, legislative day) -> the bill's third-reading roll calls that day, in order: the passage votes the bill
     list's history shows. Amendments, motions, quorum calls, the concurrence's "Bill is on Third Reading for Final
@@ -178,11 +189,7 @@ def rolls(session):
         out = defaultdict(list)
         # A session's roll calls are used once both houses' walks have reached their end (fetch.py's state.json), so a
         # first copy spread over several runs never shows a session with some of its votes (MD_VOTES_PARTIAL=1: for tests).
-        try:
-            st = json.load(open(os.path.join(P.DATA, "votes", str(session), "state.json")))
-        except (OSError, ValueError):
-            st = {}
-        if not all(st.get(h, {}).get("ended") for h in ("senate", "house")) and not os.environ.get("MD_VOTES_PARTIAL"):
+        if not floor_ready(session):
             VOTE_STATS[session]["waiting for the first copy"] = 1
             _ROLLS[session] = out
             return out
@@ -206,24 +213,35 @@ def rolls(session):
     return _ROLLS[session]
 
 
+def fold(s):
+    """"Peña-Melnyk" -> "pena-melnyk": the committee records write names without accents."""
+    return unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower().strip()
+
+
 def vote_seat(session, h, name, by_data, served):
     """A roll call's name in house h -> the member's seat ("H:44a"), else "H?Name". "Speaker" and "Mr. President" are
     whoever presided that session. A name ties to today's member written the same way in the bill list ("Washington,
-    M.", "Lewis Young"), or the one member of the house with that surname, only when that session's bill list names a
-    sponsor of the house so (a member who has since left, or changed houses, stays a name)."""
+    M.", "Lewis Young"), or the one member of the house with that surname (and initial), or (2026-11-22, the committee
+    records) the one whose full name ends with it ("White Holland, J.": Jennifer White Holland, "Holland" in the bill
+    list; "Pena-Melnyk", unaccented), only when that session's bill list names a sponsor of the house as the PDF does or
+    as the bill list names that member (a member who has since left, or changed houses, stays a name)."""
     n = name
     if re.fullmatch(r"(Mr\.|Madam) President|President|Speaker|Madam Speaker|Mr\. Speaker", n):
         n = PRESIDING[h].get(session, PRESIDING_DEFAULT[h])
-    sid = by_data.get((h, n))
-    if not sid:
+    key = (h, n) if (h, n) in by_data else None
+    if not key:
         last, _, init = n.partition(",")
-        hits = [(k, x) for k, x in by_data.items() if k[0] == h and k[1].split(",")[0] == last.strip()]
-        if init.strip():
-            hits = [(k, x) for k, x in hits if x[1][:1] == init.strip()[:1]]
+        last, init = fold(last), init.strip()[:1]
+        house = [(k, x) for k, x in by_data.items() if k[0] == h and (not init or x[1][:1] == init)]
+        hits = [k for k, x in house if fold(k[1].split(",")[0]) == last]
+        if not hits:  # (the full name without "Jr.", "III": "Jennifer White Holland")
+            hits = [k for k, x in house if re.sub(r",? (?:Jr\.|Sr\.|II|III|IV)$", "", fold(x[1])).endswith(" " + last)]
         if len(hits) == 1:
-            sid = hits[0][1]
-    if sid and (n != name or n in served.get(h, ()) or n.split(",")[0] in served.get(h, ())):
-        return sid[0]
+            key = hits[0]
+    if key:
+        known = served.get(h, ())
+        if n != name or n in known or n.split(",")[0] in known or key[1] in known or key[1].split(",")[0] in known:
+            return by_data[key][0]
     return f"{h}?{name}"
 
 
@@ -243,6 +261,144 @@ def floor_vote(session, h, p, day, by_data, served):
         return [h, "F", None, day, T["Y"], T["N"], []]
     listed = [[vote_seat(session, h, x, by_data, served), c] for c in "NABE" for x in r["names"].get(c, [])]
     return [h, "F", None, day, T["Y"], T["N"], listed]
+
+
+# ---- Committee votes -----------------------------------------------------------------------------------------------
+# Each committee's voting record on a bill (data/md/votes/<year>/committee.json, fetch.py's committee_votes(): the PDFs'
+# text), a checkmark grid:
+#   Budget and Taxation Committee                         Bill/Resolution Number:                  SB 448
+#   Voting Record - 2026 Regular Session                  Vote Date:                             2/25/2026
+#                                                         Final Action:                               FAV
+#             Name            Yea       Nay     Abstain     Excused       Absent     Amendment Numbers, ...
+#   Rosapepe, J., Vice                                                                     Other
+#                              ✓                                   (a long name's title wraps around its mark)
+#   Chair
+#   King, N.                   ✓
+#   Korman, M., Chair                     Chair generally does not vote
+#                    Totals    12          0      0             1           0
+COMM_COLS = [("Yea", "Y"), ("Nay", "N"), ("Abstain", "B"), ("Excused", "E"), ("Absent", "A")]
+COMM_ACTIONS = {"FAV", "FWA", "UNF"}  # favorable, with amendments, unfavorable (WDR, a sponsor's withdrawal, isn't kept)
+
+
+def parse_committee(t):
+    """One committee voting record's text -> {committee, year, bill ("HB141"), day (ISO), action ("FAV"), totals {code:
+    n}, rows [(name "Rosapepe, J.", code)], ok}; ok is False when a row has no mark or two, or a column's marks don't add
+    up to its total. A chair who "generally does not vote" is a row with code "B" (present, not voting: a chair left out
+    of the list would read as a yes). None when it can't be read."""
+    head = re.search(r"^\s*(.+?) Committee\s+Bill/Resolution Number:\s*([HS])([BJ])\s*(\d+)", t, re.M)
+    year = re.search(r"Voting Record - (\d{4}) Regular Session", t)
+    day = re.search(r"Vote Date:\s*(\d{1,2})/(\d{1,2})/(\d{4})", t)
+    act = re.search(r"Final Action:\s*([A-Z]{2,4})\b", t)
+    tot = re.search(r"Totals\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)", t)
+    lines = t[:tot.start()].split("\n") if tot else []
+    hdr = next((i for i, ln in enumerate(lines) if all(re.search(rf"\b{w}\b", ln) for w, _ in COMM_COLS)), None)
+    if not (head and year and day and act and tot and hdr is not None):
+        return None
+    cols = [(lines[hdr].index(w) + len(w) / 2, c) for w, c in COMM_COLS]
+    left, right = cols[0][0] - 4, cols[-1][0] + 6
+    rows, cur, pending = [], None, []
+    for ln in lines[hdr + 1:]:
+        marks = [i for i, ch in enumerate(ln) if ch in "✓✔"]
+        bare = re.sub(r"[✓✔]", " ", ln)
+        name_part = " ".join(x.group(0).strip() for x in re.finditer(r"\S+(?: \S+)*", bare) if x.start() < left)
+        note = re.search(r"does not vote", bare)
+        if re.match(r"[A-Z][^,]*,\s*[A-Z]\.", name_part):
+            cur = {"name": name_part, "marks": pending, "note": False}
+            pending = []
+            rows.append(cur)
+        elif name_part and cur:
+            cur["name"] += " " + name_part
+        codes = [min(cols, key=lambda c: abs(c[0] - i))[1] for i in marks if left <= i <= right]
+        if cur is None:
+            pending += codes
+        else:
+            cur["marks"] += codes
+            cur["note"] = cur["note"] or bool(note)
+    out, ok = [], not pending
+    for r in rows:
+        m = re.match(r"([^,]+),\s*([A-Z])\.", r["name"])
+        code = r["marks"][0] if len(r["marks"]) == 1 and not r["note"] else "B" if r["note"] and not r["marks"] else None
+        if not m or not code:
+            ok = False
+            continue
+        out.append((f"{m.group(1).strip()}, {m.group(2)}.", code))
+    totals = dict(zip("YNBEA", (int(x) for x in tot.groups())))
+    counted = defaultdict(int)
+    for r in rows:
+        for c in r["marks"]:
+            counted[c] += 1
+    ok = ok and all(counted[c] == totals[c] for c in totals)
+    return {"committee": head.group(1).strip(), "year": int(year.group(1)), "bill": f"{head.group(2)}{head.group(3)}{int(head.group(4))}",
+            "day": f"{day.group(3)}-{int(day.group(1)):02d}-{int(day.group(2)):02d}", "action": act.group(1),
+            "totals": totals, "rows": out, "ok": ok}
+
+
+_COMM = {}
+
+
+def committee_records(session):
+    """Bill ("HB141") -> [(house, parsed record)], once the session's first copy is complete and its floor votes are in."""
+    if session not in _COMM:
+        out = defaultdict(list)
+        folder = os.path.join(P.DATA, "votes", str(session))
+        try:
+            st = json.load(open(os.path.join(folder, "committee_state.json")))
+            texts = json.load(open(os.path.join(folder, "committee.json")))
+        except (OSError, ValueError):
+            st, texts = {}, {}
+        # (And once its floor votes are in: a session with committee votes and no floor votes would look like one whose
+        # roll calls went missing, test/data_check.py's "floor votes missing?".)
+        if not (st.get("complete") and floor_ready(session)) and not os.environ.get("MD_VOTES_PARTIAL"):
+            texts = {}
+            if st:
+                VOTE_STATS[session]["committee: waiting for the first copy"] = 1
+        for k, t in sorted(texts.items()):
+            bill, abbr = k.split("_", 1)
+            house = "S" if abbr in ("b&t", "eee", "fin", "jpr") else "H"
+            r = parse_committee(t)
+            if not r:
+                VOTE_STATS[session]["committee: unreadable"] += 1
+                continue
+            # A record filed under another bill or year (the trap list's KS and NY roll calls) isn't this bill's.
+            if r["bill"] != bill or r["year"] != session:
+                VOTE_STATS[session]["committee: another bill's record"] += 1
+                continue
+            out[bill].append((house, r))
+        _COMM[session] = out
+    return _COMM[session]
+
+
+def committee_votes(session, p, comm_names, by_data, served):
+    """The bill's committee votes: [h, "C", committee, day, yes, no, [[seat, code], ...]] (yes votes left out), the
+    committee named as the bill list names it ("Budget and Taxation"). An unfavorable report's record counts the votes
+    on the motion to kill the bill: its yeas are votes against the bill, its nays for it. Names only when every row has
+    one mark, the columns add up to the totals line and no seat is named twice; else the tally alone."""
+    out = []
+    for h, r in committee_records(session).get(p, []):
+        if r["action"] not in COMM_ACTIONS:
+            continue
+        name = next((c for c in comm_names.get(h, ()) if c.lower() == r["committee"].lower()), r["committee"])
+        T = dict(r["totals"])
+        flip = r["action"] == "UNF"
+        if flip:
+            T["Y"], T["N"] = T["N"], T["Y"]
+        VOTE_STATS[session]["committee votes"] += 1
+        listed = []
+        if r["ok"]:
+            swap = {"Y": "N", "N": "Y"} if flip else {}
+            listed = [[vote_seat(session, h, n, by_data, served), swap.get(c, c)] for n, c in r["rows"]]
+            seats_ = [s for s, _ in listed if "?" not in s]
+            if len(seats_) != len(set(seats_)):
+                VOTE_STATS[session]["committee: a seat named twice"] += 1
+                listed = []
+            else:
+                VOTE_STATS[session]["committee: names"] += 1
+                VOTE_STATS[session]["committee: names not tied to a seat"] += sum(1 for s, _ in listed if "?" in s)
+        else:
+            VOTE_STATS[session]["committee: names don't add up"] += 1
+        out.append([h, "C", name, r["day"], T["Y"], T["N"], [x for x in listed if x[1] != "Y"]])
+    out.sort(key=lambda v: v[3])
+    return out
 
 
 def load_session(session):
@@ -305,7 +461,10 @@ def load_session(session):
                 steps.append((day(f"ThirdReadingDate{side}"), h, f"PASSED {HOUSE[h].upper()}" if third.startswith("Passed") else f"Third reading {third.lower()}"))
         steps.sort(key=lambda s: s[0])
         # Each third reading's roll call, matched by house, bill and legislative day.
-        votes = []
+        # The committees' votes first (fetch.py's committee_votes()), named as this bill's committees are.
+        names_ = {origin: [text(b.get("CommitteePrimaryOrigin")), text(b.get("CommitteeSecondaryOrigin"))],
+                  other: [text(b.get("CommitteePrimaryOpposite")), text(b.get("CommitteeSecondaryOpposite"))]}
+        votes = committee_votes(session, p, names_, seat_of, served)
         for d_, h_, t_ in steps:
             if t_.startswith("PASSED") or t_.startswith("Third reading"):
                 v_ = floor_vote(session, h_, p, d_, seat_of, served)

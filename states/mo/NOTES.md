@@ -46,7 +46,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   when its names add up to the printed totals, and is matched to the passage by day, bill and the export's ayes and noes:
   2023 182 of 189 House passages, 2024 124 of 144, 2025 176 of 192, 2026 205 of 213; no name failed to match a seat
   (`house_seat()`: the year's member files, else the bills' sponsors and co-sponsors with districts). Committee
-  tallies are the House's. "What it does" is the Senate's bill summary of a Senate bill's current version ("From the Missouri
+  tallies are the House's; committee votes by member since 2026-11-22 (below). "What it does" is the Senate's bill summary of a Senate bill's current version ("From the Missouri
   Senate's summary of the bill's current version (SS SCS SB 3)."): cross-references ("These provisions are identical to
   ...") and the analyst's name dropped, capitals headings in sentence case, "Current law ..." openings led by the "This act"
   sentence; House bills have none (the House's summaries, house/summaries/, weren't downloaded yet: about a third of laws
@@ -89,3 +89,30 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (`"listed"`: 55% had a vote that day or the next). The journal arrives once a bill's action points to it, so about a day
   ahead or less. Tested on the journals of March 24 and April 29, 2026 (22 bills, all records' numbers). The Senate's daily
   calendar (senate.mo.gov/<yy>info/pdf-cal/cal.htm, only the current day's) isn't read yet.
+- **Committee votes by member (2026-11-22).** robots.txt, re-read 2026-11-22: documents.house.mo.gov "User-agent: * /
+  Crawl-delay: 20"; www.senate.mo.gov "User-agent: * / Disallow: /Trade/ / Disallow: /DistrictWebApps/"; house.mo.gov's
+  answered 404 that day (earlier notes: Crawl-delay 120 and every "?" address barred; not read). **House:** the House
+  Journal's "COMMITTEE REPORTS" print each report's vote member by member ("Mr. Speaker: Your Committee on Commerce, to
+  which was referred HB 1664, HB 1610, HB 1645 and HB 2182, begs leave to report ... by the following vote: / Ayes (6):
+  Casteel, Mansur, ... / Noes (1): Kimble / Absent (3): Butz, Gragg and Peters"; "Smith (46)" where two share a surname;
+  Present, Absent with leave). fetch.py already reads every journal a bill's actions point to, and the "Reported Do Pass"
+  actions point to these, so only convert.py changed: `house_committee_reports()` reads them (a report counts only when
+  each group's names add up to its count), `find_committee_report()` ties one to an export tally by bill (any bill the
+  report names: combined bills share it), within three days, with the same ayes, noes and present, the same committee
+  first; ayes left out, present members coded "B". Tested on four journals (2025 jrn039; 2026 jrn027, jrn028, jrn037),
+  through a web fetch service since the House journals aren't in the local copy: 204 of 204 reports read whole; 75 House
+  committee votes of 2025 and 150 of 2026 matched; 5 reports matched none (three Consent and Procedure reports naming no
+  bill; HB 953's Rules report of 2025-03-13 and HB 2776's of 2026-02-26, which the export doesn't list); every name tied
+  to a seat. **Senate:** its journals print committee reports without votes, and its bill pages give no tallies, but each
+  committee's minutes page (/Committees/CommitteeMinutes?year=2026&ID=160, linked from its committee page) lists "Bill
+  Votes" reports, PDFs (/Committees/Reports/IndexReports?handler=BillVoteReport&year=2026&voteId=6&src=Votes&Type=): the
+  committee, bill, executive session date and a grid of each member's YES, NO, ABSENT, ABSTAIN or PRESENT (then a Consent
+  grid when one was taken; "Reconsidered Consent" reports are separate and not read). voteIds run through the year (1 to
+  about 430 in 2026). fetch.py `committee_votes()` reads the minutes pages (daily in session, weekly otherwise for a live
+  year, once for a past one) and each listed report once (senate/committee_votes/<voteId>.txt); convert.py's
+  `senate_vote_report()` reads the first grid (each member's row must have exactly one X under a heading, else the report
+  isn't used) and `Walk.senate_committee_vote()` adds it as a kind "C" vote tied to the bill's "Voted Do Pass S
+  <committee>" line (else its report line), the same committee, from the two weeks before; a "Voted Do Not Pass" line takes
+  a report with no more ayes than noes. Senate committee votes had no tallies before (none shown); on the four reports
+  saved for testing (SB 1300 of 2024; SB 869, SB 1142, HB 1707 of 2026) all four became named votes. The first copy is
+  about 1,300 reports for 2024-2026 at a second each, alongside the Senate's other work.

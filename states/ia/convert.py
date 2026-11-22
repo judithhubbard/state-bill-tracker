@@ -52,8 +52,10 @@ Lines aren't always in date order (they're in journal order): sorted by day, the
 Votes: each passage member by member from Open States' roll call ("Shall the bill pass?") of that house, day and tally,
 else the history's tally (Open States has roll calls for about half of the passages; fetch.py's roll-call PDFs aren't
 read here yet). 2025-26's roll calls name each voter's Open States person, with district; 2023-24's give surnames, tied to
-this General Assembly's members within the house when only one has that surname. Committee votes are the history's
-tallies, with no names.
+this General Assembly's members within the house when only one has that surname. Committee votes: the history's tallies
+(the House's, since 2025), with members' names from the House and Senate Journals' committee reports when fetch.py has
+read that day's journal (`committee_names()`, states/ia/journals.py); the Senate's histories give no tallies, so its
+committee votes come only from the journals.
 
 "What it does": the Legislative Services Agency's explanation from the bill as introduced (texts/<bill>.json, read by
 fetch.py) when it's there, labelled as describing the bill as introduced; otherwise none (the title is the official one).
@@ -574,6 +576,78 @@ def dedupe(listed, h):
     return [[s if c[s] <= 1 else f"{h}?{s}", code] for s, code in listed]
 
 
+def journal_votes(session):
+    """The committee votes the House and Senate Journals print, by house (states/ia/journals.py)."""
+    k = ("journals", session)
+    if k not in _CACHE:
+        from states.ia import journals as J
+        _CACHE[k] = J.read(folder(session))
+    return _CACHE[k]
+
+
+def study_of(session):
+    """Study bills the Disposition of Bills lists as renumbered: {"HF2709": ["HSB751"]} (most 2025-26 study bills' own
+    histories aren't read, so their chains don't hold them)."""
+    k = ("study_of", session)
+    if k not in _CACHE:
+        out = defaultdict(list)
+        for sb, x in listing(session).items():
+            m = RENUMBER.search((x or {}).get("last") or "")
+            if re.fullmatch(r"[HS]SB\d+", sb) and m:
+                out[key_of(m.group(1))].append(sb)
+        _CACHE[k] = dict(out)
+    return _CACHE[k]
+
+
+def _days_apart(a, b):
+    try:
+        return abs((date.fromisoformat(a) - date.fromisoformat(b)).days)
+    except ValueError:
+        return 99
+
+
+def committee_names(session, chain, reports, fvotes):
+    """Committee votes by member from the journals: each "Committee report" line of the chain gets the journal's entry for
+    one of its numbers, in that house, reported within three days (the House's recommendation date, the Senate's journal
+    day), from the same committee. A line with the history's "Committee vote" tally (the House's, since 2025) takes the
+    entry's names only when the tallies agree; one without (the Senate's histories give none) becomes a vote with the
+    journal's counts. Names are tied to the house's members as floor votes' are; yeas are left out, as there."""
+    jv = journal_votes(session)
+    if not jv["H"] and not jv["S"]:
+        return fvotes
+    nums, used = set(chain) | {s for n in chain for s in study_of(session).get(n, ())}, set()
+    for rep in reports:
+        h, c, d, k, vi = rep[:5]
+        line = rep[5] if len(rep) > 5 else ""
+        inferred = line == "inferred"
+        # A committee bill whose study bill isn't read here: the committee reported the study bill ("Committee Bill
+        # (Formerly House Study Bill 751)") days before the new number's first line, so up to two weeks before.
+        cands = [(i, e) for i, e in enumerate(jv.get(h) or []) if (h, i) not in used and nums & set(e["nums"])
+                 and (0 <= (date.fromisoformat(d) - date.fromisoformat(e["day"])).days <= 14 if inferred
+                      else _days_apart(e["day"], d) <= 3)]
+        if c:
+            cands = [(i, e) for i, e in cands if fold(comm_name(e["committee"])) == fold(c)]
+        if vi is not None:
+            v = fvotes[vi]
+            away = sum(int(x) for x in re.findall(r"(?:Excused|Absent)[.,]?\s*(\d+)", line))
+            cands = [(i, e) for i, e in cands if (e["counts"].get("Y", 0), e["counts"].get("N", 0)) == (v[4], v[5])
+                     and (not re.search(r"Excused|Absent", line) or e["counts"].get("E", 0) + e["counts"].get("A", 0) == away)]
+        elif h == "H" and P.ga_of(session) >= 91 and not inferred:
+            continue  # the House's histories give each committee vote's tally since 2025: no tally, no vote here
+        if not cands:
+            continue
+        i, e = min(cands, key=lambda x: (_days_apart(x[1]["day"], d), x[0]))
+        used.add((h, i))
+        listed = dedupe([[seat_of(session, h, n, e["day"]), code] for code, ns in e["names"].items() if code != "Y"
+                         for n in ns], h)
+        if vi is not None:
+            fvotes[vi][6] = listed
+        else:
+            fvotes.append([h, "C", c or comm_name(e["committee"]) or None, e["day"] if inferred else d, e["counts"].get("Y", 0),
+                           e["counts"].get("N", 0), listed])
+    return fvotes
+
+
 # ---- One record ----
 
 def record(session, chain, secs, parties):
@@ -612,6 +686,7 @@ def record(session, chain, secs, parties):
         return None
 
     last_vote_step = {}
+    reports = []  # each "Committee report" line: [house, committee, day, number, index of its "Committee vote" in fvotes]
     for ci, k in enumerate(chain):
         s = secs[k]
         final = ci == len(chain) - 1
@@ -630,6 +705,9 @@ def record(session, chain, secs, parties):
                     add(f"Introduced in the {HOUSE[hh]}", "intro")
                 if m.group(2):
                     c = comm_name(m.group(2))
+                    if ci == 0 and committee_sponsor and first_ref is None and fold(c) != fold(committee_sponsor):
+                        # A committee's own bill sent on to another committee: its committee's vote is in the journal.
+                        reports.append([hh, committee_sponsor, d, k, None, "inferred"])
                     comm, place, where = c, "committee", hh
                     refs.append((hh, c))
                     if first_ref is None and hh == origin:
@@ -641,6 +719,7 @@ def record(session, chain, secs, parties):
                         first_ref = committee_sponsor
                         refs.append((hh, committee_sponsor))
                         reported.add((hh, committee_sponsor))
+                        reports.append([hh, committee_sponsor, d, k, None, "inferred"])
                     place, comm, where = "floor", None, hh
                     cal = m.group(3)
                     add(f"On the {HOUSE[hh]} calendar" + (f" (the {cal} calendar)" if cal else ""), "calendar")
@@ -683,6 +762,7 @@ def record(session, chain, secs, parties):
                 n = key_of(m.group(1))
                 c = comm or committee_sponsor or ""
                 reported.add((hh, c))
+                reports.append([hh, c, d, k, None])
                 add("REPORTED", "reported")
                 add(f"The {c} Committee approved it as a new bill, {spaced(n)}" if c else f"Approved by the committee as a new bill, {spaced(n)}", "renumber")
                 continue
@@ -693,6 +773,7 @@ def record(session, chain, secs, parties):
                     add(f"The {c} Committee recommended indefinite postponement (killing it)", "commfail")
                     continue
                 reported.add((hh, c))
+                reports.append([hh, c, d, k, None])
                 what = "approved it with amendments" if "amendment" in m.group(1) else "approved it"
                 add("REPORTED", "reported")
                 add(f"The {c} Committee {what}" if c else f"The committee {what}", "report")
@@ -704,6 +785,9 @@ def record(session, chain, secs, parties):
                 if ty:
                     hc = last_vote_step.get("C") or (hh, comm or committee_sponsor or "", d)
                     fvotes.append([hc[0], "C", hc[1] or None, d, ty[0], ty[1], []])
+                    if reports and reports[-1][4] is None and reports[-1][0] == hc[0]:
+                        reports[-1][4] = len(fvotes) - 1
+                        reports[-1].append(t)
                     add(f"Committee vote: {ty[0]}-{ty[1]}", "routine")
                 continue
             if re.match(r"Placed on (?:(.+?) )?calendar", t):
@@ -976,7 +1060,7 @@ def record(session, chain, secs, parties):
             dates(lambda x: x[3] == "signed") if stage == 5 else "",
             dates(lambda x: x[3] == "vetoed"),
         ],
-        "votes": sorted(fvotes, key=lambda v: v[3]), "firstComms": [(origin, first_ref, left_first)] if first_ref else [],
+        "votes": sorted(committee_names(session, chain, reports, fvotes), key=lambda v: v[3]), "firstComms": [(origin, first_ref, left_first)] if first_ref else [],
         "vers": vers,
         "source": lead_sec["source"],
         "_official": official, "_sponsor": (first_member or by_num[lead])[0], "_lead": lead,

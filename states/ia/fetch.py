@@ -57,6 +57,12 @@ the next one once its prefiled bills are listed, into data/ia/<first year>/ (202
   passage votes (and votes on bills substituted for the other house's companion); amendment votes aren't read. The list
   is read every run during January to June of its year, weekly after while its General Assembly is current, and monthly
   for the older ones (the shared window, states/window.py: from the 90th, 2023-24, until 2029).
+- journals/<H20260219>.txt: the House or Senate Journal of a day (/docs/publications/HJNL/20260219_HJNL.pdf, SJNL for
+  the Senate, as text by pdftotext -layout), read once (2026-11-22): their committee reports print each committee's
+  final vote member by member ("Final Vote: Yeas, 18: Bousselot, ... Nays, 2: Knox and Schultz. Excused, none."; the
+  House's only since 2025). The days of the histories' committee reports (`journal_days()`, states/ia/journals.py), the
+  newest first; EARLY_JOURNALS (6) requests each run before the histories' backfill, the rest with the extras. About
+  500 for the 90th and 91st General Assemblies. A day without a journal (404) is noted and not asked again.
 - state.json: each bill's signal ("sig", its last action and date) when its history was read, the day it was read
   ("read"), bills that answer 404 ("absent"), texts read or absent, and when the lists were read.
 And into data/ia/members/<first year>/: house.html and senate.html (/legislators/house?ga=91: name, district, party,
@@ -77,8 +83,8 @@ the bot check's cut left no requests for them. After
 that, out of session, a run is a few requests (the lists); during a session, the bills that moved and their votes.
 
 Not downloaded: leaders (only under /chambers/, which robots.txt bars); fiscal notes, the governor's letters on vetoes and
-item vetoes, the LSA's "Summary of Legislation" and bill versions after the first (PDFs); committee votes by member (only
-in minutes); amendment votes; committee meeting agendas.
+item vetoes, the LSA's "Summary of Legislation" and bill versions after the first (PDFs); committee minutes (prose, written
+differently by each committee's secretary); amendment votes; committee meeting agendas.
 
 data/ia/incomplete says "running" during the first copy, then lists what was never downloaded (a General Assembly's
 lists, a listed HF, SF, HJR or SJR's history, the current members or committees); it is removed when nothing is
@@ -551,6 +557,68 @@ def roll_calls(ga, folder, state):
         print(f"{year} roll calls: {got} of {len(todo)} read", flush=True)
 
 
+def journal_days(ga, folder):
+    """The House and Senate Journals that can hold committee votes by member (states/ia/journals.py), newest first: the
+    days of the histories' "Committee report" lines, and for the House the two weekdays after (it prints a recommendation
+    in a later day's journal) and the four before a committee bill's first line (its study bill's report, when the study
+    bill's own history isn't read). The House only from the 91st General Assembly: its journals before 2025 print no
+    committee votes."""
+    from states.ia import convert as C, journals as J
+    try:
+        _, secs = C.chains(first_year(ga))
+    except Exception as e:  # the histories unreadable: nothing to ask for this run
+        print(f"{ga} journals: histories unreadable ({type(e).__name__}: {e})", flush=True)
+        return []
+    out = set()
+    for (h, day) in list(J.report_days(secs)) + J.committee_bill_days(secs):
+        if h == "H" and ga < 91:
+            continue
+        out.add((h, day))
+        if h == "H":
+            out |= {(h, d) for d in J.next_days(day, 3)[:2]}
+    return sorted(((h, d) for h, d in out if d <= TODAY.isoformat()), key=lambda x: (x[1], x[0]), reverse=True)
+
+
+def journals(ga, folder, state, limit=None):
+    """Each wanted day's House or Senate Journal (/docs/publications/HJNL/20260219_HJNL.pdf; robots.txt bars only
+    /chambers/) as text, journals/<H|S><YYYYMMDD>.txt, once: their committee reports print each committee's final vote
+    member by member. A day with no journal (404: no session) is noted and not asked again. `limit`: at most that many
+    requests this call (a few go early each run, before the backfill takes what the bot check leaves)."""
+    from states.ia import journals as J
+    if not PDFTOTEXT:
+        return
+    gone = state.setdefault("journals_absent", {})
+    todo = [(h, d) for h, d in journal_days(ga, folder)
+            if not os.path.exists(J.path(folder, h, d)) and f"{h}{d}" not in gone]
+    if not todo:
+        return
+    if limit is not None:
+        todo = todo[:limit]
+    os.makedirs(os.path.join(folder, "journals"), exist_ok=True)
+    print(f"{ga} journals: {len(todo)} to read", flush=True)
+    got = 0
+    for h, d in todo:
+        if out_of_time():
+            break
+        body = request(J.url(SITE, h, d), f"{ga} journal {h}{d}", must=b"%PDF", binary=True)
+        if body is None:
+            if CODE[0] == 404:
+                gone[f"{h}{d}"] = TODAY.isoformat()
+            continue
+        words = pdf_text(body)
+        if not words or "JOURNAL OF THE" not in words:
+            FAILS["unreadable journal"] += 1
+            continue
+        save_text(words, J.path(folder, h, d))
+        got += 1
+        STATS["journals"] += 1
+    save(state, os.path.join(folder, "state.json"))
+    print(f"{ga} journals: {got} of {len(todo)} read", flush=True)
+
+
+EARLY_JOURNALS = 6  # journal requests each run before the histories' backfill
+
+
 # ----------------------------------------------------------------------------------------------- members, committees
 
 def member_page(page, pid):
@@ -826,6 +894,14 @@ def main():
         if ga_of(YEAR) in gas and not out_of_time():
             members(ga_of(YEAR))
             committees(ga_of(YEAR))
+        # A few journals (committee votes by member, 2026-11-22) before the backfill too, the newest General Assembly's
+        # first.
+        early = EARLY_JOURNALS
+        for ga in listed:
+            if early > 0 and not out_of_time():
+                before = STATS["requests"]
+                journals(ga, os.path.join(DATA, str(first_year(ga))), states[ga], limit=early)
+                early -= STATS["requests"] - before
         # A few texts ("What it does") before the backfill (2026-11-22): it used to take every request the bot check
         # left, so no text was ever read. The current General Assembly's laws first.
         for ga in listed[:1]:
@@ -843,6 +919,8 @@ def main():
                 enrolled(ga, folder, states[ga])
             if not out_of_time():
                 roll_calls(ga, folder, states[ga])
+            if not out_of_time():
+                journals(ga, folder, states[ga])
             save(states[ga], os.path.join(folder, "state.json"))
         for ga in listed:
             if not out_of_time():
@@ -863,7 +941,7 @@ def main():
         votes = sum(len(os.listdir(os.path.join(folder, "votes", d))) for d in os.listdir(os.path.join(folder, "votes"))
                     if os.path.isdir(os.path.join(folder, "votes", d))) if os.path.isdir(os.path.join(folder, "votes")) else 0
         sizes.append(f"{ga}th: {count('bills')} bills, {count('study')} study bills, {count('texts')} texts, "
-                     f"{votes} roll calls")
+                     f"{votes} roll calls, {count('journals')} journals")
     print(f"run: {STATS['requests']} requests, {round((time.time() - START) / 60, 1)} min"
           + (f"; read {', '.join(f'{n} {k}' for k, n in STATS.items() if k != 'requests')}" if len(STATS) > 1 else "")
           + (f"; have {'; '.join(sizes)}" if sizes else "")

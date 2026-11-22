@@ -80,3 +80,32 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   `main()` reads EARLY_TEXTS (8) texts of the current General Assembly each run right after the bills that moved and the
   members, before the backfill: laws and vetoes first (the list's last action), then the bills that moved most recently.
   About 380 laws and vetoes of 2025-26: a few days of runs. Not run from the owner's computer; shows as the runs read them.
+- **Committee votes by member (2026-11-22):** from the House and Senate Journals' committee reports
+  (www.legis.iowa.gov/docs/publications/HJNL/20260219_HJNL.pdf, SJNL for the Senate; robots.txt, re-read 2026-11-22, is
+  "User-agent: * / Disallow: /chambers/ / Sitemap: ...", so /docs/ is allowed). Each report prints "Final Vote: Yeas, 18:
+  Bousselot, ... Nays, 2: Knox and Schultz. Excused, none." (Senate, 2023-24 and 2025-26) or "Final Vote: Yeas, 17:
+  Representatives Wulf-CH, ... Nays, 6: Cooling, ... Excused, 0." (House, since 2025 only: its 2023-24 journals print the
+  recommendations without votes, so the House's 2023-24 committee votes have no names). fetch.py `journals()` reads each
+  wanted day's journal once as text (journals/<H|S><YYYYMMDD>.txt): the days of the histories' committee reports, for the
+  House also the two weekdays after (Commerce's recommendation of February 18, 2026 is in the 19th's journal) and the four
+  before a committee bill's first line; about 500 for the 90th and 91st. EARLY_JOURNALS (6) requests a run go before the
+  histories' backfill, the rest with the extras; a 404 (no session that day) is noted and not asked again. Never fetched
+  from the owner's computer (the samples for writing it, 2026-11-22, came through a web fetch service). `states/ia/journals.py`
+  parses them; convert.py's `committee_names()` ties each "Committee report" line to the journal's entry for one of the
+  chain's numbers (or the study bill the Disposition of Bills lists as renumbered into it: "Committee Bill (Formerly House
+  Study Bill 751)" is HF 2709), same house and committee, within three days, only when every group's names add up to its
+  count and, where the history has a "Committee vote" tally (the House since 2025), the yeas and nays agree. The Senate's
+  histories have no committee tallies, so its committee votes come only from the journals (a new kind "C" vote on the
+  report line); a committee's own bill whose study bill isn't read gets its committee's vote dated the journal's
+  recommendation day. Names are matched like floor votes' (surnames, "J. Taylor", "Trone Garriott"; senators who left
+  stay names: "S?Boulton"); yeas are left out. On the four journals saved for testing (S 2025-03-06, S 2024-02-14,
+  H 2026-02-19, H 2023-03-01; the last has no votes): all 95 "Final Vote" entries parsed, and 93 are on a bill's
+  committee vote with names (Senate 33 of 33 in 2023-24, 26 of 26 in 2025-26; House 34 of 36: 16 named into the history's
+  tallies, 18 committee bills from study bills, HSB 676's HF 2699 among them, referred on to Appropriations); the two left
+  are HSB 753 (not yet listed as renumbered) and HJR 2004 (not a constitutional amendment, left out). Committee votes with
+  names on that data: 2023-24 0 -> 33, 2025-26 0 -> 60 (of 598 committee votes, most still tallies only until fetch.py
+  has read their journals). Not read: the
+  committee minutes (legis.iowa.gov/committees/meetings/minutes?meetingID=..., PDFs in prose written differently by each
+  secretary: "on a roll call vote of 14 ayes (Representatives ...), 6 nays (...)", "Short form vote was called. Nays:
+  ...", "Ayes all"; the Senate's give no counts and say members excused "until they arrive"), which would be the only
+  source for the House's 2023-24 committee votes.

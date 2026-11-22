@@ -105,3 +105,18 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2024-26: passages, concurrences, free conference reports, consent passages): all 63 tallies matched, every group's names
   added up, every 2026 name tied to a seat, 2025's six untied all Senator Yates's (no longer a member), 2024's 36 all
   former members or members since moved to the Senate. Before: 1,770 floor votes, none naming members. The rest arrive with the next downloads.
+- **Committee votes by member: looked into, not built (2026-11-22).** No text source: committees report "favorably" with
+  no tally in the bill histories, each bill's vote_history.pdf has floor roll calls only, and the standing committees'
+  meeting-materials pages (CommitteeDocuments/<id>/) carry agendas and amendments, no minutes. The only record is the
+  LRC's daily scans (/record/26rs/committee_votes_House.html -> house_votes/<day>_comm_votes.pdf, and the Senate's;
+  60 House and 60 Senate PDFs in 2024 and 2026, 30 each in 2025; 4 to 13 pages each; apps.legislature.ky.gov's
+  robots.txt answers 404, none). Each page is a 300 dpi scan of the committee's report form: the House's lists "Rep Chad
+  Aull ... Yes No Pass" with the vote circled by hand; the Senate's a grid of Yea/Nay/Pass cells with hand checkmarks.
+  The totals ("ROLL CALL 14 Yes 3 No 2 Pass", the Senate's "Totals") are handwritten. Measured on HB 20's day (2026
+  House PDF 20, 12 roll-call sheets, and Senate PDF 20): tesseract reads the printed names, bill and committee well
+  (House; the Senate's grid lines garble them), but none of the 11 nonzero handwritten totals (best of psm 7/8/10/13,
+  digits only, underline removed), so no sheet can be checked against its own totals. A prototype reading the House's
+  circles (ink in the gaps around each printed Yes/No/Pass) got 40 of 42 members right on two sheets after tuning on
+  those same sheets; the two misses (a "No" circle drawn mostly over the Yes-No gap, a stray tick by an absent
+  member's Yes) look like real votes to it, and one of the two sheets came out wrong. Left out until the totals can be
+  read (a handwriting-capable reader) or the LRC publishes the tallies as text.

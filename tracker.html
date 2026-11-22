@@ -3159,6 +3159,9 @@ function carryBox() {
 
 // ---- Votes ----
 const VOTE_WORDS = { N: "No", E: "Excused", A: "Absent", B: "Abstained" };
+// A committee vote's committee as the contacts name it: Massachusetts's votes say "Joint Committee on Housing" for the
+// contacts' "Housing".
+const voteComm = (v) => (v.committee || "").replace(/^(?:Joint |House |Senate )?Committee on (?:the )?/, "");
 function voteOf(v, L) {
   // (A committee report's signatures aren't votes: kind "R", reportLine().)
   if (!L || v.house !== L.house || v.kind === "R") return null;
@@ -3166,7 +3169,7 @@ function voteOf(v, L) {
   const start = DATA.profiles?.[L.id]?.start;
   if (start && v.date < start) return null;
   // Only committee members vote in committee.
-  if (v.kind === "C" && !(L.committees || []).some((c) => commKey(c.name) === commKey(v.committee))) return null;
+  if (v.kind === "C" && !(L.committees || []).some((c) => commKey(c.name) === commKey(voteComm(v)))) return null;
   const code = v.notYes.get(L.id);
   if (code) return VOTE_WORDS[code] || code;
   // A vote known only by its tally (Kansas's and Missouri's roll calls not read yet, Illinois's House): with no names,
@@ -3178,7 +3181,7 @@ function voteOf(v, L) {
 }
 // How many members could vote: the committee's members (as the contacts list them now) or the house's.
 function voteBody(v) {
-  if (v.kind === "C") return (DATA.contacts?.committees || {})[`${v.house}:${commKey(v.committee || "")}`]?.members?.length || Infinity;
+  if (v.kind === "C") return (DATA.contacts?.committees || {})[`${v.house}:${commKey(voteComm(v))}`]?.members?.length || Infinity;
   return LEGS.filter((x) => x.house === v.house).length;
 }
 // Who isn't named on a vote's line: "all members present voted yes" (a committee's vote with no noes and no names) or

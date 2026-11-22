@@ -41,7 +41,7 @@ def check(state):
     C = importlib.import_module(f"states.{state}.convert")
     print(f"== {P.STATE_NAME}")
     loaded = {s: C.load_session(s)[0] for s in importlib.import_module("states.window").shown(P.DATA, C.sessions())}
-    # Committee reports' signatures (AK, WA: votes of kind "R") aren't votes: the vote checks below never see them.
+    # Committee reports' signatures (AK, WA, ME: votes of kind "R") aren't votes: the vote checks below never see them.
     # Each signer is a seat ("H:12|Carrick"), a member with no seat now ("S|Hughes"), or no member of the committee's
     # house ("H?Name"), which is the name read wrongly (or a list split wrongly).
     for s, recs in loaded.items():
@@ -57,6 +57,17 @@ def check(state):
                 f"not matched to a member of the house{f', e.g. {collections.Counter(m for _, m in loose).most_common(4)}' if loose else ''}")
             if bad:
                 say(state, "FAIL", f"{s}: {len(bad)} committee reports with no committee, day or signers, e.g. {bad[:4]}")
+            # A signer named twice on one report (a list read twice, two members matched to one seat), and reports dated a
+            # day the bill's history has no line on (ME's bill pages show only the latest report's division: LD 1343 of
+            # 2025-26 was divided in May 2025 and again in February 2026, so a page's signers belong to its latest report).
+            twice = sorted({n for n, v in reps if len({m for m, _ in v[6]}) < len(v[6])})
+            if twice:
+                say(state, "FAIL" if len(twice) > 0.005 * len(reps) else "LOOK",
+                    f"{s}: {len(twice)} committee reports naming a signer twice, e.g. {twice[:4]}")
+            days = {r["nums"][0]: {a[0] for x in r["vers"] for a in x["actions"]} for r in recs if r["reports"]}
+            off = sorted({n for n, v in reps if str(v[3])[:10] not in days.get(n, set())})
+            if off:
+                say(state, "LOOK", f"{s}: {len(off)} committee reports on a day with no history line, e.g. {off[:4]}")
 
     # The shared topics, with the shared names.
     mine = {k: v[0] for k, v in P.TOPICS.items()}
@@ -365,6 +376,24 @@ def check(state):
         ayes = [r["nums"][0] for r in recs for v in r["votes"] if any(c == "Y" for _, c in v[6]) and sum(1 for _, c in v[6] if c == "Y") != v[4]]
         if ayes:
             say(state, "FAIL", f"{s}: {len(ayes)} votes naming yes votes name a different number than their tally, e.g. {ayes[:4]}")
+        # A committee vote that says the opposite of the committee's report: MD's voting record on an unfavorable report
+        # counts the yeas for the motion to kill the bill (HB 344 of 2026: 17-0, read at first as "Approved by"). A bill
+        # its first committee voted down whose votes there all have more ayes than noes, or one it approved whose votes
+        # there all have more noes (2026-11-22).
+        ckey = lambda n: re.sub(r"[^a-z]", "", (n or "").lower().replace("and", ""))
+        upside = []
+        for r in recs:
+            if not r.get("firstComms") or r["commFate"] not in ("passed", "defeated"):
+                continue
+            h, cname = r["firstComms"][0][0], r["firstComms"][0][1]
+            cv = [v for v in r["votes"] if v[1] == "C" and v[0] == h and ckey(v[2]) == ckey(cname) and v[4] + v[5]]
+            if cv and (all(v[4] > v[5] for v in cv) if r["commFate"] == "defeated" else all(v[5] > v[4] for v in cv)):
+                upside.append(r["nums"][0])
+        if upside:
+            with_c = sum(1 for r in recs if any(v[1] == "C" for v in r["votes"]))
+            say(state, "FAIL" if len(upside) > 0.01 * max(1, with_c) else "LOOK",
+                f"{s}: {len(upside)} bills whose first committee's votes say the opposite of its report (an unfavorable "
+                f"report's yeas read as approval?), e.g. {upside[:4]}")
         # Votes on a day the bill's history has no line for: a roll call matched to the wrong bill or day (KS's override
         # votes filed under HB 2315; a PDF's date read wrongly). Each floor vote should fall on a day of the bill's history.
         fl_all = [(r, v) for r in recs for v in r["votes"] if v[1] == "F" and v[3]]
@@ -383,6 +412,21 @@ def check(state):
         if dup:
             say(state, "FAIL" if len(dup) > 0.005 * sum(len(r["votes"]) for r in recs) else "LOOK",
                 f"{s}: {len(dup)} votes name one seat twice (a surname tied to the wrong member?), e.g. {dup[:4]}")
+        # Committee votes counting more members than the committee has: NV's ayes are the members the minutes list as
+        # present less those named (2026-11-22), so a members list read wrongly, or a motion tied to another committee's
+        # minutes, gives a count above the committee's usual one. (Members away and not named only lower it; a committee
+        # that grew mid-session raises it legitimately, so this LOOKs.)
+        sizes = {}
+        for r in recs:
+            for v in r["votes"]:
+                if v[1] == "C" and v[6]:
+                    sizes.setdefault((v[0], v[2]), []).append(v[4] + sum(1 for _, c in v[6] if c != "Y"))
+        big_c = []
+        for k, ns in sizes.items():
+            usual = max(set(ns), key=ns.count)
+            big_c += [f"{k[0]} {k[1]}: {n} (usually {usual})" for n in ns if n > usual + 1]
+        if big_c:
+            say(state, "LOOK", f"{s}: {len(big_c)} committee votes count more members than their committee usually has, e.g. {big_c[:3]}")
         # Votes put in the wrong house: more ayes and noes than the house has seats (ID's history lines don't name the
         # house, so the converter follows the bill from house to house; WY's roll calls sometimes name the wrong one).
         seats = LEGISLATURES.get(state, {}).get("seats", {})
@@ -401,8 +445,10 @@ def check(state):
             # another session. NH and VT pass many bills by voice vote; next year's prefiled session isn't checked.)
             elsewhere = any(sum(1 for r in x if (r["passedS"] or r["passedA"]) and any(v[1] == "F" for v in r["votes"]))
                             >= 0.6 * max(1, sum(1 for r in x if r["passedS"] or r["passedA"])) for k, x in loaded.items() if k != s)
+            # (Committee votes are a sign only when the session has no floor votes at all: Massachusetts's committees
+            # post every vote by member while its houses pass most bills by voice, 111 of 564 with a roll call in 2025-26.)
             if len(passed) >= 30 and share < 0.2 and s <= date.today().year and \
-                    (elsewhere or any(v[1] == "C" for r in recs for v in r["votes"])):
+                    (elsewhere or not with_floor and any(v[1] == "C" for r in recs for v in r["votes"])):
                 say(state, "FAIL", f"{s}: only {with_floor} of {len(passed)} bills that passed a house have a floor vote "
                                    f"({sum(1 for r in recs for v in r['votes'] if v[1] == 'C')} committee votes): floor votes missing?")
             elif share < 0.6:

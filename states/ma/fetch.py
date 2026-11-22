@@ -9,6 +9,7 @@ robots.txt allows everything; see the state-survey-2026-10-31 memory).
   recent activity.
 - The members (with emails and phones), committees, leadership and session laws.
 - The Senate's roll calls (API) and the House's (the House Journal's yearly PDF of them: states/ma/house_votes.py).
+- Each committee's votes by member (committee_votes(): data/ma/<session>/committee_votes.json, from the 194th on).
 - Committee hearings and the bills on their agendas (hearings(): data/ma/hearings.json, <session>/agendas.json).
 Three requests at a time. Usage: python3 states/ma/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029)
 """
@@ -137,6 +138,83 @@ def rollcalls(session):
     print(f"{session}: {len(have)} Senate roll calls ({len(todo)} read now)")
 
 
+# A history line that may come with a committee vote: a report, a study order, a new draft, a bill placed in the Orders.
+REPORTED = re.compile(r"reported|study order|new draft|ought (?:not )?to pass|Accompanied|Orders of the Day", re.I)
+VOTES_FROM = 2025  # committees post their votes in the API since the 194th General Court's joint rules (2025)
+VOTES_MINUTES = 10  # time for committee votes in one run (the first copy, about 8,000 bills, takes a few runs)
+
+
+def committee_votes(session):
+    """Each committee's vote on a bill, member by member, into data/ma/<session>/committee_votes.json: {"H4321": {"n":
+    history lines when read, "v": [{"c": code, "a": its recommendation, "q": the question, "d": date, "b": bill,
+    "g": [{"F": [member codes], "A": [...], "R": [...], "N": [...]}]}]}}. GET /api/GeneralCourts/<court>/Documents/<bill>
+    gives CommitteeRecommendations[].Votes[], one group per branch for a joint committee (Favorable, Adverse,
+    ReserveRight, NoVoteRecorded). Read for bills whose history has a committee report, again when the history grows;
+    at most VOTES_MINUTES a run, the bills never read first. A failure keeps the last copy; never incomplete."""
+    if session < VOTES_FROM:
+        return
+    gc = court_of(session)
+    folder = os.path.join(DATA, str(session))
+    path = os.path.join(folder, "committee_votes.json")
+    try:
+        have = json.load(open(path))
+    except (OSError, ValueError):
+        have = {}
+    todo = []
+    for f in sorted(os.listdir(os.path.join(folder, "bills"))):
+        b = f[:-5]
+        try:
+            h = json.load(open(os.path.join(folder, "bills", f)))
+        except (OSError, ValueError):
+            continue
+        if any(REPORTED.search(a.get("Action") or "") for a in h) and (have.get(b) or {}).get("n") != len(h):
+            todo.append((b not in have, b, len(h)))
+    todo.sort(key=lambda x: (not x[0], x[1]))
+    stop = time.time() + 60 * VOTES_MINUTES
+    read = failed = 0
+
+    def one(item):
+        _, b, n = item
+        if time.time() > stop:
+            return b, n, None
+        return b, n, get(f"{API}/GeneralCourts/{gc}/Documents/{b}")
+
+    with ThreadPoolExecutor(3) as pool:
+        for b, n, d in pool.map(one, todo):
+            if d is None and time.time() > stop:
+                continue
+            if not d:
+                failed += 1
+                continue
+            out = []
+            for r in d.get("CommitteeRecommendations") or []:
+                for v in r.get("Votes") or []:
+                    groups = [{k[0]: [m.get("MemberCode") for m in x if m.get("MemberCode")] for k, x in g.items()
+                               if k in ("Favorable", "Adverse", "ReserveRight", "NoVoteRecorded") and x}
+                              for g in v.get("Vote") or []]
+                    out.append({"c": (v.get("Committee") or r.get("Committee") or {}).get("CommitteeCode"), "a": r.get("Action"),
+                                "q": " ".join((v.get("Question") or "").split()), "d": (v.get("Date") or "")[:10],
+                                "b": (v.get("Bill") or {}).get("BillNumber") or b, "g": [g for g in groups if g]})
+            have[b] = {"n": n, "v": out}
+            read += 1
+    save(path, have)
+    # Committee names by code (contacts.py writes them for the current court; a past one's are read here once).
+    names_path = os.path.join(folder, "committee_names.json")
+    try:
+        names = json.load(open(names_path))
+    except (OSError, ValueError):
+        names = {}
+    missing = sorted({v["c"] for x in have.values() for v in x["v"] if v.get("c") and v["c"] not in names})
+    for c in missing[:20]:
+        d = get(f"{API}/GeneralCourts/{gc}/Committees/{c}")
+        if d and d.get("FullName"):
+            names[c] = d["FullName"]
+    if missing:
+        save(names_path, names)
+    print(f"{session}: committee votes: {read} bills read now ({failed} failed, {len(todo) - read - failed} left for "
+          f"later runs); {sum(len(x['v']) for x in have.values())} votes on {sum(1 for x in have.values() if x['v'])} bills", flush=True)
+
+
 FIRST_HEARINGS = 150  # with no cache yet, read only this many of the newest hearings (ids rise as hearings are posted)
 NEW_HEARINGS_MAX = 300  # new hearings read in one run at most
 
@@ -230,6 +308,10 @@ def main():
                 house_votes.fetch(s, os.path.join(DATA, str(s)))
             except Exception as e:
                 print(f"{s}: House roll calls: stopped ({type(e).__name__}: {e}); kept the last copy", flush=True)
+            try:  # committees' votes by member: never hold the run back
+                committee_votes(s)
+            except Exception as e:
+                print(f"{s}: committee votes: stopped ({type(e).__name__}: {e}); kept the last copy", flush=True)
         if s < CURRENT and not os.path.exists(os.path.join(DATA, str(s), "member_details.json")):
             contacts.details(s)
     try:

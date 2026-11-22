@@ -35,8 +35,8 @@ data/nv/<year>/:
   [["Anderson, Natha", "Yea"], ...], "short": true when the list has fewer names than "All"}]}. From the Votes tab
   (one link per kind of vote), /Bill/GetBillVotes (each vote's house, result and counts) and
   /Bill/GetBillVoteMembers?voteResultPanel=All (every member's vote). Read only for bills whose history shows a
-  recorded vote ("Yeas"), and again when those history lines change. Committee votes aren't in NELIS (only in the
-  minutes, PDFs): the hearings' recommendations are all there is.
+  recorded vote ("Yeas"), and again when those history lines change. Committee votes aren't in NELIS's records: they
+  are in the committees' minutes (below).
 - committees.html (/HomeCommittee/LoadCommitteeListTab: the Assembly's and Senate's standing committees with their
   codes and regular meeting times, then subcommittees) and committees/<key>.html (each standing committee's Overview
   tab: members, "- Chair", "- Vice Chair", each linked to a legislator page by house and district, and staff);
@@ -44,6 +44,20 @@ data/nv/<year>/:
   "house", "district"}]}]. Ways and Means' and Finance's budget subcommittees aren't read. The next session's
   committees are listed only once it organizes (none in November 2026; prefiled bills' committee sponsors are then
   links without a name).
+- meetings.json and minutes/: committee votes. NELIS has no committee roll calls; the minutes (PDFs, typed by the
+  committee secretary) record each work-session motion and who voted no or was away ("ASSEMBLYMEMBER MARZOLA MOVED TO
+  AMEND AND DO PASS SENATE BILL 20 (1ST REPRINT). ... THE MOTION PASSED. (ASSEMBLYMEMBERS COLE, GRAY, HANSEN, HARDY, AND
+  YUREK VOTED NO.)"), after the list of the committee's members present and absent. Each standing committee's Meetings
+  tab (/Committee/FillSelectedCommitteeTab?selectedTab=Meetings: every meeting with its date, its minutes' link once
+  they're final, /Session/83rd2025/Minutes/Assembly/JUD/Final/1117.pdf, and each bill taken up with the result, "SB20:
+  Amend, and do pass as amended") goes into meetings.json: {"read", "committees": {"447": {"house", "code", "name",
+  "meetings": [{"key", "date", "minutes", "bills": {"SB20": "Amend, and do pass as amended"}}]}}}. Only the minutes of
+  meetings that reported, re-referred or postponed a bill this script keeps are downloaded, once each, as text
+  (pdftotext -layout, runs of spaces squeezed: minutes/<Assembly-JUD-1117>.txt.gz); joint meetings filed under the
+  other house's committee are left out. The links point at www. and redirect to archive.leg.state.nv.us, whose
+  robots.txt is the same (checked 2026-11-22). At most MINUTES_MAX a run, after the votes; a minutes file that fails
+  three times is left (state.json's "minutes_fail") and never holds Nevada back. The Meetings tabs are read weekly while
+  a session's minutes can still be finished (until the end of its year), once after.
 - members/assembly.html and senate.html (www.leg.state.nv.us/App/Legislator/A/<Assembly|Senate>/<session>: 42 and 21
   members with party, district and county, and whether each is still serving) and members/<A01>.html, <S05>.html (each
   member's page, by house and district: post ("Speaker Pro Tempore"), party, district, county, Carson City office and
@@ -71,7 +85,8 @@ builds up over several runs. Out of session a run reads the next session's lists
 session's vetoed bills weekly: a few minutes. During a session, about 1,200 Overviews a day (spread over the runs)
 plus the votes of bills that had one.
 
-Not downloaded: bill texts, amendments, fiscal notes, exhibits, committee minutes and agendas (PDFs or other pages);
+Not downloaded: bill texts, amendments, fiscal notes, exhibits, agendas and the minutes of meetings that reported no
+bill (PDFs or other pages);
 the veto messages (under /Reports/, which robots.txt bars); the Histories (PDFs); members' email addresses (above).
 
 data/nv/incomplete says "running" during the first copy, then lists what was never downloaded (a session's bill list,
@@ -80,7 +95,7 @@ later runs and don't hold the state back. A request that fails where a last copy
 count.
 Usage: python3 states/nv/fetch.py [year]   (default: every session above; a single year leaves the marker alone)
 """
-import hashlib, html, json, os, re, subprocess, sys, tempfile, time
+import gzip, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.parse
 from collections import Counter
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -96,6 +111,8 @@ TIMEOUT = 90  # seconds for a whole request
 TYPES = ("AB", "SB", "AJR", "SJR")
 AMENDS = re.compile(r"\bamend the (Nevada )?Constitution|Constitution of the State of Nevada", re.I)
 REFRESH_MAX = 300  # bills read again per run for being stale (runs are two hours apart on GitHub)
+MINUTES_MAX = 300  # committee minutes (PDFs) downloaded per run
+REPORTS = re.compile(r"do pass|without recommendation|re-?refer|postpone|rescind", re.I)  # a meeting's results worth its minutes
 WEEKLY = 7
 MARKER = os.path.join(DATA, "incomplete")
 
@@ -527,6 +544,163 @@ def committees(year, folder, state):
         state["committees"] = TODAY.isoformat()
 
 
+# ---- committee minutes (committee votes) ----
+
+def parse_meetings(tab, sess):
+    """A committee's Meetings tab: [{key, date, minutes, bills: {"SB20": "Amend, and do pass as amended"}}]."""
+    out = []
+    parts = re.split(rf'<h2 class="h4">\s*<a href="/App/NELIS/REL/{sess}/Meeting/(\d+)">', tab)
+    for i in range(1, len(parts), 2):
+        body = parts[i + 1]
+        head = flat(body.split("</a>")[0])
+        when = re.search(r"([A-Z][a-z]+ \d{1,2}, \d{4})", head)
+        try:
+            day = datetime.strptime(when.group(1), "%B %d, %Y").date().isoformat() if when else ""
+        except ValueError:
+            day = ""
+        link = re.search(r'href="(https?://[^"]*/Minutes/[^"]+\.pdf)"', body)
+        bills = {}
+        for x in re.findall(r"billBudgetRecommendationString=([^\"&]*)", body):
+            num, _, rec = urllib.parse.unquote(html.unescape(x)).partition(":")
+            if re.fullmatch(r"[A-Z]+\d+", num):
+                bills[num] = rec.strip()
+        out.append({"key": int(parts[i]), "date": day, "head": head, "minutes": link.group(1) if link else "",
+                    "bills": bills})
+    return out
+
+
+def minutes_name(url):
+    """".../Minutes/Assembly/JUD/Final/1117.pdf" -> "Assembly-JUD-1117", or None for a draft or another kind of link."""
+    m = re.search(r"/Minutes/(Assembly|Senate)/([A-Za-z]+)/Final/(\d+)\.pdf$", url or "")
+    return f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None
+
+
+def meetings(year, folder, state):
+    """Each standing committee's Meetings tab: weekly until the end of the session's year (minutes are finished weeks
+    after a meeting), then once more."""
+    last = state.get("meetings") or ""
+    if last and (last > f"{year}-12-31" or last >= ago(WEEKLY)):
+        return
+    comms = load(os.path.join(folder, "committees.json")) or []
+    if not comms:
+        return
+    sess = session_name(year)
+    path = os.path.join(folder, "meetings.json")
+    out = load(path, {}) or {}
+    have = out.setdefault("committees", {})
+    ok = True
+    for c in comms:
+        if c.get("code") in ("COW", ""):
+            continue  # the Committee of the Whole has no work sessions
+        if out_of_time():
+            ok = False
+            break
+        tab = request(f"/App/NELIS/REL/{sess}/Committee/FillSelectedCommitteeTab?selectedTab=Meetings"
+                      f"&committeeOrSubCommitteeKey={c['key']}", f"{year} meetings {c['name']}", "committee-meetings-tab")
+        if tab is None:
+            ok = False  # the last copy stays
+            continue
+        have[str(c["key"])] = {"house": c["house"], "code": c["code"], "name": c["name"],
+                               "meetings": parse_meetings(tab, sess)}
+    out["read"] = TODAY.isoformat()
+    save(out, path)
+    n = sum(len(x["meetings"]) for x in have.values())
+    print(f"{year} meetings: {n} in {len(have)} committees", flush=True)
+    if ok:
+        state["meetings"] = TODAY.isoformat()
+
+
+def wanted_minutes(folder, listing):
+    """[(name, url)]: the final minutes of each meeting that reported, re-referred or postponed a kept bill, filed under
+    the committee's own house and code."""
+    info = load(os.path.join(folder, "meetings.json")) or {}
+    keep, out = wanted(listing), {}
+    for c in (info.get("committees") or {}).values():
+        for m in c["meetings"]:
+            name = minutes_name(m.get("minutes"))
+            if not name or not name.startswith(f"{c['house']}-{c['code']}-"):
+                continue  # a draft, or a joint meeting filed under the other house's committee
+            if any(k in keep and REPORTS.search(r) for k, r in m["bills"].items()):
+                out[name] = m["minutes"]
+    return sorted(out.items())
+
+
+def pdf_text(url):
+    """The text of the PDF at url (pdftotext -layout, runs of spaces squeezed), or None after two tries."""
+    with tempfile.NamedTemporaryFile(dir=DATA, suffix=".part", delete=False) as tmp:
+        part = tmp.name
+    try:
+        for attempt in range(2):
+            if out_of_time():
+                return None
+            wait = LAST[0] + DELAY - time.time()
+            if wait > 0:
+                time.sleep(wait)
+            LAST[0] = time.time()
+            STATS["requests"] += 1
+            try:
+                r = subprocess.run(["curl", "-s", "-S", "-L", "--max-redirs", "3", "-m", str(TIMEOUT), "-A", AGENT,
+                                    "-o", part, "-w", "%{http_code}", url], capture_output=True, text=True,
+                                   timeout=TIMEOUT + 30)
+            except subprocess.TimeoutExpired:
+                FAILS["minutes timeout"] += 1
+                continue
+            code = int((r.stdout or "0").strip() or 0)
+            if code in (401, 403, 429):
+                FAILS[f"HTTP {code}"] += 1
+                raise Refused(f"{url}: HTTP {code}")
+            with open(part, "rb") as f:
+                head = f.read(5)
+            if r.returncode or code != 200 or head != b"%PDF-":
+                FAILS[f"minutes HTTP {code}" if code != 200 else "minutes not a PDF"] += 1
+                time.sleep(5)
+                continue
+            t = subprocess.run(["pdftotext", "-layout", part, "-"], capture_output=True)
+            if t.returncode:
+                FAILS["pdftotext failed"] += 1
+                return None
+            body = t.stdout.decode("utf-8", errors="replace")
+            return "\n".join(re.sub(r"[ \t]+", " ", x).strip() for x in body.split("\n"))
+        return None
+    finally:
+        os.remove(part)
+
+
+def minutes(year, folder, state, listing, budget):
+    """Download the wanted minutes not yet saved, at most budget of them. Returns how many were tried."""
+    out_dir = os.path.join(folder, "minutes")
+    fails = state.setdefault("minutes_fail", {})
+    todo = [(n, u) for n, u in wanted_minutes(folder, listing)
+            if not os.path.exists(os.path.join(out_dir, f"{n}.txt.gz")) and fails.get(n, 0) < 3]
+    if not todo or budget <= 0:
+        return 0
+    if not shutil.which("pdftotext"):
+        print(f"{year} minutes: {len(todo)} to read, but pdftotext isn't installed; skipped", flush=True)
+        return 0
+    os.makedirs(out_dir, exist_ok=True)
+    print(f"{year} minutes: {len(todo)} to read", flush=True)
+    got = tried = 0
+    for n, u in todo[:budget]:
+        if out_of_time():
+            break
+        tried += 1
+        body = pdf_text(u)
+        if not body or "COMMITTEE MEMBERS PRESENT" not in body.upper():
+            fails[n] = fails.get(n, 0) + 1
+            continue
+        tmp = os.path.join(out_dir, f"{n}.txt.gz.tmp")
+        with gzip.open(tmp, "wt", encoding="utf-8") as f:
+            f.write(body)
+        os.replace(tmp, os.path.join(out_dir, f"{n}.txt.gz"))
+        fails.pop(n, None)
+        got += 1
+        STATS["minutes"] += 1
+        if got % 25 == 0:
+            save(state, os.path.join(folder, "state.json"))
+    print(f"{year} minutes: {got} of {tried} read", flush=True)
+    return tried
+
+
 # ---- members ----
 
 def parse_member_list(page, house, sess):
@@ -681,7 +855,7 @@ def main():
             f.write("running\n")
     yrs = [ONLY] if ONLY else years()
     refused = False
-    found = {}
+    found, done_years = {}, {}
     try:
         newest_members = True
         # Lists, bills, members and committees first, the newest session first; then votes.
@@ -695,7 +869,11 @@ def main():
             state_path = os.path.join(folder, "state.json")
             state = load(state_path, {})
             if state.get("finished"):
-                print(f"{year}: finished and fully read; nothing to do", flush=True)
+                # Only its committee minutes (added 2026-11-22) may still be missing.
+                print(f"{year}: finished and fully read, but for committee minutes", flush=True)
+                listing = load(os.path.join(folder, "list.json"))
+                if listing:
+                    done_years[year] = (folder, state, listing)
                 continue
             listing = lists(year, folder, state)
             save(state, state_path)
@@ -719,13 +897,21 @@ def main():
                 state["finished"] = True
                 print(f"{year}: finished", flush=True)
             save(state, os.path.join(folder, "state.json"))
+        # Committee votes last: the Meetings tabs, then the minutes they point to (at most MINUTES_MAX a run).
+        budget = MINUTES_MAX
+        for year, (folder, state, listing) in {**found, **done_years}.items():
+            if out_of_time():
+                break
+            meetings(year, folder, state)
+            budget -= minutes(year, folder, state, listing, budget)
+            save(state, os.path.join(folder, "state.json"))
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
-        for year, (folder, state, listing) in found.items():
+        for year, (folder, state, listing) in {**found, **done_years}.items():
             save(state, os.path.join(folder, "state.json"))
     missing = never_downloaded(yrs)
-    print(f"run: {STATS['requests']} requests ({STATS['bills']} bills, {STATS['votes']} votes), "
+    print(f"run: {STATS['requests']} requests ({STATS['bills']} bills, {STATS['votes']} votes, {STATS['minutes']} minutes), "
           f"{round((time.time() - START) / 60)} min"
           + ("; stopped at the time limit" if out_of_time() else "")
           + ("; refused" if refused else "")
