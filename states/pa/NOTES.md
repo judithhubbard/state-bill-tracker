@@ -19,3 +19,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   The 2,572 municipalities by district (`towns.py`); townships that share a name carry their county. Full-time
   Legislature (`floorVotesEnd: false`); the session ends November 30 of the even year; governor 10 days (calendar days: Art. IV, sec. 15
   excepts no Sundays), or 30 days after the session ends for a bill still waiting then.
+- **Senate roll calls kept out by the House's (fixed 2026-11-22):** the House and the Senate number their floor roll calls
+  alike (`rcNum=202` in each), and fetch.py named each file by the link's query alone, so whichever house's was saved first
+  kept the other's out: 397 Senate and 57 House floor roll calls of 2023-24 and 305 and 66 of 2025-26 were never saved, and
+  the Senate's split votes showed tallies without names (26% and 36% named; the House 96%). New files start with the house
+  (`rc_key()`: "senate_...", "house_..."); the old files are matched by the link they hold, and each run reads the roll
+  calls that bill pages already read list but that aren't saved, without reading the bill page again. data_check.py's
+  "split floor votes naming members" check compares the houses.

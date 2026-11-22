@@ -8,7 +8,7 @@ state-survey-2026-10-31 memory; robots.txt limits only an accessibility scanner)
 - The roll calls, which the file doesn't have: each bill page with a committee report or a floor vote lists its floor
   and committee roll calls, and each roll call's page lists every member's vote (committee votes also carry a "Brief
   Description" of the bill). Into data/pa/<year>/bills/<HB17>.json (the bill's roll-call links, read again when the
-  bill's lastUpdate changes) and data/pa/<year>/rollcalls/<key>.json (one per roll call; read once).
+  bill's lastUpdate changes) and data/pa/<year>/rollcalls/<house>_<key>.json (one per roll call; read once).
 One request a second. Usage: python3 states/pa/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029)
 """
 import html, io, json, os, re, sys, time, urllib.request, zipfile
@@ -101,20 +101,58 @@ def rollcall(page, link):
     }
 
 
+def rc_key(link):
+    """A roll call's file name. The House's and the Senate's floor roll calls are numbered alike (rcNum=202 in each), and
+    until 2026-11-22 their files had the same name: whichever house's was saved first kept the other's out, so about 300
+    Senate floor roll calls a session (and 60 House ones) were never saved, and those votes showed tallies without names.
+    New files start with the house ("senate_", "house_"); older files are matched by the link they hold."""
+    key = re.sub(r"\W+", "_", link.split("?", 1)[1] + ("_c" if "committees" in link else "_f"))
+    return ("senate_" if link.startswith("/senate") else "house_") + key
+
+
 def votes(session, bills):
     folder = os.path.join(DATA, str(session))
     for sub in ("bills", "rollcalls"):
         os.makedirs(os.path.join(folder, sub), exist_ok=True)
-    todo = []
+    have = set()  # the roll calls saved, by link
+    for f in os.listdir(os.path.join(folder, "rollcalls")):
+        if f.endswith(".json"):
+            try:
+                have.add(json.load(open(os.path.join(folder, "rollcalls", f))).get("link"))
+            except ValueError:
+                pass
+
+    def read_rollcalls(links):
+        """Saves the roll calls not yet saved; False if one couldn't be read (asked again next run)."""
+        ok = True
+        for link in links:
+            if link in have:
+                continue
+            rpage = get(SITE + link)
+            if rpage:
+                save(os.path.join(folder, "rollcalls", f"{rc_key(link)}.json"), dict(rollcall(rpage, link), link=link))
+                have.add(link)
+            elif rpage is False:
+                ok = False
+                if not WHOLE[0]:
+                    INCOMPLETE.add(session)
+        return ok
+
+    todo, known = [], []
     for b in bills:
         if b.findtext("type") != "B" or not any(VOTED.search(a.findtext("verb") or "") for a in b.iter("action")):
             continue
         num = f"{b.findtext('body')}B{int(b.findtext('number'))}"
         path = os.path.join(folder, "bills", f"{num}.json")
-        have = json.load(open(path)) if os.path.exists(path) else None
-        if not have or have.get("lastUpdate") != b.get("lastUpdate"):
+        old = json.load(open(path)) if os.path.exists(path) else None
+        if not old or old.get("lastUpdate") != b.get("lastUpdate"):
             todo.append((num, b.get("lastUpdate"), path))
-    print(f"{session}: {len(todo)} bill pages to read", flush=True)
+        else:
+            known += old.get("rollcalls", [])
+    # Roll calls listed on bill pages read before but never saved (the clash above): read without the bill page.
+    left = sorted(set(l for l in known if l not in have))
+    print(f"{session}: {len(todo)} bill pages to read; {len(left)} roll calls of pages read before", flush=True)
+    read_rollcalls(left)
     done = 0
     for num, stamp, path in todo:
         page = get(f"{SITE}/legislation/bills/{session}/{num.lower()}")
@@ -123,18 +161,8 @@ def votes(session, bills):
                 INCOMPLETE.add(session)
             continue
         links = sorted(set(html.unescape(l) for l in ROLL.findall(page or "")))
-        for link in links:
-            key = re.sub(r"\W+", "_", link.split("?", 1)[1] + ("_c" if "committees" in link else "_f"))
-            rpath = os.path.join(folder, "rollcalls", f"{key}.json")
-            if os.path.exists(rpath):
-                continue
-            rpage = get(SITE + link)
-            if rpage:
-                save(rpath, dict(rollcall(rpage, link), link=link))
-            elif rpage is False:
-                stamp = None  # the bill page is read again next run, for this roll call
-                if not WHOLE[0]:
-                    INCOMPLETE.add(session)
+        if not read_rollcalls(links):
+            stamp = None  # the bill page is read again next run, for this roll call
         save(path, {"lastUpdate": stamp, "rollcalls": links})
         done += 1
         if done % 100 == 0:
