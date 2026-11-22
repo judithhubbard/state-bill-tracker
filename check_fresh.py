@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 SESSION = int(sys.argv[1])
 HERE = os.path.dirname(os.path.abspath(__file__))
-data = lambda name: os.path.join(HERE, "data", name)
+data = lambda name: os.path.join(os.environ.get("CHECK_DATA") or os.path.join(HERE, "data"), name)  # (CHECK_DATA: check_site.py's test folder)
 now = datetime.now(timezone(timedelta(hours=-5)))  # Eastern standard time is close enough for day counts
 problems = []
 
