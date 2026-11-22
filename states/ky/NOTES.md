@@ -56,3 +56,20 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   David W. Osborne; Senate President Robert Stivers, a senator); the General Assembly elected in November 2026 organizes in
   January 2027. Separate Senate (38) and House (100) districts by city or county (`states/ky/towns.py`, from the Census
   Bureau's 2024 district files).
+
+- **Committee agendas (2026-11-22):** `agendas()` in states/ky/fetch.py, run after the bills, writes
+  data/ky/<year>/agendas.json ({"HB414": [["House Local Government (H)", "2026-02-17T13:00:00"]]}); convert.py's
+  `agendas()` words the names as the histories do ("House Local Government"). It reads the LRC's weekly calendar
+  (apps.legislature.ky.gov/LegislativeCalendar/) first: between sessions every day says "No Meetings Scheduled", and
+  nothing more is read (one request; the file is emptied). During a session the calendar lists the days ahead in the week
+  (archived copies of 2026-01-28 and 2026-02-17 show only that day), each meeting as a TimeAndLocation ("1:00 pm, Annex
+  Room 171", "12:00 Noon", "Upon Adj. of the House": T00:00:00), a CommitteeName linked to its CommitteeRSN (named from
+  committees.json) and an Agenda with "26RS HB 414" lines (`calendar_meetings()`). For the days the calendar doesn't show,
+  it reads each House and Senate standing committee's meeting-materials page (apps.legislature.ky.gov/CommitteeDocuments/
+  <id>/, about 46 pages, one a second, only while the calendar has meetings) and, for each meeting up to three weeks
+  ahead (the page's <h3> date over the meeting's files), the file named "...Agenda..." (a PDF, pdftotext -layout; the
+  time from its heading). This year's regular session only ("26RS"; joint resolutions on agendas are kept in the file
+  but the converter has no such records). apps.legislature.ky.gov has no robots.txt. Tested on the archived calendar of
+  2026-02-17 (6 meetings, today set to that day) plus three committees' materials pages and agenda PDFs read live: 43
+  bills on 16 meetings, all but the two HJRs matching records. Untested live: a session-time calendar read by this code
+  (its markup is from the Wayback Machine's copies), and how early agendas reach the materials pages.

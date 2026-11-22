@@ -56,14 +56,17 @@ Not downloaded: votes member by member, which exist only as PDFs: each bill's vo
 vote_history.pdf: every floor roll call on the bill, names by surname, with text that pdftotext reads), each day's
 House and Senate committee vote PDFs (house_votes/60_comm_votes.pdf, from committee_votes_House.html), and the daily
 floor vote PDFs. robots.txt allows them (apps.legislature.ky.gov has none); none are read yet. Also not read: bill
-texts, fiscal notes, veto messages (PDFs), and committee meeting agendas.
+texts, fiscal notes and veto messages (PDFs).
+
+Committee agendas (agendas(), after the bills): the weekly calendar, then each standing committee's meeting-materials
+page and its upcoming meetings' agenda PDFs, into data/ky/<year>/agendas.json (see agendas()).
 
 data/ky/incomplete says "running" during the first copy, then lists what was never downloaded (a year's lists, a
 listed bill's page, the members or committees); it is removed when nothing is missing. A request that fails where a
 last copy exists keeps that copy and doesn't count; a bill page that answers 404 is noted and doesn't count.
 Usage: python3 states/ky/fetch.py [year]   (default: every year above; a single year leaves the marker alone)
 """
-import gzip, html, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
+import gzip, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.parse, urllib.request
 from collections import Counter
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -103,7 +106,7 @@ def out_of_time():
     return BUDGET and time.time() - START > BUDGET
 
 
-def request(url, label, must=None):
+def request(url, label, must=None, raw=False):
     """The page as text, or None after three tries; None at once for a 404 (CODE[0] is then 404). must is a piece of
     text the page has to contain (else it's counted as a failure: an error page served as 200)."""
     CODE[0] = 0
@@ -124,6 +127,8 @@ def request(url, label, must=None):
                 body = r.read()
                 if r.headers.get("Content-Encoding") == "gzip":
                     body = gzip.decompress(body)
+            if raw:
+                return body
             text = body.decode("utf-8", "replace")
             if must and must not in text:
                 FAILS["unexpected page"] += 1
@@ -474,6 +479,155 @@ def never_downloaded(years):
     return out
 
 
+# ---- Committee agendas ----
+
+CALENDAR = f"{APPS}/LegislativeCalendar/"
+AGENDA_BILL = re.compile(r"\b(\d\d)RS\s+(HB|SB|HJR|SJR)\s*(\d+)\b")
+AGENDA_DAYS = 21  # how far ahead to keep meetings
+
+
+def pdf_text(body):
+    """A PDF's text (pdftotext -layout), or None (no pdftotext, or a file it can't read)."""
+    exe = shutil.which("pdftotext")
+    if not exe or not body:
+        return None
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as f:
+        f.write(body)
+        f.flush()
+        try:
+            out = subprocess.run([exe, "-layout", f.name, "-"], capture_output=True, timeout=60)
+        except Exception:
+            return None
+    return out.stdout.decode("utf-8", "replace") if out.returncode == 0 else None
+
+
+def meeting_folders(page):
+    """A committee's meeting-materials page (CommitteeDocuments/<id>/): [(date, folder id, [file names])], newest
+    first. Each meeting is an <h3> date ("Wednesday, April 15, 2026") over a list of its files (./44280/<name>.pdf)."""
+    out = []
+    for head, block in re.findall(r"<h3>([^<]*\d{4})\s*</h3>\s*<ul>(.*?)</ul>", page, re.S):
+        try:
+            day = datetime.strptime(re.sub(r"\s+", " ", head.strip()), "%A, %B %d, %Y").date()
+        except ValueError:
+            continue
+        files = re.findall(r'href="\./(\d+)/([^"]+)"', block)
+        if files:
+            out.append((day, files[0][0], [f for _d, f in files]))
+    return out
+
+
+def agenda_time(text, day):
+    """The meeting's start from its agenda ("Tuesday, March 10, 2026 12:00 PM"), else the day at midnight ("Upon
+    Recess of the House", "Upon Adjournment")."""
+    m = re.search(r"\b(\d{1,2}):(\d\d)\s*([AP])\.?M\b", (text or "")[:800], re.I)  # in the heading
+    if not m:
+        return f"{day.isoformat()}T00:00:00"
+    h = int(m.group(1)) % 12 + (12 if m.group(3).upper() == "P" else 0)
+    return f"{day.isoformat()}T{h:02d}:{m.group(2)}:00"
+
+
+def calendar_meetings(page):
+    """The weekly calendar's meetings: [(day, committee RSN or None, "HOUSE STANDING COMMITTEE ON LOCAL GOVERNMENT",
+    start "2026-02-17T13:00:00", agenda text)]. Each day is a DateHeading ("Tuesday, February 17, 2026"), then for each
+    meeting a TimeAndLocation ("1:00 pm, Annex Room 171", "12:00 Noon, ...", "Upon Adj. of the House, ..."), a
+    CommitteeName (linked to Committee-Details.aspx?CommitteeRSN=147) and its Agenda ("26RS <a ...>HB 414</a> - AN ACT
+    ..."). "House Convenes" and the like have no committee link and are left out."""
+    out = []
+    parts = re.split(r'<div class="DateHeading">', page)
+    for part in parts[1:]:
+        try:
+            day = datetime.strptime(text(part[:part.find("</div>")]).strip(), "%A, %B %d, %Y").date()
+        except ValueError:
+            continue
+        for m in re.split(r'<div class="TimeAndLocation">', part)[1:]:
+            when = text(m[:m.find("</div>")])
+            name = re.search(r'<div class="CommitteeName">(.*?)</div>', m, re.S)
+            rsn = re.search(r"CommitteeRSN=(\d+)", name.group(1) if name else "")
+            if not rsn or re.search(r"cancel|postpone", when + " " + text(name.group(1)), re.I):
+                continue
+            ag = re.search(r'<div class="Agenda">(.*?)<div class="Members">', m, re.S)
+            tm = re.match(r"(\d{1,2})(?::(\d\d))?\s*(am|pm|noon)", when, re.I)
+            start = "00:00"
+            if tm:
+                h = int(tm.group(1)) % 12 + (12 if tm.group(3).lower() in ("pm", "noon") else 0)
+                start = f"{h:02d}:{tm.group(2) or '00'}"
+            out.append((day, int(rsn.group(1)), text(name.group(1)), f"{day.isoformat()}T{start}:00",
+                        text(ag.group(1)) if ag else ""))
+    return out
+
+
+def agendas():
+    """Bills on the House and Senate standing committees' upcoming agendas, into data/ky/<year>/agendas.json:
+    {"HB414": [["House Local Government (H)", "2026-02-17T13:00:00"], ...]} (the converter words the names).
+    The LRC's weekly calendar (apps.legislature.ky.gov/LegislativeCalendar/) is read first. Between sessions every day
+    says "No Meetings Scheduled": nothing more is read and the file is emptied. During a session it lists the days ahead
+    in the week (sometimes only today), each meeting with its committee (CommitteeRSN), time and agenda, whose bills are
+    "26RS HB 414". For later days, each standing committee's meeting-materials page (CommitteeDocuments/<id>/, from
+    committees.json) is read, and for each meeting the calendar doesn't show, up to three weeks ahead, its agenda PDF
+    ("House A&R Agenda 3-10-2026.pdf": "26RS HB 757", ...). Only the regular session's bills ("26RS"; a special
+    session's "26SS" are left out). Never fails the run: a page that can't be read leaves its meetings out, and a run
+    that reads nothing keeps the last file."""
+    folder = os.path.join(DATA, str(YEAR))
+    path = os.path.join(folder, "agendas.json")
+    yy = f"{YEAR % 100:02d}"
+    out = {}
+
+    def add(txt, entry):
+        for y, kind, num in AGENDA_BILL.findall(txt):
+            if y == yy and entry not in out.setdefault(kind + num, []):
+                out[kind + num].append(entry)
+
+    try:
+        cal = request(CALENDAR, "calendar", "DateHeading")
+        if cal is None:
+            print("agendas: the calendar couldn't be read; kept the last file", flush=True)
+            return
+        days = re.findall(r'class="DateHeading"', cal)
+        if days and len(re.findall(r"No Meetings Scheduled", cal)) >= len(days):
+            os.makedirs(folder, exist_ok=True)
+            save({}, path)
+            print("agendas: no meetings on this week's calendar", flush=True)
+            return
+        comms = [c for c in (load(os.path.join(DATA, "committees.json")) or {}).get("committees", [])]
+        names = {c["rsn"]: ("House" if c["kind"].startswith("House") else "Senate") + " " + c["name"] for c in comms}
+        shown, meetings, failed = set(), 0, 0
+        last = TODAY + timedelta(days=AGENDA_DAYS)
+        for day, rsn, title, start, agenda in calendar_meetings(cal):
+            shown.add(day)
+            if day < TODAY:
+                continue
+            meetings += 1
+            add(agenda, [names.get(rsn) or title.title(), start])
+        for c in comms:
+            if out_of_time() or not c.get("materials"):
+                continue
+            page = request(f"{APPS}/CommitteeDocuments/{c['materials']}/", f"materials {c['materials']}", "<h3>")
+            if page is None:
+                failed += 1
+                continue
+            for day, fid, files in meeting_folders(page):
+                if not TODAY <= day <= last or day in shown:
+                    continue
+                agenda = [f for f in files if "agenda" in f.lower()] or files[:1]
+                body = request(f"{APPS}/CommitteeDocuments/{c['materials']}/{fid}/{agenda[0]}", f"agenda {fid}",
+                               raw=True)
+                txt = pdf_text(body)
+                if txt is None:
+                    failed += 1
+                    continue
+                meetings += 1
+                add(txt, [names[c["rsn"]], agenda_time(txt, day)])
+        if not meetings and failed:
+            print(f"agendas: {failed} pages unreadable and no meeting read; kept the last file", flush=True)
+            return
+        os.makedirs(folder, exist_ok=True)
+        save(out, path)
+        print(f"agendas: {len(out)} bills on {meetings} meetings" + (f", {failed} unreadable" if failed else ""),
+              flush=True)
+    except Exception as e:  # a refusal or anything unexpected: the agendas never stop the run
+        print(f"agendas: stopped ({type(e).__name__}: {e}); kept the last file", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     # Before the first copy, a run cut off without its summary leaves this, so a partial copy isn't published.
@@ -495,6 +649,8 @@ def main():
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
+    if not ONLY and not refused and not out_of_time():
+        agendas()
     missing = never_downloaded(years)
     print(f"run: {STATS['requests']} requests ({STATS['bills']} bills), {round((time.time() - START) / 60)} min"
           + ("; stopped at the time limit" if out_of_time() else "")

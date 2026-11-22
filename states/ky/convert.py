@@ -651,7 +651,20 @@ def parties(session, recs):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee agendas (states/ky/fetch.py's agendas(): data/ky/<year>/agendas.json), with the
+    committees named as in the histories: "House Appropriations & Revenue (H)" -> "House Appropriations and Revenue"."""
+    try:
+        raw = json.load(open(os.path.join(folder(session), "agendas.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for key, meets in raw.items():
+        for name, when in meets:
+            house, _, rest = name.partition(" ")
+            entry = [f"{house} {comm_name(rest)}", when]
+            if entry not in out.setdefault(key, []):
+                out[key].append(entry)
+    return out
 
 
 # ---- Checks against the LRC's status lists ----
