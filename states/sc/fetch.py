@@ -64,8 +64,12 @@ copy of two sessions is about 380 bill-search requests, 8 lists, 8 acts lists an
 minutes; the roll calls (about 4,300) take about 75 minutes more, over later runs. After that a run in session is about
 200 requests plus new roll calls: about 4 minutes; out of session, a few requests (a run a day: about 4 minutes).
 
-Not downloaded: bill texts (/sess126_2025-2026/bills/3020.htm), fiscal impact statements, journals, committee agendas
-and minutes, amendments, the ratification sheets (the history has the same numbers), the governor's veto messages (in
+- agendas.json (the newest session, every run): bills on the House's and Senate's committee meetings, yesterday to
+  three weeks ahead (agendas(): /meetings?chamber=H&selecteddate=..., a week a request, and the agenda PDFs of meetings
+  whose titles name no bills, with pdftotext; agendas_read.json keeps what each agenda named, by revision).
+
+Not downloaded: bill texts (/sess126_2025-2026/bills/3020.htm), fiscal impact statements, journals, committee
+minutes, amendments, the ratification sheets (the history has the same numbers), the governor's veto messages (in
 the journals). The site's "LSA Bill Summary" search covers summaries of Acts only and isn't read.
 
 data/sc/incomplete says "running" during the first copy, then lists what was never downloaded (a session's bill
@@ -74,9 +78,9 @@ lists and committees fill in on later runs and don't hold the state back. A requ
 keeps that copy and doesn't count.
 Usage: python3 states/sc/fetch.py [session number]   (default: every session above; one leaves the marker alone)
 """
-import gzip, html, json, os, re, sys, time, urllib.error, urllib.request, zlib
+import gzip, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request, zlib
 from collections import Counter
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
 
@@ -701,6 +705,150 @@ def read_committees(state):
         print(f"{chamber} committees: {len(found)} ({sum(len(c['members']) for c in found)} seats)", flush=True)
 
 
+# Committee agendas
+
+AGENDA_DAYS = 21
+DAY_HEAD = re.compile(r'text-decoration:underline;">\s*(?:[A-Z][a-z]+day),\s+([A-Z][a-z]+ \d{1,2}, \d{4})\s*</span>')
+MEETING = re.compile(r'<a name="(\d+)"></a>|<li [^>]*>(.*?)</li>', re.S)
+BILL_IN_TEXT = re.compile(r"\b([HS])\.\s?(\d{1,4})\b")
+
+
+def meeting_list(page, chamber):
+    """A week of a chamber's meeting schedule (/meetings?chamber=H&selecteddate=2027-02-08) ->
+    [{"id", "name", "when", "bills", "agenda" (the PDF's path or None), "rev" (the revisions text)}], canceled meetings
+    and floor sessions left out. Bills come from the title's links ("Senate Judiciary Subcommittee on S.362 , S.631")."""
+    out, day, mid = [], None, None
+    pos = 0
+    events = sorted([(m.start(), "day", m) for m in DAY_HEAD.finditer(page)] +
+                    [(m.start(), "m", m) for m in MEETING.finditer(page)], key=lambda x: x[0])
+    for _, kind, m in events:
+        if kind == "day":
+            try:
+                day = datetime.strptime(m.group(1), "%B %d, %Y").date()
+            except ValueError:
+                day = None
+            continue
+        if m.group(1):
+            mid = m.group(1)
+            continue
+        li = m.group(2)
+        if not day or not mid or "REVISIONS" not in li and "Agenda" not in li and "--" not in li:
+            continue
+        head = re.split(r"<div", li, maxsplit=1)[0]
+        if re.search(r">\s*CANCEL+ED\s*<", head, re.I):
+            mid = None
+            continue
+        flat_head = text(head).replace("\n", " ")
+        parts = [p.strip() for p in flat_head.split(" -- ")]
+        if len(parts) < 3:
+            mid = None
+            continue
+        t = re.match(r"(\d{1,2}):(\d\d)\s*([ap])\.?m", parts[0], re.I)
+        clock = f"{int(t.group(1)) % 12 + (12 if t.group(3).lower() == 'p' else 0):02d}:{t.group(2)}:00" if t else "00:00:00"
+        name = " -- ".join(parts[2:])
+        name = re.sub(r"\s*\(Contact Info:.*$", "", name)
+        name = re.sub(r"\s+on\s+(?:Appointments\b.*|[HS]\.\s?\d.*)$", "", name).strip(" ,")
+        if name in ("House", "Senate", "House of Representatives"):  # a floor session
+            mid = None
+            continue
+        bills = [bill_key("S" if int(n) < 3001 else "H", n) for n in re.findall(r"billnumbers=(\d+)", head)]
+        agenda = re.search(r'href="(/agendas/[^"]+\.pdf)"', li)
+        rev = text(li.split("REVISIONS", 1)[1]) if "REVISIONS" in li else ""
+        out.append({"id": mid, "name": name, "chamber": chamber, "when": f"{day.isoformat()}T{clock}", "bills": list(dict.fromkeys(bills)),
+                    "agenda": agenda.group(1) if agenda else None, "rev": rev})
+        mid = None
+    return out
+
+
+def pdf_bills(body):
+    """The bills an agenda PDF names ("H. 5043", "S. 655", "H.3013"), with pdftotext; None without it."""
+    exe = shutil.which("pdftotext")
+    if not exe or not body or not body.startswith(b"%PDF"):
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "a.pdf")
+        with open(path, "wb") as f:
+            f.write(body)
+        r = subprocess.run([exe, "-enc", "UTF-8", path, "-"], capture_output=True)
+    if r.returncode:
+        return []  # an agenda pdftotext can't read: nothing more to learn from it
+    t = r.stdout.decode("utf-8", "replace")
+    return list(dict.fromkeys(bill_key(h, n) for h, n in BILL_IN_TEXT.findall(t)))
+
+
+def agendas(session, folder):
+    """Bills on the House's and Senate's committee meetings, yesterday to three weeks ahead, into
+    <folder>/agendas.json: {"H3013": [["House Judiciary Domestic Relations, Business & Probate Laws Subcommittee",
+    "2026-02-10T10:30:00"], ...]}. Each chamber's schedule a week a request (this week and the next three), and the
+    agenda PDF (/agendas/126h15874.pdf) of each meeting whose title names no bill, read again only when its revisions
+    change (agendas_read.json); only numbers that are this session's bills count. A failed week keeps the last file's
+    entries for its days."""
+    path, cache_path = os.path.join(folder, "agendas.json"), os.path.join(folder, "agendas_read.json")
+    known = set(load(os.path.join(folder, "bills.json"), {}) or {})
+    cache = load(cache_path, {}) or {}
+    last = load(path, {}) or {}
+    lo, hi = TODAY - timedelta(days=1), TODAY + timedelta(days=AGENDA_DAYS)
+    monday = lo - timedelta(days=lo.weekday())
+    meets, failed, used = [], [], {}
+    try:
+        for chamber in ("H", "S"):
+            for k in range(4):
+                week = monday + timedelta(days=7 * k)
+                if week > hi:
+                    break
+                page = request(f"/meetings?chamber={chamber}&selecteddate={week.isoformat()}", f"{chamber} meetings {week}",
+                               must="datechoiceform")
+                if page is None:
+                    failed.append((chamber, week))
+                    continue
+                meets += [m for m in meeting_list(page, chamber) if lo.isoformat() <= m["when"][:10] <= hi.isoformat()]
+        # A meeting on both chambers' schedules (the same id) is a joint body's: its name stays as written; the others
+        # take their chamber's name ("Judiciary General Laws Subcommittee" -> "House Judiciary ...").
+        both = {m["id"] for m in meets if m["chamber"] == "H"} & {m["id"] for m in meets if m["chamber"] == "S"}
+        merged = {}
+        for m in meets:
+            if m["id"] in both:
+                m["chamber"] = ""
+            elif not re.match(r"(House|Senate|Joint)\b", m["name"]):
+                m["name"] = f"{'House' if m['chamber'] == 'H' else 'Senate'} {m['name']}"
+            merged.setdefault(m["id"], m)
+        meets = list(merged.values())
+        for m in meets:
+            if m["bills"] or not m["agenda"] or not re.search(r"Comm?it+ee|Subcom|Commission|Council|Panel", m["name"], re.I):
+                continue
+            key = f"{m['id']}|{m['rev']}"
+            if key in cache:
+                m["bills"], used[key] = cache[key], cache[key]
+                continue
+            body = request(m["agenda"], f"agenda {m['id']}", must=b"%PDF", binary=True)
+            found = pdf_bills(body)
+            if found is not None:
+                m["bills"] = used[key] = found
+    except Refused as e:
+        print(f"agendas: refused ({e}); kept the last copy", flush=True)
+        return
+    if not meets and failed:
+        print("agendas: no schedule could be read; kept the last copy", flush=True)
+        return
+    out = {}
+    for m in meets:
+        for b in m["bills"]:
+            if (not known or b in known) and [m["name"], m["when"]] not in out.setdefault(b, []):
+                out[b].append([m["name"], m["when"]])
+    for chamber, week in failed:  # keep what the last file had for a week that couldn't be read
+        prefix = "House" if chamber == "H" else "Senate"
+        for b, entries in last.items():
+            for x in entries:
+                if x[0].startswith(prefix) and week.isoformat() <= x[1][:10] < (week + timedelta(days=7)).isoformat() \
+                        and x[1][:10] >= lo.isoformat() and x not in out.setdefault(b, []):
+                    out[b].append(x)
+    out = {b: sorted(v, key=lambda x: x[1]) for b, v in out.items() if v}
+    save(out, path)
+    save(used, cache_path)
+    print(f"agendas: {len(out)} bills on {len(meets)} meetings" + (f"; {len(failed)} weeks unread" if failed else ""),
+          flush=True)
+
+
 # The run
 
 
@@ -756,6 +904,8 @@ def main():
             read_acts(session, folder, state)
             read_member_lists(session, folder, state, i == 0)
             save(state, STATE)
+        if found and not ONLY and live(found[0]) and not out_of_time():
+            agendas(found[0], os.path.join(DATA, str(first_year(found[0]))))
         read_member_pages(found, state)
         save(state, STATE)
         if not ONLY:

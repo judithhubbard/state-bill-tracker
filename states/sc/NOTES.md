@@ -60,3 +60,19 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Assemblies linked by the same subject line and prime sponsor, or the same title without section numbers, or a subject
   one bill has in each (519 of 2025-26's; 15 read over, all the same bill). Places (`towns.py`): cities, towns,
   Census-designated places and counties, separate Senate and House lists.
+
+- **Committee agendas (2026-11-22):** `agendas()` in states/sc/fetch.py (the newest session, every run) reads each
+  chamber's meeting schedule a week a request (/meetings?chamber=H&selecteddate=<Monday>, this week and the next three:
+  8 requests), keeps the meetings from yesterday to three weeks ahead (not "CANCELED", not the floor sessions named
+  "House"/"Senate"), takes the bills from each title's links ("Senate Judiciary Subcommittee on S.362 , S.631": the name
+  without the "on ..." part), and for a committee meeting whose title names none reads its agenda PDF
+  (/agendas/126h15874.pdf, Word-made; pdftotext: "H. 5043", "S. 655"), once per revision (agendas_read.json keeps what
+  each named, by meeting id and revisions text). Only numbers in the session's bills.json count. A meeting on both
+  chambers' schedules (the same id: Education Oversight, Judicial Merit Selection) keeps its own name; others are
+  prefixed "House"/"Senate". Into data/sc/<first year>/agendas.json, `{"H3013": [["House Judiciary Domestic Relations,
+  Business & Probate Laws Subcommittee", "2026-02-10T10:30:00"]]}`; `agendas()` in convert.py keeps today's and later.
+  Meetings are posted about a week ahead ("Meeting added on ..." 4-10 days before). "Upon adjournment of the Senate" has
+  no clock time (T00:00:00). robots.txt bars only /images/, /jpeg/, /gif/, /dashboard/, /sys/. Tested 2026-11-22 as if
+  on February 10, 2026 (three days: 58 meetings, 28 agenda PDFs, 59 bills, all matching records). Needs pdftotext on the
+  runner for the PDFs (without it, title links only). In session a first run may read 50-100 agenda PDFs (about a second
+  each), later runs only changed ones.
