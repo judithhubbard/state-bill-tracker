@@ -59,6 +59,23 @@ def open_states():
             for r in rows if r["current_district"].isdigit()}
 
 
+# Members with no email in Open States: their contact form on their own senator's site, looked up by hand on 2026-11-22
+# (not on ilga.gov). Check again each January; a form is shown only while the member holds the seat named.
+FORMS = {
+    ("S", "Darby Hills"): "https://www.senatordarbyhills.com/contact/",
+    ("S", "Willie Preston"): "https://www.senatorpreston.com/contact-us",
+    # Faraci's own site didn't answer; the Senate Democrats' contact page lists every member's office.
+    ("S", "Paul Faraci"): "https://illinoissenatedemocrats.com/contact-us",
+}
+
+
+def add_forms(people):
+    for sid, p in people.items():
+        for (h, name), url in FORMS.items():
+            if sid[0] == h and name_key(name) == p["key"] and not p.get("email"):
+                p["form"] = url
+
+
 def add_open_states(people):
     """Each member's email and ilga.gov page from Open States, when its member for the seat is the same person (a seat
     filled since keeps neither)."""
@@ -92,6 +109,7 @@ def build(session):
     people = {**people_of(os.path.join(base, f"{ga}SenateMembers.xml"), "S"),
               **people_of(os.path.join(base, f"{ga}HouseMembers.xml"), "H")}
     add_open_states(people)
+    add_forms(people)
     s_comms = committees_of(os.path.join(base, f"{ga}SenateCommitteeMembers.xml"))
     h_comms = committees_of(os.path.join(base, f"{ga}HouseCommitteeMembers.xml"))
     leaders = {}
