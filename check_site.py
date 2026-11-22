@@ -235,6 +235,15 @@ for st in states_list:
     if f"restore-keys: {st['key']}-" not in publish:
         problems.append(f"{st['code']}: in .github/states.json but publish.yml doesn't restore {st['key']}")
 
+# New York: its own freshness check (check_fresh.py: bills, Assembly votes, contacts, agendas, the session calendar), with
+# the problems its last download noted (states/ny/fetch.py).
+import subprocess
+_y = datetime.now().year
+_ny = subprocess.run([sys.executable, os.path.join(HERE, "check_fresh.py"), str(_y if _y % 2 else _y - 1),
+                      os.path.join(HERE, "data", "ny", "problems.txt")], capture_output=True, text=True)
+if _ny.returncode:
+    problems += [f"ny: {l[2:]}" for l in _ny.stdout.splitlines() if l.startswith("- ")] or [f"ny: check_fresh.py failed: {_ny.stderr.strip()[-300:]}"]
+
 if problems:
     print("Problems:\n" + "\n".join(f"- {p}" for p in problems))
     sys.exit(1)

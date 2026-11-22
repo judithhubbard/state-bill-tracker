@@ -463,15 +463,21 @@
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/la/fetch.py && python3 states/la/contacts.py"
   },
   {
-   "name": "New York (Assembly memos)",
+   "name": "New York",
    "code": "ny",
-   "key": "ny-memos-v1",
+   "key": "ny-data-v1",
    "paths": [
-    "data/ny"
+    "data/ny",
+    "data/bills_*.json",
+    "data/senate_memos_*.json",
+    "data/texts_*.json",
+    "data/agendas_*.json",
+    "data/assembly_votes_*.json",
+    "data/contacts_*.json"
    ],
-   "minutes": 110,
-   "run": "python3 states/ny/memos.py",
-   "note": "The Assembly sponsors' memos from nyassembly.gov (robots.txt bars only GPTBot), a page a second; New York's bills come from the Senate's API when the site is published (publish.yml)."
+   "minutes": 45,
+   "run": "python3 states/ny/fetch.py",
+   "note": "Everything New York's pages are built from (states/ny/fetch.py): the Senate's API (bills, only when it lists an update; prefiled bills in November and December of even years), and from nyassembly.gov (robots.txt bars only GPTBot) the Assembly memos, floor votes, committee agendas and, once a day, contacts. New York's files are at the top of data/ (data/ny holds the memos, the last-checked mark and problems.txt). Past sessions' bills_<year>.json.gz are in git. v1 started from the old ny-memos-v1 and ny-bills-v1 copies (download.yml's 'Start New York from its old copies')."
   },
   {
    "name": "Congress",

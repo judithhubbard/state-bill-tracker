@@ -32,8 +32,14 @@ if not os.path.exists(data(f"bills_{SESSION}.json")):
     sys.exit(1 if problems else 0)
 bills = json.load(open(data(f"bills_{SESSION}.json")))
 fetched = datetime.strptime(bills["fetched"][:10], "%Y-%m-%d").date()
+# fetch_bills.py --if-changed downloads them again only when the Senate's API lists an update; the last check that
+# succeeded is data/ny/last_checked (download.yml's New York job).
+try:
+    fetched = max(fetched, datetime.fromisoformat(open(data(os.path.join("ny", "last_checked"))).read().strip().replace("Z", "+00:00")).astimezone(now.tzinfo).date())
+except (OSError, ValueError):
+    pass
 if (now.date() - fetched).days >= 2:
-    problems.append(f"Bill data was last downloaded {fetched}.")
+    problems.append(f"Bill data was last checked {fetched}.")
 
 # The session's scheduled end (for the watchlist's "Before the session ends"), entered each January.
 if 2 <= now.month <= 6 and str(now.year) not in json.load(open(data("session_calendar.json")))["end"]:

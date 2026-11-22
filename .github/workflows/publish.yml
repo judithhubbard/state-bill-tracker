@@ -4,7 +4,7 @@ name: Publish statebilltracker.org
 # once a day for the data checks.
 # Builds the site (build_site.sh) from each state's latest saved download (download.yml keeps them) and puts it on
 # Cloudflare Pages (project "statebilltracker"). Needs the secrets CLOUDFLARE_API_TOKEN (Cloudflare Pages: Edit) and
-# CLOUDFLARE_ACCOUNT_ID. It downloads nothing but New York's current bills and rebuilds only the states whose data or
+# CLOUDFLARE_ACCOUNT_ID. It downloads nothing (New York too is downloaded by download.yml) and rebuilds only the states whose data or
 # code changed (state_hash.py; the rest are copied from the last build), so it takes a few minutes whatever the states
 # are doing; a design change goes live with `gh workflow run publish.yml`. After each quick-lane download run, every 2
 # hours (download.yml; at most about 360 publishes a month, under Cloudflare's 500, and fewer, since nothing is uploaded
@@ -322,22 +322,35 @@ jobs:
           key: us-data-v1-latest
           restore-keys: us-data-v1-
 
-      # New York from this shared code (statebilltracker.pages.dev/ny/, not linked; albanybilltracker.org runs
-      # from its own repo until New York moves here). The data albanybilltracker.org's repo commits (past sessions,
-      # contacts, Assembly votes) is copied from it, so nothing is downloaded from nyassembly.gov twice; the current
-      # session's bills come from the Senate's API, which needs the NYSENATE_API_KEY secret (without it, New York
-      # is left out).
-      # The Assembly sponsors' memos (states/ny/memos.py, run by download.yml), which fetch_bills.py adds to "What it does".
-      - name: Restore New York's Assembly memos
+      # New York (statebilltracker.org/ny/; albanybilltracker.org runs from its own repo until New York moves here):
+      # downloaded by download.yml's "New York" job (states/ny/fetch.py) like every other state, nothing from
+      # albanybilltracker.org's repo. Its files are at the top of data/; past sessions' bills_<year>.json.gz, and the
+      # starting copies of contacts and Assembly votes, are in git. The path list must be states.json's, in order.
+      - name: Restore New York
+        id: ny
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/ny
+            data/bills_*.json
+            data/senate_memos_*.json
+            data/texts_*.json
+            data/agendas_*.json
+            data/assembly_votes_*.json
+            data/contacts_*.json
+          key: ny-data-v1-latest
+          restore-keys: ny-data-v1-
+      # Until download.yml's New York job has saved its first copy (2026-11-22): the copies the old steps kept. Can go
+      # once ny-data-v1 exists.
+      - name: Restore New York's old copies (memos)
+        if: steps.ny.outputs.cache-matched-key == ''
         uses: actions/cache/restore@v4
         with:
           path: "data/ny"
           key: ny-memos-v1-latest
           restore-keys: ny-memos-v1-
-
-      # The current session's bills as last downloaded (with the Senate memos they came with): fetch_bills.py
-      # --if-changed downloads them again (about 3 minutes) only when the Senate's API lists a bill updated since.
-      - name: Restore New York's bills
+      - name: Restore New York's old copies (bills)
+        if: steps.ny.outputs.cache-matched-key == ''
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -345,40 +358,13 @@ jobs:
             data/senate_memos_*.json
           key: ny-bills-v1-latest
           restore-keys: ny-bills-v1-
-
-      - name: Download New York
-        id: ny
+      - name: Bring New York's old copies up to date
+        if: steps.ny.outputs.cache-matched-key == ''
         env:
           NYSENATE_API_KEY: ${{ secrets.NYSENATE_API_KEY }}
         run: |
-          if [ -z "$NYSENATE_API_KEY" ]; then echo "No NYSENATE_API_KEY secret: New York left out"; exit 0; fi
-          git clone -q --depth 1 https://github.com/judithhubbard/ny-bill-tracker.git "$RUNNER_TEMP/ny"
-          cp "$RUNNER_TEMP"/ny/data/*.json "$RUNNER_TEMP"/ny/data/*.json.gz data/
           NY=$(python3 -c "import datetime; y = datetime.date.today().year; print(y if y % 2 else y - 1)")
-          before=$(cat "data/senate_memos_$NY.json" 2>/dev/null | md5sum)
-          if python3 fetch_bills.py "$NY" --if-changed; then
-            # The page's "updated" time: when the bills were last checked (build_data.py's last_checked()).
-            date -u +%Y-%m-%dT%H:%M:%SZ > data/last_checked
-            if [ "$(cat "data/senate_memos_$NY.json" 2>/dev/null | md5sum)" != "$before" ]; then echo "fresh=yes" >> "$GITHUB_OUTPUT"; fi
-          else
-            echo "New York's bills didn't download: left out"; rm -f "data/bills_$NY.json"
-          fi
-
-      - name: Keep New York's bills for the next run
-        if: steps.ny.outputs.fresh == 'yes'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            data/bills_*.json
-            data/senate_memos_*.json
-          key: ny-bills-v1-${{ github.run_id }}
-      - name: Drop older copies of New York's bills
-        if: steps.ny.outputs.fresh == 'yes'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: python3 tools/prune_caches.py ny-bills-v1- "ny-bills-v1-${{ github.run_id }}"
+          python3 fetch_bills.py "$NY" --if-changed || echo "New York's bills didn't download"
 
       # Each state's pages from the last build: a state whose data and code haven't changed isn't rebuilt (state_hash.py).
       - name: Restore the last build's pages

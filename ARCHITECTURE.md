@@ -42,8 +42,14 @@ download.yml (GitHub, every 2 h)       publish.yml (after each quick-lane downlo
 - **Markers that keep a state off the site:** `data/<st>/incomplete` (first copy not finished: the state isn't built,
   or keeps its last build's pages), and `data/<st>/incomplete_<session>` (one older session left out: `window.mark()`,
   `window.shown()`).
-- New York is different: `publish.yml` clones the ny-bill-tracker repository for past data and runs `fetch_bills.py`
-  with the Senate API key; `states/ny/memos.py` runs in download.yml.
+- New York (since 2026-11-22) is a download.yml job like the others, `states/ny/fetch.py`: the Assembly memos
+  (`states/ny/memos.py`), the bills from the Senate's API (`fetch_bills.py --if-changed`: only when the API lists an
+  update; the next session's prefiled bills in November and December of even years; the session just ended until
+  February 15 of odd years), Assembly floor votes (`fetch_assembly_votes.py`), committee agendas (`fetch_agendas.py`) and
+  contacts once a day (`fetch_contacts.py`). Its files are at the top of `data/` (its cache, `ny-data-v1`, names them by
+  pattern), with the memos, the "last checked" mark and `problems.txt` in `data/ny/`. Past sessions'
+  `bills_<year>.json.gz` and starting copies of contacts and Assembly votes are in git. Nothing comes from the
+  ny-bill-tracker repository any more. `check_site.py` runs `check_fresh.py` for it once a day.
 - By hand: `gh workflow run download.yml -f states=wi` (one state, doesn't publish); `copy-data.yml` hands a state's
   cached data to your computer.
 
@@ -138,9 +144,8 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
 
 - Triggers: each quick-lane download run (`from_download=true`), by hand (`gh workflow run publish.yml`), and daily at
   10:50 UTC (which also runs the data checks). One publish at a time (`concurrency: site`, queued, never cancelled).
-- Restores every state's cache (one step per state: `check_site.py` fails if a state in states.json has none), the
-  `built/` cache, downloads New York (only when the Senate's API lists a bill updated since the cached copy,
-  `ny-bills-v1-`: `fetch_bills.py --if-changed`), runs `build_site.sh _site` with `SITE_BASE=https://statebilltracker.pages.dev/`,
+- Restores every state's cache (one step per state, New York's included: `check_site.py` fails if a state in
+  states.json has none) and the `built/` cache, runs `build_site.sh _site` with `SITE_BASE=https://statebilltracker.pages.dev/`,
   saves `built/` (and deletes all but the newest two `built-pages-` copies: `tools/prune_caches.py`, which download.yml
   runs for each state's copies too), and deploys with `wrangler pages deploy` (project `statebilltracker`) only if some state was rebuilt
   (or it was started by hand).

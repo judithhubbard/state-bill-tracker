@@ -9,6 +9,8 @@ import json, os, re
 # whose pages stay at site/<session>.html until it moves to the multi-state site).
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data"))
 SITE_DIR = ""
+# When download.yml's New York job last finished (states/ny/fetch.py): the page's "updated" time.
+LAST_CHECKED = os.path.join(DATA, "ny", "last_checked")
 
 # Names in page titles and the header line.
 STATE_NAME = "New York"
