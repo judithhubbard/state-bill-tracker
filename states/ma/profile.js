@@ -11,6 +11,10 @@ const STATE = {
   publicSite: "https://statebilltracker.org/ma/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", H: "House" },
+  // Committee votes name the committee in full ("House Committee on Ways and Means"); a joint committee's votes are
+  // counted for each branch's members apart: "Joint Committee on Housing (House members)".
+  voteWhat: (v) => (v.kind === "C" && /^Joint Committee\b/.test(v.committee || "") ? `${esc(v.committee)} (${STATE.houses[v.house]} members)`
+    : v.kind === "C" && /^(?:House|Senate) Committee\b/.test(v.committee || "") ? esc(v.committee) : ""),
   // The picture at the top of How (tracker.html's renderHowPic()): how bills move ("twins": the same bill filed in
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.

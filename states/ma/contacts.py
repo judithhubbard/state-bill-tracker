@@ -5,7 +5,7 @@ build_data.py reads. Members' districts are names ("8th Middlesex"); each is giv
 data/ma/district_names.json (states/ma/towns.py), matched with "&"/"and", hyphens and commas made alike. Seat ids
 "S:7", "H:24". Usage: python3 states/ma/contacts.py [session]
 """
-import json, os, re, sys, time, urllib.request
+import json, os, re, sys, time, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
@@ -43,10 +43,12 @@ def details(session):
     gc = (session - 1637) // 2
     folder = os.path.join(DATA, str(session))
     os.makedirs(folder, exist_ok=True)
+    # (A code can have a space: Sen. Liz Miranda's is "L M0", which must be quoted in the address; unquoted, her record
+    # failed and she was left out of the 194th's members.)
     codes = [m["MemberCode"] for m in (get(f"{API}/GeneralCourts/{gc}/LegislativeMembers") or [])]
     with ThreadPoolExecutor(3) as pool:
         members = [{k: v for k, v in m.items() if k not in ("SponsoredBills", "CoSponsoredBills")}
-                   for m in pool.map(lambda c: get(f"{API}/GeneralCourts/{gc}/LegislativeMembers/{c}"), codes) if m]
+                   for m in pool.map(lambda c: get(f"{API}/GeneralCourts/{gc}/LegislativeMembers/{urllib.parse.quote(c)}"), codes) if m]
     if len(members) >= 190:
         json.dump(members, open(os.path.join(folder, "member_details.json"), "w"), ensure_ascii=False)
     return members
@@ -78,17 +80,25 @@ def main(session):
         }
         by_code[m["MemberCode"]] = m["Name"]
     comms = get(f"{API}/GeneralCourts/{gc}/Committees") or []
-    s_comms, h_comms = {}, {}
+    on = {m["MemberCode"]: {x.get("CommitteeCode") for x in m.get("Committees") or []} for m in members}
+    branch_of = {m["MemberCode"]: "S" if m.get("Branch") == "Senate" else "H" for m in members}
+    s_comms, h_comms, full = {}, {}, {}
     for c in comms:
         d = get(f"{API}/GeneralCourts/{gc}/Committees/{c['CommitteeCode']}") or {}
+        if d.get("FullName"):  # each code's name, for the committee votes (convert.py)
+            full[c["CommitteeCode"]] = d["FullName"]
         name = re.sub(r"^(?:Joint |House |Senate )?Committee on\s+", "", d.get("FullName") or d.get("Name") or c["CommitteeCode"])
         chairs = [by_code.get((d.get(k) or {}).get("MemberCode")) for k in ("HouseChairperson", "SenateChairperson")]
-        members_ = sorted({by_code[x.get("MemberCode")] for k in ("HouseMembers", "SenateMembers") for x in (d.get(k) or []) if x.get("MemberCode") in by_code})
-        entry = {"name": name, "chair": " and ".join(x for x in chairs if x) or None, "meets": None, "members": members_}
         code = c["CommitteeCode"]
         for h, out in (("S", s_comms), ("H", h_comms)):
             if code[0] in (h, "J"):
-                out[committee_key(name)] = entry
+                # The committee's members in this branch, from each member's record (the committee's own record lists
+                # only its chairs): a joint committee's House members on the House's list, its senators on the Senate's.
+                members_ = sorted(by_code[x] for x, cs in on.items() if code in cs and x in by_code and branch_of.get(x) == h)
+                out[committee_key(name)] = {"name": name, "chair": " and ".join(x for x in chairs if x) or None, "meets": None,
+                                            "members": members_}
+    if full:
+        json.dump(full, open(os.path.join(folder, "committee_names.json"), "w"), ensure_ascii=False, indent=0)
     leaders = {}
     for h, role in (("H", "Speaker of the House"), ("S", "Senate President")):
         hit = next((p for sid, p in people.items() if sid[0] == h and (p.get("position") or "") in ("Speaker of the House", "President of the Senate")), None)

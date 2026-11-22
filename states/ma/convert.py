@@ -7,7 +7,8 @@ the record carries every number and takes its stage from the last. A study order
 bill in committee. Each branch first passes a bill "to be engrossed"; both then enact it, and the Senate lays it before
 the governor. Votes: the tallies are in the history lines ("154 YEAS to 3 NAYS"); the Senate's members' votes come from
 the roll calls the lines cite ("see Roll Call #215"); the House's from the House Journal's yearly file of its roll calls
-(states/ma/house_votes.py), which the lines cite too ("See YEA and NAY No. 117").
+(states/ma/house_votes.py), which the lines cite too ("See YEA and NAY No. 117"). Committees' votes by member come from
+the API's CommitteeRecommendations (since 2025; committee_votes()).
 
 Constitutional amendments the Legislature proposes are "Proposal for a legislative amendment to the Constitution"
 documents (other resolutions and orders are left out). They go to a joint committee, then to the joint session of both
@@ -162,6 +163,60 @@ def tally(t):
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
+# Which way a committee vote's question points. Members answer "Favorable" to the question, which is usually the
+# recommendation to report the bill out ("Ought to pass", "Should H.600 be reported favorably to the House?", "Report as
+# Redrafted"), but can be the opposite ("Study", "Put bill into Study", "Should the Committee be authorized to adversely
+# report ...", "Ought Not to pass"). Such a vote is turned around, so "Yes" is always for the bill going forward.
+AGAINST_Q = re.compile(r"\bstudy\b|advers|ought not|unfavorabl|\bnot (?:to )?pass", re.I)
+FOR_Q = re.compile(r"favorabl|ought to pass|redraft|new draft|\breport|amended|affirmative|\bpass\b|\bpoll\b|orders of the day", re.I)
+VOTE_ACTIONS = {"Favorable", "Favorable with Amendment", "Redraft", "Place in OD", "Adverse", "Study", "Accompanied"}
+
+
+def committee_votes(session, details):
+    """The committees' votes by member (states/ma/fetch.py's committee_votes(): data/ma/<session>/committee_votes.json),
+    as bill -> [(day, house, committee, yes, no, [[member code, code], ...])]: one vote for each branch's members of a
+    joint committee (the joint rules count each branch's members apart), turned so that "Yes" is for the bill going
+    forward. Votes whose question can't be read either way are left out. Codes: N against, B reserved the right (to
+    dissent later), A no vote recorded."""
+    raw = load(session, "committee_votes.json", {})
+    names = load(session, "committee_names.json", {})
+    branch = {m["MemberCode"]: "S" if m.get("Branch") == "Senate" else "H" for m in details}
+    out, seen = defaultdict(list), set()
+    for got in raw.values():
+        for v in got.get("v") or []:
+            name = " ".join((names.get(v.get("c")) or "").split())
+            if not name or not v.get("d") or v.get("a") not in VOTE_ACTIONS:
+                continue
+            q = v.get("q") or ""
+            if AGAINST_Q.search(q):
+                flip = True
+            elif FOR_Q.search(q):
+                flip = False
+            else:  # a question that names only the bill or the committee: the recommendation says which way
+                if v["a"] in ("Adverse", "Study", "Accompanied"):
+                    continue
+                flip = False
+            per = defaultdict(lambda: {"F": [], "A": [], "R": [], "N": []})
+            for g in v.get("g") or []:
+                for k, codes in g.items():
+                    for c in codes:
+                        per[branch.get(c) or (name.startswith("Senate") and "S") or (name.startswith("House") and "H") or "?"][k].append(c)
+            for h, g in per.items():
+                if h not in HOUSE:
+                    continue
+                yes, no = (g["A"], g["F"]) if flip else (g["F"], g["A"])
+                # The same member twice in one vote (or on both sides) means the record can't be read: left out.
+                listed = yes + no + g["R"] + g["N"]
+                if len(set(listed)) != len(listed) or not (yes or no):
+                    continue
+                key = (v["b"], h, v["c"], v["d"], tuple(sorted(yes)), tuple(sorted(no)))
+                if key in seen:  # the same vote under an earlier draft's number and the new draft's
+                    continue
+                seen.add(key)
+                out[v["b"]].append((v["d"], h, name, len(yes), len(no), [[c, "N"] for c in no] + [[c, "B"] for c in g["R"]] + [[c, "A"] for c in g["N"]]))
+    return out
+
+
 _TITLES = {}
 
 
@@ -269,6 +324,7 @@ def load_session(session):
     # The House's roll calls by member (states/ma/house_votes.py), each name matched to a member of the session.
     house_calls = load(session, "house_rollcalls.json", {}).get("calls") or {}
     house_member = HV.matcher([m for m in details if m.get("Branch") == "House"])
+    cvotes = committee_votes(session, details)
 
     recs, index = [], {}
     for p in sorted(group, key=lambda b: (b[0], int(b[1:]))):
@@ -394,6 +450,10 @@ def load_session(session):
                     names = [[member(c, "H") if c else f"H?{n}", code[x]] for n, x in r["votes"] if x in code
                              for c in [house_member(n)]]
             votes.append([h, "F", None, dd, v[0], v[1], names])
+        # The committees' votes on this bill and its earlier drafts (a vote is filed under the bill it was taken on).
+        for b in nums:
+            for dd, h, name, yes, no, names in cvotes.get(b, []):
+                votes.append([h, "C", name, dd, yes, no, [[member(c, h), x] for c, x in names]])
         chap = law[0] if law else next((re.search(r"Chapter (\d+)", s[3]).group(1) for s in own if s[2] == "SIGNED" and re.search(r"Chapter (\d+)", s[3])), None)
         action_dates = [s[0] for s in steps if s[0]]
         vers = [{"p": b, "sponsor": text((docs[b].get("PrimarySponsor") or {}).get("Name")) or "—", "district": 0,

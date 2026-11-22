@@ -401,8 +401,10 @@ def check(state):
             # another session. NH and VT pass many bills by voice vote; next year's prefiled session isn't checked.)
             elsewhere = any(sum(1 for r in x if (r["passedS"] or r["passedA"]) and any(v[1] == "F" for v in r["votes"]))
                             >= 0.6 * max(1, sum(1 for r in x if r["passedS"] or r["passedA"])) for k, x in loaded.items() if k != s)
+            # (Committee votes are a sign only when the session has no floor votes at all: Massachusetts's committees
+            # post every vote by member while its houses pass most bills by voice, 111 of 564 with a roll call in 2025-26.)
             if len(passed) >= 30 and share < 0.2 and s <= date.today().year and \
-                    (elsewhere or any(v[1] == "C" for r in recs for v in r["votes"])):
+                    (elsewhere or not with_floor and any(v[1] == "C" for r in recs for v in r["votes"])):
                 say(state, "FAIL", f"{s}: only {with_floor} of {len(passed)} bills that passed a house have a floor vote "
                                    f"({sum(1 for r in recs for v in r['votes'] if v[1] == 'C')} committee votes): floor votes missing?")
             elif share < 0.6:

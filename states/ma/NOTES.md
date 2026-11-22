@@ -61,3 +61,27 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Coverage (histories of 2026-10-31): bills' House floor votes naming members, 2023-24 0 -> 89 of 97 (names as written,
   "H?Name", as the Senate's: there's no contacts file for a past court), 2025-26 0 -> 121 of 164, every name tied to a
   seat (the rest cite roll calls not yet in the 2026 file, or none).
+- **Committee votes by member (2026-11-22).** Since the 194th General Court's joint rules (2025), committees post their
+  votes in the API (robots.txt: "User-agent: * / Disallow:" with nothing barred). GET
+  /api/GeneralCourts/<court>/Documents/<bill> carries CommitteeRecommendations[].Votes[]: the question ("Ought to pass",
+  "Should H.600 be reported favorably to the House?", "Study", ...), the day, the bill it was taken on (a new draft's vote
+  can be under the old number) and one group per branch of members' codes: Favorable, Adverse, ReserveRight,
+  NoVoteRecorded. /api/GeneralCourts/194/Committees/CommitteeVotes lists the 37 committees that post them (joint
+  committees, House Ways and Means, Senate Ways and Means, Senate Ethics and Rules ...); the 193rd's records have none.
+  `committee_votes()` in fetch.py reads the document for each bill of the 194th on whose history has a committee report
+  (about 8,100 of 9,000; 10 minutes a run, the bills never read first, so the first copy takes a few runs), again when its
+  history grows; it keeps them in data/ma/<session>/committee_votes.json, with each committee code's name in
+  committee_names.json (contacts.py writes them; fetch.py reads any missing). convert.py's `committee_votes()` makes one
+  kind "C" vote for each branch's members of a joint committee (the joint rules count each branch's members apart), named
+  in full ("Joint Committee on Housing", "House Committee on Ways and Means"; profile.js `voteWhat`: "Joint Committee on
+  Housing (House members)"), turned so that "Yes" is for the bill going forward: a question for a study order or an
+  adverse report ("Study", "Put bill into Study", "Ought Not to pass") counts its Favorable members as No. A question that
+  names only the bill or the committee is read by the recommendation, and left out when that is Adverse, Study or
+  Accompanied. ReserveRight ("reserved the right" to dissent) is "B", NoVoteRecorded "A". A vote with a member twice is
+  left out; the same vote under an earlier draft's number and the new one's is kept once. Tested on 107 bills' documents
+  (2026-11-22): 86 votes on 58 records, every member tied to a seat but one. Contacts now list each committee's members
+  per branch from the members' own records (the committee record lists only chairs), so a legislator's committee votes
+  show on their pages.
+- **A member code with a space (2026-11-22):** Sen. Liz Miranda's code is "L M0"; contacts.py asked for her record
+  unquoted, it failed, and she was missing from member_details.json and the contacts (39 senators). The address is
+  quoted now. data_check's "named votes aren't tied to a seat" LOOK shows such a name ("S?L M0").
