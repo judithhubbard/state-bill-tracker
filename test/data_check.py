@@ -490,14 +490,21 @@ def check(state):
         if stray:
             say(state, "FAIL" if len(stray) > max(2, len(ag) // 50) else "LOOK",
                 f"{s}: {len(stray)} of {len(ag)} bills on committee agendas aren't records' numbers: {stray[:5]}")
+        # (A third item is the meeting's kind: Congress's "markup" or "hearing", or "meets" for a meeting that names no bills,
+        # given to every bill in that committee (the Mississippi House), which may have a fourth, a note on the time.)
         bad = [(k, e) for k, es in ag.items() for e in es
-               if not (isinstance(e, (list, tuple)) and len(e) == 2 and re.match(r"(?:House|Senate|Assembly|Joint|Legislative|Unicameral|Council) \S", e[0] or "")
-                       and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?", e[1] or ""))]
+               if not (isinstance(e, (list, tuple)) and 2 <= len(e) <= 4 and re.match(r"(?:House|Senate|Assembly|Joint|Legislative|Unicameral|Council) \S", e[0] or "")
+                       and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?", e[1] or "")
+                       and (len(e) < 3 or e[2] in ("", "markup", "hearing", "meets")) and (len(e) < 4 or e[2] == "meets"))]
         if bad:
-            say(state, "FAIL", f"{s}: {len(bad)} agenda entries aren't [\"House Committee\", \"YYYY-MM-DDTHH:MM:SS\"]: {bad[:3]}")
+            say(state, "FAIL", f"{s}: {len(bad)} agenda entries aren't [\"House Committee\", \"YYYY-MM-DDTHH:MM:SS\"(, kind)]: {bad[:3]}")
         if ag:
-            meets = {tuple(e) for es in ag.values() for e in es}
-            say(state, "LOOK", f"{s}: {len(ag)} bills on {len(meets)} upcoming committee meetings' agendas")
+            named = {k: [e for e in es if len(e) < 3 or e[2] != "meets"] for k, es in ag.items()}
+            meets = {tuple(e) for es in named.values() for e in es}
+            only = {tuple(e) for es in ag.values() for e in es if len(e) > 2 and e[2] == "meets"}
+            say(state, "LOOK", f"{s}: {sum(1 for es in named.values() if es)} bills on {len(meets)} upcoming committee meetings' agendas"
+                + (f"; {sum(1 for es in ag.values() if any(len(e) > 2 and e[2] == 'meets' for e in es))} bills in committees with"
+                   f" {len(only)} meetings that name no bills" if only else ""))
 
     # Other states' names and rules on this state's pages (settings that fell back to New York's).
     words = r"Albany|Hochul|Heastie|Stewart-Cousins|Kelles|Tompkins|New York State|nysenate|nyassembly"

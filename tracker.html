@@ -268,6 +268,7 @@ table.oc th { vertical-align: bottom; }
 .tag[data-lineage] { cursor: pointer; }
 .tag[data-lineage]:hover { text-decoration: underline; }
 .tag.agenda { background: var(--navy); color: var(--sheet); }
+.tag.agenda.meets { background: none; color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); }
 .srow.sub { padding-left: 22px; font-size: 13px; }
 .meets { display: grid; gap: 6px; margin-bottom: 18px; }
 .meet { border: 1px solid var(--rule); border-radius: 6px; background: var(--sheet); }
@@ -1809,7 +1810,7 @@ function matches(b, skip) {
   if (skip !== "nearby" && state.nearby && HOME && farAway(b)) return false;
   if (skip !== "voted" && state.voted && !votedTest(state.voted)(b)) return false;
   if (skip !== "changed" && state.changed && !CHANGED[state.changed].test(b)) return false;
-  if (skip !== "agenda" && state.agenda && !nextMeeting(b)) return false;
+  if (skip !== "agenda" && state.agenda && !(state.agenda === "meets" ? nextMeets(b) : nextAgenda(b))) return false;
   if (skip !== "amend" && state.amend && !(isAmendment(b) || toVoters(b))) return false;
   if (skip !== "issue" && state.issue && !b.nums.some((n) => ISSUE_BILLS?.get(state.issue)?.has(baseNum(n)))) return false;
   if (state.q && !queryMatches(parsedQuery(state.q), hayOf(b))) return false;
@@ -1836,6 +1837,9 @@ const PIPE_GROUPS = {}; // "3,4" -> "Still in play"
 // A stage's name in the pipeline: once the session's unpassed bills have died with it (billsDied()), stages 0-2 take
 // the finished session's wording ("Died in committee"), as on a past session's page.
 const pipeName = (k) => (k <= 2 && DATA.current && !DATA.upcoming && billsDied() ? STAGE_TEXT.final : TEXT).pipe[k];
+// Committees that post when they meet but not which bills they'll take up (the Mississippi House): every bill in such a
+// committee is "Committee meets soon", a line of its own, never "On an upcoming committee agenda".
+const MEETS_TIP = "Bills in a committee with a meeting coming up. The committee doesn't post which bills it will take up, so any of them could come up.";
 const AGENDA_TIP = "Bills listed for a committee meeting that hasn't happened yet. Committees post agendas about a week ahead; this is the time to write the chair and committee members." + (UNI ? "" : " Includes bills that passed one house and are on the other house's committee agenda.");
 function renderPipeline() {
   const counts = Array(7).fill(0), oneHouse = { [HOUSE.S]: 0, [HOUSE[LOW]]: 0 };
@@ -1868,9 +1872,12 @@ function renderPipeline() {
   const amendRow = amendN && counts[3] > amendN || state.amend ? `<button class="srow sub" type="button" data-amend aria-pressed="${!!state.amend}"${ROW_DESC(amendTip)}>
        <span class="sl">${anyAmend ? "Constitutional amendments" : "Sent to the voters"}${TIPR(amendTip)}</span><span class="sn">${num(amendN)}</span></button>` : "";
   // Bills on a committee agenda that hasn't met yet: a line under "In committee".
-  const soon = DATA.current ? BILLS.filter((b) => nextMeeting(b) && matches(b, "agenda") && (state.stage == null || stageSet().includes(b.stage))).length : 0;
-  const agendaRow = soon || state.agenda ? `<button class="srow sub" type="button" data-agenda aria-pressed="${!!state.agenda}"${ROW_DESC(AGENDA_TIP)}>
-       <span class="sl">On an upcoming committee agenda${TIPR(AGENDA_TIP)}</span><span class="sn">${num(soon)}</span></button>` : "";
+  const agendaN = (test) => DATA.current ? BILLS.filter((b) => test(b) && matches(b, "agenda") && (state.stage == null || stageSet().includes(b.stage))).length : 0;
+  const soon = agendaN(nextAgenda), meetsN = agendaN(nextMeets);
+  const agendaRow = (soon || state.agenda === "soon" ? `<button class="srow sub" type="button" data-agenda="soon" aria-pressed="${state.agenda === "soon"}"${ROW_DESC(AGENDA_TIP)}>
+       <span class="sl">On an upcoming committee agenda${TIPR(AGENDA_TIP)}</span><span class="sn">${num(soon)}</span></button>` : "")
+    + (meetsN || state.agenda === "meets" ? `<button class="srow sub" type="button" data-agenda="meets" aria-pressed="${state.agenda === "meets"}"${ROW_DESC(MEETS_TIP)}>
+       <span class="sl">Committee meets soon${TIPR(MEETS_TIP)}</span><span class="sn">${num(meetsN)}</span></button>` : "");
   const died = billsDied();
   const rowTip = (k) => ((!DATA.current || (died && k <= 2)) && PAST_STAGE_TIPS[k]) || STAGE_TIPS[k];
   const row = (k) => UNI && k === 2 ? "" : `<button class="srow" type="button" data-k="${k}" aria-pressed="${stageSet().includes(k)}"${ROW_DESC(rowTip(k))}>
@@ -1908,9 +1915,10 @@ function renderPipeline() {
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>`}`);
 }
 
-// Turning on "upcoming agenda" sorts by meeting date, unless another order was chosen.
+// Turning on "upcoming agenda" (or "committee meets soon": on is "meets") sorts by meeting date, unless another order
+// was chosen.
 function setAgenda(on) {
-  state.agenda = on ? "soon" : "";
+  state.agenda = on === "meets" ? "meets" : on ? "soon" : "";
   if (on && state.sort === "recent") state.sort = "meeting";
   if (!on && state.sort === "meeting") state.sort = "recent";
   state.shown = PAGE; syncControls(); render();
@@ -2851,11 +2859,9 @@ function nextSteps(b) {
   if (!plan) return "";
   plan.book.ifSupport = !side;
   let what = plan.what;
-  const meet = nextMeeting(b);
-  if (meet) {
-    const d = new Date(meet.when);
-    what += `<p class="when">${meetHead(meet)}: ${esc(meetComm(meet))}, ${fmtMeet(meet.when, true)}.</p>`;
-  }
+  const meet = nextAgenda(b) || nextMeets(b);
+  if (meet?.kind === "meets") what += `<p class="when">The ${esc(meetComm(meet))} meets ${meetWhen(meet)}; this bill could come up.</p>`;
+  else if (meet) what += `<p class="when">${meetHead(meet)}: ${esc(meetComm(meet))}, ${fmtMeet(meet.when, true)}.</p>`;
   what += plan.notes.map((n) => `<p class="holdup">${esc(n)}</p>`).join("");
   if (plan.actionable && oddsLine(b)) what += `<p class="odds">${oddsLine(b)}</p>`;
   const who = plan.book.html((plan.gov ? govItem(plan.gov, b) : "") + (plan.govAlso ? govItem(plan.govAlso, b, false) : ""));
@@ -2914,7 +2920,7 @@ function comingUp(mine) {
   for (const b of BILLS) {
     if (!b.agenda.length || !mine(b)) continue;
     for (const a of b.agenda) {
-      if (a.when < now || a.when > until) continue;
+      if (a.when < now || a.when > until || a.kind === "meets") continue;  // (meetings with no bills named aren't agendas)
       const k = `${a.when}|${a.committee}`;
       (meets.get(k) || meets.set(k, { ...a, bills: [] }).get(k)).bills.push(b);
     }
@@ -4276,8 +4282,9 @@ function panelTags(b, inCard = false) {
 // who sponsors it, with at most one quiet tag; the rest is in the panel that opens.
 function billRow(b) {
       const [first, second] = b.nums;
-      const meet = isWatched(b) ? null : nextMeeting(b);
-      const one = meet ? `<span class="tag agenda">${meetHead(meet)}: ${esc(meet.committee)}, ${fmtMeet(meet.when)}</span>`
+      const meet = isWatched(b) ? null : nextAgenda(b) || nextMeets(b);
+      const one = meet?.kind === "meets" ? `<span class="tag agenda meets" title="${esc(MEETS_TIP)}">${esc(meet.committee)} meets ${fmtMeet(meet.when)}</span>`
+        : meet ? `<span class="tag agenda">${meetHead(meet)}: ${esc(meet.committee)}, ${fmtMeet(meet.when)}</span>`
         : b.shell ? `<span class="tag narrow">${STATE.shellTag || "Shell bill"}${TIPI(SHELL_TIP)}</span>`
         : STATE.rowTags?.(b) || (NARROW_TAG[b.narrow] ? `<span class="tag narrow">${NARROW_TAG[b.narrow]}</span>` : "") || chapTag(b);
       return `<div class="billrow"><details class="bill" data-idx="${b.idx}">
@@ -4316,7 +4323,7 @@ function activeFilters() {
   if (state.voted) out.push(["voted", null, "Vote", opt("voted", state.voted)]);
   if (state.nearby && HOME) out.push(["nearby", null, "Only", `bills that could affect ${HOME ? placeName(HOME) : `your ${PLACE_WORD}`}`]);
   if (state.changed) out.push(["changed", null, "New activity", CHANGED[state.changed].label()]);
-  if (state.agenda) out.push(["agenda", null, "On", "an upcoming committee agenda"]);
+  if (state.agenda) out.push(["agenda", null, ...(state.agenda === "meets" ? ["Only", "bills whose committee meets soon"] : ["On", "an upcoming committee agenda"])]);
   if (state.issue) out.push(["issue", null, "Issue", issueName(state.issue)]);
   if (state.amend) out.push(["amend", null, "Only", BILLS.some((b) => isAmendment(b)) ? "constitutional amendments" : "bills sent to the voters"]);
   return out;
@@ -4418,9 +4425,15 @@ const fmtMeet = (when, time) => { const d = new Date(when); return d.toLocaleDat
 // A meeting's kind, where the data says (Congress's): a markup is where the committee votes on the bill.
 const MEET_KIND = { markup: "Markup (committee vote)", hearing: "Hearing" };
 const meetHead = (m) => MEET_KIND[m.kind] || "On the agenda";
+// A meeting with no bills named (kind "meets"): its day and time, or the note that stands for the time ("after the House
+// adjourns").
+const meetWhen = (m) => fmtMeet(m.when, true) + (m.note && /T00:00(:00)?$/.test(m.when) ? `, ${m.note}` : "");
 const meetComm = (m) => (/committee\b/i.test(m.committee) ? m.committee : `${m.committee} Committee`);
 // The next committee meeting with this bill on the agenda (current session).
 function nextMeeting(b) { return WatchRules.nextMeeting(b.agenda, DATA.current); }
+// The same, for agendas that name the bill, and for meetings of its committee that name no bills (kind "meets").
+const nextAgenda = (b) => WatchRules.nextMeeting(b.agenda.filter((a) => a.kind !== "meets"), DATA.current);
+const nextMeets = (b) => WatchRules.nextMeeting(b.agenda.filter((a) => a.kind === "meets"), DATA.current);
 // Tags after a watched bill's title: what's new, and a committee meeting coming up.
 function newsTags(b) {
   if (!isWatched(b)) return "";
@@ -4433,7 +4446,7 @@ function newsTags(b) {
   }
   if (meet) {
     const d = new Date(meet.when);
-    out += ` <span class="news soon">Coming up: ${esc(meet.committee)}, ${d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>`;
+    out += ` <span class="news soon">Coming up: ${esc(meet.committee)}${meet.kind === "meets" ? " meets" : ""}, ${d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>`;
   }
   return out;
 }
@@ -5506,7 +5519,7 @@ function wire() {
     if (e.target.closest(".tip")) return;
     const g = e.target.closest("[data-g]");
     if (g) { state.stage = String(state.stage) === g.dataset.g ? null : g.dataset.g; state.shown = PAGE; render(); return; }
-    if (e.target.closest("[data-agenda]")) { setAgenda(!state.agenda); return; }
+    if (e.target.closest("[data-agenda]")) { const v = e.target.closest("[data-agenda]").dataset.agenda || "soon"; setAgenda(state.agenda === v ? "" : v); return; }
     if (e.target.closest("[data-amend]")) { state.amend = state.amend ? "" : "1"; state.shown = PAGE; syncControls(); render(); return; }
     const btn = e.target.closest(".srow"); if (!btn) return;
     const k = +btn.dataset.k; state.stage = state.stage === k ? null : k; state.shown = PAGE; render();
@@ -6536,7 +6549,7 @@ function decode(raw) {
       title, summary, act, lawCode, topics, stage, chapter, veto, cosp, intro, dates,
       partyCount: Array.isArray(parties) ? parties : [0, 0],
       parties: partiesOf(parties),
-      agenda: (agenda || []).map(([c, when, kind]) => ({ committee: str(c), when, kind: kind || "" })),
+      agenda: (agenda || []).map(([c, when, kind, note]) => ({ committee: str(c), when, kind: kind || "", note: note || "" })),
       places: (places || []).map((i) => (raw.counties || [])[i] || "?"),
       mainTopic: mainTopic || (topics || [])[0] || "",
       similar: decodeSimilar(similar),

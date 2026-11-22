@@ -47,7 +47,9 @@ minutes when 300 week-old bills are asked again (mostly 304s).
 
 And data/ms/<this year>/agendas.json: bills on the Senate's committee agendas, yesterday to three weeks ahead (agendas():
 the agenda page www.legislature.ms.gov/calendars-and-schedules/senate-committee-agenda/ and the PDF it links, read with
-pdftotext), every run.
+pdftotext), every run. And data/ms/<this year>/house_meetings.json: the House committees' upcoming meetings from its
+committee schedule (house_schedule(): /htms/h_sched.htm, one request), which names no bills; convert.agendas() gives each
+meeting to the bills in that committee as "the committee meets".
 
 Not downloaded: the floor roll calls, which are PDFs (one per ACT_VOTE; members' votes are only there), the House's
 weekly summaries (PDFs), and bill texts. There are no committee roll calls and no plain-language summaries in the XML:
@@ -60,6 +62,7 @@ Usage: python3 states/ms/fetch.py [year]   (default: every year above; a single 
 """
 import json, os, re, shutil, ssl, subprocess, sys, tempfile, time, urllib.error, urllib.parse, urllib.request
 import xml.etree.ElementTree as ET
+from html import unescape
 from collections import Counter
 from datetime import date, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -306,6 +309,70 @@ def agendas(year):
     print(f"agendas: {len(out)} bills on {n} Senate meetings", flush=True)
 
 
+HOUSE_SCHEDULE = f"{SITE}/htms/h_sched.htm"
+SCHED_DAY = re.compile(r"<p[^>]*>\s*(?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY),\s+([A-Z]+)\s+(\d{1,2}),\s+(\d{4})\s*</p>", re.I)
+SCHED_WHEN = {"AA": "after the House adjourns", "AR": "after the House recesses", "BC": "before the House convenes"}
+
+
+def house_meetings(page):
+    """The House's committee schedule (h_sched.htm: a day line, "TUESDAY, DECEMBER 08, 2026"; then a row per meeting:
+    the time ("10:00 AM", "AA+05" minutes after adjournment, "BC", "TBA"), the room ("WNM" when it won't meet) and the
+    committee, with a line under it: "Standing Meeting", "Full Committee", "Subcommittee 1" and its members) ->
+    [[committee, "2026-12-08T10:00:00", note]]: the note says when it isn't a clock time ("after the House adjourns"),
+    and the time is then T00:00:00. Meetings that won't happen and subcommittees (which take up only some bills) are
+    left out. No bills: the House doesn't say which bills its committees will take up."""
+    html = page.decode("latin-1") if isinstance(page, bytes) else page
+    days = [(m.start(), m) for m in SCHED_DAY.finditer(html)]
+    out = []
+    for i, (pos, m) in enumerate(days):
+        mon = MONTHS.get(m.group(1).lower())
+        if not mon:
+            continue
+        try:
+            day = date(int(m.group(3)), mon, int(m.group(2)))
+        except ValueError:
+            continue
+        chunk = html[pos:days[i + 1][0] if i + 1 < len(days) else len(html)]
+        # Each row's last cell runs to the next row (or the day's end), so a row is split at the next row's start.
+        for row in re.split(r'<div class="row"><div class="col-1"><p></p></div>', chunk)[1:]:
+            cells = re.findall(r'<div class="col"><p>([^<]*)</p></div>', row)
+            texts = [re.sub(r"\s+", " ", t).strip() for t in re.findall(r'<p class="text-wrap"[^>]*>([^<]*)</p>', row)]
+            if len(cells) < 2 or not texts:
+                continue  # the "Time / Room" heading row
+            when, room = (unescape(c).strip() for c in cells[:2])
+            name, rest = unescape(texts[0]), " ".join(unescape(t) for t in texts[1:])
+            if room.upper() == "WNM" or re.search(r"\bWNM\b|will not meet|cancel", f"{when} {rest}", re.I) \
+                    or re.search(r"\bsub-?committee\b", f"{name} {rest}", re.I):
+                continue
+            t = re.match(r"(\d{1,2}):(\d\d)\s*([AP])\.?M", when, re.I)
+            if t:
+                clock, note = f"{int(t.group(1)) % 12 + (12 if t.group(3).upper() == 'P' else 0):02d}:{t.group(2)}:00", ""
+            else:
+                clock, note = "00:00:00", SCHED_WHEN.get(re.sub(r"[^A-Z]", "", when.upper())[:2], "")
+            out.append([name, f"{day.isoformat()}T{clock}", note])
+    return out
+
+
+def house_schedule(year):
+    """The House committees' upcoming meetings (no bills), yesterday to three weeks ahead, into <year>/house_meetings.json:
+    [["Judiciary A", "2027-01-20T10:00:00", ""], ["Rules", "2027-01-21T00:00:00", "after the House adjourns"]]. One
+    request; a failure keeps the last file. convert.agendas() ties them to the bills in each committee."""
+    path = os.path.join(DATA, str(year), "house_meetings.json")
+    try:
+        page, _ = request(HOUSE_SCHEDULE, "House committee schedule")
+    except Refused as e:
+        print(f"house schedule: refused ({e}); kept the last copy", flush=True)
+        return
+    if not page or page is NOT_MODIFIED or b"Committee Schedule" not in page:
+        print("house schedule: couldn't be read; kept the last copy", flush=True)
+        return
+    lo, hi = (TODAY - timedelta(days=1)).isoformat(), (TODAY + timedelta(days=AGENDA_DAYS)).isoformat()
+    meets = [m for m in house_meetings(page) if lo <= m[1][:10] <= hi]
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    save(meets, path)
+    print(f"house schedule: {len(meets)} House committee meetings", flush=True)
+
+
 def session(year):
     """One year's lists and bill histories."""
     folder = os.path.join(DATA, str(year))
@@ -457,6 +524,7 @@ def main():
             session(year)
         if not ONLY and not out_of_time():
             agendas(YEAR)
+            house_schedule(YEAR)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
     missing = never_downloaded(years)
