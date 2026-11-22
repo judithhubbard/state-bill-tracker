@@ -42,3 +42,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   `dated` for a year that differs. Crossover is each bill's deadline until it passes its own house
   (`STATE.originDeadline`), and after it the bill can't pass that year. Virginia's floor leaders and members' first
   years come from the houses' sites (contacts.py).
+- **Floor calendars (looked for 2026-11-22): none from an allowed source.** The daily floor calendars ("Daily Floor
+  Calendars", lis.virginia.gov/session-details/<session>/calendar) are only in the new LIS, a page that reads them from
+  the LIS API (lisva.azurewebsites.net/Calendar), whose key is for personal, non-commercial use (not used; the page's own
+  key isn't ours to use). Their PDFs are lis.blob.core.windows.net/files/<number>.PDF, numbered with every other LIS
+  document, so they can't be found without the API. The LIS CSV files (lis.blob.core.windows.net/lisfiles/<session>/, and
+  the legacy list on legacylis.virginia.gov/SiteInformation/ftp.html) have no calendar: its "Agenda.csv" was "not created
+  yet" and answers 404 for 2023-25; CALENDAR.CSV and the like answer 404 too. The Senate Clerk's calendar app
+  (apps.senate.virginia.gov/calendar/cal.php, public in 2023-25: "SENATE CALENDAR ... THIRD READING ...") now sends
+  visitors to a Senate HUB login (apps.senate.virginia.gov/docket/, seen from February 2026). The House's site
+  (house.vga.virginia.gov: robots.txt allows all) has committee meetings, agendas and the minutes after the day, no floor
+  calendar; vga.virginia.gov's "Meeting Calendars & Schedules" page links the LIS calendar. Asking the Clerks (House Clerk's
+  Office, Senate Clerk's Office) for a public file, or a key whose terms fit, is the owner's call.

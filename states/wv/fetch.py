@@ -69,6 +69,10 @@ And data/wv/<this year>/agendas.json, every full run from January to April (`age
 from yesterday to three weeks ahead, from each committee's agenda pages (/committees/House/house_com_agendas.cfm,
 /committees/senate/Senate_com_agendas.cfm): one request a committee, then one a meeting in the window.
 
+And data/wv/<this year>/floor.json, every full run from January to April (`floor_calendars()`, states/wv/calendars.py):
+the House's daily and Special Calendars and the Senate's calendar from /Bulletin_Board/ (robots.txt allows it): three
+index pages, then each calendar dated today or later (the next day's is posted the afternoon before); past days' stay.
+
 Not downloaded: bill texts in full, fiscal notes (/FiscalNotes/, barred), committee amendments, minutes, journals, the governor's veto messages (in the journals), members' biographies.
 
 data/wv/incomplete says "running" during the first copy, then lists what was never downloaded (a year's bill or
@@ -752,6 +756,50 @@ def agendas():
     print(f"agendas: {len(out)} bills on {len(n)} meetings ({len(read)} agenda pages besides one a committee)", flush=True)
 
 
+# ---- Floor calendars ----
+
+def floor_calendars():
+    """The House's daily and Special Calendars and the Senate's calendar, from the Clerks' Bulletin Board
+    (states/wv/calendars.py), into data/wv/<this year>/floor.json: {"read": time, "calendars": {"sdc 2026-02-16":
+    {"kind", "file", "day", "time", "bills": [[section, "SB196"], ...], "read"}}}. Each run asks the three index pages
+    (each lists the house's calendars, newest first; the next day's is posted the afternoon before) and reads every
+    calendar dated today or later (one or two a house), so a revised calendar replaces the earlier copy; calendars of
+    past days stay as last read. January to April only. A failure keeps the last file: never holds West Virginia back."""
+    from states.wv import calendars as K
+    folder = os.path.join(DATA, str(YEAR))
+    path = os.path.join(folder, "floor.json")
+    if not 1 <= TODAY.month <= 4:
+        return
+    saved = load(path, {}) or {}
+    cals = saved.get("calendars") or {}
+    now = datetime.now().isoformat(timespec="seconds")
+    got = 0
+    try:
+        for kind in K.INDEX:
+            page = request(K.index_url(SITE, YEAR, kind), f"floor calendars {kind}", "Bulletin")
+            if page is None:
+                print(f"floor calendars: the {kind} index failed; the last copy is kept", flush=True)
+                return
+            for k, name in K.links(page):
+                day = K.name_day(k, name, YEAR)
+                if k != kind or not day or day.year != YEAR or day < TODAY or not K.regular(day.isoformat()):
+                    continue
+                body = request(K.file_url(SITE, YEAR, k, name), f"floor calendar {name}")
+                cal = K.parse(body) if body else None
+                if not cal:
+                    print(f"floor calendars: {name} {'failed' if body is None else 'has no day'}", flush=True)
+                    continue
+                cals[f"{k} {cal['day']}"] = dict(cal, kind=k, file=name, read=now)
+                got += 1
+    except Refused as e:
+        print(f"floor calendars: {e}; the last copy is kept", flush=True)
+        return
+    os.makedirs(folder, exist_ok=True)
+    save({"read": now, "calendars": cals}, path)
+    print(f"floor calendars: {got} read ({sum(len(c['bills']) for k, c in cals.items() if c['day'] >= TODAY.isoformat())}"
+          f" bills listed from today on)", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     # Before the first copy, a run cut off without its summary leaves this, so a partial copy isn't published.
@@ -774,6 +822,13 @@ def main():
                 raise
             except Exception as e:  # never let the agendas stop the bills
                 print(f"agendas: failed ({type(e).__name__}: {e}); the last copy is kept", flush=True)
+        if not ONLY and not out_of_time():
+            try:
+                floor_calendars()
+            except Refused:
+                raise
+            except Exception as e:  # never let the calendars stop the bills
+                print(f"floor calendars: failed ({type(e).__name__}: {e}); the last copy is kept", flush=True)
         for year in nxt + years:  # the newest first: lists and bill pages
             if out_of_time():
                 break
