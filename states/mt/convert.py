@@ -29,7 +29,8 @@ governor neither signs nor vetoes within 10 days becomes law. Vetoes after adjou
 members by mail (two-thirds of each house). Every law gets a chapter number (1-N each session, none missing in 2023 or 2025),
 which decides laws.
 
-No summary of what a bill does exists in the data (the short title is all), so "What it does" isn't shown.
+No summary of what a bill does exists in the data (the short title is all); "What it does" is the bill's full title,
+from its latest text (states/mt/texts.py writes texts_<year>.json, which build_data.py reads).
 """
 import csv, glob, json, os, re
 from collections import Counter
@@ -903,7 +904,7 @@ def load_session(session):
             when = datetime.fromisoformat(open(path).read().strip().replace("Z", "+00:00")).astimezone(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
         except ValueError:
             when = ""
-    # No "What it does": the data has no summary of what a bill does, only its short title.
+    # "What it does" isn't read here: texts_<year>.json (states/mt/texts.py, the full title) is build_data.py's.
     settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, when, {"SENATE": [], "ASSEMBLY": []}
 

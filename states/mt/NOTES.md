@@ -38,8 +38,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2023 or 2025. Governor (Greg Gianforte, R) 10 days after delivery, in or out of session (Constitution Art. VI, sec. 10,
   as amended: no Sundays rule and no 25-day rule any more); bills reach the governor weeks after the session
   (`passedBothBy` is 60 days after it); vetoes after adjournment are overridden by the Secretary of State's mail poll,
-  two-thirds of each house's members (legislatures.json "2/3"). No "What it does": the data has only short titles (the
-  summary is empty). Titles are the short titles. Topics from the Legislative Services Division's subject codes
+  two-thirds of each house's members (legislatures.json "2/3"). The data has only short titles (the summary is empty);
+  "What it does" is the bill's full title (below, 2026-11-22). Titles are the short titles. Topics from the Legislative Services Division's subject codes
   (`SUBJECT_TOPICS`) and title words. Earlier sessions linked by short title (same prime sponsor, or one bill each), or
   the same prime sponsor with 60% of the title's words; never laws or appropriations. Bill links: the Bill Explorer,
   bills.legmt.gov/#/laws/bill/<session id>/<LC number> (2025) and /#/bill/20231/<LC number> (the archive; read from the
@@ -62,3 +62,28 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   vetoed bills show it, HB 2 (2025) and HB 5 (2023) as line-item vetoes; laws passed over a veto keep it unshown. Quality
   (HB 182 and HB 2 of 2025, HB 33 of 2023, checked against the page image): typed letters, near word-perfect ("officialsk—"
   for "officials—" in HB 33).
+- **What it does (2026-11-22): the bill's full title.** No plain summary exists: the Bill Explorer has the short title,
+  and fiscal notes ("Description of Proposed Legislation") are scans, on about half the bills (769 of 1,641 flagged in
+  2025), and describe cost. The full title the Legislative Services Division's drafters put at the top of every bill
+  lists what the act does: "AN ACT CREATING A SENIOR CITIZEN CENTER GRANT PROGRAM ...; PROVIDING AN APPROPRIATION;
+  AMENDING SECTIONS ..., MCA; AND PROVIDING AN EFFECTIVE DATE AND A TERMINATION DATE." (HB 182 of 2025; short title
+  "Provide grant funding for senior citizen centers"). `titles()` in fetch.py and states/mt/texts.py read each House and
+  Senate bill's text, a PDF with a text layer, from the documents service (robots.txt re-read 2026-11-22: api.legmt.gov
+  and docs.legmt.gov "User-agent: * / Crawl-delay: 10", nothing disallowed). Only the enrolled text (as passed) or the
+  introduced one: amended versions in between show amendments in place, and struck words stay in the text layer (trap:
+  a title read from them could keep words taken out). 2025 on, docs/v1/documents/getBillText?legislatureOrdinal=69&
+  sessionOrdinal=20251&billType=HB&billNumber=182 (the latest version's PDF itself, one request) for bills never amended
+  and for laws and vetoed bills (enrolled: no 'A BILL FOR AN ACT ENTITLED' wrapper); otherwise, and for 2023
+  (getBillText answers 404 there), getBillVersions and the "_x" (enrolled) ticket, else "_1", two requests. Labels "From
+  the bill's full title as passed by the Legislature." or "... as introduced." The title goes in
+  <year>/titles/<HB182>.json with the bill's version (re-read when versionNumber changes); a bill with no text is asked again a week later (titles/asked.json). Laws first, then the bills with the
+  longest histories; 15 minutes a run for every session together (TITLE_MINUTES, about 90 texts at the delay); the first
+  copy (1,516 bills of 2025, 1,534 of 2023: about 4,000-5,000 requests) takes about 50 runs. texts_<year>.json is written every
+  run: the title in sentence case, each word as the bill's own text writes it after a lower-case word ("Montana",
+  "Title 75", "June"; Montana's statutes write agencies and courts in lower case, so the titles do too), without the
+  lists of sections amended or repealed, effective and applicability dates (a termination date is kept as "providing a
+  termination date") and "providing definitions"; introduced bills' 'A BILL FOR AN ACT ENTITLED: "..."' wrapper and line
+  numbers are dropped; a budget's long title is cut at a clause after 1,500 characters; a title that then adds fewer
+  than two words to the short title is left out. Checked by
+  hand on HB 182 and HB 93 of 2025, SB 44 and HB 2 of 2023. Never holds Montana back (a refusal stops the step; errors
+  are logged).

@@ -3,7 +3,8 @@
 undocumented: the addresses are the ones the site's own script calls (it calls https://bearbeta.legmt.gov; the same
 service answers at https://api.legmt.gov, which is used here). api.legmt.gov's robots.txt is "User-agent: * /
 Crawl-delay: 10" and nothing disallowed, so one request at a time, ten seconds apart (counted from the end of the last
-answer). docs.legmt.gov (bill texts, fiscal notes, vote sheets: PDFs) has the same delay and isn't read.
+answer). docs.legmt.gov (bill texts, fiscal notes, vote sheets: PDFs) has the same delay; the governor's veto letters and each
+bill's latest text (for its full title, "What it does": states/mt/texts.py) are read from it.
 
 Montana's Legislature meets in odd years only (2025 is the 69th Legislature's regular session). Sessions since the
 69th are in the current system (bills/v1, legislators/v1, committees/v1; a session's id is small: 2025 is 2, 2027 is
@@ -71,6 +72,7 @@ from datetime import date, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
 from states import letters as L
+from states.mt import texts as T
 
 API = "https://api.legmt.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "mt"))
@@ -82,6 +84,7 @@ DELAY = 10  # api.legmt.gov's robots.txt: Crawl-delay: 10
 PAGE = 100
 LIVE_DAYS = 120
 COSPONSOR_DAYS = 7
+TITLE_MINUTES = 15  # a run's time for bill texts (titles), every session together: about 90 texts at the crawl delay
 TYPES = {"HB": 1, "SB": 4, "HJ": 3, "SJ": 6}  # the current system's bill type ids; HR and SR left out
 MARKER = os.path.join(DATA, "incomplete")
 
@@ -473,6 +476,28 @@ def veto_letters(s, minutes=10):
     print(f"{s['year']}: veto letters: {got} of {len(todo)} read now", flush=True)
 
 
+def titles(s, minutes):
+    """Each bill's full title from its latest text (states/mt/texts.py), for "What it does", for at most `minutes`;
+    then texts_<year>.json. Never holds Montana back: a refusal stops this step, any other error is logged."""
+    folder = os.path.join(DATA, str(s["year"]))
+    bills = bills_on_disk(folder)
+    if not bills:
+        return
+    try:
+        left = (BUDGET - (time.time() - START)) / 60 if BUDGET else minutes
+        if left > 0 and minutes > 0:
+            T.fetch(s, folder, bills, API, request, get_pdf,
+                    lambda body: L.pdf_text(body) if body and body.startswith(b"%PDF") else "", minutes=min(minutes, left))
+    except Refused as e:
+        print(f"{s['year']}: titles: stopped, the server refused a request ({e})", flush=True)
+    except Exception as e:
+        print(f"{s['year']}: titles: failed ({type(e).__name__}: {e})", flush=True)
+    try:
+        T.write(s["year"], folder, bills, DATA)
+    except Exception as e:
+        print(f"{s['year']}: texts: failed ({type(e).__name__}: {e})", flush=True)
+
+
 def begun(s):
     """Whether a session has convened (the first Monday of January). One listed earlier, with bills numbered before it,
     is read when it's there but never holds Montana off the site."""
@@ -571,6 +596,9 @@ def main():
                 raise
             except Exception as e:  # never holds Montana back
                 print(f"{s['year']}: veto letters: failed ({type(e).__name__})", flush=True)
+        until = time.time() + TITLE_MINUTES * 60  # one allowance for every session, the newest first
+        for s in sessions_seen:
+            titles(s, max(0, (until - time.time()) / 60))
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
