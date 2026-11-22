@@ -1254,7 +1254,19 @@ def parties(session, recs):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee agendas: {"HB70": [["House Judiciary", "2026-02-04T13:30:00"]]},
+    from data/nm/<session>/agendas.json (states/nm/fetch.py's agendas()), meetings from today on."""
+    try:
+        data = json.load(open(os.path.join(folder(session), "agendas.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    today = date.today().isoformat()
+    out = {}
+    for bill, meets in data.items():
+        keep = [m for m in meets if m[1][:10] >= today]
+        if keep:
+            out[bill] = sorted(keep, key=lambda m: m[1])
+    return out
 
 
 # ---- Checks ----

@@ -68,6 +68,9 @@ standing committee's page: meeting days and room, members with district, party a
 Member, Member), committees.json, and leadership.html (/Members/Leadership). Members' and committees' pages are read
 weekly for current members (and once for others who sponsored a bill: their pages keep their last details).
 
+And data/nm/<this year>/agendas.json, every full run (`agendas()`): the bills on committee hearing agendas from
+yesterday to three weeks ahead, from the Session Calendar's agenda and schedule PDFs (/Agendas/Standing/).
+
 What changes and when: during a session (and until July 1, for the governor's actions and pocket vetoes), each run
 reads the session's list, the bills whose row changed, and the folder listings, then the files new or changed in
 them. Otherwise the lists and listings are read weekly. A first copy of three sessions (about 2,600 bills and joint
@@ -86,7 +89,7 @@ Usage: python3 states/nm/fetch.py [year]   (default: every session above; a sing
 """
 import hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.parse, urllib.request
 from collections import Counter
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from listing_dates import same  # noqa: E402
@@ -646,6 +649,132 @@ def never_downloaded(yrs, found):
     return gaps
 
 
+# ---- Committee agendas ----
+
+AGENDA_DAYS = 21  # how far ahead
+MONTHS = {m: i for i, m in enumerate(("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"), 1)}
+# The committee hearings' PDFs: a committee's agenda, "/Agendas/Standing/HJCageFeb04.26.pdf", and each house's daily
+# schedule of every committee's hearings, "/Agendas/Standing/hSched020426.pdf".
+AGENDA_LINK = re.compile(r"""href=["'](/Agendas/Standing/(?:([A-Z]+)age([A-Z][a-z]{2})(\d{2})\.(\d{2})|([hs])Sched"""
+                         r"""(\d{2})(\d{2})(\d{2}))[^"'/]*\.pdf)["']""", re.I)
+# "HOUSE JUDICIARY COMMITTEE - Christine Chandler, Chair"; the Senate's schedule leaves out "SENATE": "FINANCE COMMITTEE - ..."
+HEARING_HEAD = re.compile(r"^\s{0,4}(?:(HOUSE|SENATE)\s+)?([A-Z][A-Z,&'.\- ]*?)\s+COMMITTEE\s*(?:-|,|$)")
+HEARING_DAY = re.compile(r"\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+([A-Z][a-z]+ \d{1,2}, \d{4})"
+                         r"(?:\s*-\s*(\d{1,2}):(\d{2})\s*([AP])\.?M)?")
+# A bill's line: "HB 70", "SB     3/a", "CS/HB    49", "HB2 Discussion" (and "HJR 1"); memorials and resolutions are left out
+HEARING_BILL = re.compile(r"^\s*(?:[A-Z]{1,5}/)*(HB|SB|HJR|SJR)\s*(\d+)\b", re.M)
+SMALL_WORDS = {"and", "of", "the", "for", "on"}
+
+
+def hearing_blocks(t, house):
+    """An agenda's or schedule's hearings: [(committee, "2026-02-04T13:30:00", [bills])]. house ("House"/"Senate")
+    names the committees whose heading leaves it out."""
+    out, cur = [], None
+    lines, skip = t.splitlines(), set()
+    for i, line in enumerate(lines):
+        if i in skip:
+            continue
+        # A heading wrapped onto the next line: "HOUSE RURAL DEVELOPMENT, LAND GRANTS AND CULTURAL   - LINDA SERRATO,
+        # CHAIR" then "AFFAIRS COMMITTEE"
+        nxt = lines[i + 1] if i + 1 < len(lines) else ""
+        w = re.match(r"^\s{0,4}((?:HOUSE|SENATE)\b[A-Z,&'.\- ]*?)\s+-\s", line)
+        if w and "COMMITTEE" not in line and re.fullmatch(r"\s{0,4}[A-Z,&'.\- ]*COMMITTEE\s*", nxt):
+            line = f"{w.group(1)} {nxt.strip()}"
+            skip.add(i + 1)
+        h = HEARING_HEAD.match(line)
+        if h and "SCHEDULE" not in line:
+            words = f"{(h.group(1) or house).title()} {h.group(2)}".replace("&", "and").split()
+            name = " ".join(w.lower() if w.lower() in SMALL_WORDS and i else w.capitalize() for i, w in enumerate(words))
+            cur = [name, None, []]
+            out.append(cur)
+            continue
+        if cur is None:
+            continue
+        d = HEARING_DAY.search(line)
+        if d and cur[1] is None:
+            try:
+                day = datetime.strptime(d.group(1), "%B %d, %Y").date()
+            except ValueError:
+                continue
+            clock = "00:00"
+            if d.group(2):
+                clock = f"{int(d.group(2)) % 12 + (12 if d.group(4).upper() == 'P' else 0):02d}:{d.group(3)}"
+            cur[1] = f"{day.isoformat()}T{clock}:00"
+            continue
+        b = HEARING_BILL.match(line)
+        if b and cur[1]:
+            key = f"{b.group(1)}{int(b.group(2))}"
+            if key not in cur[2]:
+                cur[2].append(key)
+    return [tuple(c) for c in out if c[1] and c[2]]
+
+
+def agendas():
+    """Bills on committee hearing agendas from yesterday to three weeks ahead, into data/nm/<this year>/agendas.json:
+    {"HB70": [["House Judiciary", "2026-02-04T13:30:00"]]}. The Session Calendar page (/Calendar/Session) links, during a
+    session, the committees' agendas and each house's daily schedule of committee hearings (PDFs; when it links none, the
+    year's archive, /Calendar/Session_Archive?Year=2026, which lists every one posted); those dated (by file name) from
+    yesterday on are read each run, as text by pdftotext. Each hearing is a heading ("HOUSE JUDICIARY COMMITTEE - ...,
+    Chair"), its day and time ("Wednesday, February 4, 2026 - 1:30 PM or 15 minutes after the floor - Room 309") and its
+    bills ("CS/HB 49", "SB 3/a"). A committee's own agenda (often "REVISED") replaces what the daily schedule says about
+    that committee's hearing that day. A failure keeps the last file: agendas never hold New Mexico back."""
+    if not PDFTOTEXT:
+        print("agendas: no pdftotext; skipped", flush=True)
+        return
+    first, last = TODAY - timedelta(days=1), TODAY + timedelta(days=AGENDA_DAYS)
+    try:
+        page = request("/Calendar/Session", "agendas: session calendar", "Committee")
+        if not isinstance(page, str):
+            print("agendas: the session calendar failed; the last copy is kept", flush=True)
+            return
+        links = list(AGENDA_LINK.finditer(page))
+        if not links:
+            page = request(f"/Calendar/Session_Archive?Year={TODAY.year}", "agendas: archive", "Committee")
+            links = list(AGENDA_LINK.finditer(page)) if isinstance(page, str) else []
+        wanted = {}
+        for m in links:
+            try:
+                if m.group(2):
+                    day = date(2000 + int(m.group(5)), MONTHS[m.group(3).title()], int(m.group(4)))
+                else:
+                    day = date(2000 + int(m.group(9)), int(m.group(7)), int(m.group(8)))
+            except (KeyError, ValueError):
+                continue
+            if first <= day <= last:
+                # (rank, house): a committee's own agenda outranks the daily schedule
+                house = "House" if (m.group(2) or m.group(6)).upper().startswith("H") else "Senate"
+                wanted[m.group(1)] = (1 if m.group(2) else 0, house)
+        best = {}  # (committee, day) -> (rank, when, bills)
+        for path, (rank, house) in sorted(wanted.items()):
+            body = request(path.replace(" ", "%20"), f"agenda {path.rsplit('/', 1)[-1]}", binary=True)
+            if body is None or body is GONE:
+                if body is None:
+                    print(f"agendas: {path} failed; the last copy is kept", flush=True)
+                    return
+                continue
+            for name, when, bills in hearing_blocks(pdf_text(body) or "", house):
+                if when[:10] < first.isoformat():
+                    continue
+                key = (name, when[:10])
+                had = best.get(key)
+                if had is None or rank > had[0]:
+                    best[key] = (rank, when, list(bills))
+                elif rank == had[0]:
+                    had[2].extend(b for b in bills if b not in had[2])
+    except Refused as e:
+        print(f"agendas: {e}; the last copy is kept", flush=True)
+        return
+    out = {}
+    for (name, _), (_, when, bills) in sorted(best.items()):
+        for b in bills:
+            if [name, when] not in out.setdefault(b, []):
+                out[b].append([name, when])
+    folder = os.path.join(DATA, str(TODAY.year))
+    os.makedirs(folder, exist_ok=True)
+    save(out, os.path.join(folder, "agendas.json"))
+    print(f"agendas: {len(out)} bills on {len(best)} hearings ({len(wanted)} PDFs)", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     # Before the first copy, a run cut off without its summary leaves this, so a partial copy isn't published.
@@ -657,6 +786,13 @@ def main():
     try:
         found = sessions()
         yrs = years(found)
+        if not ONLY:
+            try:
+                agendas()
+            except Refused:
+                raise
+            except Exception as e:  # never let the agendas stop the bills
+                print(f"agendas: failed ({type(e).__name__}: {e}); the last copy is kept", flush=True)
         # The core first, newest session first: lists, bill pages, database and members files.
         for year in yrs:
             if out_of_time():

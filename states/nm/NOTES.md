@@ -61,3 +61,20 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   address and contact page are from governor.state.nm.us/contact-the-governor/ (checked by program 2026-11-13, not by the
   owner). Places (`towns.py`): cities, towns, villages, Census-designated places and counties, separate Senate (42) and
   House (70) lists.
+- **Committee agendas (2026-11-22):** `agendas()` in states/nm/fetch.py (every full run, before the bills) reads the
+  Session Calendar page (/Calendar/Session), which during a session links each committee's hearing agenda
+  (/Agendas/Standing/HJCageFeb04.26.pdf: code, "age", day) and each house's daily schedule of committee hearings
+  (hSched020426.pdf, sSched020426.pdf; a day's schedule also lists the next days' hearings); when it links none, it reads
+  the year's archive instead (/Calendar/Session_Archive?Year=2026, the page the "Archive" button goes to, which lists
+  every agenda and schedule posted that year with its hearing day and posting time). The PDFs dated (by file name) from
+  yesterday to three weeks ahead are read each run, as text by pdftotext: a hearing is a heading ("HOUSE JUDICIARY
+  COMMITTEE - Christine Chandler, Chair"; the Senate's schedule leaves out "SENATE": "FINANCE COMMITTEE - ..."; a long
+  heading wraps: "HOUSE RURAL DEVELOPMENT, LAND GRANTS AND CULTURAL - LINDA SERRATO, CHAIR" / "AFFAIRS COMMITTEE"), its day
+  and time ("Wednesday, February 4, 2026 - 1:30 PM or 15 minutes after the floor - Room 309") and its bills ("HB 70",
+  "CS/HB 49", "SB 3/a", "HJR 1 /a"; memorials and resolutions left out). A committee's own agenda (often "REVISED")
+  replaces what the schedule says about its hearing that day. Committee names: "House Judiciary", "Senate Tax, Business
+  and Transportation" ("&" as "and"). Into data/nm/<this year>/agendas.json; `agendas()` in convert.py keeps meetings from
+  today on. Tested as of 2026-02-04 with the 2026 archive (16 PDFs for February 3-4): 23 hearings, 88 bills, all matching
+  2026 records. Untested: the live Session Calendar's own list during a session (its committee lists say "No Committee
+  Schedule Found" now; the archive is the fallback). The HTML committee calendar (/Entity/House/Committee_Calendar) is
+  empty between sessions and wasn't used. A failed request keeps the last file; without pdftotext it's skipped.
