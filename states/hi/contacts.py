@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 """Hawaii's legislators, written as data/hi/contacts_<session>.json in the shape build_data.py reads, from Open States'
 public-domain people file (data/hi/openstates_people.csv, saved by states/hi/fetch.py; the Legislature's own site turns
-automated requests away). The file has each member's party, district, email and photo, but no phone numbers, so none
-are shown (none is invented).
+automated requests away). The file has each member's party, district, email and photo, but no phone numbers. Phones
+(and an email the people file lacks) come from the Public Access Room's "Email, Room & Phone Directory", a text PDF the
+Legislative Reference Bureau posts for each Legislature (lrb.hawaii.gov, a different host from capitol.hawaii.gov;
+robots.txt bars only /wp-admin/): `directory()`. Its address changes with each edition, so it's read from the link on
+the PAR's "Current Legislature" page (once a day; the PDF again only when the link changes). The directory names
+members "Awa, Brenton" with no district; each is matched to a people-file member of the same house by email or by
+surname and first name, so a member who sits in the same house in both Legislatures gets the phone while the people
+file still lists the Legislature now sitting (the November 2026 edition is the 2027-28 Legislature's: a representative
+elected to the Senate, Jackson Sayama, gets none until the people file moves him in January). The source's typos are
+fixed ("@capitol.hawaii,gov").
 
 Hawaii has 25 Senate and 51 House districts, one member each: seat ids "S:12", "H:12". Committees come from the bills'
 histories: each standing committee of each house with the members who voted in it in the Legislature's latest year
 (every committee vote is recorded member by member). The histories don't say who chairs a committee, so no chairs are
 shown. A past Legislature's contacts are today's members. Usage: python3 states/hi/contacts.py [session]
 """
-import json, os, re, sys
+import json, os, re, subprocess, sys, time, unicodedata, urllib.request
 from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -43,6 +51,96 @@ def committees(session):
     return by_year[max(by_year)]
 
 
+PAR = "https://lrb.hawaii.gov/par/current-legislature/"
+AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
+DIRECTORY = os.path.join(P.DATA, "par_directory.json")
+
+
+def _get(url):
+    req = urllib.request.Request(url, headers={"User-Agent": AGENT})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return r.read()
+
+
+def parse_directory(text):
+    """The directory's text (pdftotext -layout) as [(house, "Last, First", email, phone digits)], from its "Senator" and
+    "Representative" tables (the staff tables are skipped)."""
+    out, house = [], None
+    for line in text.splitlines():
+        head = re.split(r"\s{2,}", line.strip())[0]
+        if head in ("Senator", "Representative"):
+            house = "S" if head == "Senator" else "H"
+            continue
+        if re.match(r"(?:Senate|House|Legislative) Staff\b", head):
+            house = None
+            continue
+        m = re.match(r"\s*(.+?)\s{2,}(\S+@\S+)\s.*?(\(?808\)?[-. ]?\d{3}-\d{4})\s*$", line)
+        if not house or not m:
+            continue
+        name, email, phone = m.groups()
+        email = re.sub(r"@capitol\.hawaii[,;]gov$", "@capitol.hawaii.gov", email.strip().lower().rstrip(".,;"))
+        name = re.sub(r"-\s+", "-", re.sub(r"\s+", " ", name)).strip()
+        out.append((house, name, email, re.sub(r"\D", "", phone)[-10:]))
+    return out
+
+
+def directory():
+    """The latest directory's members, as [[house, name, email, phone]] (data/hi/par_directory.json keeps them with the
+    PDF's address and the day the page was last read). Any failure keeps the last copy."""
+    try:
+        saved = json.load(open(DIRECTORY))
+    except (OSError, ValueError):
+        saved = {}
+    if saved.get("read") == time.strftime("%Y-%m-%d") and saved.get("entries"):
+        return saved["entries"]
+    try:
+        page = _get(PAR).decode("utf-8", "replace")
+        links = re.findall(r'href="(https://lrb\.hawaii\.gov/[^"]*Room-Phone-Email[^"]*\.pdf)"', page)
+        if not links:
+            raise ValueError("no directory link on the page")
+        link = sorted(set(links))[-1]
+        if link != saved.get("pdf") or not saved.get("entries"):
+            r = subprocess.run(["pdftotext", "-layout", "-", "-"], input=_get(link), capture_output=True)
+            text = r.stdout.decode("utf-8", "replace")
+            entries = parse_directory(text)
+            if len(entries) < 70:
+                raise ValueError(f"only {len(entries)} members read from {link}")
+            title = re.search(r"\S+ Hawaii State Legislature, \d{4}-\d{4}", text)
+            saved = {"pdf": link, "title": title.group(0) if title else "", "entries": [list(e) for e in entries]}
+            print(f"directory: {len(entries)} members from {link}")
+        saved["read"] = time.strftime("%Y-%m-%d")
+        with open(DIRECTORY + ".tmp", "w") as f:
+            json.dump(saved, f, indent=1, ensure_ascii=False)
+        os.replace(DIRECTORY + ".tmp", DIRECTORY)
+    except (OSError, ValueError, subprocess.SubprocessError) as e:
+        print(f"directory: {type(e).__name__}: {e}; kept the last copy")
+    return saved.get("entries") or []
+
+
+def _plain(s):
+    s = unicodedata.normalize("NFKD", s or "")
+    return re.sub(r"[^a-z ]", "", "".join(c for c in s if not unicodedata.combining(c)).lower().replace("-", " ")).strip()
+
+
+def directory_match(p, h, entries, used):
+    """The index of the directory entry for people-file member p of house h, or None: the same email, else the same
+    surname (the directory's may be longer: "Keohokapu-Lee Loy" for Sue Lee Loy) and first name."""
+    email = (p.get("email") or "").lower()
+    for i, (eh, name, em, phone) in enumerate(entries):
+        if eh == h and i not in used and email and em == email:
+            return i
+    fam, given = _plain(p.get("dataName")), _plain(p["name"]).split()
+    for i, (eh, name, em, phone) in enumerate(entries):
+        if eh != h or i in used or "," not in name:
+            continue
+        last, first = (_plain(x) for x in name.split(",", 1))
+        last, first = re.sub(r"\b(?:jr|sr|ii|iii|iv)\b", "", last).strip(), first.split()
+        if fam and given and first and (last == fam or last.endswith(" " + fam)) and (
+                given[0] in first or first[0] in given):
+            return i
+    return None
+
+
 def build(session):
     people = {}
     for h, seat, full, fam, given, party in C.people():
@@ -64,6 +162,16 @@ def build(session):
         # to a site that turns them away.
         img = r.get("image") or ""
         p["image"] = img.replace("http://", "https://") if img and "capitol.hawaii.gov" not in img else None
+    entries, used = directory(), set()
+    for sid, p in sorted(people.items()):
+        i = directory_match(p, sid[0], entries, used)
+        if i is None:
+            continue
+        used.add(i)
+        d = entries[i][3]
+        p["phone"] = f"{d[:3]}-{d[3:6]}-{d[6:]}"
+        p["phones"] = [["Capitol", p["phone"]]]
+        p["email"] = p["email"] or entries[i][2]
     comms = {"S": {}, "H": {}}
     for (h, name), seats in sorted(committees(session).items()):
         members = sorted(people[s]["name"] for s in seats if s in people)
@@ -88,7 +196,8 @@ def main(sessions):
         with open(path, "w", encoding="utf-8") as f:
             json.dump(out, f, indent=1, ensure_ascii=False)
         ppl = out["people"].values()
-        print(f"{path}: {len(out['people'])} legislators ({sum(1 for p in ppl if p['email'])} with email), "
+        print(f"{path}: {len(out['people'])} legislators ({sum(1 for p in ppl if p['email'])} with email, "
+              f"{sum(1 for p in ppl if p['phone'])} with a phone), "
               f"{len(out['senateCommittees'])} Senate and {len(out['assemblyCommittees'])} House committees, leaders {sorted(out['leaders'])}")
 
 

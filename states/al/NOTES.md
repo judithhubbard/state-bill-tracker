@@ -72,3 +72,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   kept (Rules agendas also list resolutions; "SCF" items are calendars). A meeting's status is "Released" once posted,
   "Closed" after it. Tested by running it as of 2026-03-03 (past meetings come back the same way): 106 meetings, 344
   bills, every key a 2026 record. Not yet seen live in a session. A failed request keeps the last file.
+- (2026-11-22) Emails: one member record's email is "SL Jones@ballhealth.com" (a space): contacts.py leaves out an email that isn't an address (data_check's "emails that aren't addresses" FAIL).

@@ -446,7 +446,7 @@ def parse_member_list(page):
 def parse_member_page(page):
     main = section(page, "<main", "Sponsored Bills")
     info = dict((text(k), text(v)) for k, v in re.findall(r"<dt>(.*?)</dt>\s*<dd>(.*?)</dd>", main, re.S))
-    email = re.search(r'mailto:([^"]+)"', main)
+    email = re.search(r'mailto:([^"?@\s]+@[^"?\s]+)"', main)  # not a "share by email" link (mailto:?body=...)
     phone = re.search(r'href="tel:([^"]+)"', main)
     addr = re.search(r"<address>(.*?)</address>", main, re.S)
     site = re.search(r'Website:</div>\s*<a[^>]*href="([^"]+)"', main)

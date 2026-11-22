@@ -68,3 +68,14 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (floor amendments, conferee changes, rescheduled meetings): 257 of 2025-26's and 324 of 2023-24's status rows had a date
   and no wording (HB 48: 2026-04-01, now 2025-12-08 "Carried over to the 2026 session").
 - **The next Legislature (2026-11-22):** Hawaii has no prefiled bills: the 34th Legislature's (2027-28) are introduced from the opening day, January 20, 2027. fetch.py asks Open States for its session list daily while this year's is missing and reads it once listed; the current year's first copy never holds Hawaii back (`never_downloaded()`), and convert.py's `sessions()` shows a year as soon as fetch.py's first pass over it is whole and has a bill (the 500-bill rule is for a bulk import's partial copy).
+- **Phones (2026-11-22):** from the Public Access Room's "Email, Room & Phone Directory" (the Legislative Reference
+  Bureau's lrb.hawaii.gov, not capitol.hawaii.gov; robots.txt bars only /wp-admin/). The PDF's name changes with each
+  edition (2026/11/2027-Room-Phone-Email-A.pdf, the 34th Legislature's, dated 11/10/2026), so `directory()` in
+  states/hi/contacts.py reads the link from https://lrb.hawaii.gov/par/current-legislature/ once a day and the PDF only
+  when the link changes (data/hi/par_directory.json). It lists names ("Awa, Brenton"), email, room and phone, no
+  districts: each people-file member is matched in the same house by email, else surname and first name ("Keohokapu-
+  Lee Loy, Sue L." is Sue Lee Loy). Until the 34th Legislature sits (January 20, 2027), the people file is the 33rd's:
+  67 of its 76 members are in the new directory in the same house and get its phone; the 9 leaving (Belatti, Cochran,
+  Gedeon, Pierick, Shimizu, Ihara, Rhoads, Fevella; Sayama, moving to the Senate) have none, as before. The directory's
+  typo "sensayama@capitol.hawaii,gov" is fixed; emails stay Open States' (they agree for 66 of the 67; Sue Lee Loy's is repleeloy@ there, repkeohokapuleeloy@ in the directory). data_check's "emails
+  that aren't addresses" FAIL came from it, and found three more states' (CT, AL, CO: their NOTES).

@@ -16,10 +16,10 @@ STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "hi"
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
 # Contact fields a state's allowed sources don't have (see its NOTES.md): Illinois's member files have no emails or member
-# ids and www.ilga.gov turns programs away; Hawaii's and Ohio's legislators' pages turn programs away and Open States'
-# file has no phones; New Hampshire's member list leaves 142 representatives without a phone; Florida's members' phones
-# come from their pages, read over several runs.
-CONTACT_GAPS = {"il": ("email or form", "page"), "hi": ("phone",), "oh": ("phone",), "nh": ("phone",), "fl": ("phone",)}
+# ids and www.ilga.gov turns programs away; Ohio's legislators' pages turn programs away and Open States' file has no
+# phones; New Hampshire's member list leaves 142 representatives without a phone; Florida's members' phones come from
+# their pages, read over several runs. (Hawaii's come from the Public Access Room's directory since 2026-11-22.)
+CONTACT_GAPS = {"il": ("email or form", "page"), "oh": ("phone",), "nh": ("phone",), "fl": ("phone",)}
 # Each legislature's seats (states/legislatures.json), to check votes against the size of their house.
 LEGISLATURES = json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"]
 # The topics every state uses, with the same names, so states can be compared ("Shared conventions" in CLAUDE.md).
@@ -530,6 +530,13 @@ def check(state):
         people = list(json.load(open(path))["people"].values())
         have = {"email or form": sum(1 for p in people if p.get("email") or p.get("form")),
                 "phone": sum(1 for p in people if p.get("phone")), "page": sum(1 for p in people if p.get("url"))}
+        # Emails that aren't addresses: a source's typo ("sensayama@capitol.hawaii,gov" in Hawaii's directory, "SL
+        # Jones@..." in Alabama's), a contact form's address in the email column (25 Connecticut senators'), a share
+        # link read as one ("?body=https..." on Colorado's pages). Each would make a broken "mailto:" link.
+        bad = [p.get("email") for p in people if p.get("email") and not re.fullmatch(
+            r"[^@\s,;:/<>()]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}", p["email"])]
+        if bad:
+            say(state, "FAIL", f"{os.path.basename(path)}: {len(bad)} emails that aren't addresses, e.g. {bad[:3]}")
         for field, n in have.items():
             if not people or field in CONTACT_GAPS.get(state, ()):
                 continue
