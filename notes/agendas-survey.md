@@ -149,3 +149,46 @@ count and at bills on a floor calendar that are still in committee.
 A floor day in a house that passed the bill in the six days before it is dropped by build_data.py's `agenda_of()` (a
 calendar printed before the vote, or Congress's week-long listing), and the page shows floor days only for bills at
 "passed one house" or earlier. test/data_check.py now also checks New York's agendas file.
+
+## Likely floor votes (2026-11-22)
+
+Where no floor calendar is read, a bill's own history can still say when its vote is likely: in Virginia and West
+Virginia a bill is read three times on separate days, and the passage vote follows the second reading on the next day
+the house meets. An entry `["House floor", "2026-02-10T00:00:00", "floor", "likely"]` (states/floorcal.py's `likely()`,
+or `likely_from_records()` on the records' own wording) is the next weekday after the bill's last second reading, or
+after a line putting the vote off a day ("Passed by for the day", "Laid over"), while nothing but the steps between
+(amendments, engrossment) follows it; a third reading or any other step drops it. The page: the tag "Likely floor vote
+Tue, Feb 10" (outlined, with a tip saying it's a guess from the history), the card's "vote yes at its expected floor vote
+Tue, Feb 10", the watchlist's "Likely floor vote Feb 10" (Due soon), "Coming up: likely floor vote ...", and in a state
+whose floor days are all likely ones the pipeline's "Likely floor vote soon" lines. `FLOOR_TODAY` also leaves out history
+lines from that day on (`replay()`), so a past day can be replayed. test/data_check.py fails on a likely vote on a weekend
+or (outside a replay) for a bill past the floor, and LOOKs at the count.
+
+Measured by replaying each session evening by evening (each evening's predictions, scored by the history's next lines;
+the denominators are predictions, so a bill put off twice counts twice). "Generic" is a first pass on the records with
+any house's passage dates (scratch scripts, not kept); "replay" is the predictor itself.
+
+| State | Reading before the vote | Next weekday (the vote that day) | Put off that day | Later | Done? |
+|---|---|---|---|---|---|
+| VA | "Read second time (and engrossed)", Senate "Constitutional reading dispensed (on 2nd reading)" | 2024-26 from HISTORY.CSV: 92.2% of 6,234 (session days after the second reading, to the third: 1 day 91.6%, 2 days 7.3%, 3 days 0.8%, 4+ 0.3%); same on the records: 90.2% of 6,260 | 6.5% (8.4%) | 0.8% (0.9%) | implemented (convert.py `likely_votes()`) |
+| WV | "Read the second time" | 89.2% of 2,436 (2024-26) | 2.7% "Laid over" | 4.7% (2.3% earlier: Saturday sessions) | implemented (`likely_votes()`) |
+| FL | "Placed on 3rd reading" | 91.6% of 332, nearly all 2024 (the wording is rare from 2025) | 4.2% | 0.3% | not done: too few; FL histories carry dated Special Order Calendars ("Placed on Special Order Calendar, 3/5/2025"), a real calendar to read instead |
+| SC | "Read a second time in the House (its main vote)" | 80.4% of 726 (2025-26) | - | 17.8% | not done: the vote after it is the third reading after SC's main vote, near-automatic |
+| MT | "Approved on second reading" | 77.8% of 1,630 (2025) | - | 19.4% | not done: under 80%; would need "may come up for a vote from <day>" |
+| VT | "Third reading ordered" | 77.2% of 416 (2025-26) | - | 22.6% | not done: same |
+| UT | "passed 2nd reading" | 72.3% of 1,018 (2024-26) | - | 24.3% | not done |
+| MI | "read a second time" | 69.1% of 414 (2025-26) | - | 20.5% (10.4% never) | not done |
+| NV | "Read the second time" | 54.6% of 1,143 (2025) | - | 42.8% | not done |
+| IN | "Second reading: ordered engrossed" | 49.5% of 1,399 | - | 49.3% | not done |
+| AK | "Read the second time" | 50.0% of 80 (2025-26) | - | 46.2% | not done |
+| MD | "Second reading" | 31.6% of 6,367 | - | 59.4% | not done |
+| MA | "Read second" / "Ordered to the third reading" | 2.8% of 106 (2025-26; most bills then sit in the third reading committee) | - | 5.7% | not done |
+| PA | "Second consideration" | 22.1% of 113 | - | 60.2% | not done |
+| ID, LA, HI, AL, MN, IL | second reading / "passed to 3rd reading" / "Placed on Calendar Order of 3rd Reading" (generic pass) | 34%, 23%, 16%, 11%, 12%, 9% | | | not done |
+
+Others: TX's records date the second reading and the passage the same day nearly always (69 cases otherwise, 87% next
+day); KY "Read the second time and sent to the Rules Committee" (Rules decides); AK "Advanced to third reading" comes the
+day of the vote; AZ's and GA's second readings come before committee. TN ("Placed on Senate Regular Calendar for
+3/5/2025"), RI ("Placed on House Calendar (3/5/2025)") and FL write the floor calendar's day in the history itself, like
+Wisconsin: candidates for "listed" entries, not likely ones. No reading lines in the records of CT, DE, GA (after
+committee), IA, ME (engrossment wording), MS, NC, ND, NH, NM, OK, WY (only "Laid Back" lines kept).

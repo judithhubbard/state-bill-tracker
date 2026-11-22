@@ -955,7 +955,8 @@ def parties(session, recs):
 
 def agendas(session):
     """Bills on upcoming committee agendas: {"HB2043": [["House Agriculture, Commerce, and Tourism Subcommittee", "2025-02-18T14:00:00"]]},
-    from data/wv/<session>/agendas.json (states/wv/fetch.py's agendas()), meetings from today on."""
+    from data/wv/<session>/agendas.json (states/wv/fetch.py's agendas()), meetings from today on; and likely floor votes
+    (likely_votes())."""
     try:
         data = json.load(open(os.path.join(folder(session), "agendas.json"), encoding="utf-8"))
     except (OSError, ValueError):
@@ -967,6 +968,14 @@ def agendas(session):
         if keep:
             out[bill] = sorted(keep, key=lambda m: m[1])
     floor_days(session, out)
+    # The likely vote (from second readings) only fills a house's day no posted calendar covers.
+    covered = {(e[0], e[1][:10]) for es in out.values() for e in es if e[2:3] == ["floor"] and e[3:4] != ["likely"]}
+    guess = {}
+    likely_votes(session, guess)
+    for bill, es in guess.items():
+        for e in es:
+            if (e[0], e[1][:10]) not in covered:
+                out.setdefault(bill, []).append(e)
     for bill in out:
         out[bill].sort(key=lambda m: m[1])
     return out
@@ -1005,6 +1014,23 @@ def floor_days(session, out, since=None):
                 out[bill].remove(x)
             floorcal.add(out, bill, e)
     return out
+
+
+# Likely floor votes (states/floorcal.py's likely_from_records()): no floor calendar is read, but a bill is read three
+# times on separate days ("Read the second time", then "On 3rd reading" and "Read the third time" with the passage vote
+# the next day the house meets). Replaying 2024-26 evening by evening (2,436 predictions): the vote came that day 89.2%,
+# was laid over that day 2.7%, came later 4.7%, earlier (a Saturday session) 2.3%, never 1.0%.
+LIKELY_SECOND = re.compile(r"^Read the second time", re.I)
+LIKELY_BETWEEN = re.compile(r"amendment|Reported by the Clerk|^On [23](?:nd|rd) reading", re.I)
+LIKELY_PUT_OFF = re.compile(r"^Laid over on", re.I)
+
+
+def likely_votes(session, out):
+    from states import floorcal
+    recs = [r for r in load_session(session)[0] if re.match(r"[HS]B\d", r["nums"][0])]
+    houses = lambda r: ("House of Delegates", "Senate") if r["nums"][0][0] == "H" else ("Senate", "House of Delegates")
+    floorcal.likely_from_records(out, recs, LIKELY_SECOND, LIKELY_BETWEEN, LIKELY_PUT_OFF, houses,
+                                 floorcal.since(P.TIMEZONE), floorcal.replay())
 
 
 # ---- Checks against the Legislature's lists ----

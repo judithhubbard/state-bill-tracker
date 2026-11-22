@@ -100,3 +100,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (Senate February 3, House February 16: 12 of 12 third readings voted that day). www.wvlegislature.gov didn't answer from
   the owner's computer on 2026-11-22, so the live index pages are untested: check the January run's "floor calendars: N
   read" line.
+
+- **Likely floor votes (2026-11-22):** no floor calendar is read, so `likely_votes()` in convert.py (states/floorcal.py's
+  `likely_from_records()`) gives a bill whose last step is "Read the second time" (then only amendments, "Reported by the
+  Clerk" or "On 3rd reading") the next weekday as a "likely" floor day, in the House of Delegates or the Senate (the
+  other house once it passed one); "Laid over on ... reading" moves it to the weekday after that line. Replayed over
+  2024-26 (2,436 predictions): the vote came that day 89.2%, laid over that day 2.7%, later 4.7%, earlier 2.3% (Saturday
+  sessions near the end), never 1.0%. `agendas()` now returns these even when agendas.json is missing.
+
+- **Floor calendars and likely votes together (2026-11-22):** `agendas()` adds the posted calendars first (`floor_days()`); the likely vote from a second reading (`likely_votes()`) is added only for a house's day no posted calendar covers.

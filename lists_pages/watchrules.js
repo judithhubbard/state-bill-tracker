@@ -92,7 +92,7 @@ const WatchRules = (() => {
       if (b.stage === 4) return ` · due ${fmt(dl.d)}`;
       const fl = dl.g === "soon" && hooks.nextMeeting?.(b);
       if (dl.g === "soon" && b.stage < 3) return ` · ${dl.origin ? S.originWord || "deadline to pass its house" : dl.d === sessionEnd().date ? "session ends"
-        : fl?.kind === "floor" && fl.when.slice(0, 10) === dl.d ? (fl.note === "listed" ? "on the calendar" : "floor vote") : "meets"} ${fmt(dl.d)}`;
+        : fl?.kind === "floor" && fl.when.slice(0, 10) === dl.d ? (fl.note === "listed" ? "on the calendar" : fl.note === "likely" ? "likely floor vote" : "floor vote") : "meets"} ${fmt(dl.d)}`;
       return "";
     }
     // Each group's name and its note.
