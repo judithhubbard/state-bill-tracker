@@ -48,7 +48,8 @@ CREDIT_URL = "https://legiscan.com/"
 
 
 def text(x):
-    return re.sub(r"\s+", " ", html.unescape(x or "")).strip()
+    # (Maine's lines double "the": "ACCEPTANCE of the The Majority Ought to Pass Report", 2026-11-22.)
+    return re.sub(r"\b([Tt]he) The\b", r"\1", re.sub(r"\s+", " ", html.unescape(x or "")).strip())
 
 
 def read_json(path, default=None):
