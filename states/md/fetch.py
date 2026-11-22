@@ -16,7 +16,7 @@ robots.txt; see the state-survey-2026-10-31 memory).
 Usage: python3 states/md/fetch.py
 """
 import html, json, os, re, sys, time, urllib.request
-from datetime import date
+from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
 
@@ -174,6 +174,82 @@ def governor(y, bills, vetoes_only=False):
               f"{y}: governor's actions read for {done} bills")
 
 
+def parse_meetings(page):
+    """The Meetings page (/mgawebsite/Meetings/Day/<MMDDYYYY><MMDDYYYY>?ys=2026rs) -> [(committee, "2026-02-17T13:00:00",
+    [bill numbers])]. Each committee's banner (class "senate", "house" or "other") is followed by its meetings, each a
+    hearsched-hearing-header ("Canceled" first when it is) with the day, "Education, Energy, and the Environment
+    Committee - Bill Hearing" (or "- Voting Session"), "1:00 PM - West Miller Senate Building, ...", then its bills
+    (links to /mgawebsite/Legislation/Details/SB0325; struck-through rows, class hearsched-strike, were removed) and a
+    footer that may say "Withdrawn bills: HB46, HB 296, ...". Canceled meetings are left out."""
+    out = []
+    banners = re.split(r'<div class="hearsched-committee-banner (senate|house|other)\b[^"]*">', page)
+    for i in range(1, len(banners) - 1, 2):
+        kind, block = banners[i], banners[i + 1]
+        # The banner's text: a committee's linked name, a subcommittee's "Pensions Subcommittee - (Budget and Taxation
+        # Committee)", or (class "other") a county delegation ("Anne Arundel", "No. 4 - Baltimore County"), a caucus.
+        name = re.split(r'<a class="popover-icon"|</div>', block, 1)[0]
+        name = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", name))).strip()
+        if not name:
+            continue
+        sub = re.match(r"(.+?) - \((.+?) Committee\)$", name)
+        if sub:
+            name = f"{sub.group(2)} {sub.group(1)}"  # "Budget and Taxation Pensions Subcommittee"
+        name = re.sub(r" Committee$", "", name)
+        if kind == "other":
+            caucus = re.search(r"Caucus|Board|Commission|Committee|Council", name)
+            name = f"Joint {name}" if caucus else f"Joint {name} Delegation"
+        else:
+            name = f"{'Senate' if kind == 'senate' else 'House'} {name}"
+        for meet in block.split('<div class="hearsched-hearing-header">')[1:]:
+            head = meet.split("hearsched-table", 1)[0]
+            if re.search(r'<div class="font-weight-bold">\s*Cancel+ed\s*</div>', head):
+                continue
+            day = re.search(r"(?:Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday), (\w+ \d+, \d{4})", head)
+            if not day:
+                continue
+            try:
+                d = datetime.strptime(day.group(1), "%B %d, %Y").date()
+            except ValueError:
+                continue
+            t = re.search(r">\s*(\d+):(\d\d) ([AP])M\b", head)
+            hour = (int(t.group(1)) % 12 + (12 if t.group(3) == "P" else 0)) if t else 0
+            stamp = f"{d.isoformat()}T{hour:02d}:{int(t.group(2)) if t else 0:02d}:00"
+            gone = set()
+            foot = re.search(r"Withdrawn bills:([^<]*)", meet)
+            if foot:
+                gone = {f"{a}{int(b)}" for a, b in re.findall(r"\b([HS][BJ])\s*0*(\d+)", foot.group(1))}
+            bills = []
+            for strike, a, b in re.findall(r'<div class="col-sm-2( hearsched-strike)?"><a href="/mgawebsite/Legislation/Details/([HS][BJ])0*(\d+)\?', meet):
+                k = f"{a}{int(b)}"
+                if not strike and k not in gone and k not in bills:
+                    bills.append(k)
+            out.append((name, stamp, bills))
+    return out
+
+
+def agendas(year):
+    """Bills on committee meetings (hearings and voting sessions) from yesterday to three weeks ahead, from the General
+    Assembly's hearing schedule, one page for the whole range, into data/md/agendas_<year>.json: bill -> [["Senate
+    Education, Energy, and the Environment", "2026-02-17T13:00:00"], ...]. A failure keeps the last file."""
+    first, last = TODAY - timedelta(days=1), TODAY + timedelta(days=21)
+    page = get(f"{SITE}/mgawebsite/Meetings/Day/{first:%m%d%Y}{last:%m%d%Y}?budget=show&cmte=allcommittees&updates=show&ys={year}rs")
+    if not page or "hearsched" not in page:
+        print(f"{year}: no hearing schedule; kept the last agendas")
+        return
+    out, n = {}, 0
+    for name, stamp, bills in parse_meetings(page):
+        if not first.isoformat() <= stamp[:10] <= last.isoformat():
+            continue
+        n += 1
+        for b in bills:
+            if [name, stamp] not in out.setdefault(b, []):
+                out[b].append([name, stamp])
+    path = os.path.join(DATA, f"agendas_{year}.json")
+    json.dump(out, open(path + ".tmp", "w"), ensure_ascii=False)
+    os.replace(path + ".tmp", path)
+    print(f"{year}: agendas: {len(out)} bills on {n} meetings")
+
+
 def sessions():
     """The years of the shared window (states/window.py: this year and the four before, not before 2023), the current
     one first; a year's session from the second Wednesday of January. Each is one file, so a year the window adds back
@@ -199,6 +275,10 @@ def main():
             print(f"{y}: {len(data)} bills")
         elif y < TODAY.year or TODAY.month > 1:
             print(f"{y}: no bill list; kept the last copy")
+    try:
+        agendas(TODAY.year)
+    except Exception as e:  # agendas never break the run
+        print(f"agendas failed ({type(e).__name__}); kept the last file")
     # Every year's vetoes first (overrides), then the rest.
     for only in (True, False):
         for y in sessions():

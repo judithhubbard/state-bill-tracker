@@ -30,3 +30,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   over the governor's veto"); a special session's chapter number isn't kept as the bill's (it repeats the regular
   session's numbers). "Enacted under Article II, Section 17(c)" is a law without the governor's signature. A bill whose
   page isn't read yet keeps the old, undated reading.
+- **Committee agendas (2026-11-22):** `agendas()` in states/md/fetch.py (before the governor's pages) reads the hearing
+  schedule for yesterday to three weeks ahead in one page,
+  /mgawebsite/Meetings/Day/<MMDDYYYY><MMDDYYYY>?budget=show&cmte=allcommittees&updates=show&ys=<year>rs (the address the
+  page's own "Range" form goes to; about 1 MB a week in session; the site has no robots.txt), and writes
+  data/md/agendas_<year>.json; `agendas()` in convert.py reads it and keeps meetings from today on. `parse_meetings()`:
+  each committee banner (class senate/house/other: "Senate Finance", "House Appropriations Capital Budget Subcommittee",
+  county delegations as "Joint Anne Arundel Delegation") and its meetings (bill hearings and voting sessions: the day,
+  "1:00 PM - ..." (no time: T00:00:00), the bills linked as SB0325, read as SB325). Left out: meetings marked "Canceled",
+  bills struck through (removed, "hearsched-strike") and the footer's "Withdrawn bills: HB46, HB 296, ...". The bill list's
+  HearingDateTime columns aren't used (no cancellations). Tested 2026-11-22 against the page for 2026-02-16 to 02-20 (105
+  meetings, 423 bills, all matched; SB 518 and 519, removed, left out) and live (12 interim meetings, no bills).
+  Untested: a range spanning a new session's first weeks under ys=2027rs.
