@@ -2917,7 +2917,7 @@ function planFor(b, stance = "support") {
     // Its version in the other house still has to get out of committee there.
     if (live) inComm.filter((v) => !houses.includes(v.p[0])).forEach((v) => book.chair(v.p[0], v.committee, A(...agendaAsk(v.committee)), !flH));
     if (!live && !continuedTo(b)) b.vers.forEach(again);
-    book.reps(houses.length ? houses : BOTH, L(A("vote yes", "vote no")), !!flH);
+    book.reps(houses.length ? houses : BOTH, L(A(...floorAsk(fl, flH))), !!flH);
   } else if (b.stage === 2) {
     const other = b.passedIn === HOUSE.S ? LOW : "S";
     // Where each house numbers its own version (New York, New Jersey), the other house's version; where a bill
@@ -2927,11 +2927,17 @@ function planFor(b, stance = "support") {
     const agree = twin && /to agree to the/.test(twin.statusDesc || "");
     what = `<p class="when">${ended ? ended.when : stopped || `Next: ${agree ? `the ${HOUSE[other]} votes on the ${b.passedIn}'s changes.` : `the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}`}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
     // On the other house's floor calendar: its members (your own legislators) decide.
-    const fl = live && nextFloor(b), onFloor = fl && floorCode(fl) === other;
-    if (onFloor) { if (!floorSure(fl)) floorLeader(other); }
+    // ... or, when it's back for agreement to the other house's changes, the first house's (a concurrence vote).
+    const first = other === "S" ? LOW : "S";
+    const fl = live && nextFloor(b), flC = fl && floorCode(fl);
+    const onFloor = fl && (flC === other || (agree && flC === first));
+    if (onFloor && flC === first) {
+      if (!floorSure(fl)) floorLeader(first);
+      book.reps([first], L(A(...floorAsk(fl, true))), true);
+    } else if (onFloor) { if (!floorSure(fl)) floorLeader(other); }
     else if (twin && twin.committee) { book.chair(other, twin.committee, L(A(...agendaAsk(twin.committee))), live); stuck(twin); }
     else floorLeader(other);
-    book.reps([other], L(A("vote yes", "vote no")), !!onFloor);
+    if (!(onFloor && flC === first)) book.reps([other], L(A(...floorAsk(onFloor && fl, onFloor))), !!onFloor);
     if (!live && !continuedTo(b)) b.vers.forEach(again);
   } else if (b.stage === 3 && toVoters(b)) {
     what = `<p class="when">It doesn't go to ${EXEC.the}. ${ballotText(b)}</p>`;
@@ -3003,6 +3009,14 @@ function setPanelStance(b, st) {
   try { localStorage.setItem(STANCE_STORE, JSON.stringify(all)); } catch (e) {}
 }
 
+// The ask for your own legislators when the bill is on a floor calendar: the day is in the ask itself, so the card that
+// says what to do (the "Decides" box) carries it.
+function floorAsk(fl, on) {
+  if (!fl || !on) return ["vote yes", "vote no"];
+  const day = fmtMeet(fl.when, true);
+  return floorSure(fl) ? [`vote yes at the floor vote ${day}`, `vote no at the floor vote ${day}`]
+    : [`vote yes if it comes up ${day}`, `vote no if it comes up ${day}`];
+}
 function nextSteps(b) {
   // No side chosen yet: the support asks, each "If you support it: ..." (book.html()'s ifSupport).
   const side = panelStance(b);
@@ -3011,8 +3025,8 @@ function nextSteps(b) {
   plan.book.ifSupport = !side;
   let what = plan.what;
   const meet = nextDate(b);
-  if (meet?.kind === "floor") what += `<p class="when">${floorSure(meet) ? `Scheduled for a ${UNI ? "" : `${esc(floorHouse(meet))} `}floor vote ${fmtMeet(meet.when, true)}`
-    : `On the ${esc(floorHouse(meet))} calendar for ${fmtMeet(meet.when, true)}: it can come up for a vote then`}. Every member votes, so contact your own legislators before then.</p>`;
+  // (A floor day's date is in the ask on your legislators' card: floorAsk().)
+  if (meet?.kind === "floor") {}
   else if (meet?.kind === "meets") what += `<p class="when">The ${esc(meetComm(meet))} meets ${meetWhen(meet)}; this bill could come up.</p>`;
   else if (meet) what += `<p class="when">${meetHead(meet)}: ${esc(meetComm(meet))}, ${fmtMeet(meet.when, true)}.</p>`;
   what += plan.notes.map((n) => `<p class="holdup">${esc(n)}</p>`).join("");
