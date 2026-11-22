@@ -20,3 +20,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   January (40 days in odd years, 35 in even), plus a veto day near the end of March (`vetoDay()`); each year's last
   regular day is in `STATE.dated` (add each year's). Governor 5 days, not counting Saturdays, Sundays or holidays (Art. IV, sec. 4 as amended in 2002; until 2026-11-21 the
   profile excepted only Sundays), in session; 15 calendar days after the last regular day (counted from it, not from delivery).
+- **Contacts after the election (2026-11-22):** the API's 2026 member list (`SessionMembers/Session/71`) lost every
+  member's CapitolPhone and EmailState after the November 2026 election (the 2027 session's list, 174, has them for the
+  members elected), and the next download's contacts had no email or phone. Now fetch.py keeps a refreshed list's emptied
+  fields from the last copy, and saves the next session's members (data/sd/members_next.json); contacts.py fills a
+  missing email from states/sd/emails_2026.json (the API's emails as downloaded on 2026-11-01, all 105 members: those not
+  re-elected sit until January), else the next session's list (same PersonId), and a missing phone with the member's
+  house's switchboard (`SWITCHBOARD`: every member's Capitol phone was one of the two). For 2027, check that list keeps
+  its emails through the session.

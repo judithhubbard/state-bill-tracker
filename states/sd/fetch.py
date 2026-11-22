@@ -210,6 +210,13 @@ def session(year, sid):
     if live or not os.path.exists(paths["members"]):
         members = get(f"SessionMembers/Session/{sid}")
         if members:
+            # After the 2026 election the API cleared every 2026 member's Capitol phone and email (2026-11-22; the 2027
+            # session's list has them): a field the API has emptied keeps the last copy's value.
+            old = {m.get("SessionMemberId"): m for m in load(paths["members"]) or [] if isinstance(m, dict)}
+            for m in members:
+                for f in ("CapitolPhone", "EmailState"):
+                    if not m.get(f) and (old.get(m.get("SessionMemberId")) or {}).get(f):
+                        m[f] = old[m["SessionMemberId"]][f]
             save(paths["members"], members)
             print(f"{year}: {len(members)} members", flush=True)
         elif not os.path.exists(paths["members"]):  # a failed refresh keeps the last copy
@@ -274,6 +281,11 @@ def main():
                 INCOMPLETE.add(f"{y}:session")
         if YEAR + 1 in ids:  # prefiled bills for next year's session
             session(YEAR + 1, ids[YEAR + 1])
+            # Its members (those elected in November), whose list carries the emails and phones this year's list lost
+            # after the election: contacts.py fills a re-elected member's from it.
+            nxt = get(f"SessionMembers/Session/{ids[YEAR + 1]}")
+            if nxt:
+                save(os.path.join(DATA, "members_next.json"), nxt)
     except Refused as e:
         print(f"Stopped: {e}")
         refused = True
