@@ -76,17 +76,18 @@ def seq(sid):
 
 
 def part_key(desc):
-    """Order of a law's parts, numbers compared as numbers: "Part XII: ..." -> (0, 12), "Sec. 1D.10: ..." ->
-    (1, 1, "D", 10)."""
-    m = re.match(r"\s*Part\s+([IVXLC]+)\b", desc)
-    if m:
+    """Order of a law's parts, numbers compared as numbers: "Part XII: ..." -> (0, (12, ""), desc), "Sec. 1D.10: ..." ->
+    (1, ((0, 1), (1, "D"), (0, 10)), desc). Each token is tagged, numbers before letters, so a number never meets a
+    word: an untagged key crashed every run from 2026-11-14 ("Sec. 1D.10" against "Sec. A", "Summary")."""
+    m = re.match(r"\s*(?:Sub)?[Pp]art\s+([IVXLC]+)\b(?:-([A-Z]))?", desc)
+    if m:  # "Subpart II-B" comes after "Part II" and before "Part III"
         r, total = m.group(1), 0
         for i, ch in enumerate(r):
             v = ROMAN[ch]
             total += -v if i + 1 < len(r) and ROMAN[r[i + 1]] > v else v
-        return (0, total)
+        return (0, (total, m.group(2) or ""), desc)
     head = desc.split(":", 1)[0]
-    return (1,) + tuple(int(t) if t.isdigit() else t for t in re.findall(r"\d+|[A-Z](?=[.\d])", head)) + (desc,)
+    return (1, tuple((0, int(t)) if t.isdigit() else (1, t) for t in re.findall(r"\d+|[A-Z](?=[.\d])", head)), desc)
 
 
 def law_parts(rows):
