@@ -36,8 +36,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   70), line items on 7 budget bills. Constitutional amendments are bills ("AN ACT proposing to amend Section 77 of the
   Constitution of Kentucky"): three-fifths of each house's members, then the voters at the next even-year November election
   (`amendmentOnce`, `ballotEvenYears`); they get Acts chapters and go to the Secretary of State, never the governor (2024 HB
-  2 and SB 143; 2026 SB 10), tagged "const", stage 3. Votes are tallies from the history only: members' votes are in each
-  bill's vote_history.pdf (not downloaded; linked from the bill, and "About this data" says so). "What it does" is the LRC's
+  2 and SB 143; 2026 SB 10), tagged "const", stage 3. Votes: see "Members' floor votes" below. "What it does" is the LRC's
   summary of the enacted version for a law, else of the bill as introduced. Titles: the official "AN ACT relating to X"
   as "X" (amendments "Constitutional amendment: ..."); the summary is the official title. Sponsors in order as "K. Moser"
   (2024's link to the district page: 1-100 House, 101-138 Senate districts): matched to today's members by initial and
@@ -85,3 +84,24 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   showing them on overridden laws would need only that). Quality on four letters (SB 70 of 2026, HB 4 of 2025, HB 18 and
   the 8-page HB 6 of 2024): the typed text, italics too, reads with almost no errors ("Iam", "T am", fixed in the
   converter); the stamps, signatures and the "This, the 19th day" line come out garbled and are cut.
+- **Members' floor votes (2026-11-22):** `vote_histories()` in states/ky/fetch.py (after the bills, at most 10 minutes a
+  year a run) reads each voted bill's vote_history.pdf (/record/26rs/hb1/vote_history.pdf, linked from its record page;
+  apps.legislature.ky.gov has no robots.txt) with pdftotext -layout into data/ky/<year>/votes/<HB1>.txt, again when the
+  bill's history gains a tally line (votes/state.json keeps the lines it was read under). About 330 bills a year (329 in
+  2024, 261 in 2025, 349 in 2026), so a first copy takes two or three runs. Each file holds every floor roll call on the
+  bill, House ("Commonwealth of Kentucky / House of Representatives", "RCS# 134") and Senate ("COMMONWEALTH OF KENTUCKY
+  SENATE", "RSN# 3843"): the bill, or the amendment voted on ("HB 1 HFA 6"), the date, the motion and time ("Pass",
+  "Final Passage", "PASS HB 2 w/ SCS 1", "CONSENT PASSAGE OF HB 134", "Table", "Suspend the Rules", "Previous Question",
+  "Adopt", "Veto Override", "OVERRIDE VETO FINAL PASSAGE HB"), the totals (YEAS, NAYS, ABSTAINED (the Senate's PASSES),
+  NOT VOTING) and each group's surnames in columns ("Lewis D", "Bratcher S.", "Tackett Laferty"; the Senate's
+  "ChambersArmstrong" has no space). convert.py gives each history tally the bill's own roll call that day in that house
+  with those ayes and noes (not an amendment's or a procedural motion's; two 32-5 Senate votes on HB 2 of 2026 on April 1
+  each take their own), only when every group's names add up to its total; abstentions are "B", not voting "A". Names
+  go to the current member of that house with that surname (and initial) whose profile's Service line ("House 2022 - 24,
+  Senate 2025 - Present") covers the year in that house, else stay names (2024's "H?Herron" and "H?Rawlings", now
+  senators; members who left). Override votes ("veto overridden", "passed 72-27") aren't vote records, as before.
+  `python3 -m states.ky.convert` prints "floor tallies" (named, no roll call read, unmatched) and up to ten tallies that
+  matched no roll call read. Tested 2026-11-22 on 23 bills' files read live (HB 1, HB 2, HB 6, HB 4 and others across
+  2024-26: passages, concurrences, free conference reports, consent passages): all 63 tallies matched, every group's names
+  added up, every 2026 name tied to a seat, 2025's six untied all Senator Yates's (no longer a member), 2024's 36 all
+  former members or members since moved to the Senate. Before: 1,770 floor votes, none naming members. The rest arrive with the next downloads.
