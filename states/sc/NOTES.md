@@ -38,8 +38,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   ...", not tagged "const"). Only S 1126 of 2024 (voter qualifications) passed in 2023-26; S 582 of 2026 ratified it.
   Titles are the bill search's subject line ("Status Offenses"); the summary is the official title in sentence case
   (`sentence()`: counties, agencies and programs put back from `ALWAYS`); "What it does" is the title's "so as to ..."
-  clauses as sentences (`purpose()`, "From the bill's official title."; none for budgets): the only plain summaries,
-  the LSA's, cover Acts and aren't downloaded. Floor votes member by member: each history roll call whose motion (from the
+  clauses as sentences (`purpose()`, "From the bill's official title."; none for budgets), unless House Research's
+  Legislative Update has a summary (below). Floor votes member by member: each history roll call whose motion (from the
   session's vote list) is the bill's own (second and third readings, concurrence, conference reports, overrides; not
   amendments or motions), matched to members by "Last, First" within the house (`roll_code()`); codes N, E (excused), B (not
   voting, abstain, present). No committee votes. Seats "S:12", "H:71" (separate maps, 46 and 124); a seat goes to the member
@@ -61,6 +61,26 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   one bill has in each (519 of 2025-26's; 15 read over, all the same bill). Places (`towns.py`): cities, towns,
   Census-designated places and counties, separate Senate and House lists.
 
+- **Summaries from the Legislative Update (2026-11-22):** the House Research Staff's weekly Legislative Update, its
+  issues on prefiled bills, bills the House passed and each year's Acts (www.scstatehouse.gov/reports/hupdate/session-126/
+  <name>.htm, Word pages in Windows-1252, 1-7 MB; robots.txt bars only /images/, /jpeg/, /gif/, /dashboard/, /sys/) have a
+  plain paragraph on each bill they cover. The Bill Summary Index (legislativeupdates.scstatehouse.gov/api/BillSummaryIndex/126,
+  JSON, the public hupdate.php page's source; that host has no robots.txt) names each bill's issues and dates: 1,669 bills
+  of 2025-26 in 35 issues on 2026-11-22. The 125th's index is empty, so 2023-24 has none. `states/sc/updates.py`, run by
+  fetch.py for the two newest sessions: the index once a day, each issue once and again when the index dates it later than
+  the copy (3 seconds apart), into data/sc/<year>/updates/; then each bill's summary (summaries.json): the Acts issue's
+  first, else the latest issue's, passing over a short paragraph that only reports a step ("did not concur", "Conference
+  Committee"). Parsing (`summaries_in()`): Word's paragraphs, inline tags dropped without a space (it splits words into
+  spans), the contents and index left out; an entry is a heading ("H. 4641 No Kratom Sales To Minors ..." in Title Case,
+  or the Acts issue's "Taxation of Watercraft (H. 3858, A. 109)") and its paragraphs to the next heading or section
+  heading ("House Floor"); a paragraph Word split at a page break is joined; a weekly issue's opening step ("The House
+  amended and adopted H. 3247.") is dropped. Two traps in the weekly issues: a heading placed before the end of the last
+  bill's text (H. 4145's heading over a paragraph on H. 4755: when a later paragraph names the heading's bill, the ones
+  before go back to the last entry), and a heading with a typo ("H. 5146" over "H. 5164"'s paragraph: an entry whose text
+  never names its bill but opens naming another is dropped). Every summary kept opens naming its own bill or none (checked
+  2026-11-22: 0 of 1,646). "From the House Research Staff's Legislative Update." 2025-26: 1,633 of 2,286 bills (71%, from
+  0 plain summaries), 242 of 274 laws (the rest, mostly local bills, aren't in the index; the budget's H 5126 and H 5127
+  open naming each other and are left out).
 - **Committee agendas (2026-11-22):** `agendas()` in states/sc/fetch.py (the newest session, every run) reads each
   chamber's meeting schedule a week a request (/meetings?chamber=H&selecteddate=<Monday>, this week and the next three:
   8 requests), keeps the meetings from yesterday to three weeks ahead (not "CANCELED", not the floor sessions named

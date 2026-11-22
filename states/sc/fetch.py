@@ -992,6 +992,16 @@ def main():
         have = [s for s in found if begun(s) or os.path.exists(os.path.join(DATA, str(first_year(s)), "bills.json"))]
         if have and not ONLY and live(have[0]) and not out_of_time():
             agendas(have[0], os.path.join(DATA, str(first_year(have[0]))))
+        # House Research's summaries (states/sc/updates.py): the index once a day, each issue once.
+        if not ONLY:
+            from states.sc import updates
+            for session in have[:2]:
+                if out_of_time():
+                    break
+                try:
+                    updates.run(session, os.path.join(DATA, str(first_year(session))))
+                except Exception as e:  # never holds South Carolina back
+                    print(f"legislative update: failed ({type(e).__name__}: {e})", flush=True)
         read_member_pages(have, state)
         save(state, STATE)
         if not ONLY:
