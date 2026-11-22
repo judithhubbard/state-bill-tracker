@@ -47,6 +47,13 @@ DELEGATION_NAMES = set()
 # Who decides which bills reach each house's floor: the Speaker and the Senate President.
 LEADERS = {"S": ("Rob Wagner", "Senate President", "him"),
            "H": ("Julie Fahey", "Speaker of the House", "her")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". House Democrats chose
+# Ben Bowman for Speaker on November 20, 2026; Senate Democrats renominated Wagner. Both houses vote when the Legislature
+# convenes to organize on January 11, 2027. Checked 2026-11-22.
+LEADERS_NEXT = {
+    "H": ("Ben Bowman", "Speaker of the House", "them", "2027-01-11"),
+}
 
 
 def delegation(session):

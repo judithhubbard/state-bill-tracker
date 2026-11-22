@@ -26,8 +26,11 @@ def party_letter(party):
     return "O" if first else "?"
 
 
-def table():
-    return json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"]
+def table(day=None):
+    """Each legislature's facts as they stand on the day (governors.facts_on(): a dated `next` change counts from its day)."""
+    import governors
+    return {st: governors.facts_on(f, day) for st, f in
+            json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"].items()}
 
 
 # Where members-elect take office before their session's year begins (elsewhere it's in January, before or at the
