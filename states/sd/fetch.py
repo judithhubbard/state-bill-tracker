@@ -26,8 +26,8 @@ A run stops five minutes before its time limit (FETCH_MINUTES, set by the workfl
 Usage: python3 states/sd/fetch.py [first_year]   (default: the shared window's first year, states/window.py: this year and
 the four before, not before 2023; also next year's session once listed)
 """
-import hashlib, json, os, sys, time, urllib.error, urllib.request
-from datetime import date
+import hashlib, html, json, os, re, sys, time, urllib.error, urllib.request
+from datetime import date, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
 
@@ -242,6 +242,75 @@ def session(year, sid):
         save(paths["logs"], out)
 
 
+AGENDA_BILL = re.compile(r"\b(HB|SB|HJR|SJR|HCR|SCR|HC|SC)\s*(\d{1,4})\b")
+
+
+def get_html(path):
+    """One API document as text (Documents/<id>.html), or None. Never raises: agendas never hold the run back."""
+    time.sleep(1)
+    STATS["requests"] += 1
+    try:
+        req = urllib.request.Request(API + path, headers={"User-Agent": AGENT})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return r.read().decode("utf-8", "replace")
+    except Exception as e:
+        print(f"{path}: {e.__class__.__name__}", flush=True)
+        return None
+
+
+def committee_name(full):
+    """committees.json's "House Committee on Appropriations" -> "House Appropriations"; "Joint Committee on
+    Appropriations" -> "Joint Appropriations"; "House Judiciary" as it is."""
+    return re.sub(r"\s+", " ", re.sub(r"\bCommittee on ", "", full or "")).strip()
+
+
+def agendas(year):
+    """Bills on committee agendas from yesterday to three weeks ahead, into data/sd/<year>/agendas.json:
+    {"HB1055": [["House Judiciary", "2026-01-16T10:00:00"], ...]}. For each of the session's committees in
+    committees.json (not the whole House or Senate), its documents list (SessionCommittees/Documents/<id>?Type=3&Type=5,
+    as the committee page's Agendas tab reads it: each agenda's DocumentId, DocumentDate with its UTC offset, and
+    NoMeeting for a canceled meeting), then each upcoming agenda's text (Documents/<id>.html), whose bills read
+    "HB 1055" (a line break between). About 32 requests a run plus one per agenda; any failure keeps the last copy."""
+    folder = os.path.join(DATA, str(year))
+    comms = load(os.path.join(folder, "committees.json")) or []
+    first, last = (date.today() - timedelta(days=1)).isoformat(), (date.today() + timedelta(days=21)).isoformat()
+    out, meetings, failed = {}, 0, 0
+    for c in comms:
+        lst = c.get("listing") or {}
+        if (lst.get("Committee") or {}).get("FullBody") or not lst.get("SessionCommitteeId"):
+            continue
+        name = committee_name(lst.get("FullName"))
+        try:
+            docs = get(f"SessionCommittees/Documents/{lst['SessionCommitteeId']}?Type=3&Type=5")
+        except Refused as e:
+            print(f"agendas: stopped ({e})", flush=True)
+            failed += 1
+            break
+        if docs is None:
+            failed += 1
+            continue
+        for d in docs if isinstance(docs, list) else []:
+            when = d.get("DocumentDate") or ""
+            if d.get("NoMeeting") or not d.get("DocumentId") or not first <= when[:10] <= last:
+                continue
+            page = get_html(f"Documents/{d['DocumentId']}.html")
+            if page is None:
+                failed += 1
+                continue
+            meetings += 1
+            body = html.unescape(re.sub(r"<[^>]+>", " ", re.sub(r"(?s)<(script|style)\b.*?</\1>", " ", page)))
+            stamp = when[:19] if re.match(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d", when) else f"{when[:10]}T00:00:00"
+            for kind, num in AGENDA_BILL.findall(body):
+                entry = [name, stamp]
+                if entry not in out.setdefault(f"{kind}{int(num)}", []):
+                    out[f"{kind}{int(num)}"].append(entry)
+    if failed and not meetings and os.path.exists(os.path.join(folder, "agendas.json")):
+        print(f"agendas: {failed} requests failed; kept the last copy", flush=True)
+        return
+    save(os.path.join(folder, "agendas.json"), out)
+    print(f"agendas: {len(out)} bills on {meetings} meetings ({failed} requests failed)", flush=True)
+
+
 def begun(year):
     """Whether a year's session has convened (the second Tuesday of January)."""
     return date.today() >= date(year, 1, 1 + (1 - date(year, 1, 1).weekday()) % 7 + 7)
@@ -274,6 +343,11 @@ def main():
                 INCOMPLETE.add(f"{y}:session")
         if YEAR + 1 in ids:  # prefiled bills for next year's session
             session(YEAR + 1, ids[YEAR + 1])
+        if YEAR in ids and not out_of_time():
+            try:
+                agendas(YEAR)  # never holds South Dakota back
+            except Exception as e:
+                print(f"agendas: failed ({e.__class__.__name__}); kept the last copy", flush=True)
     except Refused as e:
         print(f"Stopped: {e}")
         refused = True

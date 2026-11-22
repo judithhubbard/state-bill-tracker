@@ -320,7 +320,15 @@ def earlier(session, d, p):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee agendas, from agendas.json (states/sd/fetch.py's agendas(): each committee's agenda
+    documents): {"HB1055": [["House Judiciary", "2027-01-16T10:00:00"]]}. Only meetings today or later."""
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
+    try:
+        data = json.load(open(os.path.join(folder(session), "agendas.json")))
+    except (OSError, ValueError):
+        return {}
+    out = {k: sorted(m for m in v if m[1][:10] >= today) for k, v in data.items()}
+    return {k: v for k, v in out.items() if v}
 
 
 def parties(session, recs):

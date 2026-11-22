@@ -20,3 +20,14 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   January (40 days in odd years, 35 in even), plus a veto day near the end of March (`vetoDay()`); each year's last
   regular day is in `STATE.dated` (add each year's). Governor 5 days, not counting Saturdays, Sundays or holidays (Art. IV, sec. 4 as amended in 2002; until 2026-11-21 the
   profile excepted only Sundays), in session; 15 calendar days after the last regular day (counted from it, not from delivery).
+- **Committee agendas (2026-11-22):** `agendas()` in states/sd/fetch.py, run for this year's session after the bills: for
+  each committee in committees.json other than the whole House and Senate (about 32), the API's
+  `SessionCommittees/Documents/<SessionCommitteeId>?Type=3&Type=5` (what the committee page's Agendas tab reads: each
+  meeting's agenda DocumentId, DocumentDate with its offset, "2026-01-28T10:00:00-06:00", and NoMeeting for a canceled
+  one); for each agenda from yesterday to three weeks ahead, its text, `Documents/<id>.html`, whose bills read "HB 1115"
+  (sometimes with a line break between). Written to data/sd/<year>/agendas.json; `agendas()` in convert.py keeps today's
+  and later. Committee names drop "Committee on " ("House Appropriations"). Any failure keeps the last copy and never marks
+  the state incomplete. Tested against the 2026 House Judiciary agendas (1/16 and 1/28: HB 1055; HB 1115, 1126, 1132,
+  1107) with the date set back; the live run's timing in session is untested (agendas are posted a few days ahead). Not
+  used: `Documents/Schedule` (the site's upcoming-meetings list: agendas' DocumentIds with SessionCommitteeId; in
+  November only interim meetings), which could replace the 32 committee requests once its session shape is seen.
