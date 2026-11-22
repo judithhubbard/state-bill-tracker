@@ -3107,7 +3107,8 @@ function carryBox() {
 // ---- Votes ----
 const VOTE_WORDS = { N: "No", E: "Excused", A: "Absent", B: "Abstained" };
 function voteOf(v, L) {
-  if (!L || v.house !== L.house) return null;
+  // (A committee report's signatures aren't votes: kind "R", reportLine().)
+  if (!L || v.house !== L.house || v.kind === "R") return null;
   // Members who joined mid-session didn't cast votes taken before they arrived.
   const start = DATA.profiles?.[L.id]?.start;
   if (start && v.date < start) return null;
@@ -4083,6 +4084,23 @@ function renderPersonStats(L) {
       <tr><td>Excused or absent</td><td>${num(away)}</td>${peer ? `<td>${num(Math.round(peer.missed))}</td>` : ""}</tr></tbody></table></div>
     <p class="note">Out of ${num(fv)} floor votes. The records don't give a reason for an absence.</p>` : ""}`;
 }
+// A committee report's signatures (Alaska, Washington: vote kind "R"), in the legislature's own words: "House Finance
+// Committee report: do pass: Foster, Stapp; no recommendation: Galvin". Each signer is "H:12|Name" (their seat), or
+// "H|Name" / "H?Name" (no seat). Not a vote: no tally, and nothing counts it (voteOf() skips it).
+const REPORT_TIP = "Committee members sign the report with their recommendation instead of voting. A majority signing “do pass” sends the bill on.";
+function reportLine(v, people) {
+  const groups = new Map(), mine = [];
+  for (const [who, words] of v.notYes) {
+    const [seat, name] = who.includes("|") ? who.split("|") : [null, who.replace(/^[A-Z]\?/, "")];
+    if (!groups.has(words)) groups.set(words, []);
+    groups.get(words).push(name);
+    const L = seat && people.find((x) => x.id === seat);
+    if (L) mine.push(`${L.title} ${esc(shortName(L.name))}: <b>${esc(words)}</b>`);
+  }
+  const what = `${HOUSE[v.house]} ${esc(v.committee || "")}${/ommittee$/.test(v.committee || "") ? "" : " Committee"} report`;
+  const list = [...groups].map(([w, ns]) => `<b>${esc(w)}</b>: ${ns.map(esc).join(", ")}`).join("; ");
+  return `${what}${TIPI(REPORT_TIP)} <span class="tally">· ${list}${mine.length ? `<br><span class="theirs">${mine.join(" · ")}</span>` : ""}</span>`;
+}
 // "History": the bill's main steps and its recorded votes in one dated list. A floor vote that passed goes on the line of
 // the passage it records ("Passed the Senate · 26–11"); other votes (committees, votes that failed) keep a line of their
 // own, worded as in the old Votes list. Your legislators' votes are under the vote. While the bill waits on the governor,
@@ -4105,6 +4123,7 @@ function historyBlock(b) {
     [D.vetoed, `Vetoed${b.veto ? `, Memo ${b.veto}` : ""}`, null, 4],
   ].filter(([d]) => d).map(([d, l, house, rank = 2], i) => ({ d, html: esc(l), house, rank, seq: 1000 + i }));
   b.votes.forEach((v, seq) => {
+    if (v.kind === "R") { items.push({ d: v.date || "", html: reportLine(v, people), seq, rank: 1 }); return; }
     const other = [...v.notYes.values()].filter((c) => c !== "N").length;
     const theirs = people.map((L) => { const x = voteOf(v, L); return x ? `${L.title} ${esc(shortName(L.name))}: <b class="v${x === "Yes" ? "y" : x === "No" ? "n" : "o"}">${x}</b>` : ""; }).filter(Boolean).join(" · ");
     const tally = `<b>${v.yes}–${v.no}</b>${other ? ` <span class="muted">(${other} not voting)</span>` : ""}${theirs ? `<br><span class="theirs">${theirs}</span>` : ""}`;

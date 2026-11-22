@@ -2203,7 +2203,8 @@ def compute(prev=None):
             "lastVote": max((d for r in recs for i in (1, 2) for d in r["keyDates"][i].split(";")), default=""),
             # The last committee vote, or the next committee meeting on an agenda (watchrules.js: committees meeting
             # means the Legislature isn't out, whatever the floor).
-            "lastComm": max([str(v[3])[:10] for r in recs for v in r.get("votes") or [] if v[1] != "F" and v[3]]
+            # (Committee reports' signatures, kind "R", aren't votes.)
+            "lastComm": max([str(v[3])[:10] for r in recs for v in r.get("votes") or [] if v[1] not in ("F", "R") and v[3]]
                             + [a[1][:10] for r in recs for a in agenda_of(r)], default="") if session == current else "",
             "strings": strings,
             # Stored column by column (all titles, then all summaries, ...), which compresses

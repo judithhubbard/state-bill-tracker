@@ -86,6 +86,28 @@ def where_to(name, comms):
     return comms.get(name.lower()) or comms.get(name.lower().replace(" and ", " & "))
 
 
+def report_signatures(session, comms):
+    """Bill -> its committee reports' signatures, from data/wa/<session>/signatures.json (states/wa/texts.py: each
+    committee's own report names who signed each recommendation): [{"house", "committee", "acted", "groups"}], one per
+    committee action (a committee's section is repeated in later reports; the latest report's copy is kept)."""
+    try:
+        cache = json.load(open(os.path.join(folder(session), "signatures.json")))
+    except (OSError, ValueError):
+        return {}
+    best = {}
+    for name, doc in sorted(cache.items(), key=lambda x: x[1].get("date") or ""):
+        for s in doc.get("sections") or []:
+            if not s.get("acted"):
+                continue  # (no "Committee Activity" line gave the action's day)
+            hit = comms.get(s["committee"].lower())
+            proper = hit[1] if hit and hit[0] == s["house"] else s["committee"].title().replace(" And ", " and ")
+            best[(doc["bill"], s["house"], proper, s["acted"])] = dict(s, committee=proper)
+    out = {}
+    for (bill, *_), s in sorted(best.items()):
+        out.setdefault(bill, []).append(s)
+    return out
+
+
 def steps_of(bill, d, comms):
     origin = "H" if bill.startswith("H") else "S"
     other = {"H": "S", "S": "H"}
@@ -307,6 +329,37 @@ def load_session(session):
     def member(mid, name):
         return seat_of.get(mid) or f"{who.get(mid, {}).get('house', '?')}?{name}"
 
+    signed = report_signatures(session, comms)
+    # A report's signer ("Wilson, C.", "Ortiz-Self") -> "S:9|C. Wilson": the seat of the house's member with that last
+    # name (and initial), "S|C. Wilson" for a member with no seat in that house now (a past biennium; one who left, or
+    # moved to the other house: Alvarado and Hunt, representatives in 2025, senators since), else "S?Name". The member
+    # list is the biennium's (one record per house a member sat in); members it no longer names (Caldier, who left the
+    # House in 2025) are looked up in the other bienniums' lists.
+    by_last = {}
+    for k, s in enumerate([session] + sorted({x for x in sessions() if x != session}, key=lambda x: abs(x - session))):
+        try:
+            rows = json.load(open(os.path.join(folder(s), "sponsors.json")))
+        except (OSError, ValueError):
+            continue
+        found = {}
+        for m in rows:
+            h, last, first = "S" if m.get("Agency") == "Senate" else "H", text(m.get("LastName")).lower(), text(m.get("FirstName"))[:1].lower()
+            for key in ((h, last), (h, last, first)):
+                if k == 0 or key not in by_last:
+                    found.setdefault(key, set()).add(m.get("Id") if k == 0 else None)
+        for key, ids in found.items():
+            by_last.setdefault(key, set()).update(ids)
+
+    def signer(h, x):
+        m = re.match(r"(.+?), ([A-Z])\.$", x)
+        key = (h, m.group(1).lower(), m.group(2).lower()) if m else (h, x.lower())
+        shown = f"{m.group(2)}. {m.group(1)}" if m else x
+        ids = by_last.get(key, set())
+        if len(ids) != 1:
+            return f"{h}?{shown}"
+        seat = seat_of.get(next(iter(ids)))
+        return f"{seat}|{shown}" if seat and seat[0] == h else f"{h}|{shown}"
+
     recs, index = [], {}
     for f in sorted(files, key=lambda f: (os.path.basename(f)[:2], int(re.sub(r"\D", "", os.path.basename(f)) or 0))):
         p = os.path.basename(f)[:-5]
@@ -391,6 +444,14 @@ def load_session(session):
             votes.append([h, "F", None, (r.get("VoteDate") or "")[:10],
                           int((r.get("YeaVotes") or {}).get("Count") or 0), int((r.get("NayVotes") or {}).get("Count") or 0),
                           [[member(mid, nm), VOTE_CODE[v]] for mid, nm, v in roll if v in VOTE_CODE]])
+        # The committees' reports, with who signed each recommendation (kind "R": signatures, not votes; never counted
+        # as votes). [house, "R", committee, day, signed for passing, signed "do not pass", [[signer, wording], ...]].
+        for s in signed.get(p, []):
+            votes.append([s["house"], "R", s["committee"], s["acted"],
+                          sum(len(ns) for w, ns in s["groups"] if w.startswith("do pass")),
+                          sum(len(ns) for w, ns in s["groups"] if w == "do not pass"),
+                          [[signer(s["house"], x), w] for w, ns in s["groups"] for x in ns]])
+        votes.sort(key=lambda v: v[3])
         action_dates = [dd for dd, _, _, _ in steps if dd]
         chap = next((re.match(r"Chapter (\d+)", a).group(1) for a in raw if re.match(r"Chapter \d+, \d+ Laws", a)), None)
         prime_m = who.get(prime.get("Id")) if prime else None

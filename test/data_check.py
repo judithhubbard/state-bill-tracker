@@ -41,6 +41,22 @@ def check(state):
     C = importlib.import_module(f"states.{state}.convert")
     print(f"== {P.STATE_NAME}")
     loaded = {s: C.load_session(s)[0] for s in importlib.import_module("states.window").shown(P.DATA, C.sessions())}
+    # Committee reports' signatures (AK, WA: votes of kind "R") aren't votes: the vote checks below never see them.
+    # Each signer is a seat ("H:12|Carrick"), a member with no seat now ("S|Hughes"), or no member of the committee's
+    # house ("H?Name"), which is the name read wrongly (or a list split wrongly).
+    for s, recs in loaded.items():
+        for r in recs:
+            r["reports"] = [v for v in r["votes"] if v[1] == "R"]
+            r["votes"] = [v for v in r["votes"] if v[1] != "R"]
+        reps = [(r["nums"][0], v) for r in recs for v in r["reports"]]
+        if reps:
+            loose = [(n, m) for n, v in reps for m, _ in v[6] if "?" in m]
+            bad = sorted({n for n, v in reps if not v[2] or not v[3] or not v[6]})
+            say(state, "FAIL" if len(loose) > 0.01 * sum(len(v[6]) for _, v in reps) else "LOOK",
+                f"{s}: {len(reps)} committee reports with {sum(len(v[6]) for _, v in reps)} signatures; {len(loose)} signers "
+                f"not matched to a member of the house{f', e.g. {collections.Counter(m for _, m in loose).most_common(4)}' if loose else ''}")
+            if bad:
+                say(state, "FAIL", f"{s}: {len(bad)} committee reports with no committee, day or signers, e.g. {bad[:4]}")
 
     # The shared topics, with the shared names.
     mine = {k: v[0] for k, v in P.TOPICS.items()}

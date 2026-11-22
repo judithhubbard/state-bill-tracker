@@ -44,3 +44,23 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   GetPreFiledLegislationInfo (bills prefiled from the first Monday of December: 2026-12-07 for 2027-28; empty on
   2026-11-22) and reads the next biennium's bills into data/wa/<next>/ once one is listed (no folder before), shown as an
   upcoming session; until it convenes (second Monday of January) it never marks Washington incomplete.
+- **Committee reports' signatures (2026-11-22, approved by the owner):** a committee doesn't take roll calls; its members
+  sign the report with their recommendation ("Majority Report: Do pass. Signed by 7 members: Representatives Berry, Chair;
+  ..."; "Minority Report: Without recommendation. Signed by ..."). `states/wa/texts.py`'s `signatures()` reads each
+  committee's own report ("1002 HBR LAWS 25", the Senate's "1796 SBR EDU OC 25"; not the "as passed", "SA", "PL", "FBR" or
+  "TA" reports, which repeat sections) into data/wa/<session>/signatures.json, by name and date (`SIGNED_V` re-reads all
+  when the parser changes). A report holds a section for each of that house's committees as of its last executive action;
+  the action's day is the last date before a "[" on its "Committee Activity" line ("Ways & Means: 4/08/25 [DPA (EDU),
+  DNP]; 2/27/26, 3/02/26 [DPA, DNP, w/oRec]"), so a committee reporting again the next year is a second report. The
+  wording is shortened (`wording()`: "do pass", "do pass as amended", "do pass the substitute", "do not pass", "without
+  recommendation"; the referral after it is left out); titles ("Vice Chair, Operating") are dropped and initials kept
+  ("Wilson, C."). A few reports put the recommendations before the committee's heading (1795 HBR ED 25). fetch.py reads
+  them for ten minutes a run (`all_signatures()`: the current biennium, then the earlier ones, read once); about 3,000
+  reports a biennium. `states/wa/convert.py` (`report_signatures()`, `signer()`) adds each as a vote of kind "R" shown in
+  History beside the votes (tracker.html's `reportLine()`, with an ⓘ) and never counted as a vote; signers are matched by
+  last name (and initial) within the committee's house, in the biennium's member list (one record per house: Alvarado
+  and Hunt sat in the House in 2025, the Senate since), else the other bienniums' (Caldier, who left in 2025): "H:21a|Name",
+  "H|Name" with no seat in that house now, "H?Name" for none. data_check.py counts the unmatched (FAIL over 1%). Local
+  check 2026-11-22: 2025-26 has 2,855 reports with 43,944 signatures, none unmatched; 18 are dated on a day whose history
+  has no "Majority; do pass" line (probably a majority without recommendation, which `REPORT` doesn't read as a report;
+  not looked into). The earlier bienniums' reports weren't read locally: GitHub reads them over the next runs.
