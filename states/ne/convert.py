@@ -281,6 +281,43 @@ def roll(session, v):
     return int(t.get("Yes") or 0), int(t.get("No") or 0), listed
 
 
+def committee_roll(session, k):
+    """The committee's vote to advance the bill, from its committee statement (docs/CS-LB150.txt, read for "What it
+    does"): "Roll Call Vote - Final Committee Action: / Advanced to General File ... / Vote Results: / Aye: 7 Senators
+    Bosn, DeBoer, ... / Nay: 1 Senator McKinney / Absent: / Present Not Voting:" -> (yes, no, [[seat, code], ...]) with
+    the ayes left out, or None. Names are "Cavanaugh, M." for senators who share a surname."""
+    try:
+        raw = open(os.path.join(folder(session), "docs", f"CS-{k}.txt"), encoding="utf-8", errors="replace").read()
+    except OSError:
+        return None
+    m = re.search(r"Vote Results:\s*\n(.*?)\n\s*(?:Testimony:|Proponents:)", raw, re.S)
+    if not m:
+        return None
+    groups, cur = {}, None
+    for ln in m.group(1).split("\n"):
+        g = re.match(r"\s*(Aye|Nay|Absent|Present Not Voting):\s*(.*)$", ln)
+        if g:
+            cur = g.group(1)
+            groups[cur] = g.group(2)
+        elif cur:
+            groups[cur] += " " + ln.strip()
+    out, count = [], {}
+    for group, code in (("Aye", "Y"), ("Nay", "N"), ("Absent", "A"), ("Present Not Voting", "B")):
+        t = re.sub(r"^\s*\d+\s+Senators?\s+", "", groups.get(group, "")).strip()
+        names = []
+        for part in [x.strip() for x in t.split(",") if x.strip()]:
+            if re.fullmatch(r"[A-Z]\.", part) and names:
+                names[-1] += ", " + part  # "Cavanaugh, M."
+            else:
+                names.append(part)
+        names = [x for x in names if not re.fullmatch(r"\d+|None", x)]
+        count[code] = len(names)
+        out += [[seat_of_name(session, x), code] for x in names if code != "Y"]
+    if not count.get("Y") and not count.get("N"):
+        return None
+    return count.get("Y", 0), count.get("N", 0), out
+
+
 def tally_of(line):
     """"Passed on Final Reading 29-20*-0" -> (29, 20, 0)."""
     m = re.search(r"(\d+)-(\d+)\*?-(\d+)\s*$", line)
@@ -356,6 +393,9 @@ def record(session, b):
         if m:
             if place == "committee" and comm:
                 reported, first_report, commfate = True, first_report or comm == first_ref, "passed"
+                cr = None if any(v[1] == "C" for v in fvotes) else committee_roll(session, k)
+                if cr:  # the committee's vote to advance it, member by member (its committee statement)
+                    fvotes.append([H, "C", comm, d, cr[0], cr[1], cr[2]])
                 add(d, "REPORTED", "reported")
                 add(d, f"The {comm} Committee advanced it to General File" + (" with its amendment" if m.group(1) else ""), "report")
             else:
