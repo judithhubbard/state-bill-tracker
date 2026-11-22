@@ -3935,7 +3935,12 @@ function sponsorsBlock(b) {
     const shown = sorted.length > 24 ? sorted.slice(0, 20) : sorted, rest = sorted.slice(shown.length);
     const coText = cos.length ? `; co-sponsor${cos.length === 1 ? "" : "s"}: ${shown.map(nm).join(", ")}${rest.length ? ` <details class="cosp"><summary>and ${num(rest.length)} more</summary>${rest.map(nm).join(", ")}</details>` : ""}`
       : v.cosp > v.extraPrimes ? `; ${num(v.cosp - v.extraPrimes)} co-sponsor${v.cosp - v.extraPrimes === 1 ? "" : "s"}` : "";
-    return `<p><b>${esc(v.p)}</b> ${leads.length ? `${leads.length > 1 ? "Sponsors" : "Sponsor"}: ${andList(leads.map(nm))}` : "No sponsor listed"}${coText}</p>`;
+    // Idaho: a committee's bill asked for by the members its Statement of Purpose names ("Jordan Redman, through the
+    // House Health and Welfare Committee, with Sen. Tammy Nichols"); the floor sponsors.
+    const via = v.via ? `, through the ${esc(v.via)}` : "";
+    const also = v.also?.length ? `, ${/Committee$/.test(v.sponsor || "") ? "for" : "with"} ${andList(v.also.map((x) => `${TITLE[x.house] || ""} ${x.house === v.p[0] ? nm(x.name) : esc(x.name)}`))}` : "";
+    const floor = v.floor?.length ? `<br>Floor sponsor${v.floor.length > 1 ? "s" : ""}${TIPI("Who presents the bill in that house's floor debate and answers questions about it.")}: ${andList(v.floor.map((x) => `${x.house === v.p[0] ? nm(x.name) : esc(x.name)} (${esc(HOUSE[x.house] || x.house)})`))}` : "";
+    return `<p><b>${esc(v.p)}</b> ${leads.length ? `${leads.length > 1 ? "Sponsors" : "Sponsor"}: ${andList(leads.map(nm))}${via}${also}` : "No sponsor listed"}${coText}${floor}</p>`;
   });
   return `<div class="sponsors"><h4>Who sponsors it</h4>${rows.join("")}</div>`;
 }
@@ -6363,9 +6368,12 @@ function decode(raw) {
     dates.passSAll = kd[2] ? kd[2].split(";").map(day) : [];
     dates.passAAll = kd[3] ? kd[3].split(";").map(day) : [];
     // link: the version's page where it isn't addressed by its number (Georgia's legislation ids).
-    const v = vers.map(([p, sp, c, sd, cm, acts, cos, dist, xp, link]) => ({
+    // via, also, floor (Idaho): the committee the sponsor went through, members of the other house named with them, the
+    // floor sponsors ("S:Tammy Nichols|H:Jeff Ehlers": build_data.py's sponsor_extra()).
+    const pairs = (i) => (i == null || i < 0 ? [] : T[i].split("|").map((x) => ({ house: x[0], name: x.slice(2) })));
+    const v = vers.map(([p, sp, c, sd, cm, acts, cos, dist, xp, link, via, also, floor]) => ({
       p, sponsor: str(sp), cosp: c, extraPrimes: xp || 0, statusDesc: str(sd), committee: str(cm), cosponsors: (cos || []).map(str), district: dist || 0,
-      link: link == null ? "" : str(link),
+      link: link == null || link < 0 ? "" : str(link), via: via == null ? null : str(via), also: pairs(also), floor: pairs(floor),
       actions: acts.map(([dt, t]) => [day(dt), T[t]]),
     }));
     const b = {

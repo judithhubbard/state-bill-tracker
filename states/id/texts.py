@@ -7,7 +7,8 @@ A Statement of Purpose / Fiscal Note is a page (sometimes two) written for the b
 "STATEMENT OF PURPOSE", the request number and bill ("RS31872 / H0001"), what the bill does in a few paragraphs, then
 "FISCAL NOTE" (the cost), "Contact:" (the member who asked, with a phone), the stock disclaimer (Joint Rule 18: a
 proponent's statement, not legislative intent) and a footer ("Bill SOP/FN REVISED: 01/14/2025, 4:41 PM"). Only the
-statement of purpose is kept: not the fiscal note, the contact or the disclaimer. The sponsor's own account (it can
+statement of purpose is kept: not the fiscal note, the contact or the disclaimer. (The contacts are read by contacts(),
+for states/id/convert.py: the member who asked for a committee's bill is its sponsor.) The sponsor's own account (it can
 argue for the bill), so it's labelled as the sponsor's.
 Usage: python3 states/id/texts.py [year ...]   (default: every downloaded year)
 """
@@ -131,6 +132,47 @@ def capped(paras):
         break
     if len(out) > 1 and not re.search(r"[.!?:;][\"”’)]?$", out[-1]) and not ITEM.match(out[-1]):
         out.pop()
+    return out
+
+
+# The contact section: "Contact:", then one person a line (with a phone line under some), up to the disclaimer.
+CONTACT = re.compile(r"^\s*Contacts?\s*:\s*(.*)$", re.I)
+CONTACT_END = re.compile(r"^(DISCLAIMER\b|Bill SOP/FN\b|STATEMENT OF PURPOSE\b|FISCAL\s+(NOTE|IMPACT)\b|RS\s?\d+)", re.I)
+TITLES = [(re.compile(r"^(?:Representatives?|Rep\.?|Speaker(?: of the House)?)\s+", re.I), "H"),
+          (re.compile(r"^(?:Senators?|Sen\.?|(?:Senate )?President Pro Tem(?:pore)?)\s+", re.I), "S")]
+
+
+def contacts(raw):
+    """The people the Statement of Purpose names to contact: [(house, name)], house "H" for "Representative ...", "S"
+    for "Senator ...", None for anyone else (agency staff: "Bryan Nickels", "Chris Goetz, Clearwater County Sheriff").
+    "Senator Ben Toews, Majority Caucus Chair" -> ("S", "Ben Toews"); "Representatives Hawkins and Harris" -> two.
+    Phone numbers, emails and agency lines without a name are skipped by the caller's matching, not here."""
+    lines = raw.replace("\f", "\n").split("\n")
+    out, on = [], False
+    for ln in lines:
+        s = clean(ln)
+        m = CONTACT.match(s)
+        if m and not on:
+            on = True
+            s = m.group(1).strip()
+            if not s:
+                continue
+        elif not on:
+            continue
+        if CONTACT_END.match(s):
+            break
+        if not s or re.search(r"\d{3}\D{0,2}\d{3}-\d{4}|@|^\(?\d", s):
+            continue
+        house = None
+        for rx, h in TITLES:
+            if rx.match(s):
+                house, s = h, rx.sub("", s)
+                break
+        s = s.split(",")[0].strip()
+        for n in re.split(r"\s+(?:and|&)\s+", s):
+            n = n.strip(" .;")
+            if n and re.search(r"[A-Za-z]", n):
+                out.append((house, n))
     return out
 
 
