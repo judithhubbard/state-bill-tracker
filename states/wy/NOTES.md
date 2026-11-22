@@ -26,3 +26,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   "Omnibus water bill-construction" share titles). Governor 3 days, Sundays excepted, in session; 15 days after
   adjournment. The governor's phone and contact page (governor.wyo.gov/contact/governor) haven't been checked by the
   owner. A new governor takes office January 4, 2027 (Gordon is term-limited): add them to `GOVERNORS`.
+- **Committee agendas (2026-11-22):** `agendas()` in states/wy/fetch.py, run after the bills: the meeting calendar
+  wyoleg.gov's Calendar page reads, api.wyoleg.gov `/v2/Calendar/Events/<YYYYMMDD>` (found in the site's script
+  chunk; about five weeks of meetings around the day), read for today and three weeks on (two requests). Each meeting has
+  its committee (`committee.shortName`, "Appropriations"), its house (`meetingType` "House", "Senate", "Joint"), its start
+  in local time (`startDate`; an "Upon Adjournment" meeting carries 16:00) and its bills (`sessionMeetingBills`:
+  "HB0105", with notes such as "If introduced and referred"). Meetings from yesterday to three weeks ahead go to
+  data/wy/<year>/agendas.json ("House Appropriations"); convert.py keeps today's and later. Tested on the 2026 budget
+  session's calendar (asked for 2026-02-12: 247 meetings, 152 with bills, 190 bills, all but 6 non-amendment joint
+  resolutions matching the records). The calendar has no canceled flag: a meeting whose purpose says "cancel" is left out;
+  how cancellations really show is untested. A failure keeps the last copy and never stops the run.

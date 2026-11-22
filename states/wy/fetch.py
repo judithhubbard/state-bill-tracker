@@ -27,7 +27,7 @@ A finished year's members and committees are read once. data/wy/incomplete says 
 was never downloaded after it (a failed refresh keeps the last copy); it is removed when nothing is missing.
 Usage: python3 states/wy/fetch.py [year]   (default: every year above; a single year leaves the marker alone)
 """
-import json, os, sys, time, urllib.error, urllib.request
+import json, os, re, sys, time, urllib.error, urllib.request
 from datetime import date, datetime, timedelta, timezone
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
@@ -213,6 +213,52 @@ def committees(year, folder, live):
     print(f"{year}: {len(out)} committees", flush=True)
 
 
+def agendas(year):
+    """Bills on committee agendas from yesterday to three weeks ahead, into data/wy/<year>/agendas.json:
+    {"HB105": [["House Appropriations", "2026-02-09T16:00:00"], ...]}. From the calendar wyoleg.gov's own Calendar page
+    reads (api.wyoleg.gov /v2/Calendar/Events/<YYYYMMDD>: about five weeks of meetings around the day, each with its
+    committee, house (meetingType "House", "Senate", "Joint"), start (local time; "Upon Adjournment" meetings carry
+    the day's 16:00) and the bills it takes up, sessionMeetingBills). Two requests a run (today and three weeks on).
+    Never stops the run: a failure keeps the last copy."""
+    first, last = (date.today() - timedelta(days=1)).isoformat(), (date.today() + timedelta(days=21)).isoformat()
+    events, failed = {}, 0
+    for day in (date.today(), date.today() + timedelta(days=21)):
+        try:
+            time.sleep(1)
+            req = urllib.request.Request(f"{API}/v2/Calendar/Events/{day:%Y%m%d}",
+                                         headers={"User-Agent": AGENT, "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                got = json.loads(r.read())
+        except Exception as e:
+            print(f"agendas: calendar for {day}: {type(e).__name__}", flush=True)
+            failed += 1
+            continue
+        for ev in got if isinstance(got, list) else []:
+            events[ev.get("id")] = ev
+    if failed == 2:
+        print("agendas: calendar unreadable; kept the last copy", flush=True)
+        return
+    out, meetings = {}, 0
+    for ev in events.values():
+        when = ev.get("startDate") or ""
+        name = ((ev.get("committee") or {}).get("shortName") or "").strip()
+        house = ev.get("meetingType") or ""
+        if not ev.get("sessionMeetingBills") or not first <= when[:10] <= last or not name or \
+                house not in ("House", "Senate", "Joint") or "cancel" in json.dumps(ev.get("purpose") or "").lower():
+            continue
+        meetings += 1
+        stamp = when[:19] if len(when) >= 19 else f"{when[:10]}T00:00:00"
+        for b in ev["sessionMeetingBills"]:
+            m = re.match(r"([A-Z]+)0*(\d+)$", (b.get("billNumber") or "").strip())
+            if m:
+                key, entry = f"{m.group(1)}{int(m.group(2))}", [f"{house} {name}", stamp]
+                if entry not in out.setdefault(key, []):
+                    out[key].append(entry)
+    os.makedirs(os.path.join(DATA, str(year)), exist_ok=True)
+    save(os.path.join(DATA, str(year), "agendas.json"), out)
+    print(f"agendas: {len(out)} bills on {meetings} meetings", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     WHOLE[0] = not os.path.exists(MARKER)
@@ -233,6 +279,11 @@ def main():
         committees(year, folder, live)
         bills(year, folder, live)
         READ.append(year)
+    if not ONLY:
+        try:
+            agendas(YEAR)  # never holds Wyoming back
+        except Exception as e:
+            print(f"agendas: failed ({type(e).__name__}); kept the last copy", flush=True)
     finish()
 
 
