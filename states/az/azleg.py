@@ -17,6 +17,7 @@ Last, the governor's veto letters (/govlettr/57leg/1R/hb2091.pdf; the governor's
 whose robots.txt bars every program), for each bill Open States shows vetoed, read once into data/az/<year>/vetoes/
 <HB2091>.json by OCR (states/letters.py's scanned(): the letters are scans). At most VETO_LIMIT seconds a run (about ten
 letters at the crawl delay), the newest year first; a letter not there (404) is asked for again after a month.
+Then each year's Summary of Legislation, House and Senate (`books()`; states/az/books.py reads them), two PDFs a year, once.
 Usage: python3 states/az/azleg.py
 """
 import glob, html, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
@@ -332,6 +333,49 @@ def veto_letters():
     print(f"azleg.gov: veto letters: {got} of {len(todo)} read now", flush=True)
 
 
+def books():
+    """Each year's Summary of Legislation from both research staffs (states/az/books.py), two PDFs a year, read once
+    into data/az/azleg/books/<year>-House.txt and -Senate.txt (pdftotext, without -layout). A year's books appear about
+    two and a half months after its session (Last-Modified 2026-08-27 and 2026-09-25 for a session that ended June 13):
+    the current year's are asked for from August on; one not there (404, or not a PDF) is asked for again after a month
+    (books_missing.json). Never holds Arizona back."""
+    out = os.path.join(DATA, "books")
+    os.makedirs(out, exist_ok=True)
+    missing_path = os.path.join(DATA, "books_missing.json")
+    try:
+        missing = json.load(open(missing_path))
+    except (OSError, ValueError):
+        missing = {}
+    month_ago = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 30 * 86400))
+    today = date.today()
+    root = os.path.dirname(DATA)
+    years = sorted((int(os.path.basename(f)) for f in glob.glob(os.path.join(root, "[0-9]" * 4))), reverse=True)
+    for year in years:
+        if year > today.year or (year == today.year and today.month < 8):
+            continue
+        leg, part = 56 + (year - 2023) // 2, "1R" if year % 2 else "2R"
+        for house in ("House", "Senate"):
+            name = f"{year}-{house}"
+            if os.path.exists(os.path.join(out, name + ".txt")) or missing.get(name, "") > month_ago:
+                continue
+            if time.time() - START + DELAY > RUN_LIMIT:
+                break
+            body = get_bytes(f"/alispdfs/{leg}leg/{part}/{house}/SummaryComplete.pdf")
+            if body is None:
+                continue  # (a failed request: tried again next run)
+            if not body.startswith(b"%PDF-"):
+                missing[name] = time.strftime("%Y-%m-%d", time.gmtime())
+                continue
+            with open(os.path.join(out, name + ".pdf"), "wb") as f:
+                f.write(body)
+            r = subprocess.run(["pdftotext", os.path.join(out, name + ".pdf"), os.path.join(out, name + ".txt")], capture_output=True)
+            os.remove(os.path.join(out, name + ".pdf"))
+            print(f"azleg.gov: {name} Summary of Legislation {'saved' if r.returncode == 0 else 'unreadable'}", flush=True)
+    with open(missing_path + ".tmp", "w") as f:
+        json.dump(missing, f, indent=0, sort_keys=True)
+    os.replace(missing_path + ".tmp", missing_path)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     try:  # the agendas first: they change daily in session, and the weekly committee pages could use up the run
@@ -346,6 +390,10 @@ def main():
         keep(f"committee_{i}", f"/standing-committee/?committeeId={i}")
     print(f"azleg.gov: {len(ids)} committees, rosters saved", flush=True)
     resolutions()
+    try:
+        books()
+    except Exception as e:  # never breaks the run
+        print(f"azleg.gov: Summary of Legislation failed ({type(e).__name__})", flush=True)
     try:
         veto_letters()
     except Exception as e:  # never breaks the run

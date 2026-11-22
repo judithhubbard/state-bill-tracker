@@ -15,7 +15,7 @@ from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from states.az import profile as P
+from states.az import books, profile as P
 from states.undated import settle
 from states import letters as L
 
@@ -238,6 +238,9 @@ def veto_message(session, p, stage, day):
     return {"year": int(day[:4]), "signer": gov, "text": text_, "ocr": bool(got.get("ocr")), "url": got["url"]}
 
 
+LABEL = {"House": "House Majority Research Staff", "Senate": "Senate Research Staff"}
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     path = os.path.join(P.DATA, f"contacts_{session}.json")
@@ -262,6 +265,10 @@ def load_session(session):
     fetched = datetime.fromtimestamp(max(os.path.getmtime(f) for f in files), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
     recs, index = [], {}
     official = resolution_titles(session)
+    # "What it does": the research staffs' yearly Summary of Legislation (states/az/books.py), on every measure that
+    # passed the Legislature.
+    book = books.summaries(os.path.join(P.DATA, "azleg", "books"), session)
+    texts = {}
     for f in sorted(files, key=lambda f: (os.path.basename(f)[0], int(re.sub(r"\D", "", os.path.basename(f)) or 0))):
         b = json.load(open(f))
         p = b["identifier"].replace(" ", "")
@@ -422,6 +429,9 @@ def load_session(session):
         }
         index[p] = len(recs)
         recs.append(rec)
+        if p in book:
+            texts[p] = {"statement": book[p][0], "label": f"From the {LABEL[book[p][1]]}'s Summary of Legislation."}
+    json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
