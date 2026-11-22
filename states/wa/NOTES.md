@@ -64,3 +64,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   check 2026-11-22: 2025-26 has 2,855 reports with 43,944 signatures, none unmatched; 18 are dated on a day whose history
   has no "Majority; do pass" line (probably a majority without recommendation, which `REPORT` doesn't read as a report;
   not looked into). The earlier bienniums' reports weren't read locally: GitHub reads them over the next runs.
+- **Floor calendars (2026-11-22):** `floor_calendars()` in states/wa/fetch.py lists two Workroom Reports folders on
+  lawfilesext.leg.wa.gov (no robots.txt; folder listings on): the House Floor Calendar ("FLR CAL 2026-052.pdf", by session
+  day, posted the evening before, supplements "SUP 1" during the day) and the Senate Flash Calendar ("FLASH CALENDAR
+  2026-03-11.pdf", posted the morning of the day). Two listing requests a run; a PDF (pdftotext) only when posted since
+  yesterday and new or changed (`listing_dates.same()`). Into data/wa/<session>/floor.json, `{file: {"stamp", "house",
+  "day", "bills"}}` (the day from the PDF's "FLOOR CALENDAR March 4, 2026" / "CALENDAR FOR March 11, 2026"; a month
+  kept). Bills and joint resolutions only (gubernatorial appointments and resolutions don't match). Shown as "listed": the
+  House calendar carries a bill for weeks ("Added 2/14/2026"), and of the 2026 calendars from February 24 to March 12
+  (23 PDFs, 324 bills, all records) 41% (House) and 43% (Senate) of the bills had a floor step that day or the next.
