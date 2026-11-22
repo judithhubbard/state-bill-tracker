@@ -67,3 +67,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   aren't used: their numbers can't be derived. Committee votes still aren't published anywhere readable.
 - (2026-11-22) The legislator database's email column holds the Senate Democrats' contact-form addresses
   ("https://www.senatedems.ct.gov/senator/john-fonfara/email-contact"), 25 of them: contacts.py shows them as the form.
+- **Veto messages (2026-11-22):** from the governor's numbered Bill Notifications on portal.ct.gov
+  (/governor/-/media/office-of-the-governor/bill-notifications/<year>/bill-notification-<year>-<n>.pdf; robots.txt allows
+  it; a missing number answers a "404 Error Page" in HTML), found by number, no table: states/ct/vetoes.py. Each
+  notification lists the bills signed, "signed and line-item vetoed" and vetoed; a veto's entry says on which page its
+  letter is ("The veto message can be found on page 4", 2025; "The veto message for this bill can be found on page", 2023),
+  or (2024, 2026) the letter follows with no page given and is found by its "Senate Bill 226". Letters are typed (2025's
+  HB 5002, SB 8; 2026's SB 298) or scanned (read by OCR: 2022-24 and 2025's HB 7004 and line-item vetoes). Checked
+  2026-11-22: every veto of 2022-25 (2, 5, 2, 3) has its message, plus the line-item vetoes of HB 7066 and HB 7067 of 2025
+  and SB 298 of 2026 (shown on the law). Notifications per year: 17, 13, 13, 19, 13. OLR's yearly "Veto Package" has only
+  excerpts. The FTP files have no line-item veto step, so a line-item veto shows only as the governor's letter.

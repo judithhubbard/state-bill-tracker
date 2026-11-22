@@ -32,3 +32,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   billlist; bills are numbered from early December: 2026's first on 2025-12-02; le.utah.gov's 2027 list was empty on
   2026-11-22); its folder is made only once the list has a bill, it shows from its first bill as an upcoming session
   (convert.py's `sessions()` asks 500 bills only of past years), and it never marks Utah incomplete before it convenes.
+- **Veto letters (2026-11-22):** states/ut/vetoes.py, no table: for each bill with "Governor Vetoed" or "Governor Line
+  Item Veto", le.utah.gov/~<year>/veto/<HB0003>.veto.pdf (the Legislature's copy; 2024's HB 2 and HB 3 scanned, read by
+  OCR); else the governor's last letter of the session on several bills, le.utah.gov/~<year>/veto/VetoLetter.pdf (2024's
+  scanned, 2025's typed: "I have selected these bills for veto: 1. HB 152 ...") or the governor's own copies found by
+  governor.utah.gov's WordPress media search (/wp-json/wp/v2/media?search=veto: all of 2026's). `section()` picks a
+  bill's paragraphs from such a letter (from the first naming it, by number or by its number and short title, since OCR
+  read "HB 239" as "Jub 239", to the next bill, list item or turn). Checked 2026-11-22: all 7, 6 and 2 vetoes of 2024-26
+  and the line-item vetoes (HB 2, HB 3 of 2024; HB 3, SB 3 of 2025; HB 3 of 2026). Both sites' Crawl-delay is 10.

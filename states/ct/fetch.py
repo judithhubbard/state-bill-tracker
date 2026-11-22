@@ -275,6 +275,12 @@ def main():
         journals.fetch([y for y in C.sessions() if y >= FIRST], minutes=10)
     except Exception as e:  # never holds Connecticut back
         print(f"journals: failed ({type(e).__name__}: {e})")
+    try:
+        # The governor's veto messages, from his numbered Bill Notifications (states/ct/vetoes.py).
+        from states.ct import vetoes
+        vetoes.fetch(range(FIRST, YEAR + 1), minutes=8)
+    except Exception as e:  # never holds Connecticut back
+        print(f"veto messages: failed ({type(e).__name__}: {e})")
 
 
 if __name__ == "__main__":
