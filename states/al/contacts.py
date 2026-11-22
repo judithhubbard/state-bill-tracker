@@ -48,7 +48,9 @@ def person(m, h, district, latest):
         title = ""  # the members list also gives Matt Woods this title (see P.LEADERS)
     return {
         "name": m["name"], "key": name_key(m["name"]), "id": m.get("id"), "party": PARTY.get(m.get("party"), m.get("party") or ""),
-        "email": (m.get("email") or m.get("districtEmail") or "").strip() or None, "form": None,
+        # (an address with a space, the records' "SL Jones@ballhealth.com", is a typo: left out rather than shown broken)
+        "email": next((e.strip() for e in (m.get("email"), m.get("districtEmail"))
+                       if e and re.fullmatch(r"\S+@\S+\.\w+", e.strip())), None), "form": None,
         "phone": phones[0][1] if phones else None, "phones": phones, "url": LIST_URL[h],
         "image": None, "office": office, "position": (title or None) if latest else None,
         "places": (m.get("counties") or "") if latest else "", "dataName": m.get("last") or m["name"].split()[-1],

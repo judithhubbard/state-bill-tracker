@@ -33,9 +33,13 @@ def build(year):
         phone = r.get("capitol phone") or None
         sid = f"{h}:{int(d)}"
         title = r.get("title") or None
+        email = (r.get("email") or "").strip()
         people[sid] = {
             "name": name, "key": name_key(name), "id": sid, "party": PARTY.get((r.get("party") or "")[:1], ""),
-            "email": r.get("email") or None, "form": None, "phone": phone, "phones": [["Hartford", phone]] if phone else [],
+            # The Senate Democrats' column holds their contact form's address, not an email ("https://www.senatedems.ct.gov
+            # /senator/john-fonfara/email-contact"): shown as the form.
+            "email": email if "@" in email and "/" not in email else None,
+            "form": email if email.startswith("http") else None, "phone": phone, "phones": [["Hartford", phone]] if phone else [],
             "url": r.get("URL") or None, "image": None, "office": "", "position": title if title and title.lower() not in ("representative", "senator") else None,
             "places": "", "dataName": r.get("last name") or name,
         }

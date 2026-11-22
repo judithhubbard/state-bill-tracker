@@ -31,7 +31,9 @@ def build(year):
         people[f"{h}:{int(district)}"] = {
             "name": name, "key": name_key(name), "id": m["slug"],
             "party": PARTY.get(page.get("party") or m.get("party"), page.get("party") or m.get("party") or ""),
-            "email": page.get("email") or m.get("email") or None, "form": None,
+            # (members.json files saved before 2026-11-22 hold a page's "share by email" link, "?body=...", as the email)
+            "email": next((e for e in (page.get("email"), m.get("email")) if e and "@" in e and "?" not in e), None),
+            "form": None,
             "phone": phone or None, "phones": [["Capitol", phone]] if phone else [],
             "url": f"https://leg.colorado.gov/legislators/{m['slug']}", "image": None, "office": page.get("address") or "",
             "position": page.get("leadership") or None, "places": ", ".join(page.get("counties") or []),

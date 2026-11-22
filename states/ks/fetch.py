@@ -152,6 +152,8 @@ def request(url, label, kind="json"):
                     body = gzip.decompress(body)
                 if r.headers.get("cf-mitigated") == "challenge":
                     raise Refused(f"{label}: Cloudflare challenge")
+            if kind == "bytes":
+                return body
             text = body.decode("utf-8", "replace")
             if kind != "json":
                 if "challenge-platform" in text and "Just a moment" in text:
@@ -346,6 +348,158 @@ def agendas(biennium):
         meets_of.sort(key=lambda m: m[1])
     save(out, path)
     print(f"agendas: {len(out)} bills on {len(meets)} hearings", flush=True)
+    # Committees' working meetings, from their weekly agendas: in session (January to May), or whenever hearings are set.
+    if rows or TODAY.month <= 5:
+        weekly_agendas(biennium)
+
+
+# ---- Committees' weekly agendas (working meetings) ------------------------------------------------------------------
+# The hearings list has only the bills set for a hearing. A committee's "final action" (working) meetings are on its
+# weekly agenda, a text PDF each committee posts on its documents page: kslegislature.gov/<biennium>/committees/<code>/
+# documents/, whose list of weekly agendas is the plain-HTML fragment .../documents/fragment/?type=weekly (a row per week,
+# "March 29, 2026", linking /<biennium>/bills/download/?apn=<biennium>/year2/house/committees/ctte_h_ed_1/agendas/
+# published/ctte_h_ed_1_20260208_wkagenda.pdf: the Sunday after the week, February 2-6, in the name). Each day reads:
+#     1:30 PM                                   218-N
+#     Monday, February 2
+#     Discussion & action on:
+#            HB2530 — Enacting the career readiness ...
+#     Hearing on:
+#            HB2428 — Requiring the state board of regents ...
+#     Possible action on bills previously heard
+# Bills under "Discussion & action on" (also "Final action on", "Action on", "Possible action on" with bills named) are
+# agenda entries like a hearing's; "Possible action on bills previously heard" names no bills: the meeting is kept as
+# "the committee meets", and convert.py gives it to the bills that committee has heard and still holds. Hearings are
+# left to the hearings list. The PDFs have no date or version headers (a revised agenda, "Revision 4", keeps its name),
+# so a week still to come or under way is read again when its copy is 6 hours old; a past week never.
+WEEK_PDF = re.compile(r'href="(/b\d{4}_\d\d/bills/download/\?apn=[^"]+?_(\d{8})_wkagenda\.pdf)"')
+DAY = re.compile(r"^\s*(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(January|February|March|April|May|"
+                 r"June|July|August|September|October|November|December)\s+(\d{1,2})\b", re.I)
+CLOCK = re.compile(r"^\s*(\d{1,2}:\d\d\s*[AP]\.?\s?M\.?)", re.I)
+ITEM = re.compile(r"^ {0,2}((?:Possible )?(?:final )?action on (?:bills|legislation|measures) previously heard\b|Request for bill introductions?\b|"
+                  r"(?:[A-Z][A-Za-z&/,'\- ]{2,60}?)\s+(?:on|of)\b:?)(.*)$", re.I)
+MEASURE = re.compile(r"\b(HB|SB|HCR|SCR)\s?(\d{4})\b")
+MONTHS = {m: i + 1 for i, m in enumerate("january february march april may june july august september october november "
+                                         "december".split())}
+
+
+def parse_weekly(text, week):
+    """A weekly agenda's text -> ([(bill, "2026-02-02T13:30:00")], [meeting times with "Possible action on bills
+    previously heard"]). week: the date in the file's name, "20260208" (not the week's first day: that file holds
+    February 2-6, 2026), which places the days' month and day in a year."""
+    start = date(int(week[:4]), int(week[4:6]), int(week[6:])) - timedelta(days=14)
+    acts, meets, day, clock, kind = [], [], None, "00:00:00", None
+    for line in text.splitlines():
+        if re.search(r"Committee Assistant is the point of contact|may request accommodation|Requests should be made"
+                     r"|Administrative Services at:", line):
+            continue
+        c = CLOCK.match(line)
+        if c:
+            clock = hearing_time(c.group(1).replace(".", "").replace(" M", "M"))
+        d = DAY.match(line)
+        if d:
+            month, n = MONTHS[d.group(2).lower()], int(d.group(3))
+            # Within two weeks of the name's date either way (a week can run into the next month or year).
+            for k in range(0, 29):
+                x = start + timedelta(days=k)
+                if (x.month, x.day) == (month, n):
+                    day = x
+                    break
+            else:
+                day = None
+            kind = None
+            continue
+        i = ITEM.match(line)
+        rest = line
+        if i:
+            head = i.group(1).lower()
+            if "previously heard" in head:
+                if day:
+                    meets.append(f"{day.isoformat()}T{clock}")
+                kind = None
+                continue
+            kind = "action" if re.search(r"\baction on\b", head) else "other"
+            rest = i.group(2)
+        if kind != "action" or not day:
+            continue
+        # Bills at the start of a line ("HB2530 — Enacting ...") or right after the heading's colon, not ones a
+        # description mentions in passing.
+        lead = re.split(r"\s+[—–-]\s+", rest.strip(), maxsplit=1)[0]
+        if not re.match(r"\s*(?:HB|SB|HCR|SCR)\s?\d{4}\b", lead):
+            continue
+        for kind_, num in MEASURE.findall(lead):
+            entry = (f"{kind_}{num}", f"{day.isoformat()}T{clock}")
+            if entry not in acts:
+                acts.append(entry)
+    return acts, sorted(set(meets))
+
+
+def weekly_agendas(biennium):
+    """Each standing committee's weekly agendas from last week to three weeks ahead, into <first year>/weekly_agendas.json:
+    {"bills": {"HB2530": [["House Education", "2026-02-02T13:30:00"]]}, "meets": [["House Education",
+    "2026-02-05T13:30:00"]]}; the PDFs' text is kept in <first year>/wkagendas/. One request per committee (its list)
+    plus one per week's agenda new or due again: about 50-90 a run in session. A failure keeps the last copy."""
+    folder = os.path.join(DATA, str(first_year(biennium)))
+    comms = (load(os.path.join(folder, "committees.json")) or {}).get("committees") or []
+    comms = [c for c in comms if c.get("kpid") and c.get("chamber") in ("House", "Senate")
+             and (c.get("committee_type") == "Standing" or (c.get("status") == "Active" and c.get("committee_type") in ("Special", "Select")))]
+    if not comms:
+        print("weekly agendas: no committee list; skipped", flush=True)
+        return
+    cache = os.path.join(folder, "wkagendas")
+    os.makedirs(cache, exist_ok=True)
+    seen_path = os.path.join(cache, "read.json")
+    seen = load(seen_path, {}) or {}
+    lo, hi = TODAY - timedelta(days=7), TODAY + timedelta(days=21)
+    bills, meets, read, failed = {}, set(), 0, 0
+    for c in comms:
+        if out_of_time():
+            break
+        title = re.sub(r"\s+", " ", c.get("title") or "").strip()
+        name = title if re.match(r"(House|Senate|Joint)\b", title) else f"{c['chamber']} {title}"
+        page = request(f"{SITE}/{biennium}/committees/{c['kpid']}/documents/fragment/?type=weekly", f"{c['kpid']} weekly",
+                       kind="text")
+        if page is None:
+            failed += 1
+            continue
+        for href, week in dict(WEEK_PDF.findall(page)).items():
+            # The name's date is the Sunday after the week it covers (..._20260208_ holds February 2-6, 2026); read
+            # generously, as two weeks before it to one after.
+            named = date(int(week[:4]), int(week[4:6]), int(week[6:]))
+            if not (lo <= named + timedelta(days=7) and named - timedelta(days=14) <= hi):
+                continue
+            fname = os.path.join(cache, href.rsplit("/", 1)[-1].replace(".pdf", ".txt"))
+            when = seen.get(href)
+            stale = not os.path.exists(fname) or (named + timedelta(days=7) >= TODAY and (
+                not when or time.time() - when > 6 * 3600))
+            if stale and not out_of_time():
+                body = request(SITE + html.unescape(href), f"{c['kpid']} {week}", kind="bytes")
+                if body and body[:4] == b"%PDF":
+                    import subprocess
+                    try:
+                        r = subprocess.run(["pdftotext", "-layout", "-", "-"], input=body, capture_output=True)
+                    except OSError:  # no pdftotext: the hearings list alone, as before
+                        print("weekly agendas: pdftotext isn't installed; skipped", flush=True)
+                        return
+                    if r.returncode == 0:
+                        with open(fname, "w", encoding="utf-8") as f:
+                            f.write(r.stdout.decode("utf-8", "replace"))
+                        seen[href] = time.time()
+                        read += 1
+                else:
+                    failed += 1
+            if not os.path.exists(fname):
+                continue
+            acts, ms = parse_weekly(open(fname, encoding="utf-8").read(), week)
+            for bill, at in acts:
+                if WANTED.match(bill) and [name, at] not in bills.setdefault(bill, []):
+                    bills[bill].append([name, at])
+            meets.update((name, at) for at in ms)
+    save(seen, seen_path)
+    for v in bills.values():
+        v.sort(key=lambda m: m[1])
+    save({"read": TODAY.isoformat(), "bills": bills, "meets": sorted(meets)}, os.path.join(folder, "weekly_agendas.json"))
+    print(f"weekly agendas: {len(bills)} bills for action, {len(meets)} meetings on bills heard; {read} agendas read, "
+          f"{failed} failures, {len(comms)} committees", flush=True)
 
 
 def biennium_extras(biennium):

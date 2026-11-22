@@ -44,3 +44,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
 - This year's session (or a later one) is shown from its first bill (`sessions()` in convert.py, 2026-11-22; older ones
   need more than 300), so 2027 shows from the day bills are introduced; the bill search had no "2027 Regular Session" on
   2026-11-22.
+- (2026-11-22) Emails: a member page's first "mailto:" was sometimes its "share by email" link ("mailto:?body=https..."), saved as the email in 2024's and 2025's members.json; fetch.py now takes only an address, and contacts.py skips the old ones (data_check's "emails that aren't addresses" FAIL).

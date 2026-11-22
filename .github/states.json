@@ -61,7 +61,7 @@
    "paths": [
     "data/ct"
    ],
-   "minutes": 20,
+   "minutes": 25,
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/ct/fetch.py",
    "note": "A stuck FTP server once left a run with nothing: the last copy is kept."
   },
@@ -266,7 +266,7 @@
     "data/nh"
    ],
    "minutes": 20,
-   "run": "pip install -q pymssql pypdf && python3 states/nh/fetch.py && python3 states/nh/contacts.py",
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); pip install -q pymssql pypdf && python3 states/nh/fetch.py && python3 states/nh/contacts.py",
    "note": "The General Court's daily data files (current year), plus its public read-only SQL Server for past years (login read each time from the Legislature's own document, never stored)."
   },
   {
@@ -417,7 +417,7 @@
     "data/hi"
    ],
    "minutes": 30,
-   "run": "python3 states/openstates_bulk.py hi && python3 states/hi/fetch.py && python3 states/hi/contacts.py",
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/openstates_bulk.py hi && python3 states/hi/fetch.py && python3 states/hi/contacts.py",
    "note": "Open States: the first copy from its bulk files (states/hi/bulk.json), then the API (OPENSTATES_API_KEY) for changes, at most 110 requests a day so Arizona keeps the rest of the free tier's 250; the Legislature's own site blocks automated requests. contacts.py builds the contacts after it."
   },
   {
@@ -439,7 +439,7 @@
     "data/ks"
    ],
    "minutes": 60,
-   "run": "python3 states/ks/fetch.py && python3 states/ks/contacts.py"
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/ks/fetch.py && python3 states/ks/contacts.py"
   },
   {
    "name": "Florida",
