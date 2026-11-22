@@ -2431,7 +2431,8 @@ def finish(session, core, current, urls):
     if session == current:
         import balance
         lower = getattr(P, "LOWER_NAME", "Assembly")
-        power = balance.summary_html(STATE, lower)
+        # (Each house's name and the governor's open a list under the header: tracker.html's openLegs().)
+        power = balance.summary_html(STATE, lower, buttons=True)
         if power:
             template = template.replace('<p class="power" id="power"></p>',
                                         f'<p class="power" id="power">{power}<span class="bp-why">{html_escape(balance.meaning(STATE, lower))}</span></p>', 1)
