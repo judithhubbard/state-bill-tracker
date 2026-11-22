@@ -61,3 +61,19 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   ((304) 558-2000, toll-free (888) 438-2731), address and contact form (wv.accessgov.com) are from governor.wv.gov's footer
   (checked by program 2026-11-13, not by the owner). Places (`towns.py`): cities, towns, villages, Census-designated places
   and counties, separate Senate (17) and House (100) lists.
+- **Committee agendas (2026-11-22; not yet run against the live site):** `agendas()` in states/wv/fetch.py (every full
+  run, after the committees, January to April only; otherwise it writes {}) asks each standing committee's and House
+  subcommittee's agenda page for today (/committees/House/house_com_agendas.cfm?Chart=jud&input=November 22, 2026;
+  /committees/senate/Senate_com_agendas.cfm?Chart=agr&input=...; the codes are the committee pages committees() saves,
+  members/committees/H_jud.html). The page shows the agenda of the day asked for, if there is one (an <h1> "February 18,
+  2025, 2:00 P.M.", the location, and a blockquote with the agenda text; the Senate's can repeat the same block), above a
+  table of all the committee's other meetings, this year's and past years' ("03/26/2025", "Wednesday, February 11, 2026",
+  "Monday February 27, 2023": the link's input is written several ways). Each meeting from yesterday to three weeks ahead
+  is read; bills are "HB2043 - Relating to ...", "SB 561 -Relating to ...", "Com. Sub. for H. B. 4001", "HJR 8".
+  Committee names from the <h3> ("Senate Agriculture Committee - Agenda" -> "Senate Agriculture"; "House Agriculture,
+  Commerce, and Tourism Subcommittee"). About 46 requests a run plus one a meeting. Into data/wv/<this year>/agendas.json;
+  `agendas()` in convert.py keeps meetings from today on. www.wvlegislature.gov didn't answer from the owner's computer on
+  2026-11-22 (connections timed out for an hour; it was down or unreachable, not refusing), so the parser was written and
+  tested on the Internet Archive's copies of two agenda pages (House ACT subcommittee, February 18, 2025: HB2043 and
+  HB2060; Senate Agriculture, February 8, 2023: SB561), whose keys match the records; robots.txt allows /committees/
+  (fetch.py's docstring, checked 2026-11-09). Check it in the first January run (see the January plan in the report).

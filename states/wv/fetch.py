@@ -65,8 +65,11 @@ about 4,000 roll calls, at a request a second: about 2 hours of bill pages, then
 of roll calls) builds up over several runs: the bill pages first, then the roll calls, then the texts. A quiet run
 takes about a minute; one during the session a few minutes more.
 
-Not downloaded: bill texts in full, fiscal notes (/FiscalNotes/, barred), committee amendments, agendas and minutes,
-journals, the governor's veto messages (in the journals), members' biographies.
+And data/wv/<this year>/agendas.json, every full run from January to April (`agendas()`): the bills on committee agendas
+from yesterday to three weeks ahead, from each committee's agenda pages (/committees/House/house_com_agendas.cfm,
+/committees/senate/Senate_com_agendas.cfm): one request a committee, then one a meeting in the window.
+
+Not downloaded: bill texts in full, fiscal notes (/FiscalNotes/, barred), committee amendments, minutes, journals, the governor's veto messages (in the journals), members' biographies.
 
 data/wv/incomplete says "running" during the first copy, then lists what was never downloaded (a year's bill or
 resolution list, a listed bill's page, the rosters, a member's or committee's page); it is removed when nothing is
@@ -633,6 +636,122 @@ def never_downloaded(years):
     return out
 
 
+# ---- Committee agendas ----
+
+AGENDA_DAYS = 21  # how far ahead
+AGENDA_PAGES = {"H": "committees/House/house_com_agendas.cfm", "S": "committees/senate/Senate_com_agendas.cfm"}
+# A meeting in an agenda page's table: <a href="Senate_com_agendas.cfm?input=Wednesday, February 11, 2026&chart=AGR">
+AGENDA_ROW = re.compile(r"""<a\s+href=["']((?:house|senate)_com_agendas\.cfm\?[^"']*)["'][^>]*>([^<]+)</a>""", re.I)
+# The agenda itself: <h1>February 18, 2025, 2:00 P.M.</h1> ... <blockquote class='textcontainer' ...> ... </blockquote>
+AGENDA_BLOCK = re.compile(r"<h1>([^<]*)</h1>(.*?)<blockquote[^>]*textcontainer[^>]*>(.*?)</blockquote>", re.I | re.S)
+# "HB2043 - Relating to ...", "SB 561 -Relating to ...", "Com. Sub. for H. B. 4001", "HJR 8"
+AGENDA_BILL = re.compile(r"\b([HS])\.?\s?(B|J\.?\s?R)\.?\s?(\d{1,4})\b")
+CLOCK = re.compile(r"\b(\d{1,2})(?::(\d{2}))?\s*([AP])\.?\s*M\b", re.I)
+
+
+def agenda_day(s):
+    """ "03/26/2025", "Wednesday, February 11, 2026", "February 8, 2023", "3/12/2025" -> a date, or None."""
+    s = re.sub(r"^\s*[A-Za-z]+day,?\s*", "", html.unescape(s or "")).strip()
+    s = re.split(r",\s*\d{1,2}(?::\d{2})?\s*[AaPp]", s)[0].strip()  # "February 18, 2025, 2:00 P.M."
+    for fmt in ("%m/%d/%Y", "%B %d, %Y", "%b %d, %Y", "%m/%d/%y", "%m-%d-%y", "%m-%d-%Y"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            pass
+    return None
+
+
+def agenda_codes():
+    """The standing committees' codes ("H", "jud") as committees() last saved them (members/committees/H_jud.html)."""
+    folder = os.path.join(DATA, "members", "committees")
+    out = []
+    for f in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        m = re.fullmatch(r"([HS])_(\w+)\.html", f)
+        if m:
+            out.append((m.group(1), m.group(2)))
+    return out
+
+
+def agenda_entries(page, house, code, first, last):
+    """An agenda page's meetings in the window: [(entry, bills)], entry = [committee, "2025-02-18T14:00:00"]. A page
+    shows the agenda of the day asked for (sometimes the same block more than once) above its table of other meetings."""
+    h3 = re.search(r"<h3>([^<]*)</h3>", page)
+    name = re.sub(r"\s+", " ", html.unescape(h3.group(1) if h3 else "")).strip()
+    name = re.sub(r"\s*-\s*Agenda\s*$", "", name, flags=re.I)
+    name = re.sub(r"\s+Committee$", "", name)
+    if not name.startswith(("House", "Senate", "Joint")):
+        name = f"{'House' if house == 'H' else 'Senate'} {name or code.upper()}".strip()
+    out = []
+    for head, _, body in AGENDA_BLOCK.findall(page):
+        when = agenda_day(head)
+        if not when or not first <= when <= last:
+            continue
+        tm = CLOCK.search(head)
+        clock = "00:00"
+        if tm:
+            clock = f"{int(tm.group(1)) % 12 + (12 if tm.group(3).upper() == 'P' else 0):02d}:{tm.group(2) or '00'}"
+        text = html.unescape(re.sub(r"<[^>]+>", " ", body))
+        if re.search(r"\bcancel+ed\b", text[:300], re.I):
+            continue
+        bills = []
+        for h, kind, num in AGENDA_BILL.findall(text):
+            key = f"{h}{'B' if kind == 'B' else 'JR'}{int(num)}"
+            if key not in bills:
+                bills.append(key)
+        out.append(([name, f"{when.isoformat()}T{clock}:00"], bills))
+    return out
+
+
+def agendas():
+    """Bills on committee agendas from yesterday to three weeks ahead, into data/wv/<this year>/agendas.json: {"HB2043":
+    [["House Agriculture, Commerce, and Tourism Subcommittee", "2025-02-18T14:00:00"]]}. Each standing committee (and
+    House subcommittee) has an agenda page (house_com_agendas.cfm?Chart=jud&input=<day>, Senate_com_agendas.cfm?...): the
+    agenda of the day asked for, if any, above a table of all the committee's other meetings, whatever day is asked for.
+    So one request a committee (asking for today) gives today's agenda and the meetings; each other one in the window is
+    then read (its <h1> day and time, its agenda text with "HB2043 - Relating to ...", "SB 561", "Com. Sub. for H. B.
+    4001"). Read only from January to April (the session; the interim committees' pages are elsewhere). A failure keeps
+    the last file: agendas never hold West Virginia back."""
+    folder = os.path.join(DATA, str(YEAR))
+    path = os.path.join(folder, "agendas.json")
+    if not 1 <= TODAY.month <= 4:
+        if os.path.exists(path):
+            save({}, path)
+        return
+    first, last = TODAY - timedelta(days=1), TODAY + timedelta(days=AGENDA_DAYS)
+    ask = f"{TODAY:%B} {TODAY.day}, {TODAY.year}"
+    out, n, read = {}, set(), set()
+    try:
+        for house, code in agenda_codes():
+            base = f"{SITE}/{AGENDA_PAGES[house]}"
+            page = request(f"{base}?Chart={code}&input={ask}", f"agendas {house} {code}", "wrapleftcol")
+            if page is None:
+                print(f"agendas: {house} {code}'s page failed; the last copy is kept", flush=True)
+                return
+            found = agenda_entries(page, house, code, first, last)
+            for href, label in AGENDA_ROW.findall(page):
+                day = agenda_day(label)
+                url = f"{base.rsplit('/', 1)[0]}/{html.unescape(href)}"
+                if not day or not first <= day <= last or url in read:
+                    continue
+                read.add(url)
+                agenda = request(url, f"agenda {house} {code} {day}", "wrapleftcol")
+                if agenda is None:
+                    print(f"agendas: {house} {code} {day} failed; the last copy is kept", flush=True)
+                    return
+                found += agenda_entries(agenda, house, code, first, last)
+            for entry, bills in found:
+                n.add(tuple(entry))
+                for key in bills:
+                    if entry not in out.setdefault(key, []):
+                        out[key].append(entry)
+    except Refused as e:
+        print(f"agendas: {e}; the last copy is kept", flush=True)
+        return
+    os.makedirs(folder, exist_ok=True)
+    save(out, path)
+    print(f"agendas: {len(out)} bills on {len(n)} meetings ({len(read)} agenda pages besides one a committee)", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     # Before the first copy, a run cut off without its summary leaves this, so a partial copy isn't published.
@@ -648,6 +767,13 @@ def main():
             members()
         if not ONLY and not out_of_time():
             committees()
+        if not ONLY and not out_of_time():
+            try:
+                agendas()
+            except Refused:
+                raise
+            except Exception as e:  # never let the agendas stop the bills
+                print(f"agendas: failed ({type(e).__name__}: {e}); the last copy is kept", flush=True)
         for year in nxt + years:  # the newest first: lists and bill pages
             if out_of_time():
                 break
