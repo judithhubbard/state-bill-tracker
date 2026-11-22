@@ -83,7 +83,7 @@ on later runs and don't hold the state back. A request that fails where a last c
 doesn't count.
 Usage: python3 states/ne/fetch.py [first year]   (default: the newest two Legislatures; one leaves the marker alone)
 """
-import gzip, hashlib, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
+import csv, gzip, hashlib, html, io, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from collections import Counter
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -221,6 +221,27 @@ def live(year):
 def in_session():
     """Nebraska's sessions run from early January to April (even years) or early June (odd years)."""
     return date(TODAY.year, 1, 1) <= TODAY <= date(TODAY.year, 6, 15)
+
+
+def floor_agendas(folder, days=None):
+    """The Legislature's daily agenda (calendar/agenda.php?day=YYYY-MM-DD&print=csv: each item's section, "FINAL
+    READING", "SELECT FILE", "GENERAL FILE" ..., and document, "LB737"), for today and the next three days, in session
+    only: up to four requests a run at the crawl delay. Into <folder>/floor.json, {day: [[section, document], ...]}; a day
+    with no agenda posted yet is left out; days over a month old are dropped. A failure keeps the last copy."""
+    path = os.path.join(folder, "floor.json")
+    have = {d: v for d, v in (load(path, {}) or {}).items() if not stale(d, 30)}
+    for day in days or [(TODAY + timedelta(days=i)).isoformat() for i in range(4)]:
+        if out_of_time():
+            break
+        body = request(f"/calendar/agenda.php?day={day}&print=csv", f"agenda {day}")
+        if body is None:
+            continue
+        rows = [r for r in csv.reader(io.StringIO(body)) if len(r) >= 3][1:]
+        items = [[re.sub(r"\s+", " ", r[0]).strip(), r[2].strip()] for r in rows if r[2].strip()]
+        if items:
+            have[day] = items
+            print(f"agenda {day}: {len(items)} documents", flush=True)
+    save(have, path)
 
 
 def sort_key(key):
@@ -899,6 +920,9 @@ def main():
             bills(year, folder, listing, state)
             save(listing, list_path)
             save(state, state_path)
+        # The floor agenda (today and the next three days), in session, for the Legislature meeting now.
+        if in_session() and not out_of_time() and first_year(number_of(TODAY.year)) in found:
+            floor_agendas(found[first_year(number_of(TODAY.year))][0])
         for year, (folder, state, listing) in found.items():
             if out_of_time():
                 break
