@@ -36,11 +36,11 @@ KNOWN = {
     "dtj5wlj7ond0z.cloudfront.net": "the Michigan House Republicans' site (gophouse.org)",
     "lawmakerdocuments.blob.core.usgovcloudapi.net": "the South Dakota Legislature's storage",
 }
-# Photo addresses the legislature names by seat (whoever holds it now), preferred to Open States' when they answer with
-# an image. Louisiana: 88 of 141 have none in Open States.
+# Photo addresses the legislature names itself, preferred to Open States' when they answer with an image (seat, member,
+# contacts session). Louisiana's by seat (whoever holds it now; 88 of 141 have none in Open States).
 PATTERNS = {
-    "la": lambda seat: (f"https://senate.la.gov/SenPics/Sen{digits(seat[2:])}.jpg" if seat[0] == "S"
-                        else f"https://house.louisiana.gov/H_Reps/RepPics/rep{digits(seat[2:])}.jpg"),
+    "la": lambda seat, p, session: (f"https://senate.la.gov/SenPics/Sen{digits(seat[2:])}.jpg" if seat[0] == "S"
+                                    else f"https://house.louisiana.gov/H_Reps/RepPics/rep{digits(seat[2:])}.jpg"),
 }
 OFFICIAL = re.compile(r"(?:\.gov|\.us)$|leg|senate|house|assembly|capitol|statehouse|gencourt|dems\b|democrats|gop|republicans")
 # (And not campaign sites, whose names can say "senate": overture4scsenate.com.)
@@ -135,19 +135,20 @@ def source(folder, st, force=False):
 def head(url):
     """"ok" when an address answers 200 with an image no bigger than BIG; "bad" when it answers otherwise (404, a web
     page, a 10 MB original); "net" when it doesn't answer here (a timeout; a certificate chain Python can't complete, as
-    Illinois's and the Michigan House's, which browsers do): kept, as a browser may well load it. Servers that refuse
-    HEAD (Georgia's: 405; Colorado's photos redirect to signed addresses that answer HEAD 403) are asked for the first
-    byte instead."""
+    Illinois's and the Michigan House's, which browsers do): kept, as a browser may well load it. When HEAD fails, the
+    first byte is asked for instead: servers answer HEAD in their own ways (Georgia's 405; Massachusetts's 404 for photos
+    a GET gets; Colorado's redirect to signed addresses that answer HEAD 403)."""
     r = None
     for method, extra in (("HEAD", {}), ("GET", {"Range": "bytes=0-0"})):
         try:
             r = urllib.request.urlopen(urllib.request.Request(url, method=method, headers={**UA, **extra}), timeout=10)
             break
         except urllib.error.HTTPError as e:
-            if e.code in (400, 404, 410):
+            if method == "GET" and e.code in (400, 404, 410):
                 return "bad"
         except Exception:
-            return "net"
+            if method == "GET":
+                return "net"
     if r is None:
         return "net"
     kind = (r.headers.get("Content-Type") or "").lower()
@@ -274,6 +275,7 @@ def build(folder, st, src, check=lambda url: None):
             continue
         recs = src["data"]
         used, strict = set(), numbered(people, recs)
+        session = int(re.search(r"(\d{4})", os.path.basename(path)).group(1))
         for seat, p in sorted(people.items()):
             if p.get("image"):
                 continue
@@ -282,9 +284,11 @@ def build(folder, st, src, check=lambda url: None):
             if i is not None:
                 used.add(i)
                 url = https(recs[i]["image"]) if official(recs[i]["image"]) else None
-            # The legislature's own, by seat: whoever holds it now (so only for the newest contacts), when it answers.
-            if st in PATTERNS and path == contacts_files(folder)[-1] and check(PATTERNS[st](seat)) == "ok":
-                url = PATTERNS[st](seat)
+            # The legislature's own (only for the newest contacts: Louisiana's is whoever holds the seat now), when it
+            # answers with an image.
+            own = PATTERNS[st](seat, p, session) if st in PATTERNS and path == contacts_files(folder)[-1] else None
+            if own and check(own) == "ok":
+                url = own
             if url and check(url) != "bad":
                 out[f"{seat[0]}|{p['key']}"] = url
     return out
