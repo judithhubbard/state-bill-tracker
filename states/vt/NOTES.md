@@ -33,8 +33,8 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   numbered alphabetically in data/vt/district_names.json (towns.py, from the Census relationship files): Senate 1-16
   ("Chittenden Central" is 4), House 1-109; members "S:4a", "S:4b", "S:4c", "H:37a", "H:37b" in the order of their last names
   (New Jersey's scheme, both houses). "Where you live" lists the 255 towns and cities (Census county subdivisions; Essex
-  Junction, a city since 2022, is still inside Essex there), split towns by land share. The address lookup is off (the
-  Census geocoder gives district names, not numbers). Open States gives Progressives' party as "Democratic/Progressive"
+  Junction, a city since 2022, is still inside Essex there), split towns by land share. The public site looks up an address
+  (the Census geocoder gives district names, "Washington-4", "Chittenden South East", matched to these by `censusDistrict()`). Open States gives Progressives' party as "Democratic/Progressive"
   (counted with the Democrats) and three independents. Most members' phone is the State House's message line (shown as
   such). Governor 5 days, Sundays excepted; a pocket veto only if the General Assembly adjourns within three days of
   delivery; override two-thirds of members present. Each year's opening and last day are in `STATE.opened`/`dated` (add

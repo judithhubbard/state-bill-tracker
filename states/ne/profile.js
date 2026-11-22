@@ -110,7 +110,7 @@ const STATE = {
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
   townWord: "City, village or county",
-  addressLookup: false,
+  addressLookup: true,
   findReps: "https://nebraskalegislature.gov/senators/senator_find.php",
   diesAfterFloor: () => "The Legislature has adjourned for its term, so it died; a bill has to be introduced again in the next Legislature.",
   outOfTimeLine: "Died when the Legislature adjourned for its term",

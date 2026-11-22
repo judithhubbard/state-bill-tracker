@@ -27,7 +27,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   House district's members "H:612a", "H:612b" ... (Hillsborough 12 = county code times 100 plus the number; up to 10 a
   district), named by data/nh/district_names.json. "Where you live" (`states/nh/towns.py`, run once) reads the districts
   from the law, RSA 662:3 and 662:5, by town and city ward; a place votes in all its House districts (its own and a
-  "floterial" one over it and its neighbors: `STATE.townInAllDistricts`, read by `myReps()`/`setTown()`). "What it
+  "floterial" one over it and its neighbors: `STATE.townInAllDistricts`, read by `myReps()`/`setTown()`). The public site
+  also looks up an address: the Census geocoder gives the Senate district and the base House district ("Merrimack 18";
+  its 164 House districts leave out the 39 floterials), and `floterials()` in tracker.html adds the floterials of the towns
+  in that base district (each base district's towns all share them, checked 2026-11-22). "What it
   does" is the analysis at the top of each bill's latest text (by the Office of Legislative Services; `analyses()` in
   fetch.py: billText.aspx?id=...&sy=...; the id from LsrsOnly, from the LSR number and year for 2023-24, else from the
   bill's status page), labelled by version ("... of the final version", "... as amended by the House", "... as introduced"

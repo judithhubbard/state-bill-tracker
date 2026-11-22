@@ -107,7 +107,7 @@ const STATE = {
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
   townWord: "City or county",
-  addressLookup: false,
+  addressLookup: true,
   findReps: "https://gis.lcc.mn.gov/iMaps/districts/",
   diesAfterFloor: () => "The Legislature has adjourned for its term, so it died; only a special session, which takes up the bills the governor and leaders agree on, could pass it now.",
   outOfTimeLine: "Died when the Legislature adjourned for its term",

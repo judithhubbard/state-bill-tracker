@@ -81,6 +81,7 @@ const STATE = {
   }),
   // "Where you live" picks a town or a city ward: its senator, and every House district it votes in.
   townWord: "Town or city ward",
+  addressLookup: true,
   // A place's House districts all represent it: its own and a "floterial" district over it and its neighbors.
   townInAllDistricts: true,
   oneNumber: true,

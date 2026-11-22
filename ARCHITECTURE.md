@@ -211,7 +211,8 @@ opened (`later()`, `STALE`, `showView()`).
   link to this bill". A watchlist card opened below its row (`watchCard(x, true)`) is the same panel: its own "What you
   can do" (`.wcan`), then `fillDetail()` of a `details.morebill.inplace`. `historyTags()`.
 - **Where you live** (`#whereBox`): `renderMyReps()`, `myReps()`, `setCounty()`, `setTown()`, `setRegion()` (Congress),
-  `renderTownReps()`, `renderTownRepsByHouse()`, `lookUpReps()` (Census geocoder, `STATE.addressLookup`).
+  `renderTownReps()`, `renderTownRepsByHouse()`, `lookUpReps()` (Census geocoder's 2026 districts, `STATE.addressLookup`, public
+  site only; `censusDistrict()` matches named districts to `DATA.districtNames`, `floterials()` adds New Hampshire's).
 - **Watchlist tab** (`#view-watch`): `renderWatchView()`. Its rows, groups and order come from
   `lists_pages/watchrows.js` (`WatchRows.place()`, `.draw()`; the words are `statusLabel()`'s) with deadlines from `lists_pages/watchrules.js`
   (`WR = WatchRules.make(STATE, ...)`; `deadlineOf()` and `W_GROUPS` are aliases). The card: `watchCard()`,
