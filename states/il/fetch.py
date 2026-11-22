@@ -12,7 +12,7 @@ CA OV R40), so it's fetched from Sectigo and added to a copy of the system's cer
 connection is still fully checked.
 Usage: python3 states/il/fetch.py [first_year]   (default 2021)
 """
-import json, os, re, subprocess, sys, time
+import json, os, re, subprocess, sys, time, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -22,6 +22,9 @@ from listing_dates import same
 from states.il import profile as P
 
 REPO = "https://ftp.ilga.gov"
+# Members' emails and the addresses of their ilga.gov pages (states/il/contacts.py), from Open States.
+PEOPLE = "https://data.openstates.org/people/current/il.csv"
+AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 INTERMEDIATE = "http://crt.sectigo.com/SectigoPublicServerAuthenticationCAOVR40.crt"
 SYSTEM_CAS = ["/etc/ssl/certs/ca-certificates.crt", "/etc/ssl/cert.pem", "/etc/pki/tls/certs/ca-bundle.crt"]
 FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else 2021
@@ -123,6 +126,22 @@ def main():
         if listing(f"{REPO}/Legislation/{ga}/BillStatus/XML/") or os.path.isdir(os.path.join(P.DATA, str(ga))):
             session(ga)
             members(ga)  # each Assembly's members, to read its sponsor lists
+    people()
+
+
+def people():
+    """Open States' file of current members; a failed or odd answer keeps the last copy."""
+    try:
+        req = urllib.request.Request(PEOPLE, headers={"User-Agent": AGENT})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            body = r.read()
+    except Exception as e:
+        print(f"{PEOPLE}: {e}; keeping the last copy")
+        return
+    if body.startswith(b"id,") and body.count(b"\n") > 100:
+        path = os.path.join(P.DATA, "openstates_people.csv")
+        open(path + ".tmp", "wb").write(body)
+        os.replace(path + ".tmp", path)
 
 
 def texts():

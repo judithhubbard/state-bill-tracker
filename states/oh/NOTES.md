@@ -4,9 +4,21 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
 
 - **Ohio (started 2026-10-31):** `python3 states/oh/fetch.py` reads the Legislative Service Commission's API
   (https://search-prod.lis.state.oh.us/api/v2/, JSON; see the oh-data-sources memory). legislature.ohio.gov,
-  ohiohouse.gov, ohiosenate.gov and ohiosos.gov all answer automated requests with 403, so (decided 2026-10-31)
-  everything comes from the API except legislators' emails and page links, which come from Open States' public-domain
-  file (data/oh/openstates_people.csv; it has no phones), named as the source in "About this data". Sessions are
+  ohiohouse.gov, ohiosenate.gov and ohiosos.gov all answered automated requests with 403 in October 2026, so (decided
+  2026-10-31) everything comes from the API except legislators' emails and page links, which come from Open States'
+  public-domain file (data/oh/openstates_people.csv; it has no phones), named as the source in "About this data".
+  Office phones (and the Columbus office address) since 2026-11-22: a recheck found both houses' robots.txt
+  ("User-agent: *", "Disallow:") allowing everything, and one test from a GitHub runner with fetch.py's own `AGENT`
+  (a throwaway workflow on a temporary branch, deleted after) got 200 for both robots.txt files and for
+  /members/adam-c-bird and /members/rob-mccolley, with their phones. The owner approved reading them: fetch.py's
+  `member_pages()` reads each current member's page (`page_of()` in contacts.py: the member's own house's
+  /members/<slug> from Open States' links; a senator's list can name an old House page first, as Blackshear's did,
+  which was the page link shown until then) into data/oh/member_pages.json, at most 50 a run, 3 seconds apart, each
+  again after 7 days, and stops the run's reading on a 403 or 429 (the last copies stand). House pages say
+  "Phone: (614) ..." and a "Fax:" line (left out); Senate pages a "Phone" label, and an address some give without the
+  city (Columbus, OH 43215 is added). On 2026-11-22: before, 0 of 130 with a phone; a local read of 40 pages gave 39
+  phones (brian-e-lampton answered 500), so the first three runs fill them all. Ohio is no longer in data_check.py's
+  `CONTACT_GAPS` for phones. Sessions are
   General Assemblies (`assembly_of()`: 2025 -> 136). Each bill's versions (read again when its entry in the
   legislation list changes, its actions change, or it has passed both houses and waits on the governor: the list's
   `revno` doesn't change on enrollment or delivery, so HB 13, HB 397 and SB 214, sent 2026-11-17, were missed until

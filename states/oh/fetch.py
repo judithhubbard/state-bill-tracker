@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Download Ohio's bills from the Legislative Service Commission's API (https://search-prod.lis.state.oh.us/api/v2/; see
-the oh-data-sources memory: the legislature's, House's and Senate's websites turn automated requests away, the API
-doesn't).
+the oh-data-sources memory: in October 2026 the legislature's, House's and Senate's websites turned automated requests
+away; the House's and Senate's answer the project's agent since, below).
 
 - Each General Assembly's legislation list (one call: every bill with its sponsors, co-sponsors and subjects); House
   and Senate bills, and the joint resolutions that propose constitutional amendments (short titles "CA: ..."; not the
@@ -13,7 +13,8 @@ doesn't).
   (an action like a referral doesn't change the list); a finished one's once. Three requests at a time.
 - The legislators, committees with their members, and the next three weeks' committee meetings (agendas).
 - Legislators' emails aren't in the API: Open States' public-domain file (data.openstates.org, copied from the
-  official sites), decided 2026-10-31.
+  official sites), decided 2026-10-31. Their office phones and addresses: each member's page on ohiohouse.gov or
+  ohiosenate.gov (`member_pages()`, approved by the owner 2026-11-22), each read once a week at most.
 Usage: python3 states/oh/fetch.py [first_year]   (default 2021)
 """
 import json, os, re, sys, time, urllib.request
@@ -188,6 +189,74 @@ def people():
         open(os.path.join(P.DATA, "openstates_people.csv"), "wb").write(body)
 
 
+PAGES = os.path.join(P.DATA, "member_pages.json")
+PAGES_PER_RUN, PAGE_GAP, PAGE_DAYS = 50, 3, 7
+
+
+def read_page(body):
+    """The Columbus office's phones and address from a member page's info bar (House: "Phone: (614) 644-6034" and a
+    "Fax:" line; Senate: a "Phone" label above the number)."""
+    bar = body.split("member-info-bar", 1)[-1].split("</section>", 1)[0]
+    text = lambda h: [x for x in (re.sub(r"\s+", " ", y).strip() for y in re.split(r"<[^>]+>", h.replace("&nbsp;", " "))) if re.search(r"\w", x)]
+    lines = text(bar)
+    phones, office = [], ""
+    for i, line in enumerate(lines):
+        for n in re.findall(r"\(\d{3}\)\s*\d{3}-\d{4}", line):
+            n = re.sub(r"\s+", " ", n)
+            if "fax" not in line.lower() and not (i and lines[i - 1].lower() == "fax") and n not in phones:
+                phones.append(n)
+    for module in bar.split("member-info-bar-module")[1:]:  # the address: its module's lines up to the city
+        ls = text(module.rsplit("<", 1)[0])  # less the next module's "<div class='"
+        end = next((i for i, x in enumerate(ls) if re.match(r"Columbus,? O(hio|H)\.? +432\d\d", x)), None)
+        if end is not None:
+            office = ", ".join(x for x in ls[:end + 1] if x != "Address")
+            break
+        if ls[:1] == ["Address"] and len(ls) > 1:  # some senators' list no city: "Senate Building, 1 Capitol Square, ..."
+            office = ", ".join(ls[1:] + ["Columbus, OH 43215"])
+            break
+    return {"phones": phones, "office": office}
+
+
+def member_pages():
+    """Each current member's page on ohiohouse.gov or ohiosenate.gov, for the office phone the API and Open States lack
+    (robots.txt allows everything; checked from a GitHub runner 2026-11-22 with AGENT). One page per member, read again
+    after PAGE_DAYS days, at most PAGES_PER_RUN a run, PAGE_GAP seconds apart. A refusal (403, 429) stops the run's
+    reading, and the last copies stand."""
+    import csv
+    from states.oh.contacts import page_of
+    try:
+        rows = list(csv.DictReader(open(os.path.join(P.DATA, "openstates_people.csv"), encoding="utf-8")))
+    except OSError:
+        return
+    try:
+        pages = json.load(open(PAGES))
+    except (OSError, ValueError):
+        pages = {}
+    urls = {u for u in map(page_of, rows) if u}
+    due = sorted((u for u in urls if (pages.get(u) or {}).get("read", "") <= str(TODAY - timedelta(days=PAGE_DAYS))),
+                 key=lambda u: (pages.get(u) or {}).get("read", ""))[:PAGES_PER_RUN]
+    got = 0
+    for u in due:
+        time.sleep(PAGE_GAP)
+        try:
+            with urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": AGENT}), timeout=60) as r:
+                body = r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            print(f"member pages: {u} answered {e.code}" + ("; stopping" if e.code in (403, 429) else ""))
+            if e.code in (403, 429):
+                break
+            continue
+        except Exception as e:
+            print(f"member pages: {u}: {e}")
+            continue
+        pages[u] = {"read": str(TODAY), **read_page(body)}
+        got += 1
+    pages = {u: v for u, v in pages.items() if u in urls}  # members who left
+    save(PAGES, pages)
+    print(f"member pages: {got} read, {len(pages)} of {len(urls)} on file, "
+          f"{sum(1 for v in pages.values() if v['phones'])} with a phone")
+
+
 def begun(session):
     """Whether a General Assembly has convened (the first Monday of January of its first year)."""
     jan = TODAY.replace(year=session, month=1, day=1)
@@ -200,6 +269,7 @@ def main():
         session(s)
     agendas(CURRENT)
     people()
+    member_pages()
     marker = os.path.join(P.DATA, "incomplete")
     # A General Assembly not yet begun (no bills listed yet) is read when it's there but never holds Ohio back.
     undone = {s for s in INCOMPLETE if begun(s)}

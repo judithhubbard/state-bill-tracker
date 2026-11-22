@@ -2,9 +2,13 @@
 """Illinois's legislators and committees, from the General Assembly's own member and committee files (downloaded
 by states/il/fetch.py into data/il/<GA>/), written as data/il/contacts_<session>.json in the shape build_data.py
 reads. The files have each member's name, party, district and Capitol and district phones (no email), and each
-committee's members with the chairperson. Seat ids are "S:5" and "H:103". Usage: python3 states/il/contacts.py [session]
+committee's members with the chairperson. Seat ids are "S:5" and "H:103".
+Emails and the address of each member's page on ilga.gov: Open States' public-domain file (data/il/openstates_people.csv,
+downloaded by fetch.py; the owner's decision 2026-11-22, as for Pennsylvania), matched by house, district and last name.
+The pages are only linked, never read (ilga.gov asks programs to use the file repository).
+Usage: python3 states/il/contacts.py [session]
 """
-import html, json, os, re, sys
+import csv, html, json, os, re, sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -45,6 +49,31 @@ def people_of(path, h):
     return out
 
 
+def open_states():
+    """Open States' members by (house, district), or {} without the file."""
+    try:
+        rows = list(csv.DictReader(open(os.path.join(P.DATA, "openstates_people.csv"), encoding="utf-8")))
+    except OSError:
+        return {}
+    return {("S" if r["current_chamber"] == "upper" else "H", int(r["current_district"])): r
+            for r in rows if r["current_district"].isdigit()}
+
+
+def add_open_states(people):
+    """Each member's email and ilga.gov page from Open States, when its member for the seat is the same person (a seat
+    filled since keeps neither)."""
+    os_by = open_states()
+    for sid, p in people.items():
+        o = os_by.get((sid[0], int(sid[2:])))
+        # The last names share a part: Open States' "Mike Simmons-Gessesse" is the files' "Mike Simmons".
+        last = lambda n: set((n.split() or [""])[-1].split("-")) - {""}
+        if not o or not last(name_key(o["name"])) & last(p["key"]):
+            continue
+        p["email"] = o["email"] or None
+        p["url"] = next((u for u in o["links"].split(";")
+                         if re.match(r"https://www\.ilga\.gov/(House|Senate)/Members/Details/\d+$", u)), None)
+
+
 def committees_of(path):
     out = {}
     if not os.path.exists(path):  # a new Assembly's committees are posted weeks after its members (January)
@@ -62,6 +91,7 @@ def build(session):
     base = os.path.join(P.DATA, str(ga))
     people = {**people_of(os.path.join(base, f"{ga}SenateMembers.xml"), "S"),
               **people_of(os.path.join(base, f"{ga}HouseMembers.xml"), "H")}
+    add_open_states(people)
     s_comms = committees_of(os.path.join(base, f"{ga}SenateCommitteeMembers.xml"))
     h_comms = committees_of(os.path.join(base, f"{ga}HouseCommitteeMembers.xml"))
     leaders = {}
@@ -85,6 +115,7 @@ def main(session):
     json.dump(out, open(path, "w"), indent=1, ensure_ascii=False)
     ppl = out["people"].values()
     print(f"{path}: {len(out['people'])} legislators ({sum(1 for p in ppl if p['phone'])} with a phone, "
+          f"{sum(1 for p in ppl if p['email'])} with email, {sum(1 for p in ppl if p['url'])} with a page, "
           f"{sum(1 for p in ppl if p['party'])} with party), {len(out['senateCommittees'])} Senate and "
           f"{len(out['assemblyCommittees'])} House committees, leaders {sorted(out['leaders'])}")
 

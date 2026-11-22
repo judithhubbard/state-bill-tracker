@@ -19,7 +19,7 @@ fails = []
 # ids and www.ilga.gov turns programs away; Hawaii's and Ohio's legislators' pages turn programs away and Open States'
 # file has no phones; New Hampshire's member list leaves 142 representatives without a phone; Florida's members' phones
 # come from their pages, read over several runs.
-CONTACT_GAPS = {"il": ("email or form", "page"), "hi": ("phone",), "oh": ("phone",), "nh": ("phone",), "fl": ("phone",)}
+CONTACT_GAPS = {"hi": ("phone",), "nh": ("phone",), "fl": ("phone",)}
 # Each legislature's seats (states/legislatures.json), to check votes against the size of their house.
 LEGISLATURES = json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"]
 # The topics every state uses, with the same names, so states can be compared ("Shared conventions" in CLAUDE.md).
