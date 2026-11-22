@@ -73,3 +73,27 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   February 2026's hearings (234 bills on 161 hearings, 233 matching records; HCR 5022, a resolution, isn't kept); between
   sessions the list is empty. A failed read keeps the last file.
 - **The next biennium (2026-11-22):** from November 1 (and through January, while the API's /biennia/ doesn't list it), fetch.py asks /api/v1/bill_status/?biennium=b2027_28 for one bill each run (`waiting()`: 0 on 2026-11-22) and reads the biennium like the active one once it lists a bill (prefiled bills, if the API lists them before the session opens January 11, 2027); a biennium with no bills on file is never saved and never holds Kansas back, nor do a new Legislature's member details in its first January. contacts.py writes no contacts for a biennium with fewer than 150 members and no contacts file yet (the page builds without legislators until the API lists them).
+- **Working meetings (weekly agendas, 2026-11-22):** the hearings list misses committees' "final action" meetings, which
+  only the committees' weekly agendas show. `weekly_agendas()` in states/ks/fetch.py (called by `agendas()` from January to
+  May, or whenever the hearings list has any) reads, for each standing committee in the active biennium's committees.json
+  (46 in 2025-26, plus active House or Senate special/select ones), its list of weekly agendas, the plain-HTML fragment
+  `https://kslegislature.gov/<biennium>/committees/<code>/documents/fragment/?type=weekly` (no robots.txt on the site; no
+  key needed), and each agenda PDF from a week before to three weeks ahead,
+  `/<biennium>/bills/download/?apn=<biennium>/year2/house/committees/ctte_h_ed_1/agendas/published/ctte_h_ed_1_20260208_wkagenda.pdf`.
+  The date in the name is the Sunday after the week (that file holds February 2-6, 2026; the fragment calls it "Feb. 8,
+  2026"), so the days are placed by month and day within two weeks of it. The PDFs carry no version header the server
+  exposes (no Last-Modified or ETag; a revised agenda, "Revision 4", keeps its name), so a week not yet over is read again
+  when its copy is 6 hours old, a past week never (text kept in data/ks/<first year>/wkagendas/). About 46 fragment
+  requests plus 10-30 PDFs a run in session, a second apart with the key. Each day reads "Monday, February 2", items at the
+  left margin ("Discussion & action on:", "Final action on:", "Hearing on:", "Possible action on bills previously heard",
+  "Final action on legislation previously heard"), bills indented ("HB2530 — Enacting ..."), the meeting time at the top
+  ("1:30 PM   218-N"); the page footer (the committee assistant, accommodations) is skipped and an item runs on across it.
+  Bills under an action item become plain agenda entries, `["House Education", "2026-02-02T13:30:00"]`, in
+  weekly_agendas.json beside the hearings' agendas.json (hearings stay from the API); "... previously heard" names no
+  bills, so its meeting goes in "meets" and convert.py's `agendas()` gives it, as kind "meets" (the committee meets and the
+  bill could come up, as Mississippi's House), to every bill now in that committee that it has heard since the bill's last
+  referral (`_HEARD`, from load_session()), unless the bill is on that committee's agenda that day. Tested 2026-11-22 with
+  the date set to 2026-02-10 on five committees (House Education, Health and Human Services, Taxation; Senate Judiciary,
+  Assessment and Taxation: 30 requests, 25 PDFs): 31 bills for action, 35 "previously heard" meetings (233 bills heard and
+  still in committee at the session's end), every bill a record's number. January check: the log's "weekly agendas: N
+  bills for action", and that the next biennium's committee codes (b2027_28) are in its committees.json.

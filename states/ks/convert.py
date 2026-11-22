@@ -56,6 +56,7 @@ OTHER = {"S": "H", "H": "S"}
 KEPT = re.compile(r"^(HB|SB|HCR|SCR)(\d+)$")
 _CACHE = {}
 _PARTIES = {}
+_HEARD = {}  # session -> {bill: "House Education"}: in a committee that has heard it (load_session())
 MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november",
           "december"]
 
@@ -364,10 +365,20 @@ def load_session(session):
     recs, index, texts = [], {}, {}
     bills = [b for b in raw.get("bills") or [] if kept(b)]
     bills.sort(key=lambda b: (b["BILLNO"][0] != "H", "CR" in b["BILLNO"], int(re.sub(r"\D", "", b["BILLNO"]))))
+    heard = _HEARD.setdefault(session, {})
     for b in bills:
         rec, what = record(session, b, read, parties)
         index[b["BILLNO"]] = len(recs)
         recs.append(rec)
+        # A bill still in committee that the committee has heard (a "Hearing: ..." line, past, after its last
+        # referral): the committee's "possible action on bills previously heard" meetings are given to it (agendas()).
+        acts = rec["vers"][0]["actions"]
+        if rec["stage"] == 0 and rec["comm"]:
+            last_ref = max((k for k, (_, t) in enumerate(acts) if re.match(r"(?:REFERRED|RECOMMITTED) TO ", t)), default=-1)
+            if any(t.startswith("Hearing:") for _, t in acts[last_ref + 1:]):
+                where = re.match(r"In (House|Senate) committee", rec["vers"][0]["statusDesc"] or "")
+                if where:
+                    heard[b["BILLNO"]] = f"{where.group(1)} {rec['comm']}"
         if what:
             texts[b["BILLNO"]] = {"statement": what[0], "label": what[1]}
     json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
@@ -941,10 +952,26 @@ def agendas(session):
     {"HB2001": [["House Education", "2027-01-20T13:30:00"], ...]}."""
     today = date.today().isoformat()
     out = {}
-    for bill, meets in (load(session, "agendas", {}) or {}).items():
-        keep = [m for m in meets if m[1][:10] >= today]
-        if keep:
-            out[bill] = keep
+    weekly = load(session, "weekly_agendas", {}) or {}
+    # Hearings, then the committees' working meetings from their weekly agendas (fetch.py's weekly_agendas(): "Discussion
+    # & action on: HB2530"), both plain agenda entries.
+    for src in ((load(session, "agendas", {}) or {}), weekly.get("bills") or {}):
+        for bill, meets in src.items():
+            for m in meets:
+                if m[1][:10] >= today and m not in out.setdefault(bill, []):
+                    out[bill].append(m)
+    # "Possible action on bills previously heard": the committee meets, and the bills it has heard and still holds could
+    # come up (kind "meets", as Mississippi's House meetings), unless the bill is on that committee's agenda that day.
+    meets = [m for m in weekly.get("meets") or [] if m[1][:10] >= today]
+    if meets:
+        if session not in _HEARD:
+            load_session(session)
+        norm = lambda s: re.sub(r"[^a-z]", "", s.lower())
+        for bill, comm in _HEARD[session].items():
+            for name, when in meets:
+                if norm(name) == norm(comm) and not any(x[0] == name and x[1][:10] == when[:10] for x in out.get(bill, [])):
+                    out.setdefault(bill, []).append([name, when, "meets"])
+    out = {k: sorted(v, key=lambda m: m[1]) for k, v in out.items() if v}
     return out
 
 
