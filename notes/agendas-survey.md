@@ -98,9 +98,10 @@ By state:
 
 ## Known gaps
 
-- Georgia: blocked (above).
+- Georgia: blocked (above). Rechecked 2026-11-22 from a GitHub runner: house.ga.gov, senate.ga.gov and www.legis.ga.gov all time out there; the chamber sites have been retired since 2025 (states/ga/NOTES.md).
 - Mississippi House: it publishes no bills with its meeting times; the page says only that a bill's committee meets (kind "meets", states/ms/NOTES.md).
 - Tennessee House: missing from LegiScan since February 2026, and the official site bars robots.
+- Open States (2026-11-22, research only, the owner's decision): its /events had 6 Georgia and 11 Tennessee meetings, all November-December 2026 interim ones with no bills, read from the same gated (GA) or robots-barred (TN, wapp.capitol.tn.gov) pages. The API returns only recent and upcoming events and no creation time, so lead time and bill match rates can only be measured by polling it during the 2027 sessions.
 - Kansas: hearings only.
 - Michigan and Kentucky: joint resolutions are left out. Michigan's are lettered ("HJRA"), and build_data.py drops a final capital when looking up agendas, so all of them would hit the same key; that needs a build_data.py change.
 - Massachusetts: a past hearing later moved to a future date would be missed.

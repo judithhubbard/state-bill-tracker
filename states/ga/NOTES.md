@@ -23,3 +23,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (webservices.legis.ga.gov) have no meetings or agendas (Committees has only committees and members; no Meetings,
   Calendar, Schedule or Agenda service), and the old chamber sites (www.house.ga.gov, www.senate.ga.gov) don't answer.
   `agendas()` stays empty. Asking the Legislature's web staff for API access or a feed would be the way in.
+  Checked again 2026-11-22 from a GitHub Actions runner (a throwaway workflow on a branch since deleted): www.house.ga.gov,
+  www.senate.ga.gov (robots.txt and pages, http and https) and www.legis.ga.gov all timed out on connecting, so GitHub's
+  runners can't reach any of them. The chamber sites are retired anyway: the Internet Archive shows www.house.ga.gov
+  redirecting to www.legis.ga.gov/house since January 2025 and www.senate.ga.gov serving a bare IIS page in August 2026,
+  then 404. No direct source is left.
+  Open States (looked into 2026-11-22, not used: the owner's decision): its v3 /events had 6 Georgia meetings
+  (November 17-23, 2026, interim study committees and Senate Urban Affairs), none with agenda items or bills; their
+  source is www.legis.ga.gov/schedule/all, the same gated schedule. The API returns only recent and upcoming events
+  (none before about November 2026 for any state tried, CA and NY included), and events carry no "created" time, so how
+  far ahead meetings appear and how many name bills can only be learned by polling it during a session.
