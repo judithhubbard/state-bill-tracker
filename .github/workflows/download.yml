@@ -171,6 +171,9 @@ jobs:
           LEGISCAN_API_KEY: ${{ secrets.LEGISCAN_API_KEY }}
           CONGRESS_API_KEY: ${{ secrets.CONGRESS_API_KEY }}
           KANSAS_API_KEY: ${{ secrets.KANSAS_API_KEY }}
+          # Georgia's documents through the state-ga-relay Worker (runners can't reach www.legis.ga.gov): states/ga/daily.py.
+          GA_RELAY_URL: ${{ secrets.GA_RELAY_URL }}
+          GA_RELAY_KEY: ${{ secrets.GA_RELAY_KEY }}
           # Scripts that read it stop on their own 5 minutes before the step's limit, with a summary.
           FETCH_MINUTES: ${{ matrix.minutes }}
         run: ${{ matrix.run }}

@@ -49,10 +49,19 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   agendas, 47 bills named, all records. Gaps: the Senate (no schedule outside the gated API; its press office announces
   only interim meetings), meetings on the first legislative day after a committee day (no report lists them: LD27's report
   lists March 5, a committee day, not LD28's March 6), and meetings or agendas added after the report.
-  **Not yet seen working from GitHub's runners:** the check below found www.legis.ga.gov timing out from a runner on
-  2026-11-22 (all tests here were run from the owner's computer). A run that can't connect stops after one request
-  (`Unreachable`) and keeps the last copy. If the runners can't reach it, that may be the server refusing cloud addresses:
-  don't route around it (another host, a proxy); ask the owner.
+  **From GitHub's runners, through a relay (2026-11-22, the owner's decision):** the check below found www.legis.ga.gov
+  timing out from a runner on 2026-11-22, but a test from a Cloudflare Worker the same day fetched a Daily Report normally
+  (200, 752 KB, 0.7 s, with the project's User-Agent): the block is GitHub's network, not Georgia refusing programs, and
+  the documents are public. So this isn't a workaround of any Georgia restriction. `get()` in daily.py tries the server
+  directly (10 seconds); when that fails and `GA_RELAY_URL` and `GA_RELAY_KEY` are set (GitHub secrets, passed by
+  download.yml), it and the run's later requests go through the `state-ga-relay` Worker (ga_relay_worker/:
+  GET /fetch?path=/api/document/... with the header X-Relay-Key), which fetches only paths under /api/document/ on
+  www.legis.ga.gov (never /api/meetings, /api/schedule or the token endpoint; no other host; "." or ".." steps refused,
+  encoded slashes allowed, since agenda links have them: "Ways%20and%20Means%2F2.26.26 ... Notice.pdf"), with the same
+  User-Agent, one upstream request per call, still 2 seconds apart. Its own refusals carry X-Relay-Error and stop the run
+  (`Unreachable`), as an unreachable server does; a run that can't connect either way keeps the last copy. Tested with
+  `wrangler dev` on 2026-11-22: LD24's report (7 meetings, 52 summaries) and its Ways and Means agenda (7 bills) through
+  the relay. The gated schedule is still never used.
   The Digital Library of Georgia (dlg.usg.edu, the University System's) archives the Daily Report too, months later (March
   2024's were there by June 2024; 2026-02-25's first seen in October): no use for upcoming meetings.
 - **Summaries, from the Daily Report (2026-11-22):** each report has a staff "Bill Summary:" paragraph (several
@@ -64,7 +73,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   report's summary (a committee substitute's, or the bill as the House passed it). The reports of 2025 and 2026 (all 80,
   LD1-40 each year, 109 requests 2 seconds apart, walked from each report's "reconvene" line) were read once from the
   owner's computer with `python3 states/ga/daily.py --backfill <pdf folder> 2025 2025 2026` into
-  states/ga/summaries_2025.json (committed: GitHub's runners can't reach www.legis.ga.gov), {bill: [report date, file,
+  states/ga/summaries_2025.json (committed: GitHub's runners couldn't reach www.legis.ga.gov before the relay, above), {bill: [report date, file,
   summary]}; a second run with the same folder reads the saved PDFs, not the server. daily.py's runs also keep each new
   report's summaries in daily.json, and `staff_summaries()` in convert.py takes the later of the two. "What it does" is the
   summary ("From the House Budget and Research Office's Daily Report."), else the title's clauses as before. 2025-26: 1,219

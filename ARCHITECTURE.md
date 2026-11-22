@@ -291,11 +291,16 @@ opened (`later()`, `STALE`, `showView()`).
 
 - **Cloudflare Pages**, project `statebilltracker` (secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`).
 - **Workers:** `state-lists` (`lists_worker/`, KV namespace STATE_LISTS bound as `LISTS`; secret `ADMIN_TOKEN`; every
-  profile's `listsApi`); `state-cron` (`cron_worker/`, no timer). Never deploy as, or bind to, the live NY site's
+  profile's `listsApi`); `state-cron` (`cron_worker/`, no timer); `state-ga-relay` (`ga_relay_worker/`, no storage; secret
+  `RELAY_KEY`): fetches public www.legis.ga.gov/api/document/ files (Daily Reports, agendas) for states/ga/daily.py, which
+  GitHub's runners can't reach (their connections time out; Cloudflare's network is answered normally); daily.py tries
+  directly first and uses it only through `GA_RELAY_URL` / `GA_RELAY_KEY` (GitHub secrets, download.yml's Download step).
+  Never deploy as, or bind to, the live NY site's
   `albany-lists` / `albany-cron` or its LISTS namespace. `lists_admin.py` manages lists and codes (token from
   `LISTS_ADMIN_TOKEN` or `~/.state_lists_admin`); `lists-backup.yml` exports (`tools/lists_backup.py`, paged `/admin/export`) and encrypts daily (`LISTS_BACKUP_KEY`), kept 90 days; restore steps in `tools/lists_backup.py`.
 - **Keys** (names only): GitHub secrets `NYSENATE_API_KEY`, `OPENSTATES_API_KEY`, `UTAH_API_TOKEN`, `INDIANA_API_KEY`,
-  `LEGISCAN_API_KEY`, `LISTS_ADMIN_TOKEN`, `LISTS_BACKUP_KEY`; on the owner's computer `~/.nysenate_api_key`,
+  `LEGISCAN_API_KEY`, `LISTS_ADMIN_TOKEN`, `LISTS_BACKUP_KEY`, `GA_RELAY_URL`, `GA_RELAY_KEY` (the relay Worker's
+  `RELAY_KEY`; kept nowhere else); on the owner's computer `~/.nysenate_api_key`,
   `~/.openstates_api_key`, `~/.utah_api_token`, `~/.indiana_api_key`, `~/.legiscan_api_key`, `~/.state_lists_admin`,
   `~/.state_lists_backup_key`. The repository is public: never print or commit one.
 - **Quotas:** LegiScan 10,000 queries a month (stops at 9,000); Open States 250 requests a day shared by AZ, HI, IA, and

@@ -22,7 +22,7 @@ staff summary}}}, "agendas": {url: {"bills":
 Usage (a test): python3 states/ga/daily.py <report.pdf>   prints what a report says.
 A past session's reports, once: python3 states/ga/daily.py --backfill <pdf folder> <session> <year> ... (summaries()).
 """
-import json, os, re, subprocess, sys, tempfile, time, urllib.error, urllib.request
+import json, os, re, subprocess, sys, tempfile, time, urllib.error, urllib.parse, urllib.request
 from datetime import date, datetime, timedelta
 from html import unescape
 from zoneinfo import ZoneInfo
@@ -45,17 +45,52 @@ class Unreachable(Exception):
     requests rather than wait on each."""
 
 
+RELAY = (os.environ.get("GA_RELAY") or os.environ.get("GA_RELAY_URL") or "").rstrip("/")
+RELAY_KEY = os.environ.get("GA_RELAY_KEY") or ""
+ORIGIN = "https://www.legis.ga.gov"
+DOC_PATH = ORIGIN + "/api/document/"
+DIRECT = [True]  # False once the server didn't answer directly this run: the rest go through the relay
+
+
 def get(url):
-    """A document's bytes, or None (the server answers a missing document with a 200 HTML page, so only a PDF counts)."""
+    """A document's bytes, or None (the server answers a missing document with a 200 HTML page, so only a PDF counts).
+    Directly first (10 seconds when there's a relay); if www.legis.ga.gov doesn't answer and GA_RELAY_URL (or GA_RELAY)
+    and GA_RELAY_KEY are set, through the relay Worker (ga_relay_worker/; GitHub's runners can't reach the server), which
+    fetches only public /api/document/ paths. Once the direct try fails, the run's other requests use the relay."""
     REQUESTS[0] += 1
     time.sleep(2)
+    relay = bool(RELAY and RELAY_KEY and url.startswith(DOC_PATH))
+    if DIRECT[0] or not relay:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": AGENT})
+            with urllib.request.urlopen(req, timeout=10 if relay else 30) as r:
+                body = r.read()
+            return body if body[:5] == b"%PDF-" else None
+        except urllib.error.HTTPError:
+            return None
+        except OSError as e:  # (URLError, timeouts, refused connections)
+            if not relay:
+                raise Unreachable(repr(e))
+            DIRECT[0] = False
+            print(f"daily report: www.legis.ga.gov didn't answer directly ({e!r}); using the relay", flush=True)
+    return relay_get(url)
+
+
+def relay_get(url):
+    """A document through the relay. Its own refusals (header X-Relay-Error: a wrong key, a path it won't fetch, Georgia
+    not answering it either) stop the run's requests, as an unreachable server does; Georgia's own errors give None."""
+    q = urllib.parse.urlencode({"path": url[len(ORIGIN):]})
+    req = urllib.request.Request(f"{RELAY}/fetch?{q}", headers={"User-Agent": AGENT, "X-Relay-Key": RELAY_KEY})
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": AGENT}), timeout=30) as r:
+        with urllib.request.urlopen(req, timeout=60) as r:
             body = r.read()
-    except urllib.error.HTTPError:
+    except urllib.error.HTTPError as e:
+        why = e.headers.get("X-Relay-Error")
+        if why:
+            raise Unreachable(f"relay: {e.code} {why}")
         return None
-    except OSError as e:  # (URLError, timeouts, refused connections)
-        raise Unreachable(repr(e))
+    except OSError as e:
+        raise Unreachable(f"relay: {e!r}")
     return body if body[:5] == b"%PDF-" else None
 
 

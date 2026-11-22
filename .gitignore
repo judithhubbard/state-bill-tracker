@@ -15,6 +15,8 @@ __pycache__/
 !data/session_calendar.json
 lists_worker/.wrangler/
 cron_worker/.wrangler/
+ga_relay_worker/.wrangler/
+ga_relay_worker/.dev.vars
 lists_worker/node_modules/
 # New Jersey downloads (states/nj/fetch.py); not kept in git yet.
 data/nj/*

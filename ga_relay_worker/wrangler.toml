@@ -1,0 +1,10 @@
+# Fetches public documents from www.legis.ga.gov for Georgia's download (states/ga/daily.py), which GitHub's runners
+# can't reach (their connections time out; Cloudflare's network gets the same documents normally). Only the document
+# path (/api/document/...), only with the X-Relay-Key header. No storage, no timer, nothing else.
+name = "state-ga-relay"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+# RELAY_KEY is a secret (wrangler secret put RELAY_KEY); it is never stored here. For `wrangler dev`, a throwaway key
+# goes in ga_relay_worker/.dev.vars (not committed).

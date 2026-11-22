@@ -631,7 +631,9 @@ notes before changing its code. Shared notes on the LegiScan states are in state
 - **The workflow** (`.github/workflows/update.yml`) runs only when started by hand: no schedule, no
   push trigger. It has no GitHub Pages site.
 - **The Workers are renamed:** `state-lists` and `state-cron` (with no timer, aimed at this repo). Never deploy them
-  under the names `albany-lists` or `albany-cron`. `state-lists` (https://state-lists.lists-worker.workers.dev, deployed
+  under the names `albany-lists` or `albany-cron`. A third, `state-ga-relay` (ga_relay_worker/, 2026-11-22; no KV, secret
+  `RELAY_KEY`), fetches only public www.legis.ga.gov/api/document/ files for Georgia's download, because GitHub's runners
+  can't reach that server (Cloudflare can; states/ga/NOTES.md). `state-lists` (https://state-lists.lists-worker.workers.dev, deployed
   2026-11-18) has its own KV namespace, STATE_LISTS (id in lists_worker/wrangler.toml); the account's other namespace,
   LISTS, is the live NY site's: never bind or write to it. Shared watchlists (2026-11-18): anyone can share a list (random
   address, up to 10 new lists a day per IP, title only); a group with an invite code also gets a named address, an
