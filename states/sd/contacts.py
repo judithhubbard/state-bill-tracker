@@ -18,6 +18,7 @@ from fetch_contacts import committee_key, name_key
 from states.sd import profile as P
 
 PARTY = {"D": "Democratic", "R": "Republican"}
+SWITCHBOARD = {"H": "605-773-3851", "S": "605-773-3821"}  # every member's CapitolPhone in 2023-2026
 
 
 def seats(members):
@@ -50,16 +51,30 @@ def build(year):
     folder = os.path.join(P.DATA, str(year))
     members = json.load(open(os.path.join(folder, "members.json")))
     seat = seats(members)
+    # After the 2026 election the API cleared the 2026 members' emails and phones (fetch.py keeps a copy's earlier
+    # values): a member re-elected to the next session has them in that session's list (members_next.json, same PersonId).
+    # The members who weren't re-elected sit until January: their emails as the API gave them on 2026-11-01
+    # (states/sd/emails_2026.json, by SessionMemberId).
+    try:
+        later = {m.get("PersonId"): m for m in json.load(open(os.path.join(P.DATA, "members_next.json")))}
+    except (OSError, ValueError):
+        later = {}
+    kept_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"emails_{year}.json")
+    kept = json.load(open(kept_path)) if os.path.exists(kept_path) else {}
     people = {}
     for m in sorted(members, key=lambda m: bool(m.get("InactiveDate"))):
         sid = seat[m["SessionMemberId"]]
         if sid in people:
             continue
-        # The House's and the Senate's Capitol switchboards (one member's is typed "605-733-": Pierre's exchange is 773).
-        ph = re.sub(r"^605-733-", "605-773-", m.get("CapitolPhone") or "")
+        nxt = later.get(m.get("PersonId")) or {}
+        email = m.get("EmailState") or kept.get(str(m["SessionMemberId"])) or \
+            (nxt.get("EmailState") if not m.get("InactiveDate") else None)
+        # The House's and the Senate's Capitol switchboards (one member's is typed "605-733-": Pierre's exchange is 773);
+        # every member's is one of the two, so a member whose phone is missing gets their house's.
+        ph = re.sub(r"^605-733-", "605-773-", m.get("CapitolPhone") or nxt.get("CapitolPhone") or SWITCHBOARD[sid[0]])
         people[sid] = {
             "name": name_of(m), "key": name_key(name_of(m)), "id": str(m["SessionMemberId"]),
-            "party": PARTY.get(m.get("Politics"), m.get("PartyName") or ""), "email": m.get("EmailState") or None,
+            "party": PARTY.get(m.get("Politics"), m.get("PartyName") or ""), "email": email or None,
             "form": None, "phone": ph or None, "phones": [[f"{'Senate' if sid[0] == 'S' else 'House'} switchboard", ph]] if ph else [],
             "url": f"https://sdlegislature.gov/Legislators/Profile/{m['SessionMemberId']}/Detail",
             # The API's own photo, the small one (150 by 188, a few KB; Picture is the original, up to 11 MB). Its

@@ -31,3 +31,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   and live against the interim pages (16 meetings, no bills). Untested against a live session: whether committee pages
   list every upcoming meeting (the March copy listed two per committee, about a week), and the canceled wording. The
   schedule's week view is a POST with a CSRF token (it answered 500 between sessions) and isn't used.
+- **Floor votes missing from the site (fixed 2026-11-22):** the live 2026 page had 1,226 committee votes and no floor vote.
+  fetch.py read votes in id order, committee votes ("c...") before floor votes ("f..."), and saved a vote only when its page
+  had tallies or members' votes it could read. About 900 committee voice votes ("Pass without objection", every member
+  "(Voice Vote)", no tallies; `vote_members()` didn't read the hyphenated "voice-vote" tag) were never saved, so every run
+  read the same ones again for its whole 45 minutes and never reached a floor vote: GitHub's copy had 1,733 votes of 2026,
+  all committee votes, and none of 2023-2025 (a copy made on the owner's computer had them all, so local builds looked
+  right). Now floor votes come first, every year's, newest year first, and a voice vote is saved marked `voice` (left out
+  by convert.py: no tallies, no member's vote). At about 850 votes a run, the floor votes (about 1,600-1,800 a year) take
+  about two runs a year. data_check.py fails on a session where under a fifth of the bills that passed a house have a
+  floor vote.

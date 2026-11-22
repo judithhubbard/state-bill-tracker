@@ -31,3 +31,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   1107) with the date set back; the live run's timing in session is untested (agendas are posted a few days ahead). Not
   used: `Documents/Schedule` (the site's upcoming-meetings list: agendas' DocumentIds with SessionCommitteeId; in
   November only interim meetings), which could replace the 32 committee requests once its session shape is seen.
+- **Contacts after the election (2026-11-22):** the API's 2026 member list (`SessionMembers/Session/71`) lost every
+  member's CapitolPhone and EmailState after the November 2026 election (the 2027 session's list, 174, has them for the
+  members elected), and the next download's contacts had no email or phone. Now fetch.py keeps a refreshed list's emptied
+  fields from the last copy, and saves the next session's members (data/sd/members_next.json); contacts.py fills a
+  missing email from states/sd/emails_2026.json (the API's emails as downloaded on 2026-11-01, all 105 members: those not
+  re-elected sit until January), else the next session's list (same PersonId), and a missing phone with the member's
+  house's switchboard (`SWITCHBOARD`: every member's Capitol phone was one of the two). For 2027, check that list keeps
+  its emails through the session.

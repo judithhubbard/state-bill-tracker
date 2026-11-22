@@ -115,6 +115,10 @@ const BillFacts = (() => {
       if (own) return own;
       // Actions already written in plain English (Virginia's) are kept as written unless a rule below fits.
       const written = /[a-z]/.test(t || "");
+      // A referral written out that already names the committee as one ("Referred to the Committee on Oversight and
+      // Government Reform, and in addition to ...", Congress's) is kept as written: the rule below made it "Referred to
+      // the The Committee On Oversight ... Committee" (2026-11-22).
+      if (written && /^(?:re-)?referred to\b/i.test(t) && /\bcommittees?\b/i.test(t)) return t;
       let s = (t || "").toLowerCase()
         .replace(/\b([sa])(\d+[a-z]?)\b/g, (m, h, n) => h.toUpperCase() + n.toUpperCase())
         .replace(/\bcal\.(\d+)/g, "calendar $1").replace(/\bchap\.(\d+)/g, "chapter $1")

@@ -857,7 +857,9 @@ def record(session, chain, secs, parties):
     if const:
         title = "Constitutional amendment: " + re.sub(r"^Proposing (?:an amendment|amendments) to the Constitution of the State of Iowa\s*", "", title, flags=re.I).strip(" ,")
         title = title.rstrip(": ")
-    summary = official if official != title and not const else ""
+    # No summary line: the official title differs from the title only by the stock tail (", and including effective date
+    # provisions"), which the page showed as if it were a summary (2026-11-22). "What it does" is the LSA's explanation.
+    summary = ""
     topics = ["const"] if const else []
     for h_, c in refs:
         tp = P.COMMITTEE_TOPICS.get(c)

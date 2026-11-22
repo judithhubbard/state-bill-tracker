@@ -38,3 +38,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   the date set back) and the 48 canceled 2026 hearings (all parse; each names a committee the bill was assigned to).
   Untested in session: Senate hearings' wording, and whether a hearing stays in the file after it's held (the date
   filter drops it either way).
+- **Contacts without emails or page links (checked 2026-11-22):** the file repository's member files (ftp.ilga.gov/Members/
+  and each GA's folder) have names, parties, districts, Capitol and district addresses and phones, and nothing else: no
+  email, no member id to build a page address from (the bill status files name sponsors only by name). www.ilga.gov, where
+  the member pages are, turns automated requests away, so it isn't read. data_check.py's contacts check leaves Illinois's
+  email and page out (`CONTACT_GAPS`). Open States' people file could supply emails, as for Pennsylvania (the owner's
+  decision there), if the owner wants it here too.

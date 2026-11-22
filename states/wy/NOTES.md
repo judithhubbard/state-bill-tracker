@@ -36,3 +36,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   session's calendar (asked for 2026-02-12: 247 meetings, 152 with bills, 190 bills, all but 6 non-amendment joint
   resolutions matching the records). The calendar has no canceled flag: a meeting whose purpose says "cancel" is left out;
   how cancellations really show is untested. A failure keeps the last copy and never stops the run.
+- **Member pages (2026-11-22):** contacts link each member's page on wyoleg.gov, built from the member list's `legID`
+  (the site's own route, `/Legislators/:year/:chamber/:legID`, from its Angular bundle; the page is drawn in the
+  browser, so its address can't be checked by reading it). Until then no member had an official page link.

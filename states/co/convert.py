@@ -236,6 +236,8 @@ def load_session(session):
                 v = json.load(open(os.path.join(folder(session), "votes", f"{vid}.json")))
             except (OSError, ValueError):
                 continue
+            if v.get("voice"):
+                continue  # a voice vote ("Pass without objection"): no tallies, no member's vote
             motion = text(v.get("motion"))
             committee = v.get("kind") == "committee"
             # The bill's own votes: passage, concurrence, conference reports and overrides on the floor; a committee's vote

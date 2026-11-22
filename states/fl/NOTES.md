@@ -63,3 +63,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2026-11-15 (the page has no phone; (850) 717-9337 is from general knowledge, unchecked; flgov.com's robots.txt bars AI
   crawlers by name). Places (`towns.py`): cities, towns, villages, Census-designated places and counties, separate Senate
   (40) and House (120) lists.
+- **Contacts of 2026 (checked 2026-11-22):** about a third of the 2026 session's members have no contact form or phone:
+  Florida's terms end at the November election, and members who left then are no longer on the Senate's or the House's
+  pages (the 2027 session's contacts have every member's form). data_check.py's contacts check leaves Florida's phones
+  out (`CONTACT_GAPS`: they come from members' pages, read over several runs).
