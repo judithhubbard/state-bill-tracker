@@ -39,7 +39,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   journal's printed totals. Names are "Brown (16)" (district) or a surname matched to the year's roster (Senate bill list
   sponsors with districts, the House's conferee entries with district 200+n, today's senators); 2024's journals write "Brown
   (16th Dist.)" and sometimes run two names together with one space ("Bernskoetter Brattin", `senate_seats()`). House
-  journals and House roll-call PDFs aren't downloaded: House floor votes are tallies (none for most Senate bills). Committee
+  journals: representatives member by member since 2026-11-22 (`house_rolls()`; fetch.py had downloaded the House
+  Journal PDFs all along, from documents.house.mo.gov, whose robots.txt sets only a 20-second crawl delay, but the
+  converter never read them, so House floor votes showed tallies without names). Each roll call ("AYES: 102" then names in
+  columns, "Jones 12" where two share a surname, "Mr. Speaker"; NOES, PRESENT, ABSENT WITH LEAVE, VACANCIES) is used only
+  when its names add up to the printed totals, and is matched to the passage by day, bill and the export's ayes and noes:
+  2023 182 of 189 House passages, 2024 124 of 144, 2025 176 of 192, 2026 205 of 213; no name failed to match a seat
+  (`house_seat()`: the year's member files, else the bills' sponsors and co-sponsors with districts). Committee
   tallies are the House's. "What it does" is the Senate's bill summary of a Senate bill's current version ("From the Missouri
   Senate's summary of the bill's current version (SS SCS SB 3)."): cross-references ("These provisions are identical to
   ...") and the analyst's name dropped, capitals headings in sentence case, "Current law ..." openings led by the "This act"

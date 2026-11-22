@@ -28,7 +28,9 @@ State/Article III, Sec. 31" is law without signature.
 Votes: floor tallies come from the House's exports; the Senate's roll calls member by member from the Senate Journal's
 text (journals/senate/DAY56.txt.gz: "On motion of Senator Trent, SS No. 2 for HCS for HBs 594 and 508 was read the 3rd
 time and passed by the following vote: YEAS—Senators Bean Beck ..."), matched to the passage by day and bill number.
-The House's journals weren't downloaded, so House floor votes are tallies only. Committee tallies (House committees
+The House's roll calls member by member from the House Journal's text (journals/house/jrn024.txt.gz, `house_rolls()`),
+matched by day, bill and the export's tally (since 2026-11-22; the journals were downloaded before that but not read, so
+House floor votes showed tallies only). Committee tallies (House committees
 only) come from the exports.
 """
 import gzip, html as H_, json, os, re
@@ -402,6 +404,135 @@ def find_roll(session, key, day, used, kinds=("pass",)):
     return None
 
 
+# ---- House Journal roll calls ----
+# (journals/house/jrn024.txt.gz: "On motion of Representative Black, HCS HBs 2637 & 3155 was read the third time and passed
+# by the following vote: AYES: 102" then the names in columns, "Jones 12" where two share a surname, "Mr. Speaker";
+# then "NOES: 045", "PRESENT: 002", "ABSENT WITH LEAVE: 009", "VACANCIES: 005".)
+
+H_DAY = re.compile(r"\b[A-Z-]+ DAY, (?:MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY), ([A-Z]+ \d{1,2}, \d{4})")
+H_GROUPS = [("Y", "AYES"), ("N", "NOES"), ("P", "PRESENT"), ("E", "ABSENT WITH LEAVE"), ("A", "ABSENT"), ("V", "VACANCIES")]
+H_LABEL = re.compile(r"^(AYES|NOES|PRESENT|ABSENT WITH LEAVE|ABSENT|VACANCIES): *(\d+)\s*$", re.M)
+
+
+def house_roster(session):
+    """The year's representatives: district -> (name, surname, post), from the member files, else the bills' sponsors and
+    co-sponsors (FullName with District; past years' exports have no member files)."""
+    key = (session, "hr")
+    if key not in _CACHE:
+        out = {d: (m["name"], m["last"], m.get("post") or "") for d, m in house_members(session).items()} if \
+            os.path.isdir(os.path.join(folder(session), "house", "members")) else {}
+        hb = os.path.join(folder(session), "house", "bills")
+        for f in sorted(os.listdir(hb)) if os.path.isdir(hb) else []:
+            s = open(os.path.join(hb, f), encoding="utf-8").read()
+            for typ, name, d in re.findall(r"<SponsorType>([^<]*)</SponsorType><FullName>(.*?)</FullName><District>(\d+)</District>", s):
+                if "Senate" not in typ and 0 < int(d) < 200 and int(d) not in out:
+                    name = H_.unescape(name).strip()
+                    out[int(d)] = (name, last_name(name), "")
+        _CACHE[key] = out
+    return _CACHE[key]
+
+
+def house_seat(session, written):
+    """A House Journal name ("Brown", "Jones 12", "Walsh Moore", "Mr. Speaker") -> "H:12", else "H?Name"."""
+    written = written.strip()
+    m = re.match(r"(.+?)\s+(\d{1,3})$", written)
+    if m:
+        return f"H:{int(m.group(2))}"
+    roster = house_roster(session)
+    if written == "Mr. Speaker" or written == "Madam Speaker":
+        hits = [d for d, (_, _, post) in roster.items() if post == "Speaker of the House"]
+    else:
+        # The surname, or a two-word surname's whole ("Fountain Henderson", "Van Schoiack").
+        hits = [d for d, (name, last, _) in roster.items() if norm(written) in (norm(last), norm(" ".join(name.split()[-2:])))]
+    return f"H:{hits[0]}" if len(hits) == 1 else f"H?{written}"
+
+
+def _house_names(chunk):
+    out = []
+    for ln in chunk.split("\n"):
+        if re.search(r"Journal of the House|Day\s*[–—-]\s*\w+day,|^\s*\d+\s*$", ln) or not ln.strip():
+            continue
+        out += [n.strip() for n in re.split(r"\s{2,}", ln.strip()) if n.strip() and not n.strip().isdigit()]
+    return out
+
+
+def house_rolls(session):
+    """Every roll call in the year's House Journal: [{date, bills, kind, Y, N, P, A, E, printed}], kind as in
+    senate_rolls()."""
+    key = (session, "hrolls")
+    if key in _CACHE:
+        return _CACHE[key]
+    out = []
+    d = os.path.join(folder(session), "journals", "house")
+    for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        try:
+            s = gzip.open(os.path.join(d, f), "rt", encoding="utf-8", errors="replace").read()
+        except OSError:
+            continue
+        s = s.replace("’", "'").replace("\f", "\n")
+        m = H_DAY.search(s[:5000])
+        if not m:
+            continue
+        try:
+            day = datetime.strptime(m.group(1).title(), "%B %d, %Y").date().isoformat()
+        except ValueError:
+            continue
+        labels = list(H_LABEL.finditer(s))
+        prev_end = 0
+        i = 0
+        while i < len(labels):
+            if labels[i].group(1) != "AYES":
+                i += 1
+                continue
+            j = i + 1
+            while j < len(labels) and labels[j].group(1) != "AYES":
+                j += 1
+            group, printed = {}, {}
+            for k in range(i, j):
+                lab = labels[k]
+                code = dict((b, a) for a, b in H_GROUPS)[lab.group(1)]
+                end = labels[k + 1].start() if k + 1 < j else lab.end()
+                group[code] = _house_names(s[lab.end():end]) if code != "V" else []
+                printed[code] = int(lab.group(2))
+            window = s[prev_end:labels[i].start()]
+            prev_end = labels[j - 1].end()
+            lead = re.sub(r"\s+", " ", window[-700:])
+            if re.search(r"third time and (?:finally )?passed|truly agreed to and finally passed", lead[-400:], re.I):
+                kind = "pass"
+            elif re.search(r"conference committee report", lead[-400:], re.I):
+                kind = "ccr"
+            elif re.search(r"override|notwithstanding the objections", lead[-400:], re.I):
+                kind = "override"
+            elif re.search(r"\bconcur\b|adopt S[A-Z]*S\b|adopt SA\b", lead[-400:], re.I):
+                kind = "concur"
+            else:
+                kind = "other"
+            refs = list(REF.finditer(window))
+            bills = set()
+            if refs:
+                r = refs[-1]
+                bills = {f"{re.sub(r's$', '', r.group(1))}{n}" for n in re.findall(r"\d+", r.group(2))}
+            # Names that add up to the printed totals, or the roll call isn't used.
+            ok = all(len(group.get(c, [])) == printed.get(c, 0) for c in "YNPEA" if c in printed)
+            out.append({"date": day, "kind": kind, "bills": bills, "ok": ok, "printed": printed,
+                        **{c: group.get(c, []) for c in "YNPAE"}})
+            i = j
+    _CACHE[key] = out
+    return out
+
+
+def find_house_roll(session, key, day, used, tally):
+    """The House Journal's roll call that day on that bill with the House export's tally (ayes, noes), names whole."""
+    for i, r in enumerate(house_rolls(session)):
+        if ("H", i) in used or r["date"] != day or key not in r["bills"] or r["kind"] == "other" or not r["ok"]:
+            continue
+        if tally and (r["printed"].get("Y"), r["printed"].get("N")) != (tally[0], tally[1]):
+            continue
+        used.add(("H", i))
+        return r
+    return None
+
+
 # ---- Wording ----
 
 def comm_name(c):
@@ -459,6 +590,17 @@ class Walk:
         self.steps.append((d, h, wording, kind))
 
     def floor_vote(self, d, h, tally, roll=None):
+        if h == "H" and tally:
+            hr = find_house_roll(self.session, self.key, d, self.used, tally)
+            STATS["house votes"] += 1
+            if hr:
+                STATS["house matched"] += 1
+                seats = {c: [house_seat(self.session, n) for n in hr[c]] for c in "YNPAE"}
+                STATS["house names"] += sum(len(v) for v in seats.values())
+                STATS["house unmatched names"] += sum(1 for v in seats.values() for m in v if "?" in m)
+                self.fvotes.append([h, "F", None, d, len(seats["Y"]), len(seats["N"]),
+                                    [[m, "A" if c == "P" else c] for c in ("N", "P", "E", "A") for m in seats[c]]])
+                return
         if roll:
             seats = {c: [x for n in roll[c] for x in senate_seats(self.session, n)] for c in "YNAE"}
             listed = [[m, c] for c in ("N", "A", "E") for m in seats[c]]
