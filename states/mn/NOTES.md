@@ -58,3 +58,18 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   item vetoes on appropriations; override two-thirds. The governor's phone ((651) 201-3400) and address are from general
   knowledge: mn.gov's contact page doesn't answer automated readers; not checked by the owner. If a new governor takes office
   January 4, 2027, add them to `GOVERNORS` and legislatures.json.
+
+- **Committee agendas (2026-11-22):** `agendas()` in states/mn/fetch.py (the current Legislature, every run, two requests)
+  reads the House's schedule page, www.house.mn.gov/Schedules/All (HTML, every posted meeting of House committees and
+  the joint commissions; each card's "Bills Added" links name the bills, `ssn=` the special session; else the HF/SF
+  numbers in the agenda text; "Hearing Canceled" cards and floor sessions left out), and the Senate's schedule API,
+  www.mnsenate.gov/api/schedule/range/<yesterday>/<3 weeks ahead> (the JSON behind its Vue schedule page: each agenda
+  item's bill_type "S.F."/"H.F." and bill_number "0042"; "Meeting canceled" revisions and floor sessions, cmte_id 1, left
+  out), into data/mn/<first year>/agendas.json, `{"HF743": [["House Commerce Finance and Policy", "2026-03-10T08:15:00"]]}`
+  (House and Senate committees prefixed; commissions keep their own names); `agendas()` in convert.py keeps today's and
+  later. A house whose schedule fails keeps its entries from the last file. Agendas are posted a few days ahead (the
+  Senate's `public_notice_date` about four days before). robots.txt: house.mn.gov bars only /Fiscal2/, mnsenate.gov has
+  none. Tested 2026-11-22 against March 10, 2026's House day page (same cards; 17 meetings, 54 bills) and the Senate's
+  API for February 17 to March 10, 2026 (97 meetings, 179 bills): all 233 numbers match records. The live pages had only
+  interim commissions (14 meetings, no bills). Untested live: the House's /Schedules/All with a session's worth of
+  meetings (size), and special-session numbering.

@@ -1317,6 +1317,18 @@ def link_earlier(session, recs):
                 r["prev"].add((y, old[k][0][0]))
 
 
+def agendas(session):
+    """Bills on upcoming committee meetings (states/mn/fetch.py's agendas(): the House's schedule page and the Senate's
+    schedule API), today or later: {"HF743": [["House Commerce Finance and Policy", "2027-02-03T08:15:00"], ...]}."""
+    today = date.today().isoformat()
+    out = {}
+    for bill, meets in (jload(os.path.join(folder(session), "agendas.json"), {}) or {}).items():
+        keep = [m for m in meets if m[1][:10] >= today]
+        if keep:
+            out[bill] = keep
+    return out
+
+
 def parties(session, recs):
     if session not in _PARTIES:
         load_session(session)

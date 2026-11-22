@@ -47,6 +47,9 @@ In the regular session's folder, for the whole Legislature:
   (pdftotext -layout), once. The Senate publishes its roll calls only there ("Those who voted in the affirmative
   were:"). Some days' PDFs are large (8 MB).
 - state.json: what has been read (each bill's last read day, the change feed's last day, House vote dates, summaries).
+- agendas.json (the current Legislature only, every run): bills on the House's and the Senate's posted committee
+  meetings, yesterday to three weeks ahead (agendas(): www.house.mn.gov/Schedules/All, one page, and
+  www.mnsenate.gov/api/schedule/range/<from>/<to>, the JSON behind the Senate's schedule page).
 data/mn/vetoes.html.gz: the Legislative Reference Library's list of every veto (www.lrl.mn.gov/vetoes/vetodetails),
 weekly, to check totals against.
 
@@ -917,6 +920,130 @@ def journals(ls, folder, state, live):
     return whole and bool(index)
 
 
+# ---- committee agendas ---------------------------------------------------------------------------------------------
+
+AGENDA_DAYS = 21
+
+
+def bill_key(kind, num, special=0):
+    """("H", "0042", 0) -> "HF42"; a special session's bill as the converter numbers it ("HFS2": special_num())."""
+    n = str(int(num))
+    return f"{kind}F{chr(ord('S') + special - 1) if special else ''}{n}"
+
+
+def clock(t):
+    """"8:15 AM" or "15:00" -> "08:15:00"; "00:00:00" when there's none."""
+    m = re.search(r"(\d{1,2}):(\d\d)\s*([AP])\.?\s*M", t or "", re.I)
+    if m:
+        return f"{int(m.group(1)) % 12 + (12 if m.group(3).upper() == 'P' else 0):02d}:{m.group(2)}:00"
+    m = re.match(r"\s*(\d{1,2}):(\d\d)", t or "")
+    return f"{int(m.group(1)):02d}:{m.group(2)}:00" if m else "00:00:00"
+
+
+def house_meetings(page):
+    """The House's schedule page (/Schedules/All: every posted meeting of the House's committees and the joint
+    commissions, one card each) -> [(name, "2027-01-20T08:15:00", [bill keys])], canceled ones left out."""
+    out = []
+    for card in re.split(r'<div class="card pb-3', page)[1:]:
+        head = re.search(r'class="card-header (bg-[a-z]+)".*?<span[^>]*>(.*?)</span>.*?<h3>(.*?)</h3>', card, re.S)
+        if not head:
+            continue
+        when = clean(head.group(2))
+        m = re.search(r"([A-Z][a-z]+ \d{1,2}, \d{4})", when)
+        if not m:
+            continue
+        try:
+            day = datetime.strptime(m.group(1), "%B %d, %Y").date()
+        except ValueError:
+            continue
+        name = clean(head.group(3))
+        if re.search(r"Floor Session", name, re.I):  # the floor's calendar, not a committee's agenda
+            continue
+        if head.group(1) == "bg-house" and not name.startswith("House"):
+            name = "House " + name
+        body = card[head.end():]
+        if re.search(r'text-danger[^>]*>\s*(Hearing |Meeting )?Cancel', body, re.I):
+            continue
+        bills = [bill_key(k, n, int(s or 0)) for k, n, s in
+                 re.findall(r'bills/bill\.php\?f=([HS])F(\d+)[^"]*?(?:&(?:amp;)?ssn=(\d+))?"', body)]
+        if not bills:  # no "Bills Added" list: the numbers the agenda text names
+            agenda = re.search(r"<b>Agenda:</b>(.*?)</div>", body, re.S)
+            bills = [bill_key(k, n) for k, n in re.findall(r"\b([HS])\.?\s?F\.?\s?(\d{1,4})\b", clean(agenda.group(1)) if agenda else "")]
+        out.append((name, f"{day.isoformat()}T{clock(when[m.end():])}", list(dict.fromkeys(bills))))
+    return out
+
+
+def senate_meetings(events):
+    """The Senate's schedule API (/api/schedule/range/<from>/<to>: its committees and the commissions it lists) ->
+    [(name, "2027-01-20T08:30:00", [bill keys])], canceled ones left out."""
+    out = []
+    for e in events or []:
+        if not isinstance(e, dict) or not e.get("hearing_date"):
+            continue
+        why = f"{e.get('hearing_revision_reason') or ''} {e.get('hearing_revision_details') or ''}"
+        if re.search(r"cancel|postpone", why, re.I) or str(e.get("show_public")) == "0":
+            continue
+        name = clean((e.get("committee") or {}).get("committee_name") or "")
+        if not name or name == "Senate" or str(e.get("cmte_id")) == "1":  # floor sessions
+            continue
+        if e.get("cmte_type") == "Standing" and not name.startswith("Senate"):
+            name = "Senate " + name
+        special = int(e.get("ss_number") or 0)
+        bills = []
+        for a in e.get("agenda") or []:
+            m = re.match(r"([HS])\.?\s*F\.?$", (a.get("bill_type") or "").strip())
+            if m and str(a.get("bill_number") or "").strip().isdigit():
+                bills.append(bill_key(m.group(1), a["bill_number"], special))
+        out.append((name, f"{e['hearing_date']}T{clock(e.get('hearing_time'))}", list(dict.fromkeys(bills))))
+    return out
+
+
+def agendas(folder):
+    """Bills on the House's and Senate's posted committee meetings, yesterday to three weeks ahead, into
+    <folder>/agendas.json: {"HF743": [["House Commerce Finance and Policy", "2026-03-10T08:15:00"], ...]}. Two
+    requests (the House's schedule page, the Senate's schedule API). A house whose schedule can't be read keeps its
+    part of the last file."""
+    path = os.path.join(folder, "agendas.json")
+    lo, hi = (TODAY - timedelta(days=1)).isoformat(), (TODAY + timedelta(days=AGENDA_DAYS)).isoformat()
+    last = load(path, {}) or {}
+    meets, ok = {}, {}
+    try:
+        page = text_of(request(f"{HOUSE}/Schedules/All", "House schedule"))
+        if page and ("card-header" in page or "Currently Posted Meetings" in page):
+            meets["H"], ok["H"] = house_meetings(page), True
+        body = request(f"{SENATE}/api/schedule/range/{lo}/{hi}", "Senate schedule", headers={"Accept": "application/json"})
+        events = json.loads(body.decode("utf-8")).get("events") if body else None
+        if isinstance(events, list):
+            meets["S"], ok["S"] = senate_meetings(events), True
+    except Refused as e:
+        print(f"agendas: refused ({e})", flush=True)
+    except ValueError:
+        print("agendas: the Senate's schedule isn't JSON", flush=True)
+    if not ok:
+        print("agendas: neither schedule could be read; kept the last copy", flush=True)
+        return
+    out, n = {}, 0
+    for house in ("H", "S"):
+        if not ok.get(house):  # keep that house's entries from the last file
+            for bill, entries in last.items():
+                for x in entries:
+                    if x[0].startswith("House" if house == "H" else "Senate") and x[1][:10] >= lo:
+                        out.setdefault(bill, []).append(x)
+            continue
+        for name, when, bills in meets[house]:
+            if not lo <= when[:10] <= hi:
+                continue
+            n += 1
+            for b in bills:
+                if [name, when] not in out.setdefault(b, []):
+                    out[b].append([name, when])
+    for entries in out.values():
+        entries.sort(key=lambda x: x[1])
+    save(out, path)
+    print(f"agendas: {len(out)} bills on {n} meetings" + ("" if len(ok) == 2 else f" (only {'House' if 'H' in ok else 'Senate'} read)"),
+          flush=True)
+
+
 def vetoes():
     path = os.path.join(DATA, "vetoes.html.gz")
     if os.path.exists(path) and not stale_after(time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(path))), WEEK):
@@ -1002,6 +1129,7 @@ def main():
                 house_members(folder, state)
                 senate_members(folder, state)
                 committees(ls, folder, state, True)
+                agendas(folder)
             save(state, os.path.join(folder, "state.json"))
         for s in found:
             folder, state, lst = ctx[s["key"]]
