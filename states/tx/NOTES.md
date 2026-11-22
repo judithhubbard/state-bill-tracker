@@ -10,7 +10,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Senate passed, E015 sent to the governor, E020/E025/E030 signed/filed without signature/signed with line-item vetoes,
   E035 vetoed; H/S 0xx-1xx referrals, 25x/28x reports, H245/S275 "left pending"); a reported House bill is shown in the
   Calendars Committee until it's placed on a calendar. H825/S825 "Transmitted to the Governor" is NOT a sending (it's on
-  bills still in committee). One record per bill; companions show as similar bills. Committee votes are totals from the histories;
+  bills still in committee). One record per bill; companions show as similar bills. Committee votes are totals from the histories (House committees' members from the HRO floor reports, below);
   floor votes by member come from the journals (`states/tx/journals.py`): the House Journal's record votes by the "RV#"
   numbers in the histories, and the Senate Journal by each bill's heading (it has no record numbers), including the
   Local and Uncontested Calendar's list format and a date's second journal ("...SJ04-12-F1.HTM"); "(Same as previous
@@ -43,3 +43,26 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (sos.texas.gov) answers 403, and gov.texas.gov posted none for 2023. OCR quality: the typed proclamations read
   essentially word for word (HB 305, 413, 449 of 2025, HB 1193 of 2021 checked against the page images); only the
   blackletter heading ("Governor of the State of Cexaz") and signatures misread, and both are cut.
+- **House committee votes by member (2026-11-22):** `states/tx/hro.py` (run by fetch.py, 8 minutes a session at most,
+  never holds Texas back) reads the House Research Organization's Daily Floor Report,
+  hro.house.texas.gov/pdf/fr<yyyy>/<yymmdd><A|B|C...>.PDF (no robots.txt on that host, 404, checked 2026-11-22; the owner
+  approved). Only those PDFs are read there: never house.texas.gov (its robots.txt bars ClaudeBot by name) or
+  capitol.texas.gov. There's no listing to read, so the days are the House's second-reading calendar days in the saved
+  histories (codes 420-435, 465, 515, 522: about 41 a session), each day's parts asked A, B, C ... until a 404 (about 120
+  PDFs a session; a 404 is asked again once a day while the day is under three days old). Each part is kept as pdftotext
+  -layout text in <code>/hro/<yymmdd><L>.txt. Each bill analysis names its House committee ("COMMITTEE: State Affairs —
+  committee substitute recommended") and every member's vote ("VOTE: 11 ayes — C. Bell, Zwiener, ...; 0 nays; 2 absent —
+  ..."; "present not voting" too). A group whose names don't number its count is dropped; names split across lines are
+  joined ("Leo\n Wilson", "Gervin-\nHawkins"), and a name the House writes with a comma ("Curry, Garcia, Linda, Olcott",
+  CSHB 149 of 2025) is put back together when the pair is a member's dataName. convert.py puts the names (nays "N",
+  present not voting "B", absent "A") on the committee vote the history already has, when the analysis's committee and
+  ayes-nays are the history's; never a second vote (an analysis matching no vote is counted, `HRO_STATS`). Names go to
+  seats as the journals' do (`floor_vote()`: "C. Bell" picks Cecil Bell; only the current session's members are tied to
+  seats, earlier sessions' names stay "H?Name", like their floor votes). Tested 2026-11-22 on five parts (2025-04-22 A
+  and B, 2025-05-26 A, 2023-04-03 A, 2021-03-30 A; 2025-04-22 C answered 404): 59 analyses with a committee vote, every
+  one matching the history's committee and tally; 2025's 548 names: all tied to seats but VanDeaver and Schatzline (no
+  longer members), none off the committee's current roster, 38 of 46 votes naming the whole roster. Coverage before:
+  0 of 2,710 / 2,828 / 2,498 House committee votes (2025 / 2023 / 2021) named anyone; the full download (first CI run)
+  should name about the bills that reached a second-reading calendar (1,500-2,000 a session). Limits: a committee vote
+  with every member present and voting yes names nobody (yes votes aren't listed), and the page then can't say how a
+  member voted, as for other states' unanimous committee votes; bills that never reached the floor have no analysis.

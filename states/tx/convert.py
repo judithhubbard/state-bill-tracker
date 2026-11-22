@@ -13,6 +13,9 @@ Committee, which decides which bills reach the floor: it's shown as in that comm
 Only regular-session House and Senate bills are shown, and joint resolutions (HJR/SJR) proposing constitutional
 amendments: those need two-thirds of each house's members, never go to the governor ("Filed with the Secretary of
 State" instead) and go to the voters (topic "const"). Other resolutions and special sessions' bills are left out.
+
+Votes: committee votes are the histories' totals, with the House committees' members from the House Research
+Organization's floor reports (states/tx/hro.py); floor votes by member from the journals (states/tx/journals.py).
 """
 import glob, html, json, os, re
 import xml.etree.ElementTree as ET
@@ -373,6 +376,15 @@ def veto_message(session, p, stage, day):
     return m
 
 
+HRO_STATS = {}  # session -> House committee votes, those named from the floor reports, analyses matching no vote
+
+
+def same_comm(a, b):
+    """"Ways & Means" = "Ways and Means"; "Licensing & Administrative Procedures" = "Licensing and Administrative ..."."""
+    k = lambda s: _plain(re.sub(r"&", " and ", s or "")).replace(" and ", " ")
+    return k(a) == k(b)
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     data = bills(session)
@@ -383,6 +395,14 @@ def load_session(session):
     spath = os.path.join(P.DATA, P.code_of(session), "senate_votes.json")
     senate_votes = json.load(open(spath)) if os.path.exists(spath) else {}
     senators = floor_members(session, "S")
+    from states.tx import hro
+    hro_votes = hro.analyses(session)
+    HRO_STATS[session] = {"house": 0, "named": 0, "unmatched": 0}
+
+    def member(name):
+        # "Garcia, Linda" (a member's name as the House writes it) -> "L. Garcia".
+        m = re.match(r"(.+?),\s*([A-Z])[a-z]+$", name)
+        return floor_vote(f"{m.group(2)}. {m.group(1)}" if m else name, members) or f"H?{name}"
     stamp = max((os.path.getmtime(f) for f in glob.glob(os.path.join(folder(session), "*.xml"))), default=0)
     fetched = datetime.fromtimestamp(stamp, ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
 
@@ -453,12 +473,25 @@ def load_session(session):
             ds = sorted({d for d, h, t, x, n in steps if test(h, t, n) and d})
             return {"first": ds[0], "last": ds[-1], "all": ";".join(ds)}[mode] if ds else ""
 
-        # Committee votes (totals only): the date the committee reported the bill, or the last time it took it up.
+        # Committee votes: the date the committee reported the bill, or the last time it took it up. The histories give
+        # totals; a House committee's members come from the House Research Organization's analysis of the bill
+        # (states/tx/hro.py), when its committee and tally are the history's (never a second vote).
         votes = []
+        own_hro = list(hro_votes.get(p, []))
         for h, cname, status, yes, no, pnv, absent in b["committees"]:
             if yes or no:
                 when = dates(lambda hh, t, n: hh == h and (t == "REPORTED" or n in (249, 280)))
-                votes.append([h, "C", cname, when or dates(lambda hh, t, n: hh == h), yes, no, []])
+                listed = []
+                if h == "H":
+                    hit = next((a for a in own_hro if a["ayes"] == yes and a["nays"] == no and same_comm(a["committee"], cname)), None)
+                    if hit:
+                        own_hro.remove(hit)
+                        listed = [[member(x), code] for code, k in (("N", "nays"), ("B", "pnv"), ("A", "absent"))
+                                  for x in hit["names"][k]]
+                        HRO_STATS[session]["named"] += 1
+                    HRO_STATS[session]["house"] += 1
+                votes.append([h, "C", cname, when or dates(lambda hh, t, n: hh == h), yes, no, listed])
+        HRO_STATS[session]["unmatched"] += len(own_hro)
         # House floor votes (the House Journal's record votes): final passage, agreeing to the Senate's changes, and
         # adopting a conference report; second reading's vote only when third reading had none.
         floor, prev = [], None
