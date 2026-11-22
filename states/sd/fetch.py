@@ -17,6 +17,8 @@ site's HTML page (status 200), not a 404, so any answer that isn't JSON counts a
 - The members (SessionMembers/Session/<id>: district, party, Capitol phone, state email) into members.json, and the
   committees (SessionCommittees/Session/<id>, then SessionCommittees/Detail/<id> for members with Chair and Vice-Chair,
   room and meeting days) into committees.json.
+- The governor's veto letters: each "Vetoed by the Governor" action names the day's journal (DocumentId), which prints
+  the letter in full; that journal (Documents/<id>.html) once, into journals/<id>.html (`veto_journals()`).
 - The Legislature's own lists of bills signed, vetoed and hoghoused (BillLogs/...), for checking totals, into logs.json.
 
 A finished session (an earlier year) is read once. The session of this year or later is read every run: its bill list
@@ -311,6 +313,33 @@ def agendas(year):
     print(f"agendas: {len(out)} bills on {meetings} meetings ({failed} requests failed)", flush=True)
 
 
+def veto_journals(year):
+    """The House or Senate Journal each veto action names (it prints the governor's letter), once each."""
+    folder = os.path.join(DATA, str(year))
+    bills = os.path.join(folder, "bills")
+    if not os.path.isdir(bills):
+        return
+    ids = set()
+    for name in os.listdir(bills):
+        b = load(os.path.join(bills, name)) or {}
+        for a in b.get("ActionLog") or []:
+            if re.match(r"Vetoed by the Governor", a.get("StatusText") or "") and a.get("DocumentId"):
+                ids.add(a["DocumentId"])
+    todo = sorted(i for i in ids if not os.path.exists(os.path.join(folder, "journals", f"{i}.html")))
+    got = 0
+    for i in todo:
+        if out_of_time():
+            break
+        page = get_html(f"Documents/{i}.html")
+        if page and "Journal" in page:
+            os.makedirs(os.path.join(folder, "journals"), exist_ok=True)
+            with open(os.path.join(folder, "journals", f"{i}.html"), "w", encoding="utf-8") as f:
+                f.write(page)
+            got += 1
+    if todo:
+        print(f"{year}: {got} of {len(todo)} journals with veto letters read", flush=True)
+
+
 def begun(year):
     """Whether a year's session has convened (the second Tuesday of January)."""
     return date.today() >= date(year, 1, 1 + (1 - date(year, 1, 1).weekday()) % 7 + 7)
@@ -341,6 +370,12 @@ def main():
             else:
                 print(f"{y}: no regular session listed")
                 INCOMPLETE.add(f"{y}:session")
+        for y in READ:
+            if not out_of_time():
+                try:  # never holds the run back
+                    veto_journals(y)
+                except Exception as e:  # noqa: BLE001
+                    print(f"{y}: veto letters: failed ({e.__class__.__name__})", flush=True)
         if YEAR + 1 in ids:  # prefiled bills for next year's session
             session(YEAR + 1, ids[YEAR + 1])
         if YEAR in ids and not out_of_time():
