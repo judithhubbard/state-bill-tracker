@@ -10,9 +10,9 @@ year), so every run reads the newer ones all again.
 Usage: python3 states/ct/fetch.py [first_year]   (default: four years back, so two finished sessions of each kind, long
 and short, are kept for the statistics)
 """
-import csv, io, os, re, subprocess, sys, zipfile
+import csv, io, json, os, re, subprocess, sys, time, zipfile
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -152,10 +152,113 @@ def texts():
         print(f"texts_{y}.json: {len(out)} statements of purpose")
 
 
+SITE = "https://www.cga.ct.gov"
+EVENTS = f"{SITE}/basin/api/v1/calendar-events/"
+# www.cga.ct.gov doesn't send the intermediate certificate its own needs (GoDaddy's G2), so it's fetched from GoDaddy
+# and added to a copy of the system's certificates (data/ct/ca.pem); the connection is still fully checked.
+INTERMEDIATE = "http://certificates.godaddy.com/repository/gdig2.crt"
+SYSTEM_CAS = ["/etc/ssl/certs/ca-certificates.crt", "/etc/ssl/cert.pem", "/etc/pki/tls/certs/ca-bundle.crt"]
+CA = os.path.join(P.DATA, "ca.pem")
+AGENDA_BILL = re.compile(r"\b([HS])\.\s?([BJ])\.\s?No\.\s?(\d{1,4})\b")
+
+
+def ca_bundle():
+    if os.path.exists(CA) and time.time() - os.path.getmtime(CA) < 30 * 86400:
+        return CA
+    os.makedirs(P.DATA, exist_ok=True)
+    der = subprocess.run(["curl", "-sSf", "--max-time", "60", INTERMEDIATE], capture_output=True, check=True).stdout
+    pem = subprocess.run(["openssl", "x509", "-inform", "DER"], input=der, capture_output=True, check=True).stdout
+    system = next(p for p in SYSTEM_CAS if os.path.exists(p))
+    with open(CA + ".tmp", "wb") as f:
+        f.write(open(system, "rb").read() + b"\n" + pem)
+    os.replace(CA + ".tmp", CA)
+    return CA
+
+
+def web(url):
+    """One page from www.cga.ct.gov (robots.txt allows /basin/ and the /<year>/ folders), a second apart; None on failure."""
+    time.sleep(1)
+    r = subprocess.run(["curl", "-sSf", "--cacert", CA, "--connect-timeout", "20", "--max-time", "120", url],
+                       capture_output=True)
+    return r.stdout if r.returncode == 0 else None
+
+
+def pdf_text(body):
+    r = subprocess.run(["pdftotext", "-layout", "-", "-"], input=body, capture_output=True)
+    return r.stdout.decode("utf-8", "replace") if r.returncode == 0 else ""
+
+
+def agendas(y):
+    """Bills on committee agendas from yesterday to three weeks ahead, into data/ct/<year>/agendas.json:
+    {"SB89": [["Joint Judiciary", "2026-03-23T10:00:00"], ...]}. The meetings come from the General Assembly's Schedule
+    of Events (www.cga.ct.gov/calendarofevents.asp reads /basin/api/v1/calendar-events/: every event of about a year,
+    each with its committee's code (office_code "JUD"), kind (COM a committee meeting, PHR a public hearing, PHC a hearing
+    followed by a meeting), start (Eastern time, written with a "Z" the site's own script strips) and its agenda's
+    address once posted, a PDF such as /2026/JUDdata/ca/pdf/2026ca-00323-R001000JUD-ca.pdf). Each upcoming agenda is
+    read with pdftotext; its bills read "S.B. No. 89", "H.B. No. 5308", "H.J. No. 1". Canceled events' titles begin
+    "CANCELLED". One request for the events plus one per posted agenda; any failure keeps the last copy."""
+    folder = os.path.join(P.DATA, str(y))
+    path = os.path.join(folder, "agendas.json")
+    try:
+        ca_bundle()
+    except (subprocess.CalledProcessError, OSError, StopIteration) as e:
+        print(f"agendas: no certificate bundle ({type(e).__name__}); kept the last copy")
+        return
+    body = web(EVENTS)
+    try:
+        events = json.loads(body) if body else None
+    except ValueError:
+        events = None
+    if not isinstance(events, list):
+        print("agendas: the schedule of events is unreadable; kept the last copy")
+        return
+    names = {}
+    try:
+        with open(os.path.join(folder, "committee.csv"), newline="", encoding="utf-8", errors="replace") as f:
+            for r in csv.DictReader(f):
+                names[r["comm_code"].strip()] = re.sub(r"\s+Committee$", "", re.sub(
+                    r"^(?:Joint )?Committee on\s+", "", r["comm_name"].strip()))
+    except (OSError, KeyError):
+        pass
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).date()
+    first, last = (today - timedelta(days=1)).isoformat(), (today + timedelta(days=21)).isoformat()
+    out, meetings, failed = {}, 0, 0
+    for ev in events:
+        when, url, code = ev.get("start") or "", (ev.get("url") or "").strip(), (ev.get("office_code") or "").strip()
+        if ev.get("mtg_type") not in ("COM", "PHR", "PHC") or not first <= when[:10] <= last \
+                or re.match(r"\s*CANCEL", ev.get("title") or "", re.I) or not url.lower().endswith(".pdf"):
+            continue
+        pdf = web(SITE + url if url.startswith("/") else url)
+        text = pdf_text(pdf) if pdf and pdf[:4] == b"%PDF" else ""
+        if not text:
+            failed += 1
+            continue
+        meetings += 1
+        name = f"Joint {names.get(code) or re.sub(r' (Committee|Public Hearing).*$', '', ev.get('title') or code)}"
+        stamp = f"{when[:10]}T{when[11:16] or '00:00'}:00" if re.match(r"\d{4}-\d\d-\d\dT\d\d:\d\d", when) \
+            else f"{when[:10]}T00:00:00"
+        for h, kind, num in AGENDA_BILL.findall(text):
+            key, entry = f"{h}{kind}{int(num)}", [name, stamp]
+            if entry not in out.setdefault(key, []):
+                out[key].append(entry)
+    if failed and not meetings and os.path.exists(path):
+        print(f"agendas: {failed} agendas unreadable; kept the last copy")
+        return
+    os.makedirs(folder, exist_ok=True)
+    with open(path + ".tmp", "w") as f:
+        json.dump(out, f, ensure_ascii=False)
+    os.replace(path + ".tmp", path)
+    print(f"agendas: {len(out)} bills on {meetings} meetings ({failed} agendas unreadable)")
+
+
 def main():
     for y in range(FIRST, YEAR + 1):
         year(y)
     texts()
+    try:
+        agendas(YEAR)  # never holds Connecticut back
+    except Exception as e:
+        print(f"agendas: failed ({type(e).__name__}); kept the last copy")
 
 
 if __name__ == "__main__":

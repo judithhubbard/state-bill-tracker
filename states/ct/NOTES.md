@@ -23,3 +23,16 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   statement of purpose. Legislators (phones, emails, committees, leadership) from the database; Capitol phones are the
   caucus offices' shared lines. Towns from the Census county-subdivision files (169). Earlier years linked by title and
   purpose words.
+- **Committee agendas (2026-11-22):** the FTP server has no meeting data, so `agendas()` in states/ct/fetch.py reads
+  www.cga.ct.gov (robots.txt disallows /asp/cgabillstatus/, /asp/menu/ and a few others, not these): the Schedule of
+  Events' own feed, `/basin/api/v1/calendar-events/` (what calendarofevents.asp's script reads: about a year of events, each
+  with its committee code `office_code`, kind `mtg_type` (COM a committee meeting, PHR a public hearing, PHC a hearing
+  followed by a meeting), start in Eastern time written with a false "Z", and `url`, its agenda PDF once posted:
+  /2026/JUDdata/ca/pdf/2026ca-00323-R001000JUD-ca.pdf, .../pha/pdf/...-pha.pdf for hearings), then each agenda from
+  yesterday to three weeks ahead through pdftotext: bills read "S.B. No. 89", "H.B. No. 5308", "H.J. No. 1". Events whose
+  title begins "CANCELLED" are left out. Committee names from committee.csv, as "Joint Judiciary". The site omits GoDaddy's
+  G2 intermediate certificate, so fetch.py adds it to a copy of the system's certificates (data/ct/ca.pem, as Illinois
+  does). One request for the feed plus one per posted agenda (31 in the three weeks from 2026-03-20). Tested with the date
+  set to 2026-03-20 against the saved feed and the Judiciary agendas of 3/23 (18 bills, all matching records) and 3/4
+  (hearing: SB 89, 262, 294, 296, 297); a hearing of nominations only lists no bills. Needs pdftotext on the runner (the
+  workflow's run line installs poppler-utils). Untested: how early agendas are posted in session, and revised agendas.

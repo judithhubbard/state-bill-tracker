@@ -13,7 +13,7 @@ governor. Adopted by three-fourths of each house's members, one goes to the vote
 by a majority but less ("HOUSE ADOPTED, BUT NOT BY THE NECESSARY 3/4THS"), it has to be adopted again by the Legislature
 elected next, then goes to the voters (Constitution of Connecticut, Art. XII).
 """
-import csv, glob, io, os, re
+import csv, glob, io, json, os, re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -377,7 +377,16 @@ def load_session(session):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee agendas (meetings and public hearings), from agendas.json (states/ct/fetch.py's
+    agendas(): the Schedule of Events and each agenda's PDF): {"SB89": [["Joint Judiciary", "2027-03-23T10:00:00"]]}.
+    Only meetings today or later."""
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
+    try:
+        data = json.load(open(os.path.join(folder(session), "agendas.json")))
+    except (OSError, ValueError):
+        return {}
+    out = {k: sorted(m for m in v if m[1][:10] >= today) for k, v in data.items()}
+    return {k: v for k, v in out.items() if v}
 
 
 _PARTIES = {}
