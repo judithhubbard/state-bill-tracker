@@ -332,6 +332,37 @@ table.oc th { vertical-align: bottom; }
 .bp-D { background: var(--pty-d); color: var(--pty-d-ink); } .bp-R { background: var(--pty-r); color: var(--pty-r-ink); }
 .bp-I, .bp-O, .bp-C { background: var(--chip); color: var(--ink); }
 .bp-vp { font-size: 11px; font-style: italic; }
+/* The party line's names open each house's members, or the governor's contacts (renderLegs()). */
+.bp-open { appearance: none; background: none; border: 0; padding: 0; font: inherit; color: var(--navy); cursor: pointer;
+  text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--navy) 35%, transparent); text-underline-offset: 3px; }
+.bp-open:hover, .bp-open[aria-expanded="true"] { text-decoration-color: currentColor; }
+.bp-open[aria-expanded="true"] { font-weight: 600; }
+.legs { max-width: 820px; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); font-size: 13.5px; }
+.legs[hidden] { display: none; }
+.legs p { margin: 8px 0 0; }
+.legs-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.legs-head h2 { margin: 0; font: 600 15px var(--body); color: var(--ink); }
+.legs-head input { margin-left: auto; width: 11em; max-width: 100%; font-size: 13px; padding: 3px 7px; }
+.legs-x { appearance: none; background: none; border: 0; color: var(--ink-2); font-size: 20px; line-height: 1; padding: 0 4px; cursor: pointer; }
+.legs-head h2 + .legs-x { margin-left: auto; }
+.legs-scroll { margin-top: 8px; max-height: min(65vh, 560px); overflow-y: auto; }
+.legtab { width: 100%; border-collapse: collapse; table-layout: fixed; overflow-wrap: anywhere; }
+.legtab .lt-district { width: 32%; }
+.legtab th { position: sticky; top: 0; background: var(--sheet); text-align: left; font-weight: 600; border-bottom: 1px solid var(--rule); padding: 0; }
+.legtab th button { appearance: none; background: none; border: 0; font: inherit; font-size: 12.5px; color: var(--ink-2); cursor: pointer; padding: 4px 6px; width: 100%; text-align: inherit; }
+.legtab th[aria-sort="ascending"] button, .legtab th[aria-sort="descending"] button { color: var(--ink); }
+.legtab th[aria-sort="ascending"] button::after { content: " ▴"; font-size: 10px; }
+.legtab th[aria-sort="descending"] button::after { content: " ▾"; font-size: 10px; }
+.legtab td { padding: 4px 6px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.legtab .lt-party { width: 3.6em; }
+.legtab .lt-bills, .legtab .lt-laws { text-align: right; width: 3.6em; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) {
+  .legs { padding: 10px; }
+  .legtab td, .legtab th button { padding-left: 4px; padding-right: 4px; }
+  .legtab .lt-party { width: 3.3em; }
+  .legtab .lt-bills, .legtab .lt-laws { width: 3.2em; }
+}
+.legtab .legrole { display: block; font-size: 12px; color: var(--ink-2); }
 .mast-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 10px 24px; }
 .mast .sessions { margin-top: 0; }
 .views { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 2px solid var(--ink); }
@@ -1140,6 +1171,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
       </div>
       <nav class="sessions" id="sessions" aria-label="Legislative sessions"></nav>
     </div>
+    <section class="legs" id="legsBox" aria-label="Members" hidden></section>
     <details class="where" id="whereBox"><summary id="whereSum">Find your legislators</summary><div class="act-sec" id="myReps"></div></details>
     <p class="notice" id="notice" hidden></p>
     <div class="person" id="person" hidden></div>
@@ -2181,6 +2213,103 @@ function renderMyReps() {
     ${ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr || "NY"}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
     <p class="muted" id="repMsg">We do not store your address; your county and district numbers are saved to this browser only.</p>` : ""}
     <div class="repsel"><label>Senate <select id="repS">${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repA">${opts(LOW)}</select></label></div>`;
+}
+// ---- The party line under the title (balance.py's summary_html(), the current session's page only): each house's name
+// opens its members here, and the governor's (the President's) the office's contacts. The same name again closes it. ----
+let LEGS_OPEN = "", LEG_COUNTS = null;
+const LEGS_VIEW = { by: "name", q: "" };
+// Bills each member sponsors this session and how many became law, counted as a legislator's page counts them
+// (sponsoredBy()): every bill's sponsors are in the list part, so nothing more is fetched.
+function legCounts() {
+  if (LEG_COUNTS) return LEG_COUNTS;
+  LEG_COUNTS = new Map();
+  for (const b of BILLS) {
+    const mine = new Set(b.vers.filter((v) => v.sponsor).map((v) => `${v.p[0]}:${v.sponsor}`));
+    for (const k of mine) {
+      const c = LEG_COUNTS.get(k) || [0, 0];
+      c[0]++; if (b.stage === 5) c[1]++;
+      LEG_COUNTS.set(k, c);
+    }
+  }
+  return LEG_COUNTS;
+}
+const legParty = (L) => (NOPARTY || !L.party ? "" : /Democrat/.test(L.party) ? "D" : /Republican/.test(L.party) ? "R" : /Independent/.test(L.party) ? "I" : "O");
+// The house's leader (DATA.contacts.leaders), when they're a member: by name, else by a last name no one else there has.
+function legLeader(h) {
+  const lead = DATA.contacts?.leaders?.[h];
+  if (!lead) return {};
+  const here = LEGS.filter((L) => L.house === h);
+  const same = here.filter((L) => lastName(L.name) === lastName(lead.name));
+  return { lead, L: here.find((L) => L.name === lead.name) || (same.length === 1 ? same[0] : null) };
+}
+const LEG_SORTS = {
+  name: (a, b) => lastName(a.L.name).localeCompare(lastName(b.L.name)) || a.L.name.localeCompare(b.L.name),
+  district: (a, b) => a.L.district - b.L.district || LEG_SORTS.name(a, b),
+  party: (a, b) => a.party.localeCompare(b.party) || LEG_SORTS.name(a, b),
+  bills: (a, b) => b.n - a.n || LEG_SORTS.name(a, b),
+  laws: (a, b) => b.law - a.law || b.n - a.n || LEG_SORTS.name(a, b),
+};
+// The houses without a member list (none for this session) keep their names as plain text.
+function setupLegs() {
+  LEG_COUNTS = null;
+  for (const btn of document.querySelectorAll("#power [data-legs]")) {
+    const k = btn.dataset.legs;
+    if (EMBED || !DATA.current || DATA.upcoming || (k !== "G" && !LEGS.some((L) => L.house === k))) btn.replaceWith(btn.textContent);
+  }
+}
+function openLegs(k) {
+  LEGS_OPEN = LEGS_OPEN === k ? "" : k;
+  if (LEGS_OPEN) { countOnce("legislators/opened"); countOnce(`legislators/${k === "G" ? "governor" : k}`); }
+  LEGS_VIEW.q = "";
+  renderLegs();
+  if (LEGS_OPEN) $("legsBox").scrollIntoView({ block: "nearest" });
+}
+function renderLegs() {
+  const box = $("legsBox"), k = LEGS_OPEN;
+  for (const btn of document.querySelectorAll("#power [data-legs]")) btn.setAttribute("aria-expanded", String(btn.dataset.legs === k));
+  box.hidden = !k;
+  if (!k) { box.innerHTML = ""; return; }
+  const close = `<button type="button" class="legs-x" data-legsclose aria-label="Close" title="Close">×</button>`;
+  if (k === "G") {
+    const desk = BILLS.filter((b) => b.stage === 4).length;
+    // (The party line's tip has the full name, "Governor Mikie Sherrill"; DATA.governor is the last name.)
+    const who = document.querySelector('#power [data-legs="G"]')?.closest(".bp-ch")?.title || `${EXEC.title} ${DATA.governor || ""}`;
+    box.innerHTML = `<div class="legs-head"><h2>${esc(who.trim())}</h2>${close}</div>
+      <p class="reach">${GOV_REACH}</p>${govNext() ? `<p>${govNext()}</p>` : ""}
+      <p>${desk ? `<button type="button" class="linkish" data-legsdesk>${num(desk)} bill${desk === 1 ? "" : "s"} waiting for ${esc(EXEC.the)}</button>` : `No bills are waiting for ${esc(EXEC.the)}.`}</p>`;
+    return;
+  }
+  const here = LEGS.filter((L) => L.house === k), parties = {};
+  for (const L of here) { const p = legParty(L); if (p) parties[p] = (parties[p] || 0) + 1; }
+  const NAMES = { D: ["Democrat", "Democrats"], R: ["Republican", "Republicans"], I: ["independent", "independents"], O: ["other", "others"] };
+  const split = Object.entries(parties).sort((a, b) => b[1] - a[1]).map(([p, n]) => `${num(n)} ${NAMES[p][n === 1 ? 0 : 1]}`);
+  const { lead, L: leadL } = legLeader(k);
+  const th = (key, label, tip) => `<th scope="col" class="lt-${key}"><button type="button" data-legsort="${key}"${tip ? ` title="${tip}"` : ""}>${label}</button></th>`;
+  box.innerHTML = `<div class="legs-head"><h2>${esc(HOUSE[k])}</h2><span class="muted">${num(here.length)} members${split.length ? `: ${split.join(", ")}` : ""}</span>
+      <input type="search" id="legsQ" placeholder="Name or district" aria-label="Find a member by name or district" autocomplete="off">${close}</div>
+    ${lead && !leadL ? `<p class="muted">${esc(lead.role)}: ${esc(lead.name)}</p>` : ""}
+    <div class="legs-scroll"><table class="legtab"><thead><tr>${NOPARTY ? "" : th("party", "Party")}${th("name", "Name")}${th("district", k === "S" && STATE.townRegions ? esc(STATE.regionWord || "State") : "District")}${th("bills", "Bills", "Bills they sponsor this session")}${th("laws", "Laws", "Their bills that became law this session")}</tr></thead><tbody id="legsRows"></tbody></table></div>`;
+  legRows();
+}
+// The rows alone, so typing in the box keeps its place.
+function legRows() {
+  const k = LEGS_OPEN, body = $("legsRows");
+  if (!body) return;
+  for (const s of $("legsBox").querySelectorAll("[data-legsort]")) {
+    const key = s.dataset.legsort;
+    s.parentElement.setAttribute("aria-sort", LEGS_VIEW.by !== key ? "none" : ["bills", "laws"].includes(key) ? "descending" : "ascending");
+  }
+  const counts = legCounts(), { lead, L: leadL } = legLeader(k);
+  const q = LEGS_VIEW.q.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const rows = LEGS.filter((L) => L.house === k).map((L) => {
+    const [n, law] = counts.get(`${L.house}:${L.apiName}`) || [0, 0];
+    return { L, n, law, party: legParty(L), dist: String(DNAME(L.house, L.district) || DNUM(L.house, L.district)) };
+  }).filter(({ L, dist }) => !q || L.name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q) || dist.toLowerCase() === q || dist.toLowerCase().startsWith(q + " ") || dist.toLowerCase().startsWith(q + "'"))
+    .sort(LEG_SORTS[LEGS_VIEW.by]);
+  body.innerHTML = rows.map(({ L, n, law, party, dist }) => `<tr>${NOPARTY ? "" : `<td class="lt-party">${party ? `<abbr class="bp-pty bp-${party}" title="${esc(L.party)}">${party}</abbr>` : ""}</td>`}
+    <td class="lt-name">${ROOT && L.slug ? `<a href="${esc(ROOT + L.slug)}/">${esc(L.name)}</a>` : esc(L.name)}${L === leadL ? `<span class="legrole">${esc(lead.role)}</span>` : ""}</td>
+    <td class="lt-district">${esc(dist)}</td><td class="lt-bills">${num(n)}</td><td class="lt-laws">${num(law)}</td></tr>`).join("")
+    || `<tr><td colspan="${NOPARTY ? 4 : 5}" class="muted">No one by that name.</td></tr>`;
 }
 function setReps(s, a, more = {}) {
   try { localStorage.setItem(REPS_STORE, JSON.stringify({ S: +s || 0, [LOW]: +a || 0, ...more })); } catch (e) {}
@@ -5691,6 +5820,21 @@ function wire() {
   $("statTopic").addEventListener("change", renderStats);
   $("statGeneral").addEventListener("change", (e) => { STAT_GENERAL = e.target.checked; renderStats(); });
   $("whereBox").addEventListener("toggle", () => { if ($("whereBox").open) { countOnce("where/opened"); renderMyReps(); } });
+  // The party line's house and governor names (written by the build, so they're here before the data).
+  $("power").addEventListener("click", (e) => { const b = e.target.closest("[data-legs]"); if (b && DATA) openLegs(b.dataset.legs); });
+  $("legsBox").addEventListener("click", (e) => {
+    const s = e.target.closest("[data-legsort]");
+    if (s) { LEGS_VIEW.by = s.dataset.legsort; countOnce(`legislators/sort/${LEGS_VIEW.by}`); legRows(); return; }
+    if (e.target.closest("[data-legsdesk]")) {
+      countUse("legislators/desk");
+      LEGS_OPEN = ""; renderLegs();
+      Object.assign(state, blank()); state.stage = 4; ONE = null; syncControls(); showView("bills"); render();
+      $("main").scrollIntoView({ block: "start" }); return;
+    }
+    if (e.target.closest("[data-legsclose]")) { const k = LEGS_OPEN; LEGS_OPEN = ""; renderLegs(); document.querySelector(`#power [data-legs="${k}"]`)?.focus(); }
+  });
+  $("legsBox").addEventListener("input", (e) => { if (e.target.id === "legsQ") { LEGS_VIEW.q = e.target.value; countOnce("legislators/filter"); legRows(); } });
+  $("legsBox").addEventListener("keydown", (e) => { if (e.key === "Escape" && LEGS_OPEN) { const k = LEGS_OPEN; LEGS_OPEN = ""; renderLegs(); document.querySelector(`#power [data-legs="${k}"]`)?.focus(); } });
   document.addEventListener("change", (e) => { const p = e.target.closest("[data-reppick]"); if (p && p.value) pickReps(p.dataset.reppick, p.value); });
   for (const id of ["statTabs"]) $(id).addEventListener("click", (e) => { const b = e.target.closest("[data-sec]"); if (b) showStatSec(b.dataset.sec); });
   $("statWho").addEventListener("click", (e) => {
@@ -6737,6 +6881,7 @@ function hydrate(raw) {
   if (PRESET?.watch) document.querySelector(".views").hidden = true;
   showView(view, false);
   if (!embedded) { renderMyReps(); renderOpenNow(); }
+  setupLegs();
   // Claude artifact pages can't hand visitors a file; the download works on GitHub Pages.
   $("csv").hidden = !ROOT;
   $("shareMenu").hidden = $("viewLinkBtn").hidden && $("csv").hidden;
