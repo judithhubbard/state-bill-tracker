@@ -26,3 +26,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   tab's Committees points. "Where you live" lists cities, villages and counties from the Census Bureau's 2024 district relationship
   files (`states/il/towns.py`, run once; no key needed; works for any state). Bill links go to the repository's
   status pages and texts.
+- **Committee agendas (2026-11-22):** the repository has no hearing schedules (folders: Committees, ILCS, JCAR,
+  Legislation, Members, Public Acts) and www.ilga.gov, which has them, turns automated requests away (not fetched). But
+  each bill's status file names the hearings it's posted for, `<committeehearing>`: "Judiciary - Criminal Committee
+  Hearing Apr 17 2026 10:30AM Capitol Building Room 114 Springfield, IL", "Transportation: Vehicles & Safety Hearing ..."
+  for a subcommittee, a red "** Canceled **" once called off, " - House Floor Amendment 2" for a hearing on an amendment.
+  `agendas()` in states/il/convert.py reads them from the files fetch.py already downloads (no new requests): canceled and
+  amendment hearings left out, the house from the bill's last "Assigned to <that committee>" action ("House Judiciary -
+  Criminal"). The files are synchronized nightly, so a hearing appears the day after it's posted. Tested on what the files
+  hold between sessions: HB 5598 of 2021-22 ("House Health Care Availability & Accessibility", 2022-03-31T09:00:00, with
+  the date set back) and the 48 canceled 2026 hearings (all parse; each names a committee the bill was assigned to).
+  Untested in session: Senate hearings' wording, and whether a hearing stays in the file after it's held (the date
+  filter drops it either way).

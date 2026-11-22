@@ -425,8 +425,54 @@ def load_session(session):
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
 
+HEARING = re.compile(r"(.+?)(?: Committee)? Hearing (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w* +(\d{1,2}) +(\d{4})"
+                     r"(?: +(\d{1,2}):(\d\d) *([AP]M))?")
+MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+
 def agendas(session):
-    return {}  # the repository has no committee hearing schedules
+    """Bills with an upcoming committee hearing: {"HB5562": [["House Judiciary - Criminal", "2026-04-17T10:30:00"]]}.
+    The repository has no hearing schedules of its own (and www.ilga.gov turns automated requests away), but each bill's
+    status file names the hearings it's posted for (<committeehearing>: "Judiciary - Criminal Committee Hearing Apr 17
+    2026 10:30AM Capitol Building Room 114 Springfield, IL"; "Transportation: Vehicles & Safety Hearing ..." for a
+    subcommittee; "** Canceled **" in a red span once called off; " - House Floor Amendment 2" when the hearing is on an
+    amendment, left out here). The house is the one whose last "Assigned to" action names that committee, else the
+    house of the bill's last action. The files are synchronized nightly, so a hearing posted today shows tomorrow.
+    Only hearings today or later."""
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
+    out = {}
+    for f in glob.glob(os.path.join(folder(session), "*.xml")):
+        m = re.search(r"\d{5}(HB|SB|HC|SC)0*(\d+)\.xml$", f)
+        if not m:
+            continue
+        t = open(f, encoding="utf-8", errors="replace").read()
+        if "<committeehearing>" not in t:
+            continue
+        key = {"HC": "HJRCA", "SC": "SJRCA"}.get(m.group(1), m.group(1)) + m.group(2)
+        acts = [(text(ch), text(a)) for ch, a in re.findall(r"<chamber>([^<]*)</chamber><action>(.*?)</action>", t, re.S)]
+        for raw in re.findall(r"<committeehearing>(.*?)</committeehearing>", t, re.S):
+            line = text(re.sub(r"<[^>]+>", " ", _html.unescape(raw)))
+            if re.search(r"Cancel", line, re.I) or re.search(r" - (?:House|Senate) (?:Floor |Committee )?Amendment", line):
+                continue
+            h = HEARING.match(line)
+            if not h:
+                continue
+            name = h.group(1).strip()
+            when = f"{h.group(4)}-{MONTHS.index(h.group(2)) + 1:02d}-{int(h.group(3)):02d}"
+            if when < today:
+                continue
+            if h.group(5):
+                hour = int(h.group(5)) % 12 + (12 if h.group(7) == "PM" else 0)
+                when += f"T{hour:02d}:{h.group(6)}:00"
+            else:
+                when += "T00:00:00"
+            house = next((ch for ch, a in reversed(acts) if ch in ("House", "Senate")
+                          and re.match(rf"(?:Assigned|Re-assigned|Re-referred) to {re.escape(name)}\b", a)),
+                         next((ch for ch, a in reversed(acts) if ch in ("House", "Senate")), "House"))
+            entry = [f"{house} {name}", when]
+            if entry not in out.setdefault(key, []):
+                out[key].append(entry)
+    return {k: sorted(v, key=lambda x: x[1]) for k, v in out.items()}
 
 
 _PARTIES = {}
