@@ -48,7 +48,8 @@ for (const st of fs.readdirSync(site).sort()) {
   if (!tag) { fail(st, "no data tag in index.html"); continue; }
   const attr = (n) => (new RegExp(`${n}="([^"]*)"`).exec(tag[1]) || [])[1] || "";
   const session = attr("data-session"), parts = Object.fromEntries(attr("data-parts").split(" ").filter(Boolean).map((x) => x.split(":")));
-  const read = (rel) => JSON.parse(fs.readFileSync(path.join(site, st, rel), "utf8"));
+  // (Data parts are stored gzipped, .json.gz: build_data.py's hashed_name().)
+  const read = (rel) => { const b = fs.readFileSync(path.join(site, st, rel)); return JSON.parse((b[0] === 0x1f && b[1] === 0x8b ? require("zlib").gunzipSync(b) : b).toString("utf8")); };
   const list = read(attr("data-src"));
   const cols = list.cols || [];
   if (!cols.length) continue;
@@ -56,7 +57,7 @@ for (const st of fs.readdirSync(site).sort()) {
   const n = cols[0].length;
   // meetings: the build's days against the page's walk.
   if (parts.rows && parts.stats) {
-    const rows = read(`data/v/${session}.${parts.rows}.rows.json`), stats = read(`data/v/${session}.${parts.stats}.stats.json`);
+    const rows = read(`data/v/${session}.${parts.rows}.rows.json.gz`), stats = read(`data/v/${session}.${parts.stats}.stats.json.gz`);
     const mine = new Map();
     for (let j = 0; j < n; j++) {
       cols[17][j].forEach((v, k) => {
