@@ -339,6 +339,8 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 }
 .tiles button.tile { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12%;
   border: 0; border-radius: 6px; font: 700 clamp(10px, 2.6vw, 15px)/1 var(--display); cursor: pointer; padding: 0; }
+/* DC isn't a state: a smaller square, set off diagonally from Maryland (the owner's choice, 2026-11-22). */
+.tiles [data-st="dc"] { transform: translate(18%, 14%) scale(.72); transform-origin: top left; }
 .tiles button.tile:hover, .tiles button.tile:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
 .tiles button.tile.sel, .tiles a.sel { outline: 3px solid var(--ink); outline-offset: 1px; }
 .tiles button.h0 { background: var(--tile-off); color: var(--ink); }
