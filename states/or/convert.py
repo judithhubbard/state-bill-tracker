@@ -14,6 +14,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from states.undated import settle
 from states import letters as L
+from states import floorcal
 
 P = importlib.import_module("states.or.profile")
 
@@ -445,7 +446,8 @@ def load_session(session):
 
 
 def agendas(session):
-    """Bills on committee agendas from today on: bill -> [["House Judiciary", "2026-02-03T13:00:00"], ...]."""
+    """Bills on committee agendas from today on: bill -> [["House Judiciary", "2026-02-03T13:00:00"], ...], and floor
+    calendars (states/floorcal.py)."""
     comms = committees(session)
     today = datetime.now(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d")
     out = {}
@@ -458,6 +460,21 @@ def agendas(session):
         b = f"{a['MeasurePrefix']}{a['MeasureNumber']}"
         if entry not in out.setdefault(b, []):
             out[b].append(entry)
+    # Floor calendars (FloorSessionAgendaItems: each house's order of business for a day, from today on): bills on third
+    # reading are set for a vote that day; "Possible Consideration Of ... Amendments" (concurrence) may or may not come
+    # up: "listed". First and second readings aren't votes. (Times aren't given: the day only.)
+    for a in table(session, "FloorSessionAgendaItems"):
+        order = a.get("OrderOfBusiness") or ""
+        day = (a.get("ScheduleDate") or "")[:10]
+        if a.get("MeasurePrefix") not in ("HB", "SB", "HJR", "SJR") or day < floorcal.since(P.TIMEZONE) or a.get("Chamber") not in HOUSE:
+            continue
+        if re.match(r"Third Reading|Special Orders? Of Business", order, re.I):
+            listed = False
+        elif re.match(r"Possible Consideration Of (?:House|Senate) Amendments", order, re.I):
+            listed = True
+        else:
+            continue
+        floorcal.add(out, f"{a['MeasurePrefix']}{a['MeasureNumber']}", floorcal.entry(HOUSE[a["Chamber"]], f"{day}T00:00:00", listed))
     return out
 
 
