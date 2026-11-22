@@ -1428,8 +1428,10 @@ def write_issues(session, inputs, page, current, labels=None):
         if not found:
             continue
         bills.append([found, filters, num, title, stage, last, const, intro, law,
-                      # Under a bare title ("Wages"), the sentence that matched, so readers see why the bill is there.
-                      excerpts if short else {},
+                      # Under a bare title ("Wages"), or a title that doesn't name the issue (a budget bill carrying
+                      # an immigration package), the sentence that matched, so readers see why the bill is there.
+                      {k: re.sub(r"\s*\((?:Sub)?[Pp]art [A-Z]+(?:-\d+)?\)", "", x) for k, x in excerpts.items()
+                       if x and (short or not issues.matches(issues.BY_ID[k], title))},
                       # The record's other numbers (New York's identical Assembly and Senate bills are one record).
                       others, party,
                       labels[i][0] if labels else ""])

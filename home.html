@@ -381,6 +381,10 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 /* The number and stage on the first line, the title below them across the whole width. */
 .panel .tt { grid-row: 2; grid-column: 1 / -1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .panel .why { color: var(--ink-2); }
+/* A bill that became law stands out: a green edge and a light green tint (its pips are dropped in the panel, so the
+   label fits). */
+.panel li:has(.stg.s5) > a { border-left: 4px solid var(--lawn); padding-left: 8px; background: color-mix(in srgb, var(--law-1) 50%, transparent); }
+.panel li:has(.stg.s5) .tags .pips { display: none; }
 .panel .stg { grid-row: 1; grid-column: 2; justify-self: end; }
 /* The status label and, before it, the sponsors' party: D, R or Both (none for committee bills), in the map's muted
    party colors. */
@@ -550,7 +554,7 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
     <span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>
     <span class="key"><i class="sq h2"></i>5&ndash;14</span>
     <span class="key"><i class="sq h3"></i>15 or more</span>
-    <span class="key lawk"><span class="lawn">3</span><span class="lw-n">Number that became law</span><span class="lw-d">Became law</span></span>
+    <span class="key lawk"><span class="lawn">3</span><span class="lw-n">Laws</span><span class="lw-d">Became law</span></span>
     <span class="key" id="waitKey" hidden><i class="sq wait"></i>No bills filed yet</span>
     <span class="key" id="nodataKey" hidden><i class="sq nodata"></i>No data for this year</span>
     <span class="key" id="offKey"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>
@@ -560,7 +564,7 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
     <span class="key"><i class="pB"></i>Both parties</span>
     <span class="key"><i class="pR"></i>Republicans</span>
     <span class="key"><i class="pN"></i>Committee or none</span>
-    <span class="key lawk"><span class="lawn">3</span>Number that became law</span>
+    <span class="key lawk"><span class="lawn">3</span>Laws</span>
     </span>
   </p>
   </div>
@@ -650,6 +654,8 @@ const partyTag = (c) => (PARTY_TAG[c] ? `<span class="pty ${c}" role="img" title
 // Sponsors' party on the map: summary.json's count for a state is [bills, laws, D, B, R] (trailing zeros left off; the
 // rest have no party sponsor), from which each tile gets a thin bar and the panel a bigger one whose parts set PARTY.
 const PARTS = [["D", "Democrats"], ["B", "Both parties"], ["R", "Republicans"], ["-", "Committee or none"]];
+// The panel's key, short enough for one line: "43 Dem · 1 both · 41 Rep".
+const PSHORT = { D: "Dem", B: "both", R: "Rep", "-": "none" };
 const PCLASS = { D: "pD", B: "pB", R: "pR", "-": "pN" };
 function splitOf(e) {
   if (!e || !e[0]) return null;
@@ -666,7 +672,7 @@ function pbig(sp) {
   const f = PARTY ? " f" : "", on = (c) => String(PARTY === c);
   const words = { D: "Democratic sponsors", B: "sponsors from both parties", R: "Republican sponsors", "-": "no party sponsor (committee bills)" };
   return `<div class="pbig${f}">${PARTS.map(([c], i) => (sp[i] ? `<button type="button" class="${PCLASS[c]}" style="flex-grow:${sp[i]}" data-pp="${c}" aria-pressed="${on(c)}" tabindex="-1" aria-hidden="true" title="${esc(`${sp[i]} with ${words[c]}`)}"></button>` : "")).join("")}</div>`
-    + `<p class="pkey${f}"><span>Sponsors:</span>${PARTS.map(([c, w], i) => (sp[i] ? `<button type="button" data-pp="${c}" aria-pressed="${on(c)}" aria-label="${esc(`${sp[i]} with ${words[c]}: ${PARTY === c ? "show all bills" : "show only these"}`)}"><i class="${PCLASS[c]}"></i>${sp[i]} ${w}</button>` : "")).join("")}</p>`;
+    + `<p class="pkey${f}"><span>Sponsors:</span>${PARTS.map(([c, w], i) => (sp[i] ? `<button type="button" data-pp="${c}" aria-pressed="${on(c)}" aria-label="${esc(`${sp[i]} with ${words[c]}: ${PARTY === c ? "show all bills" : "show only these"}`)}"><i class="${PCLASS[c]}"></i>${sp[i]} ${PSHORT[c]}</button>` : "")).join("")}</p>`;
 }
 let PP_FOCUS = null;  // after a part of the panel's bar is used, the key's button to focus again once the panel is redrawn
 function ppFocus(body) {
@@ -856,6 +862,9 @@ function showPanel(st) {
         || title.toLowerCase().includes(why.toLowerCase()))) why = "";
       if (why) title = title.replace(/[.\s]+$/, "");
       const full = why ? `${title}: ${why}` : title;
+      // A long title that doesn't name the issue (a budget bill) would push the reason out of sight: the reason is shown,
+      // the title is in the tip.
+      if (why && title.split(/\s+/).length >= 8) { title = why; why = ""; }
       return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="tags">${partyTag(pc)}${BillFacts.pips(stage, BillFacts.oneHouse(st), "mini", stg, st)}<span class="stg s${stage}" title="${esc(stg)}">${esc(stg)}</span></span></a>${raw ? starBtn(st, session, raw, last, num) + listBtn(st, session, raw, `${nameOf(st)} ${num}`) : ""}</li>`;
     }).join("")}</ul>` : "");
     ppFocus(body);
@@ -1136,7 +1145,7 @@ function searchView(words, hits) {
     some: (st, k, l) => `${k} bill${k === 1 ? "" : "s"} with “${esc(words)}”${l ? `, ${l} became law` : ""}.`,
     legend: `<span class="key"><i class="sq h0"></i>None</span><span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>`
       + `<span class="key"><i class="sq h2"></i>5&ndash;14</span><span class="key"><i class="sq h3"></i>15 or more</span>`
-      + `<span class="key lawk mk1"><span class="lawn">3</span><span class="lw-n">Number that became law</span><span class="lw-d">Became law</span></span>` };
+      + `<span class="key lawk mk1"><span class="lawn">3</span><span class="lw-n">Laws</span><span class="lw-d">Became law</span></span>` };
 }
 function drawCustom() {
   tiles.classList.add("issue");

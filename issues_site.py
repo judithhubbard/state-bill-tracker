@@ -140,6 +140,11 @@ tbody tr:last-child td { border-bottom: 0; }
 ul.bills { list-style: none; margin: 0; padding: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; }
 ul.bills li { padding: 8px 12px; border-bottom: 1px solid var(--rule); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; }
 ul.bills li:last-child { border-bottom: 0; }
+ul.bills li[data-stage="5"] { border-left: 4px solid var(--lawn); padding-left: 8px; background: color-mix(in srgb, var(--law-1) 50%, transparent); }
+/* A bill that became law stands out: a green edge and a light green tint (its pips are dropped in the panel, so the
+   label fits). */
+.panel li:has(.stg.s5) > a { border-left: 4px solid var(--lawn); padding-left: 8px; background: color-mix(in srgb, var(--law-1) 50%, transparent); }
+.panel li:has(.stg.s5) .tags .pips { display: none; }
 ul.bills a { font-weight: 600; text-decoration: none; }
 ul.bills a:hover { text-decoration: underline; }
 .t { grid-column: 1 / -1; overflow-wrap: anywhere; }
@@ -672,8 +677,8 @@ def issue_page(issue, states, year, years, default, upcoming, congress=None):
     ckeys = ['<span class="key"><i class="pD"></i>Democrats</span>', '<span class="key"><i class="pB"></i>Both parties</span>',
              '<span class="key"><i class="pR"></i>Republicans</span>', '<span class="key"><i class="pN"></i>Committee or none</span>']
     if not upcoming:
-        keys.append('<span class="key lawk"><span class="lawn">3</span><span class="lw-n">Number that became law</span><span class="lw-d">Became law</span></span>')
-        ckeys.append('<span class="key"><span class="lawn">3</span>Number that became law</span>')
+        keys.append('<span class="key lawk"><span class="lawn">3</span><span class="lw-n">Laws</span><span class="lw-d">Became law</span></span>')
+        ckeys.append('<span class="key"><span class="lawn">3</span>Laws</span>')
     if upcoming and quiet:
         keys.append('<span class="key"><i class="sq wait"></i>No bills filed yet</span>')
     if not upcoming and nosession:
@@ -746,6 +751,8 @@ const step = (n) => (n >= 15 ? 3 : n >= 5 ? 2 : n ? 1 : 0);
 // Sponsors' party: each state's bills that year (as the Show menu filters them) split D, B, R and none, drawn as a thin
 // bar on its tile (hidden when one party is chosen) and a bigger one in the panel, whose parts set the party menu.
 const PARTS = [["D", "Democrats"], ["B", "Both parties"], ["R", "Republicans"], ["-", "Committee or none"]];
+// The panel's key, short enough for one line: "43 Dem · 1 both · 41 Rep".
+const PSHORT = {{ D: "Dem", B: "both", R: "Rep", "-": "none" }};
 const PCLASS = {{ D: "pD", B: "pB", R: "pR", "-": "pN" }};
 const PWORDS = {{ D: "Democratic sponsors", B: "sponsors from both parties", R: "Republican sponsors", "-": "no party sponsor (committee bills)" }};
 let SPLIT = {{}}, PP_FOCUS = null;
@@ -755,7 +762,7 @@ function pbig(sp) {{
   if (!sp || !sp.some(Boolean)) return "";
   const pv = document.getElementById("party").value, f = pv ? " f" : "", on = (c) => String(pv === c);
   return `<div class="pbig${{f}}">${{PARTS.map(([c], i) => (sp[i] ? `<button type="button" class="${{PCLASS[c]}}" style="flex-grow:${{sp[i]}}" data-pp="${{c}}" aria-pressed="${{on(c)}}" tabindex="-1" aria-hidden="true" title="${{esc(`${{sp[i]}} with ${{PWORDS[c]}}`)}}"></button>` : "")).join("")}}</div>`
-    + `<p class="pkey${{f}}"><span>Sponsors:</span>${{PARTS.map(([c, w], i) => (sp[i] ? `<button type="button" data-pp="${{c}}" aria-pressed="${{on(c)}}" aria-label="${{esc(`${{sp[i]}} with ${{PWORDS[c]}}: ${{pv === c ? "show all bills" : "show only these"}}`)}}"><i class="${{PCLASS[c]}}"></i>${{sp[i]}} ${{w}}</button>` : "")).join("")}}</p>`;
+    + `<p class="pkey${{f}}"><span>Sponsors:</span>${{PARTS.map(([c, w], i) => (sp[i] ? `<button type="button" data-pp="${{c}}" aria-pressed="${{on(c)}}" aria-label="${{esc(`${{sp[i]}} with ${{PWORDS[c]}}: ${{pv === c ? "show all bills" : "show only these"}}`)}}"><i class="${{PCLASS[c]}}"></i>${{sp[i]}} ${{PSHORT[c]}}</button>` : "")).join("")}}</p>`;
 }}
 function ppClick(e) {{
   const b = e.target.closest("[data-pp]");
