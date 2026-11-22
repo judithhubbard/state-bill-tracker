@@ -61,7 +61,7 @@
    "paths": [
     "data/ct"
    ],
-   "minutes": 20,
+   "minutes": 25,
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/ct/fetch.py",
    "note": "A stuck FTP server once left a run with nothing: the last copy is kept."
   },

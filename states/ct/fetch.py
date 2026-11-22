@@ -267,6 +267,14 @@ def main():
         agendas(YEAR)  # never holds Connecticut back
     except Exception as e:
         print(f"agendas: failed ({type(e).__name__}); kept the last copy")
+    try:
+        # Floor roll calls: each floor day's House and Senate Journal, read once (states/ct/journals.py); at most ten
+        # minutes a run, newest first, so a first copy of five years (about 210 journals of 1-8 MB) takes two runs.
+        from states.ct import journals
+        from states.ct import convert as C
+        journals.fetch([y for y in C.sessions() if y >= FIRST], minutes=10)
+    except Exception as e:  # never holds Connecticut back
+        print(f"journals: failed ({type(e).__name__}: {e})")
 
 
 if __name__ == "__main__":

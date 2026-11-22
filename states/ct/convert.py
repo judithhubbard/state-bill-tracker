@@ -5,7 +5,7 @@ The history lines are kept as written except the steps the site's rules use. Com
 members), so a referral belongs to the house the bill is in; floor steps name their house ("HOUSE PASSED", "SEN.
 PASSED, HO. AMEND. SCH.", "FAV. RPT., TAB. FOR CAL., SEN."). A Public Act number comes when a bill passes both houses,
 before the governor acts (HB 7004 of 2025 got one and was vetoed), so it marks passing both houses, not a law; only
-"SIGNED BY GOVERNOR" does. The files have no votes.
+"SIGNED BY GOVERNOR" does. The files have no votes; floor roll calls come from the journals (states/ct/journals.py).
 
 Constitutional amendments are House and Senate joint resolutions (HJ, SJ) "proposing an amendment to the State
 Constitution"; other resolutions (nominations, claims, ratifying federal amendments) are left out. They never go to the
@@ -14,7 +14,7 @@ by a majority but less ("HOUSE ADOPTED, BUT NOT BY THE NECESSARY 3/4THS"), it ha
 elected next, then goes to the voters (Constitution of Connecticut, Art. XII).
 """
 import csv, glob, io, json, os, re
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from states.ct import profile as P
@@ -230,6 +230,9 @@ def load_session(session):
     stamp = os.path.getmtime(os.path.join(folder(session), "bill_info.csv"))
     fetched = datetime.fromtimestamp(stamp, ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
 
+    from states.ct import journals
+    rolls, floors = journals.roll_calls(session), journals.floor_steps(session)
+    _DROPPED[session] = []
     recs, index = [], {}
     for raw_num, b in sorted(info.items(), key=lambda kv: (kv[0][:2], int(re.sub(r"\D", "", kv[0]) or 0))):
         p = raw_num[:2] + str(int(raw_num[2:]))  # "HB05001" -> "HB5001"
@@ -338,8 +341,27 @@ def load_session(session):
             ds = sorted({dd for dd, h, t, a in steps if test(h, t, a) and dd})
             return {"first": ds[0], "last": ds[-1], "all": ";".join(ds)}[mode] if ds else ""
 
+        # Floor roll calls from the journals (states/ct/journals.py), each tied to a floor vote the history names in that
+        # house on that day or the next (a vote after midnight is in the journal of the day the session began). One the
+        # history doesn't name is left out (_DROPPED: a slip in the journal's bill number would put it on another bill).
+        # A vote the journal's sentence files under another number is taken from its heading's bill only when that
+        # number's own history has no floor vote then (journals.roll_calls()).
+        def named(bill, h, day):
+            nxt = (datetime.fromisoformat(day) + timedelta(days=1)).date().isoformat()
+            return bool(floors.get(bill, set()) & {(h, day), (h, nxt)})
+
+        votes = []
+        for h, day, ok, yes, no, listed, alt in rolls.get(p, []):
+            if not named(p, h, day):
+                if not alt:
+                    _DROPPED[session].append((p, h, day))
+                continue
+            if alt and named(alt, h, day):
+                continue
+            votes.append([h, "F", None, day, yes, no, listed or []])
+        votes.sort(key=lambda v: v[3])
         action_dates = [dd for dd, _, _, _ in steps if dd]
-        chapter = re.sub(r"\D", "", (act_no or "").split("-")[-1]) if act_no else ""
+        chapter =re.sub(r"\D", "", (act_no or "").split("-")[-1]) if act_no else ""
         ver = {"p": p, "sponsor": sponsor, "district": prime[2] if prime and prime[1] == sponsor else 0,
                "cosponsors": names[1:], "primes": 1, "cosp": len(names[1:]), "statusDesc": desc,
                "committee": committee if place == "committee" and stage in (0, 2) else None,
@@ -368,7 +390,7 @@ def load_session(session):
                 dates(lambda h, t, a: t == "SIGNED"),
                 dates(lambda h, t, a: t == "VETOED"),
             ],
-            "votes": [], "firstComms": first_comms, "vers": [ver],
+            "votes": votes, "firstComms": first_comms, "vers": [ver],
         }
         index[p] = len(recs)
         recs.append(rec)
@@ -390,6 +412,7 @@ def agendas(session):
 
 
 _PARTIES = {}
+_DROPPED = {}
 
 
 def parties(session, recs):
