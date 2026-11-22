@@ -16,3 +16,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   reads `v.link`). Two-year General Assemblies, 40-day sessions each year; each year's last day is in `STATE.dated`
   (add the new year's after its session). Governor 6 days in session, 40 after it. The Lieutenant Governor presides over
   the Senate (not a senator).
+- **Committee agendas (looked into 2026-11-22; none read):** the meeting schedule is only on www.legis.ga.gov, whose
+  API (/api/meetings?startDate=...&endDate=...) answers 401 without a token that the site's script makes from a key
+  hidden in its code (/api/authentication/token?key=<SHA-512 of an embedded secret>). That's a deliberate gate on
+  automated access, so it isn't used (the owner's rule: don't work around a block). The SOAP web services
+  (webservices.legis.ga.gov) have no meetings or agendas (Committees has only committees and members; no Meetings,
+  Calendar, Schedule or Agenda service), and the old chamber sites (www.house.ga.gov, www.senate.ga.gov) don't answer.
+  `agendas()` stays empty. Asking the Legislature's web staff for API access or a feed would be the way in.
