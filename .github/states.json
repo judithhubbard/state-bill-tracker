@@ -439,7 +439,7 @@
     "data/ks"
    ],
    "minutes": 60,
-   "run": "python3 states/ks/fetch.py && python3 states/ks/contacts.py"
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/ks/fetch.py && python3 states/ks/contacts.py"
   },
   {
    "name": "Florida",

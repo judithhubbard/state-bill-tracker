@@ -475,7 +475,11 @@ def weekly_agendas(biennium):
                 body = request(SITE + html.unescape(href), f"{c['kpid']} {week}", kind="bytes")
                 if body and body[:4] == b"%PDF":
                     import subprocess
-                    r = subprocess.run(["pdftotext", "-layout", "-", "-"], input=body, capture_output=True)
+                    try:
+                        r = subprocess.run(["pdftotext", "-layout", "-", "-"], input=body, capture_output=True)
+                    except OSError:  # no pdftotext: the hearings list alone, as before
+                        print("weekly agendas: pdftotext isn't installed; skipped", flush=True)
+                        return
                     if r.returncode == 0:
                         with open(fname, "w", encoding="utf-8") as f:
                             f.write(r.stdout.decode("utf-8", "replace"))
