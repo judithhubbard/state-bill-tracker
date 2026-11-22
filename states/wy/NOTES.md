@@ -36,3 +36,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   session's calendar (asked for 2026-02-12: 247 meetings, 152 with bills, 190 bills, all but 6 non-amendment joint
   resolutions matching the records). The calendar has no canceled flag: a meeting whose purpose says "cancel" is left out;
   how cancellations really show is untested. A failure keeps the last copy and never stops the run.
+- **Veto messages (looked into 2026-11-22; not read):** each vetoed bill's JSON links its letter (vetoes[].vetoLinkPath, "Governor's Veto Message" / "Governor's Line Item Veto Message": wyoleg.gov/2026/Veto/SF0101-Veto.pdf), but the PDFs are scans with no text layer (SF 101 of 2026, HB 4 of 2024's line-item message). They need OCR, the owner's decision.

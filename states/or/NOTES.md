@@ -15,3 +15,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Bills filed before the session "by order of the President" have no member sponsor: the "at the request of" field names
   who asked. Joint committees (Ways and Means) are listed for both houses. Governor 5 weekdays, or 30 business days after
   adjournment. Separate Senate (30) and House (60) districts by city or county.
+- **Veto letters (looked into 2026-11-22; not read):** oregon.gov/gov/Documents/<SB-976>_Veto_Letter.pdf is predictable from the bill number, but SB 976's is a scan with no text layer. OCR would be the owner's decision.

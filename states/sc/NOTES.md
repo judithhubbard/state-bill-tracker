@@ -76,3 +76,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   on February 10, 2026 (three days: 58 meetings, 28 agenda PDFs, 59 bills, all matching records). Needs pdftotext on the
   runner for the PDFs (without it, title links only). In session a first run may read 50-100 agenda PDFs (about a second
   each), later runs only changed ones.
+- **Veto messages (looked into 2026-11-22; not read):** governor.sc.gov/executive-branch/veto-messages links each letter (/sites/governor/files/Documents/Veto-Messages/H.3558.pdf, S.428 Veto Letter.pdf), but they are scans with no text layer. OCR would be the owner's decision.
