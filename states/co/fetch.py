@@ -525,6 +525,116 @@ def members_and_committees(year, folder):
             INCOMPLETE.add(f"{year}:committees")
 
 
+# ---------------------------------------------------------------- committee agendas
+
+def page_quietly(path):
+    """One page for the agenda reader: its text, or None. Unlike get(), never stops the run (a refusal or a 429 just
+    ends the agenda reading: `AGENDA_STOP`)."""
+    if AGENDA_STOP or out_of_time() or not allowed(urllib.parse.urlsplit(path).path):
+        return None
+    time.sleep(DELAY)
+    try:
+        req = urllib.request.Request(SITE + path, headers={"User-Agent": AGENT, "Accept": "text/html"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            body = r.read().decode("utf-8", "replace")
+        if "cf-challenge" in body or "Just a moment..." in body[:2000]:
+            AGENDA_STOP.append("a bot challenge")
+            return None
+        return body
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403, 406, 429):
+            AGENDA_STOP.append(str(e.code))
+        return None
+    except Exception:
+        return None
+
+
+AGENDA_STOP = []
+
+
+def parse_agenda(page):
+    """A committee agenda page (/agenda/committee/<id>) -> (committee, "2026-03-12T13:30:00", [bill numbers], canceled).
+    The heading is "Senate Local Government & Housing Agenda", then "Thu Mar 12th, 2026", then "1:30 PM | SCR 357"
+    ("Upon Adjournment | HCR 0107"); each bill is a hearing item linking /bills/SB26-105."""
+    head = re.search(r"<h1 class='agenda-heading'>(.*?)</h1>", page, re.S)
+    day = re.search(r"<p class='agenda-event-date'>(.*?)</p>", page, re.S)
+    if not head or not day:
+        return None
+    name = re.sub(r"\s+Agenda$", "", text(head.group(1)))
+    if not re.match(r"(House|Senate|Joint)\b", name):
+        name = f"Joint {name}"  # the year-round and interim committees are joint committees
+    m = re.match(r"\w+ (\w{3}) (\d+)\w*, (\d{4})", text(day.group(1)))
+    if not m:
+        return None
+    try:
+        d = datetime.strptime(f"{m.group(1)} {m.group(2)} {m.group(3)}", "%b %d %Y").date()
+    except ValueError:
+        return None
+    tl = re.search(r"<p class='agenda-time-location'>(.*?)</p>", page, re.S)
+    when = text(tl.group(1)) if tl else ""
+    t = re.match(r"(\d+):(\d\d)\s*([AP])M", when, re.I)
+    hour = (int(t.group(1)) % 12 + (12 if t.group(3).upper() == "P" else 0)) if t else 0
+    stamp = f"{d.isoformat()}T{hour:02d}:{int(t.group(2)) if t else 0:02d}:00"
+    top = section(page, "agenda-heading", "Scheduled Items")[:3000]
+    canceled = bool(re.search(r"\bcancel+ed\b|\bpostponed\b", text(top), re.I))
+    bills = []
+    for num in re.findall(r"<span class='bill-num-tag'>\s*([A-Z]+)\d\d-0*(\d+)\s*</span>", page):
+        key = f"{num[0]}{int(num[1])}"
+        if key not in bills:
+            bills.append(key)
+    return name, stamp, bills, canceled
+
+
+def agendas(year):
+    """Bills on committee agendas from yesterday to three weeks ahead, into data/co/<year>/agendas.json: bill ->
+    [["Senate Local Government & Housing", "2026-03-12T13:30:00"], ...]. The agendas are linked from the schedule page
+    (today's meetings) and from each committee's page ("Upcoming Schedule": its next meetings); each agenda page names
+    the committee, the day, the time and the bills. Read only while a session can meet (January to mid-June); a failure
+    keeps the last file and never marks Colorado incomplete."""
+    folder = os.path.join(DATA, str(year))
+    path = os.path.join(folder, "agendas.json")
+    os.makedirs(folder, exist_ok=True)
+    if finished(year):
+        save(path, {})
+        return
+    first, last = (TODAY - timedelta(days=1)).isoformat(), (TODAY + timedelta(days=21)).isoformat()
+    links = []
+    lists = [page_quietly("/schedule"), page_quietly(f"/committees?sess={year}a")]
+    if not isinstance(lists[1], str):
+        print(f"agendas: no committee list ({' '.join(AGENDA_STOP) or 'not read'}); kept the last file", flush=True)
+        return
+    comms = []
+    for h in re.findall(rf'href="(/committees/{year}A/(?:house|senate|year-round)/[^"#?]+)"', lists[1], re.I):
+        if h.lower() not in [c.lower() for c in comms]:
+            comms.append(h)
+    pages = [lists[0]] + [page_quietly(h) for h in comms]
+    if AGENDA_STOP or not all(isinstance(p, str) for p in pages[1:]):
+        print(f"agendas: committee pages not all read ({' '.join(AGENDA_STOP) or 'errors'}); kept the last file", flush=True)
+        return
+    for p in pages:
+        for a in re.findall(r'href="(/agenda/committee/\d+)"', p or ""):
+            if a not in links:
+                links.append(a)
+    out, n = {}, 0
+    for a in links:
+        p = page_quietly(a)
+        if AGENDA_STOP:
+            print(f"agendas: stopped ({AGENDA_STOP[0]}); kept the last file", flush=True)
+            return
+        got = parse_agenda(p) if isinstance(p, str) else None
+        if not got:
+            continue
+        name, stamp, bills, canceled = got
+        if canceled or not first <= stamp[:10] <= last:
+            continue
+        n += 1
+        for b in bills:
+            if [name, stamp] not in out.setdefault(b, []):
+                out[b].append([name, stamp])
+    save(path, out)
+    print(f"agendas: {len(out)} bills on {n} meetings ({len(links)} agendas linked)", flush=True)
+
+
 # ---------------------------------------------------------------- one session
 
 def session(year):
@@ -672,6 +782,11 @@ def main():
             f.write("running\n")
     robots()
     started = time.time()
+    if len(sys.argv) == 1:  # the current session's agendas first, so the time limit never cuts them off
+        try:
+            agendas(TODAY.year)
+        except Exception as e:  # agendas never break the run
+            print(f"agendas: failed ({e}); kept the last file", flush=True)
     for y in YEARS:
         session(y)
     read_votes()

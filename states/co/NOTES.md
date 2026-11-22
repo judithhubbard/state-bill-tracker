@@ -14,3 +14,20 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   motions (third reading "Bill", Concur, Repass, Adopt, Override), not amendments. Concurrent resolutions (constitutional
   amendments) aren't downloaded. Leaders are named only for the current year: past years' member pages show today's
   positions and houses.
+
+- **Committee agendas (2026-11-22):** `agendas()` in states/co/fetch.py runs first in each full run (before the bills,
+  so the time limit never cuts it off) and writes data/co/<year>/agendas.json; `agendas()` in convert.py reads it and
+  keeps meetings from today on. Source: leg.colorado.gov's own pages (robots.txt allows them; it bars only /house/calendar,
+  /senate/calendar, journals and file downloads, none read here), three seconds apart like the rest: /schedule (today's
+  meetings), /committees?sess=<year>a and each committee's page, whose "Upcoming Schedule" links its next meetings'
+  agendas (/agenda/committee/<id>); each agenda page gives the committee ("Senate Local Government & Housing Agenda"),
+  the day ("Thu Mar 12th, 2026"), the time ("1:30 PM | SCR 357"; "Upon Adjournment" is T00:00:00) and the bills
+  (`<span class='bill-num-tag'>SB26-105</span>`, read as SB105). Meetings from yesterday to three weeks ahead; agendas
+  naming "canceled" or "postponed" in their heading are left out; year-round committees are named "Joint ...". About
+  40-60 requests a run in session (2-3 minutes). Only January to June 20 (`finished()`); otherwise it writes {}. A 403,
+  406, 429 or bot challenge stops only the agendas (`page_quietly()`, never `refused()`), keeping the last file.
+  Tested 2026-11-22 against archived session pages (web.archive.org copies of the 2026 schedule, the House Agriculture
+  committee page of 2026-03-12 and the Senate Local Government agenda of 2026-03-12: SB105, SB98 matched the records)
+  and live against the interim pages (16 meetings, no bills). Untested against a live session: whether committee pages
+  list every upcoming meeting (the March copy listed two per committee, about a week), and the canceled wording. The
+  schedule's week view is a POST with a CSRF token (it answered 500 between sessions) and isn't used.
