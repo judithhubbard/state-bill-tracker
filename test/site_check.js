@@ -1,4 +1,4 @@
-// A daily check of the published site (statebilltracker.pages.dev until launch), run by
+// A daily check of the published site (statebilltracker.org; statebilltracker.pages.dev before launch), run by
 // .github/workflows/site-check.yml. It looks at the live pages the way a visitor's browser does and prints one list of
 // problems: FAIL lines fail the run (so GitHub emails the owner), LOOK lines are for a person to read over.
 //
@@ -28,7 +28,7 @@ const AXE = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 const REPO = path.resolve(__dirname, "..");
 const arg = (name, dflt) => { const i = process.argv.indexOf("--" + name); return i > 0 ? process.argv[i + 1] : dflt; };
 const flag = (name) => process.argv.includes("--" + name);
-const BASE = (arg("base", "https://statebilltracker.pages.dev/")).replace(/\/?$/, "/");
+const BASE = (arg("base", "https://statebilltracker.org/")).replace(/\/?$/, "/");
 const ONLY = arg("states") ? arg("states").split(",").map((s) => s.trim()).filter(Boolean) : null;
 const COUNTS = arg("counts", path.join(REPO, ".site-check", "counts.json"));
 const KEY_STATE = arg("keyboard-state", "nj");

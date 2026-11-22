@@ -388,11 +388,13 @@ jobs:
           key: built-pages-latest
           restore-keys: built-pages-
 
-      # Until launch the site lives at statebilltracker.pages.dev, so its links point there.
+      # Launched 2026-11-21: links, link previews and the visit counter use statebilltracker.org, and search engines may
+      # list it (build_site.sh). statebilltracker.pages.dev still serves the same files.
       - name: Build the site
         id: build
         env:
-          SITE_BASE: https://statebilltracker.pages.dev/
+          SITE_BASE: https://statebilltracker.org/
+          LAUNCHED: "1"
         run: |
           set -o pipefail
           ./build_site.sh _site | tee "$RUNNER_TEMP/build.log"

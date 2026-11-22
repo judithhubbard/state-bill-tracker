@@ -54,6 +54,7 @@ jobs:
         run: python3 test/cache_key_check.py wy
       - name: The cached build is the same as one without the cache
         env:
-          SITE_BASE: https://statebilltracker.pages.dev/
+          SITE_BASE: https://statebilltracker.org/
+          LAUNCHED: "1"
           CACHE_FROM: built/cache
         run: test/cache_same.sh wy sd ri
