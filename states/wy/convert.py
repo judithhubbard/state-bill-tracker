@@ -28,8 +28,11 @@ def folder(session):
 
 
 def sessions():
+    # This year's session (or next year's, numbered before it convenes) counts from its first bills; an older one once
+    # it has more than 100.
     return sorted(int(os.path.basename(f)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4))
-                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > 100)
+                  if len(glob.glob(os.path.join(f, "bills", "*.json")))
+                  > (0 if int(os.path.basename(f)) >= datetime.now().year else 100))
 
 
 def text(x):

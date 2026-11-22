@@ -58,7 +58,9 @@ def text(x):
 def sessions():
     out = []
     for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4)):
-        if os.path.exists(os.path.join(f, "allmsrs.xml")) and len(glob.glob(os.path.join(f, "history", "*.xml"))) > 100:
+        # This year's session (or next year's, prefiled) counts from its first bills; an older one from 100.
+        least = 0 if int(os.path.basename(f)) >= datetime.now().year else 100
+        if os.path.exists(os.path.join(f, "allmsrs.xml")) and len(glob.glob(os.path.join(f, "history", "*.xml"))) > least:
             out.append(int(os.path.basename(f)))
     return tuple(sorted(out))
 

@@ -40,3 +40,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2023 890 Acts and 3 vetoes (HB1189, HB1622, SB509; HB1176 line-item); 2024 176 Acts; 2025 1,026 Acts and 3 vetoes
   (HB1889, HB1961, SB451; HB1265 line-item: "four vetoes" in the news); 2026 174 Acts. Separate Senate (35) and House (100)
   districts by city, town or county (`states/ar/towns.py`).
+- Next session's prefiled bills (2026-11-22: 15 bills of 2027R in the live folder, prefiled from mid-November) are shown as
+  an upcoming session from the first one: `sessions()` in convert.py asks more than 100 bills only of sessions before
+  this year (it hid 2027 at first).

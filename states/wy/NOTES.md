@@ -36,3 +36,5 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   session's calendar (asked for 2026-02-12: 247 meetings, 152 with bills, 190 bills, all but 6 non-amendment joint
   resolutions matching the records). The calendar has no canceled flag: a meeting whose purpose says "cancel" is left out;
   how cancellations really show is untested. A failure keeps the last copy and never stops the run.
+- This year's session (or next year's, numbered before it convenes) is shown from its first bill (`sessions()` in
+  convert.py, 2026-11-22; older ones need more than 100); BillInformation/2027 was an empty list on 2026-11-22.

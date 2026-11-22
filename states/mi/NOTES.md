@@ -35,3 +35,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   meeting list (2025-02-11: 6 of 10 meetings kept, the 4 canceled left out) and two 2026 meeting pages (HB 5317, SB 979,
   SB 960, SB 526; SB 878), all matched to records; the live list is empty now (November 2026). The RSS feed
   (documents/publications/RssFeeds/comschedule.xml) lists the same meetings but doesn't mark cancellations, so it isn't used.
+- A session of this year or later is shown from its first bill (`sessions()` in convert.py, 2026-11-22; older ones need
+  more than 1,000 status files), so 2027-28 shows from its first bills in January (Michigan has no prefiling; its status
+  folders answer 404 until then).

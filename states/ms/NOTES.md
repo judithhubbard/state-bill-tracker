@@ -62,3 +62,5 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   an interim hearing's (presenters and topics, no meeting lines: nothing read). The Archive's February and March 2026
   copies held only the heading ("Updated: February 3, 2026"), so whether the Senate kept it up in 2026 is unknown:
   check in January 2027. Untested live.
+- This year's session (or next year's) is shown from its first bill history (`sessions()` in convert.py, 2026-11-22;
+  older ones need more than 100); 2027's allmsrs.xml answered 404 on 2026-11-22.

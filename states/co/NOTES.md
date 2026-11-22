@@ -31,3 +31,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   and live against the interim pages (16 meetings, no bills). Untested against a live session: whether committee pages
   list every upcoming meeting (the March copy listed two per committee, about a week), and the canceled wording. The
   schedule's week view is a POST with a CSRF token (it answered 500 between sessions) and isn't used.
+- This year's session (or a later one) is shown from its first bill (`sessions()` in convert.py, 2026-11-22; older ones
+  need more than 300), so 2027 shows from the day bills are introduced; the bill search had no "2027 Regular Session" on
+  2026-11-22.

@@ -41,3 +41,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   the place's land or the place holds most of the district (Anchorage's urban districts). Leaders from the members file's
   comments; the 35th Legislature (January 2027) chooses new ones, and a new governor takes office December 7, 2026 (add to
   `GOVERNORS` and legislatures.json). The governor's phone and contact page haven't been checked by the owner.
+- A Legislature of this year or later is shown from its first bill (`sessions()` in convert.py, 2026-11-22; older ones
+  need more than 100): the 35th's prefiled bills (BASIS answers "Invalid Session Number" for session=35 on 2026-11-22;
+  the first prefile release is the second Friday of January) appear when fetch.py starts reading it on January 1.
