@@ -110,5 +110,15 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most from 2021-22 to 2025-26, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Matched on the short
+# titles (the records here have no summaries), so the patterns include the titles' abbreviations ("VAX", "AI").
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated decision|algorithmic|deepfake|deep fake|synthetic media|\bgenerative\b|chatbot)|\bAI\b", False),
+    ("rise", "Wind and solar power", r"\bsolar|\bwind\b|wind energy|wind farm", True),
+    ("rise", "Data centers", r"(?<!childhood )data cent(?:er|re)s?\b", True),
+    ("rise", "Paid leave", r"paid (?:family|medical|sick)|family and medical leave|earned sick|paid leave", True),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
+    ("spike", "Vaccines", r"vaccin|immuniz|\bvax\b", True),
+]
 WORDING = []

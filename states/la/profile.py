@@ -160,5 +160,12 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most from 2024 to 2026, picked by hand from an automatic
+# phrase scan and checked against samples of the bills matched (notes/trends.md). 2025 was a fiscal session, so each
+# subject was also checked between the two regular sessions, 2024 and 2026. Matched on title and summary.
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated decision|algorithmic|deepfake|deep fake|synthetic media|\bgenerative\b|chatbot)|\bAI\b", False),
+    ("rise", "Carbon capture and storage", r"carbon (?:capture|sequestration|dioxide)|geologic storage|\bCO2\b|carbon storage|class vi\b", True),
+    ("spike", "Concealed carry", r"concealed (?:handgun|carry|weapon|firearm)|concealed carrying|carry (?:a )?concealed", True),
+]
 WORDING = []

@@ -128,5 +128,16 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
-WORDING = []
+# ---- What's changing: subjects whose share of bills changed most between 2023-24 and 2025-26, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Only two sessions are shown,
+# so only the clearest shifts. Matched on title and summary.
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated decision|algorithmic|deepfake|deep fake|synthetic media|\bgenerative\b|chatbot)|\bAI\b", False),
+    ("spike", "Gender identity", r"transgender|gender identity|gender-affirming|gender transition|biological sex|gender dysphoria", True),
+    ("spike", "Cybersecurity", r"cybersecurity|cyber security|ransomware|cyberattack", True),
+]
+# Old wording -> new wording, for the same thing.
+WORDING = [
+    (("“Medicaid”", r"medicaid"), ("“medical assistance”", r"medical assistance"),
+     "Iowa law calls Medicaid the medical assistance program; in 2025–26 bill titles began using that name."),
+]
