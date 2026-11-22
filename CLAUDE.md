@@ -542,8 +542,12 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   .ns.cloudflare.com, set at Porkbun; registration stays at Porkbun) with the Pages project's custom domains
   statebilltracker.org and www.statebilltracker.org; statebilltracker.pages.dev serves the same files. statebilltracker.com
   forwards with a Porkbun 302 (path kept). publish.yml builds with SITE_BASE=https://statebilltracker.org/ and LAUNCHED=1
-  (search engines allowed, GoatCounter on); /ny/ stays out of search (robots.txt and X-Robots-Tag in build_site.sh) until
-  New York moves here: drop those two lines then, and link it from the front page. Shared lists stay on
+  (search engines allowed, GoatCounter on). **New York moved here 2026-11-22:** albanybilltracker.org (the
+  AlbanyBillTracker repo's main, merged from move-to-statebilltracker) now serves only forwarding pages that carry each
+  visitor's saved settings to statebilltracker.org/ny/ (checked: /, /kelles/, /2023.html, /watchlist/, /#S1234 all
+  land with the watchlist); Albany's 4 (revoked, test) invite codes were copied to state-lists; /ny/ is open to search
+  engines; New York downloads everything itself (states/ny/fetch.py). The albany-cron timer still calls the Albany
+  workflow, which ignores it; switch it off in the Cloudflare dashboard (Workers > albany-cron > Triggers) when convenient. Shared lists stay on
   state-lists.lists-worker.workers.dev (its CORS already allows statebilltracker.org); a route on the zone is optional.
   albanybilltracker.org is also at Porkbun: on launch day its nameservers were changed by mistake and put back within
   minutes; check which domain a registrar page is for before changing it. Checklist items done: 2, 3, 4, 6 (site check);
