@@ -100,10 +100,13 @@ def wrapped(lines, short=0.8):
 
 
 def cut(paras, limit=MAX):
-    """The first paragraphs, up to `limit` characters (at least one)."""
+    """The first paragraphs, up to `limit` characters; a first paragraph longer than that is cut after a sentence."""
     s = ""
     for p in paras:
         if s and len(s) + len(p) > limit:
             break
+        if not s and len(p) > limit:
+            ends = [m.end() for m in re.finditer(r"[.!?][\"\u201d)]?(?=\s+[A-Z])", p[:limit])]
+            return p[:ends[-1]] if ends else p[:limit].rsplit(" ", 1)[0] + " \u2026"
         s += ("\n" if s else "") + p
     return s

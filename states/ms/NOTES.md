@@ -47,6 +47,14 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   SB 2477, SB 2632, SB 3402; none overridden), part vetoes on HB 1653, HB 1924, SB 2189, SB 3071. No constitutional
   amendment passed both houses in 2024-26. A first copy of three years takes about 4 hours (230 minutes on 2026-11-08).
 
+- **Veto messages (2026-11-22):** a vetoed bill's history file links the governor's message (<VETOMSG><VETO_OTHER>
+  /documents/<year>/html/veto/HB0895.htm, a Word page; no robots.txt). fetch.py's `veto_messages()` reads each once into
+  data/ms/<year>/vetoes/; convert.py's `veto_message()` keeps the paragraphs after "GOVERNOR'S VETO MESSAGE FOR ..." up to
+  the signature, joins paragraphs the page breaks mid-sentence, and drops the bill's long title quoted in full ("I am
+  returning House Bill 895: "AN ACT TO AMEND ... FOR RELATED PURPOSES."" -> "I am returning House Bill 895."). Suffrage
+  bills' vetoes come as a notice with no reasons ("MESSAGE FROM THE GOVERNOR ... has vetoed the following Senate Bill":
+  SB 3402 of 2026): left out. Read 2026-11-22: 22 messages, 2024: 2 of 6 vetoes (the others have no link), 2025: 8 of 8,
+  2026: 5 of 6, plus line-item vetoes on laws. Shows after the next download.
 - **Committee agendas (2026-11-22): Senate only.** `agendas()` in states/ms/fetch.py (every run, two requests) reads
   www.legislature.ms.gov/calendars-and-schedules/senate-committee-agenda/ for the PDF it links (one file the Senate keeps
   rewriting, "CURRENT Committee Agendas, Updated: ..."; its name keeps an older year's, 2025_SENATE_COMMITTEE_AGENDAS.pdf
