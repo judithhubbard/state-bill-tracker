@@ -386,8 +386,9 @@ def check(state):
         # A committee's vote on a motion against the bill read as a vote for it: ND's committees vote on "Do Not Pass"
         # (Y for the motion is against the bill; states/nd/convert.py's committee_vote() turns it round, 2026-11-22). A
         # committee vote that carried on the day the history says the committee recommended against the bill, and nothing
-        # that day says it recommended for it, shows "Approved by the ... Committee".
-        against = re.compile(r"recommended it not pass|\bdo not pass\b|ought not to pass|inexpedient to legislate|unfavorabl", re.I)
+        # that day says it recommended for it, shows "Approved by the ... Committee". ("Unfavorable" isn't counted: DE's
+        # reports list members' signatures, "1 favorable, 6 on its merits, 1 unfavorable", 85 bills.)
+        against = re.compile(r"recommended it not pass|\bdo not pass\b|ought not to pass|inexpedient to legislate", re.I)
         favor = re.compile(r"recommended it pass|\bdo pass\b|ought to pass\b|\bfavorabl|reported it without|\bapproved\b|\badvanced\b", re.I)
         flipped = []
         for r in recs:
