@@ -56,7 +56,10 @@ some months after the session (2023's in August 2023; 2025's not yet listed in N
 weekly and each PDF when new, then weekly with If-Modified-Since; its text (pdftotext -layout; poppler-utils) goes in
 data/nd/<year>/title_summaries/<name>.txt, and texts_<year>.json ({"HB1012": {"statement", "label"}}) is written from
 those files every run. Never part of what's missing: without pdftotext, or with the PDF not yet published, there are
-just no summaries.
+just no summaries. For bills the Title Summaries don't cover (bills that didn't pass; every bill until a session's
+edition is out), the summary in the bill's latest fiscal note ("3 - Bill and Fiscal Impact Summary", a sentence or two
+on what the bill does): fiscal_notes() reads each bill's versions page and its last fiscal note, 2 s apart, 8 minutes a
+run, into data/nd/<year>/fiscal/<HB1145>.json.
 
 A first copy of two assemblies is about 10 requests for the files (about 36 MB) and about 190 for the members' pages:
 about 5 minutes. After that a run is about 14 requests (mostly 304s), plus the weekly members' pages: under a minute,
@@ -484,8 +487,83 @@ def summary_paragraphs(txt):
     return out
 
 
+FISCAL_MINUTES = 8  # a run's time for bills' version pages and fiscal notes (2 s apart: about 200 requests)
+
+
+def fiscal_notes(found, minutes=FISCAL_MINUTES):
+    """Each bill's latest fiscal note's "Bill and Fiscal Impact Summary" into <year>/fiscal/<HB1145>.json: {"versions":
+    the number of versions the bill had when read, "note": the fiscal note's file or "", "summary", "read"}. The bill's
+    versions page (/assembly/69-2025/regular/bill-index/bi1145.html; special sessions' under /special/) links each
+    version's fiscal note (../fiscal-notes/25-0359-05000-fn.pdf), when one was prepared: about one bill in five. A bill
+    is read again when bills.json lists a new version. Two seconds apart (ndlegis.gov sets no crawl delay), at most
+    `minutes` a run, the newest assembly first, bills that got furthest first. Extras: nothing here counts as missing."""
+    if not PDFTOTEXT:
+        print("fiscal notes: no pdftotext (poppler-utils); skipped", flush=True)
+        return
+    stop_at = time.time() + minutes * 60
+
+    def get(url, label):
+        time.sleep(max(0.0, LAST[0] + 2 - time.time()))
+        return request(url, label)[0]
+
+    for a in found:
+        folder = os.path.join(DATA, str(a["year"]))
+        bills = (load(os.path.join(folder, "bills.json"), {}) or {}).get("bills") or {}
+        out = os.path.join(folder, "fiscal")
+        queue = []
+        for b in bills.values():
+            key = re.sub(r"\s+", "", b.get("name") or "")
+            if not re.fullmatch(r"(?:HB|SB|HCR|SCR)\d+", key) or "/bill-overview/bo" not in (b.get("url") or ""):
+                continue
+            have = load(os.path.join(out, f"{key}.json"), {})
+            n = len(b.get("versions") or [])
+            if have.get("versions") == n:
+                continue
+            queue.append((-len(b.get("actions") or []), key, n, b["url"].replace("/bill-overview/bo", "/bill-index/bi")))
+        queue.sort()
+        got = done = 0
+        for _, key, n, url in queue:
+            if time.time() > stop_at or out_of_time():
+                break
+            body = get(url, f"{a['year']} {key} versions page")
+            if not isinstance(body, bytes):
+                continue
+            notes = sorted(set(re.findall(r'href="(?:\.\./)?fiscal-notes/([\w.-]+-fn\.pdf)"', body.decode("utf-8", "replace"))))
+            rec = {"versions": n, "note": "", "summary": "", "read": TODAY.isoformat()}
+            if notes:
+                pdf = get(url.rsplit("/bill-index/", 1)[0] + "/fiscal-notes/" + notes[-1], f"{a['year']} {key} fiscal note")
+                summary = fiscal_summary(pdf_text(pdf) or "") if isinstance(pdf, bytes) else None
+                if summary is None:
+                    continue  # unreadable: asked again next run
+                rec.update(note=notes[-1], summary=summary)
+                got += bool(summary)
+            os.makedirs(out, exist_ok=True)
+            save(rec, os.path.join(out, f"{key}.json"))
+            done += 1
+        print(f"{a['year']} fiscal notes: {done} bills read now ({got} with a summary), {len(queue) - done} still to read",
+              flush=True)
+
+
+def fiscal_summary(txt):
+    """The "3 - Bill and Fiscal Impact Summary" of a fiscal note (pdftotext -layout): "" when the section is empty,
+    None when the text isn't a fiscal note. The bill's name and version open it ("HB1145 version 25.0359.05000
+    requires ...", "HB 1158 modifies ...") and become "The bill"."""
+    m = re.search(r"Bill and Fiscal Impact Summary(.*?)(?:\n\s*\d+\s*-\s*Fiscal Impact Sections|\Z)", txt, re.S | re.I)
+    if not m:
+        return None
+    s = re.sub(r"^.*?limited to\s+300\s+characters\)\.?", "", m.group(1), flags=re.S | re.I)
+    s = re.sub(r"(?<=\w)- +(?=\w)", "-", re.sub(r"\s+", " ", s)).strip()
+    s = re.sub(r"^(?:Engrossed |Reengrossed )?(?:H|S)(?:B|CR) ?\d+(?: version (?:\d{2}\.\d{4}\.\d{5}|LC# ?[\d.]+))?,?(?= [a-z])",
+               "The bill", s)
+    s = s.replace("�", "")
+    if len(s) < 25 or not re.search(r"[a-z]{3}", s):
+        return ""
+    return s
+
+
 def texts(a):
-    """texts_<year>.json from the assembly's Title Summaries texts: each bill's paragraphs, joined."""
+    """texts_<year>.json from the assembly's Title Summaries texts (each bill's paragraphs, joined) and, for bills they
+    don't cover, the summary in the bill's latest fiscal note."""
     paras = {}
     for path in sorted(glob.glob(os.path.join(DATA, str(a["year"]), "title_summaries", "*.txt"))):
         with open(path) as f:
@@ -493,9 +571,14 @@ def texts(a):
                 for p in ps:
                     if p not in paras.setdefault(bill, []):
                         paras[bill].append(p)
-    if not paras:
-        return
     out = {}
+    for path in sorted(glob.glob(os.path.join(DATA, str(a["year"]), "fiscal", "*.json"))):
+        rec = load(path, {}) or {}
+        if rec.get("summary"):
+            out[os.path.basename(path)[:-5]] = {"statement": rec["summary"][:TEXT_MAX],
+                                                "label": "From the summary in the bill's latest fiscal note."}
+    if not paras and not out:
+        return
     for bill, ps in paras.items():
         kept, said = [], set()
         for p in ps:
@@ -577,6 +660,12 @@ def main():
                 save(state, os.path.join(folder, "state.json"))
         bios(read)
         title_summaries(read)
+        try:
+            fiscal_notes(read)
+        except Refused:
+            raise
+        except Exception as e:  # never holds North Dakota back
+            print(f"fiscal notes: failed ({type(e).__name__}: {e})", flush=True)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True

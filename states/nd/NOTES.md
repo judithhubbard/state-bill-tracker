@@ -32,8 +32,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   session; fetch.py reads it with pdftotext, weekly, and never marks the state incomplete): a paragraph on each bill
   passed (laws and vetoed bills, "would have ..."), labelled "From the Legislative Council's summary of the bill as
   passed."; 2023: 515 bills (510 of 599 laws; budget bills only for the parts that change other laws); 2025's edition
-  wasn't listed yet in November 2026 and is picked up when it is. Nothing else per bill exists (statements of purpose of
-  amendment are budget tables), so bills that didn't pass have none. Topics from
+  wasn't listed yet in November 2026 and is picked up when it is. Other bills get their fiscal note's
+  summary, where there is one (below, 2026-11-22). Topics from
   committees (`COMMITTEE_TOPICS`) and words in the title and subjects. Concurrent resolutions amending the Constitution of
   North Dakota are tagged "const" (one passage by a majority of each house's members, then the voters at the election the
   resolution names: `amendmentOnce`, `ballotLine()`); other resolutions are left out. Earlier assembly linked by title,
@@ -53,3 +53,21 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   SB 2261, SB 2307; all sustained), item vetoes on 6 budgets. Places (`towns.py`, run once): cities, Census-designated
   places and counties, one district list for both houses.
 - **The next session's bills (checked 2026-11-22):** `fetch.py` reads every assembly assemblies.json lists, and an assembly listed with no bills file yet (a 404) is noted absent, without a folder; the 70th (2027) wasn't listed on 2026-11-22. Its prefiled bills appear from the organizational session in December; before it convenes (`begun()`) nothing of it holds North Dakota off the site.
+- **What it does, more (2026-11-22).** The Title Summaries page (/research-and-archives/title-summaries) still listed only
+  2023's edition on 2026-11-22, and /sites/default/files/resource/title-summaries/2025-title-summaries.pdf answered 404;
+  `title_summaries()` picks up any new "<year>-title-summaries.pdf" (or a special session's) for an assembly by its year,
+  so 2025's needs no change. The bill text's "A BILL for an Act to ..." is the records' `title` already (adds nothing).
+  Fiscal notes: each version that has one is linked from the bill's versions page
+  (/assembly/69-2025/regular/bill-index/bi1145.html -> ../fiscal-notes/25-0359-05000-fn.pdf; special sessions under
+  /special/ and /special-2/; the folder itself answers 403, a directory listing turned off, not a block). Their section
+  "3 - Bill and Fiscal Impact Summary" ("a brief summary of the measure ... limited to 300 characters", written by the
+  agency that prepares the note) says what the bill does in a sentence or two, neutrally: "HB1145 version 25.0359.05000
+  requires the State Board of Higher Education to post the ten commandments ..."; 2023's have the same form (HB 1158).
+  `fiscal_notes()` in fetch.py reads each HB, SB, HCR and SCR's versions page and its last fiscal note (2 seconds apart;
+  robots.txt is Drupal's stock one, no crawl delay; 8 minutes a run, `FISCAL_MINUTES`, bills with the longest histories
+  first) into <year>/fiscal/<HB1145>.json ({"versions", "note", "summary", "read"}; read again when bills.json lists a
+  new version). `texts()` uses it for bills the Title Summaries don't cover, the bill's name and version becoming "The
+  bill", labelled "From the summary in the bill's latest fiscal note." (not the "What it would cost" slot: that names the
+  legislature's budget office, and these come from agencies). Coverage: about one bill in five has a fiscal note (2 of 9
+  versions pages sampled, one chosen for having one); a first copy is about 2,100 pages plus 400 notes, about 11 runs.
+  Before this, only 2023's 515 passed bills had "What it does" (0 of 1,051 in 2025-26). Never holds North Dakota back.
