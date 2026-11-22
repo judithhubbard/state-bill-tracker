@@ -33,3 +33,9 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   governor (January 2027) to `GOVERNORS` and states/legislatures.json. The governor's contact page and phone (401-222-2080)
   haven't been checked by the owner. rilegislature.gov bars automated readers: never fetch it.
 - **Committee agendas (2026-11-22):** from each bill's LegiScan `calendar` (its hearings: date, time, room, description), read with the bill (no queries of their own): `agendas()` calls legiscan_convert.agendas() (states/LEGISCAN.md). Today's and later meetings only. LegiScan's calendar has no cancellations; an entry dropped from a notice goes when the bill is next read, which within the daily getBill allowance can be hours after the change. "Consideration" entries (a committee vote after the hearing) count as meetings. Times are often 00:00 ("Rise of the House/Senate"). Tested against 2026's saved calendars (2,144 bills, all matched).
+  The history (2026-11-22): every dated "Scheduled for hearing and/or consideration (04/02/2025)" line of 2024-26 is
+  also in the calendar (2,852, 2,909 and 3,221 of them; posted 2-6 days ahead), so the history adds no meetings. But the
+  calendar keeps hearings the history says were called off: "Meeting postponed (04/22/2025)" (270 still listed),
+  "Committee postponed at request of sponsor (05/15/2025)" (143), "Withdrawn at sponsor's request (04/09/2025)" (29).
+  `history_meetings()` in convert.py leaves out the calendar's meetings on those days (unless a later line schedules the
+  bill for that day again): as of 2026-03-01, 2,828 entries instead of 2,914.

@@ -190,6 +190,18 @@ class RhodeIsland(L.Rules):
     def decode(self, action, chamber, b, kind):
         return decode(action, chamber, b, kind)
 
+    def history_meetings(self, b):
+        # "Meeting postponed (06/12/2025)", "Committee postponed at request of sponsor (05/15/2025)", "Withdrawn at
+        # sponsor's request (04/09/2025)": LegiScan's calendar keeps those hearings (442 of 2024-26's). Unless a later
+        # line schedules the bill for that day again.
+        off = {}
+        for x in b.get("history") or []:
+            m = re.match(r"(Meeting postponed|Committee postponed at request of sponsor|Withdrawn at sponsor's request|"
+                         r"Scheduled for [a-z /]+?) \((\d\d)/(\d\d)/(\d{4})\)", L.text(x.get("action")))
+            if m:
+                off[f"{m.group(4)}-{m.group(2)}-{m.group(3)}"] = not m.group(1).startswith("Scheduled")
+        return [], [(None, d) for d, gone in off.items() if gone], {}
+
     def committee_vote(self, desc):
         m = re.match(r"(House|Senate) Committee on (.+?):\s*(.*)$", desc or "")
         if not m:

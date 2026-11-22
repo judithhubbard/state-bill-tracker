@@ -25,6 +25,35 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   2027). Governor Bill Lee is term-limited: add the new governor (January 2027) to `GOVERNORS` and states/legislatures.json.
   The governor's contact page and phone haven't been checked by the owner. sos.tn.gov turns automated requests away.
 - **Committee agendas (2026-11-22):** from each bill's LegiScan `calendar` (its hearings: date, time, room, description), read with the bill (no queries of their own): `agendas()` calls legiscan_convert.agendas() (states/LEGISCAN.md). Today's and later meetings only. LegiScan's calendar has no cancellations; an entry dropped from a notice goes when the bill is next read, which within the daily getBill allowance can be hours after the change. Tested against 2026's saved calendars (with an earlier "today": 976 bills, all matched to records). LegiScan has Tennessee's House hearings until January 2026 only; February-April 2026 are Senate only (391, 1,434, 369 entries), so House committee agendas may be missing in 2027 too. capitol.tn.gov's robots.txt is "Disallow: /" for everyone but named search engines: no other source. January check: are there House entries in the calendars?
+  **From the histories too (2026-11-22):** the bill histories name each committee meeting a bill is set for, House
+  and Senate: "Placed on s/c cal Cities & Counties Subcommittee for 3/18/2026", "Placed on cal. Judiciary Committee for
+  3/25/2026", "Action Def. in s/c Health Subcommittee to 3/24/2026", "Placed on Senate Finance, Ways, and Means Committee
+  calendar for 4/21/2026", "Action deferred in Senate Judiciary Committee to 3/24/2026", "Rule #83(8) Suspended, to be
+  heard in Senate ... Committee for 4/15/2024" (`set_for()` in convert.py; floor calendars, "Placed on Senate Consent
+  Calendar for ...", "H. Placed on Regular Calendar for ...", aren't committee meetings and are left out).
+  `history_meetings()` keeps a setting until a later line moves the bill or takes it off: another setting (settings
+  written the same day all stand: Senate Finance, Ways and Means places bills on two days' calendars at once), "Taken off
+  notice for cal in s/c ...", "Meeting Canceled", the committee's report or vote, a referral or subcommittee assignment
+  elsewhere, a floor calendar; sponsor and amendment lines don't. legiscan_convert.agendas() adds the standing ones
+  (today's and later) where the calendar has none, with the time another bill's calendar gives that meeting, else none
+  (House meetings show the day alone). It also uses the history against the calendar: an entry for a meeting the history
+  says the bill was taken off (LegiScan's calendar keeps them: 218 off-notice or canceled hearings of 2025-26 were still
+  listed), or one naming another committee than the history's setting that day, is left out (LegiScan labels about one
+  in seven of 2025-26's hearings with the wrong committee: 1,021 of 6,985, mostly "Senate Revenue Subcommittee of
+  Finance, Ways & Means" for bills the history sets before State and Local Government or Commerce and Labor; 450 of
+  9,473 in 2023-24). Both sources' committee names now read as the site's (`meeting_name()`, comm()'s spelling): "House
+  Judiciary", "House Cities and Counties Subcommittee", "Senate State and Local Government".
+  Tested by cutting the saved histories at an earlier morning (the calendars as saved): as of 2026-03-10, 2,125 entries
+  (1,224 from the calendar, 901 added from the histories, almost all House); of the 901, 894 had the committee's action
+  (a report, deferral, vote, off notice) on the meeting day or the next, 6 were undone before the day by lines not yet
+  written that morning, 1 had nothing. As of 2026-04-13: 297 added, 285 acted on that day or the next, 12 undone before.
+  How far ahead the settings are written (each meeting's first setting line against its day): 2025, House 3,815: 3% the
+  same day, 18% the day before, 28% 5-6 days, 50% 7 days, 1% more; Senate 1,731: 16% the day before, 32% 4-6 days, 50%
+  7 days. 2026, House 4,926: 7% the same day, 14% the day before, 30% 5-6 days, 47% 7 days; Senate 2,459: 9% the day before,
+  36% 4-6 days, 52% 7 days. (Same-day and day-before settings are mostly the House Calendar and Rules Committee, about half;
+  then Senate Judiciary and the House and Senate Finance, Ways and Means committees; half to two thirds of them in April.) A setting reaches the site when the bill is next read: its change_hash changes, and
+  until its full record is read the master list's last action is added as a history line (bills() above), so a placement
+  that is the bill's latest action shows within a run or two.
   Open States (looked into 2026-11-22, not used: the owner's decision): its v3 /events had 11 Tennessee meetings (November
   18 to December 17, 2026: Government Operations, Fiscal Review, the State Building Commission and other joint or interim
   committees), none with agenda items or bills. Their source is wapp.capitol.tn.gov/apps/schedule/WeeklyView.aspx, whose
