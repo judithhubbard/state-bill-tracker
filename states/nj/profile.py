@@ -130,14 +130,24 @@ def governor_on(day):
     return who
 
 
-# ---- What's changing: subjects that rose (or spiked) across sessions. Matched on the synopsis.
-# (Climate and cannabis were tried and left out: their share barely changed.)
+# ---- What's changing: subjects whose share of bills changed most across the sessions shown, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Matched on the synopsis.
+# (Cannabis rose from 2018-19 but has been flat since 2022-23; its change shows as the wording pair below.)
 TRENDS = [
-    ("rise", "Artificial intelligence", r"artificial intelligence|\bAI\b|automated (?:employment )?decision|algorithmic", False),
-    ("rise", "E-bikes and scooters", r"electric (?:assist|bicycle|scooter)|e-bikes?\b|low-speed electric", True),
-    ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen", True),
-    ("rise", "Social media", r"social media|online platform", True),
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated (?:employment )?decision|algorithmic|deepfake|deep fake|\bgenerative|chatbot)|\bAI\b", False),
+    ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+    ("rise", "Warehouses", r"warehouse(?!m[ae]n)", True),
+    ("rise", "Menstrual products", r"menstrua|feminine hygiene", True),
+    ("rise", "Reproductive health care", r"reproductive health", True),
+    ("rise", "E-bikes and scooters", r"electric[- ]assist(?:ed)? bicycle|electric (?:bicycle|scooter|motorized scooter)|e-bikes?\b|low-speed electric|motorized scooter", True),
+    ("rise", "Nuclear power", r"nuclear (?:energy|power|reactor|generat|facilit)|small modular|advanced reactor|microreactor|advanced nuclear", True),
+    ("rise", "Batteries and energy storage", r"batter(?:y|ies)|energy storage", True),
+    ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen|illegal alien|undocumented", True),
+    ("rise", "Social media", r"social media|social networking|online platform", True),
     ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
 ]
-# Old wording -> new wording, for the same thing: none picked yet for New Jersey.
-WORDING = []
+# Old wording -> new wording, for the same thing.
+WORDING = [
+    (("“marijuana”", r"marijuana|marihuana"), ("“cannabis”", r"cannabis"),
+     "New Jersey's 2021 law legalizing adult use switched the statutes from “marijuana” to “cannabis.”"),
+]

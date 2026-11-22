@@ -138,5 +138,10 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most across the sessions shown, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Only one subject moved
+# clearly in 2024-26. Matched on title and summary.
+TRENDS = [
+    ("rise", "Affordable housing", r"low[- ](?:and|or) moderate[- ]income housing|comprehensive permit|affordable housing", True),
+]
 WORDING = []

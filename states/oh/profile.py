@@ -110,5 +110,13 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most across the General Assemblies shown, picked by hand
+# from an automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Ohio's records
+# carry only a short title, so only the clearest shifts. Matched on the title.
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated decision|algorithmic|deepfake|deep fake|synthetic media|\bgenerative|chatbot)|\bAI\b", False),
+    ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+    ("rise", "Property tax", r"property tax|ad valorem|homestead exemption|property taxation", True),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic|sars-cov", True),
+]
 WORDING = []
