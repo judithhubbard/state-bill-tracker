@@ -614,10 +614,12 @@ def check(state):
     # Committee agendas (the newest session's, as build_data.py reads them): every bill named must be a record's number (a
     # number written another way, "HB0005" or "H.B. 5", shows nothing), each entry a committee with its house and a local
     # ISO time. LOOK at the count, so a reader that stops finding meetings mid-session is noticed.
-    if hasattr(C, "agendas") and loaded:
+    # (New York has no agendas(): its file, data/agendas_<session>.json from fetch_agendas.py, as build_data.py reads it.)
+    ny_file = os.path.join(P.DATA, f"agendas_{max(loaded)}.json") if loaded and not hasattr(C, "agendas") else ""
+    if (hasattr(C, "agendas") or os.path.exists(ny_file)) and loaded:
         s = max(loaded)
         try:
-            ag = C.agendas(s) or {}
+            ag = (C.agendas(s) if hasattr(C, "agendas") else json.load(open(ny_file))) or {}
         except Exception as e:  # (a reader that fails here fails the build too)
             ag = {}
             say(state, "FAIL", f"{s}: agendas() failed: {e!r}")
