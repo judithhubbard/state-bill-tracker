@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 
 from states.az import profile as P
 from states.undated import settle
+from states import letters as L
 
 HOUSE = {"S": "Senate", "H": "House"}
 ORG = {"upper": "S", "lower": "H", "executive": "G"}
@@ -217,6 +218,26 @@ def roster(session):
     return resolve
 
 
+def veto_message(session, p, stage, day):
+    """The governor's veto letter (vetoes/<HB2091>.json: azleg.py's OCR of the scanned letter from www.azleg.gov's
+    /govlettr/) -> the record's vetoMemo {year, signer, text, ocr, url}, or None. The reasons start after the salutation
+    ("Dear Speaker Montenegro:") and end at "Sincerely,"."""
+    try:
+        with open(os.path.join(folder(session), "vetoes", f"{p}.json"), encoding="utf-8") as f:
+            got = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if stage != 6 or not got.get("raw"):
+        return None
+    day = day or f"{session}-06-30"
+    gov = P.governor_on(day)
+    # ("$B1001": OCR's S read as a dollar sign in a bill number.)
+    text_ = L.cut([re.sub(r"\$B(?= ?\d)", "SB", t) for t in L.ocr_letter(got["raw"], gov)])
+    if len(text_) < 100:
+        return None
+    return {"year": int(day[:4]), "signer": gov, "text": text_, "ocr": bool(got.get("ocr")), "url": got["url"]}
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     path = os.path.join(P.DATA, f"contacts_{session}.json")
@@ -378,7 +399,8 @@ def load_session(session):
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
             "chapter": int(chapter) if chapter and stage == 5 else None,
-            "veto": None, "memo": "", "vetoMemo": None,
+            "veto": None, "memo": "",
+            "vetoMemo": veto_message(session, p, stage, dates(lambda h, t: t == "VETOED")[:10]),
             "simText": title,
             "comm": comm if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),

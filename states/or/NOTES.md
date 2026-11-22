@@ -16,4 +16,17 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   who asked. Joint committees (Ways and Means) are listed for both houses. Governor 5 weekdays, or 30 business days after
   adjournment. Separate Senate (30) and House (60) districts by city or county.
 - **The next session's bills (2026-11-22):** from November `main()` asks the API once a run for one measure of next year's session (Measures, `$top=1`) and reads its tables, into data/or/<year>R1/, only once one is there (2025's pre-session filed measures were created 2024-12-31; 2027R1 wasn't in LegislativeSessions on 2026-11-22). The fetcher writes no incomplete marker.
-- **Veto letters (looked into 2026-11-22; not read):** oregon.gov/gov/Documents/<SB-976>_Veto_Letter.pdf is predictable from the bill number, but SB 976's is a scan with no text layer. OCR would be the owner's decision.
+- **Veto letters (2026-11-22, read by OCR, the owner's decision):** the Governor's letters are scans on oregon.gov/gov/Documents
+  (robots.txt allows it). `veto_letters()` in fetch.py, after the tables: for 2025 on, each vetoed measure's (the
+  Measures `Vetoed` flag, or "Governor vetoed" / "Governor signed with line-item veto" in its history) letter under
+  SB302_Veto_Letter.pdf or SB-976_Veto_Letter.pdf (both names are used); for 2023, Kotek's letters to the Secretary of
+  State are one 21-page scan, 2023_Bill_Letters.pdf (from her 2023-08-04 newsroom post; `COMPILATIONS`), read whole into
+  2023R1/vetoes/_letters.json, and `veto_message()` in convert.py picks the letter whose head (down to "Dear ...") names
+  the bill (the compilation's signing letters are never shown). Each letter is read once (states/letters.py's
+  `scanned()`), two seconds apart, at most 8 minutes a run; a measure found under neither name is asked again weekly
+  (vetoes/asked.json). Not found on 2026-11-22: SB 736, SB 875, SB 1047 (2025) and HB 4177 (2026) are under other names
+  (the newsroom posts for SB 976 and SB 1047 link "SB-1047_Veto_Letter.pdf", so SB 1047 should be found on its run; the
+  data check LOOKs at HB 4177). 2024 had no vetoes; 2022 is Brown's (none). Shown: vetoed bills, and SB 1095 and SB 5506
+  of 2023 as line-item vetoes. Quality (SB 302, SB 976, HB 3795 of 2025 and the 2023 compilation, checked against the
+  page images): typed letters, word-perfect apart from bullets read as "e" (put back as "•") and specks in the margin
+  read as marks (dropped before paragraphs are joined).

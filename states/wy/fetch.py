@@ -27,10 +27,11 @@ A finished year's members and committees are read once. data/wy/incomplete says 
 was never downloaded after it (a failed refresh keeps the last copy); it is removed when nothing is missing.
 Usage: python3 states/wy/fetch.py [year]   (default: every year above; a single year leaves the marker alone)
 """
-import json, os, re, sys, time, urllib.error, urllib.request
+import glob, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from datetime import date, datetime, timedelta, timezone
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
+from states import letters as L
 
 LSO = "https://lsoservice.wyoleg.gov/api"
 API = "https://api.wyoleg.gov/v1"
@@ -170,6 +171,48 @@ def bills(year, folder, live):
     return len(stamps)
 
 
+def get_pdf(url):
+    """A PDF's bytes, or None."""
+    for attempt in range(3):
+        time.sleep(1)
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": AGENT})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code in (403, 404, 410):
+                return None
+            time.sleep(10 * (attempt + 1))
+        except OSError:
+            time.sleep(10 * (attempt + 1))
+    return None
+
+
+def veto_letters(year, folder, minutes=8):
+    """The governor's veto letter each vetoed (or line-item vetoed) bill links ("Governor's Veto Message" / "Governor's
+    Line Item Veto Message": wyoleg.gov/2025/Veto/HB0036-Veto.pdf), read once by OCR into vetoes/<HB0036>.json
+    (states/letters.py's scanned(): the letters are scans with no text). At most `minutes` a run; the rest next run.
+    Never holds Wyoming back."""
+    if not L.ocr_ready():
+        print(f"{year}: veto letters: pdftoppm or tesseract isn't installed", flush=True)
+        return
+    stop_at = time.time() + minutes * 60
+    todo = []
+    for path in sorted(glob.glob(os.path.join(folder, "bills", "*.json"))):
+        n = os.path.basename(path)[:-5]
+        link = next((v.get("vetoLinkPath") for v in (load(path) or {}).get("vetoes") or []
+                     if re.search(r"Veto Message", v.get("vetoLinkText") or "", re.I) and v.get("vetoLinkPath")), None)
+        if link and not os.path.exists(os.path.join(folder, "vetoes", f"{n}.json")):
+            todo.append((n, "https://wyoleg.gov/" + urllib.parse.quote(link.lstrip("/"))))
+    got = 0
+    for n, url in todo:
+        if time.time() > stop_at:
+            break
+        if L.scanned(os.path.join(folder, "vetoes"), n, url, get_pdf):
+            got += 1
+    print(f"{year}: veto letters: {got} of {len(todo)} read now", flush=True)
+
+
 def members(year, folder, live):
     for house in ("H", "S"):
         path = os.path.join(folder, f"members_{house}.json")
@@ -279,6 +322,10 @@ def main():
         committees(year, folder, live)
         bills(year, folder, live)
         READ.append(year)
+        try:
+            veto_letters(year, folder)
+        except Exception as e:  # never holds Wyoming back
+            print(f"{year}: veto letters: failed ({type(e).__name__})", flush=True)
     if not ONLY:
         try:
             agendas(YEAR)  # never holds Wyoming back

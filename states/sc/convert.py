@@ -28,6 +28,7 @@ from zoneinfo import ZoneInfo
 
 from states.sc import profile as P
 from states.undated import settle
+from states import letters as L
 
 HOUSE = {"S": "Senate", "H": "House"}
 CH = {"House": "H", "Senate": "S"}
@@ -462,6 +463,38 @@ def committee_name(c):
     return re.sub(r"^Regulations, Admin\. Procedures, Artificial Intelligence and Cybersecurity$", "Regulations and Administrative Procedures", c)
 
 
+# OCR slips in the governor's letters (states/letters.py fixes the general ones): "$.C." for "S.C.", the Roman numerals
+# of the constitution's articles ("art. IH", "Article Til", "34([X)").
+SC_FIXES = [(re.compile(r"\$\.C\."), "S.C."), (re.compile(r"\b(art(?:icle|\.)\s+)(?:IH|Ill|Til|TI|lI|Il)\b", re.I), r"\1III"),
+            (re.compile(r"\(\[X\)|\(lX\)"), "(IX)"), (re.compile(r"\{t\]"), "[t]")]
+
+
+def veto_message(session, p, stage, day):
+    """The governor's veto letter (vetoes/<H3969>.json: fetch.py's veto_letters(), the scanned PDF from governor.sc.gov
+    read by OCR) -> the record's vetoMemo {year, signer, text, ocr, url}, or None. Only a veto that stands (stage 6): an
+    overridden bill's letter isn't shown. The letterhead's footer ("State House * 1100 Gervais Street ...") is left out
+    wherever OCR read it."""
+    if stage != 6:
+        return None
+    try:
+        with open(os.path.join(folder(session), "vetoes", f"{p}.json"), encoding="utf-8") as f:
+            got = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not got.get("raw"):
+        return None
+    day = day or f"{session + 1}-06-30"
+    gov = P.governor_on(day)
+    paras = [t for t in L.ocr_letter(got["raw"], gov) if not re.search(r"Gervais\s+Street|Telephone:\s*803", t, re.I)]
+    for pat, rep in SC_FIXES:
+        paras = [pat.sub(rep, t) for t in paras]
+    text_ = L.cut(paras)
+    # (The letter names its bill, "R-70, H. 3969": one that doesn't is another bill's, or misread.)
+    if len(text_) < 150 or not re.search(rf"\b{p[0]}\.?\s*{p[1:]}\b", got["raw"]):
+        return None
+    return {"year": int(day[:4]), "signer": gov, "text": text_, "ocr": bool(got.get("ocr")), "url": got["url"]}
+
+
 def load_session(session):
     """Read one General Assembly's bills: (records, bill number -> record index, fetched time, delegation)."""
     bills = load(session, "bills", {}) or {}
@@ -867,6 +900,7 @@ def record(session, p, b, seat, act_row):
     }
     if item and stage == 5:
         rec["vers"][0]["itemVeto"] = True
+    rec["vetoMemo"] = veto_message(session, p, stage, rec["keyDates"][6][:10])
     return rec, what
 
 

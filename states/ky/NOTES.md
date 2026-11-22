@@ -73,3 +73,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2026-02-17 (6 meetings, today set to that day) plus three committees' materials pages and agenda PDFs read live: 43
   bills on 16 meetings, all but the two HJRs matching records. Untested live: a session-time calendar read by this code
   (its markup is from the Wayback Machine's copies), and how early agendas reach the materials pages.
+- **Veto messages (2026-11-22, OCR, the owner's decision):** each vetoed or line-item vetoed bill's record page links
+  "Governor's Veto Message" (/record/26rs/sb70/veto.pdf; 29 in 2024, 30 in 2025, 39 in 2026, most of them overridden).
+  They are scans with no text layer. `veto_letters()` in fetch.py, after the agendas, reads each once by OCR into
+  <year>/vetoes/<SB70>.json (states/letters.py's `scanned()`; at most 6 minutes a year a run, the rest next run).
+  `veto_message()` in convert.py keeps the reasons: from after "I, Andy Beshear, Governor ... do hereby veto the
+  following:" (and "Senate Bill 70 of the 2026 Regular Session ... in its entirety.") to "This, the 19th day of March,
+  2025." A budget's line-item letter repeats that sentence for each part ("Page 8, line 21, after "annually" delete ...",
+  then "I am vetoing this part because ..."); it goes on the law as kind "line-item". A veto the General Assembly
+  overrode isn't shown (the page shows a message only on a bill still vetoed or a line-item law; the letters are kept, so
+  showing them on overridden laws would need only that). Quality on four letters (SB 70 of 2026, HB 4 of 2025, HB 18 and
+  the 8-page HB 6 of 2024): the typed text, italics too, reads with almost no errors ("Iam", "T am", fixed in the
+  converter); the stamps, signatures and the "This, the 19th day" line come out garbled and are cut.

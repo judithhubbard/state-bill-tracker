@@ -43,6 +43,7 @@ import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
+from states import letters as L
 
 SITE = "https://www.ncleg.gov"
 WS = "https://webservices.ncleg.gov"
@@ -908,6 +909,59 @@ def finish():
         os.remove(marker)
 
 
+def veto_letter(folder, num, url):
+    """One veto document read by OCR into vetoes/<H96>.json ({url, ocr, raw, engine, read}: states/letters.py's
+    scanned() format), once. Not scanned() itself: some of these PDFs carry Acrobat's own OCR as a text layer (":Nortfi
+    Carol1na"), which scanned() would keep; tesseract reads them all the same way. Only the first pages: the governor's
+    message is the first page or two, the ratified bill follows."""
+    path = os.path.join(folder, "vetoes", f"{num}.json")
+    if os.path.exists(path):
+        return True
+    body = get_summary(url, binary=True)
+    if not isinstance(body, bytes) or body[:5] != b"%PDF-":
+        return False
+    raw = L.ocr_pdf(body, pages=3)
+    if raw is None:
+        return False
+    save(path, {"url": url, "ocr": True, "raw": raw, "engine": L.ocr_engine(), "read": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")})
+    return True
+
+
+def veto_letters(years, minutes=8):
+    """The governor's objections and veto message for each vetoed bill: the "Veto Document" its history links on the
+    "Vetoed" line (webservices.ncleg.gov/ViewBillDocument/2025/7283/0/H96-BD-NBC-16795: the signed message, then the
+    ratified bill with the clerk's stamps, scanned). At most `minutes` a run, two seconds apart (the crawl delay); what
+    isn't read now is read next run. A refusal stops only this."""
+    if not L.ocr_ready():
+        print("veto letters: pdftoppm or tesseract isn't installed", flush=True)
+        return
+    stop_at = time.time() + minutes * 60
+    todo = []
+    for year in years:
+        folder = os.path.join(DATA, str(year))
+        bills_dir = os.path.join(folder, "bills")
+        for f in sorted(os.listdir(bills_dir)) if os.path.isdir(bills_dir) else []:
+            num = f[:-5]
+            if not f.endswith(".json") or os.path.exists(os.path.join(folder, "vetoes", f"{num}.json")):
+                continue
+            b = load(os.path.join(bills_dir, f)) or {}
+            href = next((d.get("href") for h in b.get("history") or [] if re.match(r"Vetoed\b", h.get("action") or "")
+                         for d in h.get("documents") or [] if re.search(r"Veto", d.get("label") or "") and d.get("href")), None)
+            # (Not for a veto both houses overrode: the page shows only vetoes that stand.)
+            if href and not any(re.search(r"Veto Overridden", h.get("action") or "", re.I) for h in b.get("history") or []):
+                todo.append((folder, num, href))
+    got = 0
+    try:
+        for folder, num, href in todo:
+            if time.time() > stop_at or out_of_time():
+                break
+            os.makedirs(os.path.join(folder, "vetoes"), exist_ok=True)
+            got += bool(veto_letter(folder, num, href))
+    except Refused as e:
+        print(f"veto letters: stopped ({e})", flush=True)
+    print(f"veto letters: {got} of {len(todo)} read now", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     if SUMMARIES_ONLY:
@@ -931,6 +985,10 @@ def main():
         agendas(CURRENT)
     except Exception as e:
         print(f"agendas: failed ({type(e).__name__}: {e})", flush=True)
+    try:  # never holds the run or the copy's completeness
+        veto_letters(list(range(FIRST, CURRENT + 1, 2)))
+    except Exception as e:
+        print(f"veto letters: failed ({type(e).__name__}: {e})", flush=True)
     try:  # last, in the time left; whatever happens here, the copy's completeness is already settled
         summaries(list(range(FIRST, CURRENT + 1, 2)))
     except Exception as e:

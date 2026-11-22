@@ -12,9 +12,16 @@ Constitution of Arizona") from referred laws ("enacting and ordering the submiss
 the rest; Open States has only the short titles. Each is read once, and again after a strike-everything amendment
 (DPA/SE), from the version the amending house passed. About 100 a year, so the first pass builds up over several runs
 (it stops after RUN_LIMIT seconds, leaving time for the next step), those that went furthest first.
+
+Last, the governor's veto letters (/govlettr/57leg/1R/hb2091.pdf; the governor's own copies are on mcusercontent.com,
+whose robots.txt bars every program), for each bill Open States shows vetoed, read once into data/az/<year>/vetoes/
+<HB2091>.json by OCR (states/letters.py's scanned(): the letters are scans). At most VETO_LIMIT seconds a run (about ten
+letters at the crawl delay), the newest year first; a letter not there (404) is asked for again after a month.
 Usage: python3 states/az/azleg.py
 """
 import glob, html, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from states import letters as L
 from datetime import date, timedelta
 
 SITE = "https://www.azleg.gov"
@@ -23,6 +30,7 @@ AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/
 DELAY = 120  # robots.txt: Crawl-delay: 120
 WEEK = 7 * 86400
 RUN_LIMIT = 75 * 60  # GitHub gives this step 90 minutes
+VETO_LIMIT = 22 * 60  # veto letters, a run
 START = time.time()
 _last = [0.0]
 # Ceremonial resolutions, plain from their short titles; their texts aren't read.
@@ -260,6 +268,70 @@ def agendas():
           f"{read} PDFs read now" + (f", {left} left for later runs" if left > 0 else ""), flush=True)
 
 
+def get_bytes(path):
+    """A file's bytes at the crawl delay; None when it can't be read (MISSING_LETTER for a 404)."""
+    wait = _last[0] + DELAY - time.time()
+    if wait > 0:
+        time.sleep(wait)
+    _last[0] = time.time()
+    try:
+        with urllib.request.urlopen(urllib.request.Request(SITE + path, headers={"User-Agent": AGENT}), timeout=120) as r:
+            return r.read()
+    except urllib.error.HTTPError as e:
+        print(f"{path}: {e}", flush=True)
+        return MISSING_LETTER if e.code == 404 else None
+    except Exception as e:
+        print(f"{path}: {e}", flush=True)
+        return None
+
+
+MISSING_LETTER = b""
+
+
+def veto_letters():
+    """Each vetoed bill's letter (see the top), read once by OCR. Never holds Arizona back."""
+    if not L.ocr_ready():
+        print("azleg.gov: veto letters: pdftoppm or tesseract isn't installed", flush=True)
+        return
+    started = time.time()
+    root = os.path.dirname(DATA)
+    missing_path = os.path.join(DATA, "veto_letters_missing.json")
+    try:
+        missing = json.load(open(missing_path))
+    except (OSError, ValueError):
+        missing = {}
+    month_ago = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 30 * 86400))
+    todo = []
+    for year in sorted((int(os.path.basename(f)) for f in glob.glob(os.path.join(root, "[0-9]" * 4))), reverse=True):
+        leg, part = 56 + (year - 2023) // 2, "1R" if year % 2 else "2R"
+        for f in sorted(glob.glob(os.path.join(root, str(year), "bills", "*.json"))):
+            n = os.path.basename(f)[:-5]
+            if os.path.exists(os.path.join(root, str(year), "vetoes", f"{n}.json")) or missing.get(f"{year}/{n}", "") > month_ago:
+                continue
+            try:
+                b = json.load(open(f))
+            except (OSError, ValueError):
+                continue
+            if any("executive-veto" in (a.get("classification") or []) for a in b.get("actions") or []):
+                todo.append((year, n, f"/govlettr/{leg}leg/{part}/{n.lower()}.pdf"))
+    got = 0
+    for year, n, path in todo:
+        if time.time() - started + DELAY > VETO_LIMIT or time.time() - START + DELAY > RUN_LIMIT:
+            break
+        def fetch(url, n=n, year=year):
+            data = get_bytes(path)
+            if data is MISSING_LETTER:
+                missing[f"{year}/{n}"] = time.strftime("%Y-%m-%d", time.gmtime())
+                return None
+            return data
+        if L.scanned(os.path.join(root, str(year), "vetoes"), n, SITE + path, fetch):
+            got += 1
+    with open(missing_path + ".tmp", "w") as f:
+        json.dump(missing, f, indent=0, sort_keys=True)
+    os.replace(missing_path + ".tmp", missing_path)
+    print(f"azleg.gov: veto letters: {got} of {len(todo)} read now", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     try:  # the agendas first: they change daily in session, and the weekly committee pages could use up the run
@@ -274,6 +346,10 @@ def main():
         keep(f"committee_{i}", f"/standing-committee/?committeeId={i}")
     print(f"azleg.gov: {len(ids)} committees, rosters saved", flush=True)
     resolutions()
+    try:
+        veto_letters()
+    except Exception as e:  # never breaks the run
+        print(f"azleg.gov: veto letters failed ({type(e).__name__})", flush=True)
 
 
 if __name__ == "__main__":

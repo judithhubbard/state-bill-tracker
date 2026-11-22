@@ -24,3 +24,22 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   governor 10 days without Sundays or 20 after adjournment). Leaders: the Speaker, and for the Senate the Lieutenant
   Governor (not a senator). Totals for 2025 to check against: 1,047 signed, 140 filed without signature, 26 vetoed
   (reports/signedbygov.htm etc. on the FTP site).
+- **Veto messages (2026-11-22):** the governor's objections, from two sources. (1) The journals the site already reads
+  (`journal_vetoes()` in convert.py): a veto during the session is a message read in a house ("TO THE MEMBERS OF THE
+  HOUSE OF REPRESENTATIVES AND SENATE ..." or "... SENATE AND HOUSE ...": "do hereby disapprove and veto House Bill No.
+  353 ... due to the following objections:"), and the Senate Journal's last day prints every post-session proclamation
+  for Senate bills (88R: 53). The reasons run from "the following objections:" to "Since the ... Legislature ... by its
+  adjournment" / "Since you remain gathered" / "Respectfully submitted". (2) House bills vetoed after the session are in
+  no journal read here: `states/tx/vetoes.py` (run by fetch.py, 8 minutes at most, never holds Texas back) reads the
+  governor's scans by OCR (states/letters.py): the legislative statements' list (gov.texas.gov/news/category/legislative,
+  2021's one post per veto, "HB_1193_Veto_Statement.pdf") and the 2025 special session announcement's
+  VETO_proclamations_SCANS_2025-06-22_(2).pdf (34 pages, one proclamation a page), split by the bill each page vetoes
+  into <code>/vetoes/<HB305>.json; data/tx/veto_pdfs.json lists the PDFs read, so none is read twice. Messages from
+  scans carry `ocr` and the PDF's `url`. The General Appropriations Act's line-item proclamations (SB 1) are left out.
+  Counts on 2026-11-22 (journals, plus 4 OCR'd locally as a test): 2021 9 of 20 (the other 11 House bills' posts come
+  with the first CI run), 2023 55 of 76, 2025 18 of 26 (the rest of the 2025 scan with the first run). 2023's 21
+  post-session House vetoes have no allowed source: the Legislative Reference Library's scans
+  (lrl.texas.gov/scanned/vetoes/88/...) are barred by its robots.txt (Disallow: /*.pdf), the Texas Register
+  (sos.texas.gov) answers 403, and gov.texas.gov posted none for 2023. OCR quality: the typed proclamations read
+  essentially word for word (HB 305, 413, 449 of 2025, HB 1193 of 2021 checked against the page images); only the
+  blackletter heading ("Governor of the State of Cexaz") and signatures misread, and both are cut.

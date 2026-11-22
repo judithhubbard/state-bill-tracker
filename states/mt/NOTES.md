@@ -49,4 +49,16 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2027. The governor's phone and contact page are from gov.mt.gov/contact (checked by program 2026-11-09, not by the owner).
   Places (`towns.py`, run once): cities, towns, Census-designated places and counties, separate Senate (50) and House
   (100) lists (Senate District n is House Districts 2n-1 and 2n).
-- **Veto letters (looked into 2026-11-22; not read):** api.legmt.gov's documents/v1/documents/getBillOther lists each vetoed bill's "VetoLetter" (and the override poll, "PollingResult") with a docs.legmt.gov download-ticket link, but the letters are scans with no text layer (HB 182 of 2025). They need OCR, the owner's decision; at the crawl delay of 10 s, two requests a veto.
+- **Veto letters (2026-11-22, read by OCR, the owner's decision):** `veto_letters()` in fetch.py asks, for each bill whose
+  record mentions a veto (34 in 2023, 58 in 2025: vetoes, line-item vetoes, amendatory vetoes), the Bill Explorer's
+  documents list (docs/v1/documents/getBillOther?legislatureOrdinal=69&sessionOrdinal=20251&billType=HB&billNumber=182;
+  2023 is legislatureOrdinal 68, sessionOrdinal 20231), takes the letter (DocumentType "VetoLetter"; 2023's have no type,
+  so a file name like "HB0033GovVeto.pdf", never the "VetoPoll"; a re-upload "HB0002GovVeto(1).pdf" after the original)
+  and reads it once by OCR (states/letters.py's `scanned()`) into <year>/vetoes/<HB182>.json. Two requests a letter at the
+  10-second delay, at most 10 minutes a run; a bill listed with no letter (amendatory vetoes have none) is asked again a
+  week later (vetoes/asked.json). The link is docs.legmt.gov's download ticket, the one the Bill Explorer links (the same
+  ticket each time it's asked). `veto_message()` in convert.py keeps the letter after "Dear Speaker ... and President
+  ...:" up to "Sincerely" (`tidy()` drops margin specks read as marks, "They’ ve", the budget's footnote numbers);
+  vetoed bills show it, HB 2 (2025) and HB 5 (2023) as line-item vetoes; laws passed over a veto keep it unshown. Quality
+  (HB 182 and HB 2 of 2025, HB 33 of 2023, checked against the page image): typed letters, near word-perfect ("officialsk—"
+  for "officials—" in HB 33).

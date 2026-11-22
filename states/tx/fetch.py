@@ -140,6 +140,11 @@ if __name__ == "__main__":
         if os.path.isdir(os.path.join(P.DATA, P.code_of(year), "billhistory")):
             journals.main(year)
             journals.senate(year, journals.senate_dates(year))
+    from states.tx import vetoes  # the governor's scanned veto proclamations no journal prints (OCR)
+    try:
+        vetoes.main(minutes=8)
+    except Exception as e:  # never holds the run back
+        print(f"veto proclamations: failed ({type(e).__name__}: {e})")
     from states.tx import texts  # "What it does", from the bill analyses
     if os.path.isdir(os.path.join(P.DATA, P.code_of(CURRENT), "billhistory")):
         texts.main(CURRENT)

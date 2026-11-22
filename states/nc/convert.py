@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 
 from states.nc import profile as P
 from states.undated import settle
+from states import letters as L
 
 HOUSE = {"S": "Senate", "H": "House"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
@@ -87,6 +88,37 @@ def decode(h, amendment):
     if re.match(r"vetoed", low):
         return "G", "VETOED"
     return house or "G", a
+
+
+def veto_message(session, p, stage, day):
+    """The governor's objections and veto message (vetoes/<H96>.json: fetch.py's OCR of the scanned veto document) ->
+    the record's vetoMemo {year, signer, text, ocr, url}, or None. Only a veto that stands (stage 6). The reasons run
+    from after the bill's title ("House Bill 96: AN ACT ...") to "Therefore, I veto the bill."; the clerk's stamps and
+    the ratified bill after it are left out. A document that doesn't name its own bill isn't used."""
+    if stage != 6:
+        return None
+    try:
+        with open(os.path.join(folder(session), "vetoes", f"{p}.json"), encoding="utf-8") as f:
+            got = json.load(f)
+    except (OSError, ValueError):
+        return None
+    raw = got.get("raw") or ""
+    own = rf"\b{'House' if p[0] == 'H' else 'Senate'} Bill {p[1:]}\b"
+    if not re.search(own, raw):
+        return None
+    day = day or f"{session}-07-01"
+    gov = P.governor_on(day)
+    # (The signature can follow the last sentence with no blank line, "Therefore, I veto the bill." / "Josh Stein": the
+    # two then read as one short fragment, which ocr_letter() drops.)
+    raw = re.sub(r"(veto (?:the|this) bill\.)[ \t]*\n", r"\1\n\n", raw, flags=re.I)
+    paras = L.ocr_letter(raw, gov, start=rf"^{own}\s*:")
+    end = next((i for i, t in enumerate(paras) if re.search(r"\bI (?:hereby )?veto (?:the|this) bill\b", t, re.I)), None)
+    if end is None:
+        return None  # (not read as expected: no message rather than a stray page)
+    text_ = L.cut(paras[:end + 1])
+    if len(text_) < 80:
+        return None
+    return {"year": int(day[:4]), "signer": gov, "text": text_, "ocr": True, "url": got["url"]}
 
 
 def load_session(session):
@@ -244,6 +276,7 @@ def load_session(session):
                       "cosp": len(cos), "statusDesc": desc, "committee": comm if place == "committee" and stage in (0, 2) else None,
                       "actions": [[s[0], s[2]] for s in steps]}],
         }
+        rec["vetoMemo"] = veto_message(session, p, stage, rec["keyDates"][6][:10])
         index[p] = len(recs)
         recs.append(rec)
     settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)

@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 from fetch_contacts import name_key
 from states.wy import profile as P
 from states.undated import settle
+from states import letters as L
 
 HOUSE = {"S": "Senate", "H": "House"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
@@ -177,6 +178,29 @@ def roll_calls(b):
                 r[k] = ", ".join(xs[:h])
         rcs.append(r)
     return rcs
+
+
+def veto_message(session, p, stage, day):
+    """The governor's veto letter (vetoes/<HB0036>.json: fetch.py's OCR of the scanned PDF) -> the record's vetoMemo:
+    {year, signer, text, ocr, url}, or None. A law with item vetoes gets it as kind "line-item"."""
+    m = re.match(r"([A-Z]+)0*(\d+)$", p)
+    key = f"{m.group(1)}{int(m.group(2)):04d}" if m else p  # the files' numbers: HB0178
+    try:
+        with open(os.path.join(folder(session), "vetoes", f"{key}.json"), encoding="utf-8") as f:
+            got = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if stage not in (5, 6) or not got.get("raw"):
+        return None
+    day = day or f"{session}-03-31"
+    gov = P.governor_on(day)
+    text_ = L.cut(L.ocr_letter(got["raw"], gov))
+    if len(text_) < 150:
+        return None
+    m = {"year": int(day[:4]), "signer": gov, "text": text_, "ocr": bool(got.get("ocr")), "url": got["url"]}
+    if stage == 5:
+        m["kind"] = "line-item"
+    return m
 
 
 def load_session(session):
@@ -384,7 +408,8 @@ def load_session(session):
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
             "chapter": int(chapter.group(chapter.lastindex or 0)) if chapter and stage == 5 else None,
-            "veto": None, "memo": "", "vetoMemo": None,
+            "veto": None, "memo": "",
+            "vetoMemo": veto_message(session, p, stage, dates(lambda h, t: t in ("VETOED", "SIGNED"))[:10]),
             "simText": f"{title} {long_title}",
             "comm": comm if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),

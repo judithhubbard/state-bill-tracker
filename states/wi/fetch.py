@@ -37,6 +37,7 @@ from collections import Counter
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
+from states import letters as L
 
 SITE = "https://docs.legis.wisconsin.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "wi"))
@@ -608,6 +609,29 @@ def veto_messages(year, folder, listing, path_of):
             f.write(t)
         got += 1
     print(f"{year}: veto messages: {got} of {len(todo)} read now", flush=True)
+    # The scans (an empty .txt: 2023-24's budget SB 145 and a few big ones), read once by OCR into vetoes/<SB145>.json
+    # ({url, ocr, raw}: states/letters.py's scanned()), at most 6 minutes a run.
+    if not L.ocr_ready():
+        return
+    stop_at = time.time() + 6 * 60
+    scans = []
+    for num in listing:
+        t = os.path.join(folder, "vetoes", f"{num}.txt")
+        if os.path.exists(t) and not open(t, encoding="utf-8").read().strip() \
+                and not os.path.exists(os.path.join(folder, "vetoes", f"{num}.json")):
+            href = next((d["href"] for d in (load(path_of(num)) or {}).get("links") or [] if d.get("text") == "Veto Message"), None)
+            if href:
+                scans.append((num, href))
+    read = 0
+    for num, href in scans:
+        if time.time() > stop_at or out_of_time():
+            break
+        url = href if href.startswith("http") else SITE + href
+        if L.scanned(os.path.join(folder, "vetoes"), num, url,
+                     lambda u: (lambda d: d if isinstance(d, bytes) else None)(get(u[len(SITE):] if u.startswith(SITE) else u, timeout=180, binary=True))):
+            read += 1
+    if scans:
+        print(f"{year}: scanned veto messages: {read} of {len(scans)} read by OCR now", flush=True)
 
 
 def members_and_committees(year, folder, live):

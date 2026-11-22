@@ -208,7 +208,9 @@ opened (`later()`, `STALE`, `showView()`).
   floor vote's tally on its line, other votes on their own, the governor's due date last), "Who sponsors it"
   (`sponsorsBlock()`, `panelTags()`), `chapterAmendment()`, `signingMemo()`, `vetoMemo()`, `twinLine()`, `lineage()`,
   `similarBlock()`, `verBlock()` (each version's "Every action"), then the official links (`STATE.textLinks()`) and "Copy
-  link to this bill". A watchlist card opened below its row (`watchCard(x, true)`) is the same panel: its own "What you
+  link to this bill". `vetoMemo()` shows a record's `vetoMemo` (build_data.py's `veto_note()`); a message read from a
+  scanned letter by OCR (states/letters.py's `scanned()`/`ocr_letter()`: WY, MT, OR, SC, NC, AZ, KY, TX, a few WI) carries
+  the letter's address and ends with "Read from a scanned letter; a word may be off. Original letter ↗". A watchlist card opened below its row (`watchCard(x, true)`) is the same panel: its own "What you
   can do" (`.wcan`), then `fillDetail()` of a `details.morebill.inplace`. `historyTags()`.
 - **Where you live** (`#whereBox`): `renderMyReps()`, `myReps()`, `setCounty()`, `setTown()`, `setRegion()` (Congress),
   `renderTownReps()`, `renderTownRepsByHouse()`, `lookUpReps()` (Census geocoder's 2026 districts, `STATE.addressLookup`, public

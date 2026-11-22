@@ -4,7 +4,7 @@ odataservice.svc/; see the state-survey-2026-10-31 memory): for each regular ses
 data/or/<session key>/<table>.json. One request at a time; the API pages long tables (odata.nextLink).
 Usage: python3 states/or/fetch.py [first_year]   (default: four years back)
 """
-import json, os, sys, time, urllib.parse, urllib.request
+import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from datetime import date
 
 API = "https://api.oregonlegislature.gov/odata/odataservice.svc"
@@ -69,6 +69,89 @@ def main():
             print(f"{session} {name}: {len(rows)} rows", flush=True)
 
 
+# The Governor's veto letters (scans: OCR). Kotek's 2023 letters to the Secretary of State are one PDF, linked from her
+# newsroom post of 2023-08-04 ("Governor Kotek Issues Final Decision on Vetoes, Signing Letters"); from 2025 each veto
+# has its own, under one of two names (SB302_Veto_Letter.pdf, SB-976_Veto_Letter.pdf). 2024 had no vetoes.
+GOV_DOCS = "https://www.oregon.gov/gov/Documents/"
+COMPILATIONS = {"2023R1": GOV_DOCS + "2023_Bill_Letters.pdf"}
+
+
+def get_pdf(url):
+    """A PDF's bytes; None when it isn't there (404) or can't be read. Two seconds between requests."""
+    time.sleep(2)
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": AGENT})
+        with urllib.request.urlopen(req, timeout=180) as r:
+            body = r.read()
+        return body if body[:5] == b"%PDF-" else None
+    except (urllib.error.URLError, OSError):
+        return None
+
+
+def vetoed(folder):
+    """The session's vetoed (or line-item vetoed) measures: ["SB302", ...], from the saved tables."""
+    try:
+        measures = json.load(open(os.path.join(folder, "Measures.json")))
+        hist = json.load(open(os.path.join(folder, "MeasureHistoryActions.json")))
+    except (OSError, ValueError):
+        return []
+    out = {f"{m['MeasurePrefix']}{m['MeasureNumber']}" for m in measures if m.get("Vetoed")}
+    out |= {f"{h['MeasurePrefix']}{h['MeasureNumber']}" for h in hist
+            if re.match(r"Governor (?:vetoed|signed with line-item veto)", h.get("ActionText") or "", re.I)}
+    return sorted(out)
+
+
+def veto_letters(minutes=8):
+    """Each vetoed measure's veto letter, read once by OCR (states/letters.py) into <session>/vetoes/<SB302>.json, or a
+    session's compilation into vetoes/_letters.json (convert.py picks each bill's letter by its "Re:" line). A measure
+    whose letter isn't at either name is asked again a week later (vetoes/asked.json). At most `minutes` a run."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+    from states import letters as L
+    if not L.ocr_ready():
+        print("veto letters: pdftoppm or tesseract isn't installed", flush=True)
+        return
+    stop_at = time.time() + minutes * 60
+    today = date.today().isoformat()
+    week = date.fromordinal(date.today().toordinal() - 7).isoformat()
+    for session in sorted(os.listdir(DATA)):
+        folder = os.path.join(DATA, session)
+        if not re.fullmatch(r"\d{4}R1", session) or not os.path.isdir(folder):
+            continue
+        out = os.path.join(folder, "vetoes")
+        if session in COMPILATIONS:
+            if not os.path.exists(os.path.join(out, "_letters.json")) and time.time() < stop_at:
+                data = get_pdf(COMPILATIONS[session])
+                raw = L.ocr_pdf(data, pages=60) if data else None
+                if raw:
+                    os.makedirs(out, exist_ok=True)
+                    json.dump({"url": COMPILATIONS[session], "ocr": True, "raw": raw, "engine": L.ocr_engine(), "read": today},
+                              open(os.path.join(out, "_letters.json"), "w"), ensure_ascii=False)
+            continue
+        asked_path = os.path.join(out, "asked.json")
+        try:
+            asked = json.load(open(asked_path))
+        except (OSError, ValueError):
+            asked = {}
+        got = 0
+        todo = [k for k in vetoed(folder) if not os.path.exists(os.path.join(out, f"{k}.json")) and asked.get(k, "") < week]
+        for k in todo:
+            if time.time() > stop_at:
+                break
+            pre, num = re.fullmatch(r"([A-Z]+)(\d+)", k).groups()
+            for url in (f"{GOV_DOCS}{pre}{num}_Veto_Letter.pdf", f"{GOV_DOCS}{pre}-{num}_Veto_Letter.pdf"):
+                data = get_pdf(url)
+                if data:
+                    break
+            if not data:
+                os.makedirs(out, exist_ok=True)
+                asked[k] = today
+                json.dump(asked, open(asked_path, "w"))
+                continue
+            if L.scanned(out, k, url, lambda u: data):
+                got += 1
+        print(f"{session}: veto letters: {got} of {len(todo)} read now", flush=True)
+
+
 def texts():
     """"What it does": each bill's plain-language digest, as data/or/texts_<year>.json."""
     import importlib
@@ -87,5 +170,9 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
     main()
     texts()
+    try:
+        veto_letters()
+    except Exception as e:  # never holds Oregon back
+        print(f"veto letters: failed ({type(e).__name__})", flush=True)
     import importlib
     importlib.import_module("states.or.contacts").main(date.today().year)

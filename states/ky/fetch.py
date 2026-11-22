@@ -71,6 +71,7 @@ from collections import Counter
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
+from states import letters as L
 
 APPS = "https://apps.legislature.ky.gov"
 LEG = "https://legislature.ky.gov"
@@ -628,6 +629,36 @@ def agendas():
         print(f"agendas: stopped ({type(e).__name__}: {e}); kept the last file", flush=True)
 
 
+def veto_letters(year, minutes=6):
+    """The governor's veto message each vetoed (or line-item vetoed) bill's record page links ("Governor's Veto
+    Message": /record/26rs/sb70/veto.pdf), read once into vetoes/<SB70>.json (states/letters.py's scanned(): the
+    letters are scanned, so they're read by OCR). Overridden vetoes too: the record keeps the letter. At most `minutes`
+    a run; the rest next run. Never holds Kentucky back."""
+    if not L.ocr_ready():
+        print(f"{year}: veto letters: pdftoppm or tesseract isn't installed", flush=True)
+        return
+    code = f"{year % 100:02d}rs"
+    folder = os.path.join(DATA, str(year))
+    stop_at = time.time() + minutes * 60
+    todo = []
+    bills = os.path.join(folder, "bills")
+    for name in sorted(os.listdir(bills) if os.path.isdir(bills) else []):
+        k = name[:-5]
+        if not re.fullmatch(r"(HB|SB)\d+", k) or os.path.exists(os.path.join(folder, "vetoes", f"{k}.json")):
+            continue
+        with open(os.path.join(bills, name), encoding="utf-8") as f:
+            page = f.read()
+        if re.search(r"Governor's Veto Message", page):
+            todo.append((k, f"{APPS}/record/{code}/{k.lower()}/veto.pdf"))
+    got = 0
+    for k, url in todo:
+        if time.time() > stop_at or out_of_time():
+            break
+        if L.scanned(os.path.join(folder, "vetoes"), k, url, lambda u: request(u, f"{k} veto letter", raw=True)):
+            got += 1
+    print(f"{year}: veto letters: {got} of {len(todo)} read now", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     # Before the first copy, a run cut off without its summary leaves this, so a partial copy isn't published.
@@ -651,6 +682,14 @@ def main():
         refused = True
     if not ONLY and not refused and not out_of_time():
         agendas()
+    for year in ([] if refused else years):
+        try:
+            veto_letters(year)
+        except Refused as e:
+            print(f"veto letters: stopped, the server refused a request ({e})", flush=True)
+            break
+        except Exception as e:  # never holds Kentucky back
+            print(f"{year}: veto letters: failed ({type(e).__name__})", flush=True)
     missing = never_downloaded(years)
     print(f"run: {STATS['requests']} requests ({STATS['bills']} bills), {round((time.time() - START) / 60)} min"
           + ("; stopped at the time limit" if out_of_time() else "")

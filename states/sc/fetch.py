@@ -83,6 +83,7 @@ from collections import Counter
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
+from states import letters as L
 
 SITE = "https://www.scstatehouse.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "sc"))
@@ -854,6 +855,77 @@ def agendas(session, folder):
           flush=True)
 
 
+# Veto letters
+
+GOV = "https://governor.sc.gov"
+VETO_PAGE = GOV + "/executive-branch/veto-messages"
+# A link on the governor's page: "2025- H. 3969 Personal Delivery Devices (PDF)", "2024- S. 112 Fraudulent Check ...".
+VETO_LINK = re.compile(r'<a [^>]*href="([^"]+\.pdf)"[^>]*>(.*?)</a>', re.S | re.I)
+VETO_NAME = re.compile(r"^\s*(\d{4})\s*-\s*([HS])\.\s*(\d{1,4})\s+(.*)$")
+
+
+def gov_get(url, binary=True):
+    """A file from governor.sc.gov (another host than the Legislature's: its own pace, 2 s apart), or None."""
+    for attempt in range(3):
+        time.sleep(2)
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": AGENT})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                body = r.read()
+            return body if binary else body.decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403, 404, 410, 429):
+                return None
+        except Exception:
+            pass
+        time.sleep(10 * (attempt + 1))
+    return None
+
+
+def veto_letters(found, state, minutes=8):
+    """The governor's veto letters, listed on governor.sc.gov/executive-branch/veto-messages (read once a day), each
+    read once (states/letters.py's scanned(): they are scans, read by OCR) into <first year>/vetoes/<H3969>.json. The
+    link's text names the bill and the year ("2024- S. 112 ..."), which puts it in a General Assembly (2023-24, 2025-26).
+    The budget's line-item veto letters ("Budget Vetoes") are left out: their first pages are a speech about the budget,
+    not the reasons for the items vetoed. At most `minutes` a run; never holds South Carolina back."""
+    if not L.ocr_ready():
+        print("veto letters: pdftoppm or tesseract isn't installed", flush=True)
+        return
+    listing = load(os.path.join(DATA, "veto_letters.json"), None)
+    if listing is None or ago((state.get("veto_letters") or {}).get("read"), 1):
+        page = gov_get(VETO_PAGE, binary=False)
+        got = []
+        for href, label in VETO_LINK.findall(page or ""):
+            name = html.unescape(re.sub(r"<[^>]+>", "", label)).strip()
+            m = VETO_NAME.match(name)
+            if not m or re.search(r"Budget Vetoes|Earmark", name, re.I):
+                continue
+            url = href if href.startswith("http") else GOV + href
+            got.append({"year": int(m.group(1)), "bill": bill_key(m.group(2), m.group(3)), "title": re.sub(r"\s*\(P[DF]+\)?\s*$", "", m.group(4)), "url": url})
+        if got:
+            listing = got
+            save(listing, os.path.join(DATA, "veto_letters.json"))
+            state["veto_letters"] = {"read": TODAY.isoformat()}
+        elif listing is None:
+            print("veto letters: the governor's list couldn't be read", flush=True)
+            return
+    years = {first_year(s) for s in found}
+    todo = []
+    for x in listing:
+        first = x["year"] if x["year"] % 2 else x["year"] - 1
+        folder = os.path.join(DATA, str(first))
+        if first in years and os.path.isdir(folder) and not os.path.exists(os.path.join(folder, "vetoes", f"{x['bill']}.json")):
+            todo.append((folder, x))
+    stop_at = time.time() + minutes * 60
+    read = 0
+    for folder, x in todo:
+        if time.time() > stop_at or out_of_time():
+            break
+        if L.scanned(os.path.join(folder, "vetoes"), x["bill"], x["url"], gov_get):
+            read += 1
+    print(f"veto letters: {read} of {len(todo)} read now ({len(listing)} listed)", flush=True)
+
+
 # The run
 
 
@@ -926,6 +998,11 @@ def main():
             read_committees(state)
         save(state, STATE)
         read_rollcalls(have, state)
+        if not ONLY:
+            try:
+                veto_letters(have, state)
+            except Exception as e:  # never holds South Carolina back
+                print(f"veto letters: failed ({type(e).__name__})", flush=True)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True

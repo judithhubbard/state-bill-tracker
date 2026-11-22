@@ -31,7 +31,7 @@
     "data/tx"
    ],
    "minutes": 60,
-   "run": "python3 states/tx/fetch.py",
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/tx/fetch.py",
    "note": "One file per bill; only changed files after the first copy."
   },
   {
@@ -72,8 +72,8 @@
    "paths": [
     "data/or"
    ],
-   "minutes": 30,
-   "run": "python3 states/or/fetch.py"
+   "minutes": 40,
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/or/fetch.py"
   },
   {
    "name": "Ohio",
@@ -134,7 +134,7 @@
     "data/wi"
    ],
    "minutes": 110,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/wi/fetch.py",
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/wi/fetch.py",
    "note": "One request a second; the first copy takes several runs."
   },
   {
@@ -145,7 +145,7 @@
     "data/az"
    ],
    "minutes": 110,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/openstates_bulk.py az; python3 states/az/fetch.py; python3 states/az/azleg.py && python3 states/az/contacts.py",
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/openstates_bulk.py az; python3 states/az/fetch.py; python3 states/az/azleg.py && python3 states/az/contacts.py",
    "note": "Open States (the free tier's daily quota), then azleg.gov at its two-minute crawl delay (committee agendas first, at most 14 minutes of PDFs: pdftotext)."
   },
   {
@@ -156,7 +156,7 @@
     "data/nc"
    ],
    "minutes": 50,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/nc/fetch.py",
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/nc/fetch.py",
    "note": "Two seconds apart (its robots.txt crawl delay)."
   },
   {
@@ -188,7 +188,7 @@
     "data/wy"
    ],
    "minutes": 40,
-   "run": "python3 states/wy/fetch.py && python3 states/wy/contacts.py"
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/wy/fetch.py && python3 states/wy/contacts.py"
   },
   {
    "name": "Utah",
@@ -287,7 +287,7 @@
     "data/mt"
    ],
    "minutes": 110,
-   "run": "python3 states/mt/fetch.py && python3 states/mt/contacts.py"
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/mt/fetch.py && python3 states/mt/contacts.py"
   },
   {
    "name": "North Dakota",
@@ -347,7 +347,7 @@
     "data/ky"
    ],
    "minutes": 80,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/ky/fetch.py && python3 states/ky/contacts.py"
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/ky/fetch.py && python3 states/ky/contacts.py"
   },
   {
    "name": "Missouri",
@@ -387,7 +387,7 @@
     "data/sc"
    ],
    "minutes": 60,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/sc/fetch.py && python3 states/sc/contacts.py"
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/sc/fetch.py && python3 states/sc/contacts.py"
   },
   {
    "name": "Nebraska",

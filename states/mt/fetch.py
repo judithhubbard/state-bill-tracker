@@ -65,11 +65,12 @@ copy exists keeps that copy and doesn't mark the download incomplete, and once a
 ("whole" in its state.json), votes, committee votes and co-sponsors still to read don't either.
 Usage: python3 states/mt/fetch.py [year]   (default: every session from FIRST_YEAR; a single year leaves the marker alone)
 """
-import gzip, json, os, sys, time, urllib.error, urllib.request
+import gzip, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import Counter
 from datetime import date, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
+from states import letters as L
 
 API = "https://api.legmt.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "mt"))
@@ -390,6 +391,88 @@ def cosponsors(s, folder, state):
     print(f"{s['year']} co-sponsors: {sum(map(len, out.values()))} on {len(out)} bills", flush=True)
 
 
+def get_pdf(url):
+    """A document's bytes from docs.legmt.gov (the same 10-second crawl delay as the API), or None."""
+    for attempt in range(2):
+        if out_of_time():
+            return None
+        wait = LAST[0] + DELAY - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        STATS["requests"] += 1
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": AGENT})
+            with urllib.request.urlopen(req, timeout=180) as r:
+                body = r.read()
+            LAST[0] = time.time()
+            return body
+        except urllib.error.HTTPError as e:
+            LAST[0] = time.time()
+            FAILS[f"HTTP {e.code}"] += 1
+            if e.code in (401, 403, 429):
+                raise Refused(f"{url}: HTTP {e.code}")
+            if e.code == 404:
+                return None
+        except Exception as e:
+            LAST[0] = time.time()
+            FAILS[type(e).__name__] += 1
+        time.sleep(20)
+    return None
+
+
+def letter_of(docs):
+    """The governor's veto letter among a bill's other documents (getBillOther): DocumentType "VetoLetter" (2025 on), or
+    a file name like "HB0033GovVeto.pdf" / "HB0002LineItemVeto.pdf" (2023's have no type); not the override poll
+    ("PollingResult", "HB0033VetoPoll.pdf")."""
+    def attr(d, name):
+        return next((a.get("stringValue") for a in d.get("attributes") or [] if a.get("name") == name), None)
+    # (A copy re-uploaded as "HB0002GovVeto(1).pdf" comes after the original.)
+    for d in sorted(docs if isinstance(docs, list) else [], key=lambda d: bool(re.search(r"\(\d+\)", d.get("fileName") or ""))):
+        kind, name = attr(d, "DocumentType") or "", d.get("fileName") or ""
+        if kind == "VetoLetter" or (not kind and re.search(r"veto", name, re.I) and not re.search(r"poll", name, re.I)):
+            if attr(d, "DocumentLink"):
+                return attr(d, "DocumentLink")
+    return None
+
+
+def veto_letters(s, minutes=10):
+    """Each vetoed (or line-item vetoed) bill's veto letter, read once by OCR (the letters are scans) into
+    vetoes/<HB182>.json (states/letters.py's scanned()). The letter is found in the bill's other documents
+    (docs/v1/documents/getBillOther?legislatureOrdinal=69&sessionOrdinal=20251&billType=HB&billNumber=182, as the Bill
+    Explorer asks): two requests a letter at the crawl delay. The letter's address is docs.legmt.gov's download ticket,
+    the one the Bill Explorer links (the same ticket each time it's asked). A bill whose list has no letter yet is asked
+    again a week later. At most `minutes` a run; never holds Montana back."""
+    folder = os.path.join(DATA, str(s["year"]))
+    if not L.ocr_ready() or not os.path.isdir(os.path.join(folder, "bills")):
+        if not L.ocr_ready():
+            print(f"{s['year']}: veto letters: pdftoppm or tesseract isn't installed", flush=True)
+        return
+    stop_at = time.time() + minutes * 60
+    out = os.path.join(folder, "vetoes")
+    asked_path = os.path.join(out, "asked.json")
+    asked = load(asked_path, {})  # {"HB182": "2026-11-22"}: listed with no letter, that day
+    week = (TODAY - timedelta(days=7)).isoformat()
+    todo = [k for k, b in bills_on_disk(folder).items()
+            if re.search(r"veto", json.dumps(b), re.I) and not os.path.exists(os.path.join(out, f"{k}.json"))
+            and asked.get(k, "") < week]
+    got = 0
+    for k in todo:
+        if time.time() > stop_at or out_of_time():
+            break
+        m = re.fullmatch(r"([A-Z]+)(\d+)", k)
+        q = urllib.parse.urlencode({"legislatureOrdinal": 69 + (s["year"] - 2025) // 2, "sessionOrdinal": f"{s['year']}1",
+                                    "billType": m.group(1), "billNumber": m.group(2)})
+        url = letter_of(request(f"{API}/docs/v1/documents/getBillOther?{q}", f"{s['year']} {k} documents"))
+        if not url:
+            os.makedirs(out, exist_ok=True)
+            asked[k] = TODAY.isoformat()
+            save(asked, asked_path)
+            continue
+        if L.scanned(out, k, url, get_pdf):
+            got += 1
+    print(f"{s['year']}: veto letters: {got} of {len(todo)} read now", flush=True)
+
+
 def begun(s):
     """Whether a session has convened (the first Monday of January). One listed earlier, with bills numbered before it,
     is read when it's there but never holds Montana off the site."""
@@ -481,6 +564,13 @@ def main():
         found = [s for s in found if session_lists(s)]  # the newest first
         for s in found:
             session_details(s)
+        for s in sessions_seen:
+            try:
+                veto_letters(s)
+            except Refused:
+                raise
+            except Exception as e:  # never holds Montana back
+                print(f"{s['year']}: veto letters: failed ({type(e).__name__})", flush=True)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
