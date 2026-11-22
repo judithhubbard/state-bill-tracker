@@ -2142,13 +2142,14 @@ def compute(prev=None):
                 # the calendar lists bills that can come up that day rather than a vote set for it.)
                 for c, w, *kind in agendas.get(re.sub(r"[A-Z]$", "", v["p"]), []):
                     entry = [c.replace(" And ", " and "), w] + [k for k in kind if k]
-                    # A floor day in a house that passed the bill in the week before it: the calendar was printed
-                    # before the vote, or lists the bill for the whole week (Congress's House schedule).
+                    # A floor day in a house that passed the bill that day or in the week before it: the calendar was
+                    # printed before the vote, or lists the bill for the whole week (Congress's House schedule). (The
+                    # vote's own day counts: S6655 of 2025 showed "passed the Senate Jun 4" and "Senate floor vote Jun 4".)
                     if entry[2:3] == ["floor"]:
                         from datetime import date, timedelta
                         passed = r["keyDates"][1 if c.startswith("Senate") else 2] if len(r["keyDates"]) > 2 else ""
                         week = (date.fromisoformat(w[:10]) - timedelta(days=6)).isoformat()
-                        if any(week <= d[:10] < w[:10] for d in (passed or "").split(";") if d):
+                        if any(week <= d[:10] <= w[:10] for d in (passed or "").split(";") if d):
                             continue
                     if entry not in seen:
                         seen.append(entry)
