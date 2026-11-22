@@ -21,6 +21,9 @@ SITE_URL = os.environ.get("SITE_URL", PUBLIC_URL)
 # A page a year: its regular or fiscal session. Extraordinary sessions (2023S1, 2024S2, 2026S1: a few bills each, numbered
 # from HB1001 again) are left out, as Texas's special sessions are.
 YEARS = 1
+# Statistics and /compare/ count each odd year's session and the even year's after it as one two-year cycle, like
+# New York's two-year sessions (build_data.py's CYCLE); each session keeps its own pages.
+STAT_CYCLE = True
 LOWER = "H"
 LOWER_NAME = "House"
 TITLES = {"S": "Sen.", "H": "Rep."}

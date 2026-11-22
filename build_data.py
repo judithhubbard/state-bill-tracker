@@ -17,7 +17,7 @@ Usage: python3 build_data.py            builds every session found in data/
                                         states/<state>/; its data is in the profile's DATA
                                         folder and its pages go in site/<state>/
 """
-import base64, glob, gzip, hashlib, importlib, json, os, re, sys
+import base64, contextlib, glob, gzip, hashlib, importlib, json, os, re, sys
 from fetch_contacts import committee_key, name_key, senate_url
 from collections import Counter, defaultdict
 from stages import STAGE_LABEL, rank
@@ -562,6 +562,56 @@ def without_shells(loaded, hist):
             {s: defaultdict(dict, {k: hist[s][i] for k, i in enumerate(keep[s]) if i in hist[s]}) for s in loaded})
 
 
+# Legislatures elected for two years that hold a different session each year (Arkansas's regular session in odd years
+# and fiscal session in even ones, Wyoming's general and budget sessions, Kentucky's short and long ones): the
+# statistics and /compare/ treat each odd-even pair as one two-year cycle, as New York's two-year sessions are
+# (STAT_CYCLE in the profile). Each session keeps its own page: bills die when it ends.
+CYCLE = bool(getattr(P, "STAT_CYCLE", False))
+SESSION_OF = {}  # id(record) -> its own session, for records pooled into a cycle
+
+
+def cyc(s):
+    """The cycle a session belongs to, named by its first (odd) year; the session itself elsewhere."""
+    return s - (s + 1) % 2 if CYCLE else s
+
+
+def to_cycles(loaded, hist):
+    """Sessions pooled into cycles: {cycle: (records,)} and their histories, other sessions' versions named by cycle."""
+    out, h = {}, {}
+    for s in sorted(loaded):
+        c = cyc(s)
+        recs = out.setdefault(c, ([],))[0]
+        hc = h.setdefault(c, defaultdict(dict))
+        for i, r in enumerate(loaded[s][0]):
+            SESSION_OF[id(r)] = s
+            if i in hist[s]:
+                hc[len(recs)] = {k: [cyc(e[0])] + list(e[1:]) for k, e in hist[s][i].items()}
+            recs.append(r)
+    return out, h
+
+
+@contextlib.contextmanager
+def cycle_years():
+    """While statistics are worked out by cycle: two years each, and the cycle under way is the current one."""
+    global YEARS, CURRENT
+    old = YEARS, CURRENT
+    YEARS, CURRENT = 2, cyc(CURRENT)
+    try:
+        yield
+    finally:
+        YEARS, CURRENT = old
+
+
+def party_map(s, recs):
+    """parties() for a session, or for a cycle each of its sessions' own."""
+    if not CYCLE:
+        return parties(s, recs)
+    out = {}
+    for real in sorted({SESSION_OF.get(id(r), s) for r in recs}):
+        out.update(parties(real, [r for r in recs if SESSION_OF.get(id(r), s) == real]))
+    return out
+
+
 def insights(loaded, hist, current):
     shells = sum(1 for s in loaded for r in loaded[s][0] if r.get("shell"))
     loaded, hist = without_shells(loaded, hist)
@@ -569,7 +619,7 @@ def insights(loaded, hist, current):
     past = [s for s in sorted(loaded) if s != current and s != CURRENT]
     # States whose sessions alternate between long and short (Oregon, Connecticut): compare a session only with past
     # sessions of the same kind, when there is one. A 35-day session with 300 bills isn't a slow 160-day one.
-    past_kind = P.session_kind(current) if hasattr(P, "session_kind") else ""
+    past_kind = P.session_kind(current) if hasattr(P, "session_kind") and not CYCLE else ""
     if past_kind and any(P.session_kind(s) == past_kind for s in past):
         past = [s for s in past if P.session_kind(s) == past_kind]
     # Each topic also comes as "t|g" (general bills only: not about one place, person or group, nor a
@@ -687,7 +737,8 @@ def insights(loaded, hist, current):
 
     # Bills that sat in committee all of the first year: [bills, approved by a committee in the second year, law].
     stuck = {t: [0, 0, 0] for t in topics}
-    for s in (past if YEARS > 1 else []):
+    # (Not in a cycle of two sessions: bills die at the end of the first.)
+    for s in (past if YEARS > 1 and not CYCLE else []):
         y2 = str(s + 1)
         for r in loaded[s][0]:
             kd = r["keyDates"]
@@ -761,7 +812,7 @@ def insights(loaded, hist, current):
     # The same by party of sponsors and co-sponsors: both parties, Democrats only, Republicans only.
     party = {}
     for s in sorted(loaded):
-        party_of = parties(s, loaded[s][0])
+        party_of = party_map(s, loaded[s][0])
         key = "past" if s != current else "current"
         for r in loaded[s][0]:
             d, rep = bill_parties(r, party_of)
@@ -881,6 +932,9 @@ def insights(loaded, hist, current):
         "persistence": persist,
         "comeback": comeback,
         "stuck": stuck,
+        # Counted by two-year cycle (STAT_CYCLE): pastSessions are cycles, named by their first year; cycleNow the one
+        # under way.
+        **({"cycle": 2, "cycleNow": current} if CYCLE else {}),
     }
 
 
@@ -974,7 +1028,8 @@ def write_compare(done, hist, current, insight):
                 c[0] += 1
                 c[1] += back
                 c[2] += law
-        sessions.append({"session": s, "label": P.session_label(s), "kind": P.session_kind(s) if hasattr(P, "session_kind") else "",
+        label = f"{s}–{str(s + 1)[2:]}" if CYCLE else P.session_label(s)
+        sessions.append({"session": s, "label": label, "kind": P.session_kind(s) if hasattr(P, "session_kind") and not CYCLE else "",
                          "odds": dict(odds), "cfate": cfate, "fate": fate if nxt else None, "left": left})
     # The check: the Statistics tab's general-bills odds chart is the same counts, amendments kept, over its sessions.
     stats = insight["odds"].get("all|g") or {}
@@ -982,7 +1037,8 @@ def write_compare(done, hist, current, insight):
         mine = [sum(check[(s, p)][j] for s in insight["pastSessions"]) for j in (0, 1)]
         if mine != list(v):
             print(f"compare: {p} is {mine}, the Statistics tab says {v}", file=sys.stderr)
-    return {"state": STATE, "name": "Congress" if STATE == "us" else P.STATE_NAME, "years": YEARS, "chart": chart, "sessions": sessions}
+    return {"state": STATE, "name": "Congress" if STATE == "us" else P.STATE_NAME, "years": YEARS, "chart": chart, "sessions": sessions,
+            **({"cycle": True} if CYCLE else {})}
 
 
 def save_compare(out):
@@ -2075,14 +2131,19 @@ def compute(prev=None):
     # Statistics, outcomes and histories leave out an upcoming session's prefiled bills.
     done = {s: v for s, v in loaded.items() if s <= current}
     summary = {s: outcomes(loaded[s][0]) for s in done}
-    insight = insights(done, hist, current)
+    if CYCLE:
+        cdone, chist = to_cycles(done, hist)
+        with cycle_years():
+            insight = insights(cdone, chist, cyc(current))
+    else:
+        insight = insights(done, hist, current)
     insight["trends"] = trends(done)
     insight["topicRing"] = topic_ring(done)
     # Where sessions alternate in kind (Arkansas's regular and fiscal sessions, Oregon's long and short ones), a page
     # for a session of another kind than the current one compares it with past sessions of its own kind: the newest
     # finished session of each kind gets its own statistics.
     insight_of = {}
-    if hasattr(P, "session_kind"):
+    if hasattr(P, "session_kind") and not CYCLE:
         newest = {}
         for s_ in sorted(done):
             newest[P.session_kind(s_)] = s_
@@ -2091,7 +2152,11 @@ def compute(prev=None):
                 insight_of[kind] = {**insights(done, hist, ref), "trends": insight["trends"], "topicRing": insight["topicRing"]}
     gov_record = governor_record(done, current)
     # Each finished session's odds chart, for /compare/ (compare_site.py).
-    compare_out = write_compare(done, hist, current, insight) if GITHUB else None
+    if CYCLE and GITHUB:
+        with cycle_years():
+            compare_out = write_compare(cdone, chist, cyc(current), insight)
+    else:
+        compare_out = write_compare(done, hist, current, insight) if GITHUB else None
     cores = {}
 
     # Current legislators for past sessions' pages (profile card and the sessions they served in).
@@ -2214,7 +2279,9 @@ def compute(prev=None):
             "delegation": names,
             "sessions": [{"session": s, "url": urls.get(str(s)), **({"upcoming": True} if s > current else {})} for s in SESSIONS],
             "outcomes": {str(s): summary[s] for s in summary},
-            "insights": insight_of.get(P.session_kind(session), insight) if insight_of and session < current else insight,
+            "insights": insight_of.get(P.session_kind(session), insight) if insight_of and session < current else
+                        # (By cycle, the deadline rules still read when past sessions of this one's kind ended.)
+                        {**insight, "sessionTiming": [t for t in insight["timing"] if t["year"] % 2 == session % 2]} if CYCLE else insight,
             # Past pages don't carry co-sponsor names, so their network is worked out here.
             "network": session_network(session, [r for r in recs if not r.get("shell")]) if session < current else None,
             # Date of the last floor vote in either house this session.
@@ -2312,7 +2379,7 @@ def compute(prev=None):
             # {c: current, u: upcoming, e: scheduled last days by year, v: the last floor vote, t: past sessions' last votes}
             # (and "s", the profile's file: finish()).
             core["facts"] = {"c": session >= current, "u": session > current, "e": data.get("sessionEnd") or {},
-                             "v": data.get("lastVote") or "", "m": data.get("lastComm") or "", "t": [t["lastVote"] for t in (data.get("insights") or {}).get("timing") or [] if t.get("lastVote")]}
+                             "v": data.get("lastVote") or "", "m": data.get("lastComm") or "", "t": [t["lastVote"] for t in (data.get("insights") or {}).get("sessionTiming", (data.get("insights") or {}).get("timing")) or [] if t.get("lastVote")]}
             core["labels"] = label_inputs(session, recs, hist[session])
             core["issues"] = issue_inputs(session, recs, texts, {**other_party, **party_of})
 

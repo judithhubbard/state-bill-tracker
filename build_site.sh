@@ -172,6 +172,19 @@ except (OSError, ValueError):
     cmp = {}
 page = page.replace('<script type="application/json" id="compare">{}</script>',
                     '<script type="application/json" id="compare">' + json.dumps(cmp, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
+# Each state's upcoming session's page (prefiled bills: data/status.json's "u"), {st: {year: "2027.html"}}, so that with
+# next year chosen the map's and the list's links open it.
+upcoming = {}
+for s in sorted(os.listdir(out)):
+    try:
+        st = json.load(open(os.path.join(out, s, "data", "status.json")))
+    except (OSError, ValueError):
+        continue
+    for sess, e in st.items():
+        if (e.get("f") or {}).get("u") and e.get("p") and e["p"] != "./":
+            upcoming.setdefault(s, {})[sess] = e["p"]
+page = page.replace('<script type="application/json" id="upcoming">{}</script>',
+                    '<script type="application/json" id="upcoming">' + json.dumps(upcoming, separators=(",", ":")) + "</script>", 1)
 page = page.replace('<script type="application/json" id="power">{}</script>',
                     '<script type="application/json" id="power">' + json.dumps(power, ensure_ascii=False).replace("</", "<\\/") + "</script>", 1)
 page = page.replace('<script type="application/json" id="after">{}</script>',

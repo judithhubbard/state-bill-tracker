@@ -21,6 +21,10 @@ const STATE = {
   // A session a year; bills die when it ends.
   years: 1,
   sessionLabel: (s) => String(s),
+  // Statistics count each General Assembly's two sessions together (STAT_CYCLE in profile.py): each session's kind,
+  // and a line under the odds chart.
+  sessionKind: (s) => (s % 2 ? "short" : "long"),
+  cycleNote: "Each General Assembly's short session (odd years, 30 days) and long session (even years, 60 days, with the two-year budget) are counted together.",
   // Laws are chapters of each year's Acts ("Acts ch. 4").
   lawWord: "Acts ch.",
   // Constitutional amendments are bills: three-fifths of each house's members send one to the voters at the next

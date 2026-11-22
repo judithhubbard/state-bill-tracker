@@ -24,6 +24,11 @@ const STATE = {
   // One session a year; bills die when it adjourns.
   years: 1,
   sessionLabel: (s) => String(s),
+  // Statistics count each Legislature's two sessions together (STAT_CYCLE in profile.py): its name, each session's
+  // kind, and a line under the odds chart.
+  sessionKind: (s) => (s % 2 ? "general" : "budget"),
+  cycleName: (c) => `${((n) => `${n}${[11, 12, 13].includes(n % 100) ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th"}`)(68 + (c - 2025) / 2)} Legislature`,
+  cycleNote: "Each Legislature's general session and budget session are counted together; in the budget session, a bill other than the budget needs two-thirds of a house to be introduced.",
   // Joint resolutions proposing constitutional amendments pass once, by two-thirds of each house's members, then go to
   // the voters at the next general election (November of an even year); never to the governor (Wyoming Constitution,
   // Art. 20, sec. 1).

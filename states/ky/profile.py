@@ -18,6 +18,9 @@ SITE_URL = os.environ.get("SITE_URL", PUBLIC_URL)
 # (to April 15 at the latest) and 30 in odd years (a few organizational days in January, then from early February to
 # March 30 at the latest). Bills die when the session ends. A page a year; special sessions are left out.
 YEARS = 1
+# Statistics and /compare/ count each odd year's session and the even year's after it as one two-year cycle, like
+# New York's two-year sessions (build_data.py's CYCLE); each session keeps its own pages.
+STAT_CYCLE = True
 LOWER = "H"
 LOWER_NAME = "House"
 TITLES = {"S": "Sen.", "H": "Rep."}
