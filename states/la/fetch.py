@@ -86,7 +86,7 @@ Usage: python3 states/la/fetch.py [year]   (default: every session above; a sing
 """
 import html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from collections import Counter
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
 
@@ -715,6 +715,97 @@ def never_downloaded(years):
     return out
 
 
+# ---- Committee agendas ----
+
+AGENDA_DAYS = 21  # how far ahead to keep meetings
+
+
+def upcoming_meetings(page):
+    """ByCmte.aspx's upcoming meetings: [(meeting id, "Scheduled")], from its rows (<a href="Agenda.aspx?m=26182">
+    Education</a>, "Thu 12/10 3:00 p.m.", "Room 1", "Scheduled") under "House Committee Meetings", "Senate Committee
+    Meetings" and "Joint Committee Meetings"."""
+    out = []
+    for row in re.findall(r"<tr[^>]*>(.*?)</tr>", page, re.S):
+        m = re.search(r'href="Agenda\.aspx\?m=(\d+)"', row)
+        if m and int(m.group(1)) not in [i for i, _s in out]:
+            cells = [one_line(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+            out.append((int(m.group(1)), cells[-1] if cells else ""))
+    return out
+
+
+def agenda(page):
+    """An Agenda.aspx page: {"committee" ("House Committee on Appropriations"), "date" ("2026-04-27"), "time"
+    ("09:00:00" or ""), "status" ("Scheduled", "Adjourned", "Canceled"), "bills": [(instrument id, "HB165")]}, or None."""
+    title = re.search(r'id="linkTitle"[^>]*>(.*?)</a>', page, re.S) or re.search(r'id="lTitle"[^>]*>(.*?)</span>',
+                                                                                    page, re.S)
+    day = re.search(r'id="lDate"[^>]*>(.*?)</span>', page, re.S)
+    if not title or not day:
+        return None
+    try:
+        d = datetime.strptime(one_line(day.group(1)), "%B %d, %Y").date().isoformat()
+    except ValueError:
+        return None
+    tm = re.search(r'id="lTime"[^>]*>\s*(\d{1,2}):(\d\d)\s*([ap])\.?m', page, re.I)
+    t = f"{int(tm.group(1)) % 12 + (12 if tm.group(3).lower() == 'p' else 0):02d}:{tm.group(2)}:00" if tm else ""
+    st = re.search(r'id="lStatus"[^>]*>(.*?)</span>', page, re.S)
+    bills = []
+    for i, k in re.findall(r'href="BillInfo\.aspx\?i=(\d+)"[^>]*>\s*<b>\s*([A-Z]+\d+)\s*</b>', page):
+        if (int(i), k) not in bills:
+            bills.append((int(i), k))
+    return {"committee": one_line(title.group(1)), "date": d, "time": t,
+            "status": one_line(st.group(1)) if st else "", "bills": bills}
+
+
+def agendas():
+    """Bills on upcoming committee agendas, into data/la/<year>/agendas.json (this year's, and next year's for
+    prefiled bills): {"HB165": [["House Committee on
+    Appropriations", "2026-04-27T09:00:00"], ...]} (the converter words the names). legis.la.gov's ByCmte.aspx (the
+    Committees page's "Upcoming meetings": House, Senate and joint, each linked to Agenda.aspx?m=<id>) is read, then each
+    meeting's agenda page, whose bills link to BillInfo.aspx?i=<instrument id>. A bill counts only when its instrument id
+    is the year's regular-session bill in list.json (an extraordinary session's HB1 is another bill); meetings today to
+    three weeks ahead, not canceled. Never fails the run: when the list can't be read the last file is kept."""
+    years = [y for y in (YEAR, YEAR + 1) if os.path.exists(os.path.join(DATA, str(y), "list.json"))]
+    try:
+        page = request(f"{LEGIS}/ByCmte.aspx", "upcoming meetings", "UPCOMING MEETINGS")
+        if page is None:
+            print("agendas: the meetings list couldn't be read; kept the last files", flush=True)
+            return
+        ids = {}  # instrument id -> (year, "HB165"), this year's and next year's (prefiled) bills
+        for y in years:
+            for k, v in ((load(os.path.join(DATA, str(y), "list.json")) or {}).get("bills") or {}).items():
+                ids[v.get("id")] = (y, k)
+        by_year, n, failed, other = {y: {} for y in years}, 0, 0, 0
+        last = (TODAY + timedelta(days=AGENDA_DAYS)).isoformat()
+        for mid, status in upcoming_meetings(page):
+            if out_of_time():
+                break
+            if re.search(r"cancel|postpon", status, re.I):
+                continue
+            a = agenda(request(f"{LEGIS}/Agenda.aspx?m={mid}", f"agenda {mid}", "lDate") or "")
+            if a is None:
+                failed += 1
+                continue
+            if not TODAY.isoformat() <= a["date"] <= last or re.search(r"cancel|postpon", a["status"], re.I):
+                continue
+            n += 1
+            entry = [a["committee"], f"{a['date']}T{a['time'] or '00:00:00'}"]
+            for i, k in a["bills"]:
+                if not k.startswith(TYPES):
+                    continue
+                if (ids.get(i) or (0, ""))[1] != k:
+                    other += 1
+                    continue
+                out = by_year[ids[i][0]]
+                if entry not in out.setdefault(k, []):
+                    out[k].append(entry)
+        for y, out in by_year.items():
+            save(out, os.path.join(DATA, str(y), "agendas.json"))
+        print(f"agendas: {sum(len(o) for o in by_year.values())} bills on {n} meetings" + (f", {failed} agendas unreadable" if failed else "")
+              + (f", {other} bills of another session left out" if other else ""), flush=True)
+    except Exception as e:  # a refusal or anything unexpected: the agendas never stop the run
+        print(f"agendas: stopped ({type(e).__name__}: {e}); kept the last files", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     # Before the first copy, a run cut off without its summary leaves this, so a partial copy isn't published.
@@ -740,6 +831,8 @@ def main():
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
+    if not ONLY and not refused and not out_of_time():
+        agendas()
     missing = never_downloaded(years)
     print(f"run: {STATS['requests']} requests ({STATS['bills']} bills, {STATS['docs']} documents, {STATS['cvotes']} "
           f"committee votes), {round((time.time() - START) / 60)} min"

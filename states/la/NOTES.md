@@ -57,3 +57,17 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   phone and mail address are from gov.louisiana.gov/contact-the-governors-office (read by program 2026-11-14, not checked by
   the owner). Places (`towns.py`): cities, towns, villages, Census-designated places and parishes, separate Senate and House
   lists ("Albany town" is a real Louisiana town, not New York leaking in).
+
+- **Committee agendas (2026-11-22):** `agendas()` in states/la/fetch.py, run after the bills, documents and committees,
+  writes data/la/<year>/agendas.json ({"HB165": [["House Committee on Appropriations", "2026-04-27T09:00:00"]]}; next
+  year's file too for prefiled bills); convert.py's `agendas()` words the names as the histories do ("House
+  Appropriations"). It reads legis.la.gov/legis/ByCmte.aspx (the Committees page's "Upcoming meetings", House, Senate and
+  joint, a plain GET; the home page's list needs a postback and isn't used), then each listed meeting's
+  Agenda.aspx?m=<id> (HTML: linkTitle "House Committee on Appropriations", lDate "April 27, 2026", lTime "9:00 a.m.",
+  lStatus, and the instruments, each linked BillInfo.aspx?i=<instrument id>). Only HB and SB, only when the instrument id
+  is that bill's in the year's list.json (so an extraordinary session's HB 1 isn't taken for the regular session's), only
+  meetings today to three weeks ahead, not canceled or postponed. legis.la.gov has no robots.txt (404). Tested on saved
+  2026 agendas (House Appropriations 4/27/2026 and Transportation 5/11/2026, today set to 2026-04-20: 23 bills, all
+  matching records; HR 243 left out) and live on 2026-11-22 (6 interim meetings listed, no bills). Untested live: the
+  Senate's agenda pages during a session (same Agenda.aspx template, not seen with bills), and how far ahead meetings are
+  listed (House notices are posted about a week ahead under the rules).
