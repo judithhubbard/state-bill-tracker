@@ -624,6 +624,22 @@ def earlier(session, x, p, law=False):
     return out
 
 
+def agendas(session):
+    """Bills on upcoming Senate committee agendas (states/ms/fetch.py's agendas(): the Senate's agendas PDF), today or
+    later: {"SB2328": [["Senate Judiciary, Division A", "2027-02-04T08:30:00"], ...]}. The House posts no agendas."""
+    try:
+        data = json.load(open(os.path.join(folder(session), "agendas.json")))
+    except (OSError, ValueError):
+        return {}
+    today = date.today().isoformat()
+    out = {}
+    for bill, meets in data.items():
+        keep = [m for m in meets if m[1][:10] >= today]
+        if keep:
+            out[bill] = keep
+    return out
+
+
 def parties(session, recs):
     if session not in _PARTIES:
         load_session(session)

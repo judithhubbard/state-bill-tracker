@@ -46,3 +46,19 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2025 259 laws, 8 vetoes (no part vetoes in the regular session); 2026 376 laws, 6 vetoes (HB 895, HB 1152, HB 1648,
   SB 2477, SB 2632, SB 3402; none overridden), part vetoes on HB 1653, HB 1924, SB 2189, SB 3071. No constitutional
   amendment passed both houses in 2024-26. A first copy of three years takes about 4 hours (230 minutes on 2026-11-08).
+
+- **Committee agendas (2026-11-22): Senate only.** `agendas()` in states/ms/fetch.py (every run, two requests) reads
+  www.legislature.ms.gov/calendars-and-schedules/senate-committee-agenda/ for the PDF it links (one file the Senate keeps
+  rewriting, "CURRENT Committee Agendas, Updated: ..."; its name keeps an older year's, 2025_SENATE_COMMITTEE_AGENDAS.pdf
+  in 2026), runs `pdftotext -layout` and reads each day line ("Tuesday, February 4, 2025"), each meeting line (a time,
+  "AR" or "After" in the left column, "Judiciary, Division A Committee" in the right) and the bills under it ("S. B. No.
+  2328: ...", "H. B. No. 1095", "S. C. R. No. 5"; nominations, "S. N. No.", aren't bills), yesterday to three weeks ahead,
+  canceled meetings left out, into data/ms/<this year>/agendas.json, `{"SB2328": [["Senate Judiciary, Division A",
+  "2025-02-04T08:30:00"]]}`; `agendas()` in convert.py keeps today's and later. It needs pdftotext (poppler-utils) on the
+  runner: without it the last file is kept. The House posts no agendas: its committee schedule
+  (billstatus.ls.state.ms.us/htms/h_sched.htm, also the Senate's s_sched.htm) gives only times and rooms. Agendas are
+  posted a day or two ahead. Neither host has a robots.txt (404). Tested 2026-11-22 against two copies of the PDF from
+  the Internet Archive (February 4 and March 12, 2025: 15 meetings, 73 bills, all matching records); the live file is
+  an interim hearing's (presenters and topics, no meeting lines: nothing read). The Archive's February and March 2026
+  copies held only the heading ("Updated: February 3, 2026"), so whether the Senate kept it up in 2026 is unknown:
+  check in January 2027. Untested live.

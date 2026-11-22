@@ -45,6 +45,10 @@ request, usually a 304: the 2024 list was regenerated in October 2026). A first 
 histories a year, about 1.3 seconds each) takes about 4 hours; after that a run takes a minute or two, up to about 7
 minutes when 300 week-old bills are asked again (mostly 304s).
 
+And data/ms/<this year>/agendas.json: bills on the Senate's committee agendas, yesterday to three weeks ahead (agendas():
+the agenda page www.legislature.ms.gov/calendars-and-schedules/senate-committee-agenda/ and the PDF it links, read with
+pdftotext), every run.
+
 Not downloaded: the floor roll calls, which are PDFs (one per ACT_VOTE; members' votes are only there), the House's
 weekly summaries (PDFs), and bill texts. There are no committee roll calls and no plain-language summaries in the XML:
 "What it does" can only be the long title.
@@ -54,7 +58,7 @@ history, the members); it is removed when nothing is missing. A request that fai
 but doesn't count.
 Usage: python3 states/ms/fetch.py [year]   (default: every year above; a single year leaves the marker alone)
 """
-import json, os, re, ssl, sys, time, urllib.error, urllib.request
+import json, os, re, shutil, ssl, subprocess, sys, tempfile, time, urllib.error, urllib.parse, urllib.request
 import xml.etree.ElementTree as ET
 from collections import Counter
 from datetime import date, timedelta
@@ -195,6 +199,111 @@ def measures(year):
         stamp = "|".join((g.findtext(f) or "").strip() for f in ("ACTION", "FLAGS", "SHORTTITLE", "AUTHOR"))
         out[m.group(3)] = (stamp, m.group(1))
     return out
+
+
+# ---- committee agendas ---------------------------------------------------------------------------------------------
+
+AGENDA_PAGE = "https://www.legislature.ms.gov/calendars-and-schedules/senate-committee-agenda/"
+AGENDA_DAYS = 21
+MONTHS = {m: i + 1 for i, m in enumerate(["january", "february", "march", "april", "may", "june", "july", "august",
+                                          "september", "october", "november", "december"])}
+DAY_LINE = re.compile(r"^\s*(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+([A-Z][a-z]+)\.?\s+(\d{1,2})"
+                      r"(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?\s*$")
+TIME = re.compile(r"^(\d{1,2})(?::(\d\d))?\s*([ap])\.?\s*m\.?", re.I)
+MEETING_LEFT = re.compile(r"^(\d{1,2}(:\d\d)?\s*[ap]\.?\s*m\.?|noon|upon|after|immediately|tba|bc|aa|ar)\b", re.I)
+BILL_REF = re.compile(r"\b([HS])\.\s*(B|C\.\s*R)\.\s*No\.\s*(\d+)")
+
+
+def agenda_meetings(text, year):
+    """The Senate's committee agendas (pdftotext -layout of its one PDF: a day line, "Tuesday, February 4, 2025"; then
+    each meeting, its time in the left column and "Judiciary, Division A Committee" in the right on one line, the room
+    below the time and the bills, "S. B. No. 2328: Squatters; ...", in the right column) -> [(name, iso, [bill keys])].
+    A day line without a year takes the year (of the document's "Updated:" date, else this one) that puts it nearest."""
+    out, day, cur = [], None, None
+    upd = re.search(r"Updated:\s*([A-Z][a-z]+)\s+(\d{1,2}),\s*(\d{4})", text)
+    for line in text.splitlines():
+        m = DAY_LINE.match(line)
+        if m and m.group(1).lower() in MONTHS:
+            mon, d = MONTHS[m.group(1).lower()], int(m.group(2))
+            y = int(m.group(3) or (upd.group(3) if upd else year))
+            try:
+                day = date(y, mon, d)
+                if not m.group(3) and upd:  # "Monday, January 5th" in a document updated in December
+                    ref = date(int(upd.group(3)), MONTHS.get(upd.group(1).lower(), 1), int(upd.group(2)))
+                    day = min((date(y + k, mon, d) for k in (-1, 0, 1)), key=lambda x: abs((x - ref).days))
+            except ValueError:
+                day = None
+            cur = None
+            continue
+        parts = re.split(r"\s{2,}", line.strip(), maxsplit=1)
+        if day and len(parts) == 2 and MEETING_LEFT.match(parts[0]) and re.search(r"Committee\b", parts[1]) \
+                and not BILL_REF.search(parts[1]):
+            t = TIME.match(parts[0])
+            clock = f"{int(t.group(1)) % 12 + (12 if t.group(3).lower() == 'p' else 0):02d}:{t.group(2) or '00'}:00" \
+                if t else ("12:00:00" if parts[0].lower().startswith("noon") else "00:00:00")
+            name = re.sub(r"\s*\((?:cancel+ed|will not meet)\)\s*$", "", parts[1], flags=re.I).strip()
+            name = re.sub(r"\s+Committee$", "", name)
+            cur = [f"Senate {name}", f"{day.isoformat()}T{clock}", [],
+                   bool(re.search(r"cancel|will not meet|\bWNM\b|postponed", parts[1], re.I))]
+            out.append(cur)
+            continue
+        if cur is None:
+            continue
+        if re.search(r"\b(cancel+ed|will not meet|postponed)\b", line, re.I) and not BILL_REF.search(line):
+            cur[3] = True
+        for h, kind, num in BILL_REF.findall(line):
+            key = f"{h}{'B' if kind == 'B' else 'C'}{int(num)}"
+            if key not in cur[2]:
+                cur[2].append(key)
+    return [(n, w, b) for n, w, b, canceled in out if not canceled]
+
+
+def agendas(year):
+    """Bills on the Senate's committee agendas, yesterday to three weeks ahead, into <year>/agendas.json:
+    {"SB2328": [["Senate Judiciary, Division A", "2025-02-04T08:30:00"], ...]}. Two requests: the agenda page (for the
+    PDF's address, which keeps an older year's name: 2025_SENATE_COMMITTEE_AGENDAS.pdf in 2026) and the PDF. The House
+    posts only its committees' times and rooms (billstatus.ls.state.ms.us/htms/h_sched.htm), no bills. A failure keeps
+    the last file."""
+    path = os.path.join(DATA, str(year), "agendas.json")
+    pdftotext = shutil.which("pdftotext")
+    if not pdftotext:
+        print("agendas: pdftotext isn't installed (poppler-utils); kept the last copy", flush=True)
+        return
+    try:
+        page, _ = request(AGENDA_PAGE, "Senate agenda page")
+        m = re.search(rb'href="([^"]+\.pdf)"', page or b"", re.I) if page is not NOT_MODIFIED else None
+        if not m:
+            print("agendas: the Senate's agenda page names no PDF; kept the last copy", flush=True)
+            return
+        url = urllib.parse.urljoin(AGENDA_PAGE, m.group(1).decode("latin-1"))
+        body, _ = request(url, "Senate agendas")
+    except Refused as e:
+        print(f"agendas: refused ({e}); kept the last copy", flush=True)
+        return
+    if not body or body is NOT_MODIFIED or not body.startswith(b"%PDF"):
+        print("agendas: the Senate's agendas PDF couldn't be read; kept the last copy", flush=True)
+        return
+    with tempfile.TemporaryDirectory() as tmp:
+        pdf = os.path.join(tmp, "agendas.pdf")
+        write(body, pdf)
+        r = subprocess.run([pdftotext, "-layout", "-enc", "UTF-8", pdf, "-"], capture_output=True)
+    if r.returncode:
+        print("agendas: pdftotext failed; kept the last copy", flush=True)
+        return
+    lo, hi = TODAY - timedelta(days=1), TODAY + timedelta(days=AGENDA_DAYS)
+    out, n = {}, 0
+    for name, when, bills in agenda_meetings(r.stdout.decode("utf-8", "replace"), year):
+        if not lo.isoformat() <= when[:10] <= hi.isoformat():
+            continue
+        n += 1
+        for b in bills:
+            if [name, when] not in out.setdefault(b, []):
+                out[b].append([name, when])
+    for entries in out.values():
+        entries.sort(key=lambda x: x[1])
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    save(out, path)
+    print(f"agendas: {len(out)} bills on {n} Senate meetings", flush=True)
 
 
 def session(year):
@@ -346,6 +455,8 @@ def main():
             if out_of_time():
                 break
             session(year)
+        if not ONLY and not out_of_time():
+            agendas(YEAR)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
     missing = never_downloaded(years)
