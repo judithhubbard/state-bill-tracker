@@ -26,8 +26,13 @@ How:
   Center and Oklahoma's State Data Center (the census office); "wage" matches "wagering"; "grocery" matches wine sold in
   grocery stores; "shelter" matches animal shelters. `\bAI\b` is matched case-sensitively, with the rest in `(?i:...)`.
 - **Names** are plain and neutral ("Gender identity", "Immigration", "Diversity, equity and inclusion").
-- **Left empty** (no Trends button): Arkansas, Kentucky, New Hampshire, Utah and Wyoming, for the reasons in their sections.
-  States with two sessions shown, or short titles only, get fewer subjects.
+- **Left empty** (no Trends button): Arkansas and Wyoming, for the reasons in their sections. States with two sessions
+  shown, or short titles only, get fewer subjects.
+- **Second pass (2026-11-22): Arkansas, Kentucky, New Hampshire, Utah, Wyoming**, first left empty, were scanned again from
+  the full data the site uses (each state's download cache, through copy-data.yml: 2023-26 for all five), comparing sessions
+  of one kind (Arkansas regular with regular and fiscal with fiscal; Kentucky's 60-day even years and 30-day odd years;
+  Wyoming general with general and budget with budget). Kentucky, New Hampshire and Utah got subjects; Arkansas and Wyoming
+  stay empty.
 
 To redo a state: the scan scripts aren't kept in the repository; the method above is enough to repeat it with a short
 script over `C.load_session()`'s records (title + " . " + summary[:600], as `trends()` reads them).
@@ -65,9 +70,9 @@ Looked at and left out: Medicaid (1, 15, 13: 2024's single match looks low for t
 
 ## Arkansas (ar): skipped
 
-Sessions shown: 2023 (1,472 bills), 2024 fiscal (179), 2025 (1,695), 2026 fiscal (180). No summaries in the records (titles only).
+Sessions shown: 2023 (1,472 bills), 2024 fiscal (179), 2025 (1,695), 2026 fiscal (180). No summaries in the records (titles only, about 130 characters a bill). Rechecked 2026-11-22 on the full data (the same four sessions as the local copy).
 
-Left empty. The even-year fiscal sessions are almost all appropriation bills, so every policy subject drops to zero in them and the trend line zig-zags; the card's "N bills this session" would read 0 for the 2026 fiscal session. Comparing only the two regular sessions, just two subjects shift clearly, and on titles alone: artificial intelligence (0, then 8 in 2025: deepfakes, AI in health care, AI policies for public entities) and foreign entities (2, then 11: land, lobbying, vapor products from a "prohibited foreign party"). Worth adding if trends() ever compares sessions of one kind (as the statistics do with `session_kind()`).
+Left empty. The even-year fiscal sessions are almost all appropriation bills, so every policy subject drops to zero in them and the trend line zig-zags; the card's "N bills this session" would read 0 for the 2026 fiscal session. Regular against regular (2023 with 2025), no candidate subject reaches the bar: artificial intelligence is closest (0 to 8, z +2.6: deepfakes, AI in health care, AI policies for public entities), then fluoride (0 to 6), domestic violence (1 to 8) and foreign entities (4 to 10, z +1.3); the phrase scan's movers are drafting words ("regarding" 78 to 47, "prohibit" 37 to 80, "fiscal year"). Fiscal against fiscal (2024 with 2026, 180 bills each, nearly all appropriations) moves nothing. Worth adding if trends() ever compares sessions of one kind (as the statistics do with `session_kind()`), and again once 2027's regular session is in.
 
 ## Arizona (az)
 
@@ -258,9 +263,15 @@ Looked at and left out: abortion (30 to 12, z -2.7); sales tax on food ("sales a
 
 ## Kentucky (ky)
 
-Sessions shown: 2024 (1,206 bills, 60-day budget session), 2025 (1,056, 30-day), 2026 (1,263, 60-day); 2023 isn't in the local data. Skipped: TRENDS stays empty.
+Sessions shown (full data, 2026-11-22): 2023 (865 bills, 30-day session), 2024 (1,206, 60-day budget session), 2025 (1,056, 30-day), 2026 (1,263, 60-day). Each subject was compared within its kind (2024 with 2026; 2023 with 2025) and across the two pairs (2023-24 with 2025-26). The records have only Kentucky's short titles ("Grooming a minor", with "AN ACT relating to ..." as the summary; about 86 characters a bill, the same every year), so one subject passes, just under the bar.
 
-The records have only Kentucky's short titles ("AN ACT relating to ..."; about 85 characters a bill), and nothing in the scan shows a clear change. No candidate subject reached |z| 2.5. The biggest phrase shifts are drafting and session-kind effects ("making an appropriation therefor" 78, 17, 26: budget years), and the largest policy phrases are small and late (supplemental nutrition 0, 1, 8; "planning" 1, 2, 11). Worth another scan once 2027 is in, or if the records gain summaries.
+| Subject | Kind | Bills by session | Per 1,000 | Why |
+|---|---|---|---|---|
+| Housing and zoning | rise | 5, 5, 10, 19 | 5.8, 4.1, 9.5, 15.0 | The clearest candidate: 60-day sessions 5 to 19 (z +2.8), 30-day sessions 5 to 10, the two years together 10 to 29 (z +2.7); just under the bar, kept as a steady rise. Affordable housing and its trust fund, "Planning and zoning" bills (1, 11 in the phrase scan), accessory dwelling units, housing development districts, manufactured housing. All matches read; all on topic. |
+
+Wording pairs: none found.
+
+Looked at and left out: "making an appropriation therefor" (60, 78, 17, 26: falls in both kinds, z -5 to -6) is how titles are written, not a subject; vehicles (23, 29, 22, 17) is mixed (taxes, plates, dealers); the Supplemental Nutrition Assistance Program (0, 0, 0, 6 bills, after 2025's federal changes), data centers (1, 0, 0, 5), AI (0, 0, 2, 3) and crypto (0, 1, 2, 4) are too few; elections (17, 36, 18, 22) follows the session kind.
 
 ## Louisiana (la)
 
@@ -438,11 +449,15 @@ Reviewed and dropped: "spending requests" (bills stating intent to appropriate, 
 
 ## New Hampshire (nh)
 
-Sessions shown: 2023 (904 bills), 2024 (1,300), 2025 (1,034), 2026 (1,351). Skipped: TRENDS stays empty.
+Sessions shown: 2023 (904 bills), 2024 (1,300), 2025 (1,034), 2026 (1,351). The records carry titles only (summaries on 1%), and the titles have grown longer and more specific (84 characters a bill in 2023, 101 in 2026: "Relative to ..." gave way to "enabling", "requiring", "defining", "modifying"), which lifts every subject's share by about a fifth; the phrase scan's movers are that wording, not subjects. A second-year session also lists the first year's retained bills again (224 of 2026's 1,351), as in each year's own list. Scanned again on 2026-11-22 for subjects only, from the full data (the same four sessions).
 
-The records carry titles only (summaries on 1%), and the scan's movers are title wording ("enabling", "requiring", "defining", "modifying": New Hampshire's titles have grown longer and more specific), not subjects. No candidate subject reached the bar: artificial intelligence (0, 6, 3, 6) has no steady direction and is small; elections (39, 55, 67, 60) and chartered public schools (8, 4, 3, 1) are small or flat; PFAS (4, 8, 1, 2) is too few.
+| Subject | Kind | Bills by session | Per 1,000 | Why |
+|---|---|---|---|---|
+| Housing and zoning | rise | 17, 34, 27, 56 | 18.8, 26.2, 26.1, 41.5 | The one real subject shift (2023 to 2026 z +3.0; more than doubled, well beyond what the longer titles add): zoning alone 9, 14, 13, 37. 2026's accessory dwelling units, multi-family homes on commercial land, parking minimums, zoning boards of adjustment, the housing champion program, workforce and affordable housing. All 2023, 2024 and 2026 matches read; all on housing (2024's SB 503 is a fish and game bill that also amends a housing law). |
 
 Wording pairs: none found.
+
+Looked at and left out: immigration enforcement (3, 6, 9, 10) and proof of citizenship for voters are too few; artificial intelligence (0, 8, 1, 7) has no steady direction; education freedom accounts (17, 18, 11, 22) are flat; elections (42, 61, 76, 66) peaks in 2025; chartered public schools (10, 6, 6, 6) fell only after 2023; PFAS (6, 10, 1, 4) and the opioid bills (6, 5, 1, 2) are too few; energy and utilities (8.8, 7.7, 16.4, 14.8 per 1,000, z about +2) is under the bar.
 
 ## New Jersey (nj)
 
@@ -654,11 +669,16 @@ Looked at and left out: vaccines (196, 60, 34) and federal pandemic aid mostly r
 
 ## Utah (ut)
 
-Sessions shown here: 2024 (863 bills), 2025 (912), 2026 (939). Skipped: no subjects.
+Sessions shown (full data, 2026-11-22): 2023 (871 bills), 2024 (863), 2025 (912), 2026 (939), all general sessions. Utah's records are short (titles and a one-line summary, about 125 characters a bill), so two steady rises, each just under the bar, were kept.
 
-Utah's records are short (titles and a one-line summary, about 120 characters a bill), and no subject moved clearly over three years. No candidate reached |z| 2.5; artificial intelligence ("intelligence" 3, 6, 8) and elections (17, 33, 18, a 2025 bump only) are too small or not a trend. The scan's movers are drafting phrases: summaries moved from "modifies provisions related to" (155 to 67) to "This bill addresses" (142 to 257). That's a change in how the summaries are written, not a wording pair for one thing, so it isn't shown. Worth another look when 2027 is in.
+| Subject | Kind | Bills by session | Per 1,000 | Why |
+|---|---|---|---|---|
+| Artificial intelligence | rise | 0, 3, 6, 9 | 0.0, 3.5, 6.6, 9.6 | Up every year (2023 to 2026 z +2.9): AI in political ads, the 2024 Artificial Intelligence Policy Act and its office, AI in schools, law enforcement use, impersonation, companion chatbots, algorithmic pricing. All matches read; all on topic. |
+| Homelessness | rise | 1, 7, 8, 11 | 1.1, 8.1, 8.8, 11.7 | Up every year (z +2.8): homeless services and their board, the state homeless campus, property lost in camp cleanups, driver licenses for unhoused people. "Shelter" left out (animal shelters). All matches read. |
 
-Wording pairs: none.
+Wording pairs: none. The scan's biggest movers are drafting phrases: summaries moved from "This bill modifies provisions related to" (102 to 67) to "This bill addresses" (160 to 257). That's a change in how the summaries are written, not a wording pair for one thing, so it isn't shown.
+
+Looked at and left out: mental health (17, 9, 7, 7) fell after 2023's recodification of the human services code, which named it in many summaries; firearms (21, 13, 13, 13) fell once and stayed; abortion (6, 2, 0, 1) and data centers (0, 0, 0, 3) are too few; elections (a 2025 bump only).
 
 ## Virginia (va)
 
@@ -738,9 +758,9 @@ Looked at and left out: artificial intelligence is flat (6, 6, 7); gender identi
 
 ## Wyoming (wy)
 
-Sessions shown: 2024 (358 bills, a budget session), 2025 (546, general session), 2026 (325, budget session). Skipped: no subjects.
+Sessions shown (full data, 2026-11-22): 2023 (485 bills, general session), 2024 (358, budget session), 2025 (546, general), 2026 (325, budget). Skipped: no subjects.
 
-Even-year budget sessions take only bills two-thirds of a house votes to introduce, so 2024 and 2026 differ from 2025 in kind, and the only same-kind pair (2024 vs 2026) is two small sessions. No candidate passed: elections (10, 45, 29 bills) is a jump from a budget session to the general session, not a trend; vaccines (6, 2, 0) and gender identity (7, 3, 1) are too few. The phrase scan's movers were drafting phrases ("providing rulemaking authority", "making conforming amendments").
+Even-year budget sessions take only bills two-thirds of a house votes to introduce, so each kind was compared with its own (2023 with 2025, 2024 with 2026). Nothing rises or falls in both: elections (39, 13, 49, 31 bills; 80, 36, 90, 95 per 1,000) rose only between the budget sessions (z +3.1) and is flat between the general ones; water (7, 7, 14, 14: water rights, the omnibus water bills, state engineer studies) rises in both but under the bar (z +1.3 and +1.8); "federal" (21, 19, 21, 4) fell only in 2026; property tax (23, 22, 26, 20) is flat; vaccines (2, 6, 2, 0), gender identity (2, 8, 3, 1) and COVID-19 (1, 4, 1, 0) peaked in 2024 on a few bills. The phrase scan's movers were drafting phrases (general sessions: "making conforming amendments" 76 to 151, "specifying applicability"; budget sessions: "providing rulemaking authority" 16 to 2). Water is the one to watch when 2027 is in.
 
 Wording pairs: none found.
 
