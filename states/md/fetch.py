@@ -15,7 +15,9 @@ robots.txt; see the state-survey-2026-10-31 memory).
   each once, as text (pdftotext -layout) into data/md/vetoes/<year>/<SB448>.txt (`veto_letters()`).
 - The members: each house's member list (every run) and each member's page (district, county, party, committees, Annapolis
   phone, email; once a day, and at once for a new member), into data/md/members.json; then states/md/contacts.py.
-Usage: python3 states/md/fetch.py
+- The floor roll calls (`roll_calls()`, last, in what's left of the run): each house's numbered vote PDFs
+  (/<year>RS/votes/senate/0234.pdf, /votes/house/), each once, as text, into data/md/votes/<year>/<house>.json.
+Usage: python3 states/md/fetch.py [--votes YEAR]   (--votes: only that year's roll calls, for testing)
 """
 import html, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.request
 from datetime import date, datetime, timedelta
@@ -298,6 +300,109 @@ def agendas(year):
     print(f"{year}: agendas: {len(out)} bills on {n} meetings")
 
 
+# ---- Floor roll calls ----------------------------------------------------------------------------------------------
+# Each house numbers its recorded votes through a session (SEQ NO. 1, 2, ...) and posts each as a PDF the minute it's
+# taken: /<year>RS/votes/senate/0234.pdf, /<year>RS/votes/house/0234.pdf (no robots.txt). The numbers have gaps (2026's
+# Senate has no 1-7) and end at about 1,300 (Senate) and 1,750 (House) a year. Each PDF (150-300 KB) is read once, as text
+# (pdftotext -layout, about 3 KB), into data/md/votes/<year>/<house>.json {"234": text}; the numbers that answered 404 and
+# how far the walk got are in data/md/votes/<year>/state.json.
+VOTE_MINUTES = float(os.environ.get("MD_VOTE_MINUTES", 15))  # of a run, after everything else
+VOTE_GAP = 30  # numbers missing in a row that end a session's walk (the first time)
+VOTE_RECHECK = 7  # days before a missing number below the highest is asked again (this year's session only)
+
+
+def vote_pdf(url):
+    """(status, bytes): 200 with the file, 404, or 0 after three failures."""
+    for attempt in range(3):
+        time.sleep(0.5)
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": AGENT}), timeout=120) as r:
+                return 200, r.read()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return 404, None
+            time.sleep(10 * (attempt + 1))
+        except Exception:
+            time.sleep(10 * (attempt + 1))
+    return 0, None
+
+
+def roll_calls(y, deadline):
+    """Year y's floor roll calls in each house, walking the sequence numbers from 1 (or where the last run stopped) until
+    VOTE_GAP numbers in a row are missing; while this year's session can still vote (through June), each run then asks the
+    next few numbers again, and numbers missing below the highest once a week. Never marks Maryland incomplete."""
+    if not shutil.which("pdftotext"):
+        return
+    folder = os.path.join(DATA, "votes", str(y))
+    os.makedirs(folder, exist_ok=True)
+    spath = os.path.join(folder, "state.json")
+    try:
+        state = json.load(open(spath))
+    except (OSError, ValueError):
+        state = {}
+    live = y == TODAY.year and TODAY.month <= 6
+    for house in ("senate", "house"):
+        st = state.setdefault(house, {"next": 1, "high": 0, "missing": {}, "ended": False})
+        tpath = os.path.join(folder, f"{house}.json")
+        try:
+            texts = json.load(open(tpath))
+        except (OSError, ValueError):
+            texts = {}
+        if st["ended"] and not live:
+            continue
+        got = 0
+
+        def one(n):
+            nonlocal got
+            code, pdf = vote_pdf(f"{SITE}/{y}RS/votes/{house}/{n:04d}.pdf")
+            if code == 200 and pdf and pdf[:5] == b"%PDF-":
+                try:
+                    t = subprocess.run(["pdftotext", "-layout", "-enc", "UTF-8", "-", "-"], input=pdf, capture_output=True,
+                                       timeout=60).stdout.decode("utf-8", "replace")
+                except (OSError, subprocess.SubprocessError):
+                    return 0
+                texts[str(n)] = t
+                st["missing"].pop(str(n), None)
+                st["high"] = max(st["high"], n)
+                got += 1
+                if got % 100 == 0:
+                    save()
+                return 200
+            if code == 404:
+                st["missing"][str(n)] = TODAY.isoformat()
+            return code
+
+        def save():
+            json.dump(texts, open(tpath + ".tmp", "w"), ensure_ascii=False)
+            os.replace(tpath + ".tmp", tpath)
+            json.dump(state, open(spath + ".tmp", "w"), indent=0, sort_keys=True)
+            os.replace(spath + ".tmp", spath)
+
+        # Numbers missing below the highest, asked again once a week while the session can still post them.
+        if live:
+            week = (TODAY - timedelta(days=VOTE_RECHECK)).isoformat()
+            for k in sorted((k for k, d in st["missing"].items() if int(k) < st["high"] and d < week), key=int)[:50]:
+                if time.time() > deadline:
+                    break
+                one(int(k))
+        # The walk: from the next number until VOTE_GAP in a row are missing (3 once the walk has ended once).
+        gap, n, stop = 0, st["next"] if not st["ended"] else st["high"] + 1, VOTE_GAP if not st["ended"] else 3
+        while gap < stop and time.time() <= deadline:
+            code = one(n)
+            if code == 0:
+                break  # failing: try again next run
+            gap = 0 if code == 200 else gap + 1
+            n += 1
+            if not st["ended"]:
+                st["next"] = n
+        if gap >= stop:
+            st["ended"] = True
+            st["next"] = st["high"] + 1
+        save()
+        print(f"{y} {house} roll calls: {got} read now, {len(texts)} in all, highest {st['high']}"
+              + ("" if st["ended"] else "; more on later runs"))
+
+
 def sessions():
     """The years of the shared window (states/window.py: this year and the four before, not before 2023), the current
     one first; a year's session from the second Wednesday of January. Each is one file, so a year the window adds back
@@ -308,6 +413,9 @@ def sessions():
 
 def main():
     os.makedirs(DATA, exist_ok=True)
+    if sys.argv[1:2] == ["--votes"]:
+        roll_calls(int(sys.argv[2]), time.time() + VOTE_MINUTES * 60)
+        return
     for y in sessions():
         path = os.path.join(DATA, f"legislation_{y}RS.json")
         # A session's file changes until the governor's last vetoes (late May); after June it's final.
@@ -349,6 +457,17 @@ def main():
         contacts.main(contacts.P.session_of(TODAY.year))
     except SystemExit as e:
         print(e)
+    # The floor roll calls last, in what's left of the run (FETCH_MINUTES, set by the workflow, less 3 minutes for saving
+    # the cache), at most VOTE_MINUTES: this year's first, then the others.
+    limit = float(os.environ.get("FETCH_MINUTES") or 0) * 60
+    deadline = min(time.time() + VOTE_MINUTES * 60, START + limit - 180 if limit else float("inf"))
+    for y in sessions():
+        if y > TODAY.year or time.time() > deadline:
+            continue
+        try:  # never holds the run back
+            roll_calls(y, deadline)
+        except Exception as e:  # noqa: BLE001
+            print(f"{y}: roll calls failed ({type(e).__name__}: {e})")
     marker = os.path.join(DATA, "incomplete")
     if INCOMPLETE:
         open(marker, "w").write(" ".join(INCOMPLETE) + "\n")

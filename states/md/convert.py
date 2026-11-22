@@ -5,6 +5,8 @@ The bill list gives each bill's committees, the date and result of each step in 
 referral, hearing, committee report, second and third reading), how the houses settled differences
 ("InteractionBetweenChambers"), whether the General Assembly passed it, its chapter number and its status ("Approved by
 the Governor - Chapter 437", "Vetoed by the Governor (Policy)"). It has no dates for the governor's actions and no votes.
+Floor votes member by member come from each house's numbered roll-call PDFs (data/md/votes/<year>/<house>.json, read by
+fetch.py's roll_calls()): each third reading's roll call, matched by house, bill and legislative day (`floor_vote()`).
 A committee's unfavorable report kills a bill; most such bills are then withdrawn by their sponsors.
 
 The governor's actions come from each passed bill's page (data/md/governor_<year>.json, from fetch.py): the day the
@@ -108,10 +110,154 @@ def veto_message(session, p):
     return {"year": int(day[:4]), "signer": P.governor_on(day), "text": text_} if text_ else None
 
 
+# ---- Floor votes ---------------------------------------------------------------------------------------------------
+# Each house's roll calls (data/md/votes/<year>/<house>.json, fetch.py's roll_calls(): the PDFs' text). A roll call:
+#   SEQ NO. 1100                                Calendar Date: Apr 10, 2026 8:52 (PM)
+#   Presiding: Mr. President                    Legislative Date: Mar 24, 2026
+#      SB 411      Third Reading (SB) Calendar No.84
+#      ...title...
+#      On Third Reading
+#               42 Yeas         0 Nays   2 Not Voting            0 Excused         3 Absent
+#   Voting Yea - 42
+#    Mr. President             Gallion        ...          (names in five columns, 2+ spaces apart)
+#   Voting Nay - 0 / Not Voting - 2 / Excused from Voting - 0 / Excused (Absent) - 3
+# The bill list dates each reading by the house's legislative day ("Legislative Date"), which runs behind the calendar
+# late in the session (Mar 24 for a vote on April 10), so votes are matched and dated by it.
+GROUPS = [("Voting Yea", "Y"), ("Voting Nay", "N"), ("Not Voting", "A"), ("Excused from Voting", "B"), ("Excused (Absent)", "E")]
+TOTALS = {"Y": "Yeas", "N": "Nays", "A": "Not Voting", "B": "Excused", "E": "Absent"}
+MON = {m: i + 1 for i, m in enumerate(("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))}
+# Who presided ("Speaker", "Mr. President" in the lists), by session, as the bill list names them (dataName): Speaker
+# Adrienne A. Jones until she stepped down in December 2025, then Joseline A. Peña-Melnyk; Senate President Bill Ferguson.
+PRESIDING = {"H": {2023: "Jones, A.", 2024: "Jones, A.", 2025: "Jones, A.", 2026: "Peña-Melnyk"}, "S": {}}
+PRESIDING_DEFAULT = {"H": "Peña-Melnyk", "S": "Ferguson"}
+VOTE_STATS = defaultdict(lambda: defaultdict(int))  # session -> what happened to the roll calls (for checks())
+
+
+def parse_roll(t):
+    """One roll call's text -> {seq, day (legislative, ISO), bill ("SB411"), motion, totals {code: n}, names {code:
+    [names]}} or None. Names are as printed ("Washington, M.", "Lewis Young", "Speaker"); '*' (a changed vote) dropped."""
+    m = re.search(r"SEQ NO\.\s*(\d+)", t)
+    d = re.search(r"Legislative Date:\s*([A-Z][a-z]{2})[a-z]*\.? (\d{1,2}), (\d{4})", t)
+    tot = re.search(r"(\d+) Yeas\s+(\d+) Nays\s+(\d+) Not Voting\s+(\d+) Excused\s+(\d+) Absent", t)
+    if not (m and d and tot and d.group(1) in MON):
+        return None
+    head = t[:tot.start()]
+    b = re.search(r"(?m)^\s*([HS])([BJ])\s+(\d+)\b", head)
+    motion = ""
+    lines = [ln.strip() for ln in head.split("\n") if ln.strip()]
+    for ln in lines:
+        if re.match(r"On (Third|Second) Reading|Bill is on Third Reading|On (Motion|Adoption|Concurrence|Override)|"
+                    r"Conference Committee|Veto", ln, re.I):
+            motion = re.sub(r"\s{2,}.*$", "", ln)
+    names, cur = {}, None
+    for ln in t[tot.end():].split("\n"):
+        g = next(((code, int(x.group(1))) for label, code in GROUPS
+                  if (x := re.match(rf"\s*{re.escape(label)}\s*-\s*(\d+)\s*$", ln))), None)
+        if g:
+            cur = g[0]
+            names[cur] = []
+            continue
+        if re.search(r"Indicates Vote Change", ln) or re.fullmatch(r"\s*-\s*COPY\s*-\s*", ln, re.I):  # (a reposted copy's mark)
+            cur = None
+            continue
+        if cur and ln.strip():
+            names[cur] += [re.sub(r"\s*\*\s*$|^\*\s*", "", x).strip() for x in re.split(r"\s{2,}", ln.strip()) if x.strip("* ")]
+    return {"seq": int(m.group(1)), "day": f"{d.group(3)}-{MON[d.group(1)]:02d}-{int(d.group(2)):02d}",
+            "bill": f"{b.group(1)}{b.group(2)}{int(b.group(3))}" if b else "", "motion": motion,
+            "totals": dict(zip("YNABE", (int(x) for x in tot.groups()))), "names": names}
+
+
+_ROLLS = {}
+
+
+def rolls(session):
+    """(house, bill, legislative day) -> the bill's third-reading roll calls that day, in order: the passage votes the bill
+    list's history shows. Amendments, motions, quorum calls, the concurrence's "Bill is on Third Reading for Final
+    Passage" and conference reports aren't kept: the bill list gives them no day, so they'd have no history line."""
+    if session not in _ROLLS:
+        out = defaultdict(list)
+        # A session's roll calls are used once both houses' walks have reached their end (fetch.py's state.json), so a
+        # first copy spread over several runs never shows a session with some of its votes (MD_VOTES_PARTIAL=1: for tests).
+        try:
+            st = json.load(open(os.path.join(P.DATA, "votes", str(session), "state.json")))
+        except (OSError, ValueError):
+            st = {}
+        if not all(st.get(h, {}).get("ended") for h in ("senate", "house")) and not os.environ.get("MD_VOTES_PARTIAL"):
+            VOTE_STATS[session]["waiting for the first copy"] = 1
+            _ROLLS[session] = out
+            return out
+        for h, house in (("S", "senate"), ("H", "house")):
+            try:
+                texts = json.load(open(os.path.join(P.DATA, "votes", str(session), f"{house}.json")))
+            except (OSError, ValueError):
+                continue
+            for k, t in texts.items():
+                r = parse_roll(t)
+                if not r:
+                    VOTE_STATS[session]["unreadable"] += 1
+                    continue
+                if not r["bill"] or not re.match(r"On Third Reading$", r["motion"]):
+                    continue
+                VOTE_STATS[session]["third readings"] += 1
+                out[(h, r["bill"], r["day"])].append(r)
+        for v in out.values():
+            v.sort(key=lambda r: r["seq"])
+        _ROLLS[session] = out
+    return _ROLLS[session]
+
+
+def vote_seat(session, h, name, by_data, served):
+    """A roll call's name in house h -> the member's seat ("H:44a"), else "H?Name". "Speaker" and "Mr. President" are
+    whoever presided that session. A name ties to today's member written the same way in the bill list ("Washington,
+    M.", "Lewis Young"), or the one member of the house with that surname, only when that session's bill list names a
+    sponsor of the house so (a member who has since left, or changed houses, stays a name)."""
+    n = name
+    if re.fullmatch(r"(Mr\.|Madam) President|President|Speaker|Madam Speaker|Mr\. Speaker", n):
+        n = PRESIDING[h].get(session, PRESIDING_DEFAULT[h])
+    sid = by_data.get((h, n))
+    if not sid:
+        last, _, init = n.partition(",")
+        hits = [(k, x) for k, x in by_data.items() if k[0] == h and k[1].split(",")[0] == last.strip()]
+        if init.strip():
+            hits = [(k, x) for k, x in hits if x[1][:1] == init.strip()[:1]]
+        if len(hits) == 1:
+            sid = hits[0][1]
+    if sid and (n != name or n in served.get(h, ()) or n.split(",")[0] in served.get(h, ())):
+        return sid[0]
+    return f"{h}?{name}"
+
+
+def floor_vote(session, h, p, day, by_data, served):
+    """The bill's third-reading vote in house h on that legislative day (the day's last, if it was voted twice):
+    [h, "F", None, day, yeas, nays, [[seat, code], ...]] (yes votes left out), the names only when every group's count
+    matches the totals line; None when no roll call was read."""
+    hits = rolls(session).get((h, p, day))
+    if not hits:
+        return None
+    r = hits[-1]
+    T = r["totals"]
+    whole = all(len(r["names"].get(c, [])) == T[c] for c in "YNABE")
+    VOTE_STATS[session]["matched"] += 1
+    if not whole:
+        VOTE_STATS[session]["names don't add up"] += 1
+        return [h, "F", None, day, T["Y"], T["N"], []]
+    listed = [[vote_seat(session, h, x, by_data, served), c] for c in "NABE" for x in r["names"].get(c, [])]
+    return [h, "F", None, day, T["Y"], T["N"], listed]
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     people = contacts()
     by_data = {(sid[0], p["dataName"]): p for sid, p in people.items()}
+    seat_of = {(sid[0], p["dataName"]): (sid, p["name"]) for sid, p in people.items()}
+    # The names each house's sponsors go by in this session's bill list: who served then (for the roll calls' names).
+    served = defaultdict(set)
+    for b in load(session):
+        for s_ in [b.get("SponsorPrimary")] + [x.get("Name") for x in b.get("Sponsors") or []]:
+            m_ = re.match(r"(Delegate|Senator) (.+)", text(s_))
+            if m_:
+                served["H" if m_.group(1) == "Delegate" else "S"].add(m_.group(2))
+                served["H" if m_.group(1) == "Delegate" else "S"].add(m_.group(2).split(",")[0])
     parties = _PARTIES.setdefault(session, {})
 
     def who(name):
@@ -158,6 +304,15 @@ def load_session(session):
             if day(f"ThirdReadingDate{side}") and third:
                 steps.append((day(f"ThirdReadingDate{side}"), h, f"PASSED {HOUSE[h].upper()}" if third.startswith("Passed") else f"Third reading {third.lower()}"))
         steps.sort(key=lambda s: s[0])
+        # Each third reading's roll call, matched by house, bill and legislative day.
+        votes = []
+        for d_, h_, t_ in steps:
+            if t_.startswith("PASSED") or t_.startswith("Third reading"):
+                v_ = floor_vote(session, h_, p, d_, seat_of, served)
+                if v_:
+                    votes.append(v_)
+                else:
+                    VOTE_STATS[session]["no roll call"] += 1
         last_day = max((s[0] for s in steps), default=f"{session}-01-01")
         passed = {s[1] for s in steps if s[2].startswith("PASSED")}
         chapter = re.search(r"CH(\d+)", b.get("ChapterNumber") or "")
@@ -283,7 +438,7 @@ def load_session(session):
                 dates(lambda h, t: t == "PASSED HOUSE", "all"),
                 "", "", signed_day, veto_day,
             ],
-            "votes": [], "firstComms": [(refs[0][0], refs[0][1], fate == "passed")] if refs else [],
+            "votes": votes, "firstComms": [(refs[0][0], refs[0][1], fate == "passed")] if refs else [],
             "vers": [{"p": p, "sponsor": sponsor, "district": 0, "cosponsors": cos, "primes": 1, "cosp": len(cos),
                       "statusDesc": desc, "committee": committee if stage in (0, 2) else None, "actions": actions}],
         }
