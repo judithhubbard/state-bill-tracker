@@ -394,6 +394,8 @@ if not os.path.exists(os.path.join(DATA, "nv", "incomplete")): contacts("nv", TO
 if not os.path.exists(os.path.join(DATA, "mo", "incomplete")): contacts("mo", TODAY.year, 180)  # Missouri: a session a year
 if not os.path.exists(os.path.join(DATA, "wv", "incomplete")): contacts("wv", TODAY.year, 125)  # West Virginia: a session a year
 if not os.path.exists(os.path.join(DATA, "ks", "incomplete")): contacts("ks", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 150)  # Kansas: two-year bienniums
+if not os.path.exists(os.path.join(DATA, "dc", "incomplete")) and os.path.isdir(os.path.join(DATA, "dc", "legiscan")):
+    contacts("dc", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 12)  # the District: two-year Council Periods, 13 members
 # Congress: two-year Congresses; a new one's member list (January 3 of odd years) can take a few days to reach the data.
 if not os.path.exists(os.path.join(DATA, "us", "incomplete")) and not (TODAY.year % 2 and TODAY.month == 1 and TODAY.day < 15):
     contacts("us", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 520)

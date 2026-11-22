@@ -304,6 +304,15 @@ const CASES = {
       [2025, "2025-05-05", "2025-05-26", "delivered after adjournment: 15 weekdays from delivery (Memorial Day not excepted)"],
     ],
   },
+  dc: {
+    rule: "D.C. Code 1-204.04(e) (Home Rule Act sec. 404(e)): the Mayor shall, \"within 10 calendar days (excluding Saturdays, Sundays, and holidays) after the act is presented to him, either approve or disapprove such act\"; an act not returned in time is deemed approved. Cases checked against LIMS's own \"Transmitted to Mayor, Response Due on ...\" lines (states/dc/NOTES.md).",
+    cases: [
+      [2025, "2025-01-08", "2025-01-23", "B25-0043: Inauguration Day and Martin Luther King Jr. Day (both January 20, 2025) skipped"],
+      [2025, "2026-10-19", "2026-11-02", "B26-0849 (LIMS: response due November 2, 2026)"],
+      [2025, "2024-11-08", "2024-11-25", "B25-0049: Veterans Day (November 11) skipped"],
+      [2025, "2024-11-19", "2024-12-04", "B25-0010: Thanksgiving (November 28) skipped"],
+    ],
+  },
   ne: {
     rule: "Neb. Const. Art. IV, sec. 15: a bill not returned \"within five days (Sundays excepted) after it shall have been presented\" becomes law, \"unless the Legislature by their adjournment prevents its return, in which case it shall be filed with his or her objections in the office of the Secretary of State within five days after such adjournment, or become a law.\" The five days after adjournment are calendar days. Each session's sine die adjournment counts (2025-06-02, 2026-04-17).",
     cases: [

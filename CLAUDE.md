@@ -100,6 +100,7 @@ notes before changing its code. Shared notes on the LegiScan states are in state
 - **Kansas (built 2026-11-13)**: see states/ks/NOTES.md.
 - **Louisiana (built 2026-11-14)**: see states/la/NOTES.md.
 - **Florida (built 2026-11-15)**: see states/fl/NOTES.md.
+- **District of Columbia (built 2026-11-22, /dc/; bills from LegiScan because LIMS needs a key and bars robots; laws from the Council's law library)**: see states/dc/NOTES.md.
 - **LegiScan states (2026-11-08): Tennessee, then Oklahoma, Maine, Rhode Island, Vermont.** Their shared design (legiscan.py, the query budget, states/legiscan_convert.py): see states/LEGISCAN.md.
 - **Tennessee (built 2026-11-08 from LegiScan)**: see states/tn/NOTES.md.
 - **Oklahoma (built 2026-11-08 from LegiScan)**: see states/ok/NOTES.md.

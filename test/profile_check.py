@@ -30,7 +30,8 @@ def check(st):
     out = []
     low = getattr(P, "LOWER", "A")
     houses = J["houses"] or {}
-    want_houses = {"S": "Senate", low: getattr(P, "LOWER_NAME", "Assembly")} if low != "L" else None
+    # (One house, Nebraska's "L" and the District's "B": profile.js names only it.)
+    want_houses = {"S": "Senate", low: getattr(P, "LOWER_NAME", "Assembly")} if len(houses) != 1 else None
     if want_houses is not None and houses != want_houses:
         out.append(f"houses: profile.js {houses}, profile.py {want_houses}")
     years = J["years"] or 2

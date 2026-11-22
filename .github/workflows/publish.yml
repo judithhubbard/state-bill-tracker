@@ -178,6 +178,23 @@ jobs:
           key: ak-data-v1-latest
           restore-keys: ak-data-v1-
       - name: Restore the LegiScan states
+        id: legiscan
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/legiscan
+            data/tn
+            data/ok
+            data/me
+            data/ri
+            data/vt
+            data/dc
+          key: legiscan-data-v1-latest
+          restore-keys: legiscan-data-v1-
+      # The District joined the LegiScan job on 2026-11-22, which changed its saved copy's paths (a cache restores only with
+      # the paths it was saved with): until the job has saved one with data/dc, the copy from before. Can go after that.
+      - name: Restore the LegiScan states (copy saved before the District joined)
+        if: steps.legiscan.outputs.cache-matched-key == ''
         uses: actions/cache/restore@v4
         with:
           path: |

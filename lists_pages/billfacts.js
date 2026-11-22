@@ -18,6 +18,8 @@
 //   BillFacts.numText(st, num): a bill number as shown ("HB 1005", Maine's "LD 307").
 const BillFacts = (() => {
   const commPlain = (n) => (n || "").replace(/ And /g, " and ").replace(/ Committee$/, "");
+  // "the Health Committee"; a name that starts with "Committee" as it is ("the Committee of the Whole").
+  const commThe = (n) => (/^Committee\b/.test(n || "") ? `the ${n}` : `the ${commPlain(n)} Committee`);
   const BALLOT_MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December";
   // FNV-1a, 32 bits, of the number without its amendment letter ("S1234A" and "S1234" land together).
   function hash(num) {
@@ -101,6 +103,8 @@ const BillFacts = (() => {
       x.ballot = toVoters(b);
       x.second = x.amend && b.stage === 3 && tryIt(() => secondPassage(b), false);
       x.voted = b.stage === 3 ? tryIt(() => votersDone(b), "") : "";
+      // A law's own words while it isn't in force yet (S.lawText: the District's acts, under review by Congress).
+      x.lawText = b.stage === 5 && S.lawText ? tryIt(() => S.lawText(b), "") || "" : "";
       return x;
     }
     // An action in plain words. The API's action log is in capitals with abbreviations: "ORDERED TO THIRD READING RULES
@@ -199,7 +203,7 @@ const BillFacts = (() => {
       const c = f.comm ? ` in the ${commPlain(f.comm)} Committee` : "";
       if (!f.alive && f.carried) return `Carried over to ${f.carried}${c}`;
       if (f.gate) return f.alive ? `Sent back to ${f.comm}` : `Died in the ${f.comm} Committee`;
-      return `${f.alive ? "In" : "Died in"} ${f.comm ? `the ${commPlain(f.comm)} Committee` : "committee"}`;
+      return `${f.alive ? "In" : "Died in"} ${f.comm ? commThe(f.comm) : "committee"}`;
     }
     if (k === 1) return long(1);
     if (k === 2) return f.passedIn ? `Passed one house${f.alive || f.carried ? "" : " only"} (${f.passedIn})` : long(2);
@@ -212,7 +216,7 @@ const BillFacts = (() => {
       return PB;
     }
     if (k === 4) return f.current ? `On ${f.exec}'s desk` : `Sent to ${f.exec}`;
-    if (k === 5) return "Became law";
+    if (k === 5) return f.lawText || "Became law";
     if (k === 6) return "Vetoed";
     return "";
   }
@@ -247,12 +251,12 @@ const BillFacts = (() => {
   // A bill's progress as the six steps every bill row shows (five in a one-house legislature: no "passed one house"),
   // filled up to its stage, in the colors of its status label (lists_pages/rows.css's .pips). Nebraska is the one
   // legislature with one house (oneHouse(), for the pages that show several states; a state's page reads its profile).
-  const oneHouse = (st) => st === "ne";
+  const oneHouse = (st) => st === "ne" || st === "dc";
   // (more: other classes, "mini" for the compact rows, "over" for a bill out of time. now: the row's status label, and
   // st the state's code, for the hover tip naming the steps: "In committee → ... → Law; now: Passed Senate". The pips
   // stay aria-hidden: the label beside them says the same to a screen reader.)
   const steps = (uni, st) => [...(uni ? ["In committee", "On the floor", "Passed"] : ["In committee", "On the floor", "Passed one house", "Passed both houses"]),
-    st === "us" ? "President" : "Governor", "Law"];
+    st === "us" ? "President" : st === "dc" ? "Mayor" : "Governor", "Law"];
   const pipTip = (uni, st, now) => `${steps(uni, st).join(" → ")}${now ? `; now: ${now}` : ""}`;
   function pips(stage, uni, more, now, st) {
     const n = uni ? 5 : 6, k = +stage || 0, filled = k >= 5 ? n : uni && k >= 3 ? k : k + 1;
@@ -265,6 +269,6 @@ const BillFacts = (() => {
   // the paper, then its LD number), shown "LD 307". (The one copy in the pages; issues_site.py's shown() writes the same
   // in Python, and test/ports_check.js checks the two agree.)
   const numText = (st, n) => { const s = String(n || "").replace(/^([A-Z]+)(\d)/, "$1 $2"); return st === "me" ? s.replace(/^[HS]LD /, "LD ") : s; };
-  return { make, words, nextStep, newsDay, isNew, ROUTINE, WEIGHT, weightOf, hash, runProfile, commPlain, pips, pipTip, oneHouse, numText };
+  return { make, words, nextStep, newsDay, isNew, ROUTINE, WEIGHT, weightOf, hash, runProfile, commPlain, commThe, pips, pipTip, oneHouse, numText };
 })();
 if (typeof module !== "undefined") module.exports = BillFacts;

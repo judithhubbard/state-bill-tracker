@@ -337,13 +337,14 @@ def css():
 
 def pips(stage, st, now=""):
     """A bill's progress as small pips, as BillFacts.pips(stage, uni, "mini", now, st) draws them (lists_pages/billfacts.js):
-    six steps, five in Nebraska's one house, filled up to its stage, with the same hover tip naming the steps."""
-    uni = st == "ne"
+    six steps, five in a one-house legislature (Nebraska's, the District's Council), filled up to its stage, with the same
+    hover tip naming the steps."""
+    uni = st in ("ne", "dc")
     n, k = (5 if uni else 6), int(stage or 0)
     filled = n if k >= 5 else k if uni and k >= 3 else k + 1
     cells = "".join('<i class="on"></i>' if i < filled else "<i></i>" for i in range(n))
     steps = (["In committee", "On the floor", "Passed"] if uni else ["In committee", "On the floor", "Passed one house", "Passed both houses"]) \
-        + ["President" if st == "us" else "Governor", "Law"]
+        + ["President" if st == "us" else "Mayor" if st == "dc" else "Governor", "Law"]
     tip = " → ".join(steps) + (f"; now: {now}" if now else "")
     return f'<span class="pips s{k}{" uni" if uni else ""} mini" aria-hidden="true" title="{e(tip)}">{cells}</span>'
 

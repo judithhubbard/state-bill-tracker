@@ -1,6 +1,6 @@
 # LegiScan states
 
-Moved from CLAUDE.md (2026-11-19). Each state's own notes: states/tn, ok, me, ri, vt/NOTES.md.
+Moved from CLAUDE.md (2026-11-19). Each state's own notes: states/tn, ok, me, ri, vt/NOTES.md, and the District of Columbia's (joined 2026-11-22: its periods count as running until June 30 after they end, and a finished period's master list is read once: `AFTER_END`, `catch_up()` in legiscan.py), states/dc/NOTES.md.
 
 - **LegiScan states (2026-11-08): Tennessee, then Oklahoma, Maine, Rhode Island, Vermont.** Their legislatures' sites bar
   automated readers in robots.txt, so `legiscan.py` downloads LegiScan's data (CC BY 4.0; monthly query budget shared and

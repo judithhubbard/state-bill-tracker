@@ -62,7 +62,7 @@ SHARED = os.path.join(DATA, "legiscan")
 USAGE = os.path.join(SHARED, "usage.json")
 API = "https://api.legiscan.com/"
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
-STATES = ("tn", "ok", "me", "ri", "vt")
+STATES = ("tn", "ok", "me", "ri", "vt", "dc")
 MONTHLY_STOP = 9000      # LegiScan's free tier allows 10,000 a month
 PAUSE = 0.6              # seconds between requests
 MASTERLIST_EVERY = 3600  # once an hour per session
@@ -92,6 +92,8 @@ OPENS = {
                                                          # Wednesday of December after the election; else early January
     "ri": lambda y: nth(y, 1, 1, 1),                     # first Tuesday of January
     "vt": lambda y: nth(y, 1, 0, 1) + timedelta(days=2),  # the Wednesday after the first Monday of January
+    "dc": lambda y: date(y, 1, 2),                       # a Council Period begins January 2 of the odd year (Home Rule
+                                                         # Act; the Council meets all year: states/dc/NOTES.md)
 }
 
 
@@ -279,9 +281,25 @@ def take_dataset(folder, meta, ds):
     return True
 
 
+# The District of Columbia (LegiScan state_id 51): a Council Period ends December 31 of its second year, but its last acts
+# go to the Mayor and then to Congress for 30 to 60 days of review in the months after, and LegiScan's dataset for a
+# finished period stops at its last Sunday (the 25th Council's at 2024-12-29, before 160 bills' later steps). Its
+# sessions count as running until June 30 after the period, and a finished period's master list is read once after its
+# dataset (`catch_up()`), so the bills it shows changed are read in full within the allowance.
+AFTER_END = {51: (6, 30)}
+
+
 def running(ds):
     """A session still meeting: its bills are caught up between Sundays."""
+    after = AFTER_END.get(int(ds.get("state_id") or 0))
+    if after and int(ds["year_end"]) == YEAR - 1 and (TODAY.month, TODAY.day) <= after:
+        return True
     return int(ds["year_end"]) >= YEAR and not int(ds.get("sine_die") or 0)
+
+
+def catch_up(ds, meta):
+    """A finished session whose master list was never read, for the states whose datasets stop early (AFTER_END)."""
+    return int(ds.get("state_id") or 0) in AFTER_END and not running(ds) and not meta.get("masterlist_time")
 
 
 def utc_today():
@@ -518,8 +536,9 @@ def prepare_state(st, sessions, dry=False):
                 write_json(meta_path, meta, indent=1)
             else:
                 print(f"  dataset unchanged ({ds.get('dataset_date')})")
-            # A session over waits for the weekly datasets; the running ones are caught up.
-            if running(ds):
+            # A session over waits for the weekly datasets; the running ones are caught up (and, once, a finished
+            # District of Columbia period: catch_up()).
+            if running(ds) or catch_up(ds, meta):
                 take_masterlist(meta, sid, MASTERLIST_EVERY if begun(st, ds) else MASTERLIST_BEFORE)
                 sessions.append((folder, meta, sid))
         finally:
