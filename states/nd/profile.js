@@ -87,6 +87,7 @@ const STATE = {
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
   townWord: "City, community or county",
+  addressLookup: true,
   findReps: "https://openstates.org/find_your_legislator/",
   oneNumber: true,
   diesAfterFloor: () => "Bills that didn't pass died when the session adjourned; a special session takes up only the bills it was called for.",

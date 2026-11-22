@@ -2174,7 +2174,7 @@ function myReps() {
   // A district can have more than one Assembly member (New Jersey's have two). New Hampshire's towns vote in all their
   // House districts (STATE.townInAllDistricts: their own and a "floterial" one over them and their neighbors).
   const town = STATE.townInAllDistricts && c.town ? DATA.towns?.find((t) => townKey(t) === c.town) : null;
-  const also = (h) => (town && h === LOW ? town[3].map(([d]) => d) : []);
+  const also = (h) => (h !== LOW ? [] : town ? town[3].map(([d]) => d) : STATE.townInAllDistricts ? (c.also || []) : []);
   return BOTH.flatMap((h) => LEGS.filter((L) => L.house === h && (L.district === +c[h] || also(h).includes(L.district))))
     .map((L) => ({ title: L.title, name: L.name, house: L.house, last: lastName(L.name) }));
 }
@@ -2381,8 +2381,7 @@ function renderTownRepsByHouse(box) {
     : `<label>${esc(TOWN_WORD)} <select id="repT">${townOptions(town)}</select></label>`;
   box.innerHTML = `<div class="repsel">${picker}</div>
     ${where ? `<p class="muted">${where}</p>` : ""}
-    ${STATE.addressLookup && ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
-    <p class="muted" id="repMsg">We do not store your address; your district numbers are saved to this browser only.</p>` : ""}
+    ${repFindHtml()}
     <div class="repsel"><label>${regions ? "Your senators" : "Senate"} <select id="repDS"${regions ? " disabled" : ""}>${opts("S")}</select></label> <label>${HOUSE[LOW]} <select id="repDL">${opts(LOW)}</select></label></div>`;
 }
 function renderTownReps(box) {
@@ -2395,10 +2394,37 @@ function renderTownReps(box) {
   const who = (d) => LEGS.filter((L) => L.district === d).sort((a, b) => (a.house === b.house ? 0 : a.house === "S" ? -1 : 1)).map((L) => shortName(L.name)).join(", ");
   const distOpts = `<option value="">Choose your district</option>` + districts.map((d) => `<option value="${d}"${d === c?.S ? " selected" : ""}>District ${d}: ${esc(who(d))}</option>`).join("");
   const where = !town ? "" : town[2].length > 1
-    ? `${esc(named(town))} is split between ${andList(town[2].map(([d]) => `District ${d}`))}. Pick yours below.`
+    ? `${esc(named(town))} is split between ${andList(town[2].map(([d]) => `District ${d}`))}. ${STATE.addressLookup && ROOT ? "Look up your address, or pick yours below." : "Pick yours below."}`
     : `${esc(named(town))} is in District ${town[2][0][0]}.`;
   box.innerHTML = `<div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOpts}</select></label> <label>District <select id="repD">${distOpts}</select></label></div>
-    ${where ? `<p class="muted">${where}</p>` : ""}`;
+    ${where ? `<p class="muted">${where}</p>` : ""}
+    ${repFindHtml()}`;
+}
+// "Find by address" (the public site, where the state's profile turns it on): the address goes only to the Census geocoder.
+const repFindHtml = () => (STATE.addressLookup && ROOT ? `<form class="repfind" id="repFind"><label>Find by address <input type="search" id="repAddr" placeholder="Street, town, ${STATE.abbr || (STATE.code || "ny").toUpperCase()}" autocomplete="street-address"></label> <button class="act-btn" type="submit">Look up</button></form>
+    <p class="muted" id="repMsg">We do not store your address; your district numbers are saved to this browser only.</p>` : "");
+// A district as the Census geocoder names it (its BASENAME: "12", "12A", "B", "Merrimack 18", "Chittenden Central",
+// "14th Suffolk"), as this site numbers it: by the state's district names when the house has them (Alaska's Senate letters,
+// Minnesota's House 12A and 12B, Massachusetts's, New Hampshire's and Vermont's names), else its number. Names are
+// compared without case, spaces, punctuation or leading zeros ("Belknap 01" is "Belknap 1", "Chittenden South East"
+// "Chittenden Southeast").
+const distKey = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "").replace(/(^|\D)0+(?=\d)/g, "$1");
+function censusDistrict(h, x) {
+  if (!x?.BASENAME) return null;
+  const names = DATA.districtNames?.[h];
+  if (names && Object.keys(names).length) return +(Object.keys(names).find((d) => distKey(names[d]) === distKey(x.BASENAME)) || 0) || null;
+  return /^\d+$/.test(x.BASENAME) ? +x.BASENAME : null;
+}
+// New Hampshire's floterial districts (STATE.townInAllDistricts) aren't in the Census files, which give each address its
+// base House district. Every town or ward in a base district votes in the same floterials, so the towns list gives them;
+// the town itself is kept when one town (or ward) of the address's town has that base district and Senate district.
+function floterials(sd, ad, sub) {
+  if (!STATE.townInAllDistricts || !DATA.towns) return {};
+  const inBase = DATA.towns.filter((t) => t[3].some(([d]) => d === ad));
+  const also = [...new Set(inBase.flatMap((t) => t[3].map(([d]) => d)))].filter((d) => d !== ad);
+  const name = distKey(sub?.BASENAME);
+  const mine = inBase.filter((t) => name && distKey(t[0].replace(/ Ward \d+$/, "")) === name && t[2].some(([d]) => d === sd));
+  return mine.length === 1 ? { town: townKey(mine[0]) } : { also };
 }
 // The Census geocoder answers in JSONP, so it works from a static page.
 function lookUpReps(address) {
@@ -2410,15 +2436,21 @@ function lookUpReps(address) {
   window[cb] = (data) => {
     clearTimeout(timer);
     const g = data?.result?.addressMatches?.[0]?.geographies || {};
-    const pick = (re) => { const k = Object.keys(g).find((x) => re.test(x)); return k && g[k][0] ? +g[k][0].BASENAME : null; };
+    const layer = (re) => { const k = Object.keys(g).find((x) => re.test(x)); return k && g[k][0] ? g[k][0] : null; };
     // A state's own districts (Congress: STATE.lookupDistricts reads the congressional district).
-    const [sd, ad, region] = STATE.lookupDistricts ? STATE.lookupDistricts(g) : [pick(/Upper/), pick(/Lower/)];
+    const one = DATA.towns && !townsSplitByHouse();
+    let [sd, ad, region] = STATE.lookupDistricts ? STATE.lookupDistricts(g) : [censusDistrict("S", layer(/Upper/)), censusDistrict(LOW, layer(/Lower/))];
+    // One district for both houses (New Jersey, the Dakotas; Nebraska's one house, which the Census files as "Upper"): the
+    // Senate district's number (Maryland's and the Dakotas' House subdistricts, "4A", are part of it here).
+    if (one && !STATE.lookupDistricts) ad = sd;
+    // (An address in another state has that state's districts.)
+    if (!STATE.lookupDistricts && g.States?.[0]?.STUSAB && g.States[0].STUSAB !== (STATE.code || "ny").toUpperCase()) sd = ad = null;
     const county = (g.Counties?.[0]?.BASENAME || "").replace(/ County$/, "");
     countUse(sd && ad ? "lookup/found" : "lookup/not-found");
     if (!sd || !ad) return done(`That address wasn't found in ${STATE.lookupWhere || STATE.name || "New York"}. Try adding the town and ZIP code, or choose from the lists below.`);
     done("");
     if (county && (DATA.counties || []).includes(county)) { HOME = county; try { localStorage.setItem(STORE + "county", HOME); } catch (e) {} }
-    setReps(sd, ad, region ? { region } : {});
+    setReps(sd, ad, { ...(region ? { region } : {}), ...floterials(sd, ad, layer(/County Subdivisions/)) });
   };
   s.src = `https://geocoding.geo.census.gov/geocoder/geographies/onelineaddress?address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&vintage=Current_Current&layers=all&format=jsonp&callback=${cb}`;
   s.onerror = () => { clearTimeout(timer); done("The address lookup isn't available here. Choose your districts from the lists below."); };
@@ -5867,7 +5899,7 @@ function wire() {
     else if (e.target.id === "repS" || e.target.id === "repA") setReps($("repS").value, $("repA").value);
     else if (e.target.id === "repDS" || e.target.id === "repDL") {
       const c = chosenReps() || {};
-      setReps(e.target.id === "repDS" ? e.target.value : c.S, e.target.id === "repDL" ? e.target.value : c[LOW], { ...(c.town ? { town: c.town } : {}), ...(c.region ? { region: c.region } : {}) });
+      setReps(e.target.id === "repDS" ? e.target.value : c.S, e.target.id === "repDL" ? e.target.value : c[LOW], { ...(c.town ? { town: c.town } : {}), ...(c.region ? { region: c.region } : {}), ...(c.also && e.target.id === "repDS" ? { also: c.also } : {}) });
     } else if (e.target.id === "repR") setRegion(e.target.value); else if (e.target.id === "repT") setTown(e.target.value); else if (e.target.id === "repD" && e.target.value) {
       const t = DATA.towns.find((x) => townKey(x) === chosenReps()?.town);
       const d = +e.target.value;

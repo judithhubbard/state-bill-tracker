@@ -7,6 +7,8 @@ const STATE = {
   publicSite: "https://statebilltracker.org/nj/",
   listsApi: "https://state-lists.lists-worker.workers.dev",
   houses: { S: "Senate", A: "Assembly" },
+  // "Find your legislators": a town, or an address (the public site; the Census geocoder gives the district).
+  addressLookup: true,
   // The picture at the top of How (tracker.html's renderHowPic()): how bills move ("twins": the same bill filed in
   // both houses moves in each until both pass the same text; "relay": one bill goes house to house), what a bill the
   // governor doesn't sign does ("law" or "dies" lines, each with an optional ⓘ tip), and who can override a veto.

@@ -76,6 +76,7 @@ const STATE = {
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
   townWord: "City, community or borough",
+  addressLookup: true,
   findReps: "https://openstates.org/find_your_legislator/",
   oneNumber: true,
   // Shown after the second year's floor votes are over.

@@ -49,7 +49,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   records; otherwise the Revisor's one-line description, the summary line, is all there is. Titles: the description's first
   clause when long. Seats: "S:12"; House districts 12A/12B are numbered 1-134 ("H:23" = 12A, `profile.house_seat()`) and
   data/mn/district_names.json gives the page their names (tracker.html's `DNAME()` treats "12A" as a number: "District 12A").
-  No address lookup (the Census geocoder answers "12A"); `findReps` links the LCC's district finder. Places: about 850 cities and
+  The public site looks up an address (the Census geocoder answers "12A", matched to these names by tracker.html's `censusDistrict()`); `findReps` links the LCC's district finder on the Claude copies. Places: about 850 cities and
   the 87 counties, separate Senate and House lists. Balance: the House is tied 67-67 with a power-sharing agreement (Speaker Lisa
   Demuth, R; each committee a Republican and a DFL co-chair: the first listed is the chair on contact cards), so
   legislatures.json marks it `coalition` with a `note`; Senate DFL 34-33. DFL is counted as Democratic. Leaders: Speaker

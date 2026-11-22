@@ -103,6 +103,7 @@ const STATE = {
   },
   // "Where you live" picks a county or city; a split one can look up the address on the Legislature's site.
   townWord: "County or city",
+  addressLookup: true,
   findReps: "https://whosmy.virginiageneralassembly.gov/",
   // A bill keeps its number through both houses (HB1 goes to the Senate as HB1).
   oneNumber: true,

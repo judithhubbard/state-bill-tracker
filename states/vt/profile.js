@@ -76,7 +76,7 @@ const STATE = {
     reps: ["urge the governor to sign it", "urge the governor to veto it"],
   }),
   townWord: "Town or city",
-  addressLookup: false,
+  addressLookup: true,
   diesAfterFloor: (y2) => `Unless lawmakers return for a special session, it dies when the biennium ends in January ${y2 + 1}.`,
   outOfTimeLine: "Died when the biennium ended",
 
