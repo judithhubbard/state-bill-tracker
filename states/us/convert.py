@@ -257,6 +257,74 @@ def wanted_votes(congress):
     return out
 
 
+VETO_DOC = re.compile(r"veto message (?:would|will|was ordered to) be printed as a House [Dd]ocument \((\d+)-(\d+)\)")
+
+
+def veto_docs(congress):
+    """{House document number: bill} for each veto message the House had printed as a document ("... the veto message
+    would be printed as a House document (118-26)"); a Senate bill's message is printed only in the Congressional
+    Record. Read from the raw files, which are parsed only when they name one."""
+    out = {}
+    files = bill_files(congress)
+    zips = {}
+    try:
+        for n in sorted(files):
+            zp, name = files[n]
+            if zp:
+                if zp not in zips:
+                    zips[zp] = zipfile.ZipFile(zp)
+                data = zips[zp].read(name)
+            else:
+                data = open(name, "rb").read()
+            if b"printed as a House" not in data:
+                continue
+            for m in VETO_DOC.finditer(text(data.decode("utf-8", "replace"))):
+                if int(m.group(1)) == congress:
+                    out[int(m.group(2))] = n
+    finally:
+        for z in zips.values():
+            z.close()
+    return out
+
+
+def veto_file(congress, n):
+    return os.path.join(folder(congress), "vetoes", f"hdoc{n}.htm")
+
+
+def veto_message(congress, b):
+    """The President's veto message ({year, signer, text}) from the House document fetch.py saved, or None."""
+    for a in actions(b):
+        m = VETO_DOC.search(a["text"])
+        if not m or int(m.group(1)) != congress:
+            continue
+        path = veto_file(congress, int(m.group(2)))
+        if not os.path.exists(path):
+            return None
+        return veto_text(open(path, encoding="utf-8", errors="replace").read())
+    return None
+
+
+def veto_text(page):
+    """A House document's veto message -> {year, signer, text}: the letter from "To the House of Representatives:" to
+    the signature, a paragraph at each indented line."""
+    t = html.unescape(re.sub(r"<[^>]+>", "", page)).replace("``", "\u201c").replace("\'\'", "\u201d")
+    m = re.search(r"To the House of Representatives:\s*\n(.*?)\n\s{20,}\S[^\n]*\n\s*The White House,\s*([A-Z][a-z]+ \d+, (\d{4}))", t, re.S)
+    if not m:
+        return None
+    paras, cur = [], []
+    for ln in m.group(1).split("\n"):
+        if re.match(r"\s{3,}\S", ln) and cur:
+            paras.append(" ".join(cur))
+            cur = []
+        if ln.strip():
+            cur.append(ln.strip())
+    if cur:
+        paras.append(" ".join(cur))
+    body = "\n".join(re.sub(r"(\w)- (\w)", r"\1-\2", re.sub(r"\s+", " ", x)).replace("--", "\u2014") for x in paras)
+    day = datetime.strptime(m.group(2), "%B %d, %Y").date().isoformat()
+    return {"year": int(m.group(3)), "signer": P.governor_on(day), "text": body}
+
+
 PASS_CODES = {"8000", "9000", "17000", "18000", "19500", "20500", "21000", "23000", "32000", "33000", "34000", "35000"}
 OWN = re.compile(r"suspend the rules and (?:pass|agree)|^On passage|\bpass(?:ed)? (?:the )?(?:bill|joint resolution|Senate|House)|"
                  r"agree (?:with an amendment )?to the (?:Senate|House) amendment|agreed to the (?:House|Senate) amendment|"
@@ -812,7 +880,7 @@ def record(congress, p, b):
         # (Both houses passed it, but the second changed it: it's "passed" by that house, waiting on the first.)
         "stage": stage, "passedIn": (HOUSE[amended_by] if amended_by and len(passed_h) == 2 else HOUSE[origin] if origin in passed_h else HOUSE[other]) if stage == 2 else None,
         "chapter": law_no if stage == 5 and law_no and law_kind == "Public" else None,  # (private laws: their status says so)
-        "veto": None, "memo": "", "vetoMemo": None,
+        "veto": None, "memo": "", "vetoMemo": veto_message(congress, b) if stage == 6 else None,
         "simText": f"{title} {official} {' '.join(subj[:12])}",
         "comm": comm_now if stage == 0 else None,
         "first": min(action_dates, default=text(b.findtext("introducedDate")) or f"{session}-01-03"),

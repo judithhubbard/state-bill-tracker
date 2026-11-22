@@ -70,6 +70,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   the Senate's veto lists: 117th 362 public and 3 private laws, no vetoes; 118th 274 public laws, 13 vetoes (Biden's: H.J.Res.
   27, 30, 39, 42, 45, 98, 109, S. 4199, S.J.Res. 9, 11, 24, 32, 38), none overridden; 119th to 2026-11-16 142 public and 2
   private laws (GovInfo had published 138 public) and 2 vetoes (H.R. 131, H.R. 504), 4 bills on the President's desk.
+  Veto messages (2026-11-22): a House bill's BILLSTATUS names the House document its message was printed as ("the veto
+  message would be printed as a House document (118-26)"); fetch.py's `vetoes()` reads each from GovInfo once
+  (content/pkg/CDOC-118hdoc26/html/CDOC-118hdoc26.htm) into data/us/<congress>/vetoes/hdoc26.htm, and convert.py's
+  `veto_message()` keeps the letter between "To the House of Representatives:" and the signature. All 9 House bills'
+  messages (118th: 7, 119th: 2) read on 2026-11-22. The six Senate bills' messages (S. 4199, S.J.Res. 9, 11, 24, 32, 38)
+  are printed only in the Congressional Record ("text: CR S2089-2090", on 2 of the 6): not read. tracker.html's
+  `vetoMemo()` now says "the President" (EXEC) where it said "the governor".
   "Where you live": the state first, then the place (`STATE.townRegions`, `regionWord`; tracker.html's `setRegion()`),
   about 35,000 cities, towns, Census-designated places and counties from the Census Bureau's 119th Congress relationship
   files (1.9 MB, on the current page only); the address lookup reads the geocoder's congressional district
