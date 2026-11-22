@@ -103,7 +103,7 @@
     "data/md"
    ],
    "minutes": 20,
-   "run": "python3 states/md/fetch.py"
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/md/fetch.py"
   },
   {
    "name": "Georgia",
@@ -113,7 +113,7 @@
     "data/ga"
    ],
    "minutes": 40,
-   "run": "python3 states/ga/fetch.py"
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/ga/fetch.py"
   },
   {
    "name": "Michigan",
@@ -134,7 +134,7 @@
     "data/wi"
    ],
    "minutes": 110,
-   "run": "python3 states/wi/fetch.py",
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/wi/fetch.py",
    "note": "One request a second; the first copy takes several runs."
   },
   {
@@ -337,7 +337,7 @@
     "data/al"
    ],
    "minutes": 60,
-   "run": "python3 states/al/fetch.py && python3 states/al/contacts.py"
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/al/fetch.py && python3 states/al/contacts.py"
   },
   {
    "name": "Kentucky",
