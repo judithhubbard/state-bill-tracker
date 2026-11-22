@@ -15,8 +15,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   "Passed to be engrossed" is a house passing it; "Enacted ... laid before the Governor" sends it. Committees are almost
   all joint; House Steering, Policy and Scheduling decides which bills reach the House floor; the Committee on Bills in
   the Third Reading counts as the floor. Formal sessions end July 31 of the second year (`formalEnds()`), informal ones
-  when the court ends. Governor 10 days. No summaries in the data ("What it does" isn't shown); House votes are tallies,
-  Senate votes by member. Earlier courts linked by identical title (`earlier()`). Cities and towns (351) by district.
+  when the court ends. Governor 10 days. No summaries in the data ("What it does" isn't shown); Senate and (since
+  2026-11-22, below) House votes by member. Earlier courts linked by identical title (`earlier()`). Cities and towns (351) by district.
 - **Passed both houses (2026-11-19):** only when the branches agree on one text: the second branch passed it unamended,
   or the first concurred in its amendment (the last word, not "NON-concurred" or "concurred ... with a further
   amendment"), or, after "Committee of conference appointed", both accepted the report (`agreed()`); or it was enacted.
@@ -43,3 +43,21 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Senate Ways and Means and the like appear as "House ..."/"Senate ...". Untested: the 195th General Court's first
   hearings (January-March 2027: the floor stays, so new ids are read as they appear).
 - **The next General Court (2026-11-22):** the API answers 400 "Could not locate any public Documents in General Court "195"" until the 195th's first documents are public; bills are filed by mid-January and numbered mostly in February (6,357 of the 194th's bills have their first action in February 2025). fetch.py treats that answer as not there (no retries), makes no folder and never marks Massachusetts incomplete for the new court while the last court is on file, and reads the 194th's histories as a live court until March 1, 2027 (its informal sessions run to January 6 and the governor acts in the ten days after). The site shows 2027-28 once its first numbered bill's history is read. Docket filings (HD/SD numbers, before a bill number) aren't kept.
+- **House roll calls by member (2026-11-22).** The API has none; the House Journal publishes one PDF a year of every
+  "Yea and Nay" by member, https://malegislature.gov/Journal/House/<court>/<year>/RollCalls (194 for 2025 and 2026, 193
+  for 2023 and 2024; numbered through the court: 2023 No. 1-70, 2024 No. 71-203, 2025 No. 1-116, 2026 No. 117-236 on
+  2026-11-22, with No. 233 missing). `states/ma/house_votes.py` (run by fetch.py, after the Senate's roll calls; needs
+  pdftotext) reads a year's file when it has none, a past year's once more after February 1 of the next year, and this
+  year's when the histories cite a number it doesn't have yet (at most every 6 hours) or weekly; it keeps them, read, in
+  data/ma/<session>/house_rollcalls.json. Each page: the bill and motion ("H. 4993 On passing to be engrossed"), day,
+  "No. 121  154 YEAS  1 NAYS  3 N/V", then four columns of "Y|N|X|P <surname>" ("Moran F.", "Ramos, A.", "Mr. Speaker",
+  "--Jones--" for a floor leader, "Tyler *" for a vote after the roll closed; P "present" is in none of the tallies). All
+  438 roll calls of 2023-26 parse with names adding up to their tallies, and every name matches one member of that court
+  (member_details.json: surname, with the initial where two share it). convert.py ties a House vote to the roll call its
+  line cites ("(See YEA and NAY No. 117)", "(See YEA and NAY, No. 127)", "(See YEA and NAY in Supplement, No. 25)") when
+  the day is the line's and the tally is too or the roll call is on one of the record's bills; then the roll call's own
+  totals win (H5151 of 2025-26 "121 YEAS" for 129, S3106 "139" for 149, H4993 "0 NAYS" for 1). Names: N no, X "A" (not
+  voting), P "B". The file lags the histories: on 2026-11-22 the 2026 file ended at No. 236 while histories cite up to 274.
+  Coverage (histories of 2026-10-31): bills' House floor votes naming members, 2023-24 0 -> 89 of 97 (names as written,
+  "H?Name", as the Senate's: there's no contacts file for a past court), 2025-26 0 -> 121 of 164, every name tied to a
+  seat (the rest cite roll calls not yet in the 2026 file, or none).
