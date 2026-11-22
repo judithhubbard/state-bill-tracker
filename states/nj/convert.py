@@ -277,18 +277,25 @@ def read_votes(session, comms, seats=None):
 # ---- Committee agendas
 def agendas(session):
     """Bills on committee agendas: bill -> [["Assembly Health", "2026-11-05T10:00:00"], ...], as New York's
-    agendas file has them. Floor sessions and meetings that were canceled or aren't meeting are left out."""
+    agendas file has them. Meetings that were canceled or aren't meeting are left out.
+    Voting sessions' board lists (Type "Session", CommHouse "A" or "S") are the floor calendars: ["Senate floor", when,
+    "floor"], each bill listed for a vote that day (posted 1-6 days ahead). Simple resolutions (AR, SR) aren't records."""
     z = zipfile.ZipFile(os.path.join(P.DATA, f"DB{session}_TEXT.zip"))
     comms = {r["Code"]: (r["House"], r["Description"]) for r in _rows(z, "COMMITTEE.TXT")}
     off = {(r["CommHouse"], r["Date"], r["Time"]) for r in _rows(z, "AGENDAS.TXT") if r["Status"] != "Scheduled"}
+    # (A canceled voting session: its day, whatever time the board list gives.)
+    off_days = {(r["CommHouse"], r["Date"]) for r in _rows(z, "AGENDAS.TXT") if r["Type"] == "Session" and r["Status"] != "Scheduled"}
     out = defaultdict(list)
     for r in _rows(z, "BAGENDA.TXT"):
-        house, name = comms.get(r["CommHouse"], ("", ""))
-        if r["Type"] == "Session" or house not in HOUSE or (r["CommHouse"], r["Date"], r["Time"]) in off:
+        floor = r["Type"] == "Session"
+        house, name = (r["CommHouse"], "floor") if floor else comms.get(r["CommHouse"], ("", ""))
+        if house not in HOUSE or (r["CommHouse"], r["Date"], r["Time"]) in off:
+            continue
+        if floor and ((r["CommHouse"], r["Date"]) in off_days or r["BillType"] in ("AR", "SR")):
             continue
         m = re.match(r"(\d+):(\d+) ([AP])M", r["Time"])
         hour = (int(m.group(1)) % 12 + (12 if m.group(3) == "P" else 0)) if m else 0
-        entry = [f"{HOUSE[house]} {name}", f"{iso(r['Date'])}T{hour:02d}:{int(m.group(2)) if m else 0:02d}:00"]
+        entry = [f"{HOUSE[house]} {name}", f"{iso(r['Date'])}T{hour:02d}:{int(m.group(2)) if m else 0:02d}:00"] + (["floor"] if floor else [])
         bill = r["BillType"] + r["BillNumber"]
         if entry not in out[bill]:
             out[bill].append(entry)
