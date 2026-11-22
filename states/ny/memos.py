@@ -7,7 +7,7 @@ versions exist comes from the Senate's API (NYSENATE_API_KEY or ~/.nysenate_api_
 version, so after the first copy (about 11,000 Assembly bills a session: several runs, saved as it goes) a run reads only
 new bills and amended ones. Run on GitHub (download.yml), not on the owner's computer.
 
-fetch_bills.py (run when the site is published) turns each memo's purpose and summary of provisions into "What it
+fetch_bills.py (run after it by states/ny/fetch.py) turns each memo's purpose and summary of provisions into "What it
 does". The memos never hold New York off the site: there is no "incomplete" marker.
 
 Usage: python3 states/ny/memos.py [session_year]   (default: the current session)

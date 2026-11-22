@@ -33,6 +33,10 @@ notes before changing its code. Shared notes on the LegiScan states are in state
      branch `move-to-statebilltracker` in /Users/jk/Dropbox/Claude/AlbanyBillTracker (commit d34f749; steps in its
      SWITCH.md); this repo's side is lists_pages/welcome-ny.html (/welcome/ny/) and tools/copy_albany_lists.py.
      Albany had no published lists on 2026-11-18 (4 invite codes, 0 lists).
+     **New York's downloads are this repo's own (2026-11-22):** download.yml's "New York" job (`states/ny/fetch.py`:
+     memos, bills, prefiled bills, Assembly votes, agendas, contacts; cache `ny-data-v1`); publish.yml no longer reads
+     the ny-bill-tracker repo, so the switch can freeze it. Past sessions' bills_<year>.json.gz are this repo's (with
+     veto messages, which Albany's copies lack).
 - **Decided 2026-10-28:** no new features on albanybilltracker.org (the ny-bill-tracker repo); only fixes and the
   January chores, made there and carried here by hand. New work happens here. **Decided 2026-10-29: leave
   albanybilltracker.org on its own code** (an interim switch of its build to this repo was planned, dry-run on

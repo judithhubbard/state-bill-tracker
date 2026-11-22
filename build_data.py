@@ -1919,8 +1919,9 @@ def last_checked():
     from datetime import datetime
     from zoneinfo import ZoneInfo
     folder = getattr(P, "DATA", os.path.join(HERE, "data"))
+    # (New York's files are at the top of data/, its mark in data/ny/: P.LAST_CHECKED.)
     try:
-        stamp = open(os.path.join(folder, "last_checked")).read().strip()
+        stamp = open(getattr(P, "LAST_CHECKED", None) or os.path.join(folder, "last_checked")).read().strip()
         t = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
     except (OSError, ValueError):
         return None

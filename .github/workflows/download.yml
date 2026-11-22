@@ -123,11 +123,30 @@ jobs:
           python-version: "3.12"
       # Finished sessions' files never change, so each state keeps its files between runs.
       - name: Restore the last copy
+        id: restore
         uses: actions/cache/restore@v4
         with:
           path: ${{ matrix.path }}
           key: ${{ matrix.key }}-${{ github.run_id }}
           restore-keys: ${{ matrix.key }}-
+      # New York's first run as one job (2026-11-22): start from the copies publish.yml and the old memos job kept, so
+      # the memos (about 11,000 pages a session) aren't read again. Can go once ny-data-v1 exists on main.
+      - name: Start New York from its old copies (memos)
+        if: matrix.key == 'ny-data-v1' && steps.restore.outputs.cache-matched-key == ''
+        uses: actions/cache/restore@v4
+        with:
+          path: "data/ny"
+          key: ny-memos-v1-latest
+          restore-keys: ny-memos-v1-
+      - name: Start New York from its old copies (bills)
+        if: matrix.key == 'ny-data-v1' && steps.restore.outputs.cache-matched-key == ''
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/bills_*.json
+            data/senate_memos_*.json
+          key: ny-bills-v1-latest
+          restore-keys: ny-bills-v1-
       # When the copy was last checked (data/<state>/last_checked, set below after a successful download): the pages
       # say "updated" from it, since between sessions no bill file may change for weeks.
       - name: Mark the time
@@ -136,6 +155,7 @@ jobs:
         run: |
           touch "$RUNNER_TEMP/started"
           prev=0
+          set -f
           for d in $PATHS; do [ -f "$d/last_checked" ] && prev=$(stat -c %Y "$d/last_checked"); done
           echo "PREV_CHECKED=$prev" >> "$GITHUB_ENV"
       # A server that stops answering mustn't hold the job: after its time limit the state keeps what it has.
@@ -156,7 +176,10 @@ jobs:
         if: steps.dl.outcome == 'success'
         env:
           PATHS: ${{ matrix.path }}
-        run: for d in $PATHS; do mkdir -p "$d" && date -u +%Y-%m-%dT%H:%M:%SZ > "$d/last_checked"; done
+        # (In each folder named; New York's list also names files, "data/bills_*.json": skipped.)
+        run: |
+          set -f
+          for d in $PATHS; do case "$d" in *'*'*|*.json) continue ;; esac; mkdir -p "$d" && date -u +%Y-%m-%dT%H:%M:%SZ > "$d/last_checked"; done
       # Saved when something changed, or when the saved "last checked" time is over 12 hours old (so the pages' "updated"
       # stays current without filling the cache with identical copies every run).
       - name: See whether anything changed
@@ -165,7 +188,8 @@ jobs:
         env:
           PATHS: ${{ matrix.path }}
         run: |
-          n=$(find $PATHS -newer "$RUNNER_TEMP/started" -type f ! -name last_checked 2>/dev/null | wc -l)
+          # (A pattern that matches no file yet, as New York's "data/agendas_*.json" can, mustn't fail the step.)
+          n=$( (find $PATHS -newer "$RUNNER_TEMP/started" -type f ! -name last_checked 2>/dev/null || true) | wc -l)
           age=$(( $(date +%s) - PREV_CHECKED ))
           echo "$n files changed; last checked mark saved $((age / 3600)) hours ago"
           echo "any=$([ "$n" -gt 0 ] || [ "$age" -gt 43200 ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
