@@ -241,6 +241,87 @@ def roster():
     return problems
 
 
+# ---- committee agendas ------------------------------------------------------------------------------------------
+
+BILL_RE = re.compile(r"\b([HS])\.? ?(B|J\.? ?R|C\.? ?R)\.? ?0*([1-9]\d{0,3})(?=S\d\d|\b)")
+
+
+def meeting_name(name):
+    """legcal's "House Revenue and Taxation Standing Committee" -> "House Revenue and Taxation"; a committee of both
+    houses ("Executive Appropriations Committee") -> "Joint Executive Appropriations"."""
+    name = re.sub(r"\s+", " ", re.sub(r"(?: Standing)? Committee$", "", (name or "").strip()))
+    return name if re.match(r"(House|Senate) ", name) else f"Joint {name}"
+
+
+def bills_in(obj, found):
+    """Every bill number in any string of an agencal answer ("SB0112", "H.B. 47"), as "SB112", "HJR3"."""
+    if isinstance(obj, dict):
+        for v in obj.values():
+            bills_in(v, found)
+    elif isinstance(obj, list):
+        for v in obj:
+            bills_in(v, found)
+    elif isinstance(obj, str):
+        for h, kind, n in BILL_RE.findall(obj):
+            key = f"{h}{re.sub(r'[^A-Z]', '', kind)}{int(n)}"
+            if key not in found:
+                found.append(key)
+    return found
+
+
+def mtg_stamp(when):
+    """ "2026-11-10T9:00:00.000Z" -> "2026-11-10T09:00:00" (Utah time, the "Z" notwithstanding), or ""."""
+    m = re.match(r"(\d{4}-\d\d-\d\d)[T ](\d{1,2}):(\d\d)", when or "")
+    return f"{m.group(1)}T{int(m.group(2)):02d}:{m.group(3)}:00" if m else ""
+
+
+def agendas():
+    """Bills on committee agendas from yesterday to three weeks ahead, into data/ut/<year>/agendas.json:
+    {"SB112": [["Senate Revenue and Taxation", "2026-01-28T14:00:00"], ...]}. The meetings are legcal.json's (read by
+    roster() just before; times are Utah's own clock, though written with a "Z"); each meeting's agenda items come from
+    the API's agencal/<mtgID> route, about twenty requests a run in session. Meetings committees.json marks canceled
+    ("C") are left out. The answers are kept as read in agencal.json, to check the format against. A failure keeps the
+    last copy and never marks Utah incomplete."""
+    folder = os.path.join(DATA, str(YEAR))
+    cal = load(os.path.join(folder, "legcal.json"), {}).get("items") or []
+    canceled = set()
+    for c in load(os.path.join(folder, "committees.json"), {}).get("committees") or []:
+        for m in c.get("meetings") or []:
+            if m.get("status") == "C":
+                canceled.add(((c.get("id") or "").upper(), mtg_stamp(m.get("mtgTime"))))
+    first, last = date.fromordinal(date.today().toordinal() - 1).isoformat(), \
+        date.fromordinal(date.today().toordinal() + 21).isoformat()
+    out, raw, n, failed = {}, {}, 0, 0
+    for m in cal:
+        when, mid = m.get("mtgTime") or "", m.get("mtgID")
+        com = re.search(r"com=(\w+)", m.get("link") or "")
+        if not m.get("committee") or not mid or not first <= when[:10] <= last:
+            continue
+        stamp = mtg_stamp(when)
+        if not stamp or com and (com.group(1).upper(), stamp) in canceled:
+            continue
+        try:
+            d = api(f"agencal/{mid}")
+        except Refused:
+            failed += 1
+            break
+        if d is None:
+            failed += 1
+            continue
+        n += 1
+        raw[mid] = d
+        for key in bills_in(d, []):
+            entry = [meeting_name(m["committee"]), stamp]
+            if entry not in out.setdefault(key, []):
+                out[key].append(entry)
+    if failed and not n:
+        print(f"agendas: agencal unreadable for {failed} meetings; kept the last copy", flush=True)
+        return
+    save(raw, os.path.join(folder, "agencal.json"))
+    save(out, os.path.join(folder, "agendas.json"))
+    print(f"agendas: {len(out)} bills on {n} meetings", flush=True)
+
+
 # ---- roll calls from le.utah.gov --------------------------------------------------------------------------------
 
 def _names(chunk):
@@ -362,6 +443,10 @@ def main():
     problems = []
     try:
         problems += roster()
+        try:
+            agendas()
+        except Exception as e:  # agendas never hold Utah back
+            print(f"agendas: failed ({type(e).__name__}); kept the last copy", flush=True)
         read = []
         for year in YEARS:
             if out_of_time():

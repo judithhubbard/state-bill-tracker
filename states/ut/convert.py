@@ -414,7 +414,37 @@ def earlier(session, title, who):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee agendas: {"SB112": [["Senate Revenue and Taxation", "2027-01-28T14:00:00"]]}.
+    Two official sources, merged: agendas.json (states/ut/fetch.py's agendas(), from the API's meeting calendar and
+    each meeting's agenda items) and each bill's own agendaList (the API's record of every agenda it was put on, kept
+    with the bill). Only meetings today or later."""
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
+    out = {}
+
+    def add(key, name, when):
+        if when[:10] >= today and [name, when] not in out.setdefault(key, []):
+            out[key].append([name, when])
+
+    try:
+        for key, meets in json.load(open(os.path.join(folder(session), "agendas.json"))).items():
+            for name, when in meets:
+                add(key, name, when)
+    except (OSError, ValueError):
+        pass
+    for f in glob.glob(os.path.join(folder(session), "bills", "*.json")):
+        try:
+            b = json.load(open(f))
+        except (OSError, ValueError):
+            continue
+        num = b.get("billNumber") or os.path.basename(f)[:-5]
+        m = re.match(r"([A-Z]+)0*(\d+)", num)
+        for a in (b.get("agendaList") or []) if m else []:
+            t = re.match(r"(\d{4}-\d\d-\d\d)[ T](\d{1,2}):(\d\d)", a.get("mtgDate") or "")
+            name = re.sub(r"(?: Standing)? Committee$", "", (a.get("committeeName") or "").strip())
+            if t and name:
+                name = name if re.match(r"(House|Senate) ", name) else f"Joint {name}"
+                add(f"{m.group(1)}{int(m.group(2))}", name, f"{t.group(1)}T{int(t.group(2)):02d}:{t.group(3)}:00")
+    return {k: sorted(v, key=lambda x: x[1]) for k, v in out.items() if v}
 
 
 def parties(session, recs):

@@ -16,3 +16,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   General Description and Highlighted Provisions. Laws and vetoes match the Legislature's passed list bill for bill (2025:
   544 and 6; 2026: 493 and 2). One 45-day session a year from the third Tuesday of January; governor 10 days (Sundays
   excepted) in session, 20 after. Separate Senate (29) and House (75) districts by city, town or county.
+- **Committee agendas (2026-11-22):** two official sources, merged by `agendas()` in states/ut/convert.py. (1) Each bill's
+  own `agendaList` in the API record fetch.py already reads (every agenda it was put on: committee name, "2026-01-28
+  14:00:00.0", the agenda's address, an "upcomming" flag); 2026's records give 820 bills on 248 meetings, all HB/SB keys
+  matching the records (the rest are resolutions left out). (2) `agendas()` in states/ut/fetch.py, run after `roster()`:
+  for each meeting in legcal.json from yesterday to three weeks ahead (not canceled: committees.json's status "C"), the
+  API's `agencal/<mtgID>` route (listed on le.utah.gov/data/developer.htm; one request a meeting, a second apart), every
+  bill number in its answer, into data/ut/<year>/agendas.json; the answers as read go to agencal.json. Committee names
+  drop " Standing Committee"/" Committee"; one without a house becomes "Joint ...". Times are Utah's own clock (legcal
+  writes them with a "Z" and unpadded hours, "2026-11-10T9:00:00.000Z"). Untested: the agencal route's answer format
+  (the local token answered "Invalid request" for every route on 2026-11-22, so the parser looks for bill numbers in any
+  string of the answer: "SB0112", "H.B. 47", "HJR 3"), and whether a bill's updatetime changes when it's put on an agenda
+  (if not, source 2 is the timely one). Check agencal.json in January.
