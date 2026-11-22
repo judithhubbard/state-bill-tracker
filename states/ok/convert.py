@@ -32,8 +32,10 @@ reading is states/legiscan_convert.py; this file says what's particular to Oklah
 - Laws: no chapter numbers in LegiScan's data (Oklahoma numbers them "Chapter 1, O.S.L. 2025" in the session laws).
 - Constitutional amendments pass a majority of each house's members and go to the voters ("Filed with Secretary of
   State"), never the governor.
-- "What it does": nothing. LegiScan's description for Oklahoma is the official title, and the bill texts and summaries
-  are on oklegislature.gov, which asks automated readers not to read it.
+- "What it does": for laws and vetoed bills only, the House or Senate staff's bill summary of the latest whole version,
+  LegiScan's copy (read by legiscan.py's `read_supplements()`, kept by states/ok/summaries.py in data/ok/summaries.json).
+  LegiScan's description for Oklahoma is the official title, and the Legislature's own copies are on oklegislature.gov,
+  which asks automated readers not to read it.
 - Shell bills: each year leaders file hundreds of placeholders whose whole title is a subject and a named act with an
   effective date ("Schools; Education Reform Act of 2026; effective date."), kept to be rewritten late in the session.
   Those never moved past a committee are marked `shell`, as Illinois's are.
@@ -45,6 +47,7 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 from states import legiscan_convert as L
 from states.ok import profile as P
+from states.ok import summaries as S
 
 HOUSE = L.HOUSE
 # "Constitutional amendment; ...", "Oklahoma Constitution; ...", "Joint resolution; Oklahoma Constitution; ...",
@@ -138,6 +141,7 @@ class Oklahoma(L.Rules):
         super().__init__()
         self._pos = {}
         self.raw_titles = {}
+        self._summaries = None
 
     def session_folders(self):
         """{first (odd) year of the Legislature: folder}: the even year's LegiScan session holds the whole Legislature,
@@ -327,7 +331,10 @@ class Oklahoma(L.Rules):
         return ""
 
     def what(self, b):
-        return None
+        """The staff's bill summary, for laws and vetoed bills (states/ok/summaries.py)."""
+        if self._summaries is None:
+            self._summaries = S.read()
+        return S.what(b, self._summaries) if S.acted(b) else None
 
     def topics(self, b, comms, title):
         subject = L.text(b.get("title")).split(";")[0].strip().rstrip(".").lower()

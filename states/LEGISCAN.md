@@ -13,7 +13,11 @@ Moved from CLAUDE.md (2026-11-19). Each state's own notes: states/tn, ok, me, ri
   mid-way: all stages matched); getBill only within a daily allowance (`allowance()`: the month's remainder less a
   300 margin, a Sunday reserve and the master lists still to come, over the days left), status changes and major
   actions first, then new bills, then minor changes paced through the day; Sunday's dataset fills in the rest. In
-  session: ~2,000 a month of master lists, the rest for full records, ending near 8,700 at most. A session that
+  session: ~2,000 a month of master lists, the rest for full records, ending near 8,700 at most. Supplements
+  (2026-11-22): getSupplement only for Oklahoma's staff summaries of its laws and vetoed bills (`read_supplements()`,
+  `SUPPLEMENTS`, states/ok/summaries.py: each document once, kept for good), after the bills, only when no status change,
+  major action or new bill waits, within the paced allowance and counted in it, at most `SUPPLEMENT_DAY` (60) a day and a
+  third of the allowance: about 1,900 documents for 2023-26, so about a month; new laws' summaries after each session. A session that
   hasn't opened (`OPENS`, `begun()`) never marks a state incomplete. The next Legislature's session (2026-11-22) is
   read as soon as LegiScan lists it (`wanted()`: starting no later than next year), its master list once a day until it
   opens (`MASTERLIST_BEFORE`), and `folders()` shows a session starting this year or later with any bills (older ones

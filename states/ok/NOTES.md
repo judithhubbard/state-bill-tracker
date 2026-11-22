@@ -51,3 +51,18 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   convert.py reads it; legiscan_convert.py's `Rules.veto_memo()` is the hook (None for the other LegiScan states). Only
   2026's page is in `PAGES`: 2025's (gov--stitt-s-2025-veto-list.html) is laid out differently and 2023-24's weren't
   found; add each year's page by hand. 33 of 2026's vetoes matched on 2026-11-22. Shows after the next legiscan run.
+- **Staff summaries (2026-11-22, approved by the owner: laws, and vetoed bills too):** "What it does" for each law and
+  vetoed bill is the House or Senate staff's bill summary of its latest whole version (conference report, the Senate's
+  "House Amendment to Senate Bill" analysis, engrossed, committee substitute, introduced, in that order of preference by
+  date; amendment-only summaries and fiscal impact statements left out). They're PDFs on oklegislature.gov's /cf_pdf/,
+  which robots.txt bars: never read there. LegiScan keeps copies as each bill's supplements ("Fiscal Note/Analysis",
+  "House: Engrossed"), one getSupplement query each: legiscan.py's `read_supplements()` reads them after the bills, only
+  when no status change, major action or new bill waits, at most 60 a day (and a third of the day's allowance, counted in
+  it); states/ok/summaries.py picks them, reads the analysis with pdftotext and keeps each for good in
+  data/ok/summaries.json. About 1,900 documents (2025-26: 1,003 laws and vetoes; 2023-24: 892), so about a month at 60 a
+  day, newest Legislature first, plus a retry for each summary whose analysis is "Pending" (then the bill's next one).
+  Label: "From the Oklahoma House (or Senate) staff's bill summary, via LegiScan." Traps: HB 2110 of 2025 carries SB
+  2110's summary (dated ten months after the law; a document dated over 60 days after the governor acted, or whose
+  "Bill No.:" names another bill, isn't used); HB 2236 of 2023's conference summary says only "Pending". Two laws have
+  only a floor amendment's summary (SB 1196 of 2024, HB 2513 of 2025) and get none. `python3 states/ok/summaries.py`
+  prints the coverage.

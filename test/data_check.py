@@ -531,8 +531,18 @@ def check(state):
 
     # Summary text: encoding, characters lost in the export, paragraphs cut mid-sentence, title-only summaries.
     for path in sorted(glob.glob(os.path.join(P.DATA, "texts_*.json"))):
-        texts = [t for v in json.load(open(path)).values() for t in (v.get("statement"), v.get("fiscal")) if t]
+        entries = json.load(open(path))
+        texts = [t for v in entries.values() for t in (v.get("statement"), v.get("fiscal")) if t]
         name = os.path.basename(path)
+        # Empty, or a placeholder where the analysis goes (2026-11-22, Oklahoma's staff summaries: "Research Analysis
+        # Pending", "Please see previous summary of this measure", "The measure is currently under review"). LOOK: on
+        # 2026-11-22 the owner's copies also had Indiana's "None" (about 63 a year), West Virginia's empty HB 4601 and
+        # HB 5018 of 2024, Virginia 2024's cut summaries ("Installation") and Pennsylvania's one-word ones, not yet fixed.
+        hollow = sorted(n for n, v in entries.items() if "statement" in v and (len((v.get("statement") or "").strip()) < 15 or re.fullmatch(
+            r"(?:pending|n/?a|none|tbd|to be (?:completed|determined)|please see (?:the )?previous summary.*|"
+            r"the (?:measure|bill) is (?:currently )?under review.*)\.?", (v.get("statement") or "").strip(), re.I)))
+        if hollow:
+            say(state, "LOOK", f"{name}: {len(hollow)} texts empty or a placeholder (\"Pending\"), e.g. {hollow[:4]}")
         enc = sum(1 for t in texts if re.search("ï¿½|�|â€|Ã©", t))
         lost = sum(1 for t in texts if re.search(r"(?<=[a-z])\?(?=[a-z]+[\s.,;])|(^|\s)\?\s+\d", re.sub(r"\S*[/=]\S*", "", t)))
         cut = sum(1 for t in texts if any(len(p) > 20 and not re.search(r"[.:;?!)\"”\]]$", p.strip()) for p in t.split("\n")[:-1]))

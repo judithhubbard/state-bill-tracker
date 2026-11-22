@@ -26,7 +26,10 @@ LegiScan's rules (breaking them gets the key suspended), kept as hard limits:
   isn't read comes with Sunday's dataset. getRollCall only for roll calls not saved yet (they never change), counted
   in the allowance; getSessionPeople at most once a week, when a bill names someone not saved. usage.json's "day"
   holds the day's starting count and its getBill/getRollCall reads.
-- No bill texts (getBillText) and never legiscan.com's pages.
+- No bill texts (getBillText) and never legiscan.com's pages. getSupplement only for Oklahoma's staff summaries of its
+  laws and vetoed bills (`read_supplements()`, states/ok/summaries.py): each document once, after the bills, at most
+  SUPPLEMENT_DAY (60) a day and a third of the day's allowance, counted in it, and only when no status change, major
+  action or new bill is still waiting.
 
 In session (five running sessions): about 65 fixed queries a day (5 lists + 12 x 5 master lists), ~2,000 a month, about
 20 each Sunday for datasets and people, and the rest (about 220 a day) for full records when bills change: the month
@@ -427,13 +430,14 @@ def read_bills(todo, dry=False):
         tiers[t[4]] += 1
     print("  waiting: " + (", ".join(f"{n} {w}" for w, n in sorted(tiers.items())) or "none"), flush=True)
     new_people = defaultdict(set)
-    got = skipped = 0
+    got = skipped = urgent_done = 0
     for tier, _, sid, bid, why, folder, meta in todo:
         if out_of_time():
             break
         if spent >= (each if tier == 0 else paced):
             break
         entry = meta["bills"][str(bid)]
+        urgent_done += tier <= 1
         if time.time() - entry.get("fetched", 0) < BILL_EVERY:
             skipped += 1
             continue  # read within three hours: a later run
@@ -470,7 +474,82 @@ def read_bills(todo, dry=False):
     print(f"  {got} bills {verb}" + (" (roll calls not counted)" if dry else "") +
           (f"; {skipped} read within 3 hours wait" if skipped else "") +
           f"; {len(todo) - got - skipped} wait for a later day or Sunday's dataset", flush=True)
+    URGENT[0] = sum(1 for t in todo if t[0] <= 1) - urgent_done
     return new_people
+
+
+URGENT = [0]   # status changes, major actions and new bills read_bills() left for later: supplements wait for them
+
+# Supplements (LegiScan's copies of documents a legislature posts beside its bills), by state: a module with
+# wanted(cache) -> [(order, supplement_id, bill number, folder name)], read(), save(cache), take(cache, sid, bill,
+# folder, supplement) and plan(cache) -> {session: documents to read}. Oklahoma's House and Senate staff summaries of
+# its laws and vetoed bills (approved by the owner 2026-11-22; states/ok/summaries.py): about 1,900 documents for
+# 2023-24 and 2025-26, each read once and kept for good.
+SUPPLEMENTS = {"ok": "states.ok.summaries"}
+SUPPLEMENT_DAY = 60      # at most this many getSupplement queries a day (and a third of the day's allowance)
+
+
+def read_supplements(states, dry=False):
+    """getSupplement for the states' wanted documents, one query each, after the bills: only when read_bills() left no
+    status change, major action or new bill waiting, within the day's paced allowance (they count in it, as getBill
+    does: usage.json's "day" "reads", and its "supplements"), and at most min(SUPPLEMENT_DAY, a third of the allowance)
+    a day. A dry run says how many it would read."""
+    import importlib, shutil
+    mods = [(st, importlib.import_module(SUPPLEMENTS[st])) for st in states if st in SUPPLEMENTS]
+    if not mods:
+        return
+    each, spent, _ = allowance()
+    hour = 12 if PRETEND else datetime.now(timezone.utc).hour
+    paced = -(-each * min(24, hour + 2) // 24)
+    day = (read_json(USAGE, {}) or {}).get("day") or {}
+    done = day.get("supplements", 0) if day.get("date") == utc_today().isoformat() else 0
+    cap = min(SUPPLEMENT_DAY, each // 3)
+    for st, mod in mods:
+        cache = mod.read()
+        todo = mod.wanted(cache)
+        left = ", ".join(f"{s}: {n}" for s, n in sorted(mod.plan(cache).items(), reverse=True)) or "none"
+        print(f"{st.upper()} supplements: {len(todo)} documents to read (by session: {left}); {done} read today, "
+              f"at most {cap} a day", flush=True)
+        if URGENT[0]:
+            print(f"  {URGENT[0]} bills with a status change, a major action or new wait for their full record: "
+                  "supplements come after them", flush=True)
+            return
+        if not dry and not shutil.which("pdftotext"):
+            print("  no pdftotext: supplements wait for a later run", flush=True)
+            continue
+        got = 0
+        try:
+            for _, sid, bill, folder in todo:
+                if done >= cap or spent >= paced or out_of_time():
+                    break
+                got += 1
+                done += 1
+                spent += 1
+                if dry:
+                    continue
+                try:
+                    answer = query("getSupplement", id=sid)
+                except Stop as e:
+                    # One document LegiScan won't give (an answer that isn't OK) is set aside, so it can't stop every
+                    # run; the month's limit or a refused key stops the run as usual.
+                    if "this month" in str(e) or "refused" in str(e):
+                        raise
+                    print(f"  {bill} ({sid}): {e}; set aside", flush=True)
+                    answer = {"supplement": {}}
+                count_read()
+                usage = read_json(USAGE, {}) or {}
+                usage.setdefault("day", {})["supplements"] = done
+                write_json(USAGE, usage, indent=1, sort_keys=True)
+                if answer is None:
+                    continue
+                mod.take(cache, sid, bill, folder, answer.get("supplement") or {})
+                if got % 20 == 0:
+                    mod.save(cache)
+        finally:
+            if not dry and got:
+                mod.save(cache)
+        print(f"  {got} {'would be read' if dry else 'read'} (allowance used today: {spent} of {paced} by this hour); "
+              f"{len(todo) - got} left for later days", flush=True)
 
 
 def take_people(folder, meta, session_id, missing):
@@ -589,6 +668,7 @@ def main():
         print(f"Running sessions: {len(sessions)}; bills behind the saved master lists: {len(todo)}"
               " (today's master lists may show more)")
         read_bills(todo, dry=True)
+        read_supplements(states, dry=True)
         return
     KEY = load_key()
     mark_day()
@@ -633,6 +713,15 @@ def main():
         finally:
             for folder, meta, sid in sessions:
                 write_json(os.path.join(folder, "meta.json"), meta, indent=1)
+    # Then supplements (Oklahoma's staff summaries), with what the bills left of the day's allowance.
+    if not stopped:
+        try:
+            read_supplements(states)
+        except Stop as e:
+            stopped = str(e)
+            print(stopped, flush=True)
+        except Exception as e:
+            print(scrub(f"supplements: {e.__class__.__name__} {e}"), flush=True)
     for st in states:
         marker = os.path.join(DATA, st, "incomplete")
         if undone.get(st):
