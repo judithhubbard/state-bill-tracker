@@ -97,7 +97,10 @@ const WatchRows = (() => {
     // (The last action's day is left out when it's the deadline's own day: "Oct 22, 2026 · Floor vote Oct 22" read twice.)
     const sameDay = due && x.last && x.date && String(x.last).slice(0, 10) === String(x.date).slice(0, 10);
     // (With a deadline beside it, the last action's day says what it is: "Last action Oct 22, 2026 · Floor vote Oct 29".)
-    const when = [x.found && x.last && !sameDay ? `<span>${due ? "Last action " : ""}${fullDay(x.last)}</span>` : "",
+    // The latest action in the state's words, then its day, as the state's Bills list shows it ("Referred to the Health
+    // Committee · Oct 22, 2026"); a "New:" line already says it when the action is new.
+    const act = x.action && !(opt.isNew?.(x)) ? `${h(x.action)} · ` : "";
+    const when = [x.found && x.last && !sameDay ? `<span>${act}${fullDay(x.last)}</span>` : "",
       due ? `<span class="wr-dl">${h(due)}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""].filter(Boolean).join("");
     const where = `<span class="wr-where bstat">${x.found ? BillFacts.pips(x.stage, uni, over.trim(), x.label, x.st) + `<span class="stg s${x.stage}${over}">${h(x.label)}</span>` : ""}`
       + `${when ? `<span class="stw">${when}</span>` : ""}${stance}${x.found ? "" : '<span class="wr-todo">Open</span>'}</span>`;
