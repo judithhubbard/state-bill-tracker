@@ -17,6 +17,7 @@ import glob, json, os, re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from states import letters as L
 from states.wi import profile as P
 from states.undated import settle
 
@@ -159,6 +160,113 @@ def members_index(session):
     return {k: next(iter(v)) for k, v in out.items() if len(v) == 1}
 
 
+BILL_NAME = {"AB": "Assembly Bill", "SB": "Senate Bill", "AJR": "Assembly Joint Resolution", "SJR": "Senate Joint Resolution"}
+TITLE_HOUSE = {"Senator": "S", "Representative": "A"}
+
+
+def names(s):
+    """'Representative Gustafson; Representatives VanderMeer, Spiros and Tusler.' -> [{"title", "name"}, ...] (as
+    fetch.py's names())."""
+    out = []
+    for part in s.rstrip(". ").split(";"):
+        m = re.match(r"(Senators?|Representatives?)\s+(.*)", part.strip())
+        if m:
+            out += [{"title": re.sub(r"s$", "", m.group(1)), "name": n.strip()}
+                    for n in re.split(r",\s*|\s+and\s+", m.group(2)) if n.strip()]
+    return out
+
+
+def motions(paras):
+    """A committee record's motions with their votes, read from its paragraphs: [(meeting day, {"motion", "ayes",
+    "noes", ...})]. A motion is "Moved by Representative X, seconded by ... that ..." or, at an executive session held by
+    paper ballot (most of the Senate's), "Moved that Senate Bill 124 be recommended for passage as amended." (fetch.py's
+    parse_rocp() read only the first kind before 2026-11-22, so this reads the paragraphs it saves.)"""
+    out, day, mo = [], "", None
+    for p in paras:
+        m = re.match(r"([A-Z][a-z]+ \d{1,2}, \d{4})\s+\S", p)
+        if m:
+            try:
+                day = datetime.strptime(m.group(1), "%B %d, %Y").date().isoformat()
+            except ValueError:
+                day = ""
+            mo = None
+            continue
+        if p.startswith("Moved "):
+            mo = {"motion": p}
+            out.append((day, mo))
+            continue
+        m = re.match(r"(Ayes|Noes|Absent|Excused|Not Voting):\s*\((\d+)\)\s*(.*)", p)
+        if m and mo is not None:
+            mo[m.group(1).lower()] = names(m.group(3))
+            continue
+        if mo is not None and re.match(r"[A-Z][A-Z0-9 ,.'()-]{3,}.*\bAyes \d+", p):
+            mo = None
+    return [(d, x) for d, x in out if d]
+
+
+def veto_message(session, p):
+    """The governor's veto message (vetoes/<AB1>.txt, fetch.py's pdftotext -layout of the two-column letter) ->
+    {year, signer, text}, or None (none saved, or a scan with no text). The letter from "To the Honorable Members of the
+    Assembly:" to "Respectfully submitted"; a long one (a budget's partial vetoes) cut after its first paragraphs."""
+    try:
+        raw = open(os.path.join(folder(session), "vetoes", f"{p}.txt"), encoding="utf-8").read()
+    except OSError:
+        return None
+    lines = [x for page in raw.split("\f") for x in L.columns(page)]
+    start = next((i for i, (_, t) in enumerate(lines) if re.match(r"To the Honorable Members of the", t)), None)
+    if start is None:
+        return None
+    end = next((i for i, (_, t) in enumerate(lines) if i > start and re.match(r"Respectfully submitted", t)), len(lines))
+    day = next((t for _, t in lines[:start + 1] if re.fullmatch(r"[A-Z][a-z]+ \d{1,2}, \d{4}", t)), "")
+    try:
+        iso = datetime.strptime(day, "%B %d, %Y").date().isoformat()
+    except ValueError:
+        iso = f"{session + 1}-01-01"
+    # (Page headers of a long message: "GOVERNOR'S VETO MESSAGE", page numbers.)
+    body = [(i, t) for i, t in lines[start + 1:end]
+            if not re.fullmatch(r"GOVERNOR.S (?:PARTIAL )?VETO MESSAGE|-?\s*\d+\s*-?", t)]
+    text_ = L.cut(L.paragraphs(body, blanks=False))
+    return {"year": int(iso[:4]), "signer": P.governor_on(iso), "text": text_} if text_ else None
+
+
+def committee_votes(session, b, seat, comm_names):
+    """Committee votes member by member, from the Records of Committee Proceedings fetch.py saves (rocp/<id>.json):
+    each motion on the bill itself ("... that Assembly Bill 1 be recommended for passage as amended"; amendments and
+    budget papers left out), passed or failed ("WITHOUT RECOMMENDATION, Ayes 4, Noes 12"). A joint committee's vote
+    (Finance) is one vote a house, each with its own members' ayes and noes."""
+    m = re.match(r"([A-Z]+)(\d+)$", b["number"])
+    own = re.compile(rf"\bthat {BILL_NAME[m.group(1)]} {int(m.group(2))} be recommended for", re.I)
+    out = []
+    for path in b.get("rocps") or []:
+        r = load(session, os.path.join("rocp", path.rsplit("/", 1)[-1] + ".json"), None)
+        if not r:
+            continue
+        head = next((x for x in r.get("paragraphs", [])[:4] if re.match(r"(?:Joint )?(?:Survey )?Committee\b", x)), "")
+        name = re.sub(r"^(?:Joint )?(?:Survey )?Committee (?:on )?", "", head).strip()
+        # The committee's name now (the record's address: ".../senate/utilities_technology_and_tourism/1917326"), else as
+        # the record's heading gives it ("Utilities and Tourism", the name it had then).
+        keys = [re.sub(r"[^a-z]", "", x.lower().replace("and", "")) for x in (path.rstrip("/").split("/")[-2], name)]
+        name = next((comm_names[k] for k in keys if k in comm_names), name)
+        for day, mo in motions(r.get("paragraphs") or []):
+            if "ayes" not in mo or not own.search(mo.get("motion", "")):
+                continue
+            per = {}
+            for key, code in (("ayes", "Y"), ("noes", "N"), ("absent", "A"), ("excused", "E"), ("not voting", "A")):
+                for who in mo.get(key) or []:
+                    h = TITLE_HOUSE.get(who.get("title"))
+                    if not h:
+                        continue
+                    n = who["name"]
+                    i = re.match(r"([A-Z])\. (.+)$", n)
+                    k = f"{i.group(2).upper()}, {i.group(1)}" if i else n.upper()
+                    sid = seat.get((h, k)) or seat.get((h, k[:14])) or f"{h}?{n}"
+                    per.setdefault(h, []).append((sid, code))
+            for h, marks in sorted(per.items()):
+                out.append([h, "C", name or None, day, sum(1 for _, c in marks if c == "Y"),
+                            sum(1 for _, c in marks if c == "N"), [[sid, c] for sid, c in marks if c != "Y"]])
+    return out
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     path = os.path.join(P.DATA, f"contacts_{session}.json")
@@ -166,6 +274,9 @@ def load_session(session):
     by_id = {str(p.get("id")): (sid, p) for sid, p in people.items() if p.get("id")}
     seat = members_index(session)
     members = {str(m.get("id")): m for m in load(session, "members.json", [])}
+    contacts = json.load(open(path)) if os.path.exists(path) else {}
+    comm_names = {re.sub(r"[^a-z]", "", c["name"].lower().replace("and", "")): c["name"]
+                  for part in ("senateCommittees", "assemblyCommittees") for c in (contacts.get(part) or {}).values() if c.get("name")}
     parties = _PARTIES.setdefault(session, {})
 
     def person(a, h):
@@ -189,7 +300,8 @@ def load_session(session):
         origin = p[0]
         steps = [(h.get("date") or "",) + decode(h) + (text(h.get("action")), h) for h in b.get("history") or []]
         # "Report approved by the Governor with partial veto": a law with parts vetoed (the page's partlyVetoed()).
-        if any(re.search(r"partial veto", s[3], re.I) for s in steps):
+        partial = any(re.search(r"partial veto", s[3], re.I) for s in steps)
+        if partial:
             steps.append(("", "G", "Signed with item vetoes", "", {}))
         passed = set()
         for s in steps:
@@ -279,6 +391,10 @@ def load_session(session):
                     names_.append([seat.get((h, n)) or seat.get((h, n[:14])) or f"{h}?{n.title()}", "N" if m.get("vote") == "N" else "A"])
             # The roll call's own totals over the history line's (SB 541 of 2023: "Noes 8", nine noes by name).
             votes.append([h, "F", None, d] + list(totals or tally(a)) + [names_])
+        votes = sorted(committee_votes(session, b, seat, comm_names) + votes, key=lambda v: v[3])
+        vmemo = veto_message(session, p) if stage == 6 or (stage == 5 and partial) else None
+        if vmemo and stage == 5:
+            vmemo["kind"] = "line-item"  # signed with parts vetoed (the page's "signed it but vetoed some items")
         action_dates = [s[0] for s in steps if s[0]]
         rec = {
             "nums": [p], "base": [p], "prev": earlier(session, b),
@@ -289,7 +405,7 @@ def load_session(session):
             "passedS": "S" in passed, "passedA": "A" in passed, "program": None,
             "stage": stage, "passedIn": HOUSE[origin] if stage == 2 and origin in passed else HOUSE[other] if stage == 2 else None,
             "chapter": int(act) if act and stage == 5 else None,
-            "veto": None, "memo": "", "vetoMemo": None,
+            "veto": None, "memo": "", "vetoMemo": vmemo,
             "simText": f"{title} {' '.join(analysis[:2])}",
             "comm": comm if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),
