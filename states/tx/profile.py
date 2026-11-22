@@ -112,5 +112,22 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most over the 2021, 2023 and 2025 sessions, picked by hand
+# from an automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Texas's records have
+# captions only (no summaries), so these match the caption.
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|deep ?fake|\bgenerative|chatbot|algorithmic|machine learning)|\bAI\b", False),
+    ("rise", "Diversity, equity and inclusion", r"diversity, equity|diversity and equity|diversity equity|\bDEI\b", True),
+    ("rise", "Foreign adversaries", r"foreign (?:entit|adversar|governments?)|designated countr|countr(?:y|ies) of concern", True),
+    ("rise", "Squatters", r"squatt|unlawful occupant|unauthorized occupant", True),
+    ("rise", "Nuclear power", r"nuclear", True),
+    ("rise", "School library books", r"library material|school librar|library catalog|librar(?:y|ies) .{0,30}(?:explicit|harmful|obscene)", True),
+    ("rise", "Education savings accounts", r"education savings|scholarship account|education freedom", True),
+    ("spike", "Fentanyl", r"fentanyl", True),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
+    ("spike", "Power grid", r"ercot|power region|electric grid|weatheriz|winter storm|power outage", True),
+    ("spike", "Disaster declarations", r"declared (?:state of )?disaster|disaster declaration|declaration of (?:a )?(?:state of )?disaster", True),
+    ("spike", "Cannabis", r"cannabis|marihuana|marijuana", True),
+    ("spike", "Insulin", r"insulin", True),
+]
 WORDING = []
