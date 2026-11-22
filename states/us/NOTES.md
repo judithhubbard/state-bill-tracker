@@ -106,6 +106,20 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   test, not to run). On 2026-11-22 (the Thanksgiving recess) no meeting still to come named a bill: the
   House's committee calendar (docs.house.gov) had no meetings posted from November 23 to December 4, and the Senate's five
   (senate.gov's hearings.xml) were nominations, closed briefings and a hearing on caregivers and AI.
+- **The Senate's own schedule, a second source (2026-11-22):** senate.gov's hearings.xml
+  (www.senate.gov/general/committee_schedules/hearings.xml, one request a run, about 5 KB; no robots.txt rule against it)
+  lists every Senate committee meeting posted, about one to two weeks ahead (a December 1 hearing was posted November 20),
+  with an identifier, committee, type ("Open Hearing", "Closed Business Meeting"), Eastern day and time, the matter, and
+  <AssociatedDocument document_prefix="S" document_num="..."> for the measures it takes up (PN for nominations, not bills).
+  `senate_schedule()` in meetings.py runs first in every run, key or no key, into data/us/senate_hearings.json (the same
+  record shape as meetings.json, times in UTC, past meetings kept for 30 days, since the schedule drops a meeting once it's
+  held; bills from the documents, else "S. 123" numbers in the matter; "canceled"/"postponed" in the matter marks it).
+  `convert.agendas()` adds its meetings to the API's when the API has neither the same identifier (Congress.gov uses the
+  Senate's) nor the same committee at the same minute (`_comm_key()`: "Senate Aging (Special)" = "Senate Aging"), so a
+  meeting is never listed twice; kinds as before ("markup" for a business meeting or executive session, else "hearing").
+  On 2026-11-22: 5 meetings posted (nominations, closed intelligence meetings, an Aging hearing), none naming a bill, so
+  nothing shows yet; tested with a copy of the file given bill documents. The House has no such file (its Committee
+  Repository, docs.house.gov, is week and event pages: not read).
 - **A new Congress (2026-11-22):** the 120th becomes current on January 1, 2027 (its bills start January 3; govinfo
   answers 404 for /BILLSTATUS/120 until then). fetch.py reads its bills from the sitemaps before its first zips are built
   (updates/), its missing zips don't count for 45 days, and the 119th is read like the current Congress (sitemap updates,

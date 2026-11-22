@@ -1115,18 +1115,32 @@ def meeting_name(n):
     return n if re.search(r"committee\b", n, re.I) else f"{n} Committee"
 
 
+def _comm_key(n):
+    """A committee's name without the words the two sources write differently: "Senate Aging (Special)" and "Senate
+    Aging" -> "aging"."""
+    return " ".join(w for w in re.findall(r"[a-z]+", n.lower())
+                    if w not in ("senate", "house", "committee", "special", "select", "permanent", "joint", "on", "the", "and", "of"))
+
+
 def agendas(session):
     """Bills on upcoming committee meetings (data/us/meetings.json, from states/us/meetings.py): bill -> [[committee,
     "2026-12-02T10:00:00" (Eastern time, as the page shows it), "markup" | "hearing" | ""], ...]. Canceled and postponed
     meetings are left out; the current Congress only."""
     path = os.path.join(P.DATA, "meetings.json")
-    if not os.path.exists(path):
-        return {}
-    d = json.load(open(path))
-    if d.get("congress") != P.congress_of(session):
-        return {}
+    d = json.load(open(path)) if os.path.exists(path) else {}
+    meets = dict(d.get("meetings") or {}) if d.get("congress") == P.congress_of(session) else {}
+    # The Senate's own schedule (senate.gov's hearings.xml, states/us/meetings.py's senate_schedule()) adds the Senate
+    # meetings the API hasn't got yet: the same meeting is the same identifier (Congress.gov uses the Senate's) or the
+    # same committee at the same time.
+    spath = os.path.join(P.DATA, "senate_hearings.json")
+    if P.congress_of(session) == CONGRESSES[-1]:
+        same = lambda m: (m["date"][:16], _comm_key(" ".join(m.get("committees") or [])))
+        have = {same(m) for m in meets.values()}
+        for i, m in (json.load(open(spath)).get("meetings") or {}).items() if os.path.exists(spath) else []:
+            if i not in meets and same(m) not in have:
+                meets[i] = m
     out = defaultdict(list)
-    for m in d.get("meetings", {}).values():
+    for m in meets.values():
         if not m.get("bills") or not m.get("date") or re.search(r"cancel|postpon", m.get("status", ""), re.I):
             continue
         when = datetime.fromisoformat(m["date"].replace("Z", "+00:00")).astimezone(ZoneInfo("America/New_York"))
