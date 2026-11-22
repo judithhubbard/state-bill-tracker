@@ -35,6 +35,9 @@ P = importlib.import_module(f"states.{STATE}.profile")
 import governors
 P.GOV_SINCE = governors.in_office(P)[1]
 governors.apply_leaders(P)  # chosen next leaders (LEADERS_NEXT), from their first day
+# The governor's page's folder: /<st>/governor/ (Congress: /us/president/, states/legislatures.json's "executive").
+GOV_SLUG = (json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "states", "legislatures.json")))["states"]
+            .get(STATE, {}).get("executive") or "Governor").lower()
 # The code that reads the state's own data and turns it into bill records (C.load_session).
 C = importlib.import_module(f"states.{STATE}.convert")
 
@@ -860,6 +863,44 @@ def insights(loaded, hist, current):
     }
 
 
+# A law the governor neither signed nor vetoed in time, as its history says (tracker.html's NO_SIGNATURE: keep the two alike).
+NO_SIGNATURE = re.compile(r"without (?:the |my )?(?:governor'?s |president'?s )?signature|w/o sign|w/out governor", re.I)
+
+
+def governor_record(done, current):
+    """The governor's page's "Past sessions": per finished session and governor (the one in office the day of the decision,
+    or the day the bill was sent), [session, surname, the day they took office, bills that reached them, signed, vetoed
+    (overridden or not), of those overridden, law without signature, no decision recorded]. Counted as the page counts
+    the current session: stage 4 to 6; a veto is the governor's even when overridden."""
+    out = {}
+    for s in sorted(done):
+        if s >= current:
+            continue
+        for r in done[s][0]:
+            if r["stage"] not in (4, 5, 6) or r.get("ballot"):
+                continue
+            k = r["keyDates"]
+            day = next((d.split(";")[0] for d in (k[6], k[5], k[4], r["last"] or "") if d), "")
+            if not day:
+                continue
+            name, start = governors.in_office(P, day)
+            c = out.setdefault((s, start), [s, name, start, 0, 0, 0, 0, 0, 0])
+            c[3] += 1
+            if k[6]:
+                c[5] += 1
+                c[6] += r["stage"] == 5
+            elif r["stage"] == 5:
+                if any(NO_SIGNATURE.search(a[1] or "") for v in r["vers"] for a in v["actions"]):
+                    c[7] += 1
+                else:
+                    c[4] += 1
+            elif r["stage"] == 4:
+                c[8] += 1
+            else:
+                c[5] += 1  # vetoed with no veto date in the record
+    return [out[k] for k in sorted(out)]
+
+
 def write_compare(done, hist, current, insight):
     """Each finished session's odds chart numbers, for /compare/ and the front page's "Bills that became law" map
     (compare_site.py), into data/compare.json. Counted as insights() counts its odds chart (reached(), the same steps),
@@ -1630,7 +1671,7 @@ ROW_COLS = {2: [], 3: [], 10: -1, 12: 0, 15: -1, 16: -1, 21: "", 25: "", 27: ""}
 # ... and in the shards only:
 DETAIL_COLS = {1: "summary", 14: "lawCode", 22: "votes", 26: "similar", 28: "vetoNote"}
 DETAIL_EMPTY = {"summary": "", "lawCode": "", "votes": [], "similar": [], "vetoNote": 0}
-STATS_TOP = ("insights", "profiles", "peers")
+STATS_TOP = ("insights", "profiles", "peers", "govRecord", "vetoMsgs")
 NET_TOP = ("network", "networkSince")
 # A towns list this big (Congress's 35,000 places) waits; small ones are needed for the sidebar's town picker.
 BIG_TOWNS = 500_000
@@ -1888,9 +1929,9 @@ def split_payload(data, current=True, hooks=None):
 def frame_tabs(page, kind):
     """The tabs as the page will show them once its data is drawn (hydrate() sets the same), so the page's frame, shown
     while the data loads, doesn't change when it arrives. kind: "past", "upcoming", "person" (a legislator's page) or
-    "watch" (/watchlist/: no tabs)."""
+    "watch" (/watchlist/: no tabs) or "gov" (the governor's page: its record, then Bills)."""
     tab = lambda v: f'<button class="view-tab" type="button" data-view="{v}">'
-    hide = {"past": ["watch"], "upcoming": ["stats"], "person": ["watch", "stats"]}.get(kind, [])
+    hide = {"past": ["watch"], "upcoming": ["stats"], "person": ["watch", "stats"], "gov": ["watch", "stats"]}.get(kind, [])
     for v in hide:
         page = page.replace(tab(v), tab(v)[:-1] + " hidden>", 1)
     if kind == "person":
@@ -1898,8 +1939,15 @@ def frame_tabs(page, kind):
         page = page.replace(tab("person")[:-1] + " hidden>", tab("person"), 1)
         # Only a legislator's page has the "Open for comment" tab (their bills to weigh in on).
         page = page.replace(tab("act")[:-1] + " hidden>", tab("act"), 1)
+    if kind == "gov":
+        # The governor's record first, named for the office (tracker.html's hydrate() does the same), then Bills.
+        page = page.replace('data-view="how"><span', 'data-view="how" hidden><span', 1)
+        page = re.sub(r'<button class="view-tab" type="button" data-view="person" hidden>[^<]*</button>\n\s*', "", page, count=1)
+        bills = '<button class="view-tab" type="button" data-view="bills" aria-current="page">Bills</button>'
+        assert bills in page, "tracker.html's Bills tab changed"
+        page = page.replace(bills, f'{tab("person")[:-1]} aria-current="page">{GOV_SLUG.capitalize()}</button>\n    {tab("bills")}Bills</button>', 1)
     # "Where you live" is for the current session's pages (a legislator's page is about them).
-    if kind in ("past", "upcoming", "person"):
+    if kind in ("past", "upcoming", "person", "gov"):
         page = page.replace('<details class="where" id="whereBox">', '<details class="where" id="whereBox" hidden>', 1)
     if kind == "watch":
         page = page.replace('<nav class="views" aria-label="Page sections">', '<nav class="views" aria-label="Page sections" hidden>', 1)
@@ -2023,6 +2071,7 @@ def compute(prev=None):
         for kind, ref in newest.items():
             if kind != P.session_kind(current):
                 insight_of[kind] = {**insights(done, hist, ref), "trends": insight["trends"], "topicRing": insight["topicRing"]}
+    gov_record = governor_record(done, current)
     # Each finished session's odds chart, for /compare/ (compare_site.py).
     compare_out = write_compare(done, hist, current, insight) if GITHUB else None
     cores = {}
@@ -2158,6 +2207,11 @@ def compute(prev=None):
             "counties": P.COUNTIES,
             # The current governor, for telling whether an earlier veto was theirs.
             "governor": governors.in_office(P)[0],
+            # Their full name, party and first day in office, and their page's folder (GOV_SLUG, public site only).
+            **({"govPage": f"{GOV_SLUG}/"} if session == current and GITHUB else {}),
+            **({"govNow": {"name": g[0], "party": g[1], "since": governors.in_office(P)[1]}} if session == current and (g := governors.facts_governor(
+                json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "states", "legislatures.json")))["states"].get(STATE)
+                or {"governor": ["", ""]})) and g[0] else {}),
             # A governor-elect not yet in office: {"name": full name, "start": "YYYY-MM-DD"} (states/legislatures.json).
             **({"governorNext": {"name": nx[0], "start": nx[2]}} if (nx := governors.facts_next(
                 json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "states", "legislatures.json")))["states"].get(STATE, {}))) else {}),
@@ -2174,6 +2228,11 @@ def compute(prev=None):
         if session == current:
             data["contacts"] = contacts_for(session, recs, names)
             data["legislators"] = legislators(session)
+            # The governor's page (/<st>/governor/, tracker.html's renderGov()): their record in past sessions, and this
+            # session's bills whose veto came with a message (indexes into the rows).
+            data["govRecord"] = gov_record
+            data["vetoMsgs"] = [i for i, r in enumerate(recs) if r.get("vetoMemo") and r["keyDates"][6]
+                                and (r.get("vetoMemo") or {}).get("kind") in (None, "absolute")]
             # Legislators' numbers leave out Illinois's shell bills, like the statistics.
             real, real_done = [r for r in recs if not r.get("shell")], without_shells(done, {s: {} for s in done})[0]
             data["profiles"], data["peers"] = profiles(session, real, data["legislators"], party_of)
@@ -2513,6 +2572,20 @@ def finish(session, core, current, urls):
                     f.write(github_page(page, preload("../") + page_meta(f'{leg["title"]} {leg["name"]} · {state_words()} · State Bill Tracker',
                                                         f'{leg["title"]} {leg["name"]} in the {P.LEGISLATURE}: bills, committees and how to get in touch.',
                                                         f'{leg["slug"]}/')))
+            # /governor/ (Congress: /president/): the same page, opened to the governor's record (tracker.html's renderGov()).
+            if any(leg["slug"] == GOV_SLUG for leg in core["legislators"]):
+                print(f"   warning: a legislator's page is at /{GOV_SLUG}/; no governor's page")
+            else:
+                facts = json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"].get(STATE) or {"governor": ["", ""]}
+                gov_name = f'{GOV_SLUG.capitalize()} {governors.facts_governor(facts)[0]}'.strip()
+                page = frame_tabs(with_nav(person_template, "../"), "gov").replace(marker, data_tag("../", ' data-base="../"'))
+                page = page.replace(f"<title>{P.SITE_NAME}</title>",
+                                    f'<title>{html_escape(gov_name)} · {P.SITE_NAME}</title>\n<meta name="abt-preset" content="{{&quot;gov&quot;: true}}">', 1)
+                os.makedirs(os.path.join(GITHUB, GOV_SLUG), exist_ok=True)
+                with open(os.path.join(GITHUB, GOV_SLUG, "index.html"), "w") as f:
+                    f.write(github_page(page, preload("../") + page_meta(f"{gov_name} · {state_words()} · State Bill Tracker",
+                                                        f"{gov_name}: the bills waiting for a decision, what was signed and vetoed, and how to get in touch.",
+                                                        f"{GOV_SLUG}/")))
             # /watchlist/: the same page, opened to the visitor's own watchlist.
             page = frame_tabs(with_nav(person_template, "../"), "watch").replace(marker, data_tag("../", ' data-base="../"'))
             page = page.replace(f"<title>{P.SITE_NAME}</title>",

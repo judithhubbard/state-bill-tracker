@@ -730,6 +730,13 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
   under the header, the house's members (party, district, bills sponsored and laws this session, from the list part's
   sponsors: `legCounts()`; sortable, a name filter; the leader marked) or the governor's contacts (`GOV_REACH`, the
   bills waiting for them); the same name again closes it (2026-11-22). Legislator pages: `PRESET`, `PAST_WHO`, `renderPerson()` and `renderPersonStats()`.
+  The governor's page (2026-11-22), /<st>/governor/ (Congress: /us/president/, build_data.py's `GOV_SLUG` from
+  legislatures.json's "executive"; `PRESET.gov`): `renderGovCard()` and `renderGov()` (`#govRec`, the Record tab named for
+  the office, before Bills): on the desk (soonest deadline first), this session's decisions by the governor in office
+  (decided on or after `govNow.since`; signed, without signature, vetoed, overridden: `GOV_KINDS`), earlier sessions under
+  the same governor (`govRecord` in the stats part, `governor_record()`: by the governor in office on the decision's day;
+  its `NO_SIGNATURE` is tracker.html's, keep them alike) and vetoes with a message (`vetoMsgs`). Bills open in place
+  (`billRow()`). Linked from the Governor panel and from a decided bill's "What you can do" line (`govLink()`, `govFrom()`).
 - **Statistics:** `renderStats()`, which builds every stats section, plus `sankey()` (odds),
   `monthChart()`, `oddsLine()` (the "In past sessions…" line in a bill panel) and the network
   (`renderNet()` / `drawNet()`, which loads d3 on demand).

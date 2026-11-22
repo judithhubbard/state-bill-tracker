@@ -110,7 +110,7 @@ download.yml (GitHub, every 2 h)       publish.yml (after each quick-lane downlo
      the build swaps them for `@font-face` rules (`site_fonts.swap_google()`; on state pages at the top of app.css),
      files at `/assets/fonts/<name>.<hash>.woff2`.
 5. Writes `index.html` (current session), `<year>.html` (others), `/<slug>/index.html` per legislator,
-   `/watchlist/index.html`.
+   `/governor/index.html` (Congress: `/president/`, `GOV_SLUG`), `/watchlist/index.html`.
 
 Without `--github` it writes `site/<st>/<session>.html` with all data embedded (gzip+base64): the Claude copies.
 
@@ -219,6 +219,11 @@ opened (`later()`, `STALE`, `showView()`).
 - **How tab:** `showHowSec()`, `renderHowComm()` (`STATE.commPairs`), `renderHowCal()`; text from `states/<st>/how.html`.
 - **Legislator pages** (`/<st>/<slug>/`, `PRESET.who`): `renderPerson()`, `renderPersonStats()` ("Their numbers"),
   `renderOpenNow()` / `comingUp()` ("Open for comment").
+- **/<st>/governor/** (Congress: /us/president/; `PRESET.gov`, `frame_tabs(..., "gov")`): `renderGovCard()` (name, party,
+  since: the list part's `govNow`; `GOV_REACH`), `renderGov()` in `#govRec` (the Record tab, named for the office, then
+  Bills): the desk (stage 4, by `b.due`), this session's decisions by the governor in office (`GOV_KINDS`: signed,
+  without signature, vetoed, overridden), earlier sessions (the stats part's `govRecord`, `governor_record()`) and vetoes
+  with a message (`vetoMsgs`). Linked from the party line's Governor panel and decided bills' "What you can do" (`govLink()`).
 - **/<st>/watchlist/**: the same page with `frame_tabs(..., "watch")`.
 - Notice above the tabs: `sessionNotice()`, `shortNotice()`, `staleNotice()`. Analytics: `countUse()`, `countOnce()`.
 
