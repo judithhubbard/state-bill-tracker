@@ -58,7 +58,11 @@ notes for two bienniums) takes about 2½ hours without a key, so GitHub's runs b
 - agendas.json (the active biennium): bills on committee hearings from yesterday to three weeks ahead, from
   /api/v1/hearings/ (see agendas()), every run.
 
-Not read: bill texts (PDFs; /api/v1/measures/<bill>/text/ has them as lines), fiscal notes (PDFs), testimony, past
+- fnotes/<HB2001>.json: the Division of the Budget's fiscal note on the bill's latest version that has one, for bills with
+  no supplemental note (2026-11-22: the note's letter describes the bill before its cost; "What it does" falls back to
+  it), from the same viewer (/<biennium>/documents/view-leg/?apn=<biennium>/ds_docs_li/fisc_note_hb2001_00_0000/...),
+  once a version, after the roll calls (`fiscal_notes()`).
+Not read: bill texts (PDFs; /api/v1/measures/<bill>/text/ has them as lines), testimony, past
 hearings, committee minutes, and the website's pages, whose emails are hidden behind Cloudflare's script
 (the API and the members' CSV export give them openly).
 
@@ -416,6 +420,56 @@ def biennium_extras(biennium):
     save(state, state_path)
 
 
+def fiscal_notes(biennium):
+    """The fiscal note on each bill with no supplemental note (see the module's docstring), as the run's time allows."""
+    year = first_year(biennium)
+    folder = os.path.join(DATA, str(year))
+    bills = (load(os.path.join(folder, "bill_status.json")) or {}).get("bills") or []
+    notes_list = load(os.path.join(folder, "supp_notes.json"))
+    if not notes_list:
+        return  # (which bills have a supplemental note isn't known yet)
+    with_note = {(n.get("bill_no") or "").upper() for n in notes_list.get("supp_notes") or []}
+    state_path = os.path.join(folder, "state.json")
+    state = load(state_path, {})
+    absent = state.setdefault("absent", {})
+    os.makedirs(os.path.join(folder, "fnotes"), exist_ok=True)
+    todo = []
+    for b in bills:
+        bill = (b.get("BILLNO") or "").upper()
+        if not WANTED.match(bill) or bill in with_note:
+            continue
+        docs = [v.get("associated_documents", {}).get("fiscal_note") for v in b.get("versions") or []]
+        docs = [d for d in docs if d]
+        if not docs:
+            continue
+        m = re.search(r"apn=([^&]+)", docs[-1])
+        if not m:
+            continue
+        apn = urllib.parse.unquote(m.group(1))
+        have = load(os.path.join(folder, "fnotes", f"{bill}.json")) or {}
+        if have.get("apn") == apn or absent.get(apn):
+            continue
+        todo.append((bill, apn))
+    got = 0
+    for bill, apn in todo:
+        if out_of_time():
+            break
+        url = f"{SITE}/{biennium}/documents/view-leg/?{urllib.parse.urlencode({'apn': apn})}"
+        page = request(url, f"{year} fiscal note {bill}", "text")
+        text = note_text(page) if page else None
+        if not text:
+            if CODE[0] == 404 or page:
+                absent[apn] = TODAY.isoformat()
+            continue
+        save({"bill": bill, "apn": apn, "text": text}, os.path.join(folder, "fnotes", f"{bill}.json"))
+        got += 1
+        if got % 25 == 0:
+            save(state, state_path)
+    save(state, state_path)
+    if todo:
+        print(f"{year} fiscal notes: {got} of {len(todo)} read (bills with no supplemental note)", flush=True)
+
+
 def member_details(biennium):
     """The active members' details, when missing or a week old. A detail that fails keeps its last copy."""
     os.makedirs(MEMBERS, exist_ok=True)
@@ -508,6 +562,10 @@ def main():
             if out_of_time():
                 break
             biennium_extras(x)
+        for x in bienniums:
+            if out_of_time():
+                break
+            fiscal_notes(x)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True

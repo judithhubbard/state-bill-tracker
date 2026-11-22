@@ -770,7 +770,12 @@ def record(session, b, read, parties):
         if len(tw & bw) < 0.2 * max(1, len(tw)):
             return rec, None
         return rec, (what, "From the Legislative Research Department's supplemental note on the bill before the conference committee's report, which may have changed it.")
-    return rec, (what, "From the Legislative Research Department's supplemental note.") if what else None
+    if what:
+        return rec, (what, "From the Legislative Research Department's supplemental note.")
+    # No supplemental note: the Division of the Budget's fiscal note, whose letter says what the bill would do before
+    # what it would cost (fnotes/<bill>.json, fetch.py's fiscal_notes()).
+    what = fiscal_what(load(session, f"fnotes/{p}"))
+    return rec, (what, "From the Division of the Budget's fiscal note.") if what else None
 
 
 STOP = set("the a an of and or to in for on by with from that this be is are as at certain such any providing relating "
@@ -816,6 +821,33 @@ def floor_votes(session, p, days=None):
 
 
 # ---- what it does ---------------------------------------------------------------------------------------------------
+
+def fiscal_what(fnote):
+    """A fiscal note's account of what the bill would do: the paragraphs after "... is respectfully submitted to your
+    committee." up to the first after it about the bill's cost (a dollar figure, "fiscal effect", the agencies'
+    estimates), at most two. The viewer gives each printed line as a paragraph: lines are joined until one ends a sentence."""
+    t = ((fnote or {}).get("text") or "").replace("\r", "")
+    m = re.search(r"respectfully\s+submitted\s+to\s+your\s+committee\.", t, re.I)
+    if not m:
+        return ""
+    paras, cur = [], []
+    for ln in re.split(r"\n\s*\n", t[m.end():]):
+        x = text(ln)
+        if not x:
+            continue
+        cur.append(x)
+        if re.search(r"[.!?:;\"\u201d]$", x):
+            paras.append(" ".join(cur))
+            cur = []
+    out = []
+    for x in paras:
+        if out and re.search(r"\$\s?\d|fiscal effect|would require additional|expenditures|estimates?\b|indicates", x, re.I):
+            break  # (the first paragraph is kept whatever it says: a bill can set a tax rate, "$0.09 per kilowatt-hour")
+        out.append(re.sub(r"\s+([.,;:])", r"\1", x))
+        if len(out) == 2:
+            break
+    return "\n".join(out)
+
 
 def what_it_does(note):
     """The supplemental note's Brief, then its Background (the hearing, the committees' amendments), without the note's
