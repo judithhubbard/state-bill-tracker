@@ -33,9 +33,9 @@ shared reading is states/legiscan_convert.py; this file says what's particular t
     the "As Enacted" text ("ACT044 As Enacted.pdf"; municipal acts, charters mostly, are "ACTM003"), added as the
     bill's last step. Acts are numbered through the biennium with no gaps (2023-24: 1-185 and M-1 to M-28; 2025-26:
     1-179 and M-1 to M-12).
-- No summaries: LegiScan's description is the official title ("An act relating to ..."), and the Legislative Counsel's
-  "statement of purpose" is only in the bill texts (PDFs on the Legislature's site), so there's no "What it does".
-"""
+- No summaries in LegiScan: its description is the official title ("An act relating to ..."). "What it does" is the
+  Office of Legislative Counsel's act summary, vetoed bill summary or statement of purpose of the bill as introduced,
+  read from the Legislature's PDFs by states/vt/texts.py (data/vt/texts_raw.json)."""
 import json, os, re, sys
 from datetime import date
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -43,6 +43,7 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 from states import legiscan_convert as L
 from states.vt import profile as P
+from states.vt import texts as T
 
 HOUSE = L.HOUSE
 MESSAGE = re.compile(r"^(?:Senate|House) [Mm]essage\b")
@@ -255,7 +256,11 @@ class Vermont(L.Rules):
         return L.text(b.get("title"))
 
     def what(self, b):
-        return None
+        """Legislative Counsel's act summary, vetoed bill summary or statement of purpose, as read by states/vt/texts.py."""
+        global _TEXTS
+        if _TEXTS is None:
+            _TEXTS = T.read()
+        return T.what(b, _TEXTS)
 
     def topics(self, b, comms, title):
         return ([P.COMMITTEE_TOPICS[c] for c in comms if c in P.COMMITTEE_TOPICS] +
@@ -279,6 +284,7 @@ class Vermont(L.Rules):
 
 
 RULES = Vermont()
+_TEXTS = None
 _SEATS, _LOADED = {}, {}
 
 
