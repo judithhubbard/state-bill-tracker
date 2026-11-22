@@ -41,6 +41,9 @@ def check(state):
     C = importlib.import_module(f"states.{state}.convert")
     print(f"== {P.STATE_NAME}")
     loaded = {s: C.load_session(s)[0] for s in importlib.import_module("states.window").shown(P.DATA, C.sessions())}
+    if not loaded:  # (no session's data at all: the District's folder before its first LegiScan download crashed here)
+        say(state, "FAIL", "no session's data to check (download missing?)")
+        return
     # Committee reports' signatures (AK, WA, ME: votes of kind "R") aren't votes: the vote checks below never see them.
     # Each signer is a seat ("H:12|Carrick"), a member with no seat now ("S|Hughes"), or no member of the committee's
     # house ("H?Name"), which is the name read wrongly (or a list split wrongly).

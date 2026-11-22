@@ -275,6 +275,22 @@ def read_votes(session, comms, seats=None):
 
 
 # ---- Committee agendas
+def _main_bills(z):
+    """The session's records from MAINBILL.TXT, by number: bills (A, S) and constitutional amendments (ACR, SCR)."""
+    subj_keys = defaultdict(set)
+    for r in _rows(z, "BILLSUBJ.TXT"):
+        subj_keys[r["BillType"] + r["BillNumber"]].add(r["SubjectKey"])
+    main = {}
+    for r in _rows(z, "MAINBILL.TXT"):
+        # A number held open for a bill not yet introduced (FirstPrime "OPEN", no synopsis, no date: 21 in 2026, A3988,
+        # S364 ...): not a bill yet. Its history, if one comes, starts with its introduction, and the synopsis with it.
+        if not r["Synopsis"].strip() and not r["IntroDate"].strip() and r["FirstPrime"].strip() in ("OPEN", ""):
+            continue
+        if r["CurrentStatus"] != "WAPP" and (r["BillType"] in ("A", "S") or is_amendment(r, subj_keys[r["BillType"] + r["BillNumber"]])):
+            main[r["BillType"] + r["BillNumber"]] = r
+    return main
+
+
 def agendas(session):
     """Bills on committee agendas: bill -> [["Assembly Health", "2026-11-05T10:00:00"], ...], as New York's
     agendas file has them. Meetings that were canceled or aren't meeting are left out.
@@ -285,6 +301,9 @@ def agendas(session):
     off = {(r["CommHouse"], r["Date"], r["Time"]) for r in _rows(z, "AGENDAS.TXT") if r["Status"] != "Scheduled"}
     # (A canceled voting session: its day, whatever time the board list gives.)
     off_days = {(r["CommHouse"], r["Date"]) for r in _rows(z, "AGENDAS.TXT") if r["Type"] == "Session" and r["Status"] != "Scheduled"}
+    # Only the site's records: the voting sessions' boards also list joint and concurrent resolutions that aren't
+    # constitutional amendments (AJR103, ACR144 of 2026), which the site leaves out.
+    kept = set(_main_bills(z))
     out = defaultdict(list)
     for r in _rows(z, "BAGENDA.TXT"):
         floor = r["Type"] == "Session"
@@ -297,6 +316,8 @@ def agendas(session):
         hour = (int(m.group(1)) % 12 + (12 if m.group(3) == "P" else 0)) if m else 0
         entry = [f"{HOUSE[house]} {name}", f"{iso(r['Date'])}T{hour:02d}:{int(m.group(2)) if m else 0:02d}:00"] + (["floor"] if floor else [])
         bill = r["BillType"] + r["BillNumber"]
+        if bill not in kept:
+            continue
         if entry not in out[bill]:
             out[bill].append(entry)
     return dict(out)
@@ -328,17 +349,7 @@ def load_session(session):
         last, _, first = sponsor.partition(",")
         return roster.get((house,) + name_key(last, first.strip()), (0, ""))
 
-    subj_keys = defaultdict(set)
-    for r in _rows(z, "BILLSUBJ.TXT"):
-        subj_keys[r["BillType"] + r["BillNumber"]].add(r["SubjectKey"])
-    main = {}
-    for r in _rows(z, "MAINBILL.TXT"):
-        # A number held open for a bill not yet introduced (FirstPrime "OPEN", no synopsis, no date: 21 in 2026, A3988,
-        # S364 ...): not a bill yet. Its history, if one comes, starts with its introduction, and the synopsis with it.
-        if not r["Synopsis"].strip() and not r["IntroDate"].strip() and r["FirstPrime"].strip() in ("OPEN", ""):
-            continue
-        if r["CurrentStatus"] != "WAPP" and (r["BillType"] in ("A", "S") or is_amendment(r, subj_keys[r["BillType"] + r["BillNumber"]])):
-            main[r["BillType"] + r["BillNumber"]] = r
+    main = _main_bills(z)
     hist = defaultdict(list)
     for r in _rows(z, "BILLHIST.TXT"):
         hist[r["BillType"] + r["BillNumber"]].append(r)

@@ -314,23 +314,58 @@ def _letters(s):
     return re.sub(r"[^a-z]", "", s.lower())
 
 
+def _served(session):
+    """Members in the year's and the year before's contacts files, for a Statement of Purpose naming someone the year's
+    committee pages leave out: the Speaker (on no committee: "Representative Mike Moyle", 2023-25) and members who left
+    during the year, whom the pages, read later, no longer list (Sen. Abby Lee and Rep. Sue Chew in 2024, Reps. Kevin
+    Andrus and Todd Achilles in 2025)."""
+    out = []
+    for y in (session, session - 1):
+        try:
+            people = json.load(open(os.path.join(P.DATA, f"contacts_{y}.json"), encoding="utf-8"))["people"]
+        except (OSError, ValueError, KeyError):
+            continue
+        for sid, c in people.items():
+            if c.get("name") and sid[:1] in ("H", "S") and not any(o["name"] == c["name"] and o["house"] == sid[0] for o in out):
+                out.append({"house": sid[0], "name": c["name"], "district": int(re.sub(r"\D", "", sid) or 0) or None})
+    return out
+
+
 def member_named(session, house, name):
     """The year's member a Statement of Purpose's contact names ("Representative Jordan Redman": house "H"), or None:
     in that house, by surname, and by first name too when two share the surname ("Josh Tanner", "Steven Tanner") or no
     title says which house (agency staff are no one's match). The first name may differ when the house and surname
     settle it ("Ted Hill", "Edward H. Hill" on an earlier year's pages; "Stephanie Mickelsen", "Stephanie Jo
-    Mickelsen")."""
-    people = [p for p in roster(session).values()]
-    last, first = _letters(surname(name)), _letters(name.split()[0]) if name.split() else ""
-    same_first = lambda p: _letters(p["name"].split()[0]) == first
-    for h in ([house] if house else []) + [OTHER[house] if house else None]:
-        hits = [p for p in people if (h is None or p["house"] == h) and _letters(surname(p["name"])) == last]
-        if len(hits) > 1 or h != house or not house:
-            hits = [p for p in hits if same_first(p)]
-        if len(hits) > 1:
-            hits = [p for p in hits if p.get("sid")] or hits[:0]
-        if len(hits) == 1:
-            return hits[0]
+    Mickelsen"), or be its short form ("Steve C. Tanner", "Steven Tanner"). Also written: the district after the name
+    ("Josh Tanner (14)"), the surname alone ("Den Hartog", "Vander Woude"), surname first ("Bernt Treg" for Treg A.
+    Bernt), no space after an initial ("Bruce D.Skaug"). Not on the year's pages: members in the contacts files
+    (`_served()`)."""
+    name = re.sub(r"\.(?=[A-Za-z])", ". ", name).strip()
+    district = re.search(r"\((\d+)\)\s*$", name)
+    name = re.sub(r"\s*\(\d+\)\s*$", "", name)
+    district = int(district.group(1)) if district else None
+    words = name.split()
+    if not words:
+        return None
+    first_of = lambda n: _letters(n.split()[0]) if n.split() else ""
+    same_first = lambda a, b: bool(a and b) and (a == b or min(len(a), len(b)) >= 3 and (a.startswith(b) or b.startswith(a)))
+    # (surname, first name, whether the first name must match) readings: as written; the whole name as a surname;
+    # surname first (only with the first name too: "Scott Bedke" read so would be Heather Scott).
+    readings = [(_letters(surname(name)), first_of(name), False)]
+    if len(words) == 2:
+        readings += [(_letters(name), "", False), (_letters(words[0]), _letters(words[1]), True)]
+    pools = ([p for p in roster(session).values()], _served(session))
+    for last, first, strict in readings:
+        for pool in pools:
+            for h in ([house] if house else []) + [OTHER[house] if house else None]:
+                hits = [p for p in pool if (h is None or p["house"] == h) and _letters(surname(p["name"])) == last
+                        and (not district or p.get("district") == district)]
+                if strict or len(hits) > 1 or h != house or not house:
+                    hits = [p for p in hits if same_first(first_of(p["name"]), first)]
+                if len(hits) > 1:
+                    hits = [p for p in hits if p.get("sid")] or hits[:0]
+                if len(hits) == 1:
+                    return hits[0]
     return None
 
 
