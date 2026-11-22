@@ -24,8 +24,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (B), Excused (E) by Sponsor Name, matched within the vote's house to that General Assembly's members ("H:12"); members
   who left are "H?McCollum". The 2023-24 roll-call pages never list Sen. Alan Clark, though their counts include him
   (HB1024's Senate vote: "Nays: 2", one name); `fill_missing()` puts back the house's members missing from every group
-  when exactly one group is short by that many. Roll calls not yet read aren't shown (the files have no tallies). No summaries: the title is
-  the subtitle, sentence-cased (`titled()`), and there's no "What it does". Appropriation bills (most of a fiscal session)
+  when exactly one group is short by that many. Roll calls not yet read aren't shown (the files have no tallies). The title is
+  the subtitle, sentence-cased (`titled()`); acts have a "What it does" from the BLR's Summary of General Legislation (below). Appropriation bills (most of a fiscal session)
   are `budget` ("Budget bill"). Joint resolutions proposing amendments (not Article V applications) are tagged "const":
   one passage by a majority of each house's members, then the voters at the next general election (`amendmentOnce`; up
   to three per election); the records show them enrolled and "Approved by the Governor", a formality, so they stop at
@@ -43,3 +43,18 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
 - Next session's prefiled bills (2026-11-22: 15 bills of 2027R in the live folder, prefiled from mid-November) are shown as
   an upcoming session from the first one: `sessions()` in convert.py asks more than 100 bills only of sessions before
   this year (it hid 2027 at first).
+- **What it does (2026-11-22):** the Bureau of Legislative Research's Summary of General Legislation, a book after each
+  regular session summarizing every general act by subject ("ACT 28 (HB1204) limits the recovery of damages for ...").
+  It's linked from the session's Session Documents page (arkleg.state.ar.us/Bills/SessionDocuments?a=1&
+  ddBienniumSession=2025%2F2025R: "Summary of General Legislation"; 2023's "2023 Regular Session - General Legislative
+  Summary") as a /Home/FTPDocument PDF (3-4 MB). robots.txt allows all but ChatGPT's agents. states/ar/summaries.py,
+  called by fetch.py: the page, then the book when its address is new or the copy is 60 days old; read with pdftohtml
+  -xml (poppler-utils), which keeps fonts: headings are bold or italic, or capitals; an act's text is the plain lines
+  after its "ACT n (HB1234)" line at the same margin, carried over a page break. Proposed amendments (HJR 1018 of 2025)
+  are a bold title, then "If approved by voters at the 2026 general election, the amendment would ...". Kept in
+  <biennium>/general_summary_<year>.json, written to texts_<year>.json. Label: "From the Bureau of Legislative
+  Research's summary of the act." Coverage: 2023 689 of 890 laws plus 1 amendment, 2025 845 of 1,026 plus 3; the rest
+  are appropriations, whose fiscal summaries are tables of amounts (not used), as are the fiscal sessions' (2024, 2026:
+  none). An act listed under several subjects has each different summary as a paragraph (SB 294 of 2023, the LEARNS Act,
+  has 22). Traps: pdftohtml splits a line where the font changes ("... malpractice ac" + "tion."), so pieces with the
+  same top are joined; the table of contents and index repeat headings and "ACT 986 ....... 18" lines, skipped.

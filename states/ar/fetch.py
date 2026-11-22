@@ -603,6 +603,12 @@ def main():
                 got = votes_run(biennium, budget)
                 if budget is not None:
                     budget -= got
+        if not ONLY and not out_of_time():
+            try:  # the BLR's Summary of General Legislation ("What it does" for acts); never holds the run back
+                from states.ar import summaries
+                summaries.run(request, [y for b in bienniums for y in (b, b + 1) if y <= date.today().year])
+            except Exception as e:  # noqa: BLE001
+                print(f"general summary: failed ({e.__class__.__name__})", flush=True)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         if not whole:  # a refusal stops a first copy; once whole, the last copies stay
