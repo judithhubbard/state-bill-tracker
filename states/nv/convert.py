@@ -26,7 +26,8 @@ line says so, "Vetoed after the session ended: ...", which profile.js's STATE.ve
 
 Floor votes (votes/<AB1>.json): each final passage, member by member. NELIS calls every one "Passed" (AB 500's lost
 votes too): the history line decides, and votes are matched to it by house, day and tally. The laws and vetoed lists
-(list.json) decide laws and vetoes too, and agree with the histories bill for bill.
+(list.json) decide laws and vetoes too, and agree with the histories bill for bill. Committee votes come from the
+committees' minutes (minutes/, meetings.json): committee_votes() ties each report to the motion that made it.
 """
 import html, json, os, re
 from datetime import date, datetime
@@ -708,7 +709,7 @@ def record(session, p, row, lst):
         ds = sorted({s[0] for s in steps if test(s) and s[0]})
         return {"first": ds[0], "last": ds[-1], "all": ";".join(ds)}[mode] if ds else ""
 
-    votes = floor_votes(session, p, vote_steps)
+    votes = committee_votes(session, p, reported) + floor_votes(session, p, vote_steps)
     action_dates = [s[0] for s in steps if s[0]]
     what = digest_text(pg["digest"])
     budget = bool(re.match(r"(?:Makes|Authorizes) (?:an? |certain |supplemental )*(?:appropriations?|expenditures?)\b", title)) or \
@@ -799,6 +800,239 @@ def floor_votes(session, p, vote_steps):
             out.append([h, "F", None, d, int(c.get("Yea") or 0), int(c.get("Nay") or 0), listed])
         elif tl:
             out.append([h, "F", None, d, tl.get("Yeas", 0), tl.get("Nays", 0), []])
+    return out
+
+
+# ---- committee votes (the minutes) -------------------------------------------------------------------------------------
+# NELIS has no committee roll calls. The minutes (minutes/<Assembly-JUD-1117>.txt.gz, fetch.py) list the committee's
+# members present and absent, then record each work-session motion in capitals: "ASSEMBLYMEMBER MARZOLA MOVED TO AMEND
+# AND DO PASS SENATE BILL 20 (1ST REPRINT). ASSEMBLYMEMBER GONZÁLEZ SECONDED THE MOTION. ... THE MOTION PASSED.
+# (ASSEMBLYMEMBERS COLE, GRAY, HANSEN, HARDY, AND YUREK VOTED NO. ASSEMBLYMEMBER GOULDING WAS ABSENT FOR THE VOTE.)"
+# Only the noes and those away are named: the ayes are the members present less those named. MINUTES_STATS counts what
+# was read and why motions were left out (python3 -m states.nv.convert prints it).
+
+_MEETINGS, _MOTIONS = {}, {}
+MINUTES_STATS = {}
+TITLE = r"(?:ASSEMBLY(?:MEMBERS?|MEN|WOMEN|MAN|WOMAN)|SENATORS?|(?:VICE )?CHAIR(?:WOMAN|MAN)?)"
+MOVER = re.compile(rf"\b{TITLE}\s+[A-ZÀ-Ý'’\-. ]{{2,40}}?\s+(?:MOVED|MADE A MOTION|MOTIONED)\b")
+RESULT = re.compile(r"THE MOTIONS? (PASSED|CARR?IED|FAILED|DID NOT PASS|DID NOT CARRY|WAS WITHDRAWN)\s*([A-Z][A-Z ]*?)?\s*(?:\.|(?=\())"
+                    r"\s*(\((?:[^()]|\([^()]*\))*\))?")
+BILL_REF = re.compile(r"\b(?:(ASSEMBLY|SENATE) (JOINT RESOLUTIONS?|BILLS?)|(A|S)\.\s?(J\.\s?R|B)\.)\s*((?:\d+(?:\s*\([^)]*\))?(?:,\s*|,?\s+AND\s+)?)+)")
+
+
+def _fold(s):
+    """Upper case without accents or curly apostrophes, for matching names: "Zermeño" -> "ZERMENO"."""
+    import unicodedata
+    s = unicodedata.normalize("NFKD", text(s).replace("’", "'")).encode("ascii", "ignore").decode()
+    s = re.sub(r"\s+", " ", s.upper()).strip()
+    return re.sub(r",?\s+(?:JR|SR|II|III|IV)\.?$", "", s)  # "Max E. Carter II": the minutes say "CARTER"
+
+
+def meetings_of(session):
+    """(house letter, committee name) -> [(day, minutes file name, {bill: result})] from meetings.json."""
+    if session not in _MEETINGS:
+        info = load(session, "meetings") or {}
+        out = {}
+        for c in (info.get("committees") or {}).values() if isinstance(info, dict) else []:
+            h = CHAMBER.get(c.get("house"))
+            for m in c.get("meetings") or []:
+                mm = re.search(r"/Minutes/(Assembly|Senate)/([A-Za-z]+)/Final/(\d+)\.pdf$", m.get("minutes") or "")
+                if h and mm and mm.group(1) == c["house"] and mm.group(2) == c["code"] and m.get("date"):
+                    out.setdefault((h, c["name"]), []).append((m["date"], f"{mm.group(1)}-{mm.group(2)}-{mm.group(3)}", m.get("bills") or {}))
+        for v in out.values():
+            v.sort()
+        _MEETINGS[session] = out
+    return _MEETINGS[session]
+
+
+def minutes_lines(raw):
+    """The minutes' lines without the running heads ("Assembly Committee on Judiciary / May 12, 2025 / Page 3")."""
+    keep = []
+    for line in raw.replace("\f", "\n").split("\n"):
+        s = re.sub(r"\s+", " ", line).strip()
+        if re.fullmatch(r"Page \d+", s):
+            while keep and (re.fullmatch(r"(?:Assembly|Senate|Joint) .{0,120}", keep[-1]) or re.fullmatch(r"[A-Z][a-z]+ \d{1,2}, \d{4}", keep[-1]) or not keep[-1]):
+                keep.pop()
+            continue
+        if re.fullmatch(r"\*CM\d+\*|Minutes ID: \d+", s):
+            continue
+        keep.append(s)
+    return keep
+
+
+def minutes_members(lines, h):
+    """The committee's members from the minutes' head: [(name as written, excused?)] present and absent."""
+    present, absent, part = [], [], None
+    word = r"(?:Assemblymember|Assemblyman|Assemblywoman|Senator)"
+    for s in lines:
+        if s.startswith("COMMITTEE MEMBERS PRESENT"):
+            part = present
+            continue
+        if s.startswith("COMMITTEE MEMBERS ABSENT"):
+            part = absent
+            continue
+        if part is not None and re.fullmatch(r"[A-Z][A-Z ,]+:", s):
+            break  # GUEST LEGISLATORS PRESENT:, STAFF MEMBERS PRESENT:
+        if part is None or not s or s == "None":
+            continue
+        m = re.match(rf"{word}\s+(.+?)(?:,\s*(?:Chair|Vice Chair|Co-?Chair|Chairman|Chairwoman))?\s*(\((?:excused|absent)[^)]*\))?\s*$", s, re.I)
+        if m:
+            part.append((re.sub(r",\s*(?:Chair|Vice Chair)$", "", m.group(1).strip()), bool(m.group(2) and "excused" in m.group(2).lower())))
+        elif part is absent and not re.match(word, s):
+            continue
+        else:
+            return None  # a line not read: don't guess the membership
+    return [(n, False, True) for n, _ in present] + [(n, ex, False) for n, ex in absent]
+
+
+def minutes_seat(session, h, full):
+    """A name from the minutes' head ("Cinthia Zermeño Moore") -> the session's seat, else "A?Moore"."""
+    f = _fold(full)
+    cands = []
+    for m in load(session, "members"):
+        if CHAMBER.get(m.get("house")) != h or not m.get("district"):
+            continue
+        last, _, first = text(m.get("name")).partition(",")
+        if f.endswith(" " + _fold(last)) or f == _fold(last):
+            cands.append((m, (first.split() or [""])[0]))
+    if len(cands) > 1:
+        cands = [c for c in cands if _fold(c[1]).strip(".") == f.split()[0]] or cands
+    if len(cands) == 1:
+        return f"{h}:{int(cands[0][0]['district'])}"
+    first = f.split()[0] if f else ""
+    sid = seat_of(session, h, f"{f.split()[-1] if f else ''}, {first}")
+    return sid
+
+
+def unanimous(words):
+    """"UNANIMOUSLY", and the typos the minutes have: "UANIMOUSLY", "UNAMIMOUSLY", "UNANIMOUSY"."""
+    return bool(re.fullmatch(r"U[A-Z]{6,10}Y?", (words or "").strip())) and (words or "").startswith(("UN", "UA"))
+
+
+def read_named(paren):
+    """"(ASSEMBLYMEMBERS COLE AND GRAY VOTED NO. ASSEMBLYMEMBER HARDY WAS ABSENT FOR THE VOTE.)" -> [(name, code)], or
+    None when a sentence isn't one of those read."""
+    out = []
+    for sent in re.split(r"\.\s*", paren.strip("() .")):
+        sent = sent.strip()
+        if not sent:
+            continue
+        m = re.fullmatch(rf"(?:{TITLE}\s+)?(.+?)\s+(VOTED NO|VOTED IN THE NEGATIVE|(?:WAS|WERE) (?:ABSENT|NOT PRESENT) FOR THE VOTE|"
+                         r"(?:WAS|WERE) EXCUSED(?: FOR THE VOTE)?|ABSTAINED(?: FROM THE VOTE)?|(?:WAS|WERE) ABSENT|(?:WAS|WERE) EXCUSED FROM THE VOTE)", sent)
+        if not m:
+            return None
+        pred = m.group(2)
+        code = "N" if pred.startswith("VOTED") else "B" if pred.startswith("ABSTAIN") else "E" if "EXCUSED" in pred else "A"
+        for n in re.split(r",\s*(?:AND\s+)?|\s+AND\s+", m.group(1)):
+            n = re.sub(rf"^{TITLE}\s+", "", n.strip())
+            if n:
+                out.append((n, code))
+    return out
+
+
+def minutes_motions(session, h, name):
+    """The motions in one meeting's minutes: [{"bills", "kind" ("report" or "other"), "passed", "yes", "no", "listed"}];
+    "listed" is None when the votes couldn't be read (a name not on the committee, wording not read)."""
+    key = (session, name)
+    if key in _MOTIONS:
+        return _MOTIONS[key]
+    import gzip
+    st = MINUTES_STATS.setdefault(session, {})
+    try:
+        with gzip.open(os.path.join(folder(session), "minutes", f"{name}.txt.gz"), "rt", encoding="utf-8") as f:
+            raw = f.read()
+    except OSError:
+        _MOTIONS[key] = None
+        return None
+    st["minutes"] = st.get("minutes", 0) + 1
+    lines = minutes_lines(raw)
+    members = minutes_members(lines, h)
+    if not members:
+        st["minutes without a members list read"] = st.get("minutes without a members list read", 0) + 1
+        _MOTIONS[key] = []
+        return []
+    seats_ = [(n, minutes_seat(session, h, n), ex, here) for n, ex, here in members]
+    body = " ".join(lines)
+    out = []
+    starts = [m for m in MOVER.finditer(body)]
+    for i, m in enumerate(starts):
+        end = starts[i + 1].start() if i + 1 < len(starts) else len(body)
+        seg = body[m.end():end]
+        sec = re.search(r"SECONDED THE MOTIONS?|THE MOTIONS? (?:PASSED|CARR?I?ED|FAILED|DID NOT)", seg)
+        motion = seg[:sec.start()] if sec else seg[:400]
+        res = RESULT.search(seg)
+        bills = []
+        for b in BILL_REF.finditer(motion):
+            kind = (b.group(1) or b.group(3))[0] + ("JR" if "J" in (b.group(2) or b.group(4) or "") else "B")
+            bills += [kind + n for n in re.findall(r"\d+(?![^(]*\))", b.group(5))]
+        if not bills:
+            continue
+        report = bool(re.search(r"\bDO PASS\b|\bTO PASS\b|WITHOUT RECOMMENDATION|RE-?REFER", motion)) and \
+            not re.search(r"RECONSIDER|RESCIND|INDEFINITELY POSTPONE|INTRODUCE|BILL DRAFT REQUEST|\bBDR\b", motion)
+        rec = {"bills": bills, "kind": "report" if report else "other", "passed": None, "yes": 0, "no": 0, "listed": None,
+               "amend": "AMEND" in motion}
+        out.append(rec)
+        if not res:
+            st["motions with no result read"] = st.get("motions with no result read", 0) + 1
+            continue
+        rec["passed"] = res.group(1) in ("PASSED", "CARRIED")
+        if res.group(1) == "WAS WITHDRAWN":
+            rec["passed"] = None
+            continue
+        named = read_named(res.group(3)) if res.group(3) else []
+        if named is None or (not named and not res.group(3) and not unanimous(res.group(2))):
+            st["results not read"] = st.get("results not read", 0) + 1
+            continue
+        listed, ok = {}, True
+        for n, code in named:
+            f = _fold(n)
+            hits = [s for nm, s, _, _ in seats_ if _fold(nm) == f or _fold(nm).endswith(" " + f)]
+            if len(hits) != 1:
+                ok = False
+                break
+            listed[hits[0]] = code
+        if not ok:
+            st["names not on the committee"] = st.get("names not on the committee", 0) + 1
+            continue
+        for nm, s, ex, here in seats_:
+            if not here and s not in listed:
+                listed[s] = "E" if ex else "A"
+        rec["listed"] = [[s, c] for s, c in listed.items()]
+        rec["no"] = sum(1 for c in listed.values() if c == "N")
+        rec["yes"] = len(seats_) - len(listed)
+    _MOTIONS[key] = out
+    return out
+
+
+def committee_votes(session, p, reported):
+    """Each committee report in the history ("From committee: Do pass.") tied to the motion that made it: the latest
+    passed motion naming the bill in that committee's minutes on or before the report's day, at a meeting whose result
+    for the bill (NELIS's Meetings tab) is a report. -> [[house, "C", committee, day, yes, no, listed]]."""
+    out, used = [], set()
+    st = MINUTES_STATS.setdefault(session, {})
+    meets = meetings_of(session)
+    for d, h, c, rec in reported:
+        st["reports"] = st.get("reports", 0) + 1
+        best = None
+        for day, name, results in meets.get((h, c), []):
+            if day > d or name in used or not re.search(r"do pass|without recommendation|re-?refer", results.get(p, ""), re.I):
+                continue
+            ms = minutes_motions(session, h, name)
+            if ms is None:
+                continue
+            for mo in ms:
+                if p in mo["bills"] and mo["kind"] == "report" and mo["passed"]:
+                    best = (day, name, mo)
+        if not best:
+            st["reports without minutes or motion"] = st.get("reports without minutes or motion", 0) + 1
+            continue
+        day, name, mo = best
+        if mo["listed"] is None:
+            st["reports whose vote wasn't read"] = st.get("reports whose vote wasn't read", 0) + 1
+            continue
+        used.add(name)
+        st["committee votes"] = st.get("committee votes", 0) + 1
+        out.append([h, "C", c, day, mo["yes"], mo["no"], [list(x) for x in mo["listed"]]])
     return out
 
 
@@ -907,5 +1141,6 @@ if __name__ == "__main__":
         print(s, len(recs), dict(sorted(st.items())), f"laws {len(mine_laws)} (list {len(laws)}; differ {sorted(mine_laws ^ laws)[:6]}),"
               f" vetoes {len(mine_vetoes)} (list {len(vetoes)}; differ {sorted(mine_vetoes ^ vetoes)[:6]}),"
               f" returning {sum(1 for r in recs if r.get('vetoReturns'))}")
+        print(s, "committee votes from the minutes:", MINUTES_STATS.get(s))
     for k, n in sorted(UNREAD.items(), key=lambda x: -x[1])[:25]:
         print(n, k[:160])
