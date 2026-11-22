@@ -11,13 +11,14 @@ away; the House's and Senate's answer the project's agent since, below).
   Versions are read again when the bill's entry in the list changes, its actions change, or it waits on enrollment or
   the governor (the entry's revno doesn't change for either); the current General Assembly's actions every run
   (an action like a referral doesn't change the list); a finished one's once. Three requests at a time.
-- The legislators, committees with their members, and the next three weeks' committee meetings (agendas).
+- The legislators, committees with their members, the next three weeks' committee meetings (agendas) and the House and
+  Senate floor calendars dated today or later (floor_calendars(): two index requests a run, a PDF when one is new).
 - Legislators' emails aren't in the API: Open States' public-domain file (data.openstates.org, copied from the
   official sites), decided 2026-10-31. Their office phones and addresses: each member's page on ohiohouse.gov or
   ohiosenate.gov (`member_pages()`, approved by the owner 2026-11-22), each read once a week at most.
 Usage: python3 states/oh/fetch.py [first_year]   (default 2021)
 """
-import json, os, re, sys, time, urllib.request
+import json, os, re, subprocess, sys, time, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -183,6 +184,62 @@ def agendas(session):
     print(f"agendas: {len(out)} bills on {n} meetings")
 
 
+def floor_calendars(session, since=None, folder=None):
+    """Floor calendars (the House and Senate calendars' "Bills for Third Consideration"), into <session>/floor.json:
+    {calendar name ("house_calendar_11182026_02"): {"revno", "house", "when", "bills": ["HB391", ...]}}. Each house's
+    index is one request a run; a calendar (a PDF, read with pdftotext) is downloaded only when it's dated today or later
+    and its revno is new (a reissue is a new name, _02). Calendars over a month old are dropped from the file. The Senate
+    Rules calendar isn't a floor calendar."""
+    since = since or TODAY.isoformat()
+    folder = folder or os.path.join(P.DATA, str(session))
+    path = os.path.join(folder, "floor.json")
+    try:
+        have = json.load(open(path))
+    except (OSError, ValueError):
+        have = {}
+    base = f"{API}/general_assembly_{P.assembly_of(session)}/calendars"
+    cut = (TODAY - timedelta(days=30)).isoformat()
+    out = {k: v for k, v in have.items() if v["when"][:10] >= min(cut, since)}
+    for house in ("house", "senate"):
+        index = get(f"{base}/{house}/")
+        if not isinstance(index, list):
+            print(f"floor calendars: no {house} index; kept the last copy")
+            continue
+        # The newest version of each day's calendar (house_calendar_11182026_01, then _02).
+        newest = {}
+        for c in index:
+            m = re.match(r".*/((house|senate)_calendar_(\d\d)(\d\d)(\d{4})_(\d+))\.html$", c.get("apn") or "")
+            if not m or c.get("date", "") < since:
+                continue
+            day = f"{m[5]}-{m[3]}-{m[4]}"
+            if day not in newest or int(m[6]) > int(newest[day][0].rsplit("_", 1)[1]):
+                newest[day] = (m[1], c)
+        for day, (name, c) in newest.items():
+            for k in [k for k in out if k.rsplit("_", 1)[0] == name.rsplit("_", 1)[0] and k != name]:
+                del out[k]  # (an earlier version of the same day's calendar)
+            if name in out and out[name]["revno"] == c.get("revno"):
+                continue
+            pdf = get(f"{base}/{name}/", raw=True)
+            if not pdf:
+                continue
+            open(path + ".pdf", "wb").write(pdf)
+            text = subprocess.run(["pdftotext", "-layout", path + ".pdf", "-"], capture_output=True, text=True).stdout
+            os.remove(path + ".pdf")
+            m = re.search(r"\b[A-Z]+DAY\s*-\s*([A-Z]+ \d+, \d{4})(?:\s*-\s*(\d+:\d\d [AP]M))?", text)
+            when = f"{day}T00:00"
+            if m and m[2]:
+                when = f"{day}T{datetime.strptime(m[2], '%I:%M %p').strftime('%H:%M')}"
+            bills = []
+            for kind, jr, num in re.findall(r"(?m)^\s*(?:(?:Am|Sub)\.\s+)*([HS])\.\s+(B|J\.\s*R)\.\s+No\.\s+(\d+)\s+[–-]", text):
+                b = f"{kind}{'JR' if jr != 'B' else 'B'}{num}"
+                if b not in bills:
+                    bills.append(b)
+            out[name] = {"revno": c.get("revno"), "house": "House" if house == "house" else "Senate", "when": when, "bills": bills}
+            print(f"floor calendar {name}: {len(bills)} bills")
+            time.sleep(1)
+    save(path, out)
+
+
 def people():
     body = get(PEOPLE, raw=True)
     if body and body.startswith(b"id,"):
@@ -268,6 +325,7 @@ def main():
     for s in range(FIRST, CURRENT + 1, 2):
         session(s)
     agendas(CURRENT)
+    floor_calendars(CURRENT)
     people()
     member_pages()
     marker = os.path.join(P.DATA, "incomplete")

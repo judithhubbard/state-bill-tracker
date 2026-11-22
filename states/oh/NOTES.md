@@ -38,3 +38,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   only after it convenes (January 4, 2027), so it's read from January; until March 1 a list never read doesn't hold Ohio
   back, and its contacts wait until its legislators and committees are listed. The General Assembly just ended is read
   again until April 1 for bills still waiting on enrollment or the governor (the list's revno may not change).
+- **Floor calendars (2026-11-22):** fetch.py's `floor_calendars()` reads the SOLAR API's calendar indexes
+  (`/api/v2/general_assembly_<n>/calendars/house/` and `/senate/`, two requests a run; robots.txt allows all) and downloads
+  each House and Senate calendar dated today or later when its revno is new (a PDF, read with pdftotext; the newest
+  version of a day's calendar, _01, _02 ...; the Senate Rules calendar is left out), into `<session>/floor.json`. Each
+  lists the "Bills for Third Consideration" (H. B., S. B., joint resolutions; concurrent resolutions aren't records),
+  with the day and time. A calendar is issued the day before. Both are shown as "listed" (can come up that day): of 2026's
+  calendars from May 20 to Nov 18 (162 bills on 12 calendars, all records), 32% of the House calendar's bills and 58% of
+  the Senate's had a floor vote that day or the next (House bills wait on the calendar for weeks; SB 175 sat on the
+  Senate's of Sept. 30 with no vote).
