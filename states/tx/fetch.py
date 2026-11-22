@@ -140,6 +140,12 @@ if __name__ == "__main__":
         if os.path.isdir(os.path.join(P.DATA, P.code_of(year), "billhistory")):
             journals.main(year)
             journals.senate(year, journals.senate_dates(year))
-    from states.tx import texts  # "What it does", from the current session's bill analyses
+    from states.tx import texts  # "What it does", from the bill analyses
     if os.path.isdir(os.path.join(P.DATA, P.code_of(CURRENT), "billhistory")):
         texts.main(CURRENT)
+    for year in range(CURRENT - 2, FIRST - 1, -2):  # earlier sessions: a few minutes a run until each is read
+        if os.path.isdir(os.path.join(P.DATA, P.code_of(year), "billhistory")):
+            try:
+                texts.main(year, minutes=6)
+            except Exception as e:  # never holds the run back
+                print(f"texts_{year}.json: failed ({type(e).__name__}: {e})")

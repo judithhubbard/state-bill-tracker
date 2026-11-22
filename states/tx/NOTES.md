@@ -18,8 +18,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   count matches its tally. `states/tx/contacts.py`: the House's member and
   committee JSON, each senator's page, parties from the Legislative Reference Library; `dataName` is the last name, or
   "Bell, Keith" where two members share it. Counties with each district's share (`states/tx/towns.py`, run once, from the
-  Texas Legislative Council's r4.pdf district reports). "What it does": the current session's bill analyses
-  (`states/tx/texts.py`). Session dates are computed (`opens()`, `sessionEnds()` = day 140, House deadline day 122,
+  Texas Legislative Council's r4.pdf district reports). "What it does": the bill analyses
+  (`states/tx/texts.py`): the current session's every run, and (2026-11-22) each earlier session's with six minutes a
+  run until all are read (2023: about 3,200 analyses, a few runs; then 2021), cached by address in <code>/analyses.json. Session dates are computed (`opens()`, `sessionEnds()` = day 140, House deadline day 122,
   governor 10 days without Sundays or 20 after adjournment). Leaders: the Speaker, and for the Senate the Lieutenant
   Governor (not a senator). Totals for 2025 to check against: 1,047 signed, 140 filed without signature, 26 vetoed
   (reports/signedbygov.htm etc. on the FTP site).
