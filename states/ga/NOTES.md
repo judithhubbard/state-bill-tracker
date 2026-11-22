@@ -10,7 +10,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   letter is the house where the step happened; referrals don't name the committee: it's the bill's committee in that
   house). Agreeing to the other house's changes "As Amended" changes the bill again, disagreeing leads to conference, and
   a conference report needs both houses (`agreed()`; HB 196 of 2023-24). Laws are "Act 696" (`STATE.lawWord`). "What it
-  does" is the long title's "so as to ..." clauses (`purpose()`); there are no plain summaries and no committee votes.
+  does" is the House Daily Report's staff summary where there is one (below), else the long title's "so as to ..." clauses (`purpose()`); no committee votes.
   Local legislation (one city or county) is narrow kind "place" ("For one city or county"), kept out of similar-bill
   matching. Bill pages are addressed by legislation id: a version's `link` (shared: build_data.py passes it, the page
   reads `v.link`). Two-year General Assemblies, 40-day sessions each year; each year's last day is in `STATE.dated`
@@ -55,6 +55,23 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   don't route around it (another host, a proxy); ask the owner.
   The Digital Library of Georgia (dlg.usg.edu, the University System's) archives the Daily Report too, months later (March
   2024's were there by June 2024; 2026-02-25's first seen in October): no use for upcoming meetings.
+- **Summaries, from the Daily Report (2026-11-22):** each report has a staff "Bill Summary:" paragraph (several
+  sentences, plain English) for every bill a House committee reported that day ("Committee Actions", House and Senate bills
+  alike), every bill on the House floor ("Today on the Floor") and every bill on the next day's Rules Calendar. `summaries()`
+  in daily.py reads them from pdftotext -layout: a summary runs from "Bill Summary:" to the entry's "Authored By:" (or the
+  next entry or heading), skipping the running head and page number; a line indented differently after one ending a
+  sentence starts a paragraph, and a word hyphenated at a line's end is joined. A bill in several reports keeps the latest
+  report's summary (a committee substitute's, or the bill as the House passed it). The reports of 2025 and 2026 (all 80,
+  LD1-40 each year, 109 requests 2 seconds apart, walked from each report's "reconvene" line) were read once from the
+  owner's computer with `python3 states/ga/daily.py --backfill <pdf folder> 2025 2025 2026` into
+  states/ga/summaries_2025.json (committed: GitHub's runners can't reach www.legis.ga.gov), {bill: [report date, file,
+  summary]}; a second run with the same folder reads the saved PDFs, not the server. daily.py's runs also keep each new
+  report's summaries in daily.json, and `staff_summaries()` in convert.py takes the later of the two. "What it does" is the
+  summary ("From the House Budget and Research Office's Daily Report."), else the title's clauses as before. 2025-26: 1,219
+  summaries (1,128 bills and amendments, 91 other resolutions left out), so 1,128 of 2,288 bills (49%, from 0) and all 708
+  laws; 1 paragraph of 2,004 ends without punctuation. 2023-24 isn't read (its folder and spellings are untried; the same
+  command with 2023 2024 would do it). The Senate publishes nothing like it outside the gated API. **Each new session:** run
+  the backfill again after the session (or during it) from a computer that reaches www.legis.ga.gov, and commit the file.
 - **Committee agendas (looked into 2026-11-22, before the Daily Report was found):** the meeting schedule is only on www.legis.ga.gov, whose
   API (/api/meetings?startDate=...&endDate=...) answers 401 without a token that the site's script makes from a key
   hidden in its code (/api/authentication/token?key=<SHA-512 of an embedded secret>). That's a deliberate gate on

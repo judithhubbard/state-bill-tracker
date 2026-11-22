@@ -66,6 +66,24 @@ def purpose(summary):
     return (out[:1].upper() + out[1:]).rstrip(" ;,") + "."
 
 
+def staff_summaries(session):
+    """{bill: summary} from the House Budget & Research Office's Daily Reports (states/ga/NOTES.md, "Summaries"): the
+    reports read once into states/ga/summaries_<session>.json (`daily.py --backfill`), and those daily.py reads in a
+    run (data/ga/<session>/daily.json), the latest report's summary for each bill (a committee substitute's, or the bill
+    as the House passed it). A summary that only repeats the title says nothing: none of the reports' do (they open "HB
+    320 restricts ..."), but one under 40 characters is left out all the same."""
+    got = {}
+    try:
+        got = dict(json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), f"summaries_{session}.json"))))
+    except (OSError, ValueError):
+        pass
+    for name, rep in (load(session, "daily.json", {}).get("reports") or {}).items():
+        for bill, s in (rep.get("summaries") or {}).items():
+            if bill not in got or got[bill][0] <= rep.get("date", ""):
+                got[bill] = [rep.get("date", ""), name, s]
+    return {k: v[2] for k, v in got.items() if len(v[2]) >= 40}
+
+
 def is_amendment(b):
     """A House or Senate resolution proposing an amendment to the Georgia Constitution (SR 55 of 2023, also typed "CA",
     ratifies a federal amendment)."""
@@ -197,6 +215,7 @@ def load_session(session):
     files = glob.glob(os.path.join(folder(session), "bills", "*.json"))
     fetched = datetime.fromtimestamp(max(os.path.getmtime(f) for f in files), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
     texts, recs, index = {}, [], {}
+    staff = staff_summaries(session)
     for f in sorted(files, key=lambda f: (os.path.basename(f)[0], int(re.sub(r"\D", "", os.path.basename(f)) or 0))):
         b = json.load(open(f))
         if not kept(b):
@@ -268,7 +287,9 @@ def load_session(session):
         sponsor = names[0] if names else "—"
         cos = names[1:]
         what = purpose(b.get("Summary"))
-        if what:
+        if staff.get(p):
+            texts[p] = {"statement": staff[p], "label": "From the House Budget and Research Office's Daily Report."}
+        elif what:
             texts[p] = {"statement": what, "label": "From the bill's official title."}
         if stage == 0 and committee:
             desc = f"In {HOUSE[where_h]} committee"

@@ -15,10 +15,12 @@ likely spellings until one answers (at most MAX_TRIES a run; once found, the nex
 each agenda it links (again while the meeting is ahead, at most every AGAIN hours). Nothing else on the server is read.
 
 Writes data/ga/<session>/daily.json: {"year", "folder", "style", "next": [ld, "YYYY-MM-DD"], "reports": {file:
-{"ld", "date", "next", "meetings": [[name, "YYYY-MM-DDTHH:MM:00", agenda_url or ""], ...]}}, "agendas": {url: {"bills":
+{"ld", "date", "next", "meetings": [[name, "YYYY-MM-DDTHH:MM:00", agenda_url or ""], ...], "summaries": {bill:
+staff summary}}}, "agendas": {url: {"bills":
 ["HB7", ...], "read": iso time, "failed": bool}}}. convert.py's agendas() reads it.
 
 Usage (a test): python3 states/ga/daily.py <report.pdf>   prints what a report says.
+A past session's reports, once: python3 states/ga/daily.py --backfill <pdf folder> <session> <year> ... (summaries()).
 """
 import json, os, re, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from datetime import date, datetime, timedelta
@@ -172,11 +174,71 @@ def house_only(name):
     return not re.search(r"FLOOR SESSION|\(Senate\)", name, re.I)
 
 
+ENTRY = re.compile(r"^ {1,8}((?:HB|SB|HR|SR)\s+\d+)\b")
+SUMMARY = re.compile(r"^(\s*)Bill Summary:\s*(.*)$")
+# What ends a summary: the entry's facts, the next entry, a committee's or section's heading.
+STOP = re.compile(r"^\s*(?:Authored By:|Carried By:|Sponsored By:|Rule Applied:|House\s+Committee:|Committee Meeting Schedule)"
+                  r"|^ {0,4}\S.*\bCommittee\s*$|^\s*(?:Today on the Floor|Next on the Floor|Committee Actions)\b")
+FURNITURE = re.compile(r"^\s*(?:House of Representatives\s+Daily Report for|Page \d+ of \d+\s*$)")
+
+
+def summaries(text):
+    """The staff's "Bill Summary:" paragraphs: {"HB320": "HB 320 restricts ...\nThe bill ..."}. pdftotext -layout
+    keeps the report's indents: a summary's first paragraph is indented like "Bill Summary:", and each later one
+    further, so a line indented differently from the one before, after a line ending a sentence, starts a paragraph (a
+    deeper line after one that doesn't end a sentence is the same sentence: "Board of" / "Elections and Registration.").
+    The page's running head and number are skipped (a summary can run onto the next page). A bill in two sections of one
+    report (reported, then on the floor) has one summary; the last is kept."""
+    out = {}
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        m = ENTRY.match(lines[i])
+        if not m:
+            i += 1
+            continue
+        bill = re.sub(r"\s+", "", m[1])
+        j = i + 1
+        while j < len(lines) and j < i + 6 and not SUMMARY.match(lines[j]) and not ENTRY.match(lines[j]):
+            j += 1
+        sm = SUMMARY.match(lines[j]) if j < len(lines) else None
+        if not sm:
+            i = j if j > i else i + 1
+            continue
+        paras, cur, indent, prev = [], [sm[2].strip()], len(sm[1]), sm[2]
+        k = j + 1
+        while k < len(lines):
+            ln = lines[k]
+            if ENTRY.match(ln) or STOP.match(ln):
+                break
+            if FURNITURE.match(ln) or not ln.strip():
+                k += 1
+                continue
+            ind = len(ln) - len(ln.lstrip())
+            ends = bool(re.search(r"[.!?:;][\"')\u201d\u2019]*\s*$", prev))
+            if ends and (ind != indent or len(prev.strip()) < 70):
+                paras.append(" ".join(cur))
+                cur = []
+            if cur and re.search(r"[a-z]-$", cur[-1]):  # "workforce-" / "ready": the hyphen is the word's
+                cur[-1] += ln.strip()
+            else:
+                cur.append(ln.strip())
+            indent, prev = ind, ln
+            k += 1
+        paras.append(" ".join(cur))
+        paras = [unescape(re.sub(r"\s+", " ", x)).strip() for x in paras]
+        body = "\n".join(x for x in paras if x)
+        if body:
+            out[bill] = body
+        i = k
+    return out
+
+
 def read_report(body, year):
     text = pdftext(body)
     nd = next_day(text, year)
     rows = [r for r in schedule(body) if house_only(r[0])]
-    return {"next": [nd[0], nd[1].isoformat()] if nd else None, "meetings": rows}
+    return {"next": [nd[0], nd[1].isoformat()] if nd else None, "meetings": rows, "summaries": summaries(text)}
 
 
 def run(folder, year, today=None):
@@ -259,10 +321,90 @@ def agenda_pdfs(st, today, now):
             st["agendas"][url] = {"bills": [], "read": now.isoformat(timespec="seconds"), "failed": True}
 
 
-if __name__ == "__main__":
+def backfill(year, out):
+    """A past year's Daily Reports, once (states/ga/NOTES.md, "Summaries"): from LD1 on the session's first day, each
+    report's "reconvene" line naming the next, the PDFs saved in <out>/<year>/ (kept: a second run reads them, not the
+    server). A report not at its day's address is looked for on the next four weekdays (the House moved a day for
+    weather in 2025). Stops at a report naming no next day (the last) or one that can't be found."""
+    d = os.path.join(out, str(year))
+    os.makedirs(d, exist_ok=True)
+    first = date(year, 1, 1 + (0 - date(year, 1, 1).weekday()) % 7 + 7)
+    ld, due, style, fold = 1, first, {}, None
+    while ld <= 45:
+        days = [due + timedelta(i) for i in range(10) if (due + timedelta(i)).weekday() < 5][:5]
+        found = None
+        have = [f for f in os.listdir(d) if re.match(rf"ld0?{ld}_|{year}-daily-report-ld-{ld}\.pdf$", f)]
+        if have:
+            name = have[0]
+            body = open(os.path.join(d, name), "rb").read()
+            m = re.match(r"ld\d+_[a-z]+_([a-z]+)_(\d+)_", name)
+            day = date(year, next(i + 1 for i, f in enumerate(FULL) if f.startswith(m[1][:3])), int(m[2])) if m else due
+            found = (fold, name, day, body)
+        for day in ([] if found else days):
+            for fo in folders(year, fold):
+                cands = names(ld, day, style) + ([f"{year}-daily-report-ld-{ld}.pdf"] if ld <= 3 else [])
+                for name in dict.fromkeys(cands):
+                    body = get(DOCS + fo + "/" + name)
+                    if body:
+                        found = (fo, name, day, body)
+                        open(os.path.join(d, name), "wb").write(body)
+                        break
+                if found:
+                    break
+            if found:
+                break
+        if not found:
+            print(f"backfill {year}: LD{ld} (due {due}) not found after {REQUESTS[0]} requests", flush=True)
+            break
+        fo, name, day, body = found
+        fold = fo or fold
+        style = style_of(name, style)
+        nd = next_day(pdftext(body), year)
+        print(f"backfill {year}: LD{ld} {name}", flush=True)
+        if not nd:
+            break
+        ld, due = nd[0], nd[1]
+    return d
+
+
+def summaries_of(folder):
+    """{bill: [report date, report file, summary]} from the reports saved in a folder, the latest report's summary kept
+    (it describes the latest version the House took up: a committee substitute, or the bill as it passed)."""
+    out = {}
+    for name in sorted(os.listdir(folder)):
+        if not name.endswith(".pdf"):
+            continue
+        body = open(os.path.join(folder, name), "rb").read()
+        text = pdftext(body)
+        m = re.search(r"Daily Report for ([A-Z][a-z]+) (\d+), (\d{4})", text)
+        if not m:  # the first days' reports have no running head (and no summaries)
+            continue
+        day = date(int(m[3]), FULL.index(m[1].lower()) + 1, int(m[2])).isoformat()
+        for bill, s in summaries(text).items():
+            if bill not in out or out[bill][0] <= day:
+                out[bill] = [day, name, s]
+    return out
+
+
+if __name__ == "__main__" and sys.argv[1] == "--backfill":
+    # python3 states/ga/daily.py --backfill <pdf folder> <session> <year> ...: saves the years' reports, then writes
+    # states/ga/summaries_<session>.json from every report saved for the session.
+    out, session, years = sys.argv[2], int(sys.argv[3]), [int(y) for y in sys.argv[4:]]
+    got = {}
+    for y in years:
+        for bill, v in summaries_of(backfill(y, out)).items():
+            if bill not in got or got[bill][0] <= v[0]:
+                got[bill] = v
+    dest = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"summaries_{session}.json")
+    json.dump(dict(sorted(got.items(), key=lambda kv: (kv[0][:2], int(kv[0][2:])))), open(dest, "w"),
+              ensure_ascii=False, indent=0)
+    print(f"{dest}: {len(got)} bills, {REQUESTS[0]} requests")
+elif __name__ == "__main__":
     body = open(sys.argv[1], "rb").read()
     yr = int(re.search(r"(20\d\d)", os.path.basename(sys.argv[1]))[1])
     rep = read_report(body, yr)
     print("next:", rep["next"])
     for r in rep["meetings"]:
         print(r)
+    for k, v in rep["summaries"].items():
+        print(k, "|", v)
