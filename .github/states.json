@@ -347,7 +347,7 @@
     "data/ky"
    ],
    "minutes": 80,
-   "run": "python3 states/ky/fetch.py && python3 states/ky/contacts.py"
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/ky/fetch.py && python3 states/ky/contacts.py"
   },
   {
    "name": "Missouri",
