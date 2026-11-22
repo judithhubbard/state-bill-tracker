@@ -430,6 +430,22 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     as NV's does, moves such a bill's day with each run until its own page is read.) And a source's typo a month ahead:
     MA's histories sign H4716, H4721, H5685 and S3097 "2026-11-30" (the session laws say October 30): a line dated after
     its file was read takes the law's date, else the read day. The "in the future" check catches both.
+  - (2026-11-22, a coverage audit of the live site) A copy on the owner's computer that GitHub's doesn't match: CO's local
+    data had every floor vote, GitHub's none, because pages a download can't save (about 900 committee voice votes) were
+    read again first every run until time ran out. Save what a page says even when it's "nothing to record", read the most
+    important records first, and compare a state's live pages with a local build (`copy-data.yml` hands GitHub's copy over).
+    The check fails when under a fifth of the bills that passed a house have a floor vote.
+  - File names that collide: PA's House and Senate roll calls are both numbered from 1 (`rcNum`), and files named by the
+    number alone kept one house's out; the Senate's votes showed tallies without names. The check fails when one house's
+    split floor votes name members far less often than the other's. And files downloaded but never read: MO's House
+    Journals were fetched all along while the converter said they weren't.
+  - Contacts emptied after an election: SD's API cleared the outgoing session's emails and phones; Open States' "current"
+    file (NV's emails) moved to the members-elect. A refreshed list keeps the last copy's fields; the check fails when the
+    current session's contacts have email (or form), phone or page for under half the members (`CONTACT_GAPS` lists what a
+    state's sources never had).
+  - Page wording built from written-out lines: billfacts.js's `plainAction()` turned Congress's "Referred to the Committee
+    on ..." into "Referred to the The Committee On ... Committee" in every status row; Maine's own lines say "the The
+    Majority ... Report". The check fails on "the the" in history lines.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.

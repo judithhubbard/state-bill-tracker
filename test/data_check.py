@@ -113,11 +113,18 @@ def check(state):
         # A summary line that is the title again with a stock tail: Iowa's was the official title, whose only difference
         # from the title is ", and including effective date provisions" (2026-11-22).
         norm_t = lambda t: re.sub(r"[^a-z0-9 ]", "", (t or "").lower()).split()
+        # (Only a stock tail: many states' summary line is the full title, which starts with the short one.)
+        stock = re.compile(r"^(?:and )?(?:including|providing|making|with) (?:an )?(?:effective dates?|applicability|retroactive|"
+                           r"penalties|transition)[a-z ]*(?:provisions?|applicable)?$")
         echo = [r["nums"][0] for r in recs if r["summary"] and (st := norm_t(r["title"])) and len(st) >= 3
-                and (sm := norm_t(r["summary"]))[:len(st)] == st and len(sm) - len(st) <= 8]
+                and (sm := norm_t(r["summary"]))[:len(st)] == st and len(sm) > len(st) and stock.match(" ".join(sm[len(st):]))]
         if echo:
             say(state, "FAIL" if len(echo) > 0.05 * len(recs) else "LOOK",
-                f"{s}: {len(echo)} summary lines are the title with a few words added, e.g. {echo[:4]}")
+                f"{s}: {len(echo)} summary lines are the title with a stock tail, e.g. {echo[:4]}")
+        # (The same words as the title: the rows leave it out, an opened bill shows it. NE, WV and others: only a LOOK.)
+        same = [r["nums"][0] for r in recs if r["summary"] and norm_t(r["summary"]) == norm_t(r["title"])]
+        if same:
+            say(state, "LOOK", f"{s}: {len(same)} summary lines repeat the title word for word, e.g. {same[:4]}")
         # A doubled word in history lines: Congress.gov's "Referred to the The Subcommittee on ..." (states/us/convert.py
         # drops it; billfacts.js's plainAction() made its own "the The Committee On ..." of written-out referrals, fixed
         # 2026-11-22).
@@ -316,7 +323,12 @@ def check(state):
         if passed and (any(r["votes"] for r in recs) or any(v[1] == "F" for x in loaded.values() for r in x for v in r["votes"])):
             with_floor = sum(1 for r in passed if any(v[1] == "F" for v in r["votes"]))
             share = with_floor / len(passed)
-            if len(passed) >= 30 and share < 0.2:
+            # (A FAIL needs a sign roll calls exist: committee votes this session, or floor votes on most passed bills in
+            # another session. NH and VT pass many bills by voice vote; next year's prefiled session isn't checked.)
+            elsewhere = any(sum(1 for r in x if (r["passedS"] or r["passedA"]) and any(v[1] == "F" for v in r["votes"]))
+                            >= 0.6 * max(1, sum(1 for r in x if r["passedS"] or r["passedA"])) for k, x in loaded.items() if k != s)
+            if len(passed) >= 30 and share < 0.2 and s <= date.today().year and \
+                    (elsewhere or any(v[1] == "C" for r in recs for v in r["votes"])):
                 say(state, "FAIL", f"{s}: only {with_floor} of {len(passed)} bills that passed a house have a floor vote "
                                    f"({sum(1 for r in recs for v in r['votes'] if v[1] == 'C')} committee votes): floor votes missing?")
             elif share < 0.6:
@@ -334,7 +346,7 @@ def check(state):
             if max(a, b) >= 0.8 and min(a, b) < 0.5:
                 say(state, "FAIL", f"{s}: split floor votes naming members: " +
                     ", ".join(f"{h} {100 * x:.0f}% of {n}" for h, (x, n) in split_named.items()) + " (one house's names missing?)")
-            elif min(a, b) < 0.8:
+            elif min(a, b) < 0.8 and max(a, b) >= 0.5:
                 say(state, "LOOK", f"{s}: split floor votes naming members: " +
                     ", ".join(f"{h} {100 * x:.0f}% of {n}" for h, (x, n) in split_named.items()))
         # Roll calls filed under the wrong bill: KS's roll-call records name their bill, and two 2026 Senate line-item override
