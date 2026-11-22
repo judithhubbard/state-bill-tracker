@@ -24,3 +24,14 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Illinois), the Senate's chairs and meeting times from senate.michigan.gov's committee list. Cities and townships by district (`towns.py`).
   Full-time Legislature; governor 14 days, Sundays included (Art. IV, sec. 33: "measured in hours and minutes"; the profile
   excepted Sundays until 2026-11-21).
+- **Committee agendas (2026-11-22):** `agendas()` in fetch.py (after the legislators, before the status files) reads
+  the meeting list, https://www.legislature.mi.gov/Committees/Meetings (each chamber's upcoming meetings; canceled ones
+  struck through and marked "cancelled"), then each listed meeting's page (/Committees/Meeting?meetingID=6100; about
+  20-40 a week in session, one a second) for its agenda: the bill links (/Search/ExecuteSearch?docTypes=House
+  Bill&sessions=2025-2026&number=5317) and bills named in its text ("SB 979", "Senate Bill 878"). Into
+  data/mi/<session>/agendas.json, meetings from yesterday to three weeks ahead; the committee is the list's name with its
+  section's house ("Senate Local Government"). A failed list keeps the last file; a meeting page that fails is left out.
+  Joint resolutions aren't read (lettered: build_data.py's lookup drops a final letter). Tested against an archived
+  meeting list (2025-02-11: 6 of 10 meetings kept, the 4 canceled left out) and two 2026 meeting pages (HB 5317, SB 979,
+  SB 960, SB 526; SB 878), all matched to records; the live list is empty now (November 2026). The RSS feed
+  (documents/publications/RssFeeds/comschedule.xml) lists the same meetings but doesn't mark cancellations, so it isn't used.

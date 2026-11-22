@@ -8,7 +8,7 @@ amendments they propose; other resolutions are left out. A finished session's fi
 session's when the folder listing shows them newer.
 Usage: python3 states/mi/fetch.py   (2023-2024 and 2025-2026)
 """
-import glob, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.request
+import glob, html, json, os, re, shutil, subprocess, sys, tempfile, time, urllib.request
 from collections import Counter
 from datetime import date, datetime
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -47,6 +47,71 @@ def get(url):
     return None
 
 
+def clock(t):
+    """"01:30 PM" -> "13:30:00"; no time -> "00:00:00"."""
+    m = re.search(r"\b(\d{1,2}):(\d\d) ?([AP])M\b", t or "", re.I)
+    return f"{int(m.group(1)) % 12 + (12 if m.group(3).upper() == 'P' else 0):02d}:{m.group(2)}:00" if m else "00:00:00"
+
+
+def agenda_bills(page, session):
+    """A meeting page's agenda -> its bills ("HB4001", "SB12"): the bill links (/Search/ExecuteSearch?docTypes=House
+    Bill&sessions=2025-2026&number=5317) and bills named in the text ("HB 5317", "Senate Bill 878")."""
+    m = re.search(r'(?s)<div class="formLeft">Agenda</div>\s*<div class="formRight">(.*?)</div>', page)
+    if not m:
+        return []
+    part, out = m.group(1), []
+    for kind, s, num in re.findall(r'docTypes=(House|Senate)(?:%20|\+| )Bill&(?:amp;)?sessions=([\d-]+)&(?:amp;)?number=(\d+)', part):
+        if s == session:
+            out.append(f"{kind[0]}B{int(num)}")
+    words = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", part)))
+    for kind, num in re.findall(r"\b(H|S|House|Senate)\.? ?B(?:\.|ill)? ?(?:No\.? ?)?0*(\d{1,4})\b", words):
+        out.append(f"{kind[0]}B{int(num)}")
+    return list(dict.fromkeys(out))
+
+
+def agendas(start):
+    """Bills on committee meetings from yesterday to three weeks ahead: the meeting list
+    (https://www.legislature.mi.gov/Committees/Meetings: each chamber's meetings, canceled ones marked) and each listed
+    meeting's page (its agenda) into data/mi/<session>/agendas.json: bill -> [["Senate Local Government",
+    "2026-06-16T13:30:00"], ...]. If the list can't be read the last file stays; a meeting page that fails is left out."""
+    session = f"{start}-{start + 1}"
+    listing = get(f"{SITE}/Committees/Meetings")
+    if not listing:
+        print("agendas: no meeting list; kept the last file", flush=True)
+        return
+    listing = listing.decode("utf-8", "replace")
+    today = date.today()
+    first, last = date.fromordinal(today.toordinal() - 1).isoformat(), date.fromordinal(today.toordinal() + 21).isoformat()
+    meets = []
+    for house, part in re.findall(r"(?s)<h2>\s*(House|Senate) Committee Meetings\s*</h2>(.*?)(?=<h2>|</main>|$)", listing):
+        for li in re.findall(r"(?s)<li>(.*?)</li>", part):
+            m = re.search(r'href="/Committees/Meeting\?meetingID=(\d+)">([^<]+)</a>', li)
+            d = re.search(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b(?:\s+(\d{1,2}:\d\d ?[AP]M))?", re.sub(r"<[^>]+>", " ", li))
+            if not m or not d or re.search(r'class="struck"|\bcancel', li, re.I):
+                continue
+            day = f"{d.group(3)}-{int(d.group(1)):02d}-{int(d.group(2)):02d}"
+            if first <= day <= last:
+                meets.append((m.group(1), f"{house} {html.unescape(m.group(2)).strip()}", f"{day}T{clock(d.group(4))}"))
+    out, n = {}, 0
+    for mid, name, when in meets:
+        page = get(f"{SITE}/Committees/Meeting?meetingID={mid}")
+        if not page:
+            continue
+        page = page.decode("utf-8", "replace")
+        if re.search(r'class="[^"]*struck', page):
+            continue
+        bills = agenda_bills(page, session)
+        n += bool(bills)
+        for b in bills:
+            if [name, when] not in out.setdefault(b, []):
+                out[b].append([name, when])
+    folder = os.path.join(DATA, session)
+    os.makedirs(folder, exist_ok=True)
+    json.dump(out, open(os.path.join(folder, "agendas.json.tmp"), "w"))
+    os.replace(os.path.join(folder, "agendas.json.tmp"), os.path.join(folder, "agendas.json"))
+    print(f"agendas: {len(out)} bills on {n} of {len(meets)} meetings", flush=True)
+
+
 def begun(year):
     """Whether a session has convened (the second Wednesday of January of its first year)."""
     return date.today() >= date(year, 1, 1 + (2 - date(year, 1, 1).weekday()) % 7 + 7)
@@ -70,6 +135,11 @@ def main():
         contacts.main(CURRENT)
     except SystemExit as e:
         print(e)
+    if not only or only == CURRENT:
+        try:  # quick, and never holds the run
+            agendas(CURRENT)
+        except Exception as e:
+            print(f"agendas: failed ({type(e).__name__}: {e})", flush=True)
     # The shared window's sessions (states/window.py: from 2023-24 until 2029), the current session first.
     for start in range(CURRENT, W.first_session() - 1, -2):
         if only and start != only:
