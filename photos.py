@@ -25,6 +25,17 @@ file is downloaded again only when the copy is a week old (kept in the state's f
 rewritten only when it changes. build_data.py's legislators() reads it (`image_of()`); test/data_check.py counts how many
 current members have a photo either way.
 
+- The legislature's own pages (2026-11-22), preferred to Open States' when they answer with an image: an address built
+  from the seat or the state's own member data (`PATTERNS`: Louisiana by seat, New Hampshire's senators by district and
+  House members by the picture number its CommitteeMembers.txt gives each PersonID, Florida's House by MemberId), or read
+  from one roster page that lists every member with a photo (`ROSTERS`, read weekly into photos_roster.json: the Oklahoma
+  House's /representatives, the Florida Senate's /Senators/).
+Every request respects the host's robots.txt (`allowed()`, 2026-11-22): a photo under a path it disallows is never asked
+for, checked or copied (Colorado's /rails/active_storage/, South Carolina's /images/, Tennessee's capitol.tn.gov for all
+but named search engines, the Missouri House's and the Indiana House Republicans' photo folders); it stays linked only if
+an answer from before showed a light photo, else it's left out. Requests to a host keep its Crawl-delay (gc.nh.gov's 11 seconds, flsenate.gov's 10); a host with a delay of 5 seconds or more is asked again
+monthly instead of weekly.
+
 Matching: each contacts file's members, by house, name and district (`match()`); a member the state's files give a photo
 keeps it. Each address is asked once a week whether it answers with an image (`head()`, a HEAD request, two a second,
 answers in photos_checked.json, with its size): a 404 or a web page is left out, and a heavy one shrunk (above).
@@ -47,10 +58,99 @@ KNOWN = {
 }
 # Photo addresses the legislature names itself, preferred to Open States' when they answer with an image (seat, member,
 # contacts session). Louisiana's by seat (whoever holds it now; 88 of 141 have none in Open States).
+def nh_pictures(folder):
+    """New Hampshire's House photos are /house/images/memberpics/<n>.jpg, n the number CommitteeMembers.txt gives each
+    PersonID (its third and fourth columns: "H43|51|377257|902|1|V Chairman"): {PersonID: n}, from the newest file."""
+    files = sorted(glob.glob(os.path.join(folder, "[0-9]" * 4, "CommitteeMembers.txt")))
+    out = {}
+    for line in (open(files[-1], encoding="utf-8", errors="replace").read().split("\n") if files else []):
+        f = line.strip().split("|")
+        if len(f) >= 4 and f[2].strip().isdigit() and f[3].strip().isdigit():
+            out[f[3].strip()] = f[2].strip()
+    return out
+
+
+_NH = {}
+
+
+def nh_photo(seat, p, session, folder):
+    if seat[0] == "S":
+        return f"https://gc.nh.gov/senate/images/senators/{digits(seat[2:])}.jpg"
+    if folder not in _NH:
+        _NH[folder] = nh_pictures(folder)
+    n = _NH[folder].get(str(p.get("id") or ""))
+    return f"https://gc.nh.gov/house/images/memberpics/{n}.jpg" if n else None
+
+
 PATTERNS = {
-    "la": lambda seat, p, session: (f"https://senate.la.gov/SenPics/Sen{digits(seat[2:])}.jpg" if seat[0] == "S"
-                                    else f"https://house.louisiana.gov/H_Reps/RepPics/rep{digits(seat[2:])}.jpg"),
+    "la": lambda seat, p, session, folder: (f"https://senate.la.gov/SenPics/Sen{digits(seat[2:])}.jpg" if seat[0] == "S"
+                                            else f"https://house.louisiana.gov/H_Reps/RepPics/rep{digits(seat[2:])}.jpg"),
+    "nh": nh_photo,
+    # Florida's House: the MemberId the contacts carry ("id"; the roster's /FileStores/Web/Imaging/Member/4864.jpg).
+    "fl": lambda seat, p, session, folder: (f"https://www.flhouse.gov/FileStores/Web/Imaging/Member/{p['id']}.jpg"
+                                            if seat[0] == "H" and str(p.get("id") or "").isdigit() else None),
 }
+
+
+def ok_house(get_):
+    """The Oklahoma House's roster page (www.okhouse.gov/representatives; no robots.txt): its page data lists every
+    member with district and portrait, in several sizes ("small" is 400x500, about 35 KB). {"H:97": url}."""
+    page = get_("https://www.okhouse.gov/representatives").decode("utf-8", "replace")
+    data = json.loads(re.search(r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>', page, re.S).group(1))
+    out = {}
+    for m in data["props"]["pageProps"]["members"]["legislatureMembers"]:
+        a = m.get("attributes") or {}
+        d = ((((a.get("district") or {}).get("data") or {}).get("attributes")) or {}).get("number")
+        pic = (((a.get("portrait") or {}).get("data") or {}).get("attributes")) or {}
+        url = ((pic.get("formats") or {}).get("small") or {}).get("url") or pic.get("url")
+        if d and url:
+            out[f"H:{int(d)}"] = url
+    return out
+
+
+def fl_senate(get_):
+    """The Florida Senate's list of senators (www.flsenate.gov/Senators/, robots.txt allows /Senators/): each one's
+    thumbnail, /PublishedContent/Senators/2026-2028/Photos/S27_5342_Thumbnail.jpg; the photo is the same name without
+    "_Thumbnail" (about 60 KB). {"S:27": url}."""
+    page = get_("https://www.flsenate.gov/Senators/").decode("utf-8", "replace")
+    out = {}
+    for path, d in re.findall(r'src="(/PublishedContent/Senators/[^"]*/Photos/S(\d+)_[^"]*?)_Thumbnail\.jpg"', page):
+        out[f"S:{int(d)}"] = "https://www.flsenate.gov" + path + ".jpg"
+    return out
+
+
+# The legislature's own roster pages, one request each, read weekly into photos_roster.json (seat -> url): for the newest
+# contacts, preferred to Open States' when the photo answers.
+ROSTERS = {"ok": [ok_house], "fl": [fl_senate]}
+
+
+def rosters(folder, st, force=False):
+    path = os.path.join(folder, "photos_roster.json")
+    try:
+        old = json.load(open(path))
+    except (OSError, ValueError):
+        old = None
+    if st not in ROSTERS:
+        return {}
+    if old and not force and time.time() - old.get("t", 0) < WEEK:
+        return old["seats"]
+    seats = {}
+    for fn in ROSTERS[st]:
+        try:
+            def get_(u):
+                if not allowed(u):
+                    raise RuntimeError("robots.txt disallows it")
+                pace(u, 1)
+                return get(u)
+            seats.update(fn(get_))
+        except Exception as e:  # a failed page keeps the last copy's seats
+            print(f"{st}: photo roster {fn.__name__} didn't load ({str(e)[:100]})")
+            seats.update({k: v for k, v in ((old or {}).get("seats") or {}).items() if k not in seats})
+    if seats:
+        with open(path + ".tmp", "w") as f:
+            json.dump({"t": int(time.time()), "seats": seats}, f, indent=0, sort_keys=True)
+        os.replace(path + ".tmp", path)
+    return seats
 OFFICIAL = re.compile(r"(?:\.gov|\.us)$|leg|senate|house|assembly|capitol|statehouse|gencourt|dems\b|democrats|gop|republicans")
 # (And not campaign sites, whose names can say "senate": overture4scsenate.com.)
 NOT = re.compile(r"gstatic|googleusercontent|townnews|gannett|brightspot|arcpublishing|patch\.com|enview|"
@@ -106,6 +206,58 @@ def get(url, timeout=60):
     if url.startswith("https://api.github.com/") and os.environ.get("GITHUB_TOKEN"):
         headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
     return urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=timeout).read()
+
+
+_ROBOTS = {}
+
+
+def robots(url):
+    """The host's robots.txt (urllib.robotparser), read once a run; None when it can't be read (a 404: everything
+    allowed, as robotparser itself takes it)."""
+    import urllib.robotparser
+    host = "/".join(url.split("/")[:3])
+    if host not in _ROBOTS:
+        rp = urllib.robotparser.RobotFileParser()
+        try:
+            r = urllib.request.urlopen(urllib.request.Request(host + "/robots.txt", headers=UA), timeout=20)
+            body = r.read(500_000).decode("utf-8", "replace").lstrip("\ufeff")  # (flsenate.gov's starts with a BOM)
+            kind = (r.headers.get("Content-Type") or "").lower()
+            # (A site answering every address with its home page, as flhouse.gov's old name did, has no robots.txt.)
+            rp.parse(body.splitlines() if "html" not in kind else [])
+        except urllib.error.HTTPError as e:
+            # (RFC 9309: a robots.txt answering 4xx means no rules (S3 and CloudFront answer 403 for a missing one);
+            # 5xx means the site may be down: all disallowed for now.)
+            rp.parse([] if 400 <= e.code < 500 else ["User-agent: *", "Disallow: /"])
+        except Exception:
+            rp = None  # (not reached: treated as no rules, as before robots.txt was read)
+        _ROBOTS[host] = rp
+    return _ROBOTS[host]
+
+
+def allowed(url):
+    rp = robots(url)
+    return True if rp is None else rp.can_fetch(UA["User-Agent"], url)
+
+
+def crawl_delay(url):
+    rp = robots(url)
+    try:
+        d = rp.crawl_delay(UA["User-Agent"]) if rp else None
+    except Exception:
+        d = None
+    return float(d or 0)
+
+
+_LAST = {}
+
+
+def pace(url, least=0.5):
+    """Waits so requests to one host are its Crawl-delay apart (at least `least` seconds)."""
+    host = url.split("/")[2]
+    wait = _LAST.get(host, 0) + max(least, crawl_delay(url)) - time.time()
+    if wait > 0:
+        time.sleep(wait)
+    _LAST[host] = time.time()
 
 
 # ---- sources ----
@@ -200,13 +352,18 @@ class Checks:
     def __call__(self, url):
         self.asked.add(url)
         old = self.seen.get(url)
+        if not allowed(url):
+            # Never asked for (robots.txt): linked only when an answer from before robots.txt was read showed a light
+            # photo (visitors' browsers load it, as from the legislature's own page); unknown or heavy ones left out,
+            # since they can't be checked or copied small.
+            return "ok" if old and old[0] == "ok" else "bad"
         # (Answers saved before sizes were, [verdict, time], are asked again: 5 MB originals were "bad" then.)
-        if old and len(old) > 2 and time.time() - old[1] < WEEK:
+        if old and len(old) > 2 and time.time() - old[1] < (4 * WEEK if crawl_delay(url) >= 5 else WEEK):
             return old[0]
         if time.time() > self.until:
             return old[0] if old and len(old) > 2 else None
+        pace(url)
         v, size = head(url)
-        time.sleep(0.5)
         self.seen[url] = [v, int(time.time()), size]
         self.changed = True
         return v
@@ -283,14 +440,14 @@ class Small:
             return name
         if old and old[0] == "" and old[1] == size and time.time() - old[2] < WEEK:
             return None
-        if ballotpedia(url) or time.time() > self.until:
+        if ballotpedia(url) or time.time() > self.until or not allowed(url):
             return None
         try:
             import PIL  # noqa: F401 (installed in download.yml; without it heavy photos are left out)
         except ImportError:
             return None
+        pace(url, 1)
         data = shrink(url, size)
-        time.sleep(1)
         self.changed = True
         if not data:
             self.index[url] = ["", size, int(time.time())]
@@ -385,7 +542,7 @@ def contacts_files(folder):
     return sorted(glob.glob(os.path.join(folder, "contacts_*.json")))
 
 
-def build(folder, st, src, check=lambda url: None):
+def build(folder, st, src, check=lambda url: None, roster=None):
     """{"<house>|<name key>": url} for members whose contacts have no photo. check(url) "bad" leaves a photo out."""
     out = {}
     for path in contacts_files(folder):
@@ -410,7 +567,9 @@ def build(folder, st, src, check=lambda url: None):
                 url = https(recs[i]["image"]) if official(recs[i]["image"]) else None
             # The legislature's own (only for the newest contacts: Louisiana's is whoever holds the seat now), when it
             # answers with an image.
-            own = PATTERNS[st](seat, p, session) if st in PATTERNS and path == contacts_files(folder)[-1] else None
+            newest = path == contacts_files(folder)[-1]
+            own = PATTERNS[st](seat, p, session, folder) if st in PATTERNS and newest else None
+            own = own or ((roster or {}).get(seat) if newest else None)
             if own and check(own) in ("ok", "big"):
                 url = own
             if url and check(url) != "bad":
@@ -425,8 +584,9 @@ def refresh(folder, force=False):
     src = source(folder, st, force)
     if not src:
         return
-    check = Checks(folder)
-    images = build(folder, st, src, check)
+    # (Hosts with a crawl delay get more time: New Hampshire's 400 photos at 11 seconds take a few runs.)
+    check = Checks(folder, budget=600 if st in ("nh", "fl") else 150)
+    images = build(folder, st, src, check, rosters(folder, st, force))
     check.save()
     # Heavy photos: their small copies, else left out (not made yet: the next run makes more; over MAX_SMALL; Ballotpedia's).
     small, heavy = Small(folder), sorted({u for u in images.values() if check(u) == "big"})

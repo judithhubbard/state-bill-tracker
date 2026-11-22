@@ -51,3 +51,7 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   convert.py reads it; legiscan_convert.py's `Rules.veto_memo()` is the hook (None for the other LegiScan states). Only
   2026's page is in `PAGES`: 2025's (gov--stitt-s-2025-veto-list.html) is laid out differently and 2023-24's weren't
   found; add each year's page by hand. 33 of 2026's vetoes matched on 2026-11-22. Shows after the next legiscan run.
+- **Photos (2026-11-22):** the House's own from its roster page (www.okhouse.gov/representatives, no robots.txt): the
+  page data lists every member's district and portrait; the 400x500 "small" size is used (about 35 KB). The Senate's site
+  (oksenate.gov) answers its pages with a script challenge (Sucuri), so its roster isn't read; Open States' links to its
+  photo files (/sites/default/files/, allowed) still load and are copied small.
