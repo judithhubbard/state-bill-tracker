@@ -24,10 +24,26 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   bill for bill: 2024 330 laws (chapters 1-330), 2 vetoes; 2025 340 laws (one with line-item vetoes, H 482), 1 veto (S 1023,
   override failed in the Senate); 2026 344 laws, 4 vetoes; no veto was overridden. Joint resolutions (HJR/SJR) propose
   constitutional amendments: two-thirds of each house's members, then the voters (`amendmentOnce`); they go to the
-  Secretary of State, never the governor (2024 HJR 5; 2025 HJR 4 and HJR 6). Sponsors: nearly every bill is a committee's
-  ("House State Affairs Committee"); the member who asked is named only in the Statement of Purpose (a PDF, not
-  downloaded), and the floor sponsors are history lines ("Floor sponsor: Bruce"), so legislators' sponsorship numbers
-  count only the ~20 personal bills a year ("by RUBEL"); How's "About this data" says so. Titles are the list's short
+  Secretary of State, never the governor (2024 HJR 5; 2025 HJR 4 and HJR 6). Sponsors (2026-11-22): nearly every bill is a committee's
+  ("House State Affairs Committee"); the member who asked is named only in the Statement of Purpose's "Contact:" section
+  ("Representative Jordan Redman", one a line, a phone under some; sometimes several, sometimes agency staff: "Bryan
+  Nickels", "Office of Administrative Hearings"; titles after a comma: "Senator Ben Toews, Majority Caucus Chair").
+  `texts.contacts()` reads them from sop/<key>.txt and `member_named()` in convert.py matches each to the year's members
+  (roster(): the title's house and surname, the first name too when two share a surname or there's no title; "Ted Hill"
+  = 2024's "Edward H. Hill"). The first in the bill's own house is its sponsor, through the committee (vers' `via`:
+  "Jordan Redman, through the House Health and Welfare Committee"), others there are sponsors too (primes, counted as
+  sponsors on legislators' pages and in sponsor_class()); members of the other house named (usually who carries it
+  there) are shown ("with Sen. Tammy Nichols", `with`), not counted; untitled names are kept only when they're a
+  member's full name. A statement naming no member leaves the committee as sponsor ("for Rep. X" when it names only one
+  of the other house: S 1276 of 2024). Floor sponsors ("Floor sponsor - Ehardt", "Sponsors - Boyle & Shirts") are
+  resolved to members of the house acting (`resolver()`) and shown as "Floor sponsors: Barbara Ehardt (House) and Carl
+  J. Bjerke (Senate)" (`floor`); they aren't counted as sponsorships (a floor sponsor carries a bill the committee
+  already sent out; counting them would credit leaders and chairs with most of the year's bills). build_data.py's
+  `sponsor_extra()` writes via/with/floor after the version's link (every other state writes nothing there). In 38
+  statements read on 2026-11-22 (7 a year on the owner's computer, 18 more fetched by hand) every titled name matched;
+  the whole count per year is data_check.py's LOOK line ("N of M statements name a member of the bill's house"; FAIL
+  when under 60% of 50 or more, or when titled names match no member). The personal bills ("by RUBEL", ~20 a year)
+  keep their named member. Titles are the list's short
   titles with abbreviations spelled out (`ABBREV`: "Approp, ITS, add'l" -> "Appropriation, ITS, additional"); the summary
   is the one-line description; "What it does" is the bill's Statement of Purpose, written for its sponsor
   ("From the sponsor's statement of purpose."; sponsors' statements kept, the owner's decision 2026-11-14), from

@@ -5,7 +5,7 @@ Senate bills, plus the joint resolutions (HJR, SJR), which in Idaho propose amen
 concurrent resolutions, memorials and one house's resolutions are left out.
 
 Each bill's page has its sponsor ("by STATE AFFAIRS COMMITTEE": nearly every bill is a committee's; the member who asked
-for it is named only in the Statement of Purpose, a PDF not downloaded), a subject and one-line description, and the
+for it is named only in the Statement of Purpose's contacts: requested(), shown as the sponsor "through" the committee), a subject and one-line description, and the
 history: a date (MM/DD, no year; blank for more steps the same day) and the action. The lines don't say which house
 acted, so the bill is followed from house to house: it starts in its own house; "Received from the House ..." and
 "Returned from the Senate ..." move it; "Title apvd - to Senate", "Signed by President; returned to House",
@@ -310,6 +310,74 @@ def resolver(session):
     return find
 
 
+def _letters(s):
+    return re.sub(r"[^a-z]", "", s.lower())
+
+
+def member_named(session, house, name):
+    """The year's member a Statement of Purpose's contact names ("Representative Jordan Redman": house "H"), or None:
+    in that house, by surname, and by first name too when two share the surname ("Josh Tanner", "Steven Tanner") or no
+    title says which house (agency staff are no one's match). The first name may differ when the house and surname
+    settle it ("Ted Hill", "Edward H. Hill" on an earlier year's pages; "Stephanie Mickelsen", "Stephanie Jo
+    Mickelsen")."""
+    people = [p for p in roster(session).values()]
+    last, first = _letters(surname(name)), _letters(name.split()[0]) if name.split() else ""
+    same_first = lambda p: _letters(p["name"].split()[0]) == first
+    for h in ([house] if house else []) + [OTHER[house] if house else None]:
+        hits = [p for p in people if (h is None or p["house"] == h) and _letters(surname(p["name"])) == last]
+        if len(hits) > 1 or h != house or not house:
+            hits = [p for p in hits if same_first(p)]
+        if len(hits) > 1:
+            hits = [p for p in hits if p.get("sid")] or hits[:0]
+        if len(hits) == 1:
+            return hits[0]
+    return None
+
+
+def requested(session, key):
+    """The members a bill's Statement of Purpose names as its contacts (the ones who asked a committee for it):
+    ([person, ...], [names with a legislator's title that match no member]). From data/id/<year>/sop/<key>.txt."""
+    from states.id import texts
+    try:
+        raw = open(os.path.join(folder(session), "sop", f"{key}.txt"), encoding="utf-8").read()
+    except OSError:
+        return [], []
+    found, missed = [], []
+    for house, name in texts.contacts(raw):
+        p = member_named(session, house, name)
+        if p and p not in found:
+            found.append(p)
+        elif not p and house:
+            missed.append(f"{'Representative' if house == 'H' else 'Senator'} {name}")
+    return found, missed
+
+
+_CONTACTS = {}
+
+
+def _note_contacts(session, key, asked, missed, origin):
+    s = _CONTACTS.setdefault(session, {"statements": 0, "own": 0, "other": 0, "none": [], "missed": []})
+    if not os.path.exists(os.path.join(folder(session), "sop", f"{key}.txt")):
+        return
+    s["statements"] += 1
+    if any(x["house"] == origin for x in asked):
+        s["own"] += 1
+    elif asked:
+        s["other"] += 1
+    else:
+        s["none"].append(number(key))
+    s["missed"] += [(number(key), n) for n in missed]
+
+
+def contact_stats(session):
+    """What the year's Statements of Purpose gave (test/data_check.py): {"statements": bills with one, "own": bills whose
+    contacts include a member of their own house, "other": only of the other house, "none": [bills naming no member],
+    "missed": [(bill, "Representative X") titled as a legislator but matching no member]}. After load_session()."""
+    if session not in _CONTACTS:
+        load_session(session)
+    return _CONTACTS.get(session) or {"statements": 0, "own": 0, "other": 0, "none": [], "missed": []}
+
+
 def names(s):
     """"Alfieri, Andrus, Vander Woude, Mr. Speaker" -> list; "None" -> []."""
     s = s.strip()
@@ -385,6 +453,7 @@ def load_session(session):
     enacted = {e["bill"]: e for e in lst.get("enacted") or []}
     vetoed = set(lst.get("vetoed") or [])
     find = resolver(session)
+    _CONTACTS.pop(session, None)  # counted again below (contact_stats())
     parties = _PARTIES.setdefault(session, {})
     for p in roster(session).values():
         if p["party"] in ("R", "D"):
@@ -425,6 +494,7 @@ def record(session, key, p, pg, listed, enacted, vetoed_listed, find):
     refs = []
     chapter = None
     votes = []
+    floor = []  # (house, name): the members who carried it on each floor ("Floor sponsor - Bruce")
     vote_ctx = None  # the roll call being read: [house, date, yeas, nays, listed]
     d = f"{session}-01-01"
     for mmdd, parts in pg["rows"]:
@@ -446,6 +516,12 @@ def record(session, key, p, pg, listed, enacted, vetoed_listed, find):
                 who = fm.group(1).strip()
                 if who and not re.match(r"No sponsor data", who):
                     steps.append((d, cur, f"Floor sponsor: {who.replace(' & ', ' and ')}", "floorsponsor"))
+                    for n in re.split(r"\s*&\s*|\s+and\s+", who):
+                        sid = find(cur, n)
+                        person = next((x for x in roster(session).values() if x.get("sid") == sid), None) if sid and "?" not in sid else None
+                        name = person["name"] if person else re.sub(r"\(.*", "", n).strip()
+                        if name and (cur, name) not in floor:
+                            floor.append((cur, name))
                 continue
             # Before the line: the house that records it.
             mv = re.match(r"(?:Received|Returned) (?:from|From) (?:the )?(House|Senate)\b", t)
@@ -760,9 +836,22 @@ def record(session, key, p, pg, listed, enacted, vetoed_listed, find):
                                 [k for k in P.TOPIC_WORDS if P.TOPIC_WORDS[k].search(f"{subj} {title}")]))
     fate = "passed" if dopass or passed else "none"
     # Sponsors: the committee that introduced it ("House State Affairs Committee"), or the members named.
+    # A committee's bill names the members who asked for it only in its Statement of Purpose's contacts: the first in
+    # the bill's own house is its sponsor ("Jordan Redman, through the House Health and Welfare Committee"), others in
+    # that house are sponsors too (primes); those in the other house ("with Senator Tammy Nichols", usually who carries
+    # it there) are shown, not counted.
     sp = pg["sponsor"]
+    asked, missed = requested(session, key)
+    _note_contacts(session, key, asked, missed, origin)
+    own = [x["name"] for x in asked if x["house"] == origin]
+    other_side = [(x["house"], x["name"]) for x in asked if x["house"] != origin]
+    via = None
     if re.search(r"COMMITTEE$", sp):
-        sponsor, cos = f"{HOUSE[origin]} {comm_name(sp)} Committee", []
+        committee = f"{HOUSE[origin]} {comm_name(sp)} Committee"
+        if own:
+            sponsor, cos, via = own[0], own[1:], committee
+        else:
+            sponsor, cos = committee, []
     else:
         who = [w.strip() for w in re.split(r"\s+AND\s+|,\s*", sp) if w.strip()]
         full = []
@@ -771,6 +860,9 @@ def record(session, key, p, pg, listed, enacted, vetoed_listed, find):
             person = next((x for x in roster(session).values() if x.get("sid") == sid), None)
             full.append(person["name"] if person else w.title())
         sponsor, cos = (full[0] if full else "—"), full[1:]
+        if full:  # a personal bill's other contacts in its house are its sponsors too
+            cos = cos + [n for n in own if n not in full]
+    primes = 1 + len(cos)
     where = HOUSE[cur] if stage in (0, 1) else HOUSE[origin]
     if stage == 0:
         if not refs and not passed:
@@ -815,7 +907,8 @@ def record(session, key, p, pg, listed, enacted, vetoed_listed, find):
             dates(lambda s: s[3] == "vetoed"),
         ],
         "votes": fvotes, "firstComms": [(origin, first_ref, first_report == "pass" or bool(passed))] if first_ref else [],
-        "vers": [{"p": p, "sponsor": sponsor, "district": 0, "cosponsors": cos, "primes": 1 + len(cos) if cos else 1,
+        "vers": [{"p": p, "sponsor": sponsor, "district": 0, "cosponsors": cos, "primes": primes,
+                  "via": via, "with": other_side, "floor": floor,
                   "cosp": len(cos), "statusDesc": dsc, "committee": comm_now,
                   "link": f"https://legislature.idaho.gov/sessioninfo/{session}/legislation/{key}/",
                   "actions": [[s[0], s[2]] for s in steps]}],

@@ -308,6 +308,18 @@ def bill_parties(r, party_of):
     return [vals.count("D"), vals.count("R")]
 
 
+def sponsor_extra(v, S):
+    """A version's sponsor details past its link, as strings (tracker.html's decode()): the committee the sponsor went
+    through ("via": Idaho's committee bills, asked for by the member named in the Statement of Purpose), members in the
+    other house named with them ("with"), and the floor sponsors ("floor"), each list "S:Tammy Nichols|H:Jeff Ehlers".
+    [] when a version has none (every other state), so their pages are unchanged."""
+    pairs = lambda xs: "|".join(f"{h}:{n}" for h, n in xs) or None
+    via, other, floor = v.get("via"), pairs(v.get("with") or []), pairs(v.get("floor") or [])
+    if not (via or other or floor):
+        return []
+    return ([] if v.get("link") else [-1]) + [S(via), S(other), S(floor)]
+
+
 def sponsor_class(r, party_of):
     """The bill's sponsors' party, for the issue pages' "Sponsor's party" menu: "D" or "R" when every prime (main)
     sponsor whose party is known is of that party, "B" (both parties) when the prime sponsors include both, or when the
@@ -2101,7 +2113,8 @@ def compute(prev=None):
             vers = [[v["p"], S(v["sponsor"]), v["cosp"], S(v["statusDesc"]), S(v["committee"]),
                      [[a[0].replace("-", ""), S(a[1])] for a in v["actions"]],
                      [S(n) for n in v["cosponsors"]] if session >= current else [], v.get("district") or 0,
-                      max(0, (v.get("primes") or 1) - 1)] + ([S(v["link"])] if v.get("link") else []) for v in r["vers"]]
+                      max(0, (v.get("primes") or 1) - 1)] + ([S(v["link"])] if v.get("link") else []) + sponsor_extra(v, S)
+                    for v in r["vers"]]
             h = sorted(hist[session][i].values(), key=lambda e: (e[0], e[1]))
             summ = r["summary"][:2500]
             # A summary that repeats the title is stored as the rest of it, marked with \x01.

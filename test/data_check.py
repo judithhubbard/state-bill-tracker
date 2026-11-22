@@ -51,6 +51,21 @@ def check(state):
         # Count bills by stage against the Legislature's own totals (signed, vetoed).
         say(state, "LOOK", f"{s}: {len(recs)} bills; signed {stages[5]}, vetoed {stages[6]}, passed both houses but not "
                            f"sent {stages[3]}, on the governor's desk {stages[4]} (compare with the official totals)")
+        # Sponsors named only in another document: Idaho's committee bills name the member who asked for them in the
+        # Statement of Purpose's "Contact:" section, matched to the year's members. A session where most don't match (a
+        # new layout, a member list that didn't load) shows committees again; names titled as legislators that match no
+        # member mean the matching slipped.
+        if hasattr(C, "contact_stats"):
+            cs = C.contact_stats(s)
+            if cs["statements"]:
+                say(state, "LOOK", f"{s}: {cs['own']} of {cs['statements']} statements name a member of the bill's house as "
+                                   f"its contact, {cs['other']} only one of the other house; none named: {cs['none'][:5]}")
+                if cs["statements"] >= 50 and cs["own"] < 0.6 * cs["statements"]:
+                    say(state, "FAIL", f"{s}: only {cs['own']} of {cs['statements']} statements' contacts matched a member "
+                                       f"of the bill's house")
+                if cs["missed"]:
+                    say(state, "FAIL" if len(cs["missed"]) > max(3, 0.01 * cs["statements"]) else "LOOK",
+                        f"{s}: {len(cs['missed'])} contacts titled as legislators match no member, e.g. {cs['missed'][:5]}")
         # A bill that passed both houses passed each one (missing votes, one-house conference reports).
         missing = [r["nums"][0] for r in recs if r["stage"] >= 3 and not (r["passedS"] and r["passedA"])]
         if missing:
