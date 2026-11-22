@@ -147,6 +147,22 @@ jobs:
             data/senate_memos_*.json
           key: ny-bills-v1-latest
           restore-keys: ny-bills-v1-
+      # The District joined the LegiScan job on 2026-11-22, which changed the copy's paths (a cache restores only with the
+      # paths it was saved with): its first run starts from the copy saved before, so the month's query count
+      # (data/legiscan/usage.json) and the five states' files carry on. Can go once a copy with data/dc is saved.
+      - name: Start the LegiScan states from their copy before the District joined
+        if: matrix.key == 'legiscan-data-v1' && steps.restore.outputs.cache-matched-key == ''
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data/legiscan
+            data/tn
+            data/ok
+            data/me
+            data/ri
+            data/vt
+          key: legiscan-data-v1-latest
+          restore-keys: legiscan-data-v1-
       # When the copy was last checked (data/<state>/last_checked, set below after a successful download): the pages
       # say "updated" from it, since between sessions no bill file may change for weeks.
       - name: Mark the time

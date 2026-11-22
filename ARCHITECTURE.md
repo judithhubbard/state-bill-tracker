@@ -23,7 +23,8 @@ download.yml (GitHub, every 2 h)       publish.yml (after each quick-lane downlo
 
 - **One job per state**, in `.github/workflows/download.yml`. The list of jobs is `.github/states.json`: for each, `code`
   (data folder), `key` (its Actions cache), `paths`, `minutes` (time limit of the Download step) and `run` (the shell
-  command). New Jersey's job also downloads Virginia; the `legiscan` job covers TN, OK, ME, RI, VT.
+  command). New Jersey's job also downloads Virginia; the `legiscan` job covers TN, OK, ME, RI, VT and the District of
+  Columbia (DC also reads the Council's law library, `states/dc/laws.py`, and dccouncil.gov, `states/dc/contacts.py`).
 - The commands are each state's `states/<st>/fetch.py`, usually followed by `states/<st>/contacts.py` (writes
   `data/<st>/contacts_<session>.json`). Shared downloaders:
   - `legiscan.py` (TN, OK, ME, RI, VT): LegiScan's API into `data/<st>/legiscan/<session_id>/`. Counts every query in

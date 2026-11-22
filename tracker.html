@@ -1967,7 +1967,8 @@ const overriddenLaw = (b) => b.stage === 5 && !!b.dates.vetoed;
 // A law the governor neither signed nor vetoed in time (or, in some states, returned unsigned), as its history says.
 const NO_SIGNATURE = /without (?:the |my )?(?:governor'?s |president'?s )?signature|w\/o sign|w\/out governor/i;
 const unsignedLaw = (b) => b.stage === 5 && !overriddenLaw(b) && b.vers.some((v) => v.actions.some(([, t]) => NO_SIGNATURE.test(t)));
-const lawLine = (b) => (overriddenLaw(b) ? `Became law over ${EXEC.the}'s veto` : unsignedLaw(b) ? `Became law without ${EXEC.the}'s signature` : STATE.noSignatures ? "Became law" : "Signed into law");
+// (A state's own words, STATE.lawLine: the District's acts are "Signed by the Mayor" and become law after Congress's review.)
+const lawLine = (b) => STATE.lawLine?.(b) || (overriddenLaw(b) ? `Became law over ${EXEC.the}'s veto` : unsignedLaw(b) ? `Became law without ${EXEC.the}'s signature` : STATE.noSignatures ? "Became law" : "Signed into law");
 const partlyVetoed = (b) => b.stage === 5 && b.vers.some((v) => v.actions.some(([, t]) => /partially vetoed|line-item veto|item veto/i.test(t)));
 // Lines that only name who wrote or signed on to a bill ("Coauthored by Representative George (principal House author)"):
 // never a bill's "latest action".
@@ -2156,6 +2157,8 @@ function interimNote(b) {
 }
 
 // A last name as written, for lists of districts ("Jr." isn't one).
+// What a state calls its legislators in "Find your legislators" (the District's "Councilmembers": STATE.repsWord).
+const REPS_WORD = STATE.repsWord || "legislators";
 const shortName = (n) => (n || "").replace(/,?\s+(Jr\.?|Sr\.?|II|III|IV)$/, "").split(" ").pop();
 const lastName = (n) => (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\s-]/g, "").split(/\s+/).filter((w) => !["jr", "sr", "ii", "iii"].includes(w)).pop() || "";
 
@@ -2198,7 +2201,9 @@ function myReps() {
   // A district can have more than one Assembly member (New Jersey's have two). New Hampshire's towns vote in all their
   // House districts (STATE.townInAllDistricts: their own and a "floterial" one over them and their neighbors).
   const town = STATE.townInAllDistricts && c.town ? DATA.towns?.find((t) => townKey(t) === c.town) : null;
-  const also = (h) => (h !== LOW ? [] : town ? town[3].map(([d]) => d) : STATE.townInAllDistricts ? (c.also || []) : []);
+  // Members elected at large (the District's Council: STATE.atLarge, their district's number) represent everyone.
+  const also = (h) => (h !== LOW ? [] : town ? town[3].map(([d]) => d) : STATE.townInAllDistricts ? (c.also || []) : [])
+    .concat(h === LOW && STATE.atLarge ? [STATE.atLarge] : []);
   return BOTH.flatMap((h) => LEGS.filter((L) => L.house === h && (L.district === +c[h] || also(h).includes(L.district))))
     .map((L) => ({ title: L.title, name: L.name, house: L.house, last: lastName(L.name) }));
 }
@@ -2506,14 +2511,18 @@ function renderTownReps(box) {
   const town = c?.town ? towns.find((t) => townKey(t) === c.town) : null;
   const named = townName;
   const townOpts = townOptions(town);
-  const districts = [...new Set(LEGS.map((L) => L.district))].sort((a, b) => a - b);
+  // (A state's own word for a district: the District of Columbia's wards, STATE.districtWord; members elected at large,
+  // STATE.atLarge, aren't a choice: they represent everyone, STATE.atLargeLine.)
+  const DW = STATE.districtWord || "District";
+  const districts = [...new Set(LEGS.map((L) => L.district))].filter((d) => d !== STATE.atLarge).sort((a, b) => a - b);
   const who = (d) => LEGS.filter((L) => L.district === d).sort((a, b) => (a.house === b.house ? 0 : a.house === "S" ? -1 : 1)).map((L) => shortName(L.name)).join(", ");
-  const distOpts = `<option value="">Choose your district</option>` + districts.map((d) => `<option value="${d}"${d === c?.S ? " selected" : ""}>District ${d}: ${esc(who(d))}</option>`).join("");
+  const distOpts = `<option value="">Choose your ${DW.toLowerCase()}</option>` + districts.map((d) => `<option value="${d}"${d === c?.S ? " selected" : ""}>${DW} ${d}: ${esc(who(d))}</option>`).join("");
   const where = !town ? "" : town[2].length > 1
-    ? `${esc(named(town))} is split between ${andList(town[2].map(([d]) => `District ${d}`))}. ${STATE.addressLookup && ROOT ? "Look up your address, or pick yours below." : "Pick yours below."}`
-    : `${esc(named(town))} is in District ${town[2][0][0]}.`;
-  box.innerHTML = `<div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOpts}</select></label> <label>District <select id="repD">${distOpts}</select></label></div>
-    ${where ? `<p class="muted">${where}</p>` : ""}
+    ? `${esc(named(town))} is split between ${andList(town[2].map(([d]) => `${DW} ${d}`))}. ${STATE.addressLookup && ROOT ? "Look up your address, or pick yours below." : "Pick yours below."}`
+    : `${esc(named(town))} is in ${DW} ${town[2][0][0]}.`;
+  const atLarge = STATE.atLarge && STATE.atLargeLine ? `<p class="muted">${STATE.atLargeLine(LEGS.filter((L) => L.district === STATE.atLarge).map((L) => esc(L.name)))}</p>` : "";
+  box.innerHTML = `<div class="repsel"><label>${esc(TOWN_WORD)} <select id="repT">${townOpts}</select></label> <label>${esc(DW)} <select id="repD">${distOpts}</select></label></div>
+    ${where ? `<p class="muted">${where}</p>` : ""}${atLarge}
     ${repFindHtml()}`;
 }
 // "Find by address" (the public site, where the state's profile turns it on): the address goes only to the Census geocoder.
@@ -2589,9 +2598,9 @@ function repsLine() {
   const picker = !DATA.towns ? `<select data-reppick="county">${countyOptions()}</select>`
     : regions ? `<select data-reppick="region"><option value="">Choose your ${esc(rw)}</option>${regions.map((r) => `<option${r === (town?.[1] || c?.region) ? " selected" : ""}>${esc(r)}</option>`).join("")}</select>`
     : `<select data-reppick="town">${townOptions(town)}</select>`;
-  if (!reps.length) return `<p class="yourreps"><label>Your legislators: ${picker}</label></p>`;
+  if (!reps.length) return `<p class="yourreps"><label>Your ${REPS_WORD}: ${picker}</label></p>`;
   const place = town ? townName(town) : c?.region || (!DATA.towns && HOME ? placeName(HOME) : "");
-  return `<p class="yourreps">Your legislators: ${esc(reps.map((r) => `${TITLE[r.house]} ${r.name}`).join(", "))}${place ? ` (${esc(place)})` : ""}`
+  return `<p class="yourreps">Your ${REPS_WORD}: ${esc(reps.map((r) => `${TITLE[r.house]} ${r.name}`).join(", "))}${place ? ` (${esc(place)})` : ""}`
     + ` · <button type="button" class="linkish" data-repchange>change</button><span class="reppick" hidden> ${picker}</span></p>`;
 }
 function refreshRepsLines() { for (const el of document.querySelectorAll(".yourreps")) el.outerHTML = repsLine(); }
@@ -2648,13 +2657,13 @@ function contactBook(b, canMove = true, oppose = false) {
       if (!c || !c.chair) return;
       // A chair who sponsors it still decides when it comes up.
       const mine = backs(c.chair, house) && !oppose;
-      add(c.chair, house, `chair of the ${UNI ? "" : `${HOUSE[house]} `}${c.name} Committee${c.meets ? ` (meets ${c.meets} during session)` : ""}`,
+      add(c.chair, house, `chair of the ${UNI ? "" : `${HOUSE[house]} `}${commWord(c.name)}${c.meets ? ` (meets ${c.meets} during session)` : ""}`,
         mine && ask ? `${ask.replace("the committee agenda", "your committee's agenda")} (you sponsor it)` : ask, star);
       // Your own legislators who sit on this committee get a vote there.
       for (const r of myReps().filter((x) => x.house === house)) {
         const L = LEGS.find((x) => x.house === house && lastName(x.name) === r.last && x.name === r.name) || LEGS.find((x) => x.house === house && lastName(x.name) === r.last);
         if (L && who(r.name, house) !== who(c.chair, house) && (L.committees || []).some((m) => commKey(m.name) === commKey(c.name)))
-          add(r.name, house, `member of the ${c.name} Committee`, canMove && !backs(r.name, house) ? (oppose ? "vote no in committee" : "vote yes in committee") : "");
+          add(r.name, house, `member of the ${commWord(c.name)}`, canMove && !backs(r.name, house) ? (oppose ? "vote no in committee" : "vote yes in committee") : "");
       }
     },
     // A leader who sponsors it still decides when it comes up; returns them then, for a note.
@@ -4435,7 +4444,7 @@ function partyTag(b, counts = true) {
   const label = [d && `${d} Democrat${d === 1 ? "" : "s"}`, r && `${r} Republican${r === 1 ? "" : "s"}`].filter(Boolean).join(", ");
   return `<span class="ptyline" title="Sponsors and co-sponsors, both versions"><span class="pty ${k}">${k === "B" ? "Both" : k}</span>${counts ? ` Sponsors: ${label}` : ""}</span>`;
 }
-const NARROW_TAG = { person: "For one person", org: "For one group", naming: "Road or place naming", place: "For one city or county" };
+const NARROW_TAG = { person: "For one person", org: "For one group", naming: "Road or place naming", place: STATE.placeTag || "For one city or county" };
 const chapTag = (b) => amendedBills(b) ? `<span class="tag chap">Chapter amendment${TIPI(CHAPTER_AMENDMENT)}</span>`
   : b.memo && changesAgreed(b) ? `<span class="tag chap">${changesMade(b) ? "Changed by a later bill" : "Changes to come"}${TIPI(CHANGES_AGREED)}</span>` : "";
 // What used to crowd each row (party, topics, the law it changes, earlier sessions ...), shown when the bill is opened.
@@ -4601,6 +4610,8 @@ const meetHead = (m) => MEET_KIND[m.kind] || "On the agenda";
 // A meeting with no bills named (kind "meets"): its day and time, or the note that stands for the time ("after the House
 // adjourns").
 const meetWhen = (m) => fmtMeet(m.when, true) + (m.note && /T00:00(:00)?$/.test(m.when) ? `, ${m.note}` : "");
+// A committee's name with "Committee" after it, unless it starts with the word (the District's "Committee of the Whole").
+const commWord = (n) => (/^Committee\b/.test(n || "") ? n : `${n} Committee`);
 const meetComm = (m) => (/committee\b/i.test(m.committee) ? m.committee : `${m.committee} Committee`);
 // The next committee meeting with this bill on the agenda (current session).
 function nextMeeting(b) { return WatchRules.nextMeeting(b.agenda, DATA.current); }
@@ -5431,10 +5442,10 @@ function selectOptions() {
 const MORE_KEYS = ["party", "progress", "law", "comm", "house", "hist", "intro"];
 function fillSelects() {
   $("votedField").hidden = !DATA.current || !votePeople().length;
-  $("votedLabel").textContent = PRESET?.who ? "How they voted" : "How your legislators voted";
+  $("votedLabel").textContent = PRESET?.who ? "How they voted" : `How your ${REPS_WORD} voted`;
   const reps = PRESET?.who ? [] : votePeople();
   // (Each name links to the legislator's page on the public site.)
-  $("whereSum").innerHTML = reps.length ? `Your legislators: ${andList(reps.map((L) => { const n = esc(`${L.title || ""} ${L.name}`.trim()); return ROOT && L.slug && DATA.current ? `<a href="${esc(ROOT + L.slug)}/">${n}</a>` : n; }))}` : "Find your legislators";
+  $("whereSum").innerHTML = reps.length ? `Your legislators: ${andList(reps.map((L) => { const n = esc(`${L.title || ""} ${L.name}`.trim()); return ROOT && L.slug && DATA.current ? `<a href="${esc(ROOT + L.slug)}/">${n}</a>` : n; }))}`.replace(/^Your legislators/, `Your ${REPS_WORD}`) : `Find your ${REPS_WORD}`;
   for (const id of ["who", "law", "voted", "changed", ...MORE_KEYS]) $(id)?.classList.toggle("on", !!state[id]);
   // How many more bills each "hide" box takes out, given the other filters.
   // (States that find legislators by town have no county box.)
@@ -6316,10 +6327,10 @@ function renderHowPic() {
     return `${start} ${EXEC.The} signs it, and it becomes law, or vetoes it. ${over.t}.${over.tip ? ` ${over.tip}` : ""} ${un}`.trim();
   }
 
-  const cap = UNI ? `${STATE.name}'s ${H[0]} has one house, so a bill takes one track.`
+  const cap = STATE.howCap ? STATE.howCap : UNI ? `${STATE.name}'s ${H[0]} has one house, so a bill takes one track.`
     : relay ? "A bill starts in either house. If that house passes it, it goes to the other house and starts again in a committee."
     : "Many bills are filed in both houses at once, word for word. The two copies move side by side until both houses pass the same text.";
-  box.innerHTML = `<h2>How a bill becomes law in ${esc(STATE.name)}</h2><p class="cap">${cap}</p>
+  box.innerHTML = `<h2>How a bill becomes law in ${esc(STATE.inName || STATE.name)}</h2><p class="cap">${cap}</p>
     <svg width="0" height="0" class="hpdefs" aria-hidden="true">
       <symbol id="hp-file" viewBox="0 0 24 24"><circle cx="8" cy="7" r="3"/><path d="M2.5 20c0-3.2 2.4-5.5 5.5-5.5s5.5 2.3 5.5 5.5"/><path d="M15 5h6v11h-6z"/><path d="M17 8.5h2M17 11.5h2"/></symbol>
       <symbol id="hp-comm" viewBox="0 0 24 24"><circle cx="5.5" cy="8" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="18.5" cy="8" r="2"/><path d="M3 13h18v3H3z"/><path d="M6 16v4M18 16v4"/></symbol>
@@ -6903,7 +6914,7 @@ function renderPerson(L, past) {
       <p>${[L.party, STATE.seatText ? STATE.seatText(L.house, L.district, DNAME(L.house, L.district)) : DNAME(L.house, L.district) ? `${house}, ${DNAME(L.house, L.district)} district` : `${house} District ${DNUM(L.house, L.district)}`, since].filter(Boolean).map(esc).join(" · ")}</p>
       ${!past && chairs.length ? `<p><b>Chairs:</b> ${chairs.map(esc).join(", ")}</p>` : ""}
       ${!past && member.length ? `<p><b>Committees:</b> ${member.map(esc).join(", ")}</p>` : ""}
-      <p>Sponsored ${num(mine.length)} bill${mine.length === 1 ? "" : "s"} ${past ? `in ${span(DATA.session)}` : "this session"}; ${num(signed)} signed into law.</p>
+      <p>Sponsored ${num(mine.length)} bill${mine.length === 1 ? "" : "s"} ${past ? `in ${span(DATA.session)}` : "this session"}; ${num(signed)} ${STATE.signedWords || "signed into law"}.</p>
       <p>${reach}</p>
       <nav class="sessions psessions" id="personSessions" aria-label="Their sessions"></nav>
       <p>${past && ROOT && L.slug ? `<a href="${esc(ROOT + L.slug)}/">Their current page</a> · <a href="${esc(location.pathname)}">All bills in ${span(DATA.session)}</a> · ` : ""}<a href="${esc(ROOT || BASE || "./")}">← All bills in ${BODY}</a></p>

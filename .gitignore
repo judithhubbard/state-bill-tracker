@@ -188,3 +188,7 @@ data/us/*
 .build-cache/
 # The committee agenda log (tools/agenda_seen.py; an Actions cache on GitHub).
 agenda_log/
+# District of Columbia (LegiScan, legiscan.py; LIMS needs a developer key: states/dc/NOTES.md).
+data/dc/*
+!data/dc/district_towns.json
+!data/dc/district_names.json

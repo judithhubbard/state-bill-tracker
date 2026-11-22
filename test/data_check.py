@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, HERE)
-STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "de", "ga", "hi", "ia", "id", "il", "in", "ks", "ky", "la", "ma", "md", "me", "mi", "mn", "mo", "ms", "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy", "us") if os.path.isdir(os.path.join(HERE, "data", s))
+STATES = [s for s in ("ak", "al", "ar", "az", "ca", "co", "ct", "dc", "de", "ga", "hi", "ia", "id", "il", "in", "ks", "ky", "la", "ma", "md", "me", "mi", "mn", "mo", "ms", "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "oh", "ok", "or", "pa", "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy", "us") if os.path.isdir(os.path.join(HERE, "data", s))
           and not os.path.exists(os.path.join(HERE, "data", s, "incomplete"))] + \
     (["ny"] if glob.glob(os.path.join(HERE, "data", "bills_*.json*")) else [])  # New York's data is in data/ itself
 fails = []
@@ -486,14 +486,26 @@ def check(state):
             say(state, "LOOK", f"sessions whose sponsors mostly have no party (a member list that didn't match?): {low}, "
                                f"best {100 * max(share.values()):.0f}%")
 
-    # The current session's votes should name seats, not leftover names.
+    # The current session's votes should name seats, not leftover names. Former members are expected: a name missing from its
+    # house's last 30 days of roll calls has left (the District's Council, 13 members, lost two at-large members in 2025-26,
+    # 12% of its named votes); only names still voting then count toward a FAIL (a member list that fails to match leaves
+    # every recent name loose).
     cur = max(loaded)
     who = [m for r in loaded[cur] for v in r["votes"] for m, _ in v[6]]
     loose = [m for m in who if "?" in m]
     if who:
+        endday = {}
+        for r in loaded[cur]:
+            for v in r["votes"]:
+                if v[1] == "F":
+                    endday[v[0]] = max(endday.get(v[0], ""), v[3])
+        still = {m for r in loaded[cur] for v in r["votes"] if v[1] == "F" and endday.get(v[0]) and
+                 v[3] >= (date.fromisoformat(endday[v[0]]) - timedelta(days=30)).isoformat() for m, _ in v[6]}
         share = 100 * len(loose) / len(who)
-        say(state, "FAIL" if share > 10 else "LOOK", f"{cur}: {share:.1f}% of named votes aren't tied to a seat "
-            f"(former members are expected), e.g. {collections.Counter(loose).most_common(3)}")
+        staying = 100 * sum(1 for m in loose if m in still) / len(who)
+        say(state, "FAIL" if staying > 10 else "LOOK", f"{cur}: {share:.1f}% of named votes aren't tied to a seat "
+            f"({staying:.1f}% by names still voting in the last 30 days; former members are expected), "
+            f"e.g. {collections.Counter(loose).most_common(3)}")
 
     # A member still voting at the session's end but not tied to a seat: a member list giving someone's district in the office
     # they hold now (SC's lists put Wes Climer, now in Congress, in Senate District "5", shared with Tom Corbin; his seat, 15,
@@ -624,7 +636,8 @@ def check(state):
         # every legislator's district is one some place in "Where you live" gives.
         towns = json.load(open(P.TOWNS_PATH)) if os.path.exists(getattr(P, "TOWNS_PATH", "")) else []
         if towns and isinstance(towns[0], list) and len(towns[0]) >= 3:
-            have = {"S": set(), "L": set()}
+            # (Members elected at large, the District's Council's district 9, P.AT_LARGE, represent every place.)
+            have = {"S": set(), "L": {P.AT_LARGE} if hasattr(P, "AT_LARGE") else set()}
             for t in towns:
                 for key, i in (("S", 2), ("L", 3 if len(t) > 3 else 2)):
                     have[key] |= {int(d[0]) for d in t[i] if isinstance(d, list) and str(d[0]).isdigit()}
