@@ -591,6 +591,18 @@ def members():
             else:
                 state["modified"][name] = stamp
         print(f"members {index}: {len(links)}", flush=True)
+    # The Senate's own roster (kept up to date when the member files weren't: convert.py's FORMER and ADDED), as text
+    # for contacts.py's comparison with the seats. Never holds the run back.
+    try:
+        pdf = os.path.join(folder, "s_roster.pdf")
+        stamp = fetch_file(f"{SITE}/members/s_roster.pdf", pdf, "Senate roster", state["modified"].get("s_roster.pdf"), None)
+        if stamp is not None and shutil.which("pdftotext") and os.path.exists(pdf):
+            state["modified"]["s_roster.pdf"] = stamp
+            r = subprocess.run(["pdftotext", "-layout", "-enc", "UTF-8", pdf, os.path.join(folder, "s_roster.txt")], capture_output=True)
+            if r.returncode:
+                print("Senate roster: pdftotext failed", flush=True)
+    except Exception as e:
+        print(f"Senate roster: not read ({type(e).__name__}: {e})", flush=True)
     if clean:
         state["read"] = TODAY.isoformat()
     save(state, state_path)

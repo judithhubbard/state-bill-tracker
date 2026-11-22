@@ -137,19 +137,77 @@ def phone(x):
     return f"({d[:3]}) {d[3:6]}-{d[6:10]}" if len(d) == 10 else None
 
 
-# Districts the member files get wrong: Sen. Chris Johnson's file says District 44, which is Sen. John Polk's; his counties
-# (Forrest, Lamar, Perry: Perry County lies wholly in District 45 in the Census Bureau's district files) and the vacant
-# 45th seat say 45 (checked 2026-11-08). contacts.py reports any other seat claimed twice.
-DISTRICT_FIX = {("S", "johnson"): 45}
+# Districts the member files get wrong. (Until 2026-11-22 Sen. Chris Johnson was moved from 44 to 45 here; the Senate's
+# roster of 2026-11-17 has him in 44, in the districts redrawn for the November 2025 special elections, and Johnny
+# DuPree in 45.) contacts.py reports any seat claimed twice.
+DISTRICT_FIX = {}
+
+# The member files are out of date (found 2026-11-22): ss_membs.xml (Last-Modified 2025-07-01) and hr_membs.xml
+# (2025-10-14) predate the November 2025 special elections in the redrawn districts and later departures. Checked against
+# the chambers' own rosters, billstatus.ls.state.ms.us/members/s_roster.pdf (Last-Modified 2026-11-17, text) and
+# h_roster.pdf (a scan dated July 7, 2026), on 2026-11-22: these members are on neither roster (Senate Districts 33 and
+# 34 are "Vacant" there; House Districts 70 and 77 aren't listed) ...
+FORMER = {("S", "parker"), ("S", "polk"), ("S", "robinson"), ("S", "tate"), ("S", "barnett"),
+          ("H", "lancaster"), ("H", "paden"), ("H", "brown"), ("H", "wallace")}
+# ... and these sit (and are in 2026's author lists, s_auth.xml and h_auth.xml, under these slugs) with no member file:
+# as the rosters give them (the House's lists no committees, phone or room for its two). Each is used only while no
+# member file has its slug; fetch.py saves the Senate roster's text (members/s_roster.txt) and contacts.py reports
+# where it and the seats disagree.
+ADDED = {
+    ("S", "dupree"): {"name": "Johnny L. DuPree", "short": "DuPree", "district": 45, "party": "D",
+                      "email": "jdupree@senate.ms.gov", "phones": [["Capitol", "(601) 359-2220"]], "room": "407",
+                      "counties": ["Forrest", "Lamar"],
+                      "committees": ["Appropriations", "Drug Policy", "Economic and Workforce Development", "Ethics",
+                                     "Housing", "Labor"]},
+    ("S", "gillespie_isom"): {"name": "Theresa Gillespie Isom", "short": "Gillespie Isom", "district": 2, "party": "D",
+                              "email": "tgillespie-isom@senate.ms.gov", "phones": [["Capitol", "(601) 359-2395"]],
+                              "room": "215", "counties": ["DeSoto", "Tunica"],
+                              "committees": ["Economic and Workforce Development", "Ethics", "Finance",
+                                             "Investigate State Offices", "Municipalities", "Tourism"]},
+    ("S", "hartness"): {"name": "Don Hartness", "short": "Hartness", "district": 42, "party": "R",
+                        "email": "dhartness@senate.ms.gov", "phones": [["Capitol", "(601) 359-2220"]], "room": "407",
+                        "counties": ["Forrest", "Greene", "Jones", "Wayne"],
+                        "committees": ["Agriculture", "Appropriations", "Labor", "Municipalities", "Tourism",
+                                       "Veterans and Military Affairs"]},
+    ("S", "mumford"): {"name": "Kamesha B. Mumford", "short": "Mumford", "district": 26, "party": "D",
+                       "email": "kmumford@senate.ms.gov", "phones": [["Capitol", "(601) 359-4088"]], "room": "213",
+                       "counties": ["Hinds", "Madison"],
+                       "committees": ["Constitution", "Economic and Workforce Development", "Finance", "Labor", "Tourism",
+                                      "Veterans and Military Affairs"]},
+    ("S", "pope"): {"name": "Justin Pope", "short": "Pope", "district": 24, "party": "D", "email": "jpope@senate.ms.gov",
+                    "phones": [["Capitol", "(601) 359-2224"]], "room": "405", "counties": ["Leflore", "Panola", "Tallahatchie"],
+                    "committees": ["Drug Policy", "Environment Protection, Conservation and Water Resources", "Ethics",
+                                   "Finance", "Municipalities", "State Library"]},
+    ("H", "crosby"): {"name": "Justin O. Crosby", "short": "Crosby", "district": 22, "party": "D",
+                      "email": "jcrosby@house.ms.gov", "phones": [], "room": "", "counties": ["Monroe", "Chickasaw", "Clay"],
+                      "committees": []},
+    ("H", "williams"): {"name": "Otha E. Williams III", "short": "Williams", "district": 26, "party": "D",
+                        "email": "owilliams@house.ms.gov", "phones": [], "room": "", "counties": ["Coahoma", "Bolivar", "Sunflower"],
+                        "committees": []},
+}
+
+
+def listed_members(sub):
+    """The member files the house's current list links ("senate/dupree.xml" -> "dupree"), or None without the list. A
+    file the list no longer links (a member who left) stays on disk but isn't a current member."""
+    root = xml(os.path.join(P.DATA, "members", "hr_membs.xml" if sub == "house" else "ss_membs.xml"))
+    if root is None:
+        return None
+    return {os.path.basename(t)[:-4].lower() for e in root.iter() if e.tag.endswith("_LINK")
+            for t in [(e.text or "").strip()] if re.fullmatch(r"(?:house|senate)/[^/]+\.xml", t, re.I)}
 
 
 @functools.lru_cache(maxsize=None)
 def current_members():
-    """The current members (data/ms/members/house|senate/<slug>.xml): (house, slug) -> {name, district, party, email,
-    phones, room, counties, committees: [(name, officer)]}."""
+    """The current members (data/ms/members/house|senate/<slug>.xml, those the house's list links, less FORMER, plus
+    ADDED): (house, slug) -> {name, district, party, email, phones, room, counties, committees: [(name, officer)]}."""
     out = {}
     for h, sub, domain in (("H", "house", "@house.ms.gov"), ("S", "senate", "@senate.ms.gov")):
+        links = listed_members(sub)
         for path in sorted(glob.glob(os.path.join(P.DATA, "members", sub, "*.xml"))):
+            sl = os.path.basename(path)[:-4]
+            if (h, sl.lower()) in FORMER or links is not None and sl.lower() not in links:
+                continue
             m = xml(path)
             if m is None or not text(m.findtext("DISTRICT")).isdigit():
                 continue
@@ -172,6 +230,9 @@ def current_members():
                 "committees": [(comm_name(c.findtext("CMTE_NAME")), text(c.findtext("OFFICER")))
                                for c in m.iter("CMTE_INFO") if text(c.findtext("CMTE_NAME"))],
             }
+    for (h, sl), m in ADDED.items():
+        if (h, sl) not in out:
+            out[(h, sl)] = {**m, "house": h, "committees": [(c, "") for c in m["committees"]]}
     return out
 
 
