@@ -49,8 +49,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   when one has it (a member page read by fetch.py also has to list the 90th General Assembly); departed members stay names
   ("H?Abdul-Samad"). fetch.py's roll-call PDFs (votes/) and committee pages aren't read by the converter yet. "What it
   does": the LSA's explanation from texts/<bill>.json when fetch.py has read it (none yet on 2026-11-15). Titles: the
-  official title without "A bill for an act" and the stock "and including effective date ... provisions" (kept in the
-  summary). Topics from committees (`COMMITTEE_TOPICS`) and title words. Earlier General Assembly linked by the same
+  official title without "A bill for an act" and the stock "and including effective date ... provisions" (no summary line:
+  until 2026-11-22 the full official title was the summary, repeating the title with only that tail). Topics from committees (`COMMITTEE_TOPICS`) and title words. Earlier General Assembly linked by the same
   official title and first member sponsor, or the same title (eight words or more) held by one bill each; never laws or
   budget bills. Contacts (`contacts.py`): the saved House and Senate member lists (members.json once fetch.py writes it),
   emails; the Capitol phone is each house's switchboard ((515) 281-3221 House, (515) 281-3371 Senate), labelled so; no
