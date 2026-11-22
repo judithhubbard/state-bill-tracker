@@ -242,7 +242,15 @@ def safe_name(name):
 
 def take_dataset(folder, meta, ds):
     """Download and unpack a session's dataset. A bill read on its own since the dataset was made keeps that copy."""
-    answer = query("getDataset", id=ds["session_id"], access_key=ds["access_key"])
+    # A session still taking prefiled bills can be listed before its dataset can be read ("Invalid access key", Tennessee's
+    # 115th on 2026-11-22): skip it, so the master list and single bills carry the session and the other states go on.
+    try:
+        answer = query("getDataset", id=ds["session_id"], access_key=ds["access_key"])
+    except Stop as e:
+        if "access key" not in str(e).lower():
+            raise
+        print(scrub(f"  dataset not readable yet ({e}); using the master list"), flush=True)
+        return "unreadable"
     if answer is None:
         return False
     raw = base64.b64decode(answer["dataset"]["zip"])
@@ -511,11 +519,13 @@ def prepare_state(st, sessions, dry=False):
         print(f"{st.upper()} {ds['session_name']} (session {sid}, {ds['year_start']}-{ds['year_end']})", flush=True)
         try:
             if meta.get("dataset_hash") != ds["dataset_hash"]:
-                if not take_dataset(folder, meta, ds):
+                got = take_dataset(folder, meta, ds)
+                if not got:
                     if not read_once:
                         undone.append(f"{sid}:dataset")
                     continue
-                write_json(meta_path, meta, indent=1)
+                if got != "unreadable":  # (a new session's dataset not out yet: the master list below carries it)
+                    write_json(meta_path, meta, indent=1)
             else:
                 print(f"  dataset unchanged ({ds.get('dataset_date')})")
             # A session over waits for the weekly datasets; the running ones are caught up.
