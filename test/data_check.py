@@ -427,6 +427,28 @@ def check(state):
             big_c += [f"{k[0]} {k[1]}: {n} (usually {usual})" for n in ns if n > usual + 1]
         if big_c:
             say(state, "LOOK", f"{s}: {len(big_c)} committee votes count more members than their committee usually has, e.g. {big_c[:3]}")
+        # A committee's vote on a motion against the bill read as a vote for it: ND's committees vote on "Do Not Pass"
+        # (Y for the motion is against the bill; states/nd/convert.py's committee_vote() turns it round, 2026-11-22). A
+        # committee vote that carried on the day the history says the committee recommended against the bill, and nothing
+        # that day says it recommended for it, shows "Approved by the ... Committee". ("Unfavorable" isn't counted: DE's
+        # reports list members' signatures, "1 favorable, 6 on its merits, 1 unfavorable", 85 bills.)
+        against = re.compile(r"recommended it not pass|\bdo not pass\b|ought not to pass|inexpedient to legislate", re.I)
+        favor = re.compile(r"recommended it pass|\bdo pass\b|ought to pass\b|\bfavorabl|reported it without|\bapproved\b|\badvanced\b", re.I)
+        flipped = []
+        for r in recs:
+            days = collections.defaultdict(list)
+            for x in r["vers"]:
+                for d, t in x["actions"]:
+                    days[str(d)[:10]].append(t)
+            for v in r["votes"]:
+                ts = days.get(str(v[3])[:10], [])
+                if v[1] == "C" and v[4] > v[5] and any(against.search(t) for t in ts) and \
+                        not any(favor.search(t) and not against.search(t) for t in ts):
+                    flipped.append(r["nums"][0])
+                    break
+        if flipped:
+            say(state, "LOOK", f"{s}: {len(flipped)} bills with a committee vote that carried on a day the committee "
+                               f"recommended against them (a vote on a motion against the bill?), e.g. {flipped[:4]}")
         # Votes put in the wrong house: more ayes and noes than the house has seats (ID's history lines don't name the
         # house, so the converter follows the bill from house to house; WY's roll calls sometimes name the wrong one).
         seats = LEGISLATURES.get(state, {}).get("seats", {})

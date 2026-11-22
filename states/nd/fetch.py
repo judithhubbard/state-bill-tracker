@@ -23,7 +23,8 @@ December):
     numbers: "25.0156.02000" the first engrossment) and actions with dates and a category ("Committee report",
     "Passed", "Concurred", "Filed with Secretary of State", "Vetoed by Governor", "Veto sustained") and, for a floor
     vote, its roll call (id and totals). Committee reports carry their tally in the wording ("Reported back, do pass,
-    place on calendar 13 0 1") but no names: committee votes by member are only in the minutes (PDFs, not read).
+    place on calendar 13 0 1") but no names: committee votes by member are only in the minutes, in each bill's
+    Legislative History (histories(), below).
     Hearings name their committee.
   - roll_call.json: every floor roll call member by member (member_votes: member id, "Last, First", Yea/Nay/Absent),
     with the bill, version, motion ("Final Passage", "Consideration of Amendments", "Reconsider") and totals. Every
@@ -38,6 +39,7 @@ December):
 - leaders.json: the leadership page (/assembly/69-2025/regular/members/leadership): each house's leaders with their
   biography slug and positions ("Majority Leader", "Majority Caucus Leader Effective 1/7/25 - 4/29/25"). Read when
   missing, and weekly while the assembly is live.
+- minutes/HB1001.txt, minutes.json: the committees' minutes from each bill's Legislative History (histories()).
 And into data/nd/members/<slug>.json, one per member of any assembly read (the slug is the members.json url's,
 /biography/bert-anderson): the biography page's contact fields (Home, Work, Cell phones; Email) and photo. Read when
 missing, and weekly for the newest assembly's active members; a page that answers 404 is noted in data/nd/bios.json
@@ -89,6 +91,7 @@ BIOS = os.path.join(DATA, "bios.json")
 MARKER = os.path.join(DATA, "incomplete")
 SUMMARIES = os.path.join(DATA, "summaries.json")  # the Title Summaries listing and files: {"listed": day, "files": {name: {...}}}
 PDFTOTEXT = shutil.which("pdftotext")
+HISTORY_MB = float(os.environ.get("ND_HISTORY_MB") or 1500)  # bill histories read a run, at most (histories())
 TEXT_MAX = 3500  # characters of "What it does" at most (a budget bill's paragraphs run to 5,000)
 
 # The run's own time limit (FETCH_MINUTES, set by the workflow): stop a few minutes early, with everything read so far
@@ -525,6 +528,100 @@ def texts(a):
     print(f"{a['year']} texts: {len(out)} bills", flush=True)
 
 
+MINUTES_HEAD = re.compile(r"^\s*\d{4} (?:HOUSE|SENATE|JOINT) (?:STANDING|CONFERENCE) COMMITTEE MINUTES\s*$")
+SECTION_MAX = 1500  # lines of one meeting's minutes kept, at most (a budget division's long meetings)
+
+
+def minutes_sections(txt):
+    """The committee minutes in a bill history's text (pdftotext -layout): each meeting's lines from its heading ("2025
+    SENATE STANDING COMMITTEE MINUTES") to its clerk's line ("Audrey Oswald, Committee Clerk"), the next heading or
+    SECTION_MAX lines. The rest (testimony, amendments, the bill's versions, reports) is left out."""
+    out, keep = [], 0
+    for line in txt.replace("\f", "\n").split("\n"):
+        if MINUTES_HEAD.match(line):
+            keep = SECTION_MAX
+        if keep:
+            out.append(line.rstrip())
+            keep -= 1
+            if re.search(r"\bCommittee Clerk\b", line):
+                keep = 0
+    return "\n".join(out) + "\n" if out else ""
+
+
+def history_wanted(b):
+    """Whether a bill's history is worth reading for its committees' votes: a committee report the tally alone can't
+    name everyone in (a no, someone absent, or a do-not-pass recommendation, whose yes votes were against the bill). A
+    report "do pass ... 13 0 0" says every member voted yes."""
+    for x in b.get("actions") or []:
+        t = x.get("description") or ""
+        if x.get("category") != "Committee report" or re.match(r"Reported back from conference|Conference committee", t):
+            continue
+        m = re.search(r"(\d+) (\d+) (\d+)\s*$", t)
+        if m and (int(m.group(2)) or int(m.group(3)) or "do not pass" in t):
+            return True
+    return False
+
+
+def histories(found):
+    """Each bill's Legislative History (the Legislative Council library's PDF, /sites/default/files/resource/69-2025/
+    library/hb1001.pdf: the committees' minutes with their roll calls, testimony, amendments, versions; compiled after
+    the session) for the committee votes by member: each bill once, its minutes' text into <year>/minutes/HB1001.txt.
+    Not yet compiled (a 404): asked again weekly while the assembly is live, monthly after. Extras: nothing here counts as
+    missing. At most HISTORY_MB a run: the files are large (median 3.5 MB, budgets to 56 MB; about 7 GB an assembly)."""
+    if not PDFTOTEXT:
+        print("histories: no pdftotext (poppler-utils); skipped", flush=True)
+        return
+    got = size = 0
+    for a in found:
+        folder = os.path.join(DATA, str(a["year"]))
+        path = os.path.join(folder, "minutes.json")
+        seen = load(path, {})  # "HB1001" -> {"read": day, "meetings": n} or {"gone": day}
+        bills = (load(os.path.join(folder, "bills.json"), {}) or {}).get("bills") or {}
+        todo = []
+        for b in bills.values():
+            m = re.fullmatch(r"(HB|SB|HCR|SCR) (\d+)", (b.get("name") or "").strip())
+            if not m or not history_wanted(b):
+                continue
+            key = m.group(1) + m.group(2)
+            s = seen.get(key) or {}
+            if s.get("read") and os.path.exists(os.path.join(folder, "minutes", f"{key}.txt")):
+                continue
+            if s.get("gone") and not stale(s["gone"], WEEKLY if a["live"] else 30):
+                continue
+            todo.append(key)
+        done = 0
+        for key in todo:
+            if out_of_time() or size > HISTORY_MB * 1e6:
+                break
+            body, _ = request(f"{SITE}/sites/default/files/resource/{a['key']}/library/{key.lower()}.pdf", f"history {key}")
+            if body is GONE:
+                seen[key] = {"gone": TODAY.isoformat()}
+                continue
+            if not isinstance(body, bytes):
+                continue
+            size += len(body)
+            txt = pdf_text(body)
+            if txt is None:
+                print(f"history {key}: unreadable", flush=True)
+                continue
+            mins = minutes_sections(txt)
+            os.makedirs(os.path.join(folder, "minutes"), exist_ok=True)
+            with open(os.path.join(folder, "minutes", f"{key}.txt.tmp"), "w") as f:
+                f.write(mins)
+            os.replace(os.path.join(folder, "minutes", f"{key}.txt.tmp"), os.path.join(folder, "minutes", f"{key}.txt"))
+            seen[key] = {"read": TODAY.isoformat(), "meetings": sum(1 for x in mins.split("\n") if MINUTES_HEAD.match(x))}
+            got += 1
+            done += 1
+            if done % 25 == 0:
+                save(seen, path)
+        if os.path.isdir(folder):
+            save(seen, path)
+        left = len(todo) - done
+        if todo:
+            print(f"{a['year']} histories: {done} read, {left} to go", flush=True)
+    print(f"histories: {got} read, {round(size / 1e6)} MB", flush=True)
+
+
 def begun(a):
     """Whether an assembly has convened (the first Tuesday after January 3 of its first year). One listed earlier, with
     prefiled bills, is read when it's there but never holds North Dakota off the site."""
@@ -577,6 +674,7 @@ def main():
                 save(state, os.path.join(folder, "state.json"))
         bios(read)
         title_summaries(read)
+        histories(read)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True
