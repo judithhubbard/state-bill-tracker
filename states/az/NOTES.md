@@ -45,3 +45,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   were already downloaded matched, and the rest are in the same form, HB2313) and live (no meetings ahead). Untested: the
   list in January 2027 (whether it shows the 58th Legislature's meetings by default), Senate agendas' layout, and how
   far ahead agendas are posted against seven PDFs a run.
+- **Next year's prefiled bills (2026-11-22):** Open States lists 58th-1st-regular (2027-01-11) already, with no bills on
+  2026-11-22 (2026's first prefiled bill was dated 2025-11-15). fetch.py asks for one bill a run and makes data/az/2027/
+  only once there is one; convert.py's `sessions()` shows this or next year from its first bill (500 only for past
+  years). A year not begun never marks Arizona incomplete.

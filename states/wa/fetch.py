@@ -75,12 +75,17 @@ def key(info):
 
 def bill_list(session):
     ids = {}
-    for year in (session, session + 1):
-        if year > TODAY.year:
+    bien = P.biennium(session)
+    lists = [rows(call("LegislationService", "GetLegislationByYear", year=year)) for year in (session, session + 1)
+             if year <= TODAY.year]
+    if not begun(session):
+        # Bills prefiled for a biennium not yet convened (from the first Monday of December, RCW 44.04 / Joint Rules).
+        lists.append(rows(call("LegislationService", "GetPreFiledLegislationInfo")))
+    for info in (i for l in lists for i in l):
+        if info.get("Biennium", bien) != bien:
             continue
-        for info in rows(call("LegislationService", "GetLegislationByYear", year=year)):
-            if info.get("ShortLegislationType", {}).get("ShortLegislationType") in KINDS and info.get("BillNumber", "").isdigit():
-                ids[key(info)] = info["BillNumber"]
+        if info.get("ShortLegislationType", {}).get("ShortLegislationType") in KINDS and info.get("BillNumber", "").isdigit():
+            ids[key(info)] = info["BillNumber"]
     return ids
 
 
@@ -117,16 +122,19 @@ def one(session, bill, number):
 
 def session(session):
     folder = os.path.join(P.DATA, str(session))
+    ids = bill_list(session)
+    if not ids:
+        if session > CURRENT and not os.path.isdir(os.path.join(folder, "bills")):
+            print(f"{session}: no bills prefiled yet")  # no folder until there's a bill, so no empty session shows
+        else:
+            print(f"{session}: no bill list (the service didn't answer); kept the last copy")
+        return
     os.makedirs(os.path.join(folder, "bills"), exist_ok=True)
     state_path = os.path.join(folder, "state.json")
     try:
         state = json.load(open(state_path))
     except (OSError, ValueError):
         state = {}
-    ids = bill_list(session)
-    if not ids:
-        print(f"{session}: no bill list (the service didn't answer); kept the last copy")
-        return
     have = {f[:-5] for f in os.listdir(os.path.join(folder, "bills")) if f.endswith(".json")}
     todo = set(ids) - have
     started = TODAY.isoformat()
@@ -213,6 +221,12 @@ def main():
     for s in range(FIRST, CURRENT + 1, 2):
         members(s)
         session(s)
+    # From November of a biennium's second year, the next biennium's prefiled bills (one request until there are some).
+    nxt = CURRENT + 2
+    if TODAY.month >= 11 and TODAY.year + 1 == nxt:
+        session(nxt)
+        if os.path.isdir(os.path.join(P.DATA, str(nxt), "bills")):
+            members(nxt)
     agendas(CURRENT)
     # Until every biennium is fully downloaded, data/wa/incomplete tells build_site.sh and the checks to wait.
     marker = os.path.join(P.DATA, "incomplete")

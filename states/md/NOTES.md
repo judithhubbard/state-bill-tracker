@@ -42,3 +42,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   HearingDateTime columns aren't used (no cancellations). Tested 2026-11-22 against the page for 2026-02-16 to 02-20 (105
   meetings, 423 bills, all matched; SB 518 and 519, removed, left out) and live (12 interim meetings, no bills).
   Untested: a range spanning a new session's first weeks under ys=2027rs.
+- **Next year's prefiled bills (2026-11-22):** from November fetch.py also reads next year's bill list
+  (/2027RS/misc/billsmasterlist/legislation.json answered "[]" on 2026-11-22; prefiled bills are "BillType":
+  "Pre-Filed"); legislation_<year>RS.json is written only once it lists a bill, so the session shows as upcoming from its
+  first prefiled bill. The bill list never marks Maryland incomplete.

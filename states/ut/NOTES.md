@@ -28,3 +28,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (the local token answered "Invalid request" for every route on 2026-11-22, so the parser looks for bill numbers in any
   string of the answer: "SB0112", "H.B. 47", "HJR 3"), and whether a bill's updatetime changes when it's put on an agenda
   (if not, source 2 is the timely one). Check agencal.json in January.
+- **Next year's bills (2026-11-22):** from November fetch.py also reads next year's general session (bills/<2027GS>/
+  billlist; bills are numbered from early December: 2026's first on 2025-12-02; le.utah.gov's 2027 list was empty on
+  2026-11-22); its folder is made only once the list has a bill, it shows from its first bill as an upcoming session
+  (convert.py's `sessions()` asks 500 bills only of past years), and it never marks Utah incomplete before it convenes.

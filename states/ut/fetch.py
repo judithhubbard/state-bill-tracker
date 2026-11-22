@@ -31,7 +31,9 @@ SITE = "https://le.utah.gov"
 DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "ut"))
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 YEAR = date.today().year
-YEARS = tuple(W.years()[::-1])  # the shared window (states/window.py), the current session first
+# The shared window (states/window.py), the current session first; from November, next year's general session first of
+# all (its bills are numbered from early December: 2026's first on 2025-12-02), read once its bill list has a bill.
+YEARS = tuple(W.years(ahead=1 if date.today().month >= 11 else 0)[::-1])
 START = time.time()
 # The run's own time limit (FETCH_MINUTES, set by the workflow): stop five minutes early with everything saved, so a
 # first copy of a year (2023's status pages take hours at ten seconds apart) resumes on the next run.
@@ -126,12 +128,15 @@ def session_bills(year):
     """The session's bill list, then each bill that is new or whose updatetime changed. Returns problems."""
     sid = f"{year}GS"
     folder = os.path.join(DATA, str(year))
-    os.makedirs(os.path.join(folder, "bills"), exist_ok=True)
     listing = api(f"bills/{sid}/billlist")
     if isinstance(listing, dict) and isinstance(listing.get("bills"), list):
         listing = listing["bills"]  # 2023's list is wrapped: {"bills": [{"number", "updatetime"}, ...]}
+    if year > YEAR and not os.path.isdir(os.path.join(folder, "bills")) and not (isinstance(listing, list) and listing):
+        print(f"{sid}: no bills numbered yet", flush=True)  # no folder until there's one, so no empty session shows
+        return []
+    os.makedirs(os.path.join(folder, "bills"), exist_ok=True)
     if not isinstance(listing, list):
-        if year == YEAR and listing is None:
+        if year >= YEAR and listing is None:
             print(f"{sid}: no bill list yet", flush=True)
             return []
         print(f"{sid}: bill list unreadable; kept the last copies", flush=True)

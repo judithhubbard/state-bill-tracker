@@ -865,7 +865,10 @@ def missing(term):
     """Files never downloaded: the current biennium's per-term files, and this session year's (or, before a new
     session's files appear in January, the last year's)."""
     folder = os.path.join(DATA, str(term))
-    out = [n for n in list(PER_TERM) + ["Members"] if not os.path.exists(os.path.join(folder, f"{n}.txt"))]
+    # In December, before the new General Court's session, the last one's copy still counts (a new term's committees
+    # and lists may not be in the files yet, and a session not begun never holds New Hampshire off the site).
+    folders = [folder] + ([os.path.join(DATA, str(term - 2))] if term > TODAY.year else [])
+    out = [n for n in list(PER_TERM) + ["Members"] if not any(os.path.exists(os.path.join(f, f"{n}.txt")) for f in folders)]
     for name in BY_YEAR:
         if not any(os.path.exists(os.path.join(DATA, str(first_year(y)), f"{name}_{y}.txt"))
                    for y in (TODAY.year, TODAY.year - 1)):

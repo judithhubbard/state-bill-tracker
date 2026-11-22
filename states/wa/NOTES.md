@@ -40,3 +40,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Justice, & Reentry", "Human Services, Youth, & Early Learning"; 2025-26's "Business, Financial Services & Trade") was
   kept as text, so 9 House bills of 2023-24 (HB 1098, HB 1108) sent back to committee in January 2024 showed on the floor:
   it's now a referral under the name as written ("and" matches "&").
+- **Next biennium's prefiled bills (2026-11-22):** from November of a biennium's second year, fetch.py also asks
+  GetPreFiledLegislationInfo (bills prefiled from the first Monday of December: 2026-12-07 for 2027-28; empty on
+  2026-11-22) and reads the next biennium's bills into data/wa/<next>/ once one is listed (no folder before), shown as an
+  upcoming session; until it convenes (second Monday of January) it never marks Washington incomplete.
