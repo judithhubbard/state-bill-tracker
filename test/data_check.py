@@ -383,6 +383,27 @@ def check(state):
         if dup:
             say(state, "FAIL" if len(dup) > 0.005 * sum(len(r["votes"]) for r in recs) else "LOOK",
                 f"{s}: {len(dup)} votes name one seat twice (a surname tied to the wrong member?), e.g. {dup[:4]}")
+        # A committee's vote on a motion against the bill read as a vote for it: ND's committees vote on "Do Not Pass"
+        # (Y for the motion is against the bill; states/nd/convert.py's committee_vote() turns it round, 2026-11-22). A
+        # committee vote that carried on the day the history says the committee recommended against the bill, and nothing
+        # that day says it recommended for it, shows "Approved by the ... Committee".
+        against = re.compile(r"recommended it not pass|\bdo not pass\b|ought not to pass|inexpedient to legislate|unfavorabl", re.I)
+        favor = re.compile(r"recommended it pass|\bdo pass\b|ought to pass\b|\bfavorabl|reported it without|\bapproved\b|\badvanced\b", re.I)
+        flipped = []
+        for r in recs:
+            days = collections.defaultdict(list)
+            for x in r["vers"]:
+                for d, t in x["actions"]:
+                    days[str(d)[:10]].append(t)
+            for v in r["votes"]:
+                ts = days.get(str(v[3])[:10], [])
+                if v[1] == "C" and v[4] > v[5] and any(against.search(t) for t in ts) and \
+                        not any(favor.search(t) and not against.search(t) for t in ts):
+                    flipped.append(r["nums"][0])
+                    break
+        if flipped:
+            say(state, "LOOK", f"{s}: {len(flipped)} bills with a committee vote that carried on a day the committee "
+                               f"recommended against them (a vote on a motion against the bill?), e.g. {flipped[:4]}")
         # Votes put in the wrong house: more ayes and noes than the house has seats (ID's history lines don't name the
         # house, so the converter follows the bill from house to house; WY's roll calls sometimes name the wrong one).
         seats = LEGISLATURES.get(state, {}).get("seats", {})

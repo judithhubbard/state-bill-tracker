@@ -16,7 +16,8 @@ and a conference committee's report has to be adopted, and the bill passed again
 veto", "Vetoed by Governor 04/13", "Passed over veto, yeas 90 nays 0" (each house), "Veto sustained", "Filed with Secretary
 Of State 04/20" (laws, and vetoed bills with the governor's objections). Committee hearings are each bill's Hearings (with
 the committee's name); the actions' "Committee Hearing 09:00" lines are left out. Floor roll calls come member by member
-(roll_call.json); committees' votes are only tallies (the members' votes are in the minutes, PDFs).
+(roll_call.json); committees' votes are the reports' tallies, member by member from the minutes in each bill's
+Legislative History (minutes/HB1001.txt, read by fetch.py once the library has compiled it: committee_vote()).
 
 Laws are numbered as chapters of the Session Laws (chapters.json, from the bill index published after the session;
 vetoed measures get chapter numbers too, "Measure Vetoed", so the history decides laws and vetoes). No plain-language
@@ -272,6 +273,7 @@ def record(session, b, p, amendment, chapters, rolls, by_bill, seat, members):
     acts = sorted((a for a in b.get("actions") or [] if a.get("category") != "Committee hearing"),
                   key=lambda a: (a.get("date") or "")[:10])  # by day; the file's order within a day
     vote_actions = []  # (date, house, action) for floor votes on the bill's own question
+    cvotes, cused = [], set()  # committee votes (their reports' roll calls), the minutes' roll calls used
     for a in acts:
         t, cat = text(a.get("description")), a.get("category") or ""
         d = (a.get("date") or "")[:10]
@@ -332,6 +334,8 @@ def record(session, b, p, amendment, chapters, rolls, by_bill, seat, members):
                 if kind == "pass":
                     dopass = True
                     steps.append((d, h, "REPORTED", "reported"))
+                if tl and comm:  # the committee's vote, member by member when its minutes are read
+                    cvotes.append(committee_vote(session, p, h, comm, d, tl, kind, cused, seat))
                 steps.append((d, h, f"The {cname} Committee {words}" + (" with amendments" if "amended" in t else "")
                               + (f", {tl[0]}-{tl[1]}" if tl else "") + (" (consent calendar)" if "consent calendar" in t else ""), "report"))
             elif re.match(r"Divided committee report", t):
@@ -563,7 +567,7 @@ def record(session, b, p, amendment, chapters, rolls, by_bill, seat, members):
         ds = sorted({s[0] for s in steps if test(s) and s[0]})
         return {"first": ds[0], "last": ds[-1], "all": ";".join(ds)}[mode] if ds else ""
 
-    votes = floor_votes(b, name, vote_actions, rolls, by_bill, seat, members)
+    votes = sorted(floor_votes(b, name, vote_actions, rolls, by_bill, seat, members) + cvotes, key=lambda v: v[3])
     action_dates = [s[0] for s in steps if s[0]]
     return {
         "nums": [p], "base": [p], "prev": earlier(session, b, p),
@@ -632,8 +636,188 @@ def floor_votes(b, name, vote_actions, rolls, by_bill, seat, members):
     return out
 
 
+MIN_HEAD = re.compile(r"^\s*\d{4} (HOUSE|SENATE|JOINT) (STANDING|CONFERENCE) COMMITTEE MINUTES\s*$")
+VOTE_HEAD = re.compile(r"^\s*(Senators|Representatives)(?:\s+Vote)?\s*$")
+VOTER = re.compile(r"^\s*(Senator|Representative)\s+(\S.*?)\s+(Y|N|AB|A|E|X|NV|P)\s*$")
+VOTE_CODE = {"Y": "Y", "N": "N", "AB": "A", "A": "A", "NV": "A", "X": "A", "E": "E", "P": "B"}
+_MINUTES, _VOTERS = {}, {}
+
+
+def comm_key(name):
+    """A committee's name as tracker.html's commKey() compares them ("Industry, Business and Labor Committee" ->
+    "industrybusinesslabor")."""
+    n = re.sub(r"\s+Committee\s*$", "", text(name), flags=re.I).lower()
+    return re.sub(r"[^a-z]", "", n.replace("and", ""))
+
+
+def minutes(session, key):
+    """A bill's committee roll calls, from its Legislative History's minutes (data/nd/<year>/minutes/HB1001.txt, written
+    by fetch.py): [{"house", "committee", "date", "motion", "voters": [(title, name, code)], "stated": (y, n, other) or
+    None}] in the minutes' order, standing committees only. A meeting's heading gives the house, the committee
+    ("Appropriations - Education and Environment Division" for a division) and the day ("1/27/2025"); a roll call is a
+    "Senators  Vote" heading ("Senators" alone in a joint committee's, each house voting apart), then "Senator Jeff Barta  Y" lines (Y, N, AB absent; a page's header can fall within
+    it), then the result ("Motion passed 5-0-0.", "10-4-0 Motion Carries", "VOTE: YES – 6 NO – 0 Absent – 0 Motion
+    PASSED"); the motion is the last "moved" line before it. A roll call that names another bill (SB 2200's history
+    carries the Appropriations Committee's "Roll Call Vote – DO PASS SB 2211") is left out."""
+    k = (session, key)
+    if k in _MINUTES:
+        return _MINUTES[k]
+    out = []
+    try:
+        lines = open(os.path.join(folder(session), "minutes", f"{key}.txt"), encoding="utf-8", errors="replace").read().split("\n")
+    except OSError:
+        _MINUTES[k] = out
+        return out
+    me = re.fullmatch(r"([A-Z]+)(\d+)", key)
+    house = comm = day = motion = None
+    standing = False
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        m = MIN_HEAD.match(line)
+        if m:
+            house, standing = {"SENATE": "S", "HOUSE": "H"}.get(m.group(1), "J"), m.group(2) == "STANDING"
+            comm = day = motion = None
+            for x in lines[i + 1:i + 14]:
+                x = x.strip()
+                if not x:
+                    continue
+                if comm is None:
+                    comm = x
+                dm = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{2}|\d{4})", x)
+                if dm and day is None:
+                    y = int(dm.group(3))
+                    try:
+                        day = date(y + 2000 if y < 100 else y, int(dm.group(1)), int(dm.group(2))).isoformat()
+                    except ValueError:
+                        pass
+            if house == "J" and comm and not comm.lower().startswith("joint"):
+                comm = f"Joint {comm}"  # "Policy Committee": the actions' "Joint Policy Committee"
+            i += 1
+            continue
+        if (re.search(r"\bmoved?\b", line, re.I) and not re.search(r"seconded the move", line, re.I) or re.search(r"\broll call vote\b.*\b(?:pass|recommend)", line, re.I)) \
+                and not VOTE_HEAD.match(line):
+            motion = text(line)
+            if not re.search(r"[.)]\s*$", line) and i + 1 < len(lines) and lines[i + 1].strip():
+                motion += " " + text(lines[i + 1])
+        vh = VOTE_HEAD.match(line)
+        if vh and standing and house and day:
+            # (A joint committee's roll calls are each house's: "Roll Call Vote" / "Senators" / ...: special sessions.)
+            th = "S" if vh.group(1) == "Senators" else "H"
+            voters, j, gap, result = [], i + 1, 0, ""
+            while j < len(lines) and gap <= 10:
+                v = VOTER.match(lines[j])
+                if v:
+                    voters.append((v.group(1), text(v.group(2)), VOTE_CODE[v.group(3)]))
+                    gap = 0
+                elif re.search(r"motion|vote\s*:|\d+\s*[-–]\s*\d+\s*[-–]\s*\d+|yes\s*[-–]|carr|second|moved", lines[j], re.I):
+                    result = text(lines[j])
+                    nxt = next((x for x in lines[j + 1:j + 3] if x.strip()), "")
+                    if not re.search(r"\bmoved?\b|Committee Clerk|STANDING COMMITTEE", nxt):
+                        result += " " + text(nxt)
+                    break
+                else:
+                    gap += 1
+                j += 1
+            named = {f"{a}{b}" for a, b in re.findall(r"\b([HS])\.?\s?B\.?\s?(\d{4})\b", f"{motion or ''} {result}")}
+            if voters and house in (th, "J") and not (me and named - {f"{me.group(1)[0]}{int(me.group(2))}"}):
+                st = re.search(r"(\d+)\s*[-–]\s*(\d+)\s*[-–]\s*(\d+)", result) or re.search(
+                    r"YES\s*[-–]\s*(\d+)\s*NO\s*[-–]\s*(\d+)\s*Absent\s*[-–]\s*(\d+)", result, re.I)
+                out.append({"house": th, "committee": comm or "", "date": day, "motion": motion or "",
+                            "result": result, "voters": voters, "stated": tuple(int(x) for x in st.groups()) if st else None})
+            if house != "J":  # (a joint committee's motion has a roll call in each house)
+                motion = None
+            i = max(j, i + 1)
+            continue
+        i += 1
+    _MINUTES[k] = out
+    return out
+
+
+def _norm(name):
+    n = re.sub(r"[.,]", " ", text(name).lower())
+    return [w for w in n.split() if w not in ("jr", "sr", "ii", "iii", "iv")]
+
+
+def voters(session):
+    """Each house's members of the assembly for matching names in minutes: house -> [(member id, words of the name)]."""
+    if session not in _VOTERS:
+        by = {}
+        for m in load(session, "members"):
+            h = CHAMBER.get(m.get("chamber"))
+            if h:
+                by.setdefault(h, []).append((m["id"], _norm(person(m["name"]))))
+        _VOTERS[session] = by
+    return _VOTERS[session]
+
+
+def voter_seat(session, h, name, seat):
+    """A name in a committee's roll call ("Jeff A. Hoverson") -> the member's seat ("H:3a"), matched within the house:
+    the whole name, else first and last names, else the last name when one member has it; members who left are
+    "H?Hoverson", as on floor votes; None when no member matches."""
+    w = _norm(name)
+    if not w:
+        return None
+    ms = voters(session).get(h, [])
+    hit = [m for m in ms if m[1] == w] or [m for m in ms if m[1] and m[1][0] == w[0] and m[1][-1] == w[-1]] or \
+        [m for m in ms if m[1] and m[1][-1] == w[-1]]
+    ids = {m[0] for m in hit}
+    if len(ids) != 1:
+        return None
+    mid = ids.pop()
+    sid = seat.get(mid)
+    if sid and sid[0] == h:
+        return sid
+    last = next((x for x in load(session, "members") if x["id"] == mid), {}).get("name")
+    return f"{h}?{last_name(last)}"
+
+
+def committee_vote(session, key, h, comm, d, tl, kind, used, seat):
+    """The roll call behind a committee report ("Reported back, do pass, place on calendar 11 2 1"): of the bill's
+    minutes' roll calls in that house and committee, on the report's day or the three weeks before, one whose names add
+    up to the report's tally (yes, no, absent), the report's own motion first (do pass, do not pass, without
+    recommendation), then the latest. -> [house, "C", committee, day, yes, no, [[seat, code], ...]] with the yes votes
+    left out, or the tally alone ([]) when no roll call fits. A "do not pass" report is the committee voting the bill
+    down: its yes votes (for the motion) are against the bill, so they are listed as "N" and the noes left out as yes;
+    "yes" and "no" are the votes for and against the bill."""
+    yes, no, absent = tl
+    want = {"pass": r"\bdo pass", "fail": r"do not pass", "none": r"without"}[kind]
+    best = None
+    for idx, r in enumerate(minutes(session, key)):
+        if idx in used or r["house"] != h or comm_key(r["committee"]) != comm_key(comm) or not r["date"] or not d:
+            continue
+        if not (0 <= (date.fromisoformat(d) - date.fromisoformat(r["date"])).days <= 21):
+            continue
+        c = [x[2] for x in r["voters"]]
+        if (c.count("Y"), c.count("N"), len(c) - c.count("Y") - c.count("N")) != (yes, no, absent):
+            continue
+        if any(x[0] != ("Senator" if h == "S" else "Representative") for x in r["voters"]):
+            continue
+        rank = (bool(re.search(want, r["motion"] + " " + r["result"], re.I))
+                and not (kind == "pass" and re.search(r"do not pass", r["motion"], re.I)), r["date"], idx)
+        if best is None or rank >= best[0]:
+            best = (rank, idx, r)
+    if best:
+        r = best[2]
+        listed, seen = [], set()
+        for _, name, code in r["voters"]:
+            sid = voter_seat(session, h, name, seat) or f"{h}?{_norm(name)[-1].title()}"
+            if sid in seen:
+                listed = None  # a member named twice: the names can't be trusted
+                break
+            seen.add(sid)
+            if kind == "fail":
+                code = {"Y": "N", "N": "Y"}.get(code, code)
+            if code != "Y":
+                listed.append([sid, code])
+        if listed is not None:
+            used.add(best[1])
+            return [h, "C", comm, r["date"], no if kind == "fail" else yes, yes if kind == "fail" else no, listed]
+    return [h, "C", comm, d, no if kind == "fail" else yes, yes if kind == "fail" else no, []]
+
+
 _KEYS = {}
-_STOP = set("the a an of to and or for in on by with relating provide provides create enact amend reenact repeal section "
+_STOP =set("the a an of to and or for in on by with relating provide provides create enact amend reenact repeal section "
             "sections chapter north dakota century code new subsection subdivision legislative management study report "
             "effective date penalty appropriation act bill application exemption transfer".split())
 
