@@ -43,3 +43,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   line-item vetoes on appropriations; override three-fifths of each house's members. The governor's phones and contact page
   are from governor.delaware.gov/contact/ (checked by program 2026-11-08, not by the owner). Places (`towns.py`, run once):
   cities, towns, Census-designated places and counties, separate Senate and House lists.
+- **Committee agendas (2026-11-22):** `agendas()` in states/de/fetch.py (every full run, before the bills) reads the
+  Committee Meetings page's grid (POST /json/CommitteeMeetings/GetUpcomingCommitteeMeetings; an empty body when nothing
+  is scheduled) and, for each meeting from yesterday to three weeks ahead that isn't "Cancelled" (or postponed), its
+  agenda (POST /json/MeetingNotice/GetCommitteeMeetingItems?committeeMeetingId=N: one request a meeting; items with a
+  LegislationId and a display code "SB 311", "HS 1 for HB 457 w/ HA 1", which gives the bill's number; minutes and other
+  items are left out), into data/de/<first year>/agendas.json for the meeting's Assembly ({"SB311": [["Senate
+  Agriculture", "2026-05-20T11:00:00"]]}; times are local, "5/20/26 11:00 AM"). A joint meeting of a Senate and a House
+  committee (SharedCommitteeName) names the committee each bill is assigned to. `agendas()` in convert.py keeps meetings
+  from today on. Tested with past meetings in the same format (each committee page's GetCommitteePastMeetings grid,
+  same fields as the upcoming grid): Senate Agriculture and House Judiciary in May and June 2026, 6 meetings, 16 bills,
+  all matching 2025-26 records. The upcoming grid itself was empty on 2026-11-22, so its date format is assumed to be
+  the past grid's (the run prints how many meeting times it didn't understand). A failed request keeps the last files.

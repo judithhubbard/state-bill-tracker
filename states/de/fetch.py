@@ -44,6 +44,9 @@ numbers come after the last session day, June 30). A live Assembly's list (about
 are read every run, and a bill again when its status, status date or display code changed, or every REREAD_DAYS. A
 finished Assembly is read once and marked "finished".
 
+And agendas.json (`agendas()`, every full run): the committee meetings from yesterday to three weeks ahead and the bills
+on their agendas, one request for the meetings and one per meeting.
+
 Each bill takes four requests (page, actions, committee reports, roll call list) plus one per roll call: a first copy
 of two Assemblies (about 1,950 bills and substitutes) takes several hours, so GitHub's runs build it up, each resuming
 where the last stopped: every Assembly's list, members and committees and the members' pages first, then the bills,
@@ -54,7 +57,7 @@ Usage: python3 states/de/fetch.py [assembly]   (default: every Assembly from FIR
 """
 import gzip, html, json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from collections import Counter
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from states import window as W
 
@@ -434,6 +437,81 @@ def assembly_lists(ga):
         roster(ga, folder)
 
 
+AGENDA_DAYS = 21  # how far ahead
+BILL_CODE = re.compile(r"\b([HS]B) (\d+)\b")  # "SB 311", "HS 1 for HB 457 w/ HA 1": the bill (after "for")
+
+
+def meeting_time(s):
+    """ "7/20/26 10:30 AM" (as the past meetings' grid writes it) -> datetime, or None."""
+    for fmt in ("%m/%d/%Y %I:%M %p", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime((s or "").strip(), fmt)
+        except ValueError:
+            pass
+    try:
+        return datetime.strptime((s or "").strip(), "%m/%d/%y %I:%M %p")
+    except ValueError:
+        return None
+
+
+def agendas():
+    """The committee meetings from yesterday to three weeks ahead (POST /json/CommitteeMeetings/GetUpcomingCommitteeMeetings,
+    the Committee Meetings page's grid) and each one's agenda (/json/MeetingNotice/GetCommitteeMeetingItems?
+    committeeMeetingId=N: the bills, "SB 311" or "HS 1 for HB 457", and other items such as minutes), into
+    data/de/<first year>/agendas.json for each meeting's Assembly: {"SB311": [["Senate Agriculture",
+    "2026-05-20T11:00:00"]]}. Meetings marked "Cancelled" (CommitteeMeetingStatusName) are left out. A joint meeting of a
+    Senate and a House committee ("SharedCommitteeName") names the committee each bill is assigned to. A failure keeps
+    the last files: agendas never hold Delaware back."""
+    try:
+        meets = grid("/json/CommitteeMeetings/GetUpcomingCommitteeMeetings", "agendas")
+    except Refused as e:
+        print(f"agendas: {e}; the last copy is kept", flush=True)
+        return
+    if meets is None:
+        print("agendas: the meetings list failed; the last copy is kept", flush=True)
+        return
+    first, last = TODAY - timedelta(days=1), TODAY + timedelta(days=AGENDA_DAYS)
+    out = {ga: {} for ga in {current_ga()} | {m.get("AssemblyId") for m in meets if isinstance(m.get("AssemblyId"), int)}}
+    n = 0
+    for m in meets:
+        when = meeting_time(m.get("MeetingDateTime"))
+        if not when or not first <= when.date() <= last or not isinstance(m.get("AssemblyId"), int):
+            continue
+        if re.search(r"cancel|postpone", m.get("CommitteeMeetingStatusName") or "", re.I):
+            continue
+        if m.get("HasCommitteeMeetingItem") is False:
+            continue
+        try:
+            items = grid(f"/json/MeetingNotice/GetCommitteeMeetingItems?committeeMeetingId={m['CommitteeMeetingId']}",
+                         f"agenda {m['CommitteeMeetingId']}")
+        except Refused as e:
+            print(f"agendas: {e}; the last copy is kept", flush=True)
+            return
+        if items is None:
+            print(f"agendas: meeting {m.get('CommitteeMeetingId')}'s agenda failed; the last copy is kept", flush=True)
+            return
+        n += 1
+        names = {m.get("CommitteeId"): f"{m.get('CommitteeTypeName') or ''} {m.get('CommitteeName') or ''}".strip(),
+                 m.get("SharedWithCommitteeId"): f"{m.get('SharedCommitteeTypeName') or ''} "
+                                                 f"{m.get('SharedCommitteeName') or ''}".strip()}
+        for it in items:
+            b = BILL_CODE.search(it.get("LegislationDisplayCode") or "")
+            if not b or not it.get("LegislationId"):
+                continue
+            entry = [names.get(it.get("CommitteeId")) or names[m.get("CommitteeId")], when.strftime("%Y-%m-%dT%H:%M:00")]
+            key = b.group(1) + b.group(2)
+            if entry not in out[m["AssemblyId"]].setdefault(key, []):
+                out[m["AssemblyId"]][key].append(entry)
+    for ga, bills in out.items():
+        folder = os.path.join(DATA, str(first_year(ga)))
+        if os.path.isdir(folder) or bills:
+            os.makedirs(folder, exist_ok=True)
+            save(bills, os.path.join(folder, "agendas.json"))
+    odd = sum(1 for m in meets if not meeting_time(m.get("MeetingDateTime")))
+    print(f"agendas: {sum(len(b) for b in out.values())} bills on {n} meetings (of {len(meets)} upcoming)"
+          + (f"; {odd} meeting times not understood (\"{meets[0].get('MeetingDateTime')}\")" if odd else ""), flush=True)
+
+
 def assembly(ga):
     """An Assembly's bills that are new, changed or due, after every Assembly's lists and the members' pages; a finished
     Assembly is marked so once everything is read."""
@@ -521,6 +599,8 @@ def main():
         for ga in gas:
             assembly_lists(ga)
         people([ga for ga in gas if os.path.exists(os.path.join(DATA, str(first_year(ga)), "members.json"))])
+        if not ONLY:
+            agendas()
         for ga in gas:
             assembly(ga)
     except Refused as e:
