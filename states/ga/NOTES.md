@@ -23,3 +23,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (webservices.legis.ga.gov) have no meetings or agendas (Committees has only committees and members; no Meetings,
   Calendar, Schedule or Agenda service), and the old chamber sites (www.house.ga.gov, www.senate.ga.gov) don't answer.
   `agendas()` stays empty. Asking the Legislature's web staff for API access or a feed would be the way in.
+- **The next session's bills (2026-11-22):** from November of an even year `main()` also reads the next session once the Session service lists it (GetSessions; 2027-2028 not listed on 2026-11-22), one list request a run; its folder is made only when the list has an HB or SB (bills are prefiled after the general election), `sessions()` shows a session after the current one from its first bill (others need 100), and a session that hasn't convened (`begun()`: the second Monday of January) never marks Georgia incomplete.

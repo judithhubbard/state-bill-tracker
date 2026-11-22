@@ -242,7 +242,8 @@ def load_session(session):
     comms = committees(session)
     bills = {}
     for r in rows(session, "BILL"):
-        if r[2] == "0" and r[3] in KINDS:
+        # (r[1] is the session, "20272028": a daily zip saved around a new session's first day may hold both.)
+        if r[2] == "0" and r[3] in KINDS and (r[1] or "").startswith(str(session)):
             bills[r[0]] = r
     p_of = {bid: f"{r[3]}{r[4]}" for bid, r in bills.items()}
 

@@ -76,3 +76,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   on February 10, 2026 (three days: 58 meetings, 28 agenda PDFs, 59 bills, all matching records). Needs pdftotext on the
   runner for the PDFs (without it, title links only). In session a first run may read 50-100 agenda PDFs (about a second
   each), later runs only changed ones.
+- **The next session's bills (2026-11-22):** the bill search's session list offers the next General Assembly (127, 2027-28) once it has prefiled bills (not yet on 2026-11-22: session=127 answers "An error has occurred loading the bill results"); `sessions()` reads it daily. A session offered before it has a bill gets no folder (`read_bills()` writes no empty bills.json, and `main()` reads nothing else of it: agendas, members' pages and roll calls go to the newest session with bills), and one not convened (`begun()`) never holds South Carolina off the site.

@@ -111,11 +111,16 @@ def pool_map(fn, items):
 
 def session(year, sid):
     folder = os.path.join(DATA, str(year))
-    for sub in ("bills", "votes"):
-        os.makedirs(os.path.join(folder, sub), exist_ok=True)
     live = year >= CURRENT
     # The whole list is slow the first time the server builds it (once more than two minutes).
     index = call("Legislation", "GetLegislationForSession", many=True, timeout=600, SessionId=sid)
+    # The next session, listed before it convenes: its folder (which the converter shows) waits for its first bill.
+    if not begun(year) and not os.path.exists(folder) and not any(
+            x["Description"].split(" ")[0] in ("HB", "SB") for x in index or []):
+        print(f"{year}: listed, no bills prefiled yet")
+        return
+    for sub in ("bills", "votes"):
+        os.makedirs(os.path.join(folder, sub), exist_ok=True)
     if not index:
         print(f"{year}: no legislation list; kept the last copy")
         # Only a list never read holds Georgia off the site; a failed refresh keeps the last copy.
@@ -211,9 +216,14 @@ def main():
     if not ids:
         sys.exit("No session list from the Session service")
     save(os.path.join(DATA, "sessions.json"), ids)
-    for y in range(FIRST, CURRENT + 1, 2):
+    # From November of an even year, the next session too, once the Session service lists it (bills are prefiled
+    # after the general election); a session not begun never holds Georgia back (below).
+    nxt = [CURRENT + 2] if date.today().month >= 11 and YEAR % 2 == 0 else []
+    for y in list(range(FIRST, CURRENT + 1, 2)) + nxt:
         if y in ids:
             session(y, ids[y])
+        elif y in nxt:
+            print(f"{y}: not listed yet")
         else:
             print(f"{y}: no regular session listed")
             INCOMPLETE.add(f"{y}:session")

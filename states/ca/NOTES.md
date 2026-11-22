@@ -19,3 +19,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   counties PDF and the Assembly's list) and, on the public site, looks up an address with the Census geocoder
   (`STATE.addressLookup`). Earlier sessions are linked by subject and digest (`earlier()`, like Virginia's), never
   spot bills. A new governor takes office January 4, 2027: add them to `GOVERNORS`.
+- **The next session's bills (2026-11-22):** the daily zip moves to the new session when it convenes (the first Monday of December of an even year: 2027-28 on 2026-12-07, when bills are first introduced), and `fetch.py` already reads CURRENT + 2's own zip (pubinfo_2027.zip, a 404 until it's published) and saves a daily zip into the folder of the newest session its BILL table names; `load_session()` keeps only rows of its own session (BILL's session column), in case a zip around the switch holds both. 2025-26's copy then comes from pubinfo_2025.zip. No 2027 data on 2026-11-22.

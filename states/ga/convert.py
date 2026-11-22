@@ -28,8 +28,9 @@ def folder(session):
 
 
 def sessions():
+    # (The next session's prefiled bills, before it convenes, count from the first one.)
     return sorted(int(os.path.basename(f)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4))
-                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > 100)
+                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > (0 if int(os.path.basename(f)) > CURRENT else 100))
 
 
 def text(x):
