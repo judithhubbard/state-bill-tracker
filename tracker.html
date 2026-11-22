@@ -2854,7 +2854,7 @@ function nextSteps(b) {
   const meet = nextMeeting(b);
   if (meet) {
     const d = new Date(meet.when);
-    what += `<p class="when">On the agenda: ${esc(meet.committee)} Committee, ${fmtMeet(meet.when, true)}.</p>`;
+    what += `<p class="when">${meetHead(meet)}: ${esc(meetComm(meet))}, ${fmtMeet(meet.when, true)}.</p>`;
   }
   what += plan.notes.map((n) => `<p class="holdup">${esc(n)}</p>`).join("");
   if (plan.actionable && oddsLine(b)) what += `<p class="odds">${oddsLine(b)}</p>`;
@@ -2928,7 +2928,7 @@ function comingUp(mine) {
     <div class="meets">${list.map((m) => {
       const w = m.bills.filter(isWatched).length;
       m.bills.sort((x, y) => isWatched(y) - isWatched(x) || x.sortKey - y.sortKey);
-      return `<details class="meet"><summary><b>${fmtMeet(m.when, true)}</b> ${esc(m.committee)} <span class="muted">· ${num(m.bills.length)} bill${m.bills.length === 1 ? "" : "s"}${w ? ` · ${num(w)} on your watchlist` : ""}</span></summary>
+      return `<details class="meet"><summary><b>${fmtMeet(m.when, true)}</b> ${esc(m.committee)}${MEET_KIND[m.kind] ? ` (${MEET_KIND[m.kind].toLowerCase()})` : ""} <span class="muted">· ${num(m.bills.length)} bill${m.bills.length === 1 ? "" : "s"}${w ? ` · ${num(w)} on your watchlist` : ""}</span></summary>
         <div class="list">${m.bills.map(billRow).join("")}</div></details>`;
     }).join("")}</div>`;
 }
@@ -4277,7 +4277,7 @@ function panelTags(b, inCard = false) {
 function billRow(b) {
       const [first, second] = b.nums;
       const meet = isWatched(b) ? null : nextMeeting(b);
-      const one = meet ? `<span class="tag agenda">On the agenda: ${esc(meet.committee)}, ${fmtMeet(meet.when)}</span>`
+      const one = meet ? `<span class="tag agenda">${meetHead(meet)}: ${esc(meet.committee)}, ${fmtMeet(meet.when)}</span>`
         : b.shell ? `<span class="tag narrow">${STATE.shellTag || "Shell bill"}${TIPI(SHELL_TIP)}</span>`
         : STATE.rowTags?.(b) || (NARROW_TAG[b.narrow] ? `<span class="tag narrow">${NARROW_TAG[b.narrow]}</span>` : "") || chapTag(b);
       return `<div class="billrow"><details class="bill" data-idx="${b.idx}">
@@ -4414,7 +4414,11 @@ function newActions(b) {
 // ("New" is decided the same way on every page: BillFacts.isNew(), from the latest day with news.)
 const hasNews = (b) => isWatched(b) && BillFacts.isNew(watchEntry(b).seen, BillFacts.newsDay(b.vers.flatMap((v) => v.actions), ROUTINE));
 // A meeting's day, and its time when known (Virginia's dockets give only the day, written as midnight).
-const fmtMeet = (when, time) => { const d = new Date(when); return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + (time && !/T00:00(:00)?$/.test(when) ? `, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""); };
+const fmtMeet = (when, time) => { const d = new Date(when); return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + (time && !/T00:00(:00)?$/.test(when) ? `, ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}${STATE.meetZone ? ` ${STATE.meetZone}` : ""}` : ""); };
+// A meeting's kind, where the data says (Congress's): a markup is where the committee votes on the bill.
+const MEET_KIND = { markup: "Markup (committee vote)", hearing: "Hearing" };
+const meetHead = (m) => MEET_KIND[m.kind] || "On the agenda";
+const meetComm = (m) => (/committee\b/i.test(m.committee) ? m.committee : `${m.committee} Committee`);
 // The next committee meeting with this bill on the agenda (current session).
 function nextMeeting(b) { return WatchRules.nextMeeting(b.agenda, DATA.current); }
 // Tags after a watched bill's title: what's new, and a committee meeting coming up.
@@ -6532,7 +6536,7 @@ function decode(raw) {
       title, summary, act, lawCode, topics, stage, chapter, veto, cosp, intro, dates,
       partyCount: Array.isArray(parties) ? parties : [0, 0],
       parties: partiesOf(parties),
-      agenda: (agenda || []).map(([c, when]) => ({ committee: str(c), when })),
+      agenda: (agenda || []).map(([c, when, kind]) => ({ committee: str(c), when, kind: kind || "" })),
       places: (places || []).map((i) => (raw.counties || [])[i] || "?"),
       mainTopic: mainTopic || (topics || [])[0] || "",
       similar: decodeSimilar(similar),

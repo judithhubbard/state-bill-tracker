@@ -5,6 +5,8 @@ const STATE = {
   name: "Congress",
   abbr: "US",
   bodyName: "Congress",
+  // Committee meetings (states/us/meetings.py) are given in Washington's time.
+  meetZone: "ET",
   // The President signs or vetoes bills, not a governor. The White House's contact page and comments line are from
   // general knowledge (whitehouse.gov wasn't read by program); not checked by the owner.
   executive: { the: "the President", The: "The President", office: "The White House", title: "President", dear: "Dear Mr. President," },

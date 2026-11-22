@@ -80,8 +80,21 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   keep the seat until a successor's term starts. Committees: the current Congress's only (the data has no past
   committees); chairs from the "Chairman"/"Chair" title. Leaders: Speaker Mike Johnson; the Senate's Majority Leader, John
   Thune, stands for the Senate (the Vice President presides); the 120th Congress chooses its own on January 3, 2027
-  (`LEADERS`). The White House's contact form is the only contact shown (the comments line, (202) 456-1111, was dropped 2026-11-17: whitehouse.gov lists only the form, and the line closed during the 2025 shutdown). Party balance: states/legislatures.json's "us" (`executive` "President", seats S 100, H 435). Not done: no
-  hearings or committee schedules (`agendas()`), no CBO cost estimates, the Senate's committee roll calls, House
+  (`LEADERS`). The White House's contact form is the only contact shown (the comments line, (202) 456-1111, was dropped 2026-11-17: whitehouse.gov lists only the form, and the line closed during the 2025 shutdown). Party balance: states/legislatures.json's "us" (`executive` "President", seats S 100, H 435). Not done: no CBO cost estimates, the Senate's committee roll calls, House
   committees' member votes. issues_site.py reads every two-letter folder, so it counts Congress among the states (a "Congress"
   row in each issue's table, and in the "N states" and bill counts; not on the tile maps, which only have states): to be
   kept out for now (an owner's decision; not changed here).
+- **Committee meetings (2026-11-22):** `states/us/meetings.py` (run after contacts.py in states.json, never failing the
+  download) reads the Congress.gov API's committee meetings (api.congress.gov/v3/committee-meeting/<congress>/<house|senate>)
+  with a free api.data.gov key: the environment's CONGRESS_API_KEY (the GitHub secret of that name, to be added by the owner)
+  or ~/.congress_api_key; without one it does nothing and keeps the last copy. Each run lists both houses' meetings updated in
+  the last 21 days (the list filters by update time, not the meeting's day) and reads the details of the new or changed ones,
+  a second apart, newest first, for at most 4 minutes; data/us/meetings.json keeps each meeting's day (UTC), kind, status,
+  committees and bills (relatedItems, else the "H.R. 123" numbers its bill documents and title name), and drops meetings
+  over a month past. It's rewritten only when a meeting changed, or twice a day for its "listed" time, which check_site.py
+  fails on when more than 3 days old. `convert.agendas()` turns it into the shared agenda shape, with a third item, the
+  kind: "markup" (the House's Markup, the Senate's Business Meeting or Executive Session) or "hearing"; canceled and
+  postponed meetings are left out, times are Eastern (`STATE.meetZone` "ET"). The page says "Markup (committee vote): ..."
+  or "Hearing: ..." where a state's says "On the agenda: ...". The DEMO_KEY allows only 10 requests an hour (enough to
+  test, not to run). On 2026-11-22 (the Thanksgiving recess) none of the meetings read named a bill: the Senate's six
+  scheduled meetings are nominations, briefings and an oversight hearing.

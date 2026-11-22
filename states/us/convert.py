@@ -1030,6 +1030,43 @@ def link_earlier(session, recs):
             r["prev"].add((prev, hits[0]["nums"][0]))
 
 
+def meeting_kind(t):
+    """The API's meeting type in the page's words: "markup" for a vote on bills (the House's "Markup", the Senate's
+    "Business Meeting" or "Executive Session"), "hearing", or "" (another kind of meeting)."""
+    return "markup" if re.search(r"markup|business meeting|executive session", t, re.I) else \
+        "hearing" if re.search(r"hearing", t, re.I) else ""
+
+
+def meeting_name(n):
+    """"Senate Aging (Special)" -> "Senate Aging Committee"; "House Natural Resources Subcommittee on Indian and Insular
+    Affairs" as written."""
+    n = re.sub(r"\s*\((?:Special|Select|Permanent Select|Joint)\)", "", text(n))
+    return n if re.search(r"committee\b", n, re.I) else f"{n} Committee"
+
+
+def agendas(session):
+    """Bills on upcoming committee meetings (data/us/meetings.json, from states/us/meetings.py): bill -> [[committee,
+    "2026-12-02T10:00:00" (Eastern time, as the page shows it), "markup" | "hearing" | ""], ...]. Canceled and postponed
+    meetings are left out; the current Congress only."""
+    path = os.path.join(P.DATA, "meetings.json")
+    if not os.path.exists(path):
+        return {}
+    d = json.load(open(path))
+    if d.get("congress") != P.congress_of(session):
+        return {}
+    out = defaultdict(list)
+    for m in d.get("meetings", {}).values():
+        if not m.get("bills") or not m.get("date") or re.search(r"cancel|postpon", m.get("status", ""), re.I):
+            continue
+        when = datetime.fromisoformat(m["date"].replace("Z", "+00:00")).astimezone(ZoneInfo("America/New_York"))
+        entry = [" and ".join(meeting_name(c) for c in m["committees"]) or "Committee", when.strftime("%Y-%m-%dT%H:%M:%S"),
+                 meeting_kind(m.get("type", ""))]
+        for b in m["bills"]:
+            if entry not in out[b]:
+                out[b].append(entry)
+    return dict(out)
+
+
 def parties(session, recs):
     if P.congress_of(session) not in _PARTIES:
         load_session(session)

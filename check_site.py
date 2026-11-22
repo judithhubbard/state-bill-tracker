@@ -397,6 +397,13 @@ if not os.path.exists(os.path.join(DATA, "ks", "incomplete")): contacts("ks", TO
 # Congress: two-year Congresses; a new one's member list (January 3 of odd years) can take a few days to reach the data.
 if not os.path.exists(os.path.join(DATA, "us", "incomplete")) and not (TODAY.year % 2 and TODAY.month == 1 and TODAY.day < 15):
     contacts("us", TODAY.year if TODAY.year % 2 else TODAY.year - 1, 520)
+# Congress's committee meetings (states/us/meetings.py, once it has a key): listed at least every 3 days.
+_meet = os.path.join(HERE, "data", "us", "meetings.json")
+if os.path.exists(_meet):
+    _listed = json.load(open(_meet)).get("listed", "")[:10]
+    if not _listed or (TODAY - date.fromisoformat(_listed)).days > 3:
+        problems.append(f"us: committee meetings last listed {_listed or 'never'} (more than 3 days ago; states/us/meetings.py, "
+                        "the CONGRESS_API_KEY secret)")
 
 # Wyoming: a session a year.
 if not os.path.exists(os.path.join(DATA, "wy", "incomplete")):

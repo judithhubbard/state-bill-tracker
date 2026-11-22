@@ -1520,7 +1520,7 @@ def status_inputs(session, recs, agenda_of=None, later_of=None):
         taken[lead] = r["nums"][0]
         acts = [a for v in r["vers"] for a in v["actions"] if a[0] == r["last"]]
         deliv = (r["keyDates"][4] or "").split(";")[-1] if r["stage"] == 4 and len(r["keyDates"]) > 4 else ""
-        meets = [[w, c] for c, w in (agenda_of(r) if agenda_of else [])]
+        meets = [[a[1], a[0]] for a in (agenda_of(r) if agenda_of else [])]
         flags = ("b" if r.get("budget") else "") + ("v" if r.get("ballot") else "")
         later = later_of(i) if later_of else None
         rows.append([i, lead, [r["nums"][0], r["title"][:140], r["stage"], r["last"] or "", (acts[-1][1] if acts else "")[:120],
@@ -2070,8 +2070,9 @@ def compute(prev=None):
         def agenda_of(r):
             seen = []
             for v in r["vers"]:
-                for c, w in agendas.get(re.sub(r"[A-Z]$", "", v["p"]), []):
-                    entry = [c.replace(" And ", " and "), w]
+                # ([committee, when], or with a third item, the meeting's kind: Congress's "markup" or "hearing".)
+                for c, w, *kind in agendas.get(re.sub(r"[A-Z]$", "", v["p"]), []):
+                    entry = [c.replace(" And ", " and "), w] + [k for k in kind if k]
                     if entry not in seen:
                         seen.append(entry)
             return sorted(seen, key=lambda x: x[1])
@@ -2127,7 +2128,7 @@ def compute(prev=None):
                          S(r["program"]), S(r["law"]), vers, max(session, int((r["first"] or str(session))[:4])), h,
                          [d.replace("-", "") for d in [r["first"] or ""] + r["keyDates"]],
                          bill_parties(r, party_of), enc_votes(r["votes"]),
-                         [[S(c), w] for c, w in agenda_of(r)],
+                         [[S(a[0]), *a[1:]] for a in agenda_of(r)],
                          [(P.COUNTIES + ["?"]).index(c) for c in r["places"]], r["mainTopic"], sims[i], r["memo"], veto_note(i, r)])
 
         data = {
@@ -2151,7 +2152,7 @@ def compute(prev=None):
             # The last committee vote, or the next committee meeting on an agenda (watchrules.js: committees meeting
             # means the Legislature isn't out, whatever the floor).
             "lastComm": max([str(v[3])[:10] for r in recs for v in r.get("votes") or [] if v[1] != "F" and v[3]]
-                            + [w[:10] for r in recs for _c, w in agenda_of(r)], default="") if session == current else "",
+                            + [a[1][:10] for r in recs for a in agenda_of(r)], default="") if session == current else "",
             "strings": strings,
             # Stored column by column (all titles, then all summaries, ...), which compresses
             # about a fifth smaller than bill by bill; the page turns it back into rows.
