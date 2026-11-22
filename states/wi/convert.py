@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo
 from states import letters as L
 from states.wi import profile as P
 from states.undated import settle
+from states import floorcal
 
 HOUSE = {"S": "Senate", "A": "Assembly"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
@@ -465,14 +466,44 @@ def load_session(session):
 
 def agendas(session):
     """Bills on upcoming committee meetings (states/wi/fetch.py's agendas(), from the committee schedule): bill ->
-    [["Senate Judiciary and Public Safety", "2027-02-03T10:00:00"], ...], meetings from today on."""
+    [["Senate Judiciary and Public Safety", "2027-02-03T10:00:00"], ...], meetings from today on; and floor calendars
+    (floor_days())."""
     try:
         got = json.load(open(os.path.join(P.DATA, str(session), "agendas.json")))
     except (OSError, ValueError):
-        return {}
+        got = {}
     today = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
     out = {k: [e for e in v if e[1][:10] >= today] for k, v in got.items()}
-    return {k: v for k, v in out.items() if v}
+    out = {k: v for k, v in out.items() if v}
+    for bill, e in floor_days(session):
+        floorcal.add(out, bill, e)
+    return out
+
+
+def floor_days(session):
+    """Floor calendars (states/floorcal.py), from the bills' own histories: "Placed on calendar 2-13-2024" (by the
+    Committee on Rules, or under Senate Rule 18(1) / Joint Rule 82) names the day the house takes the bill up, posted a
+    day to a week ahead, in the house the line is filed under. A bill on the day's calendar can still be laid over or
+    sent back to Rules: "listed". Days from today on; bills and the amendments the site keeps only."""
+    since = floorcal.since(P.TIMEZONE)
+    out = []
+    for f in glob.glob(os.path.join(folder(session), "bills", "*.json")):
+        try:
+            b = json.load(open(f))
+        except (OSError, ValueError):
+            continue
+        p = b.get("number") or ""
+        if p[:2] not in ("AB", "SB") and not is_amendment(b):
+            continue
+        for h in b.get("history") or []:
+            m = re.match(r"placed on calendar (\d{1,2})-(\d{1,2})-(\d{4})", text(h.get("action")), re.I)
+            house = {"Assembly": "A", "Senate": "S"}.get(h.get("house"))
+            if not m or not house:
+                continue
+            day = f"{m[3]}-{int(m[1]):02d}-{int(m[2]):02d}"
+            if day >= since:
+                out.append((p, floorcal.entry(HOUSE[house], f"{day}T00:00:00", listed=True)))
+    return out
 
 
 def parties(session, recs):
