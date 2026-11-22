@@ -102,7 +102,7 @@
    "paths": [
     "data/md"
    ],
-   "minutes": 20,
+   "minutes": 40,
    "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/md/fetch.py"
   },
   {
