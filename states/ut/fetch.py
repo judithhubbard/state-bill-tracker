@@ -106,6 +106,7 @@ def api(route):
 
 
 def save(obj, path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)  # a year with no bills yet (2027GS) has no folder
     tmp = path + ".tmp"
     with open(tmp, "w") as f:
         json.dump(obj, f, ensure_ascii=False)
