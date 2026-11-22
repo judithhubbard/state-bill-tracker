@@ -112,6 +112,11 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   fitting the floor votes, or a state's data stops updating (2026-11-22, `freshness()`: no successful download for 2 days,
   the download failing every run, a live session losing bills since the day before, or, in session only, no new bill
   action for two weeks or more; milder cases are warnings in the run's summary). Still by hand: a new governor (`GOVERNORS`) every four years, next January 2030.
+- **Governors' photos (2026-11-22):** states/governor_photos.json, from Wikidata (P18) and Wikimedia Commons thumbnails, by
+  tools/governor_photos.py (matched by name and the state's governor's office; a governor-elect by name when only one U.S.
+  politician fits; `PICK` settles namesakes, e.g. Wisconsin's David Crowley). publish.yml asks again weekly and when
+  legislatures.json names someone new (its own cache, gov_photos/). The build shows the photo of whoever is in office that
+  day (`govNow.photo`): the governor's page card and the header's Governor panel; the credit is in How's "About this data".
 - **Tabs (2026-11-19):** a state's page has Bills, Watchlist, Statistics and How laws are made. The Weigh in tab is gone
   (the owner's decision): "Find your legislators" (`#whereBox`, `renderMyReps()`, drawn when opened; "Where you live"
   until 2026-11-20; the names link to their pages) is a line under the title on every tab, the only place to pick a

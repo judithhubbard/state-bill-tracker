@@ -383,6 +383,46 @@ jobs:
           key: agenda-log-latest
           restore-keys: agenda-log-
 
+      # Governors' and the President's photos (tools/governor_photos.py: Wikidata and Wikimedia Commons, three requests),
+      # asked again once a week and when states/legislatures.json names someone new; kept in their own small cache. The
+      # copy in the repository (states/governor_photos.json) stays when Wikidata doesn't answer. Never holds up the site.
+      - name: Restore the governors' photos
+        uses: actions/cache/restore@v4
+        with:
+          path: gov_photos
+          key: gov-photos-latest
+          restore-keys: gov-photos-
+      - name: Governors' photos
+        id: govphotos
+        continue-on-error: true
+        run: |
+          mkdir -p gov_photos
+          python3 tools/governor_photos.py --names > "$RUNNER_TEMP/asked.txt"
+          same=no; cmp -s gov_photos/asked.txt "$RUNNER_TEMP/asked.txt" && same=yes
+          [ "$same" = yes ] && [ -f gov_photos/governor_photos.json ] && cp gov_photos/governor_photos.json states/
+          age=$(( $(date +%s) - $(cat gov_photos/checked 2>/dev/null || echo 0) ))
+          if [ "$same" = no ] || [ "$age" -gt 604800 ]; then
+            if python3 tools/governor_photos.py; then
+              cp states/governor_photos.json "$RUNNER_TEMP/asked.txt" gov_photos/
+              date +%s > gov_photos/checked
+              echo "save=yes" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+      - name: Keep the governors' photos
+        if: steps.govphotos.outputs.save == 'yes'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: gov_photos
+          key: gov-photos-${{ github.run_id }}
+      - name: Drop older copies of the governors' photos
+        if: steps.govphotos.outputs.save == 'yes'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 tools/prune_caches.py "gov-photos-" "gov-photos-${{ github.run_id }}"
+
       # Launched 2026-11-21: links, link previews and the visit counter use statebilltracker.org, and search engines may
       # list it (build_site.sh). statebilltracker.pages.dev still serves the same files.
       - name: Build the site

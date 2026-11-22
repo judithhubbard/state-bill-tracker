@@ -357,6 +357,7 @@ table.oc th { vertical-align: bottom; }
 .legs-head input { margin-left: auto; width: 11em; max-width: 100%; font-size: 13px; padding: 3px 7px; }
 .legs-x { appearance: none; background: none; border: 0; color: var(--ink-2); font-size: 20px; line-height: 1; padding: 0 4px; cursor: pointer; }
 .legs-head h2 + .legs-x { margin-left: auto; }
+.legs-head .gov-ph { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: 50% 20%; background: var(--chip); flex: none; }
 .legs-scroll { margin-top: 8px; max-height: min(65vh, 560px); overflow-y: auto; }
 .legtab { width: 100%; border-collapse: collapse; table-layout: fixed; overflow-wrap: anywhere; }
 .legtab .lt-district { width: 32%; }
@@ -2294,7 +2295,8 @@ function renderLegs() {
     const desk = BILLS.filter((b) => b.stage === 4).length;
     // (The party line's tip has the full name, "Governor Mikie Sherrill"; DATA.governor is the last name.)
     const who = document.querySelector('#power [data-legs="G"]')?.closest(".bp-ch")?.title || `${EXEC.title} ${DATA.governor || ""}`;
-    box.innerHTML = `<div class="legs-head"><h2>${esc(who.trim())}</h2>${close}</div>
+    const ph = DATA.govNow?.photo ? `<img class="gov-ph" src="${esc(DATA.govNow.photo)}" alt="" title="${esc(DATA.govNow.photoBy || "")}" width="40" height="40" onerror="this.remove()">` : "";
+    box.innerHTML = `<div class="legs-head">${ph}<h2>${esc(who.trim())}</h2>${close}</div>
       <p class="reach">${GOV_REACH}</p>${govNext() ? `<p>${govNext()}</p>` : ""}
       <p>${desk ? `<button type="button" class="linkish" data-legsdesk>${num(desk)} bill${desk === 1 ? "" : "s"} waiting for ${esc(EXEC.the)}</button>` : `No bills are waiting for ${esc(EXEC.the)}.`}</p>
       ${govLink() ? `<p>${govLink()}</p>` : ""}`;
@@ -2361,7 +2363,7 @@ function renderGovCard() {
   const since = g.since ? `In office since ${fmtDate(g.since)}` : "";
   const initials = g.name.split(" ").filter((w) => /^[A-Z]/.test(w) && !/^(Jr|Sr|II|III)\.?$/.test(w)).map((w) => w[0]).filter((c, i, a) => i === 0 || i === a.length - 1).join("");
   $("person").innerHTML = `
-    <div class="photo"><span>${esc(initials)}</span></div>
+    <div class="photo"${g.photoBy ? ` title="${esc(g.photoBy)}"` : ""}><span>${esc(initials)}</span>${g.photo ? `<img src="${esc(g.photo)}" alt="" onerror="this.remove()">` : ""}</div>
     <div class="who-body">
       <h2>${esc(name)}</h2>
       <p>${[PARTY_WORD[g.party] || "", since].filter(Boolean).map(esc).join(" · ")}</p>
