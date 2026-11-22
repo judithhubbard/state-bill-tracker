@@ -597,6 +597,7 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
 <script type="application/json" id="past">{}</script>
 <script type="application/json" id="issues">[]</script>
 <script type="application/json" id="compare">{}</script>
+<script type="application/json" id="upcoming">{}</script>
 <script>
 /*named.js*/
 </script>
@@ -619,6 +620,14 @@ const NAMES = { AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: 
 // The states built in this run (the list's links, "ca/"), and their party control ({ca: {dots: [[party, supermajority] x3], title}}).
 const built = {};
 for (const a of document.querySelectorAll("#states a")) built[a.getAttribute("href").replace(/\/.*$/, "").toUpperCase()] = a.getAttribute("href");
+// Each state's upcoming session's page, with its prefiled bills (build_site.sh, from data/status.json): {st: {year: page}}.
+// With next year chosen, the map's and the list's links open that page instead of the current session's.
+let UPCOMING = {};
+try { UPCOMING = JSON.parse(document.getElementById("upcoming").textContent) || {}; } catch (e) {}
+const pageOf = (code) => {
+  const st = code.toLowerCase(), p = !CUSTOM && typeof year === "number" && year > NOW ? UPCOMING[st]?.[year] : null;
+  return p ? `${st}/${p}` : built[code.toUpperCase()];
+};
 let power = {}, after = {};
 try { power = JSON.parse(document.getElementById("power").textContent); } catch (e) {}
 // After the 2026 election (reported results, states/elected_2026.json): the "From January" view, shown only until the
@@ -1039,7 +1048,7 @@ function drawMap(view) {
          ...(changed && now ? ["", "Now:", ...now.title.split("; ")] : [])].join("\n")
       : [NAMES[code], ...p.title.split("; ")].join("\n");
     const maj = MAJORITY_OVERRIDE.has(code.toLowerCase()) ? `\n${MAJ_NOTE}` : "";
-    return `<a href="${built[code]}" data-st="${code.toLowerCase()}" class="${ctl}" style="${style}" title="${esc(lines + (p ? maj : ""))}" aria-label="${esc(`${code}, ${label}${p && maj ? `. ${MAJ_NOTE}` : ""}`)}">${code}</a>`;
+    return `<a href="${pageOf(code)}" data-st="${code.toLowerCase()}" class="${ctl}" style="${style}" title="${esc(lines + (p ? maj : ""))}" aria-label="${esc(`${code}, ${label}${p && maj ? `. ${MAJ_NOTE}` : ""}`)}">${code}</a>`;
   }).join("") + fedParty(view);
   markStars();
   partyPanel(null);
@@ -1052,12 +1061,12 @@ const FED = `grid-row:1;grid-column:5 / span 3`, FED_LABEL = `<span class="fl"><
 function fedParty(view) {
   if (!built.US) return "";
   const p = view === "past" ? past[year].us : power.us;
-  if (!p) return `<a href="${built.US}" data-st="us" class="fed" style="${FED}" title="U.S. Congress" aria-label="U.S. Congress">${FED_LABEL}</a>`;
+  if (!p) return `<a href="${pageOf("US")}" data-st="us" class="fed" style="${FED}" title="U.S. Congress" aria-label="U.S. Congress">${FED_LABEL}</a>`;
   const later = view === "after" && !after.us;
   const lines = [later ? "U.S. Congress from January" : "U.S. Congress", ...p.title.split("; "),
     ...(later ? ["", "The new Congress's election results", "aren't in this data yet; colors show today's."] : [])].join("\n");
   const label = later ? `U.S. Congress. ${p.title}. The new Congress's election results aren't in this data yet; these are today's` : `U.S. Congress. ${p.title}`;
-  return `<a href="${built.US}" data-st="us" class="fed ${control(p.dots)}" style="${FED}" title="${esc(lines)}" aria-label="${esc(label)}">${FED_LABEL}</a>`;
+  return `<a href="${pageOf("US")}" data-st="us" class="fed ${control(p.dots)}" style="${FED}" title="${esc(lines)}" aria-label="${esc(label)}">${FED_LABEL}</a>`;
 }
 // Issue view: shaded by Congress's bills on the issue that year, with the number that became law; its bills in the panel.
 function fedIssue(y, open, upcoming) {
@@ -1228,6 +1237,8 @@ function render() {
   const sl = document.querySelector("#showSide .sidelist"), sb = sl && sl.querySelector('button[aria-current="true"]');
   if (sb && (sb.offsetTop < sl.scrollTop || sb.offsetTop + sb.offsetHeight > sl.scrollTop + sl.clientHeight)) sl.scrollTop = sb.offsetTop - sl.clientHeight / 2;
   drawMap(view);
+  // The list of states follows the year too (next year: the upcoming sessions' pages).
+  for (const a of document.querySelectorAll("#states a")) a.setAttribute("href", pageOf((a.dataset.home ||= a.getAttribute("href")).replace(/\/.*$/, "")));
 }
 function remember() {
   if (CUSTOM) { try { history.replaceState(null, "", CUSTOM.kind === "mine" ? "#mine" : CUSTOM.kind === "laws" ? "#laws" : location.pathname); } catch (e) {} return; }

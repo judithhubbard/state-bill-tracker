@@ -24,6 +24,11 @@ const STATE = {
   // A session a year: the regular session in odd years, the fiscal session in even years; bills die when it adjourns.
   years: 1,
   sessionLabel: (s) => `${s} ${s % 2 ? "regular" : "fiscal"}`,
+  // Statistics count each General Assembly's two sessions together (STAT_CYCLE in profile.py): its name, each session's
+  // kind, and a line under the odds chart.
+  sessionKind: (s) => (s % 2 ? "regular" : "fiscal"),
+  cycleName: (c) => `${((n) => `${n}${[11, 12, 13].includes(n % 100) ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th"}`)(95 + (c - 2025) / 2)} General Assembly`,
+  cycleNote: "Each General Assembly's regular session and fiscal session are counted together; the fiscal session's bills are nearly all appropriations, the state's budget.",
   // Laws are numbered "Act 123" (of the session: Act 123 of 2025).
   lawWord: "Act",
   // A joint resolution proposing a constitutional amendment passes both houses once, by a majority of each house's

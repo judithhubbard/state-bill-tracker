@@ -164,7 +164,12 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   - Bills only (each chamber's bill type), plus constitutional amendments tagged "const"; other resolutions left out.
   - What skews comparisons is marked on the record: narrow bills (`narrow`: "place" for local bills for one city or
     county, as in GA and NC; "person", "org", "naming"), placeholder bills (`shell`, IL), and the session length
-    (`YEARS`, `session_kind()` for states alternating long and short sessions).
+    (`YEARS`, `session_kind()` for states alternating long and short sessions). Two-year legislatures holding a different
+    session each year (Arkansas regular + fiscal, Wyoming general + budget, Kentucky short + long; 2026-11-22, the owner's
+    decision) set `STAT_CYCLE = True`: Statistics, Timing (24 months), the Sessions table (each cycle, then its two
+    sessions by `sessionKind`) and /compare/ count each odd-even pair as one cycle ("2023–24"), as New York's two-year
+    sessions (build_data.py's `to_cycles()`, `cycle_years()`); each session keeps its own pages, and the deadline rules
+    still read past sessions of the page's own kind (`sessionTiming`).
   - Laws are stage 5 whatever the route (signed, without signature, over a veto, local bills ratified in NC); amendments
     stop at stage 3.
 - **Data traps found so far.** `python3 test/data_check.py` checks every state for all of these that a program can
