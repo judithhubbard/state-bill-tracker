@@ -113,6 +113,12 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   fitting the floor votes, or a state's data stops updating (2026-11-22, `freshness()`: no successful download for 2 days,
   the download failing every run, a live session losing bills since the day before, or, in session only, no new bill
   action for two weeks or more; milder cases are warnings in the run's summary). Still by hand: a new governor (`GOVERNORS`) every four years, next January 2030.
+- **Wikidata and Commons (the owner's decision, 2026-11-22):** query.wikidata.org's robots.txt disallows /sparql and
+  commons.wikimedia.org's /w/ (the API), but Wikimedia's User-Agent policy and API rules welcome identified programs; the
+  owner chose to use them, gently (one request a second, maxlag, a User-Agent naming statebilltracker.org, no email), for
+  governors' photos (tools/governor_photos.py) and legislators' photos missing elsewhere (photos.py's Wikidata fallback;
+  credits in photos.json, shown on each photo and in How's "About this data"). The photos themselves (upload.wikimedia.org)
+  are allowed. Every other host's robots.txt is still obeyed.
 - **Governors' photos (2026-11-22):** states/governor_photos.json, from Wikidata (P18) and Wikimedia Commons thumbnails, by
   tools/governor_photos.py (matched by name and the state's governor's office; a governor-elect by name when only one U.S.
   politician fits; `PICK` settles namesakes, e.g. Wisconsin's David Crowley). publish.yml asks again weekly and when
