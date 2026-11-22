@@ -1891,10 +1891,14 @@ function renderPipeline() {
        <span class="sl">${anyAmend ? "Constitutional amendments" : "Sent to the voters"}${TIPR(amendTip)}</span><span class="sn">${num(amendN)}</span></button>` : "";
   // Bills on a committee agenda that hasn't met yet: a line under "In committee".
   const agendaN = (test) => DATA.current ? BILLS.filter((b) => test(b) && matches(b, "agenda") && (state.stage == null || stageSet().includes(b.stage))).length : 0;
-  const soon = agendaN(nextAgenda), meetsN = agendaN(nextMeets), floorN = agendaN(nextFloor);
-  // Bills on a floor calendar for a day still to come: a line under "Awaiting a floor vote".
-  const floorRow = floorN || state.agenda === "floor" ? `<button class="srow sub" type="button" data-agenda="floor" aria-pressed="${state.agenda === "floor"}"${ROW_DESC(FLOOR_TIP)}>
-       <span class="sl">On an upcoming floor calendar${TIPR(FLOOR_TIP)}</span><span class="sn">${num(floorN)}</span></button>` : "";
+  const soon = agendaN(nextAgenda), meetsN = agendaN(nextMeets);
+  // Bills on a floor calendar for a day still to come: a line under "Awaiting a floor vote" (their first house) and one
+  // under "Passed one house" (the other house's calendar), so a line never counts more than the row above it.
+  const floorN1 = agendaN((b) => b.stage <= 1 && nextFloor(b)), floorN2 = agendaN((b) => b.stage === 2 && nextFloor(b));
+  const floorLine = (n, label) => n || state.agenda === "floor" ? `<button class="srow sub" type="button" data-agenda="floor" aria-pressed="${state.agenda === "floor"}"${ROW_DESC(FLOOR_TIP)}>
+       <span class="sl">${label}${TIPR(FLOOR_TIP)}</span><span class="sn">${num(n)}</span></button>` : "";
+  const floorRow = floorLine(floorN1, "On an upcoming floor calendar");
+  const floorRow2 = UNI ? "" : floorLine(floorN2, "On the other house's floor calendar");
   const agendaRow = (soon || state.agenda === "soon" ? `<button class="srow sub" type="button" data-agenda="soon" aria-pressed="${state.agenda === "soon"}"${ROW_DESC(AGENDA_TIP)}>
        <span class="sl">On an upcoming committee agenda${TIPR(AGENDA_TIP)}</span><span class="sn">${num(soon)}</span></button>` : "")
     + (meetsN || state.agenda === "meets" ? `<button class="srow sub" type="button" data-agenda="meets" aria-pressed="${state.agenda === "meets"}"${ROW_DESC(MEETS_TIP)}>
@@ -1931,7 +1935,7 @@ function renderPipeline() {
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
     <div class="pg stale">${head("Died", [0, 1, 2, 3])}${[0, 1, 2, 3].map(row).join("")}</div>
     ${counts[4] ? `<div class="pg stale">${row(4)}</div>` : ""}` : `
-    <div class="pg leg">${head(`In ${BODY}`, [0, 1, 2, 3])}${row(0)}${agendaRow}${row(1)}${floorRow}${[2, 3].map(row).join("")}${amendRow}</div>
+    <div class="pg leg">${head(`In ${BODY}`, [0, 1, 2, 3])}${row(0)}${agendaRow}${row(1)}${floorRow}${row(2)}${floorRow2}${row(3)}${amendRow}</div>
     <div class="pg live"><div class="pg-h">With ${EXEC.the}</div>${[4].map(row).join("")}</div>
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>`}`);
 }

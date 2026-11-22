@@ -41,7 +41,7 @@ const WatchRows = (() => {
       // (A floor calendar, kind "floor": "Floor vote Mar 2", or "On the Senate calendar Mar 2" for a list of bills that
       // can come up that day, note "listed".)
       else if (meet && dl.d === meet.when.slice(0, 10)) x.due = meet.kind !== "floor" ? `Committee meets ${day(dl.d)}`
-        : meet.note === "listed" ? `On the ${meet.committee.replace(/ floor$/i, "")} calendar ${day(dl.d)}` : `Floor vote ${day(dl.d)}`;
+        : meet.note === "listed" ? `On the ${meet.committee.replace(/ floor$/i, "")} calendar ${day(dl.d).replace(" ", "\u00a0")}` : `Floor vote ${day(dl.d).replace(" ", "\u00a0")}`;
       else if (dl.d === c.WR.sessionEnd().date) x.due = c.WR.daysUntil(dl.d) >= 0 ? `Session ends ${day(dl.d)}` : "Session could end any day";
     }
     if (dl.g === "year") x.yearGroup = c.S.passedBothGroup?.[0] || "";
