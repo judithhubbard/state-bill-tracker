@@ -3,11 +3,13 @@
 
 - Members, parties, districts and committee roles: the Legislative Service Commission's API (data/oh/<session>/
   legislators.json, committees.json, committee_members.json, from states/oh/fetch.py). Seat ids "S:5", "H:63".
-- Emails and links to each member's page: Open States' public-domain file (data/oh/openstates_people.csv), since the
-  House's and Senate's sites turn automated requests away (decided 2026-10-31); matched by house and district. It has
-  no phone numbers. Usage: python3 states/oh/contacts.py [session]
+- Emails and links to each member's page: Open States' public-domain file (data/oh/openstates_people.csv; decided
+  2026-10-31, when the House's and Senate's sites turned automated requests away); matched by house, district and last
+  name. It has no phone numbers.
+- Office phones and addresses: each member's own page on ohiohouse.gov or ohiosenate.gov (data/oh/member_pages.json,
+  read by fetch.py's member_pages(); approved by the owner 2026-11-22). Usage: python3 states/oh/contacts.py [session]
 """
-import csv, json, os, sys
+import csv, json, os, re, sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -18,6 +20,17 @@ from states.oh import profile as P
 PARTY = {"party_republican_1": "Republican", "party_democrat_1": "Democratic"}
 
 
+def page_of(row):
+    """A current member's page on their own house's site, from Open States' links (a senator's can name their old
+    House page first): "https://www.ohiosenate.gov/members/rob-mccolley"."""
+    site = "ohiosenate.gov" if row["current_chamber"] == "upper" else "ohiohouse.gov"
+    for u in row["links"].split(";"):
+        m = re.match(rf"https?://(?:www\.)?{re.escape(site)}/members/([a-z0-9-]+)/?$", u.strip())
+        if m:
+            return f"https://www.{site}/members/{m.group(1)}"
+    return None
+
+
 def build(session):
     folder = os.path.join(P.DATA, str(session))
     legs = json.load(open(os.path.join(folder, "legislators.json")))
@@ -25,6 +38,10 @@ def build(session):
         rows = list(csv.DictReader(open(os.path.join(P.DATA, "openstates_people.csv"))))
     except OSError:
         rows = []
+    try:
+        pages = json.load(open(os.path.join(P.DATA, "member_pages.json")))
+    except (OSError, ValueError):
+        pages = {}
     os_by = {("S" if r["current_chamber"] == "upper" else "H", int(r["current_district"] or 0)): r for r in rows}
     people, by_lpid = {}, {}
     for m in legs:
@@ -40,11 +57,14 @@ def build(session):
         same = lambda x: name_key(x.replace("\u2010", "-").replace("\u2011", "-")).split()[-1:]
         if o and same(o["family_name"]) != same(last or name):
             o = None
-        links = [u for u in (o["links"].split(";") if o else []) if "/members/" in u]
+        page = page_of(o) if o else None
+        info = pages.get(page) or {}
+        phones = [["Columbus", n] for n in info.get("phones", [])]
         people[sid] = {
             "name": name, "key": name_key(name), "id": m.get("lpid"), "party": PARTY.get(m.get("party"), ""),
-            "email": (o or {}).get("email") or None, "form": None, "phone": None, "phones": [],
-            "url": links[0] if links else None, "image": (o or {}).get("image") or None, "office": "",
+            "email": (o or {}).get("email") or None, "form": None,
+            "phone": phones[0][1] if phones else None, "phones": phones,
+            "url": page, "image": (o or {}).get("image") or None, "office": info.get("office", ""),
             "position": None, "places": "", "dataName": last or name,
         }
         by_lpid[m.get("lpid")] = name
@@ -79,6 +99,7 @@ def main(session):
     ppl = out["people"].values()
     comms = list(out["senateCommittees"].values()) + list(out["assemblyCommittees"].values())
     print(f"{path}: {len(out['people'])} legislators ({sum(1 for p in ppl if p['email'])} with email, "
+          f"{sum(1 for p in ppl if p['phone'])} with a phone, {sum(1 for p in ppl if p['url'])} with a page, "
           f"{sum(1 for p in ppl if p['party'])} with party), {len(out['senateCommittees'])} Senate and "
           f"{len(out['assemblyCommittees'])} House committees ({sum(1 for c in comms if c['chair'])} with a chair), "
           f"leaders {sorted(out['leaders'])}")

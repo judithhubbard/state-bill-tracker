@@ -38,10 +38,16 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   the date set back) and the 48 canceled 2026 hearings (all parse; each names a committee the bill was assigned to).
   Untested in session: Senate hearings' wording, and whether a hearing stays in the file after it's held (the date
   filter drops it either way).
-- **Contacts without emails or page links (checked 2026-11-22):** the file repository's member files (ftp.ilga.gov/Members/
-  and each GA's folder) have names, parties, districts, Capitol and district addresses and phones, and nothing else: no
-  email, no member id to build a page address from (the bill status files name sponsors only by name). www.ilga.gov, where
-  the member pages are, turns automated requests away, so it isn't read. data_check.py's contacts check leaves Illinois's
-  email and page out (`CONTACT_GAPS`). Open States' people file could supply emails, as for Pennsylvania (the owner's
-  decision there), if the owner wants it here too.
+- **Contacts: emails and page links from Open States (the owner's decision 2026-11-22, as for Pennsylvania):** the file
+  repository's member files (ftp.ilga.gov/Members/ and each GA's folder) have names, parties, districts, Capitol and
+  district addresses and phones, and nothing else: no email, no member id to build a page address from. So fetch.py's
+  `people()` downloads Open States' public-domain file (data.openstates.org/people/current/il.csv, to
+  data/il/openstates_people.csv; a failed or odd answer keeps the last copy), and contacts.py's `add_open_states()` takes
+  each member's email and the address of their page on ilga.gov (the "https://www.ilga.gov/House/Members/Details/3358"
+  form among the record's links), matched by house and district and a shared part of the last name (Open States' "Mike
+  Simmons-Gessesse" is the files' "Mike Simmons"; a seat filled since gets neither). The ilga.gov pages are only linked,
+  never read: ilga.gov asks programs to use the file repository. "About this data" names Open States. On 2026-11-22:
+  before, 0 of 177 with an email or page; after, 174 emails (Faraci, Hills and Preston have none in Open States; a few
+  addresses are personal ones, e.g. Simmons's gmail.com, as Open States lists them) and 177 pages. Illinois is no longer
+  in data_check.py's `CONTACT_GAPS`. Open States' file also has photos (cdn.ilga.gov) not used yet.
 - **The next General Assembly (2026-11-22):** members prefile bills from early December (1,081 of the 104th's were "Prefiled with Clerk" on 2024-12-02); fetch.py asks for the next Assembly's BillStatus folder every run (`main()`: up to `CURRENT + 2`; /Legislation/105/ answered 404 on 2026-11-22) and reads it as soon as it's listed, so the 105th shows as an upcoming session from its first prefiled bills. Its member and committee lists come later: until both member lists are on file, `contacts_session()` keeps refreshing the 104th's contacts (contacts.py couldn't read lists that aren't there), and a missing committee list reads as none.
