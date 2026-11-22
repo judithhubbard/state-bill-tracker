@@ -659,7 +659,12 @@ def main():
     try:
         if not ONLY:
             members()
-            agendas()
+            try:
+                agendas()
+            except Refused:
+                raise
+            except Exception as e:  # never let the agendas stop the bills
+                print(f"agendas: failed ({type(e).__name__}: {e}); the last copy is kept", flush=True)
         for year in years:  # the current year first
             if out_of_time():
                 break
