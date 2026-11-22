@@ -18,6 +18,7 @@ from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from states import letters as L
 from states.md import profile as P
 from states.undated import settle
 
@@ -84,6 +85,27 @@ def earlier(session, b):
         elif len(old) == 1 and len(_titles(session).get(k, [])) == 1 and len(k.split()) >= 4:
             out.add((y, old[0][0]))
     return out
+
+
+MONTH_DAY = re.compile(r"(January|February|March|April|May|June|July|August|September|October|November|December) (\d{1,2}), (\d{4})")
+
+
+def veto_message(session, p):
+    """The governor's veto letter (data/md/vetoes/<year>/<SB448>.txt, fetch.py's veto_letters()) -> {year, signer,
+    text}: from "Dear President Ferguson:" (or Speaker) to "Sincerely", or None."""
+    try:
+        raw = open(os.path.join(P.DATA, "vetoes", str(session), f"{p}.txt"), encoding="utf-8").read()
+    except OSError:
+        return None
+    m = re.search(r"(?m)^\s*Dear [^\n]*[:,]+\s*$", raw)  # ("Dear President Ferguson:," and "Dear President Ferguson,")
+    if not m:
+        return None
+    body = re.split(r"(?m)^\s*(?:Sincerely|Respectfully)", raw[m.end():])[0]
+    lines = [ln for ln in body.split("\n") if not re.fullmatch(r"\s*(?:Page \d+( of \d+)?|-?\s*\d+\s*-?)\s*", ln)]
+    text_ = L.cut(L.wrapped(lines))
+    d = MONTH_DAY.search(raw[:m.start()])
+    day = datetime.strptime(" ".join(d.groups()), "%B %d %Y").date().isoformat() if d else f"{session}-05-31"
+    return {"year": int(day[:4]), "signer": P.governor_on(day), "text": text_} if text_ else None
 
 
 def load_session(session):
@@ -249,7 +271,7 @@ def load_session(session):
             "senDeleg": False, "asmDeleg": False, "budget": any("Budget" in s for s in subjects),
             "passedS": "S" in passed, "passedA": "H" in passed, "program": "Administration" in text(b.get("SponsorPrimary")) or None,
             "stage": stage, "passedIn": HOUSE[origin] if stage == 2 else None, "chapter": int(chapter.group(1)) if chapter else None,
-            "veto": None, "memo": "", "vetoMemo": None,
+            "veto": None, "memo": "", "vetoMemo": veto_message(session, p) if stage == 6 else None,
             "simText": f"{title} {text(b.get('Synopsis'))}",
             "comm": committee if stage == 0 else None,
             "first": min((s[0] for s in steps if s[0]), default=f"{session}-01-01"),
