@@ -626,6 +626,74 @@ def finish():
         os.remove(marker)
 
 
+SCHEDULE = "https://committeeschedule.legis.wisconsin.gov"  # the Legislature's committee schedule (no robots.txt)
+
+
+def parse_schedule(page):
+    """The committee schedule page -> [(committee, "2026-02-03T10:00:00", [bill numbers])]. The page carries every
+    meeting of the biennium as calendar events in its script: title "Judiciary and Public Safety (Senate)", start,
+    classNames "Senate " ("Senate  canceledMtg " when canceled: left out), eItems "SB6; SB25" (or "(None)", rules
+    "CR24-051", appointments). Names become "Senate Judiciary and Public Safety", "Assembly Rules", "Joint Finance"."""
+    out = []
+    for m in re.finditer(r"\{\s*title: \"((?:[^\"\\]|\\.)*)\",\s*start: '([^']*)',\s*description: '[^']*',\s*"
+                         r"classNames: '([^']*)',.*?eItems: '((?:[^'\\]|\\.)*)'", page, re.S):
+        title, start, classes, items = m.groups()
+        if "canceled" in classes.lower() or not re.match(r"\d{4}-\d\d-\d\dT\d\d:\d\d", start):
+            continue
+        try:
+            title = json.loads(f'"{title}"')
+        except ValueError:
+            pass
+        title = html.unescape(title).strip()
+        h = re.match(r"(.+?) \((Assembly|Senate|Joint|Legislative Council)\)$", title)
+        if h:
+            house = "Joint" if h.group(2) == "Legislative Council" else h.group(2)
+            name = h.group(1)
+            name = name if name.startswith(house + " ") else f"{house} {name}"  # "Joint Legislative Audit Committee"
+        else:
+            name = f"Joint {title}"
+        stamp = (start + ":00")[:19]
+        bills = []
+        for a, n in re.findall(r"\b(AB|SB|AJR|SJR)\s*0*(\d+)\b", items):
+            if f"{a}{n}" not in bills:
+                bills.append(f"{a}{n}")
+        out.append((name, stamp, bills))
+    return out
+
+
+def agendas(year):
+    """Bills on committee meetings (public hearings and executive sessions) from yesterday to three weeks ahead, from
+    the committee schedule (one page with the whole biennium), into data/wi/<year>/agendas.json: bill -> [["Senate
+    Judiciary and Public Safety", "2027-02-03T10:00:00"], ...]. A failure keeps the last file."""
+    today = date.today()
+    first, last = (today - timedelta(days=1)).isoformat(), (today + timedelta(days=21)).isoformat()
+    # The address the page's own script loads (the first answer is a stub that sends the browser here).
+    url = f"{SCHEDULE}/?StartDate={today.isoformat()}&CommitteeID=-1&CommItemVisibleName=-1&TopicID=-1&ViewType=listWeek&ReloadCache=True"
+    try:
+        time.sleep(1)
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": AGENT}), timeout=180) as r:
+            page = r.read().decode("utf-8", "replace")
+    except Exception as e:
+        print(f"{year}: committee schedule unreadable ({type(e).__name__}); kept the last agendas", flush=True)
+        return
+    meetings = parse_schedule(page)
+    if not meetings and "successCallback" not in page:
+        print(f"{year}: committee schedule has no meeting list; kept the last agendas", flush=True)
+        return
+    out, n = {}, 0
+    for name, stamp, bills in meetings:
+        if not first <= stamp[:10] <= last:
+            continue
+        n += 1
+        for b in bills:
+            if [name, stamp] not in out.setdefault(b, []):
+                out[b].append([name, stamp])
+    folder = os.path.join(DATA, str(year))
+    os.makedirs(folder, exist_ok=True)
+    save(os.path.join(folder, "agendas.json"), out)
+    print(f"{year}: agendas: {len(out)} bills on {n} meetings ({len(meetings)} meetings listed)", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     marker = os.path.join(DATA, "incomplete")
@@ -633,6 +701,11 @@ def main():
     if not os.path.exists(marker):  # until this run finishes, the copy may be partial
         with open(marker, "w") as f:
             f.write("running\n")
+    if len(sys.argv) == 1:
+        try:
+            agendas(CURRENT)
+        except Exception as e:  # agendas never break the run
+            print(f"agendas failed ({type(e).__name__}); kept the last file", flush=True)
     for y in range(FIRST, CURRENT + 1, 2):
         session(y)
     sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
