@@ -90,7 +90,9 @@ const WatchRules = (() => {
     function dueText(b, dl, fmt = shortDay) {
       if (!facts().current || !dl.d) return "";
       if (b.stage === 4) return ` · due ${fmt(dl.d)}`;
-      if (dl.g === "soon" && b.stage < 3) return ` · ${dl.origin ? S.originWord || "deadline to pass its house" : dl.d === sessionEnd().date ? "session ends" : "meets"} ${fmt(dl.d)}`;
+      const fl = dl.g === "soon" && hooks.nextMeeting?.(b);
+      if (dl.g === "soon" && b.stage < 3) return ` · ${dl.origin ? S.originWord || "deadline to pass its house" : dl.d === sessionEnd().date ? "session ends"
+        : fl?.kind === "floor" && fl.when.slice(0, 10) === dl.d ? (fl.note === "listed" ? "on the calendar" : "floor vote") : "meets"} ${fmt(dl.d)}`;
       return "";
     }
     // Each group's name and its note.
@@ -109,11 +111,13 @@ const WatchRules = (() => {
     };
     return { daysUntil, sessionEnd, floorVotesOver, standing, live, canAct, deadlineOf, dueText, groups, lastYear };
   }
-  // The next committee meeting with the bill on its agenda ([{when, committee}]), in the current session.
-  function nextMeeting(agenda, current) {
+  // The next committee meeting with the bill on its agenda ([{when, committee, kind, note}]), in the current session (or
+  // floor day: kind "floor", the house as committee, "Senate floor").
+  // (stage: the bill's; a floor day counts only while it still needs a floor vote, stage 2 or less.)
+  function nextMeeting(agenda, current, stage) {
     if (!current || !agenda || !agenda.length) return null;
     const now = new Date(Date.now() - 6 * 36e5).toISOString().slice(0, 16);
-    return agenda.filter((a) => a.when >= now).sort((x, y) => (x.when < y.when ? -1 : 1))[0] || null;
+    return agenda.filter((a) => a.when >= now && !(a.kind === "floor" && stage > 2)).sort((x, y) => (x.when < y.when ? -1 : 1))[0] || null;
   }
   return { make, nextMeeting, SOON_DAYS, monthDay, shortDay, ORDER, localToday };
 })();

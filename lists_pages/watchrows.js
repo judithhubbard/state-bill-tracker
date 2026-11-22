@@ -33,12 +33,15 @@ const WatchRows = (() => {
     }
     if (!c.act) return { group: "idle", out: true };
     const dl = c.WR.deadlineOf(b), x = { group: dl.g, date: dl.d || "" };
-    const meet = WatchRules.nextMeeting(b.agenda, true);
+    const meet = WatchRules.nextMeeting(b.agenda, true, b.stage);
     if (dl.d) {
       if (b.stage === 4) x.due = `${c.exec || "Governor"} by ${day(dl.d)}`;
       else if (dl.origin) x.due = `Must pass its house by ${day(dl.d)}`;
       else if (dl.g === "year") x.due = `Due by ${day(dl.d)}`;
-      else if (meet && dl.d === meet.when.slice(0, 10)) x.due = `Committee meets ${day(dl.d)}`;
+      // (A floor calendar, kind "floor": "Floor vote Mar 2", or "On the Senate calendar Mar 2" for a list of bills that
+      // can come up that day, note "listed".)
+      else if (meet && dl.d === meet.when.slice(0, 10)) x.due = meet.kind !== "floor" ? `Committee meets ${day(dl.d)}`
+        : meet.note === "listed" ? `On the ${meet.committee.replace(/ floor$/i, "")} calendar ${day(dl.d)}` : `Floor vote ${day(dl.d)}`;
       else if (dl.d === c.WR.sessionEnd().date) x.due = c.WR.daysUntil(dl.d) >= 0 ? `Session ends ${day(dl.d)}` : "Session could end any day";
     }
     if (dl.g === "year") x.yearGroup = c.S.passedBothGroup?.[0] || "";

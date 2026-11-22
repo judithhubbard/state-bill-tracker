@@ -72,7 +72,9 @@ def current_items(site, st):
         except (OSError, ValueError, KeyError):
             continue
         for num, row in bills.items():
-            for when, comm in (row[8] if len(row) > 8 and isinstance(row[8], list) else []):
+            # (A floor calendar's day carries its kind, [when, "Senate floor", "floor"(, "listed")]: logged the same way,
+            # under the house's "committee", so its notice can be measured too.)
+            for when, comm, *_ in (row[8] if len(row) > 8 and isinstance(row[8], list) else []):
                 items[f"{session}|{num}|{comm}|{when}"] = when
     return items
 
