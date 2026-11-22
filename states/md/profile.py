@@ -102,5 +102,12 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most from 2024 to 2026, picked by hand from an automatic
+# phrase scan and checked against samples of the bills matched (notes/trends.md). Matched on the titles (the records
+# here have no summaries).
+TRENDS = [
+    ("rise", "Cryptocurrency", r"cryptocurrenc|virtual currenc|digital asset|blockchain|bitcoin|stablecoin|crypto", True),
+    ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen|undocumented", True),
+    ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+]
 WORDING = []

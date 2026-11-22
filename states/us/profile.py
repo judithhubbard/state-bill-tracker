@@ -203,5 +203,24 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most over the 117th, 118th and 119th Congresses, picked by
+# hand from an automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Matched on
+# title and summary (Congress.gov's titles; few bills have a summary in their first months).
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|deepfake|\bgenerative|chatbot|algorithmic|machine learning)|\bAI\b", False),
+    ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+    ("rise", "Government shutdowns", r"shutdown|lapse in (?:discretionary )?appropriations", True),
+    ("rise", "Overturning agency rules", r"congressional disapproval", True),
+    ("rise", "War powers", r"war powers|hostilities|removal of United States Armed Forces", True),
+    ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen|illegal aliens?|unauthorized aliens?|undocumented|deport", True),
+    ("rise", "Wildfire", r"wildfire|wildland fire", True),
+    ("rise", "Child care", r"child ?care|day care", True),
+    ("rise", "Antisemitism", r"antisemit|anti-semit", True),
+    ("rise", "Pharmacy benefit managers", r"pharmacy benefits? manager|\bPBMs?\b", True),
+    ("rise", "Diversity, equity and inclusion", r"diversity, equity|diversity and equity|diversity equity|\bDEI\b", True),
+    ("spike", "Fentanyl", r"fentanyl|xylazine|carfentanil", True),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic|sars-cov", True),
+    ("spike", "Russia and Ukraine", r"russia|ukrain", True),
+    ("spike", "Afghanistan", r"afghan", True),
+]
 WORDING = []

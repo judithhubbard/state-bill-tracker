@@ -107,5 +107,11 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most across the sessions shown, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Oregon alternates long and
+# short sessions, and the summaries' wording changed in 2025 (the scan's phrases mostly measure that), so only the one
+# clear shift. Matched on title and summary.
+TRENDS = [
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic|sars-cov", True),
+]
 WORDING = []

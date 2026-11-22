@@ -122,5 +122,21 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most across the sessions shown, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Matched on the bills' titles
+# (the records have no separate summaries).
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated decision|algorithmic|deep ?fake|synthetic media|\bgenerative|chatbot)|\bAI\b", False),
+    ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen|undocumented", True),
+    ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+    ("rise", "Wildfire", r"wildfire|wildland fire", True),
+    ("rise", "Home insurance", r"residential property insurance|\bFAIR Plan|homeowners'?s? insurance|\bproperty insurance", True),
+    ("rise", "E-bikes and scooters", r"electric[- ]assist(?:ed)? bicycle|electric bicycle|e-bikes?\b|electric (?:motorized )?scooter|motorized scooter", True),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic|sars-cov", True),
+    ("spike", "Cannabis", r"cannabis|marijuana", True),
+    ("spike", "Fentanyl", r"fentanyl|xylazine|carfentanil", True),
+    ("spike", "Homelessness", r"homeless|unsheltered|unhoused", True),
+    ("spike", "Mental health", r"\bmental health", True),
+    ("spike", "Catalytic converters", r"catalytic converter", True),
+]
 WORDING = []

@@ -167,5 +167,14 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most between 2023-24 and 2025-26, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Only two sessions are shown,
+# so only the clearest shifts. Matched on title and summary.
+TRENDS = [
+    ("rise", "Immigration", r"immigra|illegal aliens?|unlawfully present|undocumented|noncitizen|unauthorized aliens?", True),
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|deepfake|\bgenerative|chatbot|algorithm)|\bAI\b", False),
+    ("rise", "Sales tax on groceries", r"food and food ingredients|grocery tax|food retail sales tax|sales tax on food|tax on the retail sale of food", True),
+    ("spike", "Firearms", r"firearm|handgun|\bguns?\b|machine gun|auto sear|ammunition", True),
+    ("spike", "Third-grade retention", r"third[- ]grade", True),
+]
 WORDING = []

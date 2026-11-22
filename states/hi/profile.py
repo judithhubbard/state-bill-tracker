@@ -164,5 +164,14 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most between 2023-24 and 2025-26, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Only two sessions are shown,
+# so only the clearest shifts. Matched on title and summary. (Patterns avoid "Hawaii": 2023-24's texts spell it Hawaiʻi.)
+TRENDS = [
+    ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen|illegal alien|unauthorized alien|undocumented", True),
+    ("rise", "Homeowners and condo insurance", r"homeowners'?s? insurance|property insurance|property and casualty insurance|condominium.{0,40}insurance|insurance.{0,40}condominium", True),
+    ("rise", "E-bikes and scooters", r"electric[- ]assist(?:ed)? bicycle|electric bicycle|e-bikes?\b|electric (?:motorized |foot )?scooter|motorized scooter|low-speed electric|micromobility", True),
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated decision|algorithmic|deepfake|deep fake|synthetic media|\bgenerative\b|chatbot)|\bAI\b", False),
+    ("spike", "Wildfire", r"wildfire|wildland fire|lahaina", True),
+]
 WORDING = []

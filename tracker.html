@@ -3356,7 +3356,7 @@ function renderTrends() {
       ${x.note ? `<p class="muted">${esc(x.note)}</p>` : ""}</div>`;
   }).join("");
   box.innerHTML = `<h2>What's changing</h2>
-    <p>Subjects on the rise since ${first}${TIP(`The lines: out of every 1,000 bills introduced each session, how many name the subject in their title or summary. ${lastS} is still under way. The subjects were found by scanning for the phrases whose share changed most, then checked by hand.`)}</p>
+    <p>${T.subjects.some((x) => x.per[x.per.length - 1] < x.per[0]) ? "Subjects that rose or fell" : "Subjects on the rise"} since ${first}${TIP(`The lines: out of every 1,000 bills introduced each session, how many name the subject in their title or summary. ${lastS} is still under way. The subjects were found by scanning for the phrases whose share changed most, then checked by hand.`)}</p>
     <div class="tcards">${cards}</div>
     ${words ? `<h3 class="sub">How the wording changed</h3>
     <p class="muted">The same things in new words. Dotted line: the old wording; solid: the new.</p>

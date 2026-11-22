@@ -1330,7 +1330,8 @@ def trends(loaded):
             laws += sum(r["stage"] == 5 for r in hits)
             for r in hits:
                 for v in r["vers"]:
-                    if not v["sponsor"]:
+                    # Committees' bills (Connecticut's "General Law Committee") aren't a person's: left out.
+                    if not v["sponsor"] or re.search(r"\bCommittee\b", v["sponsor"]):
                         continue
                     key = (sn, r["first"] or "", v["p"])
                     if first is None or key < first[0]:

@@ -107,5 +107,14 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most between 2023-24 and 2025-26, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Only two sessions are shown,
+# so only the clearest shifts. Wisconsin's records carry the relating clause only, so these match it.
+TRENDS = [
+    ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+    ("rise", "Nuclear power", r"nuclear", True),
+    ("rise", "Cryptocurrency", r"cryptocurrenc|virtual currenc|digital asset|blockchain|bitcoin|crypto", True),
+    ("rise", "Hemp and THC products", r"\bhemp\b|\bTHC\b|cannabinoid", True),
+    ("spike", "Libraries", r"librar(?:y|ies|ian)", True),
+]
 WORDING = []

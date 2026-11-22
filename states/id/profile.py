@@ -103,5 +103,11 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most from 2024 to 2026, picked by hand from an automatic
+# phrase scan and checked against samples of the bills matched (notes/trends.md). Idaho's summaries are a line or two, so
+# few subjects show a clear change. Matched on title and summary.
+TRENDS = [
+    ("rise", "Repealing outdated laws", r"code cleanup|obsolete|outdated|superfluous", True),
+    ("spike", "School building funding", r"school facilit|school modernization", True),
+]
 WORDING = []

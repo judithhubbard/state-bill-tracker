@@ -133,5 +133,15 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
-WORDING = []
+# ---- What's changing: subjects whose share of bills changed most between 2023-24 and 2025-26, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Only two sessions are shown,
+# so only the two clearest shifts. Matched on title and summary.
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated decision|algorithmic|deepfake|deep fake|synthetic media|\bgenerative|chatbot)|\bAI\b", False),
+    ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+]
+# Old wording -> new wording, for the same thing.
+WORDING = [
+    (("“health care”", r"\bhealth care\b"), ("“healthcare”", r"\bhealthcare\b"),
+     "In 2025-26 South Carolina's bills switched to writing “healthcare” as one word."),
+]

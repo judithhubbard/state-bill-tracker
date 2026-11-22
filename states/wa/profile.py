@@ -110,5 +110,15 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most over the 2021-22, 2023-24 and 2025-26 sessions, picked
+# by hand from an automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Washington's
+# records carry only the short title ("AI companion chatbots"), so these match it.
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|deep ?fake|\bgenerative|chatbot|algorithmic|synthetic media|automated decision)|\bAI\b", False),
+    ("rise", "Wildfire", r"wildfire|wildland fire", True),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
+    ("spike", "Vaccines", r"vaccin|immuniz", True),
+    ("spike", "Long-term care", r"long-term care|long-term services|\bLTSS\b|WA cares", True),
+    ("spike", "Unemployment insurance", r"unemployment", True),
+]
 WORDING = []

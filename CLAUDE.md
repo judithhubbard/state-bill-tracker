@@ -777,6 +777,9 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
 - **What's changing:** `renderTrends()` draws `DATA.insights.trends`, from `trends()` in build_data.py.
   Its subjects (`TRENDS`) and wording pairs (`WORDING`, both in states/ny/profile.py) were picked by
   hand from an automatic phrase scan; check new ones before adding.
+  Every state's (and Congress's) were picked the same way on 2026-11-22, in its own profile.py: notes/trends.md has the
+  method, each subject's counts and why (AR, KY, NH, UT and WY left empty). A subject that fell makes the heading read
+  "Subjects that rose or fell"; committees aren't listed as "Most bills now".
 - **Watchlist:**
   - One watchlist, two views (the owner's decision, 2026-11-19): a state's Watchlist tab shows what /your-bills/ shows,
     that state's bills only (this session; other sessions' stars are the "3 more in 2023–24 ›" line), with the same rows,

@@ -113,5 +113,16 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most from 2023 to 2026, picked by hand from an automatic
+# phrase scan and checked against samples of the bills matched (notes/trends.md). Virginia's records have short titles
+# only, so these match the title. Each rise holds in both kinds of session (long even years, short odd ones).
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|deepfake|\bgenerative|chatbot|algorithmic|synthetic (?:media|digital content)|artificial (?:audio|visual))|\bAI\b", False),
+    ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+    ("rise", "Electric utilities", r"electric utilit", True),
+    ("rise", "Zoning", r"zoning", True),
+    ("rise", "Solar power", r"\bsolar\b", True),
+    ("spike", "Vaccines", r"vaccin|immuniz", True),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
+]
 WORDING = []

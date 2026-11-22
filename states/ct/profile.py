@@ -101,5 +101,12 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most across the sessions shown, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Long (odd-year) and short
+# sessions were compared with their own kind too. Matched on the bills' titles (no separate summaries).
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated decision|algorithmic|deep ?fake|synthetic media|\bgenerative|chatbot)|\bAI\b", False),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
+    ("spike", "Mental health", r"\bmental|behavioral health", True),
+]
 WORDING = []
