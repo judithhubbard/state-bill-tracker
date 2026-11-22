@@ -12,7 +12,8 @@ while Congress meets, a handful in recess. Kept for each meeting: its day and ti
 status (Scheduled, Rescheduled, Postponed, Canceled), committees and the bills it names (relatedItems; else the bill
 numbers its documents and title name). Meetings over a month past are dropped.
 
-No key: nothing is fetched and the last copy is kept. The run never fails the download; it stops after --minutes
+First, every run, the Senate's own schedule (senate.gov's hearings.xml, one request: `senate_schedule()`) into
+data/us/senate_hearings.json, a second source that needs no key. No key: nothing more is fetched and the last copy is kept. The run never fails the download; it stops after --minutes
 (default 4) or on the API's rate limit, and the rest is read next run.
 Usage: python3 states/us/meetings.py [--minutes N]
 """
@@ -95,8 +96,74 @@ def compact(m):
             "title": (m.get("title") or "")[:300], "bills": bills_of(m), "updateDate": m.get("updateDate") or ""}
 
 
+SENATE_XML = "https://www.senate.gov/general/committee_schedules/hearings.xml"
+SENATE_PATH = os.path.join(DATA, "senate_hearings.json")
+
+
+def senate_meetings(body):
+    """The Senate's own schedule (senate.gov's hearings.xml: every committee meeting it has posted, about a week or two
+    ahead) as meetings.json's records, keyed "senate/<identifier>": the day and time (Eastern on the page, kept in UTC as
+    the API's are), type ("Open Hearing", "Closed Business Meeting"), committee (and subcommittee), the matter, and the
+    bills its documents name (<AssociatedDocument document_prefix="S" document_num="1234">), else the "S. 1234" numbers
+    in the matter. Nominations (PN) aren't bills. The placeholder row ("No committee hearings scheduled") has no
+    identifier and is left out."""
+    import xml.etree.ElementTree as ET
+    from zoneinfo import ZoneInfo
+    out = {}
+    root = ET.fromstring(body)
+    for m in root.iter("meeting"):
+        t = lambda tag: re.sub(r"\s+", " ", (m.findtext(tag) or "")).strip()
+        ident, day = t("identifier"), t("date_iso_8601")
+        if not ident or not re.fullmatch(r"\d{4}-\d\d-\d\d", day):
+            continue
+        clock = t("time_iso_8601") or "00:00:00"
+        when = datetime.fromisoformat(f"{day}T{clock}").replace(tzinfo=ZoneInfo("America/New_York")).astimezone(timezone.utc)
+        bills = []
+        for d in m.iter("AssociatedDocument"):
+            kind, num = (d.get("document_prefix") or "").upper().replace(".", ""), d.get("document_num") or ""
+            if kind in KINDS.values() and num.isdigit():
+                bills.append(f"{kind}{int(num)}")
+        if not bills:
+            for kind, n in NUMBER.findall(t("matter")):
+                bills.append(KINDS[re.sub(r"\s", "", kind)] + str(int(n)))
+        name = "Senate " + t("committee") + (f" Subcommittee on {t('subcommittee')}" if t("subcommittee") else "")
+        matter = t("matter")
+        out[f"senate/{ident}"] = {
+            "date": when.strftime("%Y-%m-%dT%H:%M:%SZ"), "type": t("type"),
+            "status": "Canceled" if re.search(r"\bcancel", matter, re.I) else "Postponed" if re.search(r"\bpostpon", matter, re.I) else "Scheduled",
+            "committees": [name], "title": matter[:300], "bills": sorted(set(bills), key=bills.index),
+            "updateDate": t("last_update_iso_8601"), "source": "senate.gov"}
+    return out
+
+
+def senate_schedule():
+    """One request a run for the Senate's schedule (senate.gov has no robots.txt rule against it), into
+    data/us/senate_hearings.json ({"listed", "meetings"}), keeping past meetings for KEEP days as meetings.json does (the
+    schedule drops a meeting once it's held). convert.agendas() merges it with the API's meetings, without duplicates.
+    A failed request keeps the last copy."""
+    try:
+        req = urllib.request.Request(SENATE_XML, headers={"User-Agent": AGENT})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            body = r.read()
+        now_ = senate_meetings(body)
+    except Exception as e:  # noqa: BLE001 (never fails the download)
+        print(f"senate schedule: {type(e).__name__}: {e}; last copy kept")
+        return
+    old = json.load(open(SENATE_PATH)) if os.path.exists(SENATE_PATH) else {}
+    cutoff = (NOW - timedelta(days=KEEP)).strftime("%Y-%m-%d")
+    meets = {i: m for i, m in {**(old.get("meetings") or {}), **now_}.items() if m["date"][:10] >= cutoff}
+    stale = not old.get("listed") or (NOW - datetime.fromisoformat(old["listed"].replace("Z", "+00:00"))).total_seconds() > 12 * 3600
+    if meets != old.get("meetings") or stale:
+        with open(SENATE_PATH + ".tmp", "w") as f:
+            json.dump({"listed": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"), "meetings": meets}, f, indent=0, sort_keys=True)
+        os.replace(SENATE_PATH + ".tmp", SENATE_PATH)
+    soon = [m for m in now_.values() if m["bills"]]
+    print(f"senate schedule: {len(now_)} meetings posted, {len(soon)} naming bills")
+
+
 def main():
     sys.stdout.reconfigure(line_buffering=True)
+    senate_schedule()
     k = key()
     if not k:
         print("committee meetings: no Congress.gov API key (CONGRESS_API_KEY or ~/.congress_api_key); last copy kept")

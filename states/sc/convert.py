@@ -510,6 +510,8 @@ def load_session(session):
         for a in load(session, f"acts_{y}", []) or []:
             acts[a["bill"]] = (y, a)
     recs, index, texts = [], {}, {}
+    # House Research's plain summaries from the Legislative Update (states/sc/updates.py), where it has one.
+    staff = load(session, "updates/summaries", {}) or {}
     keys = sorted(bills, key=lambda k: (k[0] != "H", int(re.sub(r"\D", "", k))))
     for k in keys:
         b = bills[k]
@@ -518,7 +520,9 @@ def load_session(session):
         rec, what = record(session, k, b, seat, acts.get(k))
         index[k] = len(recs)
         recs.append(rec)
-        if what:
+        if staff.get(k):
+            texts[k] = {"statement": staff[k][2], "label": "From the House Research Staff's Legislative Update."}
+        elif what:
             texts[k] = {"statement": what, "label": "From the bill's official title."}
     json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)

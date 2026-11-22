@@ -49,6 +49,23 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2026-11-22 (2026's first prefiled bill was dated 2025-11-15). fetch.py asks for one bill a run and makes data/az/2027/
   only once there is one; convert.py's `sessions()` shows this or next year from its first bill (500 only for past
   years). A year not begun never marks Arizona incomplete.
+- **Summaries (2026-11-22): the yearly Summary of Legislation.** Both research staffs publish one PDF a year about two and
+  a half months after sine die, on www.azleg.gov (robots.txt allows /alispdfs/): /alispdfs/<57>leg/<2R>/House/
+  SummaryComplete.pdf (House Majority Research Staff's "Book", Last-Modified 2026-08-27 for the session that ended June 13)
+  and .../Senate/SummaryComplete.pdf (Senate Research Staff's "Spiel", 2026-09-25). Each has a paragraph on every measure
+  that passed the Legislature: laws (with chapter), vetoed bills and measures sent to the voters. `books()` in azleg.py,
+  after the resolutions, reads each year's two once at the crawl delay (from August for the current year; a 404 again
+  after a month) into data/az/azleg/books/<year>-House.txt and -Senate.txt (pdftotext). `states/az/books.py` reads them:
+  the House's entries ("HB 2502 (Chapter 201): title", the paragraph, "Effective: ...", "Click here for bill history.")
+  first, the Senate's ("title (S.B. 1020) – Chapter 13", then paragraphs to the next heading; its committee boxes, page
+  numbers and "SEE THE ... COMMITTEE." pointers left out) for the rest. 2024's House file at that address is the House
+  Journal, not the book, so 2024 is the Senate's. "What it does" says which ("From the House Majority Research Staff's
+  Summary of Legislation."). A budget bill's mirror ("HB 4155/SB 1848") isn't given the summary: it didn't pass. Before:
+  no "What it does" at all. After (2026-11-22, with a local copy whose 2026 first copy wasn't finished): 2024 333 of 1,708
+  bills (19.5%: all 257 laws and every veto), 2025 440 of 1,779 (24.7%: all 265 laws, 174 vetoes); 2023 and 2026 the same
+  once their bills are in (373 and 440 entries in the House books). Bills that never passed still have none (Open States'
+  "documents" links to the House summaries and Senate fact sheets are the next step). The eight books were read once on
+  2026-11-22 from the owner's computer.
 - **Veto letters (2026-11-22, OCR, the owner's decision):** the governor's own copies (linked from azgovernor.gov's
   "Legislative Action Update" releases) are on mcusercontent.com, whose robots.txt is "Disallow: /" for every program,
   and azgovernor.gov's news index answers 403: not used. The Legislature keeps the same letters on www.azleg.gov, which

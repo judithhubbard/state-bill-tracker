@@ -26,6 +26,18 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   tab's Committees points. "Where you live" lists cities, villages and counties from the Census Bureau's 2024 district relationship
   files (`states/il/towns.py`, run once; no key needed; works for any state). Bill links go to the repository's
   status pages and texts.
+- **Veto messages (2026-11-22):** the repository keeps the governor's message on each vetoed bill in the bill's folder:
+  /Legislation/104/HB/10400HB2682gms.htm ("gms", a Word page in Windows-1252), for total, amendatory and item/reduction
+  vetoes alike (an earlier survey thought total vetoes had none). fetch.py's `veto_messages()` asks for it for each status
+  file whose actions say "Governor Vetoed", "Governor Amendatory Veto" or "Governor Item/Reduction Veto", one request
+  every 10 seconds (robots.txt's Crawl-delay), once, into data/il/<GA>/vetoes/HB2682.htm; a 404 is asked again a week
+  later (vetoes/missing.json). An amendatory veto's letter says "return", not "veto": a saved page only has to be a letter
+  ("General Assembly"). `veto_message()` in convert.py keeps the paragraphs between the salutation ("... General
+  Assembly:") and "Sincerely," (they name the bill: "I veto House Bill 2682 of the 104th General Assembly"), kind
+  "conditional" for an amendatory veto (the page's New Jersey wording: sent back with changes; signed after both houses
+  accepted them; or not accepted in time), "line-item" for an item/reduction veto, and a total veto overridden shows
+  "Became law over Governor Pritzker's veto" (HB 684 of 2021). Before: no veto messages. After (2026-11-22): 21, every
+  bill with a governor's veto action in 2021-26 (102nd: 8, 103rd: 8, 104th: 5), all 12 vetoes that stood among them.
 - **Committee agendas (2026-11-22):** the repository has no hearing schedules (folders: Committees, ILCS, JCAR,
   Legislation, Members, Public Acts) and www.ilga.gov, which has them, turns automated requests away (not fetched). But
   each bill's status file names the hearings it's posted for, `<committeehearing>`: "Judiciary - Criminal Committee

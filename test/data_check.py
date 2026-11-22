@@ -552,6 +552,18 @@ def check(state):
             say(state, "FAIL", f"{s}: {len(shell)} of {len(found)} laws are summarized as placeholders, e.g. {shell[:3]}")
         elif laws and len(found) < 0.5 * len(laws):
             say(state, "LOOK", f"{s}: only {len(found)} of {len(laws)} laws have a summary in {os.path.basename(path)}")
+        # A staff summary that only says the title again (2026-11-22, when GA's Daily Reports, AZ's and SC's books were
+        # added): every word of it in the bill's title. Texts made from the title by design ("From the bill's official
+        # title.") aren't counted. LOOK only: Missouri's titles are its summaries' first sentence (SB 89 of 2025), and on
+        # 2026-11-22 the owner's local copies also showed Virginia 2024's summaries cut to a few words ("Installation" for
+        # HB 1037), both to look into before this can fail a run.
+        tw_ =lambda t: set(re.findall(r"[a-z]{3,}", (t or "").lower())) - {"the", "and", "for", "this", "bill", "act", "that", "with"}
+        bytitle = {r["nums"][0]: r["title"] for r in recs}
+        echo = [n for n, v in T.items() if n in bytitle and v.get("statement") and "official title" not in (v.get("label") or "")
+                and (sw := tw_(re.sub(r"^\W*(?:[HSA]\.?\s?[BRJC]*\.?\s*\d+|(?:House|Senate) Bill \d+)\b", "", v["statement"])))
+                and sw <= tw_(bytitle[n])]
+        if echo:
+            say(state, "LOOK", f"{s}: {len(echo)} summaries only repeat the title's words, e.g. {echo[:4]}")
         # A summary of an earlier version that another bill's contents replaced: KS conference reports often put other
         # bills into a bill (HB 2043 of 2025-26: an insurance bill as passed, a property tax law after conference), and the
         # supplemental note describes it before. Laws whose summary shares almost no words with their own title.

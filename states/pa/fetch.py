@@ -9,6 +9,7 @@ state-survey-2026-10-31 memory; robots.txt limits only an accessibility scanner)
   and committee roll calls, and each roll call's page lists every member's vote (committee votes also carry a "Brief
   Description" of the bill). Into data/pa/<year>/bills/<HB17>.json (the bill's roll-call links, read again when the
   bill's lastUpdate changes) and data/pa/<year>/rollcalls/<house>_<key>.json (one per roll call; read once).
+- The House floor calendars' staff descriptions of each bill ("This bill bans paraquat."; `calendars()`), going forward.
 One request a second. Usage: python3 states/pa/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029)
 """
 import html, io, json, os, re, sys, time, urllib.request, zipfile
@@ -236,6 +237,85 @@ def agendas(session):
     print(f"agendas: {len(out)} bills on {n} meetings")
 
 
+CAL_LISTS = ["/house/session/calendars", "/house/session/calendars?c=22", "/house/session/calendars?c=23"]
+CAL_AGAIN = 6 * 3600  # the calendar pages listed: looked at every 6 hours (a new calendar after each session day)
+
+
+def calendar_entries(page):
+    """A House calendar page (/house/session/calendars/view?CalendarId=11117&ext=HTML) -> (day, session's first year,
+    {"HB1135": "This bill bans paraquat."}): each bill row (its number's link, body=H&type=B&bn=1135) and the staff's
+    one- or two-sentence description in the row after it (<td class="analysis">). Resolutions have none."""
+    m = re.search(r"SESSION OF (\d{4})-\d{4}", page)
+    year = int(m[1]) if m else None
+    m = re.search(r"(JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER) (\d{1,2}), (\d{4})", page)
+    months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"]
+    day = date(int(m[3]), months.index(m[1]) + 1, int(m[2])).isoformat() if m else ""
+    out = {}
+    rows = re.split(r"(?i)<tr\b", page)
+    for i, row in enumerate(rows):
+        n = re.search(r"body=([HS])&(?:amp;)?type=B&(?:amp;)?bn=(\d+)", row)
+        if not n:
+            continue
+        for nxt in rows[i + 1:i + 3]:
+            a = re.search(r'(?is)<td[^>]*class="analysis"[^>]*>(.*?)</td>', nxt)
+            if a:
+                t = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", a[1]))).strip()
+                if len(t) >= 15:
+                    out[f"{n[1]}B{int(n[2])}"] = t
+                break
+            if re.search(r"body=[HS]&", nxt):
+                break
+    return day, year, out
+
+
+def calendars():
+    """The staff's description of each bill on the House's floor calendars (the Calendar, the Tabled Bill Calendar and the
+    Uncontested Calendar: only the current ones are linked, so this works going forward), into
+    data/pa/<year>/calendar_descriptions.json: {bill: [calendar day, description]}, each bill's latest. The lists are
+    looked at every CAL_AGAIN seconds; each calendar is read once (a new one is printed after each session day).
+    Fails quietly: the last file stays."""
+    state_path = os.path.join(DATA, "calendars_read.json")
+    try:
+        st = json.load(open(state_path))
+    except (OSError, ValueError):
+        st = {}
+    if time.time() - st.get("listed", 0) < CAL_AGAIN:
+        return
+    ids = []
+    for path in CAL_LISTS:
+        page = get(SITE + path)
+        if not page:
+            print(f"calendars: {path} didn't answer; kept the last file")
+            return
+        ids += [i for i in re.findall(r"calendars/view\?CalendarId=(\d+)&(?:amp;)?ext=HTML", page) if i not in ids]
+    read = st.setdefault("read", {})
+    got = 0
+    for cid in ids:
+        if cid in read:
+            continue
+        page = get(f"{SITE}/house/session/calendars/view?CalendarId={cid}&ext=HTML")
+        if not page:
+            continue
+        day, year, found = calendar_entries(page)
+        read[cid] = day
+        if not year:
+            continue
+        os.makedirs(os.path.join(DATA, str(year)), exist_ok=True)
+        path = os.path.join(DATA, str(year), "calendar_descriptions.json")
+        try:
+            have = json.load(open(path))
+        except (OSError, ValueError):
+            have = {}
+        for bill, text in found.items():
+            if bill not in have or have[bill][0] <= day:
+                have[bill] = [day, text]
+        save(path, have)
+        got += len(found)
+    st["listed"] = time.time()
+    save(state_path, st)
+    print(f"calendars: {len(ids)} listed, {got} descriptions read now")
+
+
 def begun(session):
     """Whether a session has convened (the first Tuesday of January of its first year)."""
     return date.today() >= date(session, 1, 1 + (1 - date(session, 1, 1).weekday()) % 7)
@@ -254,6 +334,10 @@ def main():
         agendas(CURRENT)
     except Exception as e:  # never holds the run
         print(f"agendas: {e}")
+    try:
+        calendars()
+    except Exception as e:  # never holds the run
+        print(f"calendars: {e}")
     # Every session's bill history first (small, and enough for the pages), then the roll calls, the current session's
     # first: a first copy of the roll calls takes several runs.
     got = {}

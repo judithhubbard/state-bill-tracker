@@ -5,6 +5,7 @@
 - /Legislation/<GA>/BillStatus/XML/: one XML per bill (HB, SB) and per joint resolution proposing a constitutional
   amendment (HC = HJRCA, SC = SJRCA); other resolutions are left out. The folder listing's dates decide which changed since the last
   run, and only those are downloaded (six at a time). Into data/il/<GA>/billstatus/, with listing dates in dates.json.
+- /Legislation/<GA>/HB|SB/<GA>00HB2682gms.htm: the governor's message on each vetoed bill (`veto_messages()`).
 - /Members/<GA>HouseMembers.xml, <GA>SenateMembers.xml and /Committees/<GA>...CommitteeMembers.xml, every run.
 
 The servers don't send the intermediate certificate their own certificate needs (Sectigo Public Server Authentication
@@ -12,7 +13,7 @@ CA OV R40), so it's fetched from Sectigo and added to a copy of the system's cer
 connection is still fully checked.
 Usage: python3 states/il/fetch.py [first_year]   (default 2021)
 """
-import json, os, re, subprocess, sys, time, urllib.request
+import glob, json, os, re, subprocess, sys, time, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -119,6 +120,55 @@ def members(ga):
             print(f"{name}: no member list in the answer ({len(body or '')} characters); keeping the last copy")
 
 
+VETO_ACTION = re.compile(r"<action>Governor (?:Vetoed|Amendatory Veto|Item/Reduction Veto)")
+VETO_DELAY = 10  # robots.txt: Crawl-delay: 10 (the bill status files are read six at a time, as before 2026-11-22)
+VETO_AGAIN = 7 * 86400  # a message not there yet is asked for again after a week
+
+
+def veto_messages(ga):
+    """The governor's message on each bill he vetoed (total, amendatory or item/reduction), from the bill's folder in the
+    repository: /Legislation/104/HB/10400HB2682gms.htm ("gms": governor's message), a Word page in Windows-1252, read once
+    into data/il/<GA>/vetoes/HB2682.htm. The bills are the status files whose actions include "Governor Vetoed",
+    "Governor Amendatory Veto" or "Governor Item/Reduction Veto". A 404 (the message is filed a few days after the veto) is
+    noted in vetoes/missing.json and asked for again a week later. One request every VETO_DELAY seconds."""
+    base = os.path.join(P.DATA, str(ga))
+    out = os.path.join(base, "vetoes")
+    path = os.path.join(out, "missing.json")
+    try:
+        missing = json.load(open(path))
+    except (OSError, ValueError):
+        missing = {}
+    todo = []
+    for f in sorted(glob.glob(os.path.join(base, "billstatus", "*.xml"))):
+        m = re.search(r"\d{5}(HB|SB)(\d{4})\.xml$", f)
+        if not m:
+            continue
+        bill = f"{m[1]}{int(m[2])}"
+        if os.path.exists(os.path.join(out, bill + ".htm")) or time.time() - missing.get(bill, 0) < VETO_AGAIN:
+            continue
+        if VETO_ACTION.search(open(f, encoding="utf-8", errors="replace").read()):
+            todo.append((bill, f"{REPO}/Legislation/{ga}/{m[1]}/{ga}00{m[1]}{m[2]}gms.htm"))
+    got = 0
+    for bill, url in todo:
+        time.sleep(VETO_DELAY)
+        r = subprocess.run(["curl", "-sS", "--cacert", CA, "--max-time", "120", "-A", AGENT, "-w", "%{http_code}", url],
+                           capture_output=True)
+        body, code = r.stdout[:-3], r.stdout[-3:].decode(errors="replace")
+        if r.returncode == 0 and code == "200" and re.search(rb"(?i)General Assembly", body):  # a letter (amendatory ones say "return", not "veto")
+            os.makedirs(out, exist_ok=True)
+            open(os.path.join(out, bill + ".htm"), "wb").write(body)
+            missing.pop(bill, None)
+            got += 1
+        elif r.returncode == 0 and code == "404":
+            missing[bill] = time.time()
+        else:
+            print(f"veto message {url}: {code or r.stderr.decode(errors='replace').strip()}", flush=True)
+    if todo:
+        os.makedirs(out, exist_ok=True)
+        json.dump(missing, open(path, "w"))
+        print(f"GA {ga}: {got} of {len(todo)} veto messages downloaded", flush=True)
+
+
 def main():
     ca_bundle()
     for year in sorted(range(FIRST, CURRENT + 3, 2), reverse=True):  # newest first
@@ -126,6 +176,10 @@ def main():
         if listing(f"{REPO}/Legislation/{ga}/BillStatus/XML/") or os.path.isdir(os.path.join(P.DATA, str(ga))):
             session(ga)
             members(ga)  # each Assembly's members, to read its sponsor lists
+            try:
+                veto_messages(ga)
+            except Exception as e:  # never holds Illinois back
+                print(f"GA {ga}: veto messages failed ({type(e).__name__}: {e})", flush=True)
     people()
 
 
