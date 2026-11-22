@@ -959,13 +959,51 @@ def agendas(session):
     try:
         data = json.load(open(os.path.join(folder(session), "agendas.json"), encoding="utf-8"))
     except (OSError, ValueError):
-        return {}
+        data = {}
     today = date.today().isoformat()
     out = {}
     for bill, meets in data.items():
         keep = [m for m in meets if m[1][:10] >= today]
         if keep:
             out[bill] = sorted(keep, key=lambda m: m[1])
+    floor_days(session, out)
+    for bill in out:
+        out[bill].sort(key=lambda m: m[1])
+    return out
+
+
+# Floor calendars (states/wv/calendars.py; fetch.py's floor_calendars()). Third reading is the passage vote: on the
+# Senate's calendar and the House's Special Calendar it's set for that day (2024-25's archived calendars: voted that day
+# 90% in each; most of the rest were laid over a day, postponed or sent to the Rules Committee), on the House Calendar
+# (bills set aside from the Special Calendar) only listed (35%). Other sections are listed: second reading (the amendment
+# stage; the vote comes the next day), first reading and unfinished business.
+FLOOR_HOUSE = {"sdc": "Senate", "hsc": "House of Delegates", "hdc": "House of Delegates"}
+FLOOR_SET = {("sdc", "THIRD READING"), ("hsc", "THIRD READING")}
+
+
+def floor_days(session, out, since=None):
+    """Add each floor calendar's bills from `since` (floorcal.since()) on to out, {bill: [entries]}. A bill on both
+    of the House's calendars for one day keeps the set vote."""
+    from states import floorcal
+    from states.wv import calendars as K
+    try:
+        cals = json.load(open(os.path.join(folder(session), "floor.json"), encoding="utf-8")).get("calendars") or {}
+    except (OSError, ValueError):
+        return out
+    since = since or floorcal.since(P.TIMEZONE)
+    for c in sorted(cals.values(), key=lambda c: (c["day"], c["kind"] != "hsc")):
+        if c["day"] < since or c["kind"] not in FLOOR_HOUSE or not K.regular(c["day"]):
+            continue
+        when = f"{c['day']}T{c.get('time') or '00:00'}:00"
+        for section, bill in c["bills"]:
+            sure = (c["kind"], section) in FLOOR_SET
+            e = floorcal.entry(FLOOR_HOUSE[c["kind"]], when, listed=not sure)
+            have = [x for x in out.get(bill, []) if x[2:3] == ["floor"] and x[0] == e[0] and x[1][:10] == when[:10]]
+            if have and (not sure or have[0][3:] == []):
+                continue  # one entry a house a day; the set vote wins
+            for x in have:
+                out[bill].remove(x)
+            floorcal.add(out, bill, e)
     return out
 
 

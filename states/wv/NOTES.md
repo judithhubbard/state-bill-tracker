@@ -77,3 +77,26 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   tested on the Internet Archive's copies of two agenda pages (House ACT subcommittee, February 18, 2025: HB2043 and
   HB2060; Senate Agriculture, February 8, 2023: SB561), whose keys match the records; robots.txt allows /committees/
   (fetch.py's docstring, checked 2026-11-09). Check it in the first January run (see the January plan in the report).
+- **Floor calendars (2026-11-22; not yet run against the live site):** each house's daily calendar from the Clerks'
+  Bulletin Board (states/wv/calendars.py, fetch.py's `floor_calendars()`, convert.py's `floor_days()`): the House's daily
+  calendar ("HOUSE CALENDAR", house_calendar_daily.cfm, files /Bulletin_Board/<year>/RS/h_calendar_daily/hdc2025-03-11-28.htm),
+  the House's Special Calendar (the Rules Committee's list the House works from; house_calendar_special.cfm, hsc...htm) and
+  the Senate's ("SENATE CALENDAR", senate_calendar.cfm, "sdc 03-11.htm"). Each index page lists its house's calendars newest
+  first and shows the newest; the next day's is up the afternoon before (archived index pages: Monday's Senate calendar
+  listed Friday 2:50 PM, Monday's three by Friday 6 PM). Every full run from January to April reads the three index pages
+  and each calendar dated today or later (about 5-8 requests) into data/wv/<year>/floor.json; past days' stay as last read.
+  Sections: THIRD READING (the passage vote), SECOND READING (amendments; the vote is the next day), FIRST READING,
+  UNFINISHED BUSINESS, SPECIAL ORDER; items "Eng. Com. Sub. for S. B. 196 - Lauren's Law". Calendars after the regular
+  session's 60th day are left out: special sessions' are filed in the same folder (hsc2024-05-20-02.htm with HB 102-114,
+  "sdc 10-07.htm" with SB 2011-2028), with their own bills. Measured on the Internet Archive's copies of 2024's and 2025's
+  calendars (225: 73 Special, 72 House, 80 Senate) against the bills' histories, per bill and day: third reading on the
+  Special Calendar was voted that day 543 of 601 times (90.3%; 26 laid over or postponed, 11 sent to the House Calendar or
+  Rules, 21 no line that day), on the Senate's 568 of 631 (90.0%; 47 laid over, 15 to Rules); on the House Calendar only
+  45 of 127 (35%: bills set aside there wait, and many die). Of the bills that passed on a day whose calendar was read,
+  537 of 563 (House) and 565 of 606 (Senate) were on its third reading (the rest mostly moved the same day by suspending
+  the rules, near the session's end). The archived copies are mostly the final version of each calendar (saved months
+  later), so how often the afternoon-before copy is revised isn't measured; each run reads today's again. So Senate and Special Calendar third readings are a vote set for that day; the House
+  Calendar's third readings and every other section are "listed". 2026's format checked on the archived copies there are
+  (Senate February 3, House February 16: 12 of 12 third readings voted that day). www.wvlegislature.gov didn't answer from
+  the owner's computer on 2026-11-22, so the live index pages are untested: check the January run's "floor calendars: N
+  read" line.
