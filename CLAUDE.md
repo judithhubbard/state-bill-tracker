@@ -532,6 +532,16 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   (created with `--force`, which isn't needed again). Deploy by hand from an empty folder, never from
   lists_worker/ or cron_worker/ (wrangler picks up that folder's wrangler.toml):
   `npx -y wrangler@4.152.0 pages deploy <repo>/_site --project-name=statebilltracker --branch=main --commit-dirty=true`.
+- **Launched 2026-11-21.** statebilltracker.org is a Cloudflare zone in the owner's account (nameservers aurora and randall
+  .ns.cloudflare.com, set at Porkbun; registration stays at Porkbun) with the Pages project's custom domains
+  statebilltracker.org and www.statebilltracker.org; statebilltracker.pages.dev serves the same files. statebilltracker.com
+  forwards with a Porkbun 302 (path kept). publish.yml builds with SITE_BASE=https://statebilltracker.org/ and LAUNCHED=1
+  (search engines allowed, GoatCounter on); /ny/ stays out of search (robots.txt and X-Robots-Tag in build_site.sh) until
+  New York moves here: drop those two lines then, and link it from the front page. Shared lists stay on
+  state-lists.lists-worker.workers.dev (its CORS already allows statebilltracker.org); a route on the zone is optional.
+  albanybilltracker.org is also at Porkbun: on launch day its nameservers were changed by mistake and put back within
+  minutes; check which domain a registrar page is for before changing it. Checklist items done: 2, 3, 4, 6 (site check);
+  still to do: 1 (run more often in January), 7 (Stripe's website field), 8 (uptime alerts).
 - **Launch checklist for statebilltracker.org** (do these together when the owner says to launch):
   1. `.github/workflows/publish.yml` and `download.yml`: run more often while legislatures meet (e.g. hourly on weekdays),
      minding Cloudflare Pages' monthly deployment limit (500 on the free plan; skip deploys when nothing changed, or pay).
