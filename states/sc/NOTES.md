@@ -77,4 +77,14 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   runner for the PDFs (without it, title links only). In session a first run may read 50-100 agenda PDFs (about a second
   each), later runs only changed ones.
 - **The next session's bills (2026-11-22):** the bill search's session list offers the next General Assembly (127, 2027-28) once it has prefiled bills (not yet on 2026-11-22: session=127 answers "An error has occurred loading the bill results"); `sessions()` reads it daily. A session offered before it has a bill gets no folder (`read_bills()` writes no empty bills.json, and `main()` reads nothing else of it: agendas, members' pages and roll calls go to the newest session with bills), and one not convened (`begun()`) never holds South Carolina off the site.
-- **Veto messages (looked into 2026-11-22; not read):** governor.sc.gov/executive-branch/veto-messages links each letter (/sites/governor/files/Documents/Veto-Messages/H.3558.pdf, S.428 Veto Letter.pdf), but they are scans with no text layer. OCR would be the owner's decision.
+- **Veto messages (2026-11-22, read by OCR, the owner's decision):** `veto_letters()` in fetch.py reads the governor's list,
+  governor.sc.gov/executive-branch/veto-messages, once a day into veto_letters.json (a link's text names the year and the bill,
+  "2024- S. 112 Fraudulent Check Expungement", which puts it in a General Assembly), and each letter once, 2 s apart, at most
+  8 minutes a run, into <first year>/vetoes/<S112>.json (states/letters.py's `scanned()`: the PDFs are scans, read by tesseract).
+  The budget's line-item veto letters are left out (with a text layer, but their first pages are a speech about the budget,
+  not the items' reasons). `veto_message()` in convert.py gives a veto that stands (stage 6) the letter from after "Dear Mr.
+  Speaker ...:" to the closing, without the letterhead's footer, with a few SC slips fixed ("$.C." for "S.C.", "art. IH"),
+  and only when the letter names its own bill ("R-70, H. 3969"); the page says it was read from a scan and links it. On
+  2026-11-22 the list had 3 such letters for 2023-24's 3 standing vetoes (H 4413, S 112, S 1166) and 3 for 2025-26's
+  (H 3969, H 5164, H 5182), plus overridden bills' letters (read, not shown). Quality (H 3969, S 112, H 5182 checked against
+  the scans): clean typed letters; about one slip a letter, mostly in legal citations ("Article Til" for III).

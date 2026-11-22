@@ -1007,6 +1007,7 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .chapam .memo { margin-top: 6px; }
 .chapam .memo summary { cursor: pointer; color: var(--navy); }
 .chapam .memo p { margin: 6px 0 0; }
+.chapam .memo p.ocrnote { font-size: 0.85em; color: var(--ink-2); }
 .tag.vno { background: var(--veto-soft); color: var(--veto); }
 .pg { padding: 8px 6px 6px; border-radius: 8px; border-left: 4px solid transparent; }
 .pg + .pg { margin-top: 10px; }
@@ -1602,7 +1603,8 @@ function chapterAmendment(b) {
 // When the governor signs a bill on the condition that it be changed, she files a memo saying why and what.
 const CHANGES_AGREED = "The governor signed it on the condition that the Legislature pass changes in a later bill (a chapter amendment).";
 const changesAgreed = (b) => /agree|chapter amendment|with these changes/i.test(b.memo) || followUps(b).length > 0;
-const memoText = (memo, label) => `<details class="memo"><summary>${label}</summary>${memo.split("\n").filter((p) => p.trim()).map((p) => `<p>${esc(p)}</p>`).join("")}</details>`;
+// (scan: the address of a scanned letter the text was read from by OCR, which may have misread a word.)
+const memoText = (memo, label, scan) => `<details class="memo"><summary>${label}</summary>${memo.split("\n").filter((p) => p.trim()).map((p) => `<p>${esc(p)}</p>`).join("")}${scan ? `<p class="ocrnote">Read from a scanned letter; a word may be off. <a href="${esc(scan)}" target="_blank" rel="noopener" data-out="veto-letter">Original letter ↗</a></p>` : ""}</details>`;
 // The chapter amendments that change this bill (indexed once: bill number -> follow-ups).
 let FOLLOW_UPS = null;
 function followUps(b) {
@@ -1632,12 +1634,12 @@ function vetoMemo(b) {
     const head = b.stage === 5 ? `Signed after the Legislature accepted ${gov}'s changes.`
       : b.stage === 6 ? `${gov} sent it back with changes in ${esc(v.year)}, and the Legislature didn't accept them in time.`
       : `${gov} sent it back with changes in ${esc(v.year)}. Both houses have to accept them.`;
-    return `<div class="chapam"><b>${head}</b>${memoText(v.text, `What ${EXEC.the} wrote`)}</div>`;
+    return `<div class="chapam"><b>${head}</b>${memoText(v.text, `What ${EXEC.the} wrote`, v.scan)}</div>`;
   }
-  if (v.own && v.kind === "line-item") return `<div class="chapam"><b>${gov} signed it but vetoed some spending items.</b>${memoText(v.text, `What ${EXEC.the} wrote`)}</div>`;
-  if (v.own) return `<div class="chapam">${memoText(v.text, `Why ${EXEC.the} vetoed it`)}</div>`;
+  if (v.own && v.kind === "line-item") return `<div class="chapam"><b>${gov} signed it but vetoed some spending items.</b>${memoText(v.text, `What ${EXEC.the} wrote`, v.scan)}</div>`;
+  if (v.own) return `<div class="chapam">${memoText(v.text, `Why ${EXEC.the} vetoed it`, v.scan)}</div>`;
   const what = v.kind === "conditional" ? "sent an earlier version" : "vetoed an earlier version";
-  return `<div class="chapam"><b>${gov} ${what} (${esc(v.nums)})${v.kind === "conditional" ? " back with changes" : ""} in ${esc(v.year)}.</b>${memoText(v.text, `What ${EXEC.the} wrote`)}</div>`;
+  return `<div class="chapam"><b>${gov} ${what} (${esc(v.nums)})${v.kind === "conditional" ? " back with changes" : ""} in ${esc(v.year)}.</b>${memoText(v.text, `What ${EXEC.the} wrote`, v.scan)}</div>`;
 }
 function signingMemo(b) {
   if (!b.memo) return "";
@@ -6421,7 +6423,7 @@ const decodeVotes = (votes, T = STRINGS) => (votes || []).map(([house, kind, cm,
   house, kind, committee: cm < 0 ? null : T[cm], date: dayOf(date), yes, no, notYes: new Map(ny.map(([m, code]) => [T[m], code])),
 }));
 // The governor's veto message: this bill's own, or an earlier version's.
-const decodeVeto = (vetoNote, T = STRINGS) => (vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: vetoNote[2] < 0 ? null : T[vetoNote[2]], nums: vetoNote[3], own: !!vetoNote[4], kind: vetoNote[5] || "absolute" } : null);
+const decodeVeto = (vetoNote, T = STRINGS) => (vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: vetoNote[2] < 0 ? null : T[vetoNote[2]], nums: vetoNote[3], own: !!vetoNote[4], kind: vetoNote[5] || "absolute", scan: vetoNote[6] || "" } : null);
 // Its versions in other sessions: [session, numbers, stage, chapter, veto]. The net part carries only each one's
 // session and stage ([session, stage]); the numbers come with the bill's shard (or the hist part).
 function setHist(b, hist, session = DATA.session) {

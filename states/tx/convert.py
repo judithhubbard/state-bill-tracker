@@ -14,7 +14,7 @@ Only regular-session House and Senate bills are shown, and joint resolutions (HJ
 amendments: those need two-thirds of each house's members, never go to the governor ("Filed with the Secretary of
 State" instead) and go to the voters (topic "const"). Other resolutions and special sessions' bills are left out.
 """
-import glob, json, os, re
+import glob, html, json, os, re
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from datetime import datetime
@@ -22,6 +22,7 @@ from zoneinfo import ZoneInfo
 
 from . import profile as P
 from states.undated import settle
+from states import letters as L
 
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 HOUSE = {"H": "House", "S": "Senate"}
@@ -267,6 +268,111 @@ def floor_vote(name, members):
     return hits[0][0] if len(hits) == 1 else None
 
 
+# ---- Veto messages. Every veto proclamation is text in a journal fetch.py already saves (states/tx/journals.py): a
+# veto while the Legislature meets is a message read in the bill's house ("TO THE MEMBERS OF THE HOUSE OF
+# REPRESENTATIVES AND SENATE ..." or "... OF THE SENATE AND HOUSE ...": "do hereby disapprove and veto House Bill No. 353
+# ..."), and the Senate Journal's last day
+# prints the proclamations filed after the session for Senate bills ("VETO PROCLAMATIONS ... PROCLAMATION BY THE
+# GOVERNOR OF THE STATE OF TEXAS"). House bills vetoed after the session are in no journal the site reads: their
+# proclamations come from the governor's scans (fetch.py's veto_letters(), OCR, vetoes/<HB705>.json). The General
+# Appropriations Act's line-item proclamation (a list of items) is left out.
+_VETOES = {}
+_START = re.compile(r"PROCLAMATION\s+BY\s+THE\s+GOVERNOR\s+OF\s+THE\s+STATE\s+OF\s+TEXAS|TO\s+THE\s+MEMBERS\s+OF\s+THE\s+(?:HOUSE\s+OF\s+"
+                    r"REPRESENTATIVES\s+AND\s+(?:THE\s+)?SENATE|SENATE\s+AND\s+(?:THE\s+)?HOUSE\s+OF\s+REPRESENTATIVES)\s+OF\s+THE\s+"
+                    r"[A-Z-]+\s+TEXAS\s+LEGISLATURE")
+_WHICH = re.compile(r"disapprove\s+(?:of\s+)?and\s+veto\s+(?:(House|Senate)\s+Bill(?:\s+No\.)?\s*(\d+)|([HS])\.?\s?B\.?\s*(\d+))", re.I)
+_REASONS = re.compile(r"(?:due\s+to|because\s+of)\s+the\s+following\s+objections?\s*:", re.I)
+_REASONS_END = re.compile(r"Since (?:the [A-Z][\w\s,-]{0,90}?by (?:its|their) adjournment|you remain gathered|the Legislature (?:has )?adjourned)|"
+                          r"IN TESTIMONY WHEREOF|Respectfully submitted|I am (?:therefore )?filing these objections", re.I)
+_MONTHS = "January February March April May June July August September October November December".split()
+
+
+def _journal_text(path):
+    raw = open(path, encoding="utf-8", errors="replace").read()
+    raw = re.sub(r"(?i)</div>|<br\s*/?>|</p>", "\n", raw)
+    t = html.unescape(re.sub(r"<[^>]+>", "", raw)).replace("\xa0", " ")
+    return "\n".join(re.sub(r"[ \t]+", " ", x).strip() for x in t.split("\n"))
+
+
+def _when(chunk):
+    """The proclamation's date: "this 13th day of June, 2023", or a message's "May 24, 2023" after its signature."""
+    m = re.search(r"this (\d+)(?:st|nd|rd|th)? day of ([A-Z][a-z]+),? (\d{4})", chunk)
+    if m and m.group(2) in _MONTHS:
+        return f"{m.group(3)}-{_MONTHS.index(m.group(2)) + 1:02d}-{int(m.group(1)):02d}"
+    m = re.search(r"Austin, Texas\s*\n\s*([A-Z][a-z]+) (\d{1,2}), (\d{4})", chunk)
+    if m and m.group(1) in _MONTHS:
+        return f"{m.group(3)}-{_MONTHS.index(m.group(1)) + 1:02d}-{int(m.group(2)):02d}"
+    return ""
+
+
+def journal_vetoes(session):
+    """Bill ("HB353") -> {"text": the governor's objections as paragraphs, "day"}, from the session's House and Senate
+    journals."""
+    if session in _VETOES:
+        return _VETOES[session]
+    out = {}
+    base = os.path.join(P.DATA, P.code_of(session), "journals")
+    for path in sorted(glob.glob(os.path.join(base, "*.HTM")) + glob.glob(os.path.join(base, "senate", "*.HTM"))):
+        try:
+            t = _journal_text(path)
+        except OSError:
+            continue
+        starts = [m.start() for m in _START.finditer(t)]
+        for a, b in zip(starts, starts[1:] + [len(t)]):
+            chunk = t[a:b]
+            which = _WHICH.search(chunk[:1500])
+            why = _REASONS.search(chunk[:2500])
+            if not which or not why or re.search(r"General Appropriations", chunk[:600]):
+                continue
+            p = (f"{which.group(1)[0]}B{int(which.group(2))}" if which.group(1)
+                 else f"{which.group(3).upper()}B{int(which.group(4))}")
+            stop = _REASONS_END.search(chunk, why.end())
+            body = chunk[why.end():stop.start() if stop else why.end() + 6000]
+            paras = [re.sub(r"\s+", " ", x).strip() for x in body.split("\n")]
+            paras = [x for x in paras if x and not re.fullmatch(r"\d+|S\s*\d+|Page \d+", x)]
+            if paras and p not in out:
+                out[p] = {"text": paras, "day": _when(chunk)}
+    _VETOES[session] = out
+    return out
+
+
+def veto_message(session, p, stage, day):
+    """The governor's veto proclamation for a vetoed bill -> its vetoMemo ({year, signer, text}, with "ocr" and "url"
+    when read from a scan), or None: the journals' text first, else the OCR of the governor's scan (vetoes/<p>.json)."""
+    if stage != 6:
+        return None
+    got = journal_vetoes(session).get(p)
+    scan = None
+    if not got:
+        try:
+            with open(os.path.join(P.DATA, P.code_of(session), "vetoes", f"{p}.json"), encoding="utf-8") as f:
+                scan = json.load(f)
+        except (OSError, ValueError):
+            return None
+        if not scan.get("raw"):
+            return None
+        # A proclamation: its reasons run from "... because of the following objections:" to "Since the ... Legislature,
+        # by its adjournment, has prevented the return of this bill" (the OCR text, as one block, is cut there).
+        raw = scan["raw"]
+        why = _REASONS.search(raw)
+        if not why:
+            return None
+        stop = _REASONS_END.search(raw, why.end())
+        body = raw[why.end():stop.start() if stop else why.end() + 6000]
+        # (A hyphen at a line's end is the word's own: the proclamations are typed, "trial-" / "related".)
+        body = re.sub(r"(\w)-\n(?=[a-z])", r"\1-", body)
+        got = {"text": L.ocr_letter("Dear X,\n\n" + body.strip(), P.governor_on(day or f"{session}-06-30")),
+               "day": _when(raw)}
+    day = got["day"] or day or f"{session}-06-30"
+    text_ = L.cut(got["text"])
+    if len(text_) < 40:
+        return None
+    m = {"year": int(day[:4]), "signer": P.governor_on(day), "text": text_}
+    if scan:
+        m.update(ocr=bool(scan.get("ocr")), url=scan["url"])
+    return m
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     data = bills(session)
@@ -396,7 +502,8 @@ def load_session(session):
             "senDeleg": False, "asmDeleg": False, "budget": bool(re.search(r"general appropriations", b["caption"], re.I)),
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": passed_in, "chapter": None,
-            "veto": None, "memo": "", "vetoMemo": None,
+            "veto": None, "memo": "",
+            "vetoMemo": veto_message(session, p, stage, dates(lambda h, t, n: t == "VETOED")[:10]),
             "comm": committee if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),
             "last": max(action_dates, default=f"{session}-01-01"),

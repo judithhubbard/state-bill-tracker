@@ -49,3 +49,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2026-11-22 (2026's first prefiled bill was dated 2025-11-15). fetch.py asks for one bill a run and makes data/az/2027/
   only once there is one; convert.py's `sessions()` shows this or next year from its first bill (500 only for past
   years). A year not begun never marks Arizona incomplete.
+- **Veto letters (2026-11-22, OCR, the owner's decision):** the governor's own copies (linked from azgovernor.gov's
+  "Legislative Action Update" releases) are on mcusercontent.com, whose robots.txt is "Disallow: /" for every program,
+  and azgovernor.gov's news index answers 403: not used. The Legislature keeps the same letters on www.azleg.gov, which
+  its robots.txt allows: /govlettr/<56|57>leg/<1R|2R>/<hb4115>.pdf (2023-24 is the 56th, 2025-26 the 57th; 1R odd
+  years). They are scans with no text layer. `veto_letters()` in states/az/azleg.py, last in its run, asks for the letter
+  of each bill Open States shows vetoed, at the 120-second crawl delay, for at most 22 minutes a run (about ten letters;
+  2024-26 is about 300 vetoes, so the first pass takes a few weeks of runs), the newest year first, and reads it once by
+  OCR into data/az/<year>/vetoes/<HB4115>.json (states/letters.py's `scanned()`); a 404 is noted in
+  azleg/veto_letters_missing.json and asked for again after a month. `veto_message()` in convert.py keeps the reasons
+  (after "RE: ..." and "Speaker Montenegro,", to "Sincerely,") on the vetoed bill, with `ocr` and the letter's address
+  (the page says it was read from a scan and links it). Quality on four letters (HB 4115 of 2026, HB 2091 and SB 1001 of
+  2025, HB 2063 of 2024): typed, clean scans in Hobbs's one-page format; read with no errors seen against the page image.

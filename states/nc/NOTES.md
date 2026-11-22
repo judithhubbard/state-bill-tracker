@@ -35,3 +35,14 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   after the session convenes, January 13, 2027). An empty feed for the current session doesn't hold the state back,
   convert.py's `sessions()` shows it from its first bill (past sessions still need over 1,000), and the session just
   ended has the bills whose feed entry changes read again until February 1.
+- **Veto messages (2026-11-22, read by OCR, the owner's decision):** each vetoed bill's history links a "Veto Document" on its
+  "Vetoed" line (webservices.ncleg.gov/ViewBillDocument/2025/7283/0/H96-BD-NBC-16795; that host has no robots.txt, the
+  crawl delay of ncleg.gov's is kept): the governor's signed "Objections and Veto Message", then the ratified bill with the
+  clerk's stamps, scanned. Some carry Acrobat's own OCR as a text layer ("State of :Nortfi Carol1na"), so `veto_letters()`
+  in fetch.py reads each with tesseract itself (states/letters.py's `ocr_pdf()`, first 3 pages), once, into
+  <session>/vetoes/<H96>.json, at most 8 minutes a run after the agendas; vetoes both houses overrode are skipped (43 of 47
+  in 2023-26). `veto_message()` in convert.py keeps the reasons, from after the title ("House Bill 96: AN ACT ...") to
+  "Therefore, I veto the bill.", for vetoes that stand, when the document names its own bill. 2023-24 has no standing veto
+  (every one overridden); 2025-26 has 6 (H 96, H 171, H 377, H 437, H 958, S 50). Quality (H 96, H 171, H 377, S 50 checked
+  against the scans, some faint photocopies): the message text read almost perfectly ("origmally" in H 96); the stamps and
+  handwriting after it are junk and are cut off.

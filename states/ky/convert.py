@@ -43,6 +43,7 @@ from zoneinfo import ZoneInfo
 
 from states.ky import profile as P
 from states.undated import settle
+from states import letters as L
 
 HOUSE = {"S": "Senate", "H": "House"}
 OTHER = {"S": "H", "H": "S"}
@@ -535,7 +536,8 @@ def record(session, b, parties):
         "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
         "stage": stage, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
         "chapter": chapter if stage == 5 else None,
-        "veto": None, "memo": "", "vetoMemo": None,
+        "veto": None, "memo": "",
+        "vetoMemo": veto_message(session, p, stage, dates(lambda s: s[3] in ("vetoed", "itemveto"), "first")[:10]),
         "simText": f"{title} {official} {b['original'][:600]}",
         "comm": comm_now if stage == 0 else None,
         "first": min(action_dates, default=f"{session}-01-01"),
@@ -558,6 +560,44 @@ def record(session, b, parties):
     if stage == 5 and not rec["keyDates"][5]:
         rec["keyDates"][5] = rec["last"]
     return rec, what
+
+
+def veto_message(session, p, stage, day):
+    """The governor's veto message (vetoes/<SB70>.json: fetch.py's OCR of the scanned letter) -> the record's vetoMemo
+    {year, signer, text, ocr, url}, or None. The reasons start after "do hereby veto the following:" (and the line
+    naming the bill "in its entirety") and end before "This, the 19th day of March, 2025." A line-item veto (the
+    budgets: "Page 8, line 21, after ... delete ...", each with its reasons) goes on the law as kind "line-item"; a
+    veto the General Assembly overrode isn't shown (the page shows messages on vetoed bills and line-item laws)."""
+    try:
+        with open(os.path.join(folder(session), "vetoes", f"{p}.json"), encoding="utf-8") as f:
+            got = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if stage not in (5, 6) or not got.get("raw"):
+        return None
+    day = day or f"{session}-04-15"
+    gov = P.governor_on(day)
+    # The letterhead before the first "I, Andy Beshear, Governor ... do hereby veto the following:", and that sentence
+    # wherever it comes again (a budget's line-item letter repeats it for each part).
+    raw = got["raw"]
+    intro = re.compile(r"I, [A-Z][\w.]+(?: [A-Z][\w.]+)*, Governor of the Commonwealth[\s\S]{0,300}?do hereby veto the following[^:\n]{0,12}:?")
+    first = intro.search(raw)
+    if first:
+        raw = intro.sub("\n", raw[first.start():])
+    paras = L.ocr_letter(raw, gov, end=r"^.{0,8}This,? the\b.{0,30}of [A-Z][a-z]+,? \d{4}")
+    paras = [re.sub(r"\b(?:Iam|T am)\b", "I am", t) for t in paras
+             if not re.match(r"(?:House|Senate) (?:Bill|Joint Resolution) \d+ of the \d{4} Regular Session.{0,60}in its entirety\.?$", t)
+             and not re.search(r"GOVERNOR\.KY\.GOV|Equal Opportunity Employer", t)]
+    line_item = any(re.match(r"Page \d+,? lines? ", t) for t in paras)
+    if stage == 5 and not line_item:
+        return None
+    text_ = L.cut(paras)
+    if len(text_) < 150:
+        return None
+    m = {"year": int(day[:4]), "signer": gov, "text": text_, "ocr": bool(got.get("ocr")), "url": got["url"]}
+    if stage == 5:
+        m["kind"] = "line-item"
+    return m
 
 
 def load_session(session):

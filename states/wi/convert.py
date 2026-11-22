@@ -213,6 +213,8 @@ def veto_message(session, p):
         raw = open(os.path.join(folder(session), "vetoes", f"{p}.txt"), encoding="utf-8").read()
     except OSError:
         return None
+    if not raw.strip():
+        return scanned_message(session, p)
     lines = [x for page in raw.split("\f") for x in L.columns(page)]
     start = next((i for i, (_, t) in enumerate(lines) if re.match(r"To the Honorable Members of the", t)), None)
     if start is None:
@@ -228,6 +230,34 @@ def veto_message(session, p):
             if not re.fullmatch(r"GOVERNOR.S (?:PARTIAL )?VETO MESSAGE|-?\s*\d+\s*-?", t)]
     text_ = L.cut(L.paragraphs(body, blanks=False))
     return {"year": int(iso[:4]), "signer": P.governor_on(iso), "text": text_} if text_ else None
+
+
+def scanned_message(session, p):
+    """A veto message that's a scan (an empty vetoes/<SB145>.txt), read by OCR into vetoes/<SB145>.json (fetch.py,
+    states/letters.py's scanned()) -> {year, signer, text, ocr, url}: the letter from "To the Honorable Members of the
+    ..." to "Respectfully submitted", or None."""
+    try:
+        with open(os.path.join(folder(session), "vetoes", f"{p}.json"), encoding="utf-8") as f:
+            got = json.load(f)
+    except (OSError, ValueError):
+        return None
+    raw = got.get("raw") or ""
+    day = re.search(r"\b(January|February|March|April|May|June|July|August|September|October|November|December) (\d{1,2}), (\d{4})", raw)
+    try:
+        iso = datetime.strptime(" ".join(day.groups()), "%B %d %Y").date().isoformat() if day else f"{session + 1}-01-01"
+    except ValueError:
+        iso = f"{session + 1}-01-01"
+    # (Page headings of a long message: "GOVERNOR'S PARTIAL VETO MESSAGE", page numbers.)
+    raw = re.sub(r"(?m)^\s*GOVERNOR.S (?:PARTIAL )?VETO MESSAGE\s*$", "", raw)
+    # (OCR runs the salutation into the first sentence, and the closing into the last paragraph: SB 145 of 2023.)
+    raw = re.sub(r"(?im)^(To the Honorable Members of the [^\n]{0,80}:)[ \t]*\n", r"\1\n\n", raw)
+    raw = re.sub(r"(?im)\n(Respectfully submitted)", r"\n\n\1", raw)
+    raw = re.sub(r"\bI\](?= [a-z])", "I", raw)
+    paras = L.ocr_letter(raw, P.governor_on(iso), end=r"^Respectfully submitted")
+    text_ = L.cut(paras)
+    if len(text_) < 150:
+        return None
+    return {"year": int(iso[:4]), "signer": P.governor_on(iso), "text": text_, "ocr": bool(got.get("ocr")), "url": got["url"]}
 
 
 def committee_votes(session, b, seat, comm_names):

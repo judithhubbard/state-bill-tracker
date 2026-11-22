@@ -2143,17 +2143,19 @@ def compute(prev=None):
             return [[h, kind, S(comm), date.replace("-", ""), y, n, [[S(member_id(m)), code] for m, code in ny]]
                     for h, kind, comm, date, y, n, ny in votes]
         def veto_note(i, r):
-            """[year, governor, reasons, bill numbers, 1 if this bill's own veto, kind] or 0. Kind is
-            "conditional" for a bill sent back with the governor's changes (New Jersey), else "absolute"."""
+            """[year, governor, reasons, bill numbers, 1 if this bill's own veto, kind(, scanned letter's address)] or 0.
+            Kind is "conditional" for a bill sent back with the governor's changes (New Jersey), else "absolute"."""
             m = r["vetoMemo"]
             # Its own message: vetoed, or (New Jersey) sent back with changes, whatever happened next.
+            # (A message read from a scanned letter by OCR carries the letter's address, last: the page links it.)
+            scan = lambda m: [m["url"]] if m.get("ocr") and m.get("url") else []
             if m and (r["stage"] == 6 or m.get("kind") in ("conditional", "line-item")):
-                return [m["year"], m["signer"], S(m["text"]), " / ".join(r["nums"]), 1, m.get("kind") or "absolute"]
+                return [m["year"], m["signer"], S(m["text"]), " / ".join(r["nums"]), 1, m.get("kind") or "absolute"] + scan(m)
             for (ps, j) in sorted((k for k in hist[session][i] if isinstance(k[1], int) and k[0] < session), reverse=True):
                 old = loaded[ps][0][j]
                 if old["stage"] == 6 and old.get("vetoMemo"):
                     m = old["vetoMemo"]
-                    return [m["year"], m["signer"], S(m["text"]), " / ".join(old["nums"]), 0, m.get("kind") or "absolute"]
+                    return [m["year"], m["signer"], S(m["text"]), " / ".join(old["nums"]), 0, m.get("kind") or "absolute"] + scan(m)
             return 0
 
         rows = []

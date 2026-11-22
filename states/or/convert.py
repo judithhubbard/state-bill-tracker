@@ -13,6 +13,7 @@ from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from states.undated import settle
+from states import letters as L
 
 P = importlib.import_module("states.or.profile")
 
@@ -187,6 +188,75 @@ def earlier(session, bill):
     return out
 
 
+# What OCR adds to these letters: specks in the margin read as marks at a line's start (". HB 2079 ...", "- . such as").
+_SPECKS = re.compile(r"(?m)^[ \t]*[-.,‘’'`·•~_|]{1,3}(?:[ \t]+[-.,‘’'`·•~_|]{1,3})*[ \t]+(?=\S)")
+_BILL_WORD = {"HB": "House Bill", "SB": "Senate Bill", "HJR": "House Joint Resolution", "SJR": "Senate Joint Resolution"}
+
+
+def _letters(raw):
+    """A compilation of letters (pages separated by "\f") -> [(the letter's head, its pages)]: a page with a salutation
+    ("Dear Secretary Griffin-Valade:") starts a letter, and the pages after it, until the next, are its own. The head is
+    the page down to the salutation and the first lines after it, where the bill is named ("Re: House Bill 2079" (OCR
+    sometimes drops the colon or reads the "Re" line badly), "I am returning Enrolled House Bill 2079")."""
+    out = []
+    for page in raw.split("\f"):
+        lines = page.split("\n")
+        dear = next((i for i, x in enumerate(lines[:45]) if re.match(r"\s*Dear\b", x)), None)
+        if dear is not None or not out:
+            out.append(["\n".join(lines[:(dear or 0) + 6]), [page]])
+        else:
+            out[-1][1].append(page)
+    return out
+
+
+def tidy(paras):
+    """What OCR leaves in these letters after states/letters.py: a bullet read as "e" ("e More families ..."), a contraction
+    split ("They’ ve"), and a sentence split at a page break or gap (a paragraph ending in a comma)."""
+    out = []
+    for t in paras:
+        t = re.sub(r"^[eo«©]\s+(?=[A-Z])", "• ", t)
+        t = re.sub(r"(?<=\w)([’'])\s(?=(?:s|t|ve|re|ll|d|m)\b)", r"\1", t)
+        if out and out[-1].endswith(","):
+            out[-1] += " " + t
+        else:
+            out.append(t)
+    return out
+
+
+def veto_message(session, p, stage, day, kind=None):
+    """The governor's veto letter -> the record's vetoMemo {year, signer, text, ocr, url(, kind)}, or None: from
+    vetoes/<SB302>.json (fetch.py's OCR of the letter), or the session's compilation (vetoes/_letters.json), the letter
+    whose "Re:" line names the bill ("Re: House Bill 2079")."""
+    if stage != 6 and kind != "line-item":  # (the compilation also holds letters sent with signed bills)
+        return None
+    vdir = os.path.join(folder(session), "vetoes")
+    got = None
+    try:
+        got = json.load(open(os.path.join(vdir, f"{p}.json"), encoding="utf-8"))
+    except (OSError, ValueError):
+        try:
+            whole = json.load(open(os.path.join(vdir, "_letters.json"), encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        m = re.fullmatch(r"([A-Z]+)(\d+)", p)
+        name = re.compile(rf"\b{_BILL_WORD.get(m.group(1), m.group(1))}\s+{m.group(2)}\b", re.I)
+        pages = next((pg for head, pg in _letters(whole.get("raw") or "") if name.search(head)), None)
+        if pages:
+            got = dict(whole, raw="\f".join(pages))
+    if not got or not got.get("raw"):
+        return None
+    day = day or f"{session}-08-01"
+    gov = P.governor_on(day)
+    # (The salutation, where OCR ran the "Re" line into it: "Re House Bill 2079 Dear Secretary Griffin-Valade:".)
+    text_ = L.cut(tidy(L.ocr_letter(_SPECKS.sub("", got["raw"]), gov, start=r"\bDear [^,:]{2,60}[,:]$")))
+    if len(text_) < 100:
+        return None
+    out = {"year": int(day[:4]), "signer": gov, "text": text_, "ocr": bool(got.get("ocr")), "url": got["url"]}
+    if kind:
+        out["kind"] = kind
+    return out
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     live = session >= CURRENT
@@ -349,7 +419,9 @@ def load_session(session):
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": passed_in,
             "chapter": int(re.sub(r"\D", "", str(chapter)) or 0) if chapter and stage == 5 else None,
-            "veto": None, "memo": "", "vetoMemo": None,
+            "veto": None, "memo": "",
+            "vetoMemo": veto_message(session, p, stage, dates(lambda h, t, a: t in ("VETOED", "SIGNED") or re.match(r"Governor", a)),
+                                     "line-item" if stage == 5 and any(re.search(r"line-item veto", s[3], re.I) for s in steps) else None),
             "simText": stock(f"{title}. {about}") if amend else f"{title}. {about}",
             "comm": committee if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),

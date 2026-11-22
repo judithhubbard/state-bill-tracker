@@ -26,10 +26,18 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   n, Noes m" history lines matched a vote with that tally (the rest had records the local copy lacked).
   Veto messages: `veto_messages()` in fetch.py reads the "Veto Message" PDF each vetoed bill's page links
   (/document/vetomessages/<year>/AB1.pdf) once into vetoes/<AB1>.txt (pdftotext -layout; an empty file for a scan: 2023-24's
-  budget SB 145 and a few big ones are images, not read). `veto_message()` in convert.py puts the two columns in order
+  SB 145 and a few others are scans, read by OCR since 2026-11-22: see below). `veto_message()` in convert.py puts the two columns in order
   (states/letters.py) and keeps the letter from "To the Honorable Members of the ..." to "Respectfully submitted", cut at
   3,500 characters; a partly vetoed law gets it as `kind: "line-item"`. Both show after the next download run (the PDFs
   aren't in the cache yet; the committee votes need only a rebuild).
+  Scanned veto messages (2026-11-22, OCR approved by the owner): after the text pass, `veto_messages()` reads each
+  message whose .txt is empty once more through states/letters.py's `scanned()` (pdftoppm at 300 dpi, tesseract), into
+  vetoes/<SB145>.json ({url, ocr, raw}), at most 6 minutes a run; never read twice. `scanned_message()` in convert.py
+  keeps "To the Honorable Members ..." to "Respectfully submitted" (OCR runs both into the paragraph next to them, so
+  they're split off first) and marks it `ocr` with the PDF's `url` (the page says it was read from a scan and links the
+  original). Which of the 167 messages (72 for 2023-24, 95 for 2025-26 on 2026-11-22) are scans shows only after the
+  next run; locally only SB 145 of 2023 (APRN licensure, a one-page Ricoh scan) was checked: word for word against the
+  page image (one "I]" for "I", fixed).
 - **Committee agendas (2026-11-22):** `agendas()` in states/wi/fetch.py (first in each full run) reads the Legislature's
   committee schedule, https://committeeschedule.legis.wisconsin.gov/ (no robots.txt; the docs site's robots.txt, which
   bars /feed/, doesn't cover it), one page: the address its stub page's script loads,

@@ -38,6 +38,7 @@ from zoneinfo import ZoneInfo
 
 from states.mt import profile as P
 from states.undated import settle
+from states import letters as L
 
 HOUSE = {"S": "Senate", "H": "House"}
 _CACHE, _PARTIES, _KEYS = {}, {}, {}
@@ -439,6 +440,43 @@ def no_steps_day(session, b):
     return min(drafted or f"{session}-01-01", date.today().isoformat())
 
 
+def tidy(paras):
+    """What OCR adds to these letters: specks in the margin read as a mark before a paragraph ("‘ House Bill 182 ...",
+    "- Regardless ..."), a contraction split ("They’ ve"), the budget letter's footnote numbers ("vetoed it.2"), a
+    sentence split at a page break (a paragraph ending in a comma)."""
+    out = []
+    for t in paras:
+        t = re.sub(r"^[‘’'`\-.,·•~_|]+\s+(?=[A-Z“\"])", "", t)
+        t = re.sub(r"(?<=\w)([’'])\s(?=(?:s|t|ve|re|ll|d|m)\b)", r"\1", t)
+        t = re.sub(r"(?<=[a-z]\.)(?:['’*]|\d{1,2})(?=\s|$)", "", t)
+        if out and out[-1].endswith(","):  # a sentence split at a page break
+            out[-1] += " " + t
+        else:
+            out.append(t)
+    return out
+
+
+def veto_message(session, p, stage, day, kind=None):
+    """The governor's veto letter (vetoes/<HB182>.json: fetch.py's OCR of the scanned PDF) -> the record's vetoMemo:
+    {year, signer, text, ocr, url(, kind)}, or None. `kind` "line-item" for a law with item vetoes (the budget)."""
+    try:
+        with open(os.path.join(folder(session), "vetoes", f"{p}.json"), encoding="utf-8") as f:
+            got = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if stage not in (5, 6) or not got.get("raw"):
+        return None
+    day = day or f"{session}-05-31"
+    gov = P.governor_on(day)
+    text_ = L.cut(tidy(L.ocr_letter(got["raw"], gov)))
+    if len(text_) < 150:
+        return None
+    m = {"year": int(day[:4]), "signer": gov, "text": text_, "ocr": bool(got.get("ocr")), "url": got["url"]}
+    if kind:
+        m["kind"] = kind
+    return m
+
+
 def record(session, k, b):
     p = k
     origin = p[0]
@@ -820,7 +858,10 @@ def record(session, k, b):
         "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
         "stage": stage, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
         "chapter": chapter if stage == 5 else None,
-        "veto": None, "memo": "", "vetoMemo": None,
+        "veto": None, "memo": "",
+        # (A law that was vetoed and overridden keeps its letter too; the page shows only a standing veto's and line items'.)
+        "vetoMemo": veto_message(session, p, stage, dates(lambda x: x[3] == "vetoed") or dates(lambda x: x[3] == "law"),
+                                 "line-item" if stage == 5 and any(re.search(r"line-item veto", x[2], re.I) for x in out) else None),
         # The short title and the subjects' names: titles are short, and words only one bill has don't count, so a title
         # alone made "Establish compensation for wrongful conviction" (HB 93 of 2025) "nearly the same" as HB 72 (militia pay).
         "simText": f"{title} {subject_names(b)}",
