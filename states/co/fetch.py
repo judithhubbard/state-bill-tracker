@@ -391,7 +391,8 @@ def parse_bill(page, num):
 
 def vote_members(fragment):
     out = []
-    for name, how in re.findall(r'<tr role="row">\s*<td>(.*?)</td>.*?class="vote-tag (\w+)"', fragment, re.S):
+    # "Yes", "No", "Excused", ...; a voice vote's members are all "voice-vote" (no tallies).
+    for name, how in re.findall(r'<tr role="row">\s*<td>(.*?)</td>.*?class="vote-tag ([\w-]+)"', fragment, re.S):
         out.append([text(name), how])
     return out
 
@@ -621,28 +622,36 @@ def session(year):
 def read_votes():
     """Members' votes, after every year's bills (so a run spent on votes never skips a year's bill updates), until the
     time limit. Votes still to read don't hold the state off the site: its bills are whole, and members' votes fill in
-    run by run (each vote is read once)."""
-    for year, folder, vtodo, linked in PENDING_VOTES:
-        vgot = 0
-        for vid in vtodo:
-            if out_of_time():
-                break
-            if vid.startswith("f"):
-                page = get(f"/bill_votes/{vid[1:]}")
-                parse = parse_floor_vote
-            else:
-                item, vote = vid[1:].split("-")
-                page = get(f"/committee_meeting_hearing_items/{item}/votes/{vote}")
-                parse = parse_committee_vote
-            if isinstance(page, str):
-                v = parse(page, vid)
-                v["bill"] = v["bill"] or linked.get(vid)
-                if v["members"] or v["counts"]:
-                    save(os.path.join(folder, "votes", f"{vid}.json"), v)
-                    vgot += 1
-            if vgot and vgot % 500 == 0:
-                print(f"{year}: {vgot} of {len(vtodo)} votes read", flush=True)
-        print(f"{year}: {vgot} of {len(vtodo)} votes read now" + (f"; {len(vtodo) - vgot} left for later runs" if vgot < len(vtodo) else ""), flush=True)
+    run by run (each vote is read once).
+    Floor votes first, every year's (newest first), then committee votes: committee votes came first until 2026-11-22,
+    and about 900 voice votes ("Pass without objection": no tallies, every member "(Voice Vote)") were never saved, so
+    each run read the same ones again for its whole time and never reached a floor vote. A voice vote is now saved,
+    marked "voice", and read once."""
+    order = [(0 if vid.startswith("f") else 1, i, vid) for i, (_, _, vtodo, _) in enumerate(PENDING_VOTES) for vid in vtodo]
+    got = [0] * len(PENDING_VOTES)
+    for _, i, vid in sorted(order):
+        if out_of_time():
+            break
+        year, folder, vtodo, linked = PENDING_VOTES[i]
+        if vid.startswith("f"):
+            page = get(f"/bill_votes/{vid[1:]}")
+            parse = parse_floor_vote
+        else:
+            item, vote = vid[1:].split("-")
+            page = get(f"/committee_meeting_hearing_items/{item}/votes/{vote}")
+            parse = parse_committee_vote
+        if isinstance(page, str):
+            v = parse(page, vid)
+            v["bill"] = v["bill"] or linked.get(vid)
+            if not v["counts"] and v["members"] and all(how == "voice-vote" for _, how in v["members"]):
+                v["voice"], v["members"] = True, []
+            if v["members"] or v["counts"] or v.get("voice"):
+                save(os.path.join(folder, "votes", f"{vid}.json"), v)
+                got[i] += 1
+                if sum(got) % 500 == 0:
+                    print(f"{sum(got)} votes read", flush=True)
+    for (year, _, vtodo, _), n in zip(PENDING_VOTES, got):
+        print(f"{year}: {n} of {len(vtodo)} votes read now" + (f"; {len(vtodo) - n} left for later runs" if n < len(vtodo) else ""), flush=True)
 
 
 def begun(year):
