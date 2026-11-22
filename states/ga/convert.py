@@ -22,6 +22,9 @@ from states.undated import settle
 HOUSE = {"S": "Senate", "H": "House"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 _PARTIES = {}
+_IN_COMM = {}  # session -> {bill: House committee} for bills in a House committee now (agendas())
+_HOUSE_COMMS = {}  # session -> the House committees bills were referred to
+_KEYS = {}  # session -> record numbers
 
 
 def folder(session):
@@ -330,6 +333,13 @@ def load_session(session):
         }
         index[p] = len(recs)
         recs.append(rec)
+        if comms.get("House"):
+            _HOUSE_COMMS.setdefault(session, set()).add(comms["House"])
+        if place == "committee" and stage in (0, 2) and where_h == "H" and committee:
+            _IN_COMM.setdefault(session, {})[p] = committee
+    _IN_COMM.setdefault(session, {})
+    _HOUSE_COMMS.setdefault(session, set())
+    _KEYS[session] = set(index)
     json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     settle(recs, folder(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
@@ -361,8 +371,75 @@ def agreed(steps):
     return not pending
 
 
+def comm_key(name):
+    """A House committee name for matching the Daily Report's schedule to the bills' committees: "WAYS AND MEANS (House)",
+    "Ways & Means" and "PUBLIC SAFTEY AND HOMELAND SECURITY" (sic) come out alike (the typos are matched in house_meeting())."""
+    c = re.sub(r"\((?:House|Upon Adjournment[^)]*)\)", " ", name, flags=re.I).lower().replace("&", " and ")
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", c)).strip()
+
+
+def house_meeting(name, comms):
+    """A schedule row's name -> (label, the bills' committee name or None, is a subcommittee or joint meeting).
+    "WAYS AND MEANS (House)" -> ("House Ways & Means", "Ways & Means", False); "Ways and Means Subcommittee on Ad Valorem
+    (House)" -> ("House Ways & Means Subcommittee on Ad Valorem", "Ways & Means", True)."""
+    import difflib
+    keys = {comm_key(c): c for c in comms}
+    key = comm_key(name)
+    sub = bool(re.search(r"\bsubcommittee|\bjoint\b", key))
+    head = re.split(r" subcommittee\b", re.sub(r"^joint ", "", key))[0]
+    m = re.match(r"(.+?) subcommittee of (.+)$", key)  # "Leverett Subcommittee of Judiciary Non-Civil"
+    if m:
+        head = m[2]
+    comm = keys.get(head) or keys.get(difflib.get_close_matches(head, keys, n=1, cutoff=0.88)[0]
+                                      if difflib.get_close_matches(head, keys, n=1, cutoff=0.88) else "")
+    plain = re.sub(r"\s*\((?:House|Upon Adjournment[^)]*)\)", "", name, flags=re.I).strip()
+    if comm and not sub:
+        label = comm
+    elif comm and not m and not plain.lower().startswith("joint"):
+        label = comm + plain[len(re.split(r"(?i) subcommittee\b", plain)[0]):]
+    else:
+        label = plain.title() if plain.isupper() else plain
+    return "House " + label, comm, sub
+
+
 def agendas(session):
-    return {}
+    """Upcoming House committee meetings, from the Daily Report (states/ga/daily.py; the schedule's own page is gated):
+    a bill on a meeting's agenda PDF gets ["House Ways & Means", "2026-02-26T08:00:00"]; a full committee's meeting whose
+    agenda names no bills (or that has none) is given to every bill now in that House committee as ["House Ways & Means",
+    when, "meets"] (as Mississippi's House). Bills named that aren't records (other resolutions) are left out. The Senate
+    publishes no schedule outside the gated API: none."""
+    st = load(session, "daily.json", {})
+    if not st.get("reports"):
+        return {}
+    if session not in _IN_COMM:
+        load_session(session)
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
+    keys = set(_KEYS.get(session) or ())
+    out, seen = {}, set()
+    # An agenda linked from both a subcommittee's row and its full committee's (Natural Resources' on 2026-02-26) is the
+    # full committee's.
+    full = {url for rep in st["reports"].values() for name, when, url in rep.get("meetings") or []
+            if url and not house_meeting(name, _HOUSE_COMMS[session])[2]}
+    for rep in st["reports"].values():
+        for name, when, url in rep.get("meetings") or []:
+            if when[:10] < today or (name, when) in seen:
+                continue
+            seen.add((name, when))
+            label, comm, sub = house_meeting(name, _HOUSE_COMMS[session])
+            bills = [b for b in ((st.get("agendas") or {}).get(url) or {}).get("bills", []) if b in keys] if url else []
+            if bills and sub and url in full:
+                continue
+            if bills:
+                for b in bills:
+                    if [label, when] not in out.get(b, []):
+                        out.setdefault(b, []).append([label, when])
+            elif comm and not sub:
+                for b, c in _IN_COMM[session].items():
+                    if c == comm and not any(e[1] == when for e in out.get(b, [])):
+                        out.setdefault(b, []).append([label, when, "meets"])
+    for es in out.values():
+        es.sort(key=lambda e: e[1])
+    return out
 
 
 def parties(session, recs):

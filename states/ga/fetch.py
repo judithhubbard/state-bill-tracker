@@ -289,6 +289,14 @@ def main():
             print(f"{y}: no regular session listed")
             INCOMPLETE.add(f"{y}:session")
     sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
+    # House committee meetings and agendas, from the House Budget & Research Office's Daily Report (states/ga/daily.py;
+    # never www.legis.ga.gov's gated schedule). Never holds Georgia back.
+    from states.ga import daily
+    if os.path.isdir(os.path.join(DATA, str(CURRENT))):
+        try:
+            daily.run(os.path.join(DATA, str(CURRENT)), YEAR)
+        except Exception as e:
+            print(f"daily report: failed ({e!r}); kept the last copy", flush=True)
     from states.ga import contacts
     try:
         contacts.main(CURRENT)

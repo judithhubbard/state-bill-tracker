@@ -113,7 +113,7 @@
     "data/ga"
    ],
    "minutes": 40,
-   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null) && python3 states/ga/fetch.py"
+   "run": "(command -v pdftohtml >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/ga/fetch.py"
   },
   {
    "name": "Michigan",
