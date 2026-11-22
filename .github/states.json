@@ -277,7 +277,7 @@
     "data/ms"
    ],
    "minutes": 110,
-   "run": "python3 states/ms/fetch.py && python3 states/ms/contacts.py"
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/ms/fetch.py && python3 states/ms/contacts.py"
   },
   {
    "name": "Montana",
@@ -387,7 +387,7 @@
     "data/sc"
    ],
    "minutes": 60,
-   "run": "python3 states/sc/fetch.py && python3 states/sc/contacts.py"
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/sc/fetch.py && python3 states/sc/contacts.py"
   },
   {
    "name": "Nebraska",
