@@ -36,12 +36,20 @@ but named search engines, the Missouri House's and the Indiana House Republicans
 an answer from before showed a light photo, else it's left out. Requests to a host keep its Crawl-delay (gc.nh.gov's 11 seconds, flsenate.gov's 10); a host with a delay of 5 seconds or more is asked again
 monthly instead of weekly.
 
+- Wikidata and Wikimedia Commons (2026-11-22), the last resort for members still without a photo (`add_wikidata()`):
+  the portrait (P18) of the person Wikidata says holds the member's seat (P39 of the house's member position,
+  `POSITIONS`; the district (P768) where the house's districts are its seat numbers; a term reaching the session), or,
+  when Wikidata has them only in the other house or no term at all, the only person of that name, if they held a seat in
+  the state's legislature or their description names it. Linked as a 330-pixel Commons thumbnail; photos.json's
+  "credits" keeps each one's author and license (the photo's tooltip on the legislator's page, `credit_of()`, and a line
+  in How's "About this data", `uses_commons()`). Answers, "none" too, are kept a month in photos_wikidata.json.
+
 Matching: each contacts file's members, by house, name and district (`match()`); a member the state's files give a photo
 keeps it. Each address is asked once a week whether it answers with an image (`head()`, a HEAD request, two a second,
 answers in photos_checked.json, with its size): a 404 or a web page is left out, and a heavy one shrunk (above).
 Usage: python3 photos.py data/<state> ...   (folders that aren't a state's are skipped; --force downloads again)
 """
-import csv, glob, hashlib, io, json, os, re, sys, time, unicodedata, urllib.error, urllib.request
+import csv, glob, hashlib, io, json, os, re, sys, time, unicodedata, urllib.error, urllib.parse, urllib.request
 from collections import Counter
 from datetime import datetime, timezone
 
@@ -580,6 +588,7 @@ def build(folder, st, src, check=lambda url: None, roster=None):
 
 
 def refresh(folder, force=False):
+    began = time.time()
     st = os.path.basename(os.path.normpath(folder))
     if not re.fullmatch(r"[a-z]{2}", st) or st == "ny" or not os.path.isdir(folder) or not contacts_files(folder):
         return
@@ -605,11 +614,20 @@ def refresh(folder, force=False):
     images = {k: u for k, u in images.items() if u not in heavy or u in names or check.size(u) <= LINK_MAX}
     if heavy:
         print(f"{st}: {len(heavy)} heavy photos, {len(names)} with small copies ({small.made} made this run)")
+    # Members still without one: Wikidata's portrait, from Commons (light thumbnails: never shrunk).
+    try:
+        # (Within the step's 8 minutes: what's left of RUN_SECONDS, else only the answers already saved.)
+        credits = add_wikidata(folder, st, images, max(0, min(WD_SECONDS, began + RUN_SECONDS - time.time())))
+    except Exception as e:  # (the photos found so far still count)
+        print(f"{st}: Wikidata fallback failed ({str(e)[:120]})")
+        credits = {}
     path = os.path.join(folder, "photos.json")
     out = {"source": "unitedstates/images" if st == "us" else "Open States people", "fetched": src.get("fetched"),
            "images": dict(sorted(images.items()))}
     if names:
         out["small"] = dict(sorted(names.items()))
+    if credits:
+        out["credits"] = dict(sorted(credits.items()))
     try:
         same = json.load(open(path)) == out
     except (OSError, ValueError):
@@ -619,6 +637,443 @@ def refresh(folder, force=False):
             json.dump(out, f, indent=0, sort_keys=True)
         os.replace(path + ".tmp", path)
     print(f"{st}: {len(images)} photos added{'' if not same else ' (unchanged)'}")
+
+
+# ---- Wikidata and Wikimedia Commons: the last resort ----
+#
+# For members still without a photo (no contacts' own, no official or Ballotpedia one robots.txt lets us use), the
+# portrait Wikidata gives them (P18), linked as a Commons thumbnail, with its author and license for the credit.
+# Each state's members of each house are one SPARQL query (people holding the house's member position, P39, with the
+# district (P768) and dates of each term), asked monthly; members not found there are looked up by name, once a month
+# each, and kept only when one person has that name and their description names the state's legislature.
+# (query.wikidata.org's and commons.wikimedia.org's robots.txt disallow /sparql and /w/ for crawlers; these are the
+# query service and API Wikimedia offers programs, used here as its User-Agent policy and API etiquette ask: an honest
+# User-Agent, one request at a time, a second apart, maxlag. The photos themselves are on upload.wikimedia.org, which
+# robots.txt allows.)
+
+WD_UA = {"User-Agent": "StateBillTracker/1.0 (https://statebilltracker.org/; legislators' photos, a monthly request) "
+                       "Python-urllib"}
+MONTH = 30 * 86400
+WD_SECONDS = 120  # of asking Wikidata and Commons a run; the rest waits for the next run
+RUN_SECONDS = 420  # a state's whole photos run (download.yml's step stops it at 8 minutes)
+WD_WIDTH = 330  # pixels: one of Wikimedia's standard thumbnail widths (https()), over WIDTH
+# Each house's member position on Wikidata ("member of the Colorado House of Representatives"), by the seat's first
+# letter: "S" the upper house, "L" Nebraska's Legislature, "B" the Council of the District of Columbia, any other the
+# lower house ("H", "A"). Found by their "subclass of" (member of United States state lower house; state senator) and
+# "applies to jurisdiction" (the state), checked by name, 2026-11-22.
+POSITIONS = {
+    "al": ("Q18648747", "Q20058764"), "ak": ("Q26265831", "Q21360107"), "az": ("Q17486298", "Q21360913"),
+    "ar": ("Q19681513", "Q21361754"), "ca": ("Q18180908", "Q19690441"), "co": ("Q17485005", "Q20064489"),
+    "ct": ("Q18763331", "Q19831739"), "de": ("Q22679266", "Q21362489"), "fl": ("Q18342844", "Q19961062"),
+    "ga": ("Q17548315", "Q20065663"), "hi": ("Q19319643", "Q20058751"), "id": ("Q17546641", "Q18655026"),
+    "il": ("Q17495450", "Q20058778"), "in": ("Q18190880", "Q19362907"), "ia": ("Q17486706", "Q18707052"),
+    "ks": ("Q17487134", "Q19617175"), "ky": ("Q20065966", "Q20066070"), "la": ("Q17355090", "Q18091440"),
+    "me": ("Q18713970", "Q18342769"), "md": ("Q20064986", "Q20064926"), "ma": ("Q17342542", "Q20058776"),
+    "mi": ("Q18654736", "Q18675883"), "mn": ("Q17505193", "Q21363942"), "ms": ("Q17487661", "Q18195558"),
+    "mo": ("Q18131809", "Q21364537"), "mt": ("Q17496847", "Q21365323"), "nv": ("Q18341124", "Q20064517"),
+    "nh": ("Q21971205", "Q19264592"), "nj": ("Q18536527", "Q19385767"), "nm": ("Q17631457", "Q20658713"),
+    "ny": ("Q20058770", "Q18691526"), "nc": ("Q18089655", "Q19727887"), "nd": ("Q19360961", "Q21366730"),
+    "oh": ("Q17502533", "Q20065429"), "ok": ("Q18925362", "Q21367377"), "or": ("Q19360415", "Q19689183"),
+    "pa": ("Q14616716", "Q18199902"), "ri": ("Q20058759", "Q19397347"), "sc": ("Q19754409", "Q18676729"),
+    "sd": ("Q19360976", "Q6814783"), "tn": ("Q18538054", "Q18534307"), "tx": ("Q18604553", "Q18565274"),
+    "ut": ("Q18810381", "Q20065565"), "vt": ("Q17484018", "Q20065418"), "va": ("Q20065408", "Q18604340"),
+    "wa": ("Q17598395", "Q20065405"), "wv": ("Q19772501", "Q21368444"), "wi": ("Q18526160", "Q17602055"),
+    "wy": ("Q18341783", "Q19394559"), "us": ("Q13218630", "Q4416090"),
+}
+ONE_HOUSE = {"ne": ("L", "Q20065395"), "dc": ("B", "Q54855275")}
+STATE_NAMES = {
+    "al": "Alabama", "ak": "Alaska", "az": "Arizona", "ar": "Arkansas", "ca": "California", "co": "Colorado",
+    "ct": "Connecticut", "de": "Delaware", "fl": "Florida", "ga": "Georgia", "hi": "Hawaii", "id": "Idaho",
+    "il": "Illinois", "in": "Indiana", "ia": "Iowa", "ks": "Kansas", "ky": "Kentucky", "la": "Louisiana", "me": "Maine",
+    "md": "Maryland", "ma": "Massachusetts", "mi": "Michigan", "mn": "Minnesota", "ms": "Mississippi", "mo": "Missouri",
+    "mt": "Montana", "ne": "Nebraska", "nv": "Nevada", "nh": "New Hampshire", "nj": "New Jersey", "nm": "New Mexico",
+    "ny": "New York", "nc": "North Carolina", "nd": "North Dakota", "oh": "Ohio", "ok": "Oklahoma", "or": "Oregon",
+    "pa": "Pennsylvania", "ri": "Rhode Island", "sc": "South Carolina", "sd": "South Dakota", "tn": "Tennessee",
+    "tx": "Texas", "ut": "Utah", "vt": "Vermont", "va": "Virginia", "wa": "Washington", "wv": "West Virginia",
+    "wi": "Wisconsin", "wy": "Wyoming", "dc": "District of Columbia", "us": "United States"}
+# Files that aren't portraits (a signature, a coat of arms), whatever P18 says.
+NOT_PORTRAIT = re.compile(r"(?i)signature|autograph|logo|seal|coat of arms|flag|map\b|\.(svg|pdf|djvu|webm|ogv)$")
+
+
+def position_of(st, seat):
+    if st in ONE_HOUSE:
+        return ONE_HOUSE[st][1]
+    pair = POSITIONS.get(st)
+    return pair and (pair[1] if seat[0] == "S" else pair[0])
+
+
+def wd_get(url, data=None, headers=None):
+    pace(url, 1)
+    req = urllib.request.Request(url, data=data, headers={**WD_UA, **(headers or {})})
+    with urllib.request.urlopen(req, timeout=90) as r:
+        return json.load(r)
+
+
+def sparql(q):
+    try:
+        return _sparql(q)
+    except urllib.error.HTTPError as e:
+        if e.code not in (500, 502, 503, 504):
+            raise
+        time.sleep(10)  # (the query service is busy now and then: once more, a little later)
+        return _sparql(q)
+
+
+def _sparql(q):
+    return wd_get("https://query.wikidata.org/sparql", urllib.parse.urlencode({"query": q}).encode(),
+                  {"Accept": "application/sparql-results+json",
+                   "Content-Type": "application/x-www-form-urlencoded"})["results"]["bindings"]
+
+
+def qid(uri):
+    return (uri or "").rsplit("/", 1)[-1]
+
+
+def file_name(uri):
+    """"Name.jpg" from a Special:FilePath address (as SPARQL gives P18)."""
+    return urllib.parse.unquote(uri.rsplit("/", 1)[-1]).replace("_", " ") if uri else ""
+
+
+def holders(st):
+    """{qid: {"names": [..], "desc", "image", "born" (year), "died", "terms": [[house letter, start, end, district
+    label]]}}: everyone Wikidata says held one of the state's member positions with a term ending in 2019 or later, or
+    with no end, leaving out people who died before 2019 or were born before 1930. One query a house for the terms,
+    then the people's names and photos 300 at a time (one query for everything timed out for the biggest houses:
+    Massachusetts's, Iowa's, the U.S. House)."""
+    pos = ({ONE_HOUSE[st][0]: ONE_HOUSE[st][1]} if st in ONE_HOUSE else
+           {"H": POSITIONS[st][0], "S": POSITIONS[st][1]})
+    out = {}
+    for house, position in pos.items():
+        q = """
+SELECT ?person ?start ?end ?distL WHERE {
+  ?person p:P39 ?stmt. ?stmt ps:P39 wd:%s.
+  OPTIONAL { ?stmt pq:P582 ?end }
+  FILTER(!BOUND(?end) || ?end >= "2019-01-01T00:00:00Z"^^xsd:dateTime)
+  FILTER NOT EXISTS { ?person wdt:P570 ?died. FILTER(?died < "2019-01-01T00:00:00Z"^^xsd:dateTime) }
+  FILTER NOT EXISTS { ?person wdt:P569 ?born. FILTER(?born < "1930-01-01T00:00:00Z"^^xsd:dateTime) }
+  OPTIONAL { ?stmt pq:P580 ?start }
+  OPTIONAL { ?stmt pq:P768 ?dist. OPTIONAL { ?dist rdfs:label ?distL. FILTER(LANG(?distL) = "en") } }
+}""" % position
+        for b in sparql(q):
+            r = {k: v["value"] for k, v in b.items()}
+            p = out.setdefault(qid(r["person"]), {"names": [], "desc": "", "image": "", "born": "", "died": "", "terms": []})
+            term = [house, r.get("start", "")[:10], r.get("end", "")[:10], r.get("distL", "")]
+            if term not in p["terms"]:
+                p["terms"].append(term)
+    ids = sorted(out)
+    for i in range(0, len(ids), 300):
+        q = """
+SELECT ?person ?desc ?img ?born ?died
+       (GROUP_CONCAT(DISTINCT ?label; separator="|") AS ?labels) (GROUP_CONCAT(DISTINCT ?alias; separator="|") AS ?aliases) WHERE {
+  VALUES ?person { %s }
+  OPTIONAL { ?person rdfs:label ?label. FILTER(LANG(?label) = "en" || LANG(?label) = "mul") }
+  OPTIONAL { ?person skos:altLabel ?alias. FILTER(LANG(?alias) = "en") }
+  OPTIONAL { ?person schema:description ?desc. FILTER(LANG(?desc) = "en") }
+  OPTIONAL { ?person wdt:P18 ?img }
+  OPTIONAL { ?person wdt:P569 ?born }
+  OPTIONAL { ?person wdt:P570 ?died }
+} GROUP BY ?person ?desc ?img ?born ?died""" % " ".join("wd:" + x for x in ids[i:i + 300])
+        for b in sparql(q):
+            r = {k: v["value"] for k, v in b.items()}
+            p = out[qid(r["person"])]
+            for n in (r.get("labels") or "").split("|") + (r.get("aliases") or "").split("|"):
+                if n and n not in p["names"]:
+                    p["names"].append(n)
+            p["desc"] = p["desc"] or r.get("desc", "")
+            p["image"] = p["image"] or file_name(r.get("img"))
+            p["born"] = p["born"] or r.get("born", "")[:4]
+            p["died"] = p["died"] or r.get("died", "")[:10]
+    return out
+
+
+def by_names(names):
+    """{name: [[qid, description, image file], ...]}: people (humans) with that English label or alias."""
+    values = " ".join(json.dumps(n) + lang for n in names for lang in ("@en", "@mul"))
+    q = """
+SELECT ?name ?person ?desc ?img WHERE {
+  VALUES ?name { %s }
+  { ?person rdfs:label ?name } UNION { ?person skos:altLabel ?name }
+  ?person wdt:P31 wd:Q5.
+  OPTIONAL { ?person schema:description ?desc. FILTER(LANG(?desc) = "en") }
+  OPTIONAL { ?person wdt:P18 ?img }
+}""" % values
+    out = {n: {} for n in names}
+    for b in sparql(q):
+        r = {k: v["value"] for k, v in b.items()}
+        same = out.setdefault(r["name"], {})
+        q_ = qid(r["person"])
+        old = same.get(q_, [q_, "", ""])
+        same[q_] = [q_, old[1] or r.get("desc", ""), old[2] or file_name(r.get("img"))]
+    return {n: list(v.values()) for n, v in out.items()}
+
+
+def commons_info(files):
+    """{file: {"src", "page", "author", "license", "about"}} from Commons' imageinfo, 50 files a request."""
+    out = {}
+    files = sorted(set(f for f in files if f))
+    for i in range(0, len(files), 50):
+        part = files[i:i + 50]
+        q = urllib.parse.urlencode({"action": "query", "format": "json", "formatversion": 2, "prop": "imageinfo",
+                                    "iiprop": "url|extmetadata", "iiurlwidth": WD_WIDTH, "maxlag": 5,
+                                    "titles": "|".join("File:" + f for f in part),
+                                    "iiextmetadatafilter": "Artist|LicenseShortName|ImageDescription|ObjectName"})
+        data = wd_get("https://commons.wikimedia.org/w/api.php?" + q).get("query", {})
+        asked = {"File:" + f: f for f in part}
+        for n in data.get("normalized", []):
+            asked[n["to"]] = asked.get(n["from"], n["from"][5:])
+        for p in data.get("pages", []):
+            info = (p.get("imageinfo") or [{}])[0]
+            f = asked.get(p["title"], p["title"][5:])
+            if not info.get("thumburl"):
+                out[f] = {}
+                continue
+            m = info.get("extmetadata", {})
+            val = lambda k: re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", m.get(k, {}).get("value", "") or "")).strip()
+            author = val("Artist")
+            if re.match(r"(?i)unknown author", author):
+                author = ""
+            out[f] = {"src": https(info["thumburl"].split("?")[0]), "page": info.get("descriptionurl", ""),
+                      "author": author[:120].rstrip(". "), "license": val("LicenseShortName"),
+                      "about": (val("ObjectName") + " | " + val("ImageDescription"))[:240]}
+    return out
+
+
+def names_of(p):
+    """A member's name as Wikidata may write it: "Carl L. Anderson", "Carl Anderson", the nickname in quotes."""
+    name = re.sub(r"\s+", " ", (p.get("name") or "").replace(" ", " ")).strip()
+    out = [name]
+    plain = re.sub(r"\s*[\"“(][^\"”)]*[\"”)]\s*", " ", name).strip()
+    words = [w for i, w in enumerate(plain.split()) if i == 0 or not re.fullmatch(r"[A-Z]\.?", w)]
+    out += [plain, " ".join(words)]
+    words = [w for w in words if not re.fullmatch(r"(?i)(jr|sr|ii|iii|iv)\.?,?", w)]
+    out.append(" ".join(words).rstrip(","))
+    nick = re.search(r"[\"“(]([^\"”)]+)[\"”)]", name)
+    if nick and len(words) > 1:
+        out.append(f"{nick.group(1)} {words[-1]}")
+    return [n for i, n in enumerate(out) if n and n not in out[:i]]
+
+
+def same_person(p, names):
+    """Whether a contacts member and a Wikidata person's names fit: the same surname and a first name (or nickname, or
+    another given name) that fits."""
+    mine = norm(p.get("name")) or norm(p.get("key"))
+    if not mine:
+        return False
+    last, first, given = mine[-1], mine[0], set(w for w in mine[:-1] if len(w) > 1)
+    for n in names:
+        theirs = norm(n)
+        if len(theirs) < 2:
+            continue
+        if not (theirs[-1] == last or last in theirs[1:] or theirs[-1] in mine[1:]):
+            continue
+        f = theirs[0]
+        if f == first or NICK.get(f) == first or NICK.get(first) == f or NICK.get(f, 1) == NICK.get(first, 2) \
+                or (min(len(f), len(first)) >= 3 and (f.startswith(first) or first.startswith(f))) \
+                or given & set(w for w in theirs[:-1] if len(w) > 1):
+            return True
+    return False
+
+
+class Wiki:
+    """The fallback's answers, data/<state>/photos_wikidata.json: {"t", "holders", "names": {name: [t, [candidates]]},
+    "files": {file: [t, info]}}, each asked again after a month; a failed request keeps the last copy."""
+    def __init__(self, folder, st, budget=WD_SECONDS):
+        self.st, self.path = st, os.path.join(folder, "photos_wikidata.json")
+        try:
+            self.d = json.load(open(self.path))
+        except (OSError, ValueError):
+            self.d = {}
+        self.until = time.time() + budget
+        self.changed = False
+
+    def busy(self):
+        return time.time() > self.until
+
+    def holders(self):
+        if (not self.d.get("holders") or time.time() - self.d.get("t", 0) > MONTH) and not self.busy():
+            try:
+                h = holders(self.st)
+                if h or not self.d.get("holders"):
+                    self.d.update(t=int(time.time()), holders=h)
+                    self.changed = True
+            except Exception as e:
+                print(f"{self.st}: Wikidata's members didn't load ({str(e)[:100]}); kept the last copy")
+        return self.d.get("holders") or {}
+
+    def names(self, wanted):
+        cache = self.d.setdefault("names", {})
+        ask = sorted(n for n in wanted if n not in cache or time.time() - cache[n][0] > MONTH)
+        for i in range(0, len(ask), 20):
+            if self.busy():
+                break
+            try:
+                got = by_names(ask[i:i + 20])
+            except Exception as e:
+                print(f"{self.st}: Wikidata's names didn't load ({str(e)[:100]})")
+                break
+            for n in ask[i:i + 20]:
+                cache[n] = [int(time.time()), got.get(n, [])]
+            self.changed = True
+        return {n: cache[n][1] for n in wanted if n in cache}
+
+    def files(self, wanted):
+        cache = self.d.setdefault("files", {})
+        ask = sorted(f for f in wanted if f not in cache or time.time() - cache[f][0] > MONTH)
+        for i in range(0, len(ask), 50):
+            if self.busy():
+                break
+            try:
+                got = commons_info(ask[i:i + 50])
+            except Exception as e:
+                print(f"{self.st}: Commons didn't answer ({str(e)[:100]})")
+                break
+            for f in ask[i:i + 50]:
+                if f in got:
+                    cache[f] = [int(time.time()), got[f]]
+            self.changed = True
+        return {f: cache[f][1] for f in wanted if f in cache and cache[f][1]}
+
+    def save(self, names, files):
+        """Saved when something was asked; names and files no longer wanted are dropped."""
+        self.d["names"] = {n: v for n, v in self.d.get("names", {}).items() if n in names}
+        self.d["files"] = {f: v for f, v in self.d.get("files", {}).items() if f in files}
+        if not self.changed:
+            return
+        with open(self.path + ".tmp", "w") as f:
+            json.dump(self.d, f, indent=0, sort_keys=True)
+        os.replace(self.path + ".tmp", self.path)
+
+
+def legislature_words(st, house):
+    """Whether a Wikidata description names this state's legislature (and the member's house, when it says)."""
+    state = STATE_NAMES.get(st, "")
+    if st == "us":
+        return lambda d: bool(re.search(r"(?i)\b(congress(wo)?man|u\.?s\.? (representative|senator)|united states "
+                                        r"(representative|senator)|member of the u\.?s\.? house)", d))
+    upper, lower = r"senat", r"house|assembly|delegate|representative"
+    house_re = {"S": upper, "L": upper + "|legislat", "B": r"council"}.get(house, lower)
+    return lambda d: bool(state and state.lower() in d.lower() and re.search(r"(?i)" + house_re, d)
+                          and not re.search(r"(?i)\b(u\.?s\.?|united states|congress)", d))
+
+
+def wikidata(folder, st, wanted, budget=WD_SECONDS):
+    """{"<house>|<name key>": (file, how)} for wanted members ([(seat, person, session)]), from Wikidata: someone who
+    held the member's house's position in a term reaching the session, with a fitting name (and district, where the
+    house's Wikidata districts are its seat numbers), and no other such person; else one person by that exact name whose
+    description names the state's legislature. Returns (found, Wiki) so the caller can save it."""
+    w = Wiki(folder, st, budget)
+    if not wanted or (st not in POSITIONS and st not in ONE_HOUSE):
+        return {}, w
+    people = w.holders()
+    found, unresolved = {}, []
+    cands = {}
+    for seat, p, session in wanted:
+        pos_house = seat[0] if st in ONE_HOUSE else ("S" if seat[0] == "S" else "H")
+        begun = f"{session}-01-01"
+        same, other = [], []
+        for q, r in people.items():
+            # (Not someone who died before the session, or was born before 1930: a namesake from long ago, whose
+            # terms Wikidata often has without dates.)
+            if (r.get("died") and r["died"] < begun) or (r.get("born") and r["born"] < "1930") \
+                    or not same_person(p, r["names"]):
+                continue
+            mine = [t for t in r["terms"] if t[0] == pos_house and (not t[2] or t[2] >= begun)]
+            if mine:
+                same.append((q, mine))
+            elif r.get("born") or any(t[1] >= "2000" or t[2] for t in r["terms"]):
+                other.append((q, []))
+        # Someone Wikidata has only in the other house (a representative since elected to the Senate, the statement not
+        # yet added) counts when no one fits in the member's own house; districts aren't compared then. (One with only
+        # undated terms there is checked by name below: the only person of that name.)
+        cands[(seat, p["key"], session)] = same or other
+    # Districts count where the house's Wikidata districts are its seat numbers (90% of the single matches agree).
+    agree, n = Counter(), Counter()
+    for (seat, key, session), c in cands.items():
+        ds = {digits(t[3]) for t in (c[0][1] if len(c) == 1 else []) if digits(t[3])}
+        if ds and digits(seat[2:]):
+            n[seat[0]] += 1
+            agree[seat[0]] += digits(seat[2:]) in ds
+    numbered_ = {h for h in n if n[h] >= 3 and agree[h] >= 0.9 * n[h]}
+    for seat, p, session in wanted:
+        c = cands[(seat, p["key"], session)]
+        if seat[0] in numbered_ and digits(seat[2:]):
+            # (A term with no district recorded doesn't rule a person out.)
+            c = [x for x in c if any(not digits(t[3]) or digits(t[3]) == digits(seat[2:]) for t in x[1])] or []
+            if len(c) > 1:
+                exact = [x for x in c if any(digits(t[3]) == digits(seat[2:]) for t in x[1])]
+                c = exact if len(exact) == 1 else c
+        if len(c) > 1:
+            # (Someone whose term has dates beats a namesake with none, often a member from long ago.)
+            dated = [x for x in c if any(t[1] for t in x[1])]
+            c = dated if len(dated) == 1 else c
+        k = f"{seat[0]}|{p['key']}"
+        if len(c) == 1:
+            r = people[c[0][0]]
+            if r["image"] and not NOT_PORTRAIT.search(r["image"]):
+                found[k] = (r["image"], f"held the position: {c[0][0]} {r['names'][0]} ({r['desc']})")
+        elif not cands[(seat, p["key"], session)]:
+            # (Not when the district ruled the only ones out.)
+            unresolved.append((seat, p))
+    # Not found holding the position: one person by exactly that name, described as one of the state's legislators.
+    names = {}
+    for seat, p in unresolved:
+        names[(seat, p["key"])] = names_of(p)
+    answers = w.names(sorted({n for v in names.values() for n in v})) if names else {}
+    for (seat, key), ns in names.items():
+        k = f"{seat[0]}|{key}"
+        if k in found or not all(n in answers for n in ns):
+            continue
+        c = {x[0]: x for n in ns for x in answers[n]}
+        if len(c) != 1:
+            continue
+        q, desc, img = next(iter(c.values()))
+        # (The only person of that name, who held a seat in this state's legislature, or is described as a member.)
+        held = people.get(q)
+        if held and ((held.get("died") and held["died"] < "2019") or (held.get("born") and held["born"] < "1930")):
+            continue
+        if img and (held or legislature_words(st, seat[0])(desc)) and not NOT_PORTRAIT.search(img):
+            found[k] = (img, f"by name{', held a seat' if held else ''}: {q} ({desc})")
+    w.names_asked = {n for v in names.values() for n in v}
+    return found, w
+
+
+def add_wikidata(folder, st, images, budget=WD_SECONDS):
+    """Adds Commons photos for members of every contacts file that have none; returns {url: credit}."""
+    wanted, seen = [], set()
+    for path in reversed(contacts_files(folder)):  # (a member's newest session)
+        session = int(re.search(r"(\d{4})", os.path.basename(path)).group(1))
+        for seat, p in sorted(json.load(open(path)).get("people", {}).items()):
+            k = f"{seat[0]}|{p.get('key')}"
+            if p.get("image") or k in images or k in seen or not p.get("key"):
+                continue
+            seen.add(k)
+            wanted.append((seat, p, session))
+    found, w = wikidata(folder, st, wanted, budget)
+    info = w.files(sorted({f for f, _ in found.values()}))
+    credits = {}
+    for k, (f, how) in found.items():
+        i = info.get(f)
+        if i and i.get("src", "").startswith(("https://upload.wikimedia.org/", "https://thumb.wikimedia.org/")):
+            images[k] = i["src"]
+            credits[i["src"]] = {"file": f, "page": i["page"], "author": i["author"], "license": i["license"]}
+    w.save(getattr(w, "names_asked", set()), {f for f, _ in found.values()})
+    if wanted:
+        print(f"{st}: {len(credits)} of {len(wanted)} members without a photo found on Wikidata")
+    return credits
+
+
+def credit_of(folder, url):
+    """"Photo: author, license, via Wikimedia Commons" for a Commons photo the fallback added, else ""."""
+    c = _read(folder).get("credits", {}).get(url)
+    if not c:
+        return ""
+    lic = c.get("license") or ""
+    by = "" if lic.lower() in ("public domain", "cc0") or not c.get("author") else c["author"]
+    return "Photo: " + ", ".join(x for x in (by, lic, "via Wikimedia Commons") if x)
+
+
+def uses_commons(folder):
+    return bool(_read(folder).get("credits"))
 
 
 # ---- reading (build_data.py, test/data_check.py) ----

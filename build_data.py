@@ -405,6 +405,7 @@ def legislators(session):
         out.append({"id": seat, "slug": slug, "name": p["name"], "title": TITLES[house],
                     "house": house, "district": int(district), "email": p.get("email"), "phone": p.get("phone"), "phones": p.get("phones"),
                     "form": p.get("form"), "url": p.get("url"), "party": p.get("party"), "image": photos.image_of(P.DATA, seat, p, photo_address if GITHUB else None),
+                    **({"photoBy": by} if (by := photos.credit_of(P.DATA, photos.image_of(P.DATA, seat, p))) else {}),
                     "since": since.get(seat), "committees": committees_of(seat, p)})
     return out
 
@@ -2576,11 +2577,15 @@ def finish(session, core, current, urls):
     # Where the legislators' photos come from, when photos.py found some (one shared sentence, at the end of "About this
     # data"'s notes: the second-to-last </div> of the section).
     if photos.load(P.DATA) and 'id="howData"' in template:
-        credit = ("<p>Photos of members are the Government Publishing Office's, from the unitedstates/images project.</p>"
+        commons = (" Some are from <a href=\"https://commons.wikimedia.org/\" target=\"_blank\" rel=\"noopener\">Wikimedia "
+                   "Commons</a>, through Wikidata, under their authors' licenses (named on each photo)."
+                   if photos.uses_commons(P.DATA) else "")
+        credit = ("<p>Photos of members are the Government Publishing Office's, from the unitedstates/images project."
+                  + commons + "</p>"
                   if STATE == "us" else
                   "<p>Legislators' photos the Legislature's own files don't include come from Open States' people "
                   "data, which takes most of them from the Legislature's website"
-                  + (", and some from Ballotpedia" if photos.uses_ballotpedia(P.DATA) else "") + ".</p>")
+                  + (", and some from Ballotpedia" if photos.uses_ballotpedia(P.DATA) else "") + "." + commons + "</p>")
         at = template.index('id="howData"')
         sec_end = template.index("</section>", at)
         last = template.rfind("</div>", at, sec_end)

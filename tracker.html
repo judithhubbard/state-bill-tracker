@@ -6987,7 +6987,7 @@ function renderPerson(L, past) {
   const reach = [emailHtml(L.email, "legislator-page"), formHtml(L.form, "legislator-page"), phonesHtml(L, "legislator-page"),
     L.url && `<a href="${esc(L.url)}" target="_blank" rel="noopener">Official page</a>`].filter(Boolean).join(" · ");
   $("person").innerHTML = `
-    <div class="photo"><span>${esc(L.name.split(" ").filter((w) => /^[A-Z]/.test(w) && !/^(Jr|Sr|II|III)\.?$/.test(w)).map((w) => w[0]).filter((c, i, a) => i === 0 || i === a.length - 1).join(""))}</span>${L.image ? `<img src="${esc(L.image)}" alt="" onerror="this.remove()">` : ""}</div>
+    <div class="photo"${L.photoBy ? ` title="${esc(L.photoBy)}"` : ""}><span>${esc(L.name.split(" ").filter((w) => /^[A-Z]/.test(w) && !/^(Jr|Sr|II|III)\.?$/.test(w)).map((w) => w[0]).filter((c, i, a) => i === 0 || i === a.length - 1).join(""))}</span>${L.image ? `<img src="${esc(L.image)}" alt="" onerror="this.remove()">` : ""}</div>
     <div class="who-body">
       <h2>${esc(L.label)}</h2>
       <p>${[L.party, STATE.seatText ? STATE.seatText(L.house, L.district, DNAME(L.house, L.district)) : DNAME(L.house, L.district) ? `${house}, ${DNAME(L.house, L.district)} district` : `${house} District ${DNUM(L.house, L.district)}`, since].filter(Boolean).map(esc).join(" · ")}</p>
