@@ -5489,7 +5489,8 @@ function keepFocus(fn) {
 
 const VIEWS = ["bills", "watch", "stats", "how", "act", "person"];
 // The tab a page opens on (the governor's page: their record), and the tabs a page doesn't have: a legislator's page has
-// no watchlist, statistics or How; the governor's page only their record and Bills; the others no Record or Coming up.
+// no watchlist, statistics or How; the governor's page (no tabs shown) its record, and Bills for a bill linked from a
+// panel; the others no Record or Coming up.
 const HOME_VIEW = () => (PRESET?.gov ? "person" : "bills");
 const viewOff = (v) => (PRESET?.gov ? !["person", "bills"].includes(v) : PRESET?.who ? ["watch", "stats", "how"].includes(v) : ["person", "act"].includes(v));
 function showView(v, push = true) {
@@ -6967,12 +6968,9 @@ function hydrate(raw) {
     for (const sec of document.querySelectorAll("#view-act > .act-sec")) if (sec.id !== "openNow") sec.hidden = true;
   }
   if (PRESET?.gov) {
-    // The governor's page: their record first, named for the office (build_data.py's frame_tabs() writes the same),
-    // then Bills.
-    for (const v of ["watch", "stats", "how", "act"]) document.querySelector(`.view-tab[data-view="${v}"]`).hidden = true;
-    const tab = document.querySelector('.view-tab[data-view="person"]');
-    tab.hidden = false; tab.textContent = EXEC.title;
-    document.querySelector(".views").prepend(tab);
+    // The governor's page is their card and record only, with no tabs (build_data.py's frame_tabs() hides them too):
+    // "All bills" on the card goes to the bill list.
+    document.querySelector(".views").hidden = true;
     renderGovCard();
     renderGov();
   }

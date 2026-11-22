@@ -220,8 +220,8 @@ opened (`later()`, `STALE`, `showView()`).
 - **Legislator pages** (`/<st>/<slug>/`, `PRESET.who`): `renderPerson()`, `renderPersonStats()` ("Their numbers"),
   `renderOpenNow()` / `comingUp()` ("Open for comment").
 - **/<st>/governor/** (Congress: /us/president/; `PRESET.gov`, `frame_tabs(..., "gov")`): `renderGovCard()` (name, party,
-  since: the list part's `govNow`; `GOV_REACH`), `renderGov()` in `#govRec` (the Record tab, named for the office, then
-  Bills): the desk (stage 4, by `b.due`), this session's decisions by the governor in office (`GOV_KINDS`: signed,
+  since: the list part's `govNow`; `GOV_REACH`), `renderGov()` in `#govRec` (the Record view; no tabs on
+  this page): the desk (stage 4, by `b.due`), this session's decisions by the governor in office (`GOV_KINDS`: signed,
   without signature, vetoed, overridden), earlier sessions (the stats part's `govRecord`, `governor_record()`) and vetoes
   with a message (`vetoMsgs`). Linked from the party line's Governor panel and decided bills' "What you can do" (`govLink()`).
 - **/<st>/watchlist/**: the same page with `frame_tabs(..., "watch")`.

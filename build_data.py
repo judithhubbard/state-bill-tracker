@@ -1929,9 +1929,9 @@ def split_payload(data, current=True, hooks=None):
 def frame_tabs(page, kind):
     """The tabs as the page will show them once its data is drawn (hydrate() sets the same), so the page's frame, shown
     while the data loads, doesn't change when it arrives. kind: "past", "upcoming", "person" (a legislator's page) or
-    "watch" (/watchlist/: no tabs) or "gov" (the governor's page: its record, then Bills)."""
+    "watch" (/watchlist/: no tabs) or "gov" (the governor's page: no tabs, their card and record)."""
     tab = lambda v: f'<button class="view-tab" type="button" data-view="{v}">'
-    hide = {"past": ["watch"], "upcoming": ["stats"], "person": ["watch", "stats"], "gov": ["watch", "stats"]}.get(kind, [])
+    hide = {"past": ["watch"], "upcoming": ["stats"], "person": ["watch", "stats"]}.get(kind, [])
     for v in hide:
         page = page.replace(tab(v), tab(v)[:-1] + " hidden>", 1)
     if kind == "person":
@@ -1940,12 +1940,8 @@ def frame_tabs(page, kind):
         # Only a legislator's page has the "Open for comment" tab (their bills to weigh in on).
         page = page.replace(tab("act")[:-1] + " hidden>", tab("act"), 1)
     if kind == "gov":
-        # The governor's record first, named for the office (tracker.html's hydrate() does the same), then Bills.
-        page = page.replace('data-view="how"><span', 'data-view="how" hidden><span', 1)
-        page = re.sub(r'<button class="view-tab" type="button" data-view="person" hidden>[^<]*</button>\n\s*', "", page, count=1)
-        bills = '<button class="view-tab" type="button" data-view="bills" aria-current="page">Bills</button>'
-        assert bills in page, "tracker.html's Bills tab changed"
-        page = page.replace(bills, f'{tab("person")[:-1]} aria-current="page">{GOV_SLUG.capitalize()}</button>\n    {tab("bills")}Bills</button>', 1)
+        # The governor's page is their card and record only: no tabs (tracker.html's hydrate() hides them too).
+        page = page.replace('<nav class="views" aria-label="Page sections">', '<nav class="views" aria-label="Page sections" hidden>', 1)
     # "Where you live" is for the current session's pages (a legislator's page is about them).
     if kind in ("past", "upcoming", "person", "gov"):
         page = page.replace('<details class="where" id="whereBox">', '<details class="where" id="whereBox" hidden>', 1)

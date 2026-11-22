@@ -731,8 +731,8 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
   sponsors: `legCounts()`; sortable, a name filter; the leader marked) or the governor's contacts (`GOV_REACH`, the
   bills waiting for them); the same name again closes it (2026-11-22). Legislator pages: `PRESET`, `PAST_WHO`, `renderPerson()` and `renderPersonStats()`.
   The governor's page (2026-11-22), /<st>/governor/ (Congress: /us/president/, build_data.py's `GOV_SLUG` from
-  legislatures.json's "executive"; `PRESET.gov`): `renderGovCard()` and `renderGov()` (`#govRec`, the Record tab named for
-  the office, before Bills): on the desk (soonest deadline first), this session's decisions by the governor in office
+  legislatures.json's "executive"; `PRESET.gov`): `renderGovCard()` and `renderGov()` (`#govRec`, the Record view; the page
+  has no tabs, the owner's choice 2026-11-22: the card's "All bills" link goes to the list): on the desk (soonest deadline first), this session's decisions by the governor in office
   (decided on or after `govNow.since`; signed, without signature, vetoed, overridden: `GOV_KINDS`), earlier sessions under
   the same governor (`govRecord` in the stats part, `governor_record()`: by the governor in office on the decision's day;
   its `NO_SIGNATURE` is tracker.html's, keep them alike) and vetoes with a message (`vetoMsgs`). Bills open in place
