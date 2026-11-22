@@ -67,3 +67,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Florida's terms end at the November election, and members who left then are no longer on the Senate's or the House's
   pages (the 2027 session's contacts have every member's form). data_check.py's contacts check leaves Florida's phones
   out (`CONTACT_GAPS`: they come from members' pages, read over several runs).
+- **Photos (2026-11-22):** the House's own by MemberId (the contacts' "id"), www.flhouse.gov/FileStores/Web/Imaging/
+  Member/<id>.jpg, as its roster page shows them; the Senate's from its list of senators (/Senators/, one request a week:
+  /PublishedContent/Senators/2026-2028/Photos/S27_5342.jpg, the thumbnail's name without "_Thumbnail"). So the 2027
+  members have photos before Open States lists them. flsenate.gov's Crawl-delay (10) is kept.

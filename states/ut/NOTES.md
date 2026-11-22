@@ -36,3 +36,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Concurrence) are standing lists, not dated: the records say when a bill was placed on one ("Senate/ placed on 2nd Reading
   Calendar", 630 in 2026) but not the day it will come up, and le.utah.gov's calendar page is a live JavaScript list. The
   floor-calendar feature needs a day, so Utah has none; "Awaiting a floor vote" already says where the bill is.
+- **Veto letters (2026-11-22):** states/ut/vetoes.py, no table: for each bill with "Governor Vetoed" or "Governor Line
+  Item Veto", le.utah.gov/~<year>/veto/<HB0003>.veto.pdf (the Legislature's copy; 2024's HB 2 and HB 3 scanned, read by
+  OCR); else the governor's last letter of the session on several bills, le.utah.gov/~<year>/veto/VetoLetter.pdf (2024's
+  scanned, 2025's typed: "I have selected these bills for veto: 1. HB 152 ...") or the governor's own copies found by
+  governor.utah.gov's WordPress media search (/wp-json/wp/v2/media?search=veto: all of 2026's). `section()` picks a
+  bill's paragraphs from such a letter (from the first naming it, by number or by its number and short title, since OCR
+  read "HB 239" as "Jub 239", to the next bill, list item or turn). Checked 2026-11-22: all 7, 6 and 2 vetoes of 2024-26
+  and the line-item vetoes (HB 2, HB 3 of 2024; HB 3, SB 3 of 2025; HB 3 of 2026). Both sites' Crawl-delay is 10.

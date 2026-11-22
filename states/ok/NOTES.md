@@ -66,3 +66,7 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   "Bill No.:" names another bill, isn't used); HB 2236 of 2023's conference summary says only "Pending". Two laws have
   only a floor amendment's summary (SB 1196 of 2024, HB 2513 of 2025) and get none. `python3 states/ok/summaries.py`
   prints the coverage.
+- **Photos (2026-11-22):** the House's own from its roster page (www.okhouse.gov/representatives, no robots.txt): the
+  page data lists every member's district and portrait; the 400x500 "small" size is used (about 35 KB). The Senate's site
+  (oksenate.gov) answers its pages with a script challenge (Sucuri), so its roster isn't read; Open States' links to its
+  photo files (/sites/default/files/, allowed) still load and are copied small.

@@ -82,9 +82,11 @@ study bills. Since 2026-11-22 a few texts (EARLY_TEXTS, laws first) go before th
 the bot check's cut left no requests for them. After
 that, out of session, a run is a few requests (the lists); during a session, the bills that moved and their votes.
 
-Not downloaded: leaders (only under /chambers/, which robots.txt bars); fiscal notes, the governor's letters on vetoes and
-item vetoes, the LSA's "Summary of Legislation" and bill versions after the first (PDFs); committee minutes (prose, written
-differently by each committee's secretary); amendment votes; committee meeting agendas.
+The governor's letters on vetoes and item vetoes: states/ia/vetoes.py, a few a run after the bills that moved.
+
+Not downloaded: leaders (only under /chambers/, which robots.txt bars); fiscal notes, the LSA's "Summary of
+Legislation" and bill versions after the first (PDFs); committee minutes (prose; committee votes by member come from the
+Journals' "Final Vote" lines instead); amendment votes; committee meeting agendas.
 
 data/ia/incomplete says "running" during the first copy, then lists what was never downloaded (a General Assembly's
 lists, a listed HF, SF, HJR or SJR's history, the current members or committees); it is removed when nothing is
@@ -891,6 +893,13 @@ def main():
         for ga in listed:
             if not out_of_time():
                 histories(ga, os.path.join(DATA, str(first_year(ga))), states[ga], BILLS, "bills")
+        # The governor's letters on vetoes and item vetoes (states/ia/vetoes.py): a few a run, each read once.
+        from states.ia import vetoes
+        for ga in listed:
+            if not out_of_time():
+                STATS["veto letters"] += vetoes.fetch(
+                    ga, first_year(ga), states[ga], lambda u: request(u, f"{ga}th veto letter", must=b"%PDF-", binary=True),
+                    lambda: CODE[0] == 404)
         if ga_of(YEAR) in gas and not out_of_time():
             members(ga_of(YEAR))
             committees(ga_of(YEAR))

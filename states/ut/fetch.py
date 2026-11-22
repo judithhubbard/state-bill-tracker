@@ -18,6 +18,7 @@ the route without it.
   apart, into data/ut/<year>/votes.json: {"H74": {"yeas": [...], "nays": [...], "absent": [...]}, ...}, names as the
   page prints them ("Peterson, K.") with the House or Senate district where the page links it. The first copy of three
   sessions takes many hours, so it resumes where the last run stopped; `--votes-minutes N` caps one run's share.
+- The governor's veto letters (states/ut/vetoes.py): le.utah.gov's copy of each, else the governor's media library.
 The glen API is read one request at a time, about a second apart.
 Usage: python3 states/ut/fetch.py [--no-votes] [--votes-minutes N]
 """
@@ -463,6 +464,12 @@ def main():
             problems += found if begun(year) else []
         # A year the window added back (2023) marks only itself (states/window.py); a year not reached keeps its mark.
         problems = W.settle(DATA, problems, read)
+        try:  # the governor's veto letters (states/ut/vetoes.py); never hold Utah back
+            if not out_of_time():
+                from states.ut import vetoes
+                vetoes.fetch(W.years(), minutes=6)
+        except Exception as e:  # noqa: BLE001
+            print(f"veto letters: failed ({type(e).__name__})", flush=True)
         if "--no-votes" not in args:
             left = votes(minutes)
             if left:

@@ -19,11 +19,29 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from states.ut import profile as P
+from states.ut import vetoes as V
 from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 _PARTIES = {}
+_VETOES = {}
+
+
+def veto_memo(session, p, stage, day):
+    """The governor's letter on a veto or line-item veto (states/ut/vetoes.py), or None: a whole veto's on the vetoed
+    bill and on a law passed over it, a line-item veto's on the signed law."""
+    if session not in _VETOES:
+        _VETOES[session] = V.messages(session)
+    m = _VETOES[session].get(p)
+    if not m or not day or (m["kind"] == "absolute" and stage not in (5, 6)) or (m["kind"] == "line-item" and stage != 5):
+        return None
+    out = {"year": int(day[:4]), "signer": P.governor_on(day), "text": m["text"]}
+    if m["kind"] == "line-item":
+        out["kind"] = "line-item"
+    if m["ocr"]:
+        out.update(ocr=True, url=m["url"])
+    return out
 
 REFER = {"HTOSTAND", "STOSTAND", "HLIFTCAL", "HCAMOVE"}
 TO_RULES = {"HREAD1", "SREAD1", "S2NDTORUL", "H3RDTORUL", "S3RDTORUL", "HCARUL", "SCARUL", "HRETRULFIS", "HCRRUL", "SCRRUL",
@@ -330,7 +348,9 @@ def load_session(session):
             "senDeleg": False, "asmDeleg": False, "budget": bool(re.search(r"\bbudget\b|appropriations? act", title, re.I)),
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
-            "chapter": None, "veto": None, "memo": "", "vetoMemo": None,
+            "chapter": None, "veto": None, "memo": "",
+            "vetoMemo": veto_memo(session, p, stage, dates(lambda h, t: t == "VETOED")
+                                  or dates(lambda h, t: t in ("SIGNED", "Signed with item vetoes"))),
             "simText": f"{title} {' '.join(subjects)}",
             "comm": comm if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),

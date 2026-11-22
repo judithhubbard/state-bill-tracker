@@ -66,6 +66,7 @@ from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from states.ia import profile as P
+from states.ia import vetoes as V
 from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
@@ -1067,6 +1068,16 @@ def record(session, chain, secs, parties):
     }
     if stage == 5 and not rec["keyDates"][5]:
         rec["keyDates"][5] = rec["last"]
+    # The governor's letter (states/ia/vetoes.py): a veto's on the vetoed bill (or a law passed over it), an item
+    # veto's on the signed law.
+    m = V.message(session, list(reversed(chain))) if stage in (5, 6) else None
+    day = rec["keyDates"][6] or rec["keyDates"][5]
+    if m and day and (m["kind"] == "absolute" or stage == 5):
+        rec["vetoMemo"] = {"year": int(day[:4]), "signer": P.governor_on(day), "text": m["text"]}
+        if m["kind"] == "line-item":
+            rec["vetoMemo"]["kind"] = "line-item"
+        if m["ocr"]:
+            rec["vetoMemo"].update(ocr=True, url=m["url"])
     return rec, what_it_does(session, chain)
 
 

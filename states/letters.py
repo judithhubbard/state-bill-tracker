@@ -180,6 +180,44 @@ def ocr_pdf(data, pages=OCR_PAGES, dpi=OCR_DPI):
         return "\f".join(out)
 
 
+def pdf_pages(data, ocr_from=1, max_ocr=OCR_PAGES * 2, dpi=OCR_DPI):
+    """A PDF (bytes) -> [(text, ocr)] a page each: its own text (pdftotext -layout), or, for a page from `ocr_from` on
+    with almost none (a scanned letter inside a typed document: CT's bill notifications), the page read by OCR (at most
+    `max_ocr` pages). None when pdftotext fails; a page OCR can't read now (no tools) is ("", True)."""
+    try:
+        n = int(re.search(r"Pages:\s+(\d+)", _sp.run(["pdfinfo", "-"], input=data, capture_output=True,
+                                                       timeout=60).stdout.decode("utf-8", "replace")).group(1))
+    except (OSError, _sp.SubprocessError, AttributeError):
+        return None
+    out, ocrs = [], 0
+    with _tempfile.TemporaryDirectory() as tmp:
+        src = _os.path.join(tmp, "in.pdf")
+        with open(src, "wb") as f:
+            f.write(data)
+        for p in range(1, n + 1):
+            try:
+                t = _sp.run(["pdftotext", "-layout", "-enc", "UTF-8", "-f", str(p), "-l", str(p), src, "-"],
+                            capture_output=True, timeout=120).stdout.decode("utf-8", "replace")
+            except (OSError, _sp.SubprocessError):
+                return None
+            if p < ocr_from or len(re.sub(r"\s", "", t)) > 100 or ocrs >= max_ocr:
+                out.append((t, False))
+                continue
+            ocrs += 1
+            got = ""
+            if ocr_ready():
+                try:
+                    _sp.run(["pdftoppm", "-r", str(dpi), "-gray", "-png", "-f", str(p), "-l", str(p), "-singlefile", src,
+                             _os.path.join(tmp, "pg")], check=True, capture_output=True, timeout=600)
+                    r = _sp.run(["tesseract", _os.path.join(tmp, "pg.png"), "-", "--oem", "1", "--psm", "3", "-l", "eng"],
+                                capture_output=True, timeout=300, env={**_os.environ, "OMP_THREAD_LIMIT": "1"})
+                    got = r.stdout.decode("utf-8", "replace") if not r.returncode else ""
+                except (OSError, _sp.SubprocessError):
+                    got = ""
+            out.append((got, True))
+    return out
+
+
 def scanned(folder, key, url, fetch, force_ocr=False):
     """The letter at `url`, read once and kept in <folder>/<key>.json: its own text when the PDF has one, else OCR.
     `fetch(url)` returns the PDF's bytes (or None). Returns the saved record, or None when it can't be read now (no

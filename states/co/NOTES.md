@@ -45,3 +45,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   need more than 300), so 2027 shows from the day bills are introduced; the bill search had no "2027 Regular Session" on
   2026-11-22.
 - (2026-11-22) Emails: a member page's first "mailto:" was sometimes its "share by email" link ("mailto:?body=https..."), saved as the email in 2024's and 2025's members.json; fetch.py now takes only an address, and contacts.py skips the old ones (data_check's "emails that aren't addresses" FAIL).
+- **Photos (2026-11-22):** leg.colorado.gov's member photos are served from /rails/active_storage/, which its robots.txt
+  disallows, so photos.py no longer asks for or copies them (it did before, from Open States' links). Light ones (13)
+  stay linked from earlier answers; the heavy originals (1.5-5.7 MB, 32) are left out, and Ballotpedia's (17) remain. Asking
+  the Legislature (or an allowed address for the photos) would bring the rest back.

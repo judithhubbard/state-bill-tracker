@@ -71,3 +71,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   no journal) get theirs once a house prints it: weeks later in session, months for summer vetoes (the fall veto day). One
   letter can cover two bills (SB 661 and HB 1491 of 2026, "I have vetoed HB 1491 and SB 661"): data_check's "veto messages
   name other bills" check now counts abbreviated numbers as naming the bill.
+- **Photos (2026-11-22):** the General Court's own, gc.nh.gov (Crawl-delay 11, kept by photos.py): senators'
+  /senate/images/senators/<district>.jpg; House members' /house/images/memberpics/<n>.jpg, n the number
+  CommitteeMembers.txt gives each PersonID (its third column: "H43|51|377257|902|..."; member pages show the same file, or
+  nophoto.jpg). Members on no committee have none this way. photos.py checks them 11 seconds apart (600 seconds a run, so
+  the first copy takes a few runs) and monthly after that.

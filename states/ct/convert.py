@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from states.ct import profile as P
+from states.ct import vetoes as V
 from states.undated import settle
 
 HOUSE = {"S": "Senate", "H": "House"}
@@ -375,7 +376,8 @@ def load_session(session):
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": passed_in,
             "chapter": int(chapter) if chapter and stage == 5 else None,
-            "veto": None, "memo": "", "vetoMemo": None,
+            "veto": None, "memo": "", "vetoMemo": veto_memo(session, p, stage, dates(lambda h, t, a: t == "VETOED")
+                                                            or dates(lambda h, t, a: t == "SIGNED")),
             "simText": f"{title}. {about}",
             "comm": committee if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),
@@ -413,6 +415,23 @@ def agendas(session):
 
 _PARTIES = {}
 _DROPPED = {}
+_VETOES = {}
+
+
+def veto_memo(session, p, stage, day):
+    """The governor's letter on a veto or line-item veto (states/ct/vetoes.py, from his Bill Notifications), or None.
+    A whole veto's shows on the vetoed bill and on a law passed over it; a line-item veto's on the signed law."""
+    if session not in _VETOES:
+        _VETOES[session] = V.messages(session)
+    m = _VETOES[session].get(p)
+    if not m or not day or (m["kind"] == "absolute" and stage not in (5, 6)) or (m["kind"] == "line-item" and stage != 5):
+        return None
+    out = {"year": int(day[:4]), "signer": P.governor_on(day), "text": m["text"]}
+    if m["kind"] == "line-item":
+        out["kind"] = "line-item"
+    if m["ocr"]:
+        out.update(ocr=True, url=m["url"])
+    return out
 
 
 def parties(session, recs):
