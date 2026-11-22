@@ -20,3 +20,14 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   and none when its title shares no words with the bill's current one (rewritten bills); it keeps the overview, the
   analysis when the overview is short and the effective date, without current law, tables or staff credits; the label
   names the version. Counties and places by district (`towns.py`).
+- **Committee agendas (2026-11-22):** `agendas()` in fetch.py reads the Legislative Calendar's month pages
+  (https://www.ncleg.gov/LegislativeCalendar/<m>/<yyyy>: this month's, and the next one's when three weeks ahead falls in
+  it; Crawl-delay 2, its own fetch `calendar_page()` that never stops the run) after the bills and contacts, before the
+  summaries, into data/nc/<session>/agendas.json: meetings from yesterday to three weeks ahead. Each committee event has
+  its chamber label ("House: "), its committee link (/Committees/CommitteeInfo/House/21; "-- UPDATED", "-- CANCELLED"
+  after the name), its time and the bills it lists (/BillLookUp/2025/H126). Canceled and postponed meetings are left out;
+  non-standing committees (no chamber label) are named "Joint ..." unless their name says the house. convert.py's
+  `agendas()` keeps meetings from today on and calls each house's Rules Committee "Rules", as the histories do. Tested
+  against June 2025's page (141 bills on 71 meetings; 135 matched records, the other 6 confirmation and honorary
+  resolutions, which aren't kept); the live page has no committee meetings now (November 2026). The current calendar
+  page (/LegislativeCalendar/) only lists what's ahead; month pages were used so a meeting from yesterday still shows.

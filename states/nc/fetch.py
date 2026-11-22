@@ -794,6 +794,95 @@ def summaries(years):
             print(f"{year} texts: failed ({type(e).__name__}: {e})", flush=True)
 
 
+MONTHS = {m: i + 1 for i, m in enumerate(("January", "February", "March", "April", "May", "June", "July", "August",
+                                           "September", "October", "November", "December"))}
+
+
+def calendar_meetings(page, year):
+    """One month of the Legislative Calendar (/LegislativeCalendar/<m>/<yyyy>) -> [(house, committee, iso start, [bills],
+    canceled)]: each committee meeting's chamber label ("House: "), its committee link and the bills it lists
+    (/BillLookUp/<year>/H126), for the session starting in `year`."""
+    out = []
+    for day in page.split('<div class="row cal-event-day">')[1:]:
+        m = re.search(r'cal-event-day-full">\s*\w+, (\w+) (\d{1,2}), (\d{4})', day)
+        if not m or m.group(1) not in MONTHS:
+            continue
+        when = date(int(m.group(3)), MONTHS[m.group(1)], int(m.group(2))).isoformat()
+        for ev in day.split('<div class="cal-event row">')[1:]:
+            name = re.search(r'<a href="/Committees/CommitteeInfo/\w+/\d+">(.*?)</a>', ev, re.S)
+            if not name:
+                continue
+            label = re.search(r'<span class="text-dark fw-bold">\s*([^<:]*?):?\s*</span>', ev)
+            house = label.group(1).strip() if label else ""
+            title = text(name.group(1))
+            canceled = bool(re.search(r"\bCANCEL+ED\b|\bPOSTPONED\b", title, re.I))
+            title = re.sub(r"\s*-+\s*(?:UPDATED|REVISED|CANCEL+ED|POSTPONED|RESCHEDULED|CHANGED?[\w ]*)\b.*$", "", title, flags=re.I).strip()
+            t = re.search(r"\b(\d{1,2}):(\d\d) ([AP])M\b", text(ev.split('<span class="text-dark fw-bold">')[0]))
+            clock = "00:00:00"
+            if t:
+                clock = f"{int(t.group(1)) % 12 + (12 if t.group(3) == 'P' else 0):02d}:{t.group(2)}:00"
+            bills = []
+            for y, num in re.findall(r'href="/BillLookUp/(\d{4})/([HS]\d+)"', ev, re.I):
+                if int(y) == year and num.upper() not in bills:
+                    bills.append(num.upper())
+            out.append((house, title, f"{when}T{clock}", bills, canceled))
+    return out
+
+
+def calendar_page(url):
+    """A calendar page, or None; unlike get(), a refusal here only skips the agendas (it never stops the run)."""
+    for attempt in range(2):
+        wait = _last[0] + DELAY - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        _last[0] = time.time()
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": AGENT})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                body = r.read().decode("utf-8", "replace")
+            if "cf-chl" in body[:20000] or "<title>Just a moment" in body[:2000]:
+                return None
+            return body
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403, 404, 429):
+                return None
+            time.sleep(10)
+        except Exception:
+            time.sleep(10)
+    return None
+
+
+def agendas(year):
+    """Bills on committee meetings from yesterday to three weeks ahead, from the Legislative Calendar's month pages
+    (this month's and, near its end, the next one's) into data/nc/<year>/agendas.json: bill -> [["House Judiciary 2",
+    "2027-02-03T13:00:00"], ...]. A page that fails keeps the last file."""
+    today = date.today()
+    first, last = today - timedelta(days=1), today + timedelta(days=21)
+    months = []
+    for d in (first, today, last):
+        if (d.month, d.year) not in months:
+            months.append((d.month, d.year))
+    out, n = {}, 0
+    for mo, yr in months:
+        page = calendar_page(f"{SITE}/LegislativeCalendar/{mo}/{yr}")
+        if not page:
+            print(f"agendas: calendar {mo}/{yr} not read; kept the last file", flush=True)
+            return
+        for house, name, start, bills, canceled in calendar_meetings(page, year):
+            if canceled or not bills or not first.isoformat() <= start[:10] <= last.isoformat():
+                continue
+            n += 1
+            if house in ("House", "Senate") and not name.startswith(house):
+                name = f"{house} {name}"
+            elif house not in ("House", "Senate") and not re.match(r"(House|Senate|Joint)\b", name):
+                name = f"Joint {name}"  # non-standing (joint, interim) committees carry no chamber label
+            for b in bills:
+                if [name, start] not in out.setdefault(b, []):
+                    out[b].append([name, start])
+    save(os.path.join(DATA, str(year), "agendas.json"), out)
+    print(f"agendas: {len(out)} bills on {n} meetings", flush=True)
+
+
 def begun(year):
     """Whether a session has convened (the second Wednesday of January of its first year)."""
     return date.today() >= date(year, 1, 1 + (2 - date(year, 1, 1).weekday()) % 7 + 7)
@@ -829,6 +918,10 @@ def main():
     except (SystemExit, OSError) as e:
         print(e)
     finish()
+    try:  # never holds the run or the copy's completeness
+        agendas(CURRENT)
+    except Exception as e:
+        print(f"agendas: failed ({type(e).__name__}: {e})", flush=True)
     try:  # last, in the time left; whatever happens here, the copy's completeness is already settled
         summaries(list(range(FIRST, CURRENT + 1, 2)))
     except Exception as e:

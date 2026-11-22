@@ -281,7 +281,24 @@ def earlier(session, b):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee meetings (fetch.py's agendas.json, from the Legislative Calendar), today or later.
+    Each house's Rules Committee by its short name, as in the histories ("Senate Rules")."""
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
+    try:
+        got = json.load(open(os.path.join(folder(session), "agendas.json")))
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for bill, meets in got.items():
+        for name, when in meets:
+            house, _, rest = name.partition(" ")
+            if house in ("House", "Senate"):
+                name = f"{house} {short(rest)}"
+            if when[:10] >= today and [name, when] not in out.setdefault(bill, []):
+                out[bill].append([name, when])
+        if not out[bill]:
+            del out[bill]
+    return out
 
 
 def parties(session, recs):
