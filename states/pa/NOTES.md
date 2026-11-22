@@ -19,6 +19,19 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   The 2,572 municipalities by district (`towns.py`); townships that share a name carry their county. Full-time
   Legislature (`floorVotesEnd: false`); the session ends November 30 of the even year; governor 10 days (calendar days: Art. IV, sec. 15
   excepts no Sundays), or 30 days after the session ends for a bill still waiting then.
+- **"What it does" from the House Calendar (2026-11-22, going forward):** the House's floor calendars
+  (/house/session/calendars, its Tabled Bill Calendar ?c=22 and Uncontested Calendar ?c=23; each links only its current
+  calendar, /house/session/calendars/view?CalendarId=11117&ext=HTML) end each bill's row with a staff sentence ("This
+  bill bans paraquat."; resolutions have none). Neutral staff wording, unlike the co-sponsorship memos' text (not used:
+  the owner's decision). `calendars()` in fetch.py looks at the three lists every 6 hours and reads each new calendar
+  once (4-6 requests a session day) into data/pa/<year>/calendar_descriptions.json ({bill: [calendar day, sentence]}, each
+  bill's latest; calendars_read.json remembers which were read). No archive of past calendars was found, so bills only
+  get one once they're on a calendar from now on. convert.py uses it before the committee roll call's "Brief
+  Description" ("From the House Calendar's description of the bill."). Either is left out when it only says the title
+  again (`says_title()`: every word of it in the title, the committee's often being the memo's title, "Save Women's Sports
+  Act"; data_check failed on 10 such in 2025-26). On 2026-11-22: 3 calendars, 306 bills (all of them already had a
+  committee description, so coverage didn't rise: 2025-26 has 940 of 4,184 bills, 22.5%, after dropping 29 title-only
+  descriptions; 263 now read from the calendar).
 - **Committee agendas (2026-11-22):** `agendas()` in fetch.py reads each chamber's committee meeting RSS feed
   (https://www.palegis.us/house/rss/committee/schedule and /senate/rss/committee/schedule; two requests a run, before the
   roll calls) into data/pa/<session>/agendas.json, meetings from yesterday to three weeks ahead. Each item has

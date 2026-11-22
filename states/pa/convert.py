@@ -39,6 +39,15 @@ def bills(session):
     return [b for b in root.iter("bill") if b.findtext("type") == "B"]
 
 
+def says_title(statement, title):
+    """A description that only says the title again (the committee's "Brief Description" is often the co-sponsorship
+    memo's title, "Save Women's Sports Act"; the calendar's "This bill updates background check requirements for gaming
+    applicants." under "Updates to the background check requirements for gaming applicants"): every word in the title."""
+    words = lambda t: set(re.findall(r"[a-z]{3,}", (t or "").lower())) - {"the", "and", "for", "this", "bill", "act", "that", "with"}
+    w = words(statement) - {"provides", "updates", "establishes", "creates", "amends", "requires"}
+    return not w or w <= words(title)
+
+
 def number(b):
     return f"{b.findtext('body')}B{int(b.findtext('number'))}"
 
@@ -229,6 +238,13 @@ def load_session(session):
     fetched = datetime.fromtimestamp(os.path.getmtime(path), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
     parties = _PARTIES.setdefault(session, {})
     texts = {}
+    # The House floor calendars' one-sentence staff descriptions (fetch.py's calendars(), going forward from 2026-11-22):
+    # a bill's latest is "What it does", before the committee roll call's "Brief Description" (often a few words, or what
+    # an amendment changed).
+    try:
+        cal = json.load(open(os.path.join(P.DATA, str(session), "calendar_descriptions.json")))
+    except (OSError, ValueError):
+        cal = {}
     recs, index = [], {}
     for b in sorted(bills(session), key=lambda b: (b.findtext("body"), int(b.findtext("number")))):
         p = number(b)
@@ -333,8 +349,10 @@ def load_session(session):
                 votes.append([r["house"], "F", None, d, yes, no, [[member(m), code.get(m[2], "A")] for m in ms if m[2] != "Yea"]])
             else:
                 votes.append([r["house"], "C", cname(r.get("committee") or ""), d, yes, no, [[member(m), code.get(m[2], "A")] for m in ms if m[2] != "Yea"]])
-                if r.get("description"):
+                if r.get("description") and not says_title(r["description"], title):
                     texts[p] = {"statement": r["description"], "label": "From the committee's description of the bill."}
+        if p in cal and not says_title(cal[p][1], title):
+            texts[p] = {"statement": cal[p][1], "label": "From the House Calendar's description of the bill."}
         for d, h, t, a in steps:
             m = re.search(r"\((\d+)-(\d+)\)", a)
             if m and h in HOUSE and (t.startswith("PASSED") or t in ("CONCURRED", "CONCURRED AS AMENDED", "FAILED")) and (h, d) not in floor_days:
