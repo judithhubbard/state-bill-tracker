@@ -40,7 +40,7 @@ def build(year):
             "name": m["formatName"], "key": name_key(m["formatName"]), "id": m["id"],
             "party": PARTY.get(m.get("party"), m.get("party") or ""), "email": m.get("email") or None, "form": None,
             "phone": phones[0][1] if phones else None, "phones": phones,
-            "url": f"https://le.utah.gov/legislator/{m['id']}", "image": None, "office": m.get("address") or "",
+            "url": f"https://le.utah.gov/legislator/{m['id']}", "image": m.get("image") or None, "office": m.get("address") or "",
             "position": m.get("leadership") or None, "places": m.get("counties") or "",
             "dataName": m.get("fullName") or m["formatName"],
         }

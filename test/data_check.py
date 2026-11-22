@@ -427,6 +427,12 @@ def check(state):
                 say(state, "FAIL", f"{os.path.basename(path)}: {label}: {xs[:4]}")
         if noparty or nophone:
             say(state, "LOOK", f"{os.path.basename(path)}: no party {noparty[:3]}, no phone {nophone[:3]}")
+        # Photos on the legislators' pages: the contacts' own, else photos.py's (data/<state>/photos.json).
+        import photos
+        nophoto = [p["name"] for sid, p in people.items() if not photos.image_of(P.DATA, sid, p)]
+        if people and len(nophoto) > 0.2 * len(people):
+            say(state, "LOOK", f"{os.path.basename(path)}: only {len(people) - len(nophoto)} of {len(people)} legislators "
+                               f"have a photo (initials instead), e.g. no photo for {nophoto[:3]}")
         # A district map that doesn't match the member list (New Hampshire's HouseDistricts.txt still has the 2012 map):
         # every legislator's district is one some place in "Where you live" gives.
         towns = json.load(open(P.TOWNS_PATH)) if os.path.exists(getattr(P, "TOWNS_PATH", "")) else []

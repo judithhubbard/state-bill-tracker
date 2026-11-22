@@ -61,7 +61,10 @@ def build(year):
             "name": name_of(m), "key": name_key(name_of(m)), "id": str(m["SessionMemberId"]),
             "party": PARTY.get(m.get("Politics"), m.get("PartyName") or ""), "email": m.get("EmailState") or None,
             "form": None, "phone": ph or None, "phones": [[f"{'Senate' if sid[0] == 'S' else 'House'} switchboard", ph]] if ph else [],
-            "url": f"https://sdlegislature.gov/Legislators/Profile/{m['SessionMemberId']}/Detail", "image": None,
+            "url": f"https://sdlegislature.gov/Legislators/Profile/{m['SessionMemberId']}/Detail",
+            # The API's own photo, the small one (150 by 188, a few KB; Picture is the original, up to 11 MB). Its
+            # address has spaces.
+            "image": (m.get("PictureSmall") or "").replace(" ", "%20") or None,
             "office": "", "position": m.get("Position") or None, "places": f"District {m.get('District')}",
             "dataName": m.get("UniqueName") or m.get("LastName"),
         }

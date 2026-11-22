@@ -172,6 +172,20 @@ jobs:
           # Scripts that read it stop on their own 5 minutes before the step's limit, with a summary.
           FETCH_MINUTES: ${{ matrix.minutes }}
         run: ${{ matrix.run }}
+      # Legislators' photos where the state's own files have none (photos.py: Open States' people file, or Congress's
+      # unitedstates/images, downloaded again weekly). The matching takes a second; once a week each photo's address is
+      # asked whether it still answers (up to 2.5 minutes). Never fails the job.
+      - name: Add photos
+        if: always()
+        timeout-minutes: 5
+        continue-on-error: true
+        env:
+          PATHS: ${{ matrix.path }}
+          # (Congress's photo list comes from GitHub's API, which limits requests without a token.)
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -f
+          python3 photos.py $PATHS
       - name: Mark the copy as checked
         if: steps.dl.outcome == 'success'
         env:
