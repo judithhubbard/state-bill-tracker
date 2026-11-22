@@ -42,7 +42,7 @@ def _all(state):
     for p in sorted(glob.glob(os.path.join(HERE, "states", "*.py")) + glob.glob(os.path.join(HERE, "states", "*.json"))):
         yield p, False
     for f in ("governors.py", "party_history.py", "build_data.py", "stages.py", "fetch_contacts.py", "listing_dates.py",
-              "balance.py", "site_meta.py", "state_hash.py"):
+              "balance.py", "site_meta.py", "state_hash.py", "photos.py"):
         yield os.path.join(HERE, f), False
     for f in PAGE_CODE:
         yield os.path.join(HERE, f), True

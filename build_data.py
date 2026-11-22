@@ -33,6 +33,7 @@ P = importlib.import_module(f"states.{STATE}.profile")
 # GOVERNORS can list a governor-elect, dated the day they take office: "the governor" is whoever holds office today
 # (governors.py), never the list's last entry.
 import governors
+import photos  # legislators' photos where the state's own files have none (data/<state>/photos.json)
 P.GOV_SINCE = governors.in_office(P)[1]
 governors.apply_leaders(P)  # chosen next leaders (LEADERS_NEXT), from their first day
 # The code that reads the state's own data and turns it into bill records (C.load_session).
@@ -380,7 +381,7 @@ def legislators(session):
         slug = last(p) if counts[last(p)] == 1 else p["key"].replace(" ", "-")
         out.append({"id": seat, "slug": slug, "name": p["name"], "title": TITLES[house],
                     "house": house, "district": int(district), "email": p.get("email"), "phone": p.get("phone"), "phones": p.get("phones"),
-                    "form": p.get("form"), "url": p.get("url"), "party": p.get("party"), "image": p.get("image"),
+                    "form": p.get("form"), "url": p.get("url"), "party": p.get("party"), "image": photos.image_of(P.DATA, seat, p),
                     "since": since.get(seat), "committees": committees_of(seat, p)})
     return out
 
@@ -2401,6 +2402,19 @@ def finish(session, core, current, urls):
         start = template.index('    <div class="howsec" id="howSteps">')
         end = template.index('  </section>', start)
         template = template[:start] + open(how).read() + template[end:]
+    # Where the legislators' photos come from, when photos.py found some (one shared sentence, at the end of "About this
+    # data"'s notes: the second-to-last </div> of the section).
+    if photos.load(P.DATA) and 'id="howData"' in template:
+        credit = ("<p>Photos of members are the Government Publishing Office's, from the unitedstates/images project.</p>"
+                  if STATE == "us" else
+                  "<p>Legislators' photos the Legislature's own files don't include are linked from Open States' people "
+                  "data, which takes most of them from the Legislature's website.</p>")
+        at = template.index('id="howData"')
+        sec_end = template.index("</section>", at)
+        last = template.rfind("</div>", at, sec_end)
+        notes_end = template.rfind("</div>", at, last)
+        if notes_end > at:
+            template = template[:notes_end] + credit + "\n    " + template[notes_end:]
     # And its own Weigh in text (states/<code>/weighin.html): how to weigh in, the governor's office and
     # who decides at each stage.
     weighin = os.path.join(os.path.dirname(P.__file__), "weighin.html")

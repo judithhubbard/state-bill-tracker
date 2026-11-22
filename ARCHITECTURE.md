@@ -33,6 +33,10 @@ download.yml (GitHub, every 2 h)       publish.yml (after each quick-lane downlo
     `states/ia/openstates.py`), sharing the free tier's 250 requests a day (HI stops at 110, IA at 100).
   - `listing_dates.py`: compares FTP/folder listing dates across daylight-saving changes (TX, IL, MI).
   - `states/window.py`: which years every state keeps (`years()`, `first_session()`, `shown()`, `settle()`).
+  - `photos.py` (every job, its own "Add photos" step after the download): legislators' photos where the contacts have
+    none, as `data/<st>/photos.json` (Open States' people file, official sites only; Congress: unitedstates/images;
+    Louisiana: the Legislature's photos by seat). The source is downloaded again weekly (`photos_source.json`);
+    build_data.py's `legislators()` reads it (`photos.image_of()`), and test/data_check.py LOOKs when under 80% have one.
 - **Lanes.** The `plan` job reads the run history and splits states: **quick** (last three downloads all 30 minutes or
   less) and **slow** (first copies, crawl delays). Each lane's run starts the next two hours after it began (the `next`
   job); the cron (`5 */2 * * *`) is a backup that runs everything. Only the quick lane starts `publish.yml` (the
