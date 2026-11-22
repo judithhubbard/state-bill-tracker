@@ -315,7 +315,8 @@ def load_session(session):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee meetings, from LegiScan's calendar of each bill (legiscan_convert.agendas())."""
+    return L.agendas(RULES, session)
 
 
 def parties(session, recs):

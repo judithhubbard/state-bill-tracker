@@ -33,3 +33,10 @@ Moved from CLAUDE.md (2026-11-19). Each state's own notes: states/tn, ok, me, ri
   state's how.html credits LegiScan with links (the license requires it), and `textLinks` links each bill's LegiScan page.
   Contacts: Open States' current list says who holds each seat (party, email), LegiScan's person records give ids (the roll
   calls'), phones and offices. LegiScan has no committee members or chairs.
+- **Committee agendas (2026-11-22):** `agendas(R, session)` reads each saved bill's `calendar` (LegiScan's hearings for it:
+  date, time, room, description), so it costs no queries. The committee comes from the description (`hearing_name()`:
+  "Senate Education 2ND REVISED Hearing" -> "Senate Education"; floor sessions left out), else `Rules.hearing_committee()`
+  (Maine's say only "Hearing"). Only the latest revision of a committee's agenda for a day is kept. How fresh it is depends
+  on when each bill's full record is next read (the getBill allowance above): a newly posted hearing changes the bill's
+  change_hash, so it is read as a minor change, paced through the day. Tennessee's House hearings are missing from LegiScan
+  after January 2026.

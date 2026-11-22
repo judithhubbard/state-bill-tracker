@@ -231,6 +231,11 @@ class Rules:
         """The text that finds the same bill in an earlier session (None: never linked)."""
         return None
 
+    def hearing_committee(self, b, entry):
+        """The committee (with its house) holding a calendar entry whose description doesn't name one (`agendas()`), or
+        None to leave it out."""
+        return None
+
     def number(self, b):
         """The record's number for a bill: its first letter must be the house where it started (the page reads the house
         from it). Default: LegiScan's number, "HB0005" -> "HB5". Maine's LDs carry no house: "LD1328" -> "HLD1328"."""
@@ -635,3 +640,64 @@ STOP = set("a an and the of to in for on or by with as from that this is be are 
 
 def words(t):
     return {w for w in re.findall(r"[a-z]{3,}", (t or "").lower()) if w not in STOP}
+
+
+# ---- Committee agendas ----
+
+REVISED = re.compile(r"\s*\b(?:(\d+)(?:ST|ND|RD|TH)\s+)?REVISED\b\s*", re.I)
+
+
+def hearing_name(desc):
+    """A LegiScan calendar entry's description as the committee's name with its house, or None for what isn't a committee
+    meeting: "Senate Finance, Ways And Means Hearing" -> "Senate Finance, Ways and Means"; Oklahoma's "Senate Education 2ND
+    REVISED Hearing" -> "Senate Education"; Vermont's "House Committee on Health Care Hearing" -> "House Health Care";
+    Rhode Island's "Senate Judiciary Consideration" -> "Senate Judiciary". Maine's are just "Hearing" (None here)."""
+    d = REVISED.sub(" ", text(desc))
+    d = re.sub(r"\s+(?:Hearing|Consideration|Meeting|Markup|Executive Session)$", "", d.strip(), flags=re.I).strip()
+    m = re.match(r"(House|Senate|Joint)\s+(?:(?:House|Senate)\s+)?(Joint\s+)?(?:Committee on\s+(?:the\s+)?)?(.+)$", d)
+    if not m or re.search(r"\b(?:Legislative Session|Floor|Session (?:AM|PM))\b", d, re.I):
+        return None
+    # (Oklahoma's "House Joint Committee on Appropriations and Budget" -> "House Joint Appropriations and Budget")
+    return f"{m.group(1)} {m.group(2) or ''}{m.group(3)}".replace(" And ", " and ").replace(" Of ", " of ").replace(" On ", " on ")
+
+
+def revision(desc):
+    """0 for an agenda as first posted, 1 for "REVISED", 2 for "2ND REVISED" ..."""
+    m = REVISED.search(text(desc))
+    return (int(m.group(1)) if m.group(1) else 1) if m else 0
+
+
+def agendas(R, session, today=None):
+    """Bills on upcoming committee meetings, from each bill's LegiScan `calendar` (its hearings: date, time, location and
+    description, read with the bill by getBill; no queries of their own): bill -> [["Senate Judiciary",
+    "2027-02-03T13:30:00"], ...], today's and later meetings only. The committee's name comes from the description
+    (`hearing_name()`), else `R.hearing_committee(b, entry)` (Maine's say only "Hearing": the committee the bill was last
+    referred to by then). Where a committee's agenda was revised (Oklahoma's "2ND REVISED"), only the latest revision's
+    entry for that day is kept. LegiScan's calendar has no cancellations: a meeting dropped from the committee's notice
+    disappears from the bill's calendar when the bill is next read."""
+    from datetime import date
+    today = today or date.today().isoformat()
+    folder = R.session_folders().get(session)
+    out = {}
+    if not folder:
+        return out
+    for b in bills(folder):
+        if not R.include(b):
+            continue
+        best = {}
+        for x in b.get("calendar") or []:
+            day = (x.get("date") or "")[:10]
+            if len(day) != 10 or day < today:
+                continue
+            name = hearing_name(x.get("description")) or R.hearing_committee(b, x)
+            if not name:
+                continue
+            t = x.get("time") or "00:00"
+            t = t if re.match(r"\d\d:\d\d$", t) else "00:00"
+            k = (name, day)
+            rank = (revision(x.get("description")), t)
+            if k not in best or rank > best[k][0]:
+                best[k] = (rank, [name, f"{day}T{t}:00"])
+        if best:
+            out[R.number(b)] = sorted((v[1] for v in best.values()), key=lambda e: e[1])
+    return out

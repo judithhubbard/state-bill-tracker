@@ -475,6 +475,30 @@ def check(state):
             say(state, "LOOK", f"{s}: {len(sent)} bills tagged constitutional amendments went to the governor (bills, not the amendments; "
                                f"the page mustn't say they skip the governor): {sent[:3]}")
 
+    # Committee agendas (the newest session's, as build_data.py reads them): every bill named must be a record's number (a
+    # number written another way, "HB0005" or "H.B. 5", shows nothing), each entry a committee with its house and a local
+    # ISO time. LOOK at the count, so a reader that stops finding meetings mid-session is noticed.
+    if hasattr(C, "agendas") and loaded:
+        s = max(loaded)
+        try:
+            ag = C.agendas(s) or {}
+        except Exception as e:  # (a reader that fails here fails the build too)
+            ag = {}
+            say(state, "FAIL", f"{s}: agendas() failed: {e!r}")
+        nums = {re.sub(r"[A-Z]$", "", v["p"]) for r in loaded[s] for v in r["vers"]}
+        stray = sorted(k for k in ag if k not in nums)
+        if stray:
+            say(state, "FAIL" if len(stray) > max(2, len(ag) // 50) else "LOOK",
+                f"{s}: {len(stray)} of {len(ag)} bills on committee agendas aren't records' numbers: {stray[:5]}")
+        bad = [(k, e) for k, es in ag.items() for e in es
+               if not (isinstance(e, (list, tuple)) and len(e) == 2 and re.match(r"(?:House|Senate|Assembly|Joint|Legislative|Unicameral|Council) \S", e[0] or "")
+                       and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?", e[1] or ""))]
+        if bad:
+            say(state, "FAIL", f"{s}: {len(bad)} agenda entries aren't [\"House Committee\", \"YYYY-MM-DDTHH:MM:SS\"]: {bad[:3]}")
+        if ag:
+            meets = {tuple(e) for es in ag.values() for e in es}
+            say(state, "LOOK", f"{s}: {len(ag)} bills on {len(meets)} upcoming committee meetings' agendas")
+
     # Other states' names and rules on this state's pages (settings that fell back to New York's).
     words = r"Albany|Hochul|Heastie|Stewart-Cousins|Kelles|Tompkins|New York State|nysenate|nyassembly"
     pages = [] if state == "ny" else sorted(glob.glob(os.path.join(HERE, "site", P.SITE_DIR, "*.html")))[-1:] + \

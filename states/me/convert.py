@@ -325,6 +325,19 @@ class Maine(L.Rules):
             return None
         return "amendment" if AMENDMENT.search(L.text(b.get("title"))) else "bill"
 
+    def hearing_committee(self, b, entry):
+        """Maine's calendar entries say only "Hearing" (every committee is joint): the committee the bill was last
+        referred to on or before that day, from its history, else LegiScan's referrals list."""
+        day = entry.get("date") or ""
+        c = None
+        for a in b.get("history") or []:
+            if (a.get("date") or "") <= day:
+                c = referral(L.text(a.get("action"))) or c
+        if not c:
+            refs = [r for r in b.get("referrals") or [] if (r.get("date") or "") <= day]
+            c = comm(refs[-1]["name"]) if refs else None
+        return f"Joint {c}" if c else None
+
     def number(self, b):
         """"LD1328" from a House paper -> "HLD1328"."""
         return (b.get("body") if b.get("body") in HOUSE else "H") + L.number(b["bill_number"])
@@ -434,7 +447,8 @@ def load_session(session):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee meetings, from LegiScan's calendar of each bill (legiscan_convert.agendas())."""
+    return L.agendas(RULES, session)
 
 
 def parties(session, recs):
