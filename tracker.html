@@ -1175,7 +1175,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
         </details>
         <div class="group issuefield" id="issueField" hidden>
           <label class="group-h" for="issueSel">Issue</label>
-          <select id="issueSel"><option value="">Any issue</option></select>
+          <select id="issueSel"><option value="">Any issue</option><option value="" disabled>Loading issues…</option></select>
           <a class="issuelink" id="issueLink" hidden>This issue in every state ›</a>
         </div>
         <details class="group morefilters" id="moreFilters">
@@ -5277,8 +5277,8 @@ const siteTopUrl = () => new URL("../", ROOT).href;
 function loadIssues() {
   if (!ROOT) return Promise.resolve();
   return (ISSUE_LOADING ||= Promise.all([
-    fetch(new URL(`data/issues_${DATA.session}.json`, ROOT)).then((r) => (r.ok ? r.json() : null)),
-    fetch(new URL("issues/summary.json", siteTopUrl())).then((r) => (r.ok ? r.json() : null)),
+    fetch(new URL(`data/issues_${DATA.session}.json`, ROOT), { priority: "low" }).then((r) => (r.ok ? r.json() : null)),
+    fetch(new URL("issues/summary.json", siteTopUrl()), { priority: "low" }).then((r) => (r.ok ? r.json() : null)),
   ]).then(([mine, meta]) => {
     const by = new Map();
     for (const row of mine?.bills || []) {
@@ -5289,7 +5289,7 @@ function loadIssues() {
     }
     ISSUE_BILLS = by; ISSUE_META = meta;
     fillIssues();
-  }).catch(() => { ISSUE_BILLS = new Map(); }));
+  }).catch(() => { ISSUE_BILLS = new Map(); $("issueSel").innerHTML = `<option value="">Any issue</option>`; }));
 }
 // The menu: the issues this session has bills on, under the same groups as the front page (the topics' names).
 function fillIssues() {
@@ -5322,6 +5322,11 @@ function syncControls() {
 
 function wire() {
   if (ROOT) {
+    // The menu's issues are fetched once it's in view (a native menu opened before they arrive can't show them).
+    if ("IntersectionObserver" in window) {
+      const seen = new IntersectionObserver((es) => { if (es.some((x) => x.isIntersecting)) { seen.disconnect(); painted().then(() => loadIssues()); } });
+      seen.observe($("issueField"));
+    }
     $("issueSel").addEventListener("focus", () => loadIssues(), { once: true });
     $("issueSel").addEventListener("pointerdown", () => loadIssues(), { once: true });
     $("issueSel").addEventListener("change", (e) => { state.issue = e.target.value; state.shown = PAGE; syncControls(); render(); countUse("filter/issue"); });
