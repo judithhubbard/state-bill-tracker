@@ -47,6 +47,13 @@ DELEGATION_NAMES = set()
 # on. From the leadership page (leaders.json), 2026-11-08; the 70th Legislative Assembly chooses its own in December 2026.
 LEADERS = {"S": ("David Hogue", "Senate Majority Leader", "him"),
            "H": ("Robin Weisz", "Speaker of the House", "him")}
+# Leaders already chosen for the next legislature, each in place from the day they take the post (governors.py's
+# apply_leaders()); pronouns only where their own official biography gives them, else "them". House Republicans
+# nominated Brandy Pyle for Speaker on November 11, 2026 (Weisz becomes majority leader); the House elects its Speaker at
+# the organizational session, December 1-3, 2026. Senate Republicans kept Hogue as majority leader. Checked 2026-11-22.
+LEADERS_NEXT = {
+    "H": ("Brandy Pyle", "Speaker of the House", "them", "2026-12-01"),
+}
 
 
 def delegation(session):

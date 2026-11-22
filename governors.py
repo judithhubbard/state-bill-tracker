@@ -51,3 +51,16 @@ def apply_leaders(P, day=None):
     for house, (name, title, pronoun, start) in getattr(P, "LEADERS_NEXT", {}).items():
         if start <= day:
             P.LEADERS = {**P.LEADERS, house: (name, title, pronoun)}
+
+
+def facts_on(facts, day=None):
+    """A states/legislatures.json entry as it stands on the day (today by default): its optional `next`, a list of
+    {"from": "YYYY-MM-DD", field: value, ...}, replaces those fields from each one's day, so a new legislature's facts
+    (a coalition that ends, a note naming the new leaders) take effect on the day it's sworn in without anyone editing
+    the file then. Fields not named stay as they are."""
+    day = day or today()
+    out = {k: v for k, v in facts.items() if k != "next"}
+    for change in sorted(facts.get("next") or [], key=lambda c: c["from"]):
+        if change["from"] <= day:
+            out.update({k: v for k, v in change.items() if k != "from"})
+    return out
