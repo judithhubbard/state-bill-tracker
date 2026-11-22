@@ -20,6 +20,7 @@ site's HTML page (status 200), not a 404, so any answer that isn't JSON counts a
 - The governor's veto letters: each "Vetoed by the Governor" action names the day's journal (DocumentId), which prints
   the letter in full; that journal (Documents/<id>.html) once, into journals/<id>.html (`veto_journals()`).
 - The Legislature's own lists of bills signed, vetoed and hoghoused (BillLogs/...), for checking totals, into logs.json.
+- The LRC's Title Summaries of each session's laws ("What it does"), into texts_<year>.json (states/sd/summaries.py).
 
 A finished session (an earlier year) is read once. The session of this year or later is read every run: its bill list
 and action logs (two requests) say which bills changed, and only those bills' details are read again; members,
@@ -383,6 +384,12 @@ def main():
                     veto_journals(y)
                 except Exception as e:  # noqa: BLE001
                     print(f"{y}: veto letters: failed ({e.__class__.__name__})", flush=True)
+        if READ and not out_of_time():
+            try:  # the LRC's Title Summaries ("What it does" for laws); never holds the run back
+                from states.sd import summaries
+                summaries.run(get, READ)
+            except Exception as e:  # noqa: BLE001
+                print(f"title summaries: failed ({e.__class__.__name__})", flush=True)
         if YEAR + 1 in ids:  # prefiled bills for next year's session
             session(YEAR + 1, ids[YEAR + 1])
             # Its members (those elected in November), whose list carries the emails and phones this year's list lost

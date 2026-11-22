@@ -13,7 +13,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   "Do Pass Amended" in the second house doesn't mean it changed the bill: passed both houses needs the presiding
   officers' signatures, a concurrence or a conference report adopted in both (steps with no house are the conference
   committee's own votes, "Concurred in amendments 4-2", and don't count; HB 1140 of 2024 died in conference). Topics from the subject keywords
-  (`KEYWORD_TOPICS`). No summaries: the title is the act's one-line description ("Provide for ..."). Bill pages are
+  (`KEYWORD_TOPICS`). The title is the act's one-line description ("Provide for ..."); laws have a "What it does" from the LRC's Title Summaries (below). Bill pages are
   addressed by the Legislature's bill id (a version's `link`). Each district elects a senator and two representatives
   (26 and 28 from subdistricts 26A/26B): seats "S:12", "H:12a"/"H:12b" (New Jersey's scheme), one district list for both
   houses. Members' phones are the House's and Senate's switchboards. One session a year from the second Tuesday of
@@ -49,3 +49,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   members and committees; no bills on 2026-11-22); fetch.py reads it every run and saves it once it has a bill, and an
   empty list before the session convenes never holds the state back. convert.py's `sessions()` shows this year's and
   next year's session from its first bill (past years still need over 100).
+- **What it does (2026-11-22):** the Legislative Research Council's Title Summaries, one memorandum per SDCL title on the
+  session's laws codified in it ("HB 1054 repeals provisions creating the Digital Dakota Network, ..."). The session list
+  (api/Sessions) names the document (SummaryDocumentId: 2025 285313, 2026 306526; 0 for 2023, 2024 and special
+  sessions, which have none); it's read as HTML from mylrc.sdlegislature.gov/api/Documents/<id>.html (about 6 MB, mostly
+  images; robots.txt there bars nothing). states/sd/summaries.py, called by fetch.py: once per document, again when the id
+  changes or after 30 days; kept in <year>/title_summaries.json, written to texts_<year>.json. Label: "From the
+  Legislative Research Council's summary of the law." Coverage: 194 of 2025's 211 laws, 205 of 2026's 240 (appropriations
+  and other uncodified acts aren't in it); no bill that didn't become law. A law codified in several titles is summarized
+  under each, with the same words or each part's own: each different one is a paragraph, near-repeats ("five percent" /
+  "5 percent") once. Traps: LibreOffice splits words across tags ("transfer s", "th at"), so tags are removed without
+  adding spaces; page headers ("2026 Title Summaries") and the 2025 file's title headings are paragraphs to skip. Bill
+  explanations or digests of bills as introduced: none (fiscal notes exist for about 17 bills a year, as numbers).
