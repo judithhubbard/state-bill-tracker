@@ -123,5 +123,11 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most between 2023-24 and 2025-26, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Only two sessions are shown,
+# so only the two clearest shifts. Matched on title and summary.
+TRENDS = [
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated decision|algorithmic|deepfake|deep fake|synthetic media|chatbot)|\bAI\b", False),
+    ("rise", "Paid family and medical leave", r"paid family|family and medical leave|earned paid leave|paid leave", True),
+]
 WORDING = []

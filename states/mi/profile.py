@@ -105,5 +105,19 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+# ---- What's changing: subjects whose share of bills changed most between 2023-24 and 2025-26, picked by hand from an
+# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Only two sessions are shown;
+# the falling ones are mostly 2023's packages carrying out the 2022 ballot proposals. Matched on title and summary.
+TRENDS = [
+    ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+    ("rise", "Michigan Strategic Fund", r"strategic fund", True),
+    ("rise", "Cryptocurrency", r"cryptocurrenc|virtual currenc|digital asset|blockchain|bitcoin|stablecoin|crypto", True),
+    ("rise", "Drones", r"unmanned aircraft|\bdrones?\b|unmanned aerial", True),
+    ("rise", "Carbon capture", r"carbon (?:capture|sequestration|dioxide (?:sequestration|storage|capture|pipeline))|geologic storage|\bCO2 pipeline|carbon storage", True),
+    ("rise", "Earned wage access", r"earned wage", True),
+    ("spike", "Abortion", r"abortion|unborn|pregnancy termination|termination of pregnanc", True),
+    ("spike", "Juvenile justice", r"juvenile", True),
+    ("spike", "Financial disclosure", r"financial disclosure", True),
+    ("spike", "Absentee voting", r"absent voter|absentee", True),
+]
 WORDING = []
