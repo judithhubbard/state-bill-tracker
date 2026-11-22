@@ -29,8 +29,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   receipt" is law; while one runs, a "Line item veto receipt" or the enrolled version's effective date is (SB 152 and
   HB 479 of the 136th had neither a signing date; a future effective date is dated the day it was sent, and a "sent" date
   after the effective date, SB 152's 2026-06-12, is dropped). "Line item veto receipt" stays as written (a law, part vetoed). "Reported - Re-referred to X" is a
-  referral to X. Each house's Rules and Reference Committee schedules floor votes. "What it does" is the long title's
-  purpose clause, after the last list of sections, its verb turned into "Modifies ..." (`purpose()`, `texts.py`).
+  referral to X. Each house's Rules and Reference Committee schedules floor votes. "What it does" is the Legislative Service
+  Commission's analysis where one has been read (below), else the long title's purpose clause, after the last list of
+  sections, its verb turned into "Modifies ..." (`purpose()`, `texts.py`).
   Full-time Legislature (`floorVotesEnd: false`); governor 10 days, Sundays excepted. Separate Senate (33) and House
   (99) districts by city, village or county (`states/oh/towns.py`). The governor's phone and address are from the
   governor's contact page, checked by the owner 2026-10-31 (governor.ohio.gov answers automated requests "not found"). Built only once data/oh/incomplete is gone.
@@ -38,3 +39,25 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   only after it convenes (January 4, 2027), so it's read from January; until March 1 a list never read doesn't hold Ohio
   back, and its contacts wait until its legislators and committees are listed. The General Assembly just ended is read
   again until April 1 for bills still waiting on enrollment or the governor (the list's revno may not change).
+- **Bill analyses for "What it does" (2026-11-22):** the Legislative Service Commission writes an analysis of each
+  version of a bill, as introduced too, and a "Final Analysis" of a law. Each bill's documents page,
+  https://www.legislature.ohio.gov/legislation/136/hb13/documents, lists them under "Analysis", newest first, each a PDF at
+  /download?key=<n> (the page's links have "//download", which answers a 301 to "/download"). robots.txt is
+  "User-agent: *", "Disallow:". fetch.py's `AGENT` got 200 for every page and PDF asked; curl's default agent got 403 (so
+  the October 403s were probably the agent). The host doesn't send Sectigo's "OV R36" intermediate certificate:
+  `context()` in states/oh/analyses.py fetches it from Sectigo (data/oh/sectigo_r36.pem, renewed monthly) and adds it to
+  the system's trusted ones. `fetch()` reads the documents page and the final analysis if there is one, else the newest;
+  pdftotext (-layout, first 12 pages) gives the text, and the SUMMARY's lines (layout kept) go into
+  data/oh/<session>/analyses.json. texts.py turns them into paragraphs (`read()`): each bullet one paragraph, its
+  sub-items ("") joined into its sentence, the summary's headings, page headers and footers, footnotes and footnote
+  numbers left out. An analysis with no SUMMARY (short bills: HB 13 of the 136th, Roy Rogers Day) uses the DETAILED
+  ANALYSIS's opening only when it starts "The bill ..."; else the title's purpose stands. Label: "From the Legislative
+  Service Commission's analysis of the bill as passed by the House." (the PDF's "Version:" line: "as reported by the
+  Senate Addiction and Community Revitalization Committee"), or "... final analysis." Each run reads at most 160 requests
+  in 8 minutes, 2 seconds apart, laws first, then bills with more versions, the newest General Assembly first; a bill again
+  only when its versions change (and weekly for 30 days after, while the new analysis is written), or after 60 days when
+  none was found; the PDF only when the analysis's key changed. A 403 or 429 stops the reading (the last copies stand);
+  PDFs over 20 MB (the budget bills') are skipped. It never fails the run. Coverage: before, 0 bills; a sample of 8 bills
+  of the 136th (laws, passed one house, reported, introduced only) all had analyses, and 5 of the 6 PDFs read had a
+  SUMMARY; HB 110 and HB 99 of the 134th have them too. About 3,700 bills in three General Assemblies at about 80 a run:
+  the first copy takes about 4 days of runs. Needs pdftotext on the runner (poppler-utils).

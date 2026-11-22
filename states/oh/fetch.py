@@ -15,6 +15,8 @@ away; the House's and Senate's answer the project's agent since, below).
 - Legislators' emails aren't in the API: Open States' public-domain file (data.openstates.org, copied from the
   official sites), decided 2026-10-31. Their office phones and addresses: each member's page on ohiohouse.gov or
   ohiosenate.gov (`member_pages()`, approved by the owner 2026-11-22), each read once a week at most.
+- The Legislative Service Commission's bill analyses on www.legislature.ohio.gov, for "What it does"
+  (states/oh/analyses.py; a bounded number each run).
 Usage: python3 states/oh/fetch.py [first_year]   (default 2021)
 """
 import json, os, re, sys, time, urllib.request
@@ -270,6 +272,12 @@ def main():
     agendas(CURRENT)
     people()
     member_pages()
+    try:  # the Legislative Service Commission's analyses, for "What it does" (bounded each run; never fails the run)
+        from states.oh import analyses
+        analyses.fetch([s for s in range(CURRENT, FIRST - 1, -2) if os.path.isdir(os.path.join(P.DATA, str(s), "bills"))],
+                       TODAY)
+    except Exception as e:
+        print(f"analyses: {type(e).__name__}: {e}")
     marker = os.path.join(P.DATA, "incomplete")
     # A General Assembly not yet begun (no bills listed yet) is read when it's there but never holds Ohio back.
     undone = {s for s in INCOMPLETE if begun(s)}
@@ -286,5 +294,5 @@ if __name__ == "__main__":
     # A new General Assembly's contacts once its legislators and committees are listed (until then the last file stands).
     if all(os.path.exists(os.path.join(P.DATA, str(CURRENT), f"{n}.json")) for n in ("legislators", "committees")):
         contacts.main(CURRENT)
-    from states.oh import texts  # "What it does", from the long titles
+    from states.oh import texts  # "What it does", from the analyses or the long titles
     texts.main()
