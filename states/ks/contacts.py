@@ -101,9 +101,14 @@ def build(session):
 
 def main(session):
     out = build(session)
-    if len(out["people"]) < 150:
-        raise SystemExit(f"{session}: only {len(out['people'])} legislators; kept the last contacts")
     path = os.path.join(P.DATA, f"contacts_{session}.json")
+    if len(out["people"]) < 150:
+        if not os.path.exists(path):
+            # A new biennium's prefiled bills (December) and first weeks come before its member list: no contacts yet,
+            # and the page is built without legislators (build_data.py allows that when there's no contacts file).
+            print(f"{session}: only {len(out['people'])} legislators so far; no contacts file yet")
+            return
+        raise SystemExit(f"{session}: only {len(out['people'])} legislators; kept the last contacts")
     json.dump(out, open(path, "w"), indent=1, ensure_ascii=False)
     ppl = out["people"].values()
     comms = list(out["senateCommittees"].values()) + list(out["assemblyCommittees"].values())

@@ -575,7 +575,10 @@ def never_downloaded(years):
             if year < YEAR or TODAY.month > 1:
                 out.append(f"{year}:list")
             continue
-        if any(KIND.match(k) and not os.path.exists(os.path.join(folder, "bills", f"{k}.html")) for k in listing["bills"]):
+        # The current year's bills never hold Idaho back: in January new bills are listed every day, and one page a run
+        # missed (the converter leaves the bill out) is read the next run, while the last year stays on the site.
+        if year < YEAR and any(KIND.match(k) and not os.path.exists(os.path.join(folder, "bills", f"{k}.html"))
+                               for k in listing["bills"]):
             out.append(f"{year}:bills")
     return out
 

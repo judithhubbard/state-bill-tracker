@@ -67,3 +67,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
 - (2026-11-19) A record's `last` is the day of the latest line the history shows, not of a "routine" line it leaves out
   (floor amendments, conferee changes, rescheduled meetings): 257 of 2025-26's and 324 of 2023-24's status rows had a date
   and no wording (HB 48: 2026-04-01, now 2025-12-08 "Carried over to the 2026 session").
+- **The next Legislature (2026-11-22):** Hawaii has no prefiled bills: the 34th Legislature's (2027-28) are introduced from the opening day, January 20, 2027. fetch.py asks Open States for its session list daily while this year's is missing and reads it once listed; the current year's first copy never holds Hawaii back (`never_downloaded()`), and convert.py's `sessions()` shows a year as soon as fetch.py's first pass over it is whole and has a bill (the 500-bill rule is for a bulk import's partial copy).

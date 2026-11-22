@@ -443,6 +443,27 @@ def begun(b):
     return TODAY >= date(y, 1, 1 + (0 - date(y, 1, 1).weekday()) % 7 + 7)
 
 
+def biennium_of(year):
+    """The biennium a year belongs to: 2027 and 2028 -> "b2027_28"."""
+    y = year if year % 2 else year - 1
+    return f"b{y}_{str(y + 1)[2:]}"
+
+
+def waiting(b):
+    """A biennium with no bills on file (the next one, before or just after it convenes): skipped unless the API lists a
+    bill for it (one request a run), so an empty one is never saved (the converter would show it as a session with no
+    bills, and the build would take it for the current one) and never holds Kansas back. Its prefiled bills, once the
+    API lists them, are read from then on."""
+    if os.path.exists(os.path.join(DATA, str(first_year(b)), "bill_status.json")):
+        return False
+    page = request(f"{API}/bill_status/?{urllib.parse.urlencode({'biennium': b, 'limit': 1})}", f"{b} bills listed")
+    if isinstance(page, dict) and page.get("count"):
+        print(f"{b}: {page['count']} measures listed; reading its first copy", flush=True)
+        return False
+    print(f"{b}: no bills listed yet", flush=True)
+    return True
+
+
 def never_downloaded(bienniums, active):
     """What was never downloaded: a biennium's bill status, the active biennium's legislators or committees, an active
     member's details. (A failed refresh with a last copy doesn't count; nor do roll calls and notes, which fill in.)"""
@@ -459,7 +480,8 @@ def never_downloaded(bienniums, active):
         else:
             missing = [m["kpid"] for m in legs.get("legislators", []) if m.get("status") == "Active"
                        and not os.path.exists(os.path.join(MEMBERS, f"{m['kpid']}.json"))]
-            if missing:
+            # (A new Legislature's members' details, read in its first January, don't hold Kansas back.)
+            if missing and not (first_year(active) == TODAY.year and TODAY.month == 1):
                 out.append(f"members({len(missing)})")
         if load(os.path.join(folder, "committees.json")) is None:
             out.append("committees")
@@ -474,7 +496,7 @@ def main():
             f.write("running\n")
     print(f"Kansas: {'with an API key' if KEY else 'no API key'}, a request every {DELAY} s", flush=True)
     refused = False
-    bienniums, active = [], None
+    bienniums, active, nxt = [], None, []
     try:
         b = request(f"{API}/biennia/", "biennia")
         if isinstance(b, dict) and b.get("active"):
@@ -492,14 +514,19 @@ def main():
         if active:
             # The active biennium and the archived ones in the shared window (states/window.py: from b2023_24 until
             # 2029); a biennium the site no longer lists keeps its last copy.
-            bienniums = [active] + [x for x in archived if first_year(x) >= W.first_session()]
+            # From November 1, the next biennium (prefiled bills), and in January the new one, when the API doesn't
+            # list it yet; it's read like the active one once it has bills.
+            nxt = [x for x in [biennium_of(TODAY.year + 1 if TODAY.month >= 11 else TODAY.year)]
+                   if x != active and x not in archived and first_year(x) > first_year(active)]
+            bienniums = [active] + nxt + [x for x in archived if first_year(x) >= W.first_session()]
             if ONLY:
-                bienniums = [x for x in [active] + archived if first_year(x) == ONLY]
+                bienniums = [x for x in [active] + nxt + archived if first_year(x) == ONLY]
+            bienniums = [x for x in bienniums if not waiting(x)]
         # What the site needs first (each biennium's lists, the active members' details), then the extras.
         for x in bienniums:
             if out_of_time():
                 break
-            biennium_lists(x, x == active)
+            biennium_lists(x, x == active or x in nxt)  # the next biennium's lists every run too
             if x == active and not out_of_time():
                 agendas(x)
             if x == active and not out_of_time():

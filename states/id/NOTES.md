@@ -81,3 +81,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   matching 2026 records. Untested: what the two agendas pages look like during a session (on 2026-11-22 they say "No
   agendas currently available"); if they don't link the PDFs the committee pages are read instead. A failed request
   keeps the last file; without pdftotext it's skipped.
+- **The next session (2026-11-22):** Idaho lists no bills before the session (/sessioninfo/2027/legislation/ answered 404 on 2026-11-22); 2027 is read from January 1 (the window's new year) and appears once its list has a bill, from about January 12, 2027. The current year's missing bill pages never hold Idaho back (`never_downloaded()`: one a run missed is read the next run).
