@@ -1638,7 +1638,8 @@ def status_inputs(session, recs, agenda_of=None, later_of=None):
         taken[lead] = r["nums"][0]
         acts = [a for v in r["vers"] for a in v["actions"] if a[0] == r["last"]]
         deliv = (r["keyDates"][4] or "").split(";")[-1] if r["stage"] == 4 and len(r["keyDates"]) > 4 else ""
-        meets = [[a[1], a[0]] for a in (agenda_of(r) if agenda_of else [])]
+        # (A floor calendar's day keeps its kind and note: [when, "Senate floor", "floor"(, "listed")].)
+        meets = [[a[1], a[0]] + (a[2:] if a[2:3] == ["floor"] else []) for a in (agenda_of(r) if agenda_of else [])]
         flags = ("b" if r.get("budget") else "") + ("v" if r.get("ballot") else "")
         later = later_of(i) if later_of else None
         rows.append([i, lead, [r["nums"][0], r["title"][:140], r["stage"], r["last"] or "", (acts[-1][1] if acts else "")[:120],
@@ -2201,9 +2202,20 @@ def compute(prev=None):
         def agenda_of(r):
             seen = []
             for v in r["vers"]:
-                # ([committee, when], or with a third item, the meeting's kind: Congress's "markup" or "hearing".)
+                # ([committee, when], or with a third item, the meeting's kind: Congress's "markup" or "hearing"; "floor"
+                # for a floor calendar's day, with the house as committee ("Senate floor") and a fourth item "listed" when
+                # the calendar lists bills that can come up that day rather than a vote set for it.)
                 for c, w, *kind in agendas.get(re.sub(r"[A-Z]$", "", v["p"]), []):
                     entry = [c.replace(" And ", " and "), w] + [k for k in kind if k]
+                    # A floor day in a house that passed the bill that day or in the week before it: the calendar was
+                    # printed before the vote, or lists the bill for the whole week (Congress's House schedule). (The
+                    # vote's own day counts: S6655 of 2025 showed "passed the Senate Jun 4" and "Senate floor vote Jun 4".)
+                    if entry[2:3] == ["floor"]:
+                        from datetime import date, timedelta
+                        passed = r["keyDates"][1 if c.startswith("Senate") else 2] if len(r["keyDates"]) > 2 else ""
+                        week = (date.fromisoformat(w[:10]) - timedelta(days=6)).isoformat()
+                        if any(week <= d[:10] <= w[:10] for d in (passed or "").split(";") if d):
+                            continue
                     if entry not in seen:
                         seen.append(entry)
             return sorted(seen, key=lambda x: x[1])

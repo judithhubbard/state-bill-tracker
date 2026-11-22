@@ -57,6 +57,8 @@ notes for two bienniums) takes about 2½ hours without a key, so GitHub's runs b
 
 - agendas.json (the active biennium): bills on committee hearings from yesterday to three weeks ahead, from
   /api/v1/hearings/ (see agendas()), every run.
+- floor.json (the active biennium): each house's daily calendars dated today or later, from /api/v1/daily-calendars/
+  and their PDFs (see floor_calendars()), every run.
 
 - fnotes/<HB2001>.json: the Division of the Budget's fiscal note on the bill's latest version that has one, for bills with
   no supplemental note (2026-11-22: the note's letter describes the bill before its cost; "What it does" falls back to
@@ -696,6 +698,82 @@ def never_downloaded(bienniums, active):
     return out
 
 
+# ---- Floor calendars ----------------------------------------------------------------------------------------------
+# Each house's daily calendar (/api/v1/daily-calendars/: a row per calendar, with its day and PDF, posted the evening
+# before) lists, under the order of business, the bills that can come up that day: the consent calendar, final action,
+# motions to concur or nonconcur, and general orders above "the line" (debate in the Committee of the Whole: the House
+# marks it "(The Line)", the Senate "ANTICIPATED END OF DEBATE CALENDAR"; the long list below it waits, often all session).
+# Each entry is a calendar number line ("2712–") and the bill ("HB 2712, AN ACT ..." or "Sub. for HB 2081, AN ACT ...").
+FLOOR_KEEP = re.compile(r"Consent Calendar|Final Action|Concur or Nonconcur|General Orders|UNFINISHED BUSINESS", re.I)
+FLOOR_SKIP = re.compile(r"INTRODUCTION OF|Reference of|REPORTS OF|MESSAGES FROM|COMMUNICATIONS FROM|Motions and Resolutions|"
+                        r"CONSIDERATION OF MOTIONS|Consideration of Appointments|CORRECTION AND APPROVAL|READING AND CORRECTION|"
+                        r"\(The Line\)|ANTICIPATED END OF DEBATE", re.I)
+
+
+def floor_bills(text):
+    """The bills a daily calendar lists in its floor sections, in order: ["HB2712", "SB478", ...]."""
+    out, keep, lines = [], False, text.splitlines()
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if FLOOR_KEEP.search(s) and len(s) < 70 and not re.search(r"AN ACT|,", s):
+            keep = True
+        elif FLOOR_SKIP.search(s) and len(s) < 70:
+            keep = False
+        m = re.match(r"(\d+)\s*[–-]$", s)
+        if keep and m:
+            nxt = next((x.strip() for x in lines[i + 1:i + 4] if x.strip()), "")
+            b = re.search(r"\b(HB|SB|HCR|SCR)\s+(\d+)\b", nxt.split("AN ACT")[0].split("A CONCURRENT")[0])
+            if b and b.group(2) == m.group(1) and b.group(1) + b.group(2) not in out:
+                out.append(b.group(1) + b.group(2))
+    return out
+
+
+def floor_calendars(biennium, since=None, folder=None):
+    """Daily calendars dated today or later, into <first year>/floor.json: {apn: {"house", "when", "bills"}}. One or two
+    list requests a run, and a PDF for each calendar not read yet; calendars over a month old are dropped. A failure
+    keeps the last file."""
+    import subprocess
+    since = since or TODAY.isoformat()
+    path = os.path.join(folder or os.path.join(DATA, str(first_year(biennium))), "floor.json")
+    have = load(path, {}) or {}
+    cut = (TODAY - timedelta(days=30)).isoformat()
+    out = {k: v for k, v in have.items() if v["when"][:10] >= min(cut, since)}
+    try:
+        rows = listing("daily-calendars", "daily calendars", biennium)
+    except Refused as e:
+        print(f"floor calendars: refused ({e}); kept the last copy", flush=True)
+        return
+    if rows is None:
+        print("floor calendars: unreadable; kept the last copy", flush=True)
+        return
+    for c in rows:
+        apn, day, house = c.get("apn") or "", c.get("date") or "", (c.get("chamber") or "").title()
+        if day < since or house not in ("House", "Senate") or apn in out or not c.get("document"):
+            continue
+        body = request(SITE + c["document"], f"calendar {apn}", kind="bytes")
+        if not body:
+            continue
+        try:
+            text = subprocess.run(["pdftotext", "-layout", "-", "-"], input=body, capture_output=True).stdout.decode("utf-8", "replace")
+        except OSError:
+            print("floor calendars: pdftotext isn't installed; skipped", flush=True)
+            return
+        t = re.search(r"CONVENES at (\d+:\d\d)\s*([AP])\.?M", text, re.I)
+        when = f"{day}T00:00:00"
+        if t:
+            h, mnt = map(int, t.group(1).split(":"))
+            when = f"{day}T{h % 12 + (12 if t.group(2).upper() == 'P' else 0):02d}:{mnt:02d}:00"
+        out[apn] = {"house": house, "when": when, "bills": floor_bills(text)}
+        print(f"floor calendar {house} {day}: {len(out[apn]['bills'])} bills", flush=True)
+    # A calendar reissued for the same day replaces the earlier one (the newest file name wins).
+    newest = {}
+    for k, v in out.items():
+        key = (v["house"], v["when"][:10])
+        if key not in newest or k > newest[key]:
+            newest[key] = k
+    save({k: v for k, v in out.items() if newest[(v["house"], v["when"][:10])] == k}, path)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     # Before the first copy, a run cut off without its summary leaves this, so a partial copy isn't published.
@@ -737,6 +815,8 @@ def main():
             biennium_lists(x, x == active or x in nxt)  # the next biennium's lists every run too
             if x == active and not out_of_time():
                 agendas(x)
+            if x == active and not out_of_time():
+                floor_calendars(x)
             if x == active and not out_of_time():
                 member_details(x)
         for x in bienniums:

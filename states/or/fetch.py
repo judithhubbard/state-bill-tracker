@@ -12,7 +12,7 @@ DATA = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 TABLES = ["Measures", "MeasureHistoryActions", "MeasureSponsors", "MeasureVotes", "CommitteeVotes", "MeasureDocuments",
           "MeasureAnalysisDocuments", "Committees", "CommitteeMembers", "CommitteeMeetings", "CommitteeAgendaItems",
-          "Legislators", "LegislativeSessions"]
+          "Legislators", "LegislativeSessions", "FloorSessionAgendaItems"]  # (the last: floor calendars, 2026-11-22)
 # Two sessions of each kind (long in odd years, short in even ones), so each is compared with past ones like it.
 FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else date.today().year - 4
 
@@ -58,9 +58,13 @@ def main():
                 continue
         os.makedirs(folder, exist_ok=True)
         # A session two or more years back is finished: read once.
-        if year < date.today().year - 1 and all(os.path.exists(os.path.join(folder, f"{t}.json")) for t in TABLES):
+        # (A table added later, FloorSessionAgendaItems, is read once for such a session, without the others again.)
+        done = year < date.today().year - 1
+        if done and all(os.path.exists(os.path.join(folder, f"{t}.json")) for t in TABLES):
             continue
         for name in TABLES:
+            if done and os.path.exists(os.path.join(folder, f"{name}.json")):
+                continue
             rows = table(name, session)
             if rows is None:
                 print(f"{session} {name}: failed")

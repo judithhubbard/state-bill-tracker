@@ -1122,10 +1122,40 @@ def _comm_key(n):
                     if w not in ("senate", "house", "committee", "special", "select", "permanent", "joint", "on", "the", "and", "of"))
 
 
+FLOOR_NUM = {"H.R.": "HR", "S.": "S", "H.J.Res.": "HJRES", "S.J.Res.": "SJRES"}
+
+
+def house_floor(session, out):
+    """The House floor schedule (data/us/floor.json, from states/us/fetch.py's floor()): bills that "may be considered"
+    in a week, under suspension of the rules or a rule. The schedule names the week, not the day, so each bill is
+    "listed" on every weekday of its week still to come (states/floorcal.py): ["House floor", day, "floor", "listed"].
+    House resolutions (rules, H. Res.) aren't records; items taken off the schedule are left out."""
+    from datetime import date, timedelta
+    from states import floorcal
+    try:
+        weeks = json.load(open(os.path.join(P.DATA, "floor.json"))).get("weeks", {})
+    except (OSError, ValueError):
+        return
+    if session != max(sessions()):
+        return
+    since = floorcal.since(P.TIMEZONE)
+    for wk, items in weeks.items():
+        days = [(date.fromisoformat(wk) + timedelta(days=i)).isoformat() for i in range(5)]
+        for it in items:
+            m = re.fullmatch(r"(H\.R\.|S\.|H\.J\.Res\.|S\.J\.Res\.) ?(\d+)", it.get("num", ""))
+            if not m or it.get("removed"):
+                continue
+            for d in days:
+                if d >= since:
+                    floorcal.add(out, FLOOR_NUM[m[1]] + m[2], floorcal.entry("House", f"{d}T00:00:00", listed=True))
+
+
 def agendas(session):
     """Bills on upcoming committee meetings (data/us/meetings.json, from states/us/meetings.py): bill -> [[committee,
     "2026-12-02T10:00:00" (Eastern time, as the page shows it), "markup" | "hearing" | ""], ...]. Canceled and postponed
     meetings are left out; the current Congress only."""
+    out = defaultdict(list)
+    house_floor(session, out)
     path = os.path.join(P.DATA, "meetings.json")
     d = json.load(open(path)) if os.path.exists(path) else {}
     meets = dict(d.get("meetings") or {}) if d.get("congress") == P.congress_of(session) else {}
@@ -1139,7 +1169,6 @@ def agendas(session):
         for i, m in (json.load(open(spath)).get("meetings") or {}).items() if os.path.exists(spath) else []:
             if i not in meets and same(m) not in have:
                 meets[i] = m
-    out = defaultdict(list)
     for m in meets.values():
         if not m.get("bills") or not m.get("date") or re.search(r"cancel|postpon", m.get("status", ""), re.I):
             continue

@@ -30,7 +30,7 @@ const OneList = (() => {
       if (!S) return null;
       const F = { session: +session, current: !!f.c, upcoming: !!f.u, lastVote: f.v || "", lastComm: f.m || "", sessionEnd: f.e || {}, timing: (f.t || []).map((v) => ({ lastVote: v })) };
       const lc = (S.passedBothText || "Passed both houses").replace(/^./, (c) => c.toLowerCase());
-      const WR = WatchRules.make(S, () => F, { today: iso, nextMeeting: (b) => WatchRules.nextMeeting(b.agenda, F.current),
+      const WR = WatchRules.make(S, () => F, { today: iso, nextMeeting: (b) => WatchRules.nextMeeting(b.agenda, F.current, b.stage),
         isAmendment: (b) => !!S.amendments && b.topics.includes("const"), toVoters: (b) => !!b.ballot && !(S.amendments && b.topics.includes("const")), passedBothLc: lc });
       return { S, WR, F };
     })());
@@ -67,7 +67,7 @@ const OneList = (() => {
     // page works it out: billfacts.js): it ended before the session did ("e"), a veto that can still be overridden ("r"),
     // the voters have decided it ("d"), an amendment ("a") on its second passage ("2").
     const has = (c) => flags.includes(c);
-    const bill = { stage, due: null, agenda: meets.map(([when, committee]) => ({ when, committee })), topics: kind === "const" ? ["const"] : [],
+    const bill = { stage, due: null, agenda: meets.map(([when, committee, kind, note]) => ({ when, committee, kind: kind || "", note: note || "" })), topics: kind === "const" ? ["const"] : [],
       vers: [{ p: full, actions: [], statusDesc: "", committee: comm || "" }], nums: [full], budget: has("b"), ballot: has("v") };
     try {
       if (stage === 4 && R.F.current) bill.due = S.govDeadline(deliv || null, +b.session);

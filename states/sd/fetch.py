@@ -274,20 +274,40 @@ def committee_name(full):
     return re.sub(r"\s+", " ", re.sub(r"\bCommittee on ", "", full or "")).strip()
 
 
+FLOOR_HEAD = re.compile(r"\b[A-Z][A-Z ,'()&:-]{10,}[A-Z):]")
+
+
+def floor_bills(body):
+    """The bills a House or Senate calendar (its text) lists for a vote: those under "SECOND READING OF HOUSE BILLS AND
+    JOINT RESOLUTIONS" (South Dakota's passage vote is on second reading), "... OF SENATE BILLS ..." and "SECOND READING
+    AND CONSIDERATION OF CONSENT CALENDAR ITEMS"; not committee reports, motions and resolutions, commemorations or
+    conference committees."""
+    out, heads = [], [(m.start(), m.end(), m.group(0)) for m in FLOOR_HEAD.finditer(body)]
+    for i, (_, end, head) in enumerate(heads):
+        if head.startswith("SECOND READING"):
+            stop = heads[i + 1][0] if i + 1 < len(heads) else len(body)
+            out += [x for x in AGENDA_BILL.findall(body[end:stop]) if x[0] in ("HB", "SB", "HJR", "SJR") and x not in out]
+    return out
+
+
 def agendas(year):
     """Bills on committee agendas from yesterday to three weeks ahead, into data/sd/<year>/agendas.json:
     {"HB1055": [["House Judiciary", "2026-01-16T10:00:00"], ...]}. For each of the session's committees in
-    committees.json (not the whole House or Senate), its documents list (SessionCommittees/Documents/<id>?Type=3&Type=5,
+    committees.json, its documents list (SessionCommittees/Documents/<id>?Type=3&Type=5,
     as the committee page's Agendas tab reads it: each agenda's DocumentId, DocumentDate with its UTC offset, and
     NoMeeting for a canceled meeting), then each upcoming agenda's text (Documents/<id>.html), whose bills read
-    "HB 1055" (a line break between). About 32 requests a run plus one per agenda; any failure keeps the last copy."""
+    "HB 1055" (a line break between). The House's and the Senate's own (FullBody) documents are each day's floor
+    calendars: their bills set for a vote (floor_bills()) go in as ["House floor", when, "floor"] (states/floorcal.py).
+    About 34 requests a run plus one per agenda or calendar; any failure keeps the last copy."""
     folder = os.path.join(DATA, str(year))
     comms = load(os.path.join(folder, "committees.json")) or []
     first, last = (date.today() - timedelta(days=1)).isoformat(), (date.today() + timedelta(days=21)).isoformat()
     out, meetings, failed = {}, 0, 0
     for c in comms:
         lst = c.get("listing") or {}
-        if (lst.get("Committee") or {}).get("FullBody") or not lst.get("SessionCommitteeId"):
+        # The whole House or Senate (FullBody): its documents are the day's floor calendars (states/floorcal.py).
+        body_of = (lst.get("Committee") or {}).get("Body") if (lst.get("Committee") or {}).get("FullBody") else None
+        if not lst.get("SessionCommitteeId") or (body_of is not None and body_of not in ("H", "S")):
             continue
         name = committee_name(lst.get("FullName"))
         try:
@@ -310,6 +330,12 @@ def agendas(year):
             meetings += 1
             body = html.unescape(re.sub(r"<[^>]+>", " ", re.sub(r"(?s)<(script|style)\b.*?</\1>", " ", page)))
             stamp = when[:19] if re.match(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d", when) else f"{when[:10]}T00:00:00"
+            if body_of:
+                for kind, num in floor_bills(body):
+                    entry = [f"{'House' if body_of == 'H' else 'Senate'} floor", stamp, "floor"]
+                    if entry not in out.setdefault(f"{kind}{int(num)}", []):
+                        out[f"{kind}{int(num)}"].append(entry)
+                continue
             for kind, num in AGENDA_BILL.findall(body):
                 entry = [name, stamp]
                 if entry not in out.setdefault(f"{kind}{int(num)}", []):

@@ -120,6 +120,17 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   On 2026-11-22: 5 meetings posted (nominations, closed intelligence meetings, an Aging hearing), none naming a bill, so
   nothing shows yet; tested with a copy of the file given bill documents. The House has no such file (its Committee
   Repository, docs.house.gov, is week and event pages: not read).
+- **House floor schedule (2026-11-22; floor calendars, states/floorcal.py):** fetch.py's `floor()` reads the Majority
+  Leader's weekly "bills this week" XML, docs.house.gov/floor/Download.aspx?file=/billsthisweek/<Monday>/<Monday>.xml,
+  for this week and next (two small requests a run; the 39 MB RSS index is never read; docs.house.gov has no robots.txt),
+  into data/us/floor.json; weeks over are dropped, and a week not posted (the server answers 200 with a "File Not Found"
+  page) keeps its last copy. It's posted about five days ahead and revised through the week (the week of 2026-11-16: 8
+  versions). Items are listed by category ("may be considered under suspension of the rules", "pursuant to a rule"), not
+  by day, so `convert.house_floor()` lists each bill on every weekday of its week still to come, as "listed" ("On the
+  House calendar ..."); H. Res. (rules) and items taken off (remove-date) are left out. Tested on the weeks of May 11,
+  May 18 and June 1, 2026 (FLOOR_TODAY=2026-05-11): 64 bills, all records' numbers; a floor vote that day or the next on
+  30% of the bill-days, as a week-long listing should give. The Senate publishes no comparable schedule. Known gap: a bill
+  the House passes on Tuesday still shows on the calendar Wednesday-Friday (the schedule doesn't drop items taken up).
 - **A new Congress (2026-11-22):** the 120th becomes current on January 1, 2027 (its bills start January 3; govinfo
   answers 404 for /BILLSTATUS/120 until then). fetch.py reads its bills from the sitemaps before its first zips are built
   (updates/), its missing zips don't count for 45 days, and the 119th is read like the current Congress (sitemap updates,

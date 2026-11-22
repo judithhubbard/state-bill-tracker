@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 
 from states.oh import profile as P
 from states.undated import settle
+from states import floorcal
 
 HOUSE = {"S": "Senate", "H": "House"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
@@ -367,10 +368,24 @@ def load_session(session):
 
 
 def agendas(session):
+    """Committee agendas (fetch.py's agendas.json) and floor calendars (floor.json, states/floorcal.py): each house's
+    calendar lists its bills for third consideration, which can come up that day but often wait ("listed": in 2026, about
+    a third of the House calendar's bills and three in five of the Senate's had a floor vote that day or the next)."""
     try:
-        return json.load(open(os.path.join(folder(session), "agendas.json")))
+        out = json.load(open(os.path.join(folder(session), "agendas.json")))
     except (OSError, ValueError):
-        return {}
+        out = {}
+    try:
+        cals = json.load(open(os.path.join(folder(session), "floor.json")))
+    except (OSError, ValueError):
+        cals = {}
+    since = floorcal.since(P.TIMEZONE)
+    for c in cals.values():
+        if c["when"][:10] < since:
+            continue
+        for b in c["bills"]:
+            floorcal.add(out, b, floorcal.entry(c["house"], c["when"], listed=True))
+    return out
 
 
 _PARTIES = {}

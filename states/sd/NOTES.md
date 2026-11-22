@@ -61,3 +61,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   "5 percent") once. Traps: LibreOffice splits words across tags ("transfer s", "th at"), so tags are removed without
   adding spaces; page headers ("2026 Title Summaries") and the 2025 file's title headings are paragraphs to skip. Bill
   explanations or digests of bills as introduced: none (fiscal notes exist for about 17 bills a year, as numbers).
+- **Floor calendars (2026-11-22, states/floorcal.py):** `agendas()` in fetch.py no longer skips the two FullBody
+  "committees" (House of Representatives, SessionCommitteeId 1266 in 2026; Senate 1288): their documents are each floor
+  day's calendar, posted before the day (two more list requests a run, plus one per calendar in the window).
+  `floor_bills()` keeps the bills under "SECOND READING OF HOUSE/SENATE BILLS AND JOINT RESOLUTIONS" and "SECOND READING
+  AND CONSIDERATION OF CONSENT CALENDAR ITEMS" (South Dakota's passage vote is on second reading), not committee reports,
+  motions, commemorations or conferences; they go in agendas.json as ["House floor", when, "floor"], a vote set for that
+  day (91% of Senate and 93% of House listings had a vote that day or the next; the rest were tabled or deferred).
+  Tested on nine saved calendars of Feb 23-Mar 2, 2026 (127 bills, all records' numbers but SJR 508, a joint resolution
+  the converter leaves out).

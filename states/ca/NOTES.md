@@ -20,3 +20,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (`STATE.addressLookup`). Earlier sessions are linked by subject and digest (`earlier()`, like Virginia's), never
   spot bills. A new governor takes office January 4, 2027: add them to `GOVERNORS`.
 - **The next session's bills (2026-11-22):** the daily zip moves to the new session when it convenes (the first Monday of December of an even year: 2027-28 on 2026-12-07, when bills are first introduced), and `fetch.py` already reads CURRENT + 2's own zip (pubinfo_2027.zip, a 404 until it's published) and saves a daily zip into the folder of the newest session its BILL table names; `load_session()` keeps only rows of its own session (BILL's session column), in case a zip around the switch holds both. 2025-26's copy then comes from pubinfo_2025.zip. No 2027 data on 2026-11-22.
+- **Floor calendars (2026-11-22):** the Daily File (DAILY_FILE table, downloaded every run and unread until now: bill,
+  file location, item, file date): a bill on a third reading file, concurrence (Assembly) or unfinished business (Senate),
+  or the consent calendar's second day can come up that day (`FLOOR_FILES` in convert.py), but bills often wait on the
+  third reading file for weeks, so each is "listed": "On the Senate calendar Tue, Aug 25". Second reading, the inactive
+  file, held at the desk and governor's vetoes are left out. Only file days from today on (the table has 66,801 rows for
+  2025-26). Tested with FLOOR_TODAY=2026-08-17: 1,041 bills on files Aug 17-31, all matched to records.

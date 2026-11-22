@@ -35,7 +35,7 @@ function decl(name) {
 }
 const ctx = vm.createContext({});
 vm.runInContext(["SENT_TO", "commKey", "walkCommittees", "dayOf", "PAGE", "sortBills"].map(decl).join("\n")
-  + "\nlet state = { sort: 'recent' }; const rankOf = (s) => s, earlierSessions = () => 0, nextMeeting = () => null;"
+  + "\nlet state = { sort: 'recent' }; const rankOf = (s) => s, earlierSessions = () => 0, nextMeeting = () => null, rowMeet = () => null;"
   + "\nglobalThis.T = { walkCommittees, sortBills, dayOf, PAGE };", ctx);
 const { walkCommittees, sortBills, dayOf, PAGE } = ctx.T;
 

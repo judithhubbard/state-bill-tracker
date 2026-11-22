@@ -107,3 +107,43 @@ By state:
 - Michigan and Kentucky: joint resolutions are left out. Michigan's are lettered ("HJRA"), and build_data.py drops a final capital when looking up agendas, so all of them would hit the same key; that needs a build_data.py change.
 - Massachusetts: a past hearing later moved to a future date would be missed.
 - Missouri: the Senate page gives dates with no year, and the reader takes the year nearest today.
+
+## Floor calendars (2026-11-22)
+
+Which bills are set for a floor vote soon, shown like committee agendas. A floor calendar's day is an agenda entry of kind
+"floor" with the house as its committee, from the same `agendas(session)`: `["Senate floor", "2027-03-02T10:00:00", "floor"]`
+for a vote set for that day, with a fourth item `"listed"` where the calendar lists bills that can come up that day but
+often wait there for days (states/floorcal.py: `since()`, `entry()`, `add()`). Readers keep only days from today on
+(`FLOOR_TODAY=YYYY-MM-DD` sets today back, for testing on past calendars).
+
+On the page (tracker.html): the bill row's tag "Senate floor vote Thu, Oct 22" (or "On the Senate calendar Tue, Aug 25",
+outlined, for "listed"); the panel's line "Scheduled for a Senate floor vote Thu, Oct 22, 2:00 PM. Every member votes, so
+contact your own legislators before then."; the card makes your own legislators in that house the ones who decide
+(`book.reps(..., star)`), and drops the leader's "bring it to a floor vote" ask when the vote is set (kept for "listed");
+"On an upcoming floor calendar" under "Awaiting a floor vote", with its filter (`#v&agenda=floor`); the watchlist's
+"Floor vote Oct 22" deadline (lists_pages/watchrows.js; "On the Senate calendar Oct 22" for "listed") in Due soon; the
+watched bill's "Coming up:" tag. Committee agendas behave as before (`nextAgenda()` leaves floor days out; a row shows
+the soonest of the two, or the one the list is filtered by). The status rows (/your-bills/) carry a floor day's kind and
+note. `test/data_check.py` checks the entries' shape and house names, that their bills are records, and LOOKs at the
+count and at bills on a floor calendar that are still in committee.
+
+| State | Source | Sure or listed | Tested |
+|---|---|---|---|
+| NJ | BAGENDA.TXT "Session" rows (the voting sessions' board lists), already downloaded | sure | 2026: 13 sessions, 492 bills |
+| CA | DAILY_FILE table (third reading, concurrence, unfinished business, consent second day), already downloaded | listed | FLOOR_TODAY=2026-08-17: 1,041 bills |
+| AR | FloorCalendars.txt, already downloaded; drafting ids through LegislativeMeasures.txt; third reading and concurrence sections only | listed | 2025: 1,176 bills; 2026: 175 |
+| OR | OData FloorSessionAgendaItems (one new table in fetch.py): third reading sure, "Possible Consideration of ... Amendments" listed | both | 2026R1: 323 entries, all with a floor action that day or the next |
+| WI | the bills' own history lines, "Placed on calendar 2-11-2026" | listed (94% Senate, 76% Assembly voted that day or next) | 2026: 357 bills on 12 days |
+| SD | the House's and Senate's own (FullBody) committee documents, the day's calendar (fetch.py: 2 more list requests a run plus one per calendar); "SECOND READING" sections (the passage vote) | sure (91-93%) | 9 calendars of Feb 23-Mar 2, 2026: 127 bills |
+| MO | House only: the HOUSE CALENDAR at the end of each House Journal already downloaded; third reading, Senate amendments, conference reports | listed (55%) | 2 journals of 2026: 22 bills |
+| OH | SOLAR API calendar indexes (2 requests a run) and each new House/Senate calendar PDF (pdftotext); Senate Rules calendar left out | listed (32% House, 58% Senate) | from 2026-05-15: 12 calendars, 162 bills |
+| KS | /api/v1/daily-calendars/ and each new calendar PDF: consent, final action, concurrence, unfinished business, general orders above the line | listed (83-87%) | Mar 2-Apr 10, 2026: 44 calendars, 205 bills |
+| NE | /calendar/agenda.php?day=...&print=csv, today and the next 3 days in session (3 s crawl delay): General File, Select File, Final Reading as "Legislature floor" | listed (73%) | Mar 23-Apr 9, 2026: 114 bills |
+| WA | Workroom Reports folders "House Floor Calendar" and "Senate Flash Calendar" (2 listing requests a run, new PDFs only) | listed (41-43%) | Feb 24-Mar 12, 2026: 23 PDFs, 324 bills |
+| UT | not read: its reading calendars are standing lists with no day | - | - |
+| NY | Senate only: the Open Legislation API's calendars (fetch_agendas.py's `senate_floor()`: one request for the year's list plus one per calendar to come), each active list (released the evening before); the third-reading section left out. No NOTES.md: this row is New York's note. The Assembly's calendar isn't in anything already downloaded | sure (99% voted that day) | June 1-4, 2026: 360 bills |
+| US | the House's weekly floor schedule XML (docs.house.gov/floor/Download.aspx?file=/billsthisweek/<Monday>/<Monday>.xml, this week and next: 2 requests a run; never the RSS index) into data/us/floor.json; bills only by week, so each weekday still to come of its week | listed (30% of bill-days) | weeks of May 11, May 18, June 1, 2026: 64 bills |
+
+A floor day in a house that passed the bill in the six days before it is dropped by build_data.py's `agenda_of()` (a
+calendar printed before the vote, or Congress's week-long listing), and the page shows floor days only for bills at
+"passed one house" or earlier. test/data_check.py now also checks New York's agendas file.

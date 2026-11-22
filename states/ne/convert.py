@@ -41,6 +41,7 @@ from zoneinfo import ZoneInfo
 
 from states.ne import profile as P
 from states.undated import settle
+from states import floorcal
 
 H = "L"  # the only house
 HOUSE = {"L": "Legislature"}
@@ -844,6 +845,23 @@ def agendas(session):
             m = re.match(r"Notice of hearing for (.+)$", t)
             if m and comm and "cancel" not in t and iso(m.group(1)) >= today:
                 out.setdefault(k, []).append([f"{HOUSE[H]} {comm}", f"{iso(m.group(1))}T00:00:00"])
+    # The floor agenda (fetch.py's floor_agendas(), states/floorcal.py): bills on General File and Select File (the two
+    # rounds of debate, each ending in a vote to advance) and on Final Reading (the passage vote). All "listed": a bill can
+    # stay on the agenda for days (LB 753 of 2026 was on Final Reading April 7 and 8 and passed April 9). Motions to return
+    # a bill to Select File, A bills (appropriations, not records here), resolutions other than amendments: left out.
+    since = floorcal.since(P.TIMEZONE)
+    try:
+        days = json.load(open(os.path.join(folder(session), "floor.json")))
+    except (OSError, ValueError):
+        days = {}
+    for day, items in days.items():
+        if day < since:
+            continue
+        for section, doc in items:
+            if not re.fullmatch(r"LB\d+|LR\d+CA", doc) or re.search(r"Motions? to return", section, re.I):
+                continue
+            if re.search(r"FINAL READING|SELECT FILE|GENERAL FILE", section):
+                floorcal.add(out, doc, floorcal.entry(HOUSE[H], f"{day}T00:00:00", listed=True))
     return out
 
 

@@ -32,3 +32,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   billlist; bills are numbered from early December: 2026's first on 2025-12-02; le.utah.gov's 2027 list was empty on
   2026-11-22); its folder is made only once the list has a bill, it shows from its first bill as an upcoming session
   (convert.py's `sessions()` asks 500 bills only of past years), and it never marks Utah incomplete before it convenes.
+- **Floor calendars (2026-11-22): none.** Utah's reading calendars (House 3rd Reading, Senate 2nd/3rd Reading,
+  Concurrence) are standing lists, not dated: the records say when a bill was placed on one ("Senate/ placed on 2nd Reading
+  Calendar", 630 in 2026) but not the day it will come up, and le.utah.gov's calendar page is a live JavaScript list. The
+  floor-calendar feature needs a day, so Utah has none; "Awaiting a floor vote" already says where the bill is.

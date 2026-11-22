@@ -54,3 +54,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   session is read from January (it convenes January 4, 2027). Its missing list, members and committees don't hold
   Wisconsin back until April 1 (bill pages never read still do), and convert.py's `sessions()` shows it from its first
   bill (past sessions still need over 1,000).
+- **Floor calendars (2026-11-22, states/floorcal.py):** no new download. `floor_days()` in convert.py reads each bill's own
+  history: "Placed on calendar 2-11-2026 by Committee on Rules" (or "pursuant to Senate Rule 18(1)", "Joint Rule 82") names
+  the day the house takes it up, filed a day to a week ahead in the house the line is under. Shown as "On the Senate
+  calendar <day>" (`"listed"`): in 2025-26, 94% of Senate and 76% of Assembly placements had a floor vote that day or the
+  next; the rest were laid on the table or sent back to Rules. Days from today on. Tested with FLOOR_TODAY=2026-01-01: 357
+  bills on 12 calendar days, all records' numbers. (`agendas()` no longer returns nothing when agendas.json is missing.)

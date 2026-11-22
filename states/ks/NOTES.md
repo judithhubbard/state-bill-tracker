@@ -97,3 +97,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Assessment and Taxation: 30 requests, 25 PDFs): 31 bills for action, 35 "previously heard" meetings (233 bills heard and
   still in committee at the session's end), every bill a record's number. January check: the log's "weekly agendas: N
   bills for action", and that the next biennium's committee codes (b2027_28) are in its committees.json.
+- **Floor calendars (2026-11-22):** `floor_calendars()` in states/ks/fetch.py reads `/api/v1/daily-calendars/?biennium=`
+  (one or two requests a run; no robots.txt) and downloads each house's daily calendar PDF dated today or later that
+  hasn't been read (posted the evening before; a reissue for the same day replaces the older), into
+  data/ks/<first year>/floor.json (`{apn: {"house", "when", "bills"}}`, the "CONVENES at" time; a month kept). It keeps
+  the bills under Consent Calendar, Final Action, motions to concur or nonconcur, Unfinished Business and General Orders
+  above the line (House "(The Line)", Senate "ANTICIPATED END OF DEBATE CALENDAR"); the long list below the line waits,
+  often all session, and is left out (counting it, 1-2% of late-March bills had a vote that day). Concurrent resolutions
+  only when they're records (the amendments). Shown as "listed": of the 2026 calendars from March 2 to April 10 (44 calendars,
+  205 bills, all records), 83% (House) and 87% (Senate) had a floor action that day or the next.

@@ -33,12 +33,15 @@ const WatchRows = (() => {
     }
     if (!c.act) return { group: "idle", out: true };
     const dl = c.WR.deadlineOf(b), x = { group: dl.g, date: dl.d || "" };
-    const meet = WatchRules.nextMeeting(b.agenda, true);
+    const meet = WatchRules.nextMeeting(b.agenda, true, b.stage);
     if (dl.d) {
       if (b.stage === 4) x.due = `${c.exec || "Governor"} by ${day(dl.d)}`;
       else if (dl.origin) x.due = `Must pass its house by ${day(dl.d)}`;
       else if (dl.g === "year") x.due = `Due by ${day(dl.d)}`;
-      else if (meet && dl.d === meet.when.slice(0, 10)) x.due = `Committee meets ${day(dl.d)}`;
+      // (A floor calendar, kind "floor": "Floor vote Mar 2", or "On the Senate calendar Mar 2" for a list of bills that
+      // can come up that day, note "listed".)
+      else if (meet && dl.d === meet.when.slice(0, 10)) x.due = meet.kind !== "floor" ? `Committee meets ${day(dl.d)}`
+        : meet.note === "listed" ? `On the ${meet.committee.replace(/ floor$/i, "")} calendar ${day(dl.d).replace(" ", "\u00a0")}` : `Floor vote ${day(dl.d).replace(" ", "\u00a0")}`;
       else if (dl.d === c.WR.sessionEnd().date) x.due = c.WR.daysUntil(dl.d) >= 0 ? `Session ends ${day(dl.d)}` : "Session could end any day";
     }
     if (dl.g === "year") x.yearGroup = c.S.passedBothGroup?.[0] || "";
@@ -91,7 +94,13 @@ const WatchRows = (() => {
     const over = (x.out || x.group === "done") && x.stage <= 2 ? " over" : "", uni = opt.uni ? opt.uni(x) : BillFacts.oneHouse(x.st);
     // (A deadline the group's heading already gives isn't repeated on each row: opt.groupDay.)
     const due = x.due && !(opt.groupDay && x.date === opt.groupDay && (x.group === "session" || x.group === "year")) ? x.due : "";
-    const when = [x.found && x.last ? `<span>${fullDay(x.last)}</span>` : "",
+    // (The last action's day is left out when it's the deadline's own day: "Oct 22, 2026 · Floor vote Oct 22" read twice.)
+    const sameDay = due && x.last && x.date && String(x.last).slice(0, 10) === String(x.date).slice(0, 10);
+    // (With a deadline beside it, the last action's day says what it is: "Last action Oct 22, 2026 · Floor vote Oct 29".)
+    // The latest action in the state's words, then its day, as the state's Bills list shows it ("Referred to the Health
+    // Committee · Oct 22, 2026"); a "New:" line already says it when the action is new.
+    const act = x.action && !(opt.isNew?.(x)) ? `${h(x.action)} · ` : "";
+    const when = [x.found && x.last && !sameDay ? `<span>${act}${fullDay(x.last)}</span>` : "",
       due ? `<span class="wr-dl">${h(due)}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""].filter(Boolean).join("");
     const where = `<span class="wr-where bstat">${x.found ? BillFacts.pips(x.stage, uni, over.trim(), x.label, x.st) + `<span class="stg s${x.stage}${over}">${h(x.label)}</span>` : ""}`
       + `${when ? `<span class="stw">${when}</span>` : ""}${stance}${x.found ? "" : '<span class="wr-todo">Open</span>'}</span>`;

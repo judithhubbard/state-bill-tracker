@@ -30,3 +30,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   of 2023 as line-item vetoes. Quality (SB 302, SB 976, HB 3795 of 2025 and the 2023 compilation, checked against the
   page images): typed letters, word-perfect apart from bullets read as "e" (put back as "•") and specks in the margin
   read as marks (dropped before paragraphs are joined).
+- **Floor calendars (2026-11-22):** the OData FloorSessionAgendaItems table (fetch.py now downloads it with the others:
+  one more paged request per session a run), each house's order of business for a day: bills on "Third Reading Of ..."
+  (and special orders) are set for a vote that day ("Senate floor vote Mon, Feb 16"); "Possible Consideration Of House
+  Amendments" (concurrence) may not come up: "listed". First and second readings left out. Day only, no time. 2026R1 had
+  1,185 rows (posted a median 2.6 days ahead, the survey says); with FLOOR_TODAY=2026-01-01, 300 third-reading entries and
+  23 concurrence entries, every one with a floor action that day or the next.

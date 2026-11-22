@@ -41,6 +41,7 @@ from zoneinfo import ZoneInfo
 
 from states.mo import profile as P
 from states.undated import settle
+from states import floorcal
 
 HOUSE = {"S": "Senate", "H": "House"}
 OTHER = {"S": "H", "H": "S"}
@@ -1307,6 +1308,54 @@ def agendas(session):
         keep = [e for e in meets if (e[1] or "")[:10] >= today]
         if keep:
             out[k] = keep
+    for k, e in house_calendar(session):
+        floorcal.add(out, k, e)
+    return out
+
+
+# ---- House floor calendars, from the House Journals already downloaded (states/floorcal.py) ----
+MONTHS = {m: i for i, m in enumerate(["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER",
+                                      "OCTOBER", "NOVEMBER", "DECEMBER"], 1)}
+CAL_HEAD = re.compile(r"^\s*HOUSE CALENDAR\s*\n\s*[A-Z-]+ DAY, [A-Z]+DAY, ([A-Z]+) (\d{1,2}), (\d{4})", re.M)
+CAL_BILL = re.compile(r"\b([HS])(B|JR)s?\s+(\d+(?:\s*(?:,|&)\s*\d+)*)")
+
+
+def house_calendar(session):
+    """Each House Journal ends with the HOUSE CALENDAR for the next day ("FORTY-FIRST DAY, WEDNESDAY, MARCH 25, 2026"):
+    sections of bills by order of business. Bills under "... FOR THIRD READING" (passage; "- CONSENT" too), "... WITH
+    SENATE AMENDMENTS" (the House agreeing to the Senate's changes) and conference reports can come up that day, but
+    bills often wait there for days: "listed". Perfection (amending, before third reading), second reading, the
+    informal calendar and resolutions aren't set votes. The journal is downloaded once a bill's action points to it,
+    usually the day it's printed, so the calendar arrives about a day ahead. Days from today on."""
+    since = floorcal.since(P.TIMEZONE)
+    d = os.path.join(folder(session), "journals", "house")
+    out = []
+    for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        try:
+            s = gzip.open(os.path.join(d, f), "rt", encoding="utf-8", errors="replace").read()
+        except OSError:
+            continue
+        s = s.replace("\f", "\n").replace("’", "'")
+        m = CAL_HEAD.search(s)
+        if not m or m[1] not in MONTHS:
+            continue
+        day = f"{m[3]}-{MONTHS[m[1]]:02d}-{int(m[2]):02d}"
+        if day < since:
+            continue
+        keep = False
+        for ln in s[m.end():].split("\n"):
+            t = ln.strip()
+            if not t or re.search(r"Journal of the House|Day\s*[–—-]\s*\w+day,|intentionally left blank", t):
+                continue
+            b = CAL_BILL.search(t.split(" - ")[0])
+            if not b and re.fullmatch(r"[A-Z][A-Z ,'&#()0-9-]+", t):  # a section's heading
+                keep = (bool(re.search(r"THIRD READING|SENATE AMENDMENTS|CONFERENCE COMMITTEE REPORT", t)) and "INFORMAL" not in t
+                        and "CONCURRENT RESOLUTIONS" not in t)
+                continue
+            # (A committee substitute for several bills, "HCS HBs 2120 & 1698": the first, whose record carries its steps.)
+            if keep and b:
+                n = re.match(r"\d+", b[3])[0]
+                out.append((f"{b[1]}{'JR' if b[2] == 'JR' else 'B'}{int(n)}", floorcal.entry("House", f"{day}T00:00:00", listed=True)))
     return out
 
 

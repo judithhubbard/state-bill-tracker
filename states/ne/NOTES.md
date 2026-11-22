@@ -64,3 +64,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   January 6, 2027. fetch.py starts the new Legislature on January 5 (one search for LB 1 a run until it's there); a
   Legislature with LB 1 looked up and not found yet doesn't hold the state back, and convert.py's `sessions()` shows it
   from its first bill page.
+- **Floor calendars (2026-11-22):** `floor_agendas()` in states/ne/fetch.py reads the daily agenda as CSV,
+  `/calendar/agenda.php?day=YYYY-MM-DD&print=csv` (robots.txt allows it; the 3 s crawl delay kept), for today and the
+  next three days, in session only (January to mid-June): up to four requests a run, into data/ne/<first year>/floor.json
+  (`{day: [[section, document], ...]}`, a month kept; no time of day). convert.py's `agendas()` shows the bills on General
+  File, Select File and Final Reading (consent calendars, priority bills, budget bills) as "Legislature floor", "listed":
+  a bill can stay on the agenda for days (LB 753 of 2026: Final Reading April 7 and 8, passed April 9). Left out: A bills
+  (not records), motions to return to Select File, resolutions other than constitutional amendments. Tested on ten 2026
+  days (March 23 to April 9: 114 bills, all records but LR 298CA, which isn't a record): 73% had a floor vote (advanced or
+  passed) that day or the next. The agenda is normally posted the evening before (not measured: no Last-Modified).

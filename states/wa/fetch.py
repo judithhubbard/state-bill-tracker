@@ -10,6 +10,8 @@ offers free "to all interested parties ... for their in-house applications" (see
 - A finished biennium is downloaded once. The current one asks which bills changed since the last run
   (GetLegislativeStatusChangesByDateRange) and downloads only those and new ones. Three requests at a time.
 - The members (SponsorService GetSponsors) and committees, every run.
+- The House and Senate floor calendars posted since yesterday (floor_calendars(): two folder listings a run on
+  lawfilesext.leg.wa.gov, and a PDF when one is new).
 Usage: python3 states/wa/fetch.py [first_year]   (default 2021)
 """
 import json, os, re, sys, time, urllib.parse, urllib.request
@@ -209,6 +211,66 @@ def agendas(session):
     print(f"agendas: {len(out)} bills on {len(meets)} meetings' agendas")
 
 
+# Floor calendars: the Workroom Reports folders on lawfilesext.leg.wa.gov (no robots.txt; folder listings on), the House
+# Floor Calendar ("FLR CAL 2026-052.pdf", by session day, posted the evening before, with supplements "... SUP 1") and the
+# Senate Flash Calendar ("FLASH CALENDAR 2026-03-11.pdf", posted the morning of the day).
+LAWFILES = "https://lawfilesext.leg.wa.gov"
+FLOOR_FOLDERS = {"House": "House Floor Calendar", "Senate": "Senate Flash Calendar"}
+FLOOR_BILL = re.compile(r"(?m)^\s*[0-9ES]{0,5}(HB|SB|HJR|SJR)\s+(\d{4})\b")
+
+
+def floor_calendars(session, since=None, folder=None):
+    """Each house's floor calendars for today or later, into data/wa/<session>/floor.json: {file name: {"stamp" (the
+    listing's date, time and size), "house", "day", "bills"}}. Two folder listings a run, and a PDF (read with
+    pdftotext) only when it's new or changed (listing_dates.same()) and was posted since yesterday; a month kept."""
+    import subprocess
+    import listing_dates
+    since = since or TODAY.isoformat()
+    path = os.path.join(folder or os.path.join(P.DATA, str(session)), "floor.json")
+    try:
+        have = json.load(open(path))
+    except (OSError, ValueError):
+        have = {}
+    cut = min((TODAY - timedelta(days=30)).isoformat(), since)
+    out = {k: v for k, v in have.items() if v["day"] >= cut}
+    posted_since = (date.fromisoformat(since) - timedelta(days=1)).isoformat()
+    bien = f"{session}-{(session + 1) % 100:02d}"
+    for house, name in FLOOR_FOLDERS.items():
+        url = f"{LAWFILES}/biennium/{bien}/Pdf/Workroom%20Reports/{urllib.parse.quote(name)}/"
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": AGENT}), timeout=60) as r:
+                listing = r.read().decode("utf-8", "replace")
+        except Exception as e:
+            print(f"floor calendars: {name} listing failed ({e}); kept the last copy")
+            continue
+        for when, size, href, fname in re.findall(r"(\d+/\d+/\d{4}\s+\d+:\d\d [AP]M)\s+(\d+)\s+<A HREF=\"([^\"]+\.pdf)\">([^<]+)</A>", listing, re.I):
+            stamp = f"{' '.join(when.split())} {size}"
+            posted = datetime.strptime(" ".join(when.split()), "%m/%d/%Y %I:%M %p").date().isoformat()
+            if posted < posted_since or (fname in out and listing_dates.same(out[fname]["stamp"], stamp)):
+                continue
+            try:
+                with urllib.request.urlopen(urllib.request.Request(LAWFILES + href, headers={"User-Agent": AGENT}), timeout=60) as r:
+                    pdf = r.read()
+            except Exception as e:
+                print(f"floor calendars: {fname} failed ({e})")
+                continue
+            text = subprocess.run(["pdftotext", "-layout", "-", "-"], input=pdf, capture_output=True).stdout.decode("utf-8", "replace")
+            m = re.search(r"(?:FLOOR CALENDAR|CALENDAR FOR)\s+([A-Z][a-z]+ \d+, \d{4})", text)
+            if not m:
+                print(f"floor calendars: {fname}: no day found")
+                continue
+            day = datetime.strptime(m.group(1), "%B %d, %Y").date().isoformat()
+            bills = []
+            for kind, num in FLOOR_BILL.findall(text):
+                if kind + num not in bills:
+                    bills.append(kind + num)
+            out[fname] = {"stamp": stamp, "house": house, "day": day, "bills": bills}
+            print(f"floor calendar {fname}: {day}, {len(bills)} bills")
+            time.sleep(1)
+    json.dump(out, open(path + ".tmp", "w"))
+    os.replace(path + ".tmp", path)
+
+
 INCOMPLETE = set()
 
 
@@ -228,6 +290,7 @@ def main():
         if os.path.isdir(os.path.join(P.DATA, str(nxt), "bills")):
             members(nxt)
     agendas(CURRENT)
+    floor_calendars(CURRENT)
     # Until every biennium is fully downloaded, data/wa/incomplete tells build_site.sh and the checks to wait.
     marker = os.path.join(P.DATA, "incomplete")
     # A biennium not yet begun (bills prefiled from December) is read when it's there but never holds Washington back.

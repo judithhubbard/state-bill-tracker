@@ -1829,7 +1829,7 @@ function matches(b, skip) {
   if (skip !== "nearby" && state.nearby && HOME && farAway(b)) return false;
   if (skip !== "voted" && state.voted && !votedTest(state.voted)(b)) return false;
   if (skip !== "changed" && state.changed && !CHANGED[state.changed].test(b)) return false;
-  if (skip !== "agenda" && state.agenda && !(state.agenda === "meets" ? nextMeets(b) : nextAgenda(b))) return false;
+  if (skip !== "agenda" && state.agenda && !(state.agenda === "meets" ? nextMeets(b) : state.agenda === "floor" ? nextFloor(b) : nextAgenda(b))) return false;
   if (skip !== "amend" && state.amend && !(isAmendment(b) || toVoters(b))) return false;
   if (skip !== "issue" && state.issue && !b.nums.some((n) => ISSUE_BILLS?.get(state.issue)?.has(baseNum(n)))) return false;
   if (state.q && !queryMatches(parsedQuery(state.q), hayOf(b))) return false;
@@ -1845,7 +1845,7 @@ function sortBills(arr) {
     num: (a, b) => a.sortKey - b.sortKey,
     cosp: (a, b) => b.cosp - a.cosp,
     due: (a, b) => (a.due || "9999").localeCompare(b.due || "9999") || recent(a, b),
-    meeting: (a, b) => (nextMeeting(a)?.when || "9999").localeCompare(nextMeeting(b)?.when || "9999") || recent(a, b),
+    meeting: (a, b) => (rowMeet(a)?.when || "9999").localeCompare(rowMeet(b)?.when || "9999") || recent(a, b),
   }[state.sort] || ((a, b) => recent(a, b));
   return arr.sort(by);
 }
@@ -1859,6 +1859,9 @@ const pipeName = (k) => (k <= 2 && DATA.current && !DATA.upcoming && billsDied()
 // Committees that post when they meet but not which bills they'll take up (the Mississippi House): every bill in such a
 // committee is "Committee meets soon", a line of its own, never "On an upcoming committee agenda".
 const MEETS_TIP = "Bills in a committee with a meeting coming up. The committee doesn't post which bills it will take up, so any of them could come up.";
+// Floor calendars: bills set for a vote of the full house (kind "floor"), or listed as able to come up that day (note "listed").
+const FLOOR_TIP = "Bills on a floor calendar for a day that hasn't come yet. The whole house votes on them, so this is the time to write your own legislators." + (UNI ? "" : " Includes bills that passed one house and are on the other house's calendar.");
+const FLOOR_LISTED_TIP = "On the day's calendar, so it can come up for a vote; bills often wait there for days.";
 const AGENDA_TIP = "Bills listed for a committee meeting that hasn't happened yet. Committees post agendas about a week ahead; this is the time to write the chair and committee members." + (UNI ? "" : " Includes bills that passed one house and are on the other house's committee agenda.");
 function renderPipeline() {
   const counts = Array(7).fill(0), oneHouse = { [HOUSE.S]: 0, [HOUSE[LOW]]: 0 };
@@ -1893,6 +1896,13 @@ function renderPipeline() {
   // Bills on a committee agenda that hasn't met yet: a line under "In committee".
   const agendaN = (test) => DATA.current ? BILLS.filter((b) => test(b) && matches(b, "agenda") && (state.stage == null || stageSet().includes(b.stage))).length : 0;
   const soon = agendaN(nextAgenda), meetsN = agendaN(nextMeets);
+  // Bills on a floor calendar for a day still to come: a line under "Awaiting a floor vote" (their first house) and one
+  // under "Passed one house" (the other house's calendar), so a line never counts more than the row above it.
+  const floorN1 = agendaN((b) => b.stage <= 1 && nextFloor(b)), floorN2 = agendaN((b) => b.stage === 2 && nextFloor(b));
+  const floorLine = (n, label) => n || state.agenda === "floor" ? `<button class="srow sub" type="button" data-agenda="floor" aria-pressed="${state.agenda === "floor"}"${ROW_DESC(FLOOR_TIP)}>
+       <span class="sl">${label}${TIPR(FLOOR_TIP)}</span><span class="sn">${num(n)}</span></button>` : "";
+  const floorRow = floorLine(floorN1, "On an upcoming floor calendar");
+  const floorRow2 = UNI ? "" : floorLine(floorN2, "On the other house's floor calendar");
   const agendaRow = (soon || state.agenda === "soon" ? `<button class="srow sub" type="button" data-agenda="soon" aria-pressed="${state.agenda === "soon"}"${ROW_DESC(AGENDA_TIP)}>
        <span class="sl">On an upcoming committee agenda${TIPR(AGENDA_TIP)}</span><span class="sn">${num(soon)}</span></button>` : "")
     + (meetsN || state.agenda === "meets" ? `<button class="srow sub" type="button" data-agenda="meets" aria-pressed="${state.agenda === "meets"}"${ROW_DESC(MEETS_TIP)}>
@@ -1929,7 +1939,7 @@ function renderPipeline() {
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>
     <div class="pg stale">${head("Died", [0, 1, 2, 3])}${[0, 1, 2, 3].map(row).join("")}</div>
     ${counts[4] ? `<div class="pg stale">${row(4)}</div>` : ""}` : `
-    <div class="pg leg">${head(`In ${BODY}`, [0, 1, 2, 3])}${row(0)}${agendaRow}${[1, 2, 3].map(row).join("")}${amendRow}</div>
+    <div class="pg leg">${head(`In ${BODY}`, [0, 1, 2, 3])}${row(0)}${agendaRow}${row(1)}${floorRow}${row(2)}${floorRow2}${row(3)}${amendRow}</div>
     <div class="pg live"><div class="pg-h">With ${EXEC.the}</div>${[4].map(row).join("")}</div>
     <div class="pg decided">${head("Decided", [5, 6])}${[5, 6].map(row).join("")}</div>`}`);
 }
@@ -1937,7 +1947,7 @@ function renderPipeline() {
 // Turning on "upcoming agenda" (or "committee meets soon": on is "meets") sorts by meeting date, unless another order
 // was chosen.
 function setAgenda(on) {
-  state.agenda = on === "meets" ? "meets" : on ? "soon" : "";
+  state.agenda = on === "meets" || on === "floor" ? on : on ? "soon" : "";
   if (on && state.sort === "recent") state.sort = "meeting";
   if (!on && state.sort === "meeting") state.sort = "recent";
   state.shown = PAGE; syncControls(); render();
@@ -2678,13 +2688,14 @@ function contactBook(b, canMove = true, oppose = false) {
       add(L.name, house, L.role.charAt(0).toLowerCase() + L.role.slice(1) + ", decides which bills come to the floor", mine && ask ? `${ask} (you sponsor it)` : ask, star);
       return mine ? L : null;
     },
-    reps(houses = BOTH, ask) {
+    // (star: they decide the next step, a floor vote already on the calendar.)
+    reps(houses = BOTH, ask, star) {
       for (const r of myReps()) if (houses.includes(r.house)) {
         // Nothing to ask our legislators if they already sponsor or co-sponsor it; otherwise the
         // stage's ask, or to sign on.
         const theirs = b.vers.some((v) => v.p[0] === r.house && (lastName(v.sponsor) === r.last || v.cosponsors.some((n) => lastName(n) === r.last)));
         add(r.name, r.house, `your ${MEMBER[r.house]}`,
-          theirs ? "" : ask || (!canMove || oppose ? "" : "sign on as a co-sponsor"));
+          theirs ? "" : ask || (!canMove || oppose ? "" : "sign on as a co-sponsor"), star && !theirs);
       }
     },
     // Only people with something to do: sponsors already push for their own bills.
@@ -2914,12 +2925,16 @@ function planFor(b, stance = "support") {
     let houses = b.vers.filter((v) => /floor/i.test(v.statusDesc || "")).map((v) => v.p[0]);
     if (!houses.length) houses = b.vers.filter((v) => !v.committee || !/committee/i.test(v.statusDesc || "")).map((v) => v.p[0]).slice(0, 1);
     if (!houses.length) houses = [b.vers[0].p[0]];
+    // On a floor calendar: that house, and its members (your own legislators) decide; once the vote is set for the day,
+    // the leader has already brought it to the floor.
+    const fl = live && nextFloor(b), flH = fl && floorCode(fl);
+    if (flH) houses = [flH];
     what = `<p class="when">${ended ? ended.when : stopped || `Next: a vote of the full ${houses.map((h) => HOUSE[h]).join(" and ")}.`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
-    houses.forEach((h) => floorLeader(h));
+    if (!(flH && floorSure(fl))) houses.forEach((h) => floorLeader(h));
     // Its version in the other house still has to get out of committee there.
-    if (live) inComm.filter((v) => !houses.includes(v.p[0])).forEach((v) => book.chair(v.p[0], v.committee, A(...agendaAsk(v.committee)), true));
+    if (live) inComm.filter((v) => !houses.includes(v.p[0])).forEach((v) => book.chair(v.p[0], v.committee, A(...agendaAsk(v.committee)), !flH));
     if (!live && !continuedTo(b)) b.vers.forEach(again);
-    book.reps(houses.length ? houses : BOTH, L(A("vote yes", "vote no")));
+    book.reps(houses.length ? houses : BOTH, L(A(...floorAsk(fl, flH))), !!flH);
   } else if (b.stage === 2) {
     const other = b.passedIn === HOUSE.S ? LOW : "S";
     // Where each house numbers its own version (New York, New Jersey), the other house's version; where a bill
@@ -2928,10 +2943,18 @@ function planFor(b, stance = "support") {
     // Back in the first house to agree to the second house's amendments (New Jersey's "2RSC").
     const agree = twin && /to agree to the/.test(twin.statusDesc || "");
     what = `<p class="when">${ended ? ended.when : stopped || `Next: ${agree ? `the ${HOUSE[other]} votes on the ${b.passedIn}'s changes.` : `the ${HOUSE[other]} has to pass it.${twin ? "" : ` It has no ${HOUSE[other]} version.`}`}`}</p>${stalled ? `<p>${stalled}</p>` : ""}`;
-    if (twin && twin.committee) book.chair(other, twin.committee, L(A(...agendaAsk(twin.committee))), live);
-    if (twin && twin.committee) stuck(twin);
+    // On the other house's floor calendar: its members (your own legislators) decide.
+    // ... or, when it's back for agreement to the other house's changes, the first house's (a concurrence vote).
+    const first = other === "S" ? LOW : "S";
+    const fl = live && nextFloor(b), flC = fl && floorCode(fl);
+    const onFloor = fl && (flC === other || (agree && flC === first));
+    if (onFloor && flC === first) {
+      if (!floorSure(fl)) floorLeader(first);
+      book.reps([first], L(A(...floorAsk(fl, true))), true);
+    } else if (onFloor) { if (!floorSure(fl)) floorLeader(other); }
+    else if (twin && twin.committee) { book.chair(other, twin.committee, L(A(...agendaAsk(twin.committee))), live); stuck(twin); }
     else floorLeader(other);
-    book.reps([other], L(A("vote yes", "vote no")));
+    if (!(onFloor && flC === first)) book.reps([other], L(A(...floorAsk(onFloor && fl, onFloor))), !!onFloor);
     if (!live && !continuedTo(b)) b.vers.forEach(again);
   } else if (b.stage === 3 && toVoters(b)) {
     what = `<p class="when">It doesn't go to ${EXEC.the}. ${ballotText(b)}</p>`;
@@ -3003,6 +3026,14 @@ function setPanelStance(b, st) {
   try { localStorage.setItem(STANCE_STORE, JSON.stringify(all)); } catch (e) {}
 }
 
+// The ask for your own legislators when the bill is on a floor calendar: the day is in the ask itself, so the card that
+// says what to do (the "Decides" box) carries it.
+function floorAsk(fl, on) {
+  if (!fl || !on) return ["vote yes", "vote no"];
+  const day = fmtMeet(fl.when, true);
+  return floorSure(fl) ? [`vote yes at the floor vote ${day}`, `vote no at the floor vote ${day}`]
+    : [`vote yes when it comes to a vote (on the ${floorHouse(fl)} calendar from ${day})`, `vote no when it comes to a vote (on the ${floorHouse(fl)} calendar from ${day})`];
+}
 function nextSteps(b) {
   // No side chosen yet: the support asks, each "If you support it: ..." (book.html()'s ifSupport).
   const side = panelStance(b);
@@ -3010,8 +3041,10 @@ function nextSteps(b) {
   if (!plan) return "";
   plan.book.ifSupport = !side;
   let what = plan.what;
-  const meet = nextAgenda(b) || nextMeets(b);
-  if (meet?.kind === "meets") what += `<p class="when">The ${esc(meetComm(meet))} meets ${meetWhen(meet)}; this bill could come up.</p>`;
+  const meet = nextDate(b);
+  // (A floor day's date is in the ask on your legislators' card: floorAsk().)
+  if (meet?.kind === "floor") {}
+  else if (meet?.kind === "meets") what += `<p class="when">The ${esc(meetComm(meet))} meets ${meetWhen(meet)}; this bill could come up.</p>`;
   else if (meet) what += `<p class="when">${meetHead(meet)}: ${esc(meetComm(meet))}, ${fmtMeet(meet.when, true)}.</p>`;
   what += plan.notes.map((n) => `<p class="holdup">${esc(n)}</p>`).join("");
   if (plan.actionable && oddsLine(b)) what += `<p class="odds">${oddsLine(b)}</p>`;
@@ -3071,7 +3104,9 @@ function comingUp(mine) {
   for (const b of BILLS) {
     if (!b.agenda.length || !mine(b)) continue;
     for (const a of b.agenda) {
-      if (a.when < now || a.when > until || a.kind === "meets") continue;  // (meetings with no bills named aren't agendas)
+      // (Meetings with no bills named aren't agendas; floor calendars aren't committee meetings.)
+      // (A meeting with no time, "T00:00:00", counts all its day: WatchRules.nextMeeting().)
+      if ((a.when.slice(11, 16) === "00:00" ? a.when.slice(0, 10) < isoToday() : a.when < now) || a.when > until || a.kind === "meets" || a.kind === "floor") continue;
       const k = `${a.when}|${a.committee}`;
       (meets.get(k) || meets.set(k, { ...a, bills: [] }).get(k)).bills.push(b);
     }
@@ -4490,8 +4525,9 @@ function panelTags(b, inCard = false) {
 // who sponsors it, with at most one quiet tag; the rest is in the panel that opens.
 function billRow(b) {
       const [first, second] = b.nums;
-      const meet = isWatched(b) ? null : nextAgenda(b) || nextMeets(b);
-      const one = meet?.kind === "meets" ? `<span class="tag agenda meets" title="${esc(MEETS_TIP)}">${esc(meet.committee)} meets ${fmtMeet(meet.when)}</span>`
+      const meet = isWatched(b) ? null : rowMeet(b);
+      const one = meet?.kind === "floor" ? `<span class="tag agenda${floorSure(meet) ? "" : " meets"}"${floorSure(meet) ? "" : ` title="${esc(FLOOR_LISTED_TIP)}"`}>${esc(floorWords(meet))}</span>`
+        : meet?.kind === "meets" ?`<span class="tag agenda meets" title="${esc(MEETS_TIP)}">${esc(meet.committee)} meets ${fmtMeet(meet.when)}</span>`
         : meet ? `<span class="tag agenda">${meetHead(meet)}: ${esc(meet.committee)}, ${fmtMeet(meet.when)}</span>`
         : b.shell ? `<span class="tag narrow">${STATE.shellTag || "Shell bill"}${TIPI(SHELL_TIP)}</span>`
         : STATE.rowTags?.(b) || (NARROW_TAG[b.narrow] ? `<span class="tag narrow">${NARROW_TAG[b.narrow]}</span>` : "") || chapTag(b);
@@ -4531,7 +4567,7 @@ function activeFilters() {
   if (state.voted) out.push(["voted", null, "Vote", opt("voted", state.voted)]);
   if (state.nearby && HOME) out.push(["nearby", null, "Only", `bills that could affect ${HOME ? placeName(HOME) : `your ${PLACE_WORD}`}`]);
   if (state.changed) out.push(["changed", null, "New activity", CHANGED[state.changed].label()]);
-  if (state.agenda) out.push(["agenda", null, ...(state.agenda === "meets" ? ["Only", "bills whose committee meets soon"] : ["On", "an upcoming committee agenda"])]);
+  if (state.agenda) out.push(["agenda", null, ...(state.agenda === "meets" ? ["Only", "bills whose committee meets soon"] : state.agenda === "floor" ? ["On", "an upcoming floor calendar"] : ["On", "an upcoming committee agenda"])]);
   if (state.issue) out.push(["issue", null, "Issue", issueName(state.issue)]);
   if (state.amend) out.push(["amend", null, "Only", BILLS.some((b) => isAmendment(b)) ? "constitutional amendments" : "bills sent to the voters"]);
   return out;
@@ -4640,10 +4676,23 @@ const meetWhen = (m) => fmtMeet(m.when, true) + (m.note && /T00:00(:00)?$/.test(
 const commWord = (n) => (/^Committee\b/.test(n || "") ? n : `${n} Committee`);
 const meetComm = (m) => (/committee\b/i.test(m.committee) ? m.committee : `${m.committee} Committee`);
 // The next committee meeting with this bill on the agenda (current session).
-function nextMeeting(b) { return WatchRules.nextMeeting(b.agenda, DATA.current); }
+function nextMeeting(b) { return WatchRules.nextMeeting(b.agenda, DATA.current, b.stage); }
 // The same, for agendas that name the bill, and for meetings of its committee that name no bills (kind "meets").
-const nextAgenda = (b) => WatchRules.nextMeeting(b.agenda.filter((a) => a.kind !== "meets"), DATA.current);
+const nextAgenda = (b) => WatchRules.nextMeeting(b.agenda.filter((a) => a.kind !== "meets" && a.kind !== "floor"), DATA.current);
 const nextMeets = (b) => WatchRules.nextMeeting(b.agenda.filter((a) => a.kind === "meets"), DATA.current);
+// Floor calendars (kind "floor", the house as the "committee": "Senate floor"): the next day the bill is on one. A note
+// "listed" means the calendar lists bills that can come up that day, not a vote set for it (California's Daily File).
+// (Only while the bill still needs a floor vote: a calendar printed before a vote can still list a bill that passed.)
+const nextFloor = (b) => (b.stage <= 2 ? WatchRules.nextMeeting(b.agenda.filter((a) => a.kind === "floor"), DATA.current) : null);
+const floorHouse = (m) => m.committee.replace(/ floor$/i, "");
+const floorCode = (m) => Object.keys(HOUSE).find((h) => HOUSE[h] === floorHouse(m)) || null;
+const floorSure = (m) => m.note !== "listed";
+// "Senate floor vote Mon, Mar 2" or "On the Senate calendar Mon, Mar 2" (one house: "Floor vote Mon, Mar 2").
+const floorWords = (m, time) => (floorSure(m) ? `${UNI ? "Floor" : `${floorHouse(m)} floor`} vote` : `On the ${floorHouse(m)} calendar`) + ` ${fmtMeet(m.when, time)}`;
+// The next committee meeting or floor day, whichever comes first (a bill row's one tag, the panel's line).
+const nextDate = (b) => [nextAgenda(b) || nextMeets(b), nextFloor(b)].filter(Boolean).sort((x, y) => (x.when < y.when ? -1 : 1))[0] || null;
+// A row's date (its tag, the sort by meeting): the one the list is filtered by, else the soonest.
+const rowMeet = (b) => (state.agenda === "floor" ? nextFloor(b) : state.agenda === "soon" ? nextAgenda(b) : state.agenda === "meets" ? nextMeets(b) : null) || nextDate(b);
 // Tags after a watched bill's title: what's new, and a committee meeting coming up.
 function newsTags(b) {
   if (!isWatched(b)) return "";
@@ -4654,7 +4703,8 @@ function newsTags(b) {
     const what = newsWhat(acts[0][1], acts[0][0], b);
     out += ` <span class="news" title="${esc(acts.map(([d, t]) => `${fmtDate(d)}: ${plainAction(t, d, all, true)}`).join("\n"))}">New: ${esc(what)}${acts.length > 1 ? ` (+${acts.length - 1} more)` : ""}</span>`;
   }
-  if (meet) {
+  if (meet?.kind === "floor") out += ` <span class="news soon">Coming up: ${esc(floorSure(meet) ? floorWords(meet) : `on the ${floorHouse(meet)} calendar ${fmtMeet(meet.when)}`)}</span>`;
+  else if (meet) {
     const d = new Date(meet.when);
     out += ` <span class="news soon">Coming up: ${esc(meet.committee)}${meet.kind === "meets" ? " meets" : ""}, ${d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>`;
   }
@@ -4686,7 +4736,7 @@ function watchRow(b, x) {
   const n = baseNum(b.nums[0]);
   return { key: `${STATE.code}:${DATA.session}:${n}`, st: STATE.code, session: DATA.session, num: n, full: b.nums[0], found: true, b, w: x,
     title: b.title, stage: b.stage, last: b.last || "", stance: watchStance(b) || "", rules: WROW_RULES,
-    label: statusLabel(b),
+    label: statusLabel(b), action: (() => { const [d, t, all] = latestStep(b); return t ? shortStep(t, d, all) : ""; })(),
     ...WatchRows.place(b, { S: STATE, WR, current: !!DATA.current, upcoming: !!DATA.upcoming, act: !!DATA.current && !DATA.upcoming && canActNow(b), exec: EXEC.title,
       session: DATA.session, next: (x) => BillFacts.nextStep(STATE, BF.factsOf(x)) }) };
 }
@@ -7024,7 +7074,7 @@ function hydrate(raw) {
     $("notice").hidden = !parts.length;
   }
   // (Not for prefiled bills: no governor's deadlines or committee meetings before the session opens.)
-  if (raw.current && !raw.upcoming) $("sort").insertAdjacentHTML("beforeend", `<option value="due">${EXEC.title}'s deadline</option><option value="meeting">Next committee meeting</option>`);
+  if (raw.current && !raw.upcoming) $("sort").insertAdjacentHTML("beforeend", `<option value="due">${EXEC.title}'s deadline</option><option value="meeting">Next ${BILLS.some((b) => b.agenda.some((a) => a.kind === "floor")) ? "meeting or floor vote" : "committee meeting"}</option>`);
   // The title goes home: the current session's main page.
   const home = raw.sessions.find((x) => x.session === LATEST)?.url;
   $("homeLink").href = ROOT || (home && /^https?:/.test(home) ? home : BASE || "./");

@@ -26,6 +26,7 @@ from zoneinfo import ZoneInfo
 from fetch_contacts import name_key
 from states.ar import profile as P
 from states.undated import settle
+from states import floorcal
 
 HOUSE = {"S": "Senate", "H": "House"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
@@ -518,7 +519,30 @@ def agendas(session):
         bill = f"{m.group(1)}{'J' if m.group(2) == 'JR' else 'B'}{m.group(3)}"
         if entry not in out.setdefault(bill, []):
             out[bill].append(entry)
+    # Floor calendars (FloorCalendars.txt: each bill on each day's House or Senate calendar, by its drafting id, "JLL443"),
+    # from today on (states/floorcal.py). LegislativeMeasures.txt gives the drafting id's bill and session (a special
+    # session's bills aren't on the site). A bill on the day's calendar can come up then, but may be passed over: "listed".
+    # Only the calendar's sections for third reading and concurrence (FLOOR_SECTIONS): its others list amendments on second
+    # reading, bills withdrawn, bills just filed and resolutions.
+    ids = {r[10]: r for r in rows(b, "LegislativeMeasures.txt") if len(r) > 17}
+    since = floorcal.since(P.TIMEZONE)
+    for r in rows(b, "FloorCalendars.txt"):
+        if len(r) < 19 or r[3][:10] < since or r[16] not in HOUSE or r[5] not in FLOOR_SECTIONS:
+            continue
+        lm = ids.get(r[18])
+        if not lm or lm[17] != P.session_id(session) or lm[1] not in ("B", "JR"):
+            continue
+        bill = f"{lm[0]}{'J' if lm[1] == 'JR' else 'B'}{lm[2]}"
+        floorcal.add(out, bill, floorcal.entry(HOUSE[r[16]], r[3][:10] + f"T{r[3][11:19] or '00:00:00'}", listed=True))
     return out
+
+
+# FloorCalendars.txt's section codes (not documented) where bills come up for a vote: in 2025-26, 77-100% of the bills
+# listed in each had a passage or concurrence vote that day or the next (H08, H15, S23, S24 third reading; H17, H18
+# concurrence in the other house's amendments; the F codes, the appropriation calendars). Left out: amendments on second
+# reading (H10, S26, H01, S01 ...: the amendment, not the bill, comes up), H05, H11, S55, S56, S86 (under 20%).
+FLOOR_SECTIONS = {"H08", "H15", "H17", "H18", "S09", "S10", "S11", "S16", "S23", "S24", "S76", "S92", "S93",
+                  "FH32", "FH33", "FH36", "FS21", "FS22", "FS25", "FS30"}
 
 
 def parties(session, recs):

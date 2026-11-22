@@ -81,3 +81,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   bills, all matching records but one concurrent resolution (SCR 21, now left out); live on 2026-11-22: "no hearings
   scheduled". Untested live: a session-time hrings.htm read by this code, and whether a House XML's LastTimeRun changes
   as soon as a hearing is added (if not, House hearings show up late).
+- **House floor calendars (2026-11-22, states/floorcal.py):** no new download. Each House Journal fetch.py already saves
+  (journals/house/jrnNNN.txt.gz) ends with the HOUSE CALENDAR for the next day; `house_calendar()` in convert.py keeps the
+  bills under "... FOR THIRD READING" (and "- CONSENT"), "HOUSE BILLS WITH SENATE AMENDMENTS" and conference committee
+  reports, not perfection, second reading, the informal calendars, concurrent resolutions or "BILLS IN CONFERENCE". A
+  combined substitute ("HCS HBs 2120 & 1698") counts for its first bill. Shown as "On the House calendar <day>"
+  (`"listed"`: 55% had a vote that day or the next). The journal arrives once a bill's action points to it, so about a day
+  ahead or less. Tested on the journals of March 24 and April 29, 2026 (22 bills, all records' numbers). The Senate's daily
+  calendar (senate.mo.gov/<yy>info/pdf-cal/cal.htm, only the current day's) isn't read yet.

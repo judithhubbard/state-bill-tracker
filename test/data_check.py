@@ -663,10 +663,12 @@ def check(state):
     # Committee agendas (the newest session's, as build_data.py reads them): every bill named must be a record's number (a
     # number written another way, "HB0005" or "H.B. 5", shows nothing), each entry a committee with its house and a local
     # ISO time. LOOK at the count, so a reader that stops finding meetings mid-session is noticed.
-    if hasattr(C, "agendas") and loaded:
+    # (New York has no agendas(): its file, data/agendas_<session>.json from fetch_agendas.py, as build_data.py reads it.)
+    ny_file = os.path.join(P.DATA, f"agendas_{max(loaded)}.json") if loaded and not hasattr(C, "agendas") else ""
+    if (hasattr(C, "agendas") or os.path.exists(ny_file)) and loaded:
         s = max(loaded)
         try:
-            ag = C.agendas(s) or {}
+            ag = (C.agendas(s) if hasattr(C, "agendas") else json.load(open(ny_file))) or {}
         except Exception as e:  # (a reader that fails here fails the build too)
             ag = {}
             say(state, "FAIL", f"{s}: agendas() failed: {e!r}")
@@ -677,12 +679,39 @@ def check(state):
                 f"{s}: {len(stray)} of {len(ag)} bills on committee agendas aren't records' numbers: {stray[:5]}")
         # (A third item is the meeting's kind: Congress's "markup" or "hearing", or "meets" for a meeting that names no bills,
         # given to every bill in that committee (the Mississippi House), which may have a fourth, a note on the time.)
+        # A floor calendar's day (kind "floor") names the house as its committee, "Senate floor" (one of the state's houses),
+        # with a fourth item "listed" when the calendar lists bills that can come up that day rather than a vote set for it.
+        houses = set(getattr(P, "HOUSES", {}).values()) if isinstance(getattr(P, "HOUSES", None), dict) else set()
+        try:
+            js = open(os.path.join(HERE, "states", state, "profile.js")).read()
+            m = re.search(r"houses:\s*\{([^}]*)\}", js)
+            houses |= set(re.findall(r'"([^"]+)"', m.group(1))) if m else set()
+        except OSError:
+            pass
+        floor_ok = lambda e: (len(e) in (3, 4) and e[2] == "floor" and (len(e) < 4 or e[3] in ("", "listed"))
+                              and re.fullmatch(r"(.+) floor", e[0] or "") and (not houses or e[0][:-6] in houses))
         bad = [(k, e) for k, es in ag.items() for e in es
-               if not (isinstance(e, (list, tuple)) and 2 <= len(e) <= 4 and re.match(r"(?:House|Senate|Assembly|Joint|Legislative|Unicameral|Council) \S", e[0] or "")
-                       and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?", e[1] or "")
-                       and (len(e) < 3 or e[2] in ("", "markup", "hearing", "meets")) and (len(e) < 4 or e[2] == "meets"))]
+               if not (isinstance(e, (list, tuple)) and 2 <= len(e) <= 4 and re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d(?::\d\d)?", e[1] or "")
+                       and (floor_ok(e) if len(e) > 2 and e[2] == "floor" else
+                            re.match(r"(?:House|Senate|Assembly|Joint|Legislative|Unicameral|Council) \S", e[0] or "")
+                            and (len(e) < 3 or e[2] in ("", "markup", "hearing", "meets")) and (len(e) < 4 or e[2] == "meets")))]
         if bad:
-            say(state, "FAIL", f"{s}: {len(bad)} agenda entries aren't [\"House Committee\", \"YYYY-MM-DDTHH:MM:SS\"(, kind)]: {bad[:3]}")
+            say(state, "FAIL", f"{s}: {len(bad)} agenda entries aren't [\"House Committee\", \"YYYY-MM-DDTHH:MM:SS\"(, kind)]"
+                               f" or [\"Senate floor\", \"YYYY-MM-DDTHH:MM:SS\", \"floor\"(, \"listed\")]: {bad[:3]}")
+        # Floor calendars: each bill named is a record's number (above); one still in committee in the house whose calendar
+        # names it would be a misread (a committee calendar read as the floor's). LOOK at the count.
+        flo = {k: [e for e in es if len(e) > 2 and e[2] == "floor"] for k, es in ag.items()}
+        flo = {k: es for k, es in flo.items() if es}
+        if flo:
+            rec_of = {re.sub(r"[A-Z]$", "", v["p"]): r for r in loaded[s] for v in r["vers"]}
+            early = sorted(k for k in flo if k in rec_of and rec_of[k]["stage"] == 0)
+            days = {(e[0], e[1][:10]) for es in flo.values() for e in es}
+            listed = sum(1 for es in flo.values() if all(len(e) > 3 and e[3] == "listed" for e in es))
+            say(state, "LOOK", f"{s}: {len(flo)} bills on {len(days)} house floor calendars"
+                               + (f" ({listed} only listed as able to come up, not set for a vote)" if listed else "")
+                               + (f"; {len(early)} of them still in committee now: {early[:5]}" if early else ""))
+        ag = {k: [e for e in es if not (len(e) > 2 and e[2] == "floor")] for k, es in ag.items()}
+        ag = {k: es for k, es in ag.items() if es}
         if ag:
             named = {k: [e for e in es if len(e) < 3 or e[2] != "meets"] for k, es in ag.items()}
             meets = {tuple(e) for es in named.values() for e in es}

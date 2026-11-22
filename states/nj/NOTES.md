@@ -24,3 +24,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   estimate's summary) comes from `states/nj/texts.py` (current session; documents already read are kept in
   data/nj/docs_<session>.json); build_data.py's `bill_texts()` writes it to data/<session>-text/<A10>.json in pieces
   of 500 bill numbers (packed into Claude copies), and `whatItDoes()` shows it when a bill is opened. Not done yet: published lists and the "public site" tip; the daily workflow for NJ.
+- **Floor calendars (2026-11-22):** the voting sessions' board lists are BAGENDA.TXT's "Session" rows (CommHouse "A" or
+  "S"), skipped by the committee reader until now: `agendas()` gives each bill listed ["Senate floor", time, "floor"]
+  (states/floorcal.py), a vote set for that day, so the page says "Senate floor vote Thu, Oct 22" and the card asks your
+  own legislators to vote; a session AGENDAS.TXT marks canceled drops its whole day. Simple resolutions (AR, SR) left out.
+  2026: 13 sessions, 492 bills (posted 1-6 days ahead); 24 are joint or concurrent resolutions that aren't records (the
+  same kind the committee agendas already had: the data check's "aren't records' numbers" FAIL was there before).
