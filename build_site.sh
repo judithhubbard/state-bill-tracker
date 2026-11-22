@@ -245,3 +245,7 @@ echo "Built $OUT/ ($N files)"
 # 19,500, so a deploy never breaks unnoticed.
 if [ "$N" -gt 19500 ]; then echo "ERROR: $N files, too close to Cloudflare Pages' limit of 20,000 a deployment"; exit 1; fi
 if [ "$N" -gt 18000 ]; then echo "WARNING: $N files, near Cloudflare Pages' limit of 20,000 a deployment"; fi
+# Small copies of heavy legislators' photos (photos.py; at most 400 a state): expected to be a few hundred in all.
+NP=$(find "$OUT/assets/photos" -type f 2>/dev/null | wc -l | tr -d ' ')
+echo "Photos' small copies: $NP"
+if [ "$NP" -gt 1500 ]; then echo "WARNING: $NP small photo copies in assets/photos/ (expected a few hundred: photos.py's HEAVY)"; fi

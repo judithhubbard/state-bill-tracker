@@ -9,7 +9,16 @@ For the rest this fills in a web address from:
   sites and Google's image-search thumbnails, which aren't ours to show.
 - Congress: the unitedstates/images project (public domain; the Government Publishing Office's member photos), by
   bioguide id, which Congress's contacts carry ("id"). Congress.gov's own photos answer 403 to programs.
-Photos are linked, not copied (as NJ's and the other states' own are).
+- Ballotpedia (approved by the owner 2026-11-22): Open States links about 400 members' photos to Ballotpedia's
+  thumbnails (s3.amazonaws.com/ballotpedia-api4/files/thumbs/200/300/..., cdn.ballotpedia.org), kept only when there's
+  no official one (the legislature's own address, `PATTERNS`, wins; so do the contacts' own). Ballotpedia asks that its
+  person photos be reused only non-commercially, with credit: they're linked, never copied (`ballotpedia()`), and the
+  page's "About this data" names them.
+Photos are linked, not copied (as NJ's and the other states' own are), except heavy ones: a photo over HEAVY (500 KB;
+Georgia's and the Oklahoma Senate's are 5-10 MB originals) is downloaded once, made 240 pixels wide (JPEG, `shrink()`),
+and kept in data/<state>/photos/<hash>.jpg (the state's cache); photos.json's "small" names it, and build_data.py
+copies it to the site's /assets/photos/, which browsers keep for good. The name is a hash of the address and the
+original's size, so a changed photo gets a new name. Ballotpedia's are never copied (and are 200x300 anyway).
 
 It runs after each state's download (download.yml's "Add photos" step, every run): the matching is quick, and the source
 file is downloaded again only when the copy is a week old (kept in the state's folder, so in its cache). photos.json is
@@ -18,10 +27,10 @@ current members have a photo either way.
 
 Matching: each contacts file's members, by house, name and district (`match()`); a member the state's files give a photo
 keeps it. Each address is asked once a week whether it answers with an image (`head()`, a HEAD request, two a second,
-answers in photos_checked.json): a 404, a web page or a 10 MB original is left out.
+answers in photos_checked.json, with its size): a 404 or a web page is left out, and a heavy one shrunk (above).
 Usage: python3 photos.py data/<state> ...   (folders that aren't a state's are skipped; --force downloads again)
 """
-import csv, glob, io, json, os, re, sys, time, unicodedata, urllib.error, urllib.request
+import csv, glob, hashlib, io, json, os, re, sys, time, unicodedata, urllib.error, urllib.request
 from collections import Counter
 from datetime import datetime, timezone
 
@@ -44,15 +53,29 @@ PATTERNS = {
 }
 OFFICIAL = re.compile(r"(?:\.gov|\.us)$|leg|senate|house|assembly|capitol|statehouse|gencourt|dems\b|democrats|gop|republicans")
 # (And not campaign sites, whose names can say "senate": overture4scsenate.com.)
-NOT = re.compile(r"gstatic|googleusercontent|townnews|gannett|brightspot|arcpublishing|patch\.com|ballotpedia|enview|"
+NOT = re.compile(r"gstatic|googleusercontent|townnews|gannett|brightspot|arcpublishing|patch\.com|enview|"
                  r"(?:for|4)[a-z]{0,3}(?:senate|house|assembly|rep|delegate)|elect|vote")
-BIG = 5_000_000  # bytes: a few legislatures' photos are 10 MB originals (CT, OK), too much for a 96-pixel picture
+HEAVY = 500_000  # bytes: over this a photo is shrunk (shrink()); a few legislatures' are 5-10 MB originals (GA, OK, CT)
+BIG = 40_000_000  # and over this left out (not downloaded)
+LINK_MAX = 5_000_000  # a heavy photo without a copy yet is linked up to this size, and left out over it
+WIDTH = 240  # pixels: the page shows 96x120 (2.5x)
+MAX_SMALL = 400  # shrunk copies a state (each is a file in the deployment: Cloudflare Pages allows 20,000)
+SHRINK_SECONDS = 120  # of downloading a run; the rest wait for the next run
+
+
+def ballotpedia(url):
+    """Ballotpedia's photo storage (linked only when there's no official photo; never copied)."""
+    parts = url.split("/")
+    return len(parts) > 3 and (parts[2].lower() == "cdn.ballotpedia.org" or
+                               (parts[2].lower() == "s3.amazonaws.com" and parts[3].startswith("ballotpedia-api")))
 
 
 def official(url):
     if not url or not url.startswith(("http://", "https://")):
         return False
     host = url.split("/")[2].lower()
+    if ballotpedia(url):
+        return True
     if NOT.search(url.lower()):
         return False
     return host in KNOWN or bool(OFFICIAL.search(host))
@@ -133,8 +156,8 @@ def source(folder, st, force=False):
 
 
 def head(url):
-    """"ok" when an address answers 200 with an image no bigger than BIG; "bad" when it answers otherwise (404, a web
-    page, a 10 MB original); "net" when it doesn't answer here (a timeout; a certificate chain Python can't complete, as
+    """(verdict, size): "ok" when an address answers 200 with an image no heavier than HEAVY; "big" when it's heavier
+    (shrunk: shrink()), "bad" when it answers otherwise (404, a web page, over BIG); "net" when it doesn't answer here (a timeout; a certificate chain Python can't complete, as
     Illinois's and the Michigan House's, which browsers do): kept, as a browser may well load it. When HEAD fails, the
     first byte is asked for instead: servers answer HEAD in their own ways (Georgia's 405; Massachusetts's 404 for photos
     a GET gets; Colorado's redirect to signed addresses that answer HEAD 403)."""
@@ -145,18 +168,20 @@ def head(url):
             break
         except urllib.error.HTTPError as e:
             if method == "GET" and e.code in (400, 404, 410):
-                return "bad"
+                return "bad", 0
         except Exception:
             if method == "GET":
-                return "net"
+                return "net", 0
     if r is None:
-        return "net"
+        return "net", 0
     kind = (r.headers.get("Content-Type") or "").lower()
     total = re.search(r"/(\d+)$", r.headers.get("Content-Range") or "")
     size = int(total.group(1) if total else r.headers.get("Content-Length") or 0)
     r.close()
     # (Georgia's photos say application/octet-stream; browsers show them.)
-    return "ok" if r.status in (200, 206) and (kind.startswith("image/") or "octet-stream" in kind) and size <= BIG else "bad"
+    if r.status not in (200, 206) or not (kind.startswith("image/") or "octet-stream" in kind) or size > BIG:
+        return "bad", size
+    return ("big" if size > HEAVY else "ok"), size
 
 
 class Checks:
@@ -175,15 +200,20 @@ class Checks:
     def __call__(self, url):
         self.asked.add(url)
         old = self.seen.get(url)
-        if old and time.time() - old[1] < WEEK:
+        # (Answers saved before sizes were, [verdict, time], are asked again: 5 MB originals were "bad" then.)
+        if old and len(old) > 2 and time.time() - old[1] < WEEK:
             return old[0]
         if time.time() > self.until:
-            return old[0] if old else None
-        v = head(url)
+            return old[0] if old and len(old) > 2 else None
+        v, size = head(url)
         time.sleep(0.5)
-        self.seen[url] = [v, int(time.time())]
+        self.seen[url] = [v, int(time.time()), size]
         self.changed = True
         return v
+
+    def size(self, url):
+        old = self.seen.get(url)
+        return old[2] if old and len(old) > 2 else 0
 
     def save(self):
         """Saved when something was asked; addresses no longer asked about (members gone) are dropped."""
@@ -193,6 +223,100 @@ class Checks:
         with open(self.path + ".tmp", "w") as f:
             json.dump(self.seen, f, indent=0, sort_keys=True)
         os.replace(self.path + ".tmp", self.path)
+
+
+# ---- heavy photos: small copies ----
+
+def shrink(url, size=0):
+    """A heavy photo as a WIDTH-pixel JPEG (bytes), or None when it doesn't load or isn't a picture Pillow reads.
+    A download shorter than the size the server gave is a failure (tried again in a week); a file the server itself
+    serves cut short is read as browsers show it (Georgia serves two portraits cut at exactly 1 MiB: the last rows grey)."""
+    from PIL import Image, ImageFile, ImageOps
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
+    try:
+        r = urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=60)
+        raw = r.read(BIG + 1)
+        r.close()
+    except Exception as e:
+        print(f"   {url}: didn't load ({str(e)[:80]})")
+        return None
+    if len(raw) > BIG or (size and len(raw) < size):
+        return None
+    try:
+        im = ImageOps.exif_transpose(Image.open(io.BytesIO(raw)))
+        if im.mode in ("RGBA", "LA", "P", "PA"):
+            im = im.convert("RGBA")
+            back = Image.new("RGB", im.size, (255, 255, 255))
+            back.paste(im, mask=im.split()[-1])
+            im = back
+        elif im.mode != "RGB":
+            im = im.convert("RGB")
+        if im.width > WIDTH:
+            im = im.resize((WIDTH, max(1, round(im.height * WIDTH / im.width))), Image.LANCZOS)
+        out = io.BytesIO()
+        im.save(out, "JPEG", quality=80, optimize=True, progressive=True)
+        return out.getvalue()
+    except Exception as e:
+        print(f"   {url}: not read as a picture ({str(e)[:80]})")
+        return None
+
+
+class Small:
+    """The shrunk copies, data/<state>/photos/<name>.jpg, and what they were made from (photos/index.json:
+    {url: [name, original's size, time]}; a name of "" is a copy that failed, tried again after a week)."""
+    def __init__(self, folder, budget=SHRINK_SECONDS):
+        self.dir = os.path.join(folder, "photos")
+        self.path = os.path.join(self.dir, "index.json")
+        try:
+            self.index = json.load(open(self.path))
+        except (OSError, ValueError):
+            self.index = {}
+        self.until = time.time() + budget
+        self.changed = False
+        self.made = 0
+
+    def name(self, url, size):
+        """The copy's file name, made first when there's none for this address and size; None when there's none."""
+        name = hashlib.sha256(f"{url} {size}".encode()).hexdigest()[:16] + ".jpg"
+        old = self.index.get(url)
+        if old and old[0] == name and os.path.exists(os.path.join(self.dir, name)):
+            return name
+        if old and old[0] == "" and old[1] == size and time.time() - old[2] < WEEK:
+            return None
+        if ballotpedia(url) or time.time() > self.until:
+            return None
+        try:
+            import PIL  # noqa: F401 (installed in download.yml; without it heavy photos are left out)
+        except ImportError:
+            return None
+        data = shrink(url, size)
+        time.sleep(1)
+        self.changed = True
+        if not data:
+            self.index[url] = ["", size, int(time.time())]
+            return None
+        os.makedirs(self.dir, exist_ok=True)
+        with open(os.path.join(self.dir, name + ".tmp"), "wb") as f:
+            f.write(data)
+        os.replace(os.path.join(self.dir, name + ".tmp"), os.path.join(self.dir, name))
+        self.index[url] = [name, size, int(time.time())]
+        self.made += 1
+        return name
+
+    def save(self, keep):
+        """Copies no longer used (members gone, photos changed) are deleted with their lines."""
+        index = {u: v for u, v in self.index.items() if u in keep}
+        names = {v[0] for v in index.values() if v[0]}
+        gone = [f for f in (os.listdir(self.dir) if os.path.isdir(self.dir) else [])
+                if f.endswith(".jpg") and f not in names]
+        for f in gone:
+            os.remove(os.path.join(self.dir, f))
+        if index != self.index or self.changed or gone:
+            self.index = index
+            os.makedirs(self.dir, exist_ok=True)
+            with open(self.path + ".tmp", "w") as f:
+                json.dump(index, f, indent=0, sort_keys=True)
+            os.replace(self.path + ".tmp", self.path)
 
 
 # ---- matching ----
@@ -287,7 +411,7 @@ def build(folder, st, src, check=lambda url: None):
             # The legislature's own (only for the newest contacts: Louisiana's is whoever holds the seat now), when it
             # answers with an image.
             own = PATTERNS[st](seat, p, session) if st in PATTERNS and path == contacts_files(folder)[-1] else None
-            if own and check(own) == "ok":
+            if own and check(own) in ("ok", "big"):
                 url = own
             if url and check(url) != "bad":
                 out[f"{seat[0]}|{p['key']}"] = url
@@ -304,9 +428,26 @@ def refresh(folder, force=False):
     check = Checks(folder)
     images = build(folder, st, src, check)
     check.save()
+    # Heavy photos: their small copies, else left out (not made yet: the next run makes more; over MAX_SMALL; Ballotpedia's).
+    small, heavy = Small(folder), sorted({u for u in images.values() if check(u) == "big"})
+    names = {}
+    for url in heavy:
+        if len(names) >= MAX_SMALL:
+            print(f"{st}: over {MAX_SMALL} heavy photos; the rest left out (MAX_SMALL)")
+            break
+        name = small.name(url, check.size(url))
+        if name:
+            names[url] = name
+    small.save(set(heavy))
+    # (Until its copy is made, a photo up to LINK_MAX is linked as before.)
+    images = {k: u for k, u in images.items() if u not in heavy or u in names or check.size(u) <= LINK_MAX}
+    if heavy:
+        print(f"{st}: {len(heavy)} heavy photos, {len(names)} with small copies ({small.made} made this run)")
     path = os.path.join(folder, "photos.json")
     out = {"source": "unitedstates/images" if st == "us" else "Open States people", "fetched": src.get("fetched"),
            "images": dict(sorted(images.items()))}
+    if names:
+        out["small"] = dict(sorted(names.items()))
     try:
         same = json.load(open(path)) == out
     except (OSError, ValueError):
@@ -323,18 +464,35 @@ def refresh(folder, force=False):
 _CACHE = {}
 
 
-def load(folder):
+def _read(folder):
     if folder not in _CACHE:
         try:
-            _CACHE[folder] = json.load(open(os.path.join(folder, "photos.json"))).get("images", {})
+            _CACHE[folder] = json.load(open(os.path.join(folder, "photos.json")))
         except (OSError, ValueError):
             _CACHE[folder] = {}
     return _CACHE[folder]
 
 
-def image_of(folder, seat, p):
-    """A member's photo: their contacts' own, else photos.json's."""
-    return p.get("image") or load(folder).get(f"{seat[0]}|{p.get('key')}")
+def load(folder):
+    return _read(folder).get("images", {})
+
+
+def small_copies(folder):
+    """{name: path} of the shrunk copies photos.json uses (build_data.py copies them to /assets/photos/)."""
+    return {n: os.path.join(folder, "photos", n) for n in _read(folder).get("small", {}).values()
+            if os.path.exists(os.path.join(folder, "photos", n))}
+
+
+def image_of(folder, seat, p, local=None):
+    """A member's photo: their contacts' own, else photos.json's. local(name): the site's address for a shrunk copy
+    (without it, as in the Claude copies, the original's address)."""
+    url = p.get("image") or load(folder).get(f"{seat[0]}|{p.get('key')}")
+    name = _read(folder).get("small", {}).get(url)
+    return local(name) if local and name and name in small_copies(folder) else url
+
+
+def uses_ballotpedia(folder):
+    return any(ballotpedia(u) for u in load(folder).values())
 
 
 if __name__ == "__main__":

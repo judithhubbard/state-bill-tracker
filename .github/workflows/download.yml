@@ -176,10 +176,11 @@ jobs:
         run: ${{ matrix.run }}
       # Legislators' photos where the state's own files have none (photos.py: Open States' people file, or Congress's
       # unitedstates/images, downloaded again weekly). The matching takes a second; once a week each photo's address is
-      # asked whether it still answers (up to 2.5 minutes). Never fails the job.
+      # asked whether it still answers (up to 2.5 minutes), and heavy ones are shrunk once (Pillow; up to 2 minutes a
+      # run). Never fails the job.
       - name: Add photos
         if: always()
-        timeout-minutes: 5
+        timeout-minutes: 8
         continue-on-error: true
         env:
           PATHS: ${{ matrix.path }}
@@ -187,6 +188,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -f
+          pip install --quiet pillow==11.3.0 || echo "Pillow didn't install: heavy photos left out this run"
           python3 photos.py $PATHS
       - name: Mark the copy as checked
         if: steps.dl.outcome == 'success'

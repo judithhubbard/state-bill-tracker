@@ -350,6 +350,12 @@ def sponsor_class(r, party_of):
     return "B" if other and other * 5 >= len(everyone) else x
 
 
+def photo_address(name):
+    """A shrunk photo's address on the site (/assets/photos/<name>: finish() copies it there)."""
+    from urllib.parse import urljoin, urlparse
+    return urlparse(urljoin(P.SITE_URL, "../assets/photos/" + name)).path
+
+
 def legislators(session):
     """Current legislators with a short page address each: last name, or first-last when shared."""
     path = os.path.join(P.DATA, f"contacts_{session}.json")
@@ -381,7 +387,7 @@ def legislators(session):
         slug = last(p) if counts[last(p)] == 1 else p["key"].replace(" ", "-")
         out.append({"id": seat, "slug": slug, "name": p["name"], "title": TITLES[house],
                     "house": house, "district": int(district), "email": p.get("email"), "phone": p.get("phone"), "phones": p.get("phones"),
-                    "form": p.get("form"), "url": p.get("url"), "party": p.get("party"), "image": photos.image_of(P.DATA, seat, p),
+                    "form": p.get("form"), "url": p.get("url"), "party": p.get("party"), "image": photos.image_of(P.DATA, seat, p, photo_address if GITHUB else None),
                     "since": since.get(seat), "committees": committees_of(seat, p)})
     return out
 
@@ -2292,7 +2298,7 @@ def bundle_key():
     import state_hash
     h = hashlib.sha256()
     h.update(json.dumps([today_here(), STATE, ONLY, os.environ.get("SITE_URL", ""), os.environ.get("SITE_BASE", ""),
-                         os.environ.get("LAUNCHED", "0"), CURRENT]).encode())
+                         os.environ.get("LAUNCHED", "0"), CURRENT, bool(GITHUB)]).encode())
     state_hash.digest(h, state_hash.data_files(STATE))
     return h.hexdigest()
 
@@ -2356,6 +2362,13 @@ def finish(session, core, current, urls):
         for name in os.listdir(os.path.join(HERE, "static")):
             with open(os.path.join(HERE, "static", name), "rb") as src, open(os.path.join(GITHUB, name), "wb") as dst:
                 dst.write(src.read())
+        # Heavy legislators' photos' small copies (photos.py), at /assets/photos/ (build_site.sh moves assets/ up).
+        for name, path in photos.small_copies(P.DATA).items():
+            dst = os.path.join(GITHUB, "assets", "photos", name)
+            if not os.path.exists(dst):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                with open(path, "rb") as a, open(dst, "wb") as b:
+                    b.write(a.read())
         texts_ = {**core["files"], "list": core["files"]["list"].replace(json.dumps(FETCHED_MARK), json.dumps(fetched, ensure_ascii=False), 1)}
         names_ = {kind: hashed_name(session, kind, text) for kind, text in texts_.items()}
         os.makedirs(os.path.join(GITHUB, "data", "v"), exist_ok=True)
@@ -2408,8 +2421,9 @@ def finish(session, core, current, urls):
     if photos.load(P.DATA) and 'id="howData"' in template:
         credit = ("<p>Photos of members are the Government Publishing Office's, from the unitedstates/images project.</p>"
                   if STATE == "us" else
-                  "<p>Legislators' photos the Legislature's own files don't include are linked from Open States' people "
-                  "data, which takes most of them from the Legislature's website.</p>")
+                  "<p>Legislators' photos the Legislature's own files don't include come from Open States' people "
+                  "data, which takes most of them from the Legislature's website"
+                  + (", and some from Ballotpedia" if photos.uses_ballotpedia(P.DATA) else "") + ".</p>")
         at = template.index('id="howData"')
         sec_end = template.index("</section>", at)
         last = template.rfind("</div>", at, sec_end)
