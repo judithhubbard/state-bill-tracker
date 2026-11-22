@@ -63,7 +63,9 @@ download.yml (GitHub, every 2 h)       publish.yml (after each quick-lane downlo
   `C.sessions()` and `C.load_session(session)` → `(records, index by number, fetched, codes)`; optionally
   `C.agendas(session)` and `C.parties()`.
 - A record is a dict with `nums`, `title`, `summary`, `stage` (0-6, `stages.py`), `comm`, `vers` (each version's
-  actions), `keyDates`, `votes`, `topics`, `narrow`, `shell`, `budget`, `ballot`, `chapter`, `prev` ... The stage is
+  actions), `keyDates`, `votes` (`[house, kind, committee, day, yes, no, [[member, code], ...]]`: kind "F" floor, "C"
+  committee; "R" a committee report's signatures, AK and WA, code the recommendation's wording: shown in History by
+  `reportLine()`, never counted as a vote), `topics`, `narrow`, `shell`, `budget`, `ballot`, `chapter`, `prev` ... The stage is
   decided here, from the history: this is where most "wrong status" bugs live.
 - Shared converters: `states/legiscan_convert.py` (`Rules`, `load_session(Rules, session)`; each LegiScan state
   subclasses `Rules`), `states/openstates_bulk.py` (puts bulk records in the API's shape). New York's: `states/ny/convert.py`.
@@ -205,7 +207,7 @@ opened (`later()`, `STALE`, `showView()`).
 - **The opened panel:** `fillDetail()`, indented under the title with a rule down its left, in this order: "What you can
   do" (`nextSteps()` / `planFor()` / `contactBook()` / `holdUp()`, `oddsLine()`; `draftFor()` writes the email), "What
   it does" (the summary, `whatItDoes()`/`loadBillText()`), "History" (`historyBlock()`: the main steps with each passing
-  floor vote's tally on its line, other votes on their own, the governor's due date last), "Who sponsors it"
+  floor vote's tally on its line, other votes on their own, committee reports' signatures (`reportLine()`), the governor's due date last), "Who sponsors it"
   (`sponsorsBlock()`, `panelTags()`), `chapterAmendment()`, `signingMemo()`, `vetoMemo()`, `twinLine()`, `lineage()`,
   `similarBlock()`, `verBlock()` (each version's "Every action"), then the official links (`STATE.textLinks()`) and "Copy
   link to this bill". A watchlist card opened below its row (`watchCard(x, true)`) is the same panel: its own "What you

@@ -44,3 +44,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
 - A Legislature of this year or later is shown from its first bill (`sessions()` in convert.py, 2026-11-22; older ones
   need more than 100): the 35th's prefiled bills (BASIS answers "Invalid Session Number" for session=35 on 2026-11-22;
   the first prefile release is the second Friday of January) appear when fetch.py starts reading it on January 1.
+- **Committee reports' signatures (2026-11-22, approved by the owner):** the 063 lines after each 002 report ("DP: CARRICK,
+  SADDLER", "NR: NELSON", "AM: ...", "DNP: ...", lists carried onto the next line joined) are also kept as a vote of kind
+  "R" (`[house, "R", committee, day, do pass + amend, do not pass, [[signer, wording], ...]]`), shown in History beside the
+  votes as "House Finance Committee report · do pass: Foster, Stapp; no recommendation: Galvin" with an ⓘ (tracker.html's
+  `reportLine()`). They aren't votes: the vote filter, legislators' floor-vote numbers and absences, "lastComm" and the
+  data checks' vote checks all leave them out. Signers are matched by last name within the committee's house (`signer()`:
+  "H:12|Carrick"; "S|Hughes" for a member who left; "H?Name" for no member); two members with one last name are written
+  with an initial ("C.JOHNSON", "D.NELSON"), matched by first initial. data_check.py counts unmatched signers (FAIL over
+  1%): 0 of 4,142 in 2023-24 and 0 of 4,223 in 2025-26.

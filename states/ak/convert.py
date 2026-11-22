@@ -197,6 +197,8 @@ def person(m):
 
 
 PARTY = {"D": "D", "R": "R", "N": "I"}
+# A committee report's recommendation codes, spelled out.
+REC_WORDS = {"DP": "do pass", "NR": "no recommendation", "AM": "amend", "DNP": "do not pass"}
 
 
 def floor_question(title):
@@ -225,6 +227,21 @@ def load_session(session):
     lasts = {}
     for (h, code), m in by_member.items():
         lasts[(h, (m.get("LastName") or "").upper())] = m.get("LastName")
+    # A report's signer ("CARRICK") -> "H:12|Carrick", the seat of the house's member with that last name (the sitting
+    # one when a name was used twice), else "H|Name" for a member who left, else "H?Name" (no member of that house).
+    # Two members with one last name are written with an initial: "C.JOHNSON", "D.NELSON".
+    holders = {}
+    for (h, code), m in by_member.items():
+        last, first = (m.get("LastName") or "").upper(), (m.get("FirstName") or "").strip().upper()
+        for k in ((h, last), (h, f"{first[:1]}.{last}")):
+            if seats.get((h, code)) or k not in holders:
+                holders[k] = seats.get((h, code))
+
+    def signer(h, x):
+        k = (h, re.sub(r"^([A-Z])\.\s*", r"\1.", x.upper()))
+        m = re.match(r"([A-Z])\.(.+)", k[1])
+        name = f"{m.group(1)}. {lasts.get((h, m.group(2)), m.group(2).title())}" if m else lasts.get(k, x.title())
+        return f"{holders[k]}|{name}" if holders.get(k) else f"{h}|{name}" if k in holders else f"{h}?{name}"
     parties = _PARTIES.setdefault(session, {})
     files = glob.glob(os.path.join(folder(session), "bills", "*.json"))
     fetched = datetime.fromtimestamp(max(os.path.getmtime(f) for f in files), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
@@ -249,7 +266,8 @@ def load_session(session):
         last_vote = {}  # house -> "passage" / "concur": what a rescinding undoes
         where_h, place, explicit, reported = origin, "committee", None, {"H": set(), "S": set()}
         chapter, first_ref = None, None
-        acts = [a for a in b.get("Actions") or [] if a.get("Code") not in SKIP]
+        reports = []  # committee reports' signatures, as votes of kind "R"
+        acts =[a for a in b.get("Actions") or [] if a.get("Code") not in SKIP]
         i = 0
         while i < len(acts):
             a = acts[i]
@@ -288,15 +306,19 @@ def load_session(session):
                 while i < len(acts) and acts[i].get("Code") == "063":
                     m = re.match(r"(DP|NR|AM|DNP):\s*(.*)$", text(acts[i].get("Text")))
                     if m:
-                        who = [lasts.get((h, x.strip()), x.strip().title()) for x in m.group(2).split(",") if x.strip()]
-                        recs_.append((m.group(1), who))
+                        recs_.append((m.group(1), [x.strip() for x in m.group(2).split(",") if x.strip()]))
                     elif recs_:  # a list carried onto the next line
-                        recs_[-1][1].extend(lasts.get((h, x.strip()), x.strip().title()) for x in text(acts[i].get("Text")).split(",") if x.strip())
+                        recs_[-1][1].extend(x.strip() for x in text(acts[i].get("Text")).split(",") if x.strip())
                     i += 1
                 steps.append((d, h, "REPORTED", code))
-                words = {"DP": "do pass", "NR": "no recommendation", "AM": "amend", "DNP": "do not pass"}
                 if recs_:
-                    steps.append((d, h, f"{cname(c)} Committee report: " + "; ".join(f"{words[k]} ({', '.join(v)})" for k, v in recs_), "063"))
+                    steps.append((d, h, f"{cname(c)} Committee report: " + "; ".join(
+                        f"{REC_WORDS[k]} ({', '.join(lasts.get((h, x), x.title()) for x in v)})" for k, v in recs_), "063"))
+                    # The report's signatures, shown beside the votes (kind "R"): not a roll call, never counted as votes.
+                    # [house, "R", committee, day, signed do pass or amend, signed do not pass, [[signer, wording], ...]]
+                    reports.append([h, "R", cname(c), d, sum(len(v) for k, v in recs_ if k in ("DP", "AM")),
+                                    sum(len(v) for k, v in recs_ if k == "DNP"),
+                                    [[signer(h, x), REC_WORDS[k]] for k, v in recs_ for x in v]])
                 # On to the next committee in the list, or to the Rules Committee.
                 nxt = next((x for x in plan[h] if x not in reported[h]), None)
                 if nxt and c != "RLS":
@@ -538,6 +560,7 @@ def load_session(session):
                        f"{r.get('MemberChamber')}?{text(r.get('MemberName'))}", text(r.get("Vote"))]
                       for r in rows if text(r.get("Vote")) in ("N", "E", "A")]
             votes.append([h, "F", None, (rows[0].get("VoteDate") or "")[:10], yes, no, listed])
+        votes += reports
         votes.sort(key=lambda v: v[3])
         action_dates = [s[0] for s in steps if s[0]]
         rec = {

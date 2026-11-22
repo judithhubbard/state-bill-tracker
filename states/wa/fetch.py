@@ -245,3 +245,4 @@ if __name__ == "__main__":
     contacts.main(CURRENT)
     from states.wa import texts  # "What it does": the current biennium's bill reports
     texts.main(CURRENT)
+    texts.all_signatures(CURRENT)  # committee reports' signatures, ten minutes a run until every biennium's are read
