@@ -109,35 +109,43 @@ def badge(party):
     return f'<abbr class="bp-pty bp-{party}" title="{name}">{party}</abbr>'
 
 
-def chamber_html(name, ch):
+def opener(name, key):
+    """A chamber's or the governor's name as a button that opens its members or contacts under the header (tracker.html's
+    openLegs()); the plain name without a key."""
+    return name if key is None else (f'<button type="button" class="bp-open" data-legs="{key}" aria-expanded="false" '
+                                     f'aria-controls="legsBox">{name}</button>')
+
+
+def chamber_html(name, ch, key=None):
     """"Senate R 29–2 veto-proof": the majority's badge, its seats and the next party's."""
     parties = list(ch["parties"].items())
     if not parties:
         return ""
     if ch.get("nonpartisan"):
-        return f'<span class="bp-ch" title="{name}: {ch["seats"]} members elected without party labels">{name}: nonpartisan</span>'
+        return f'<span class="bp-ch" title="{name}: {ch["seats"]} members elected without party labels">{opener(name, key)}: nonpartisan</span>'
     lead, n = parties[0]
     rest = parties[1][1] if len(parties) > 1 else 0
     if ch["majority"] == "C":
-        return f'<span class="bp-ch" title="{name}: {", ".join(f"{v} {PARTY_NAME.get(k, k)}" for k, v in parties)}; run by a bipartisan coalition">{name} {badge("C")} coalition</span>'
+        return f'<span class="bp-ch" title="{name}: {", ".join(f"{v} {PARTY_NAME.get(k, k)}" for k, v in parties)}; run by a bipartisan coalition">{opener(name, key)} {badge("C")} coalition</span>'
     tip = ", ".join(f"{v} {PARTY_NAME.get(k, k)}" for k, v in parties) + (f", {ch['vacant']} vacant" if ch["vacant"] else "")
     # Where a majority overrides (Indiana), every majority is "veto-proof": the sentence below says so instead.
     tag = (' <span class="bp-vp" title="Enough seats to override a veto (' + ch["override"].replace("2/3", "two-thirds").replace("3/5", "three-fifths")
            + ')">veto-proof</span>') if ch["canOverride"] and ch["override"] != "majority" else ""
-    return f'<span class="bp-ch" title="{name}: {tip}">{name} {badge(lead)} {n}–{rest}{tag}</span>'
+    return f'<span class="bp-ch" title="{name}: {tip}">{opener(name, key)} {badge(lead)} {n}–{rest}{tag}</span>'
 
 
-def summary_html(state, lower_name="House", sep=" · "):
-    """A state's party control: "Senate R 29–2 · House R 56–6 · Gov. R" (the front page puts each part on its own line)."""
+def summary_html(state, lower_name="House", sep=" · ", buttons=False):
+    """A state's party control: "Senate R 29–2 · House R 56–6 · Gov. R" (the front page puts each part on its own line).
+    With buttons (the state's current page), each name opens that house's members or the governor's contacts."""
     b = current(state)
     if not b:
         return ""
     names = {"S": "Senate"}
-    parts = [chamber_html(names.get(c, re.sub(r" of Delegates$", "", lower_name)), ch) for c, ch in
+    parts = [chamber_html(names.get(c, re.sub(r" of Delegates$", "", lower_name)), ch, c if buttons else None) for c, ch in
              sorted(b["chambers"].items(), key=lambda x: x[0] != "S")]
     gov = b["governor"]
     exe = table().get(state, {}).get("executive", "Governor")  # Congress: the President
-    parts.append(f'<span class="bp-ch" title="{exe} {gov[0]}">{exe} {badge(gov[1])}</span>')
+    parts.append(f'<span class="bp-ch" title="{exe} {gov[0]}">{opener(exe, "G" if buttons else None)} {badge(gov[1])}</span>')
     return sep.join(p for p in parts if p)
 
 

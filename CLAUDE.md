@@ -725,7 +725,11 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
   bills pass (`budgetPassed()`). In 2017–24, about half of NY bills sponsored by most of a house
   still died there, many in Ways and Means. Leaders' pronouns are in `LEADERS`.
 - **Your legislators:** `HOME` (county), `setCounty()`, `myReps()`, `votePeople()` and
-  `lookUpReps()`. Legislator pages: `PRESET`, `PAST_WHO`, `renderPerson()` and `renderPersonStats()`.
+  `lookUpReps()`. The party line under the title (`#power`, balance.py's `summary_html(buttons=True)`, current session
+  only) names each house and the governor as buttons (`data-legs`): `openLegs()` / `renderLegs()` show, in `#legsBox`
+  under the header, the house's members (party, district, bills sponsored and laws this session, from the list part's
+  sponsors: `legCounts()`; sortable, a name filter; the leader marked) or the governor's contacts (`GOV_REACH`, the
+  bills waiting for them); the same name again closes it (2026-11-22). Legislator pages: `PRESET`, `PAST_WHO`, `renderPerson()` and `renderPersonStats()`.
 - **Statistics:** `renderStats()`, which builds every stats section, plus `sankey()` (odds),
   `monthChart()`, `oddsLine()` (the "In past sessions…" line in a bill panel) and the network
   (`renderNet()` / `drawNet()`, which loads d3 on demand).
