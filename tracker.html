@@ -3019,7 +3019,7 @@ function floorAsk(fl, on) {
   if (!fl || !on) return ["vote yes", "vote no"];
   const day = fmtMeet(fl.when, true);
   return floorSure(fl) ? [`vote yes at the floor vote ${day}`, `vote no at the floor vote ${day}`]
-    : [`vote yes if it comes up ${day}`, `vote no if it comes up ${day}`];
+    : [`vote yes when it comes to a vote (on the ${floorHouse(fl)} calendar from ${day})`, `vote no when it comes to a vote (on the ${floorHouse(fl)} calendar from ${day})`];
 }
 function nextSteps(b) {
   // No side chosen yet: the support asks, each "If you support it: ..." (book.html()'s ifSupport).
