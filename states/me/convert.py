@@ -37,7 +37,8 @@ build_data.py reads. The shared reading is states/legiscan_convert.py; this file
   "rollcall" with that tally, so each roll call file finds its line. Only roll calls on the bill's own questions count as
   members' votes on it (accepting an Ought to Pass report, engrossment, enactment, final passage, overriding a veto); a
   "yea" to accept an Ought Not to Pass report or to indefinitely postpone is a vote against the bill, and those are left
-  out. Committee votes aren't in the data.
+  out. Committee votes aren't in the data; a divided report's signers are (states/me/reports.py reads them from the bill's
+  page), shown as the committee's report (votes of kind "R", `add_reports()`), never counted as votes.
 - No summaries: LegiScan's description is the title. "What it does" isn't shown.
 """
 import json, os, re, sys
@@ -439,11 +440,97 @@ def load_session(session):
         for r in recs:
             if r["stage"] == 2 and r["passedS"] and r["passedA"] and last_pass.get(r["nums"][0]) in HOUSE:
                 r["passedIn"] = HOUSE[last_pass[r["nums"][0]]]
+        add_reports(session, recs, index)
         older = {s: load_session(s)[0] for s in sessions() if session - 4 <= s < session}
         L.link_earlier(RULES, session, recs, older)
         _LOADED[session] = (recs, index, fetched)
     recs, index, fetched = _LOADED[session]
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
+
+
+REPORT_SMALL = SMALL | {"as", "a", "an", "under"}
+_REPORTS = None
+
+
+def report_wording(words, label):
+    """"Ought To Pass As Amended", "MAJ" -> "Ought to Pass as Amended (majority)"; "B" -> "... (report B)"."""
+    w = " ".join(x.lower() if i and x.lower() in REPORT_SMALL else x for i, x in enumerate(words.split()))
+    return f"{w} ({ {'MAJ': 'majority', 'MIN': 'minority'}.get(label, 'report ' + label)})"
+
+
+def signers(folder, session):
+    """(house, signer's name as the page writes it, the place after "of") -> the signer as votes write them: the seat and last name ("S:12|Baldacci"),
+    a member of that house with no seat here ("H|Collamore": earlier sessions, members who left), or "H?Name" when no
+    member of that house has the name. Members are LegiScan's people of the session; two members of a house with one last
+    name are told apart by first name (2023-24's Anne and Joseph Perry), shown with the initial ("A. Perry")."""
+    by_house = {"S": [], "H": []}
+    for pid, p in L.people(folder).items():
+        h = L.person_house(p)
+        if h in by_house:
+            by_house[h].append((pid, p))
+    norm = lambda s: re.sub(r"[^a-z ]", "", re.sub(r"[-.]", " ", (s or "").lower())).split()
+    seats = _seats(session)
+
+    def find(h, name, place=""):
+        words = [w for w in norm(name) if w not in ("jr", "sr", "ii", "iii", "iv")]
+        hits = [(pid, p) for pid, p in by_house.get(h, []) if norm(p.get("last_name")) and
+                words[-len(norm(p.get("last_name"))):] == norm(p.get("last_name"))]
+        if not hits and words:
+            # A name written shorter on the page: "Tiffany Roberts" for LegiScan's "Roberts-Lovell" (first name too).
+            hits = [(pid, p) for pid, p in by_house.get(h, []) if words[-1] in re.split(r"[- ]", (p.get("last_name") or "").lower())
+                    and words[0] in {w for x in ("first_name", "nickname") for w in norm(p.get(x))[:1]}]
+        if len(hits) > 1:
+            firsts = {words[0]} if words else set()
+            hits = [(pid, p) for pid, p in hits if {w for x in ("first_name", "nickname") for w in norm(p.get(x))[:1]} & firsts] or \
+                   [(pid, p) for pid, p in hits if words and norm(p.get("first_name"))[:1] and norm(p.get("first_name"))[0][:1] == words[0][:1]]
+        if len(hits) != 1:
+            # The tribal representatives (no district, no floor vote; LegiScan's people may lack them: Brian Reynolds of the
+            # Houlton Band of Maliseet Indians, 2025-26) sit on committees and sign reports: members with no seat.
+            if h == "H" and re.search(r"\b(?:Tribe|Nation|Band|Indians?)\b", place or ""):
+                return f"H|{name.split()[-1]}"
+            return f"{h}?{name}"
+        pid, p = hits[0]
+        last = L.text(p.get("last_name"))
+        twins = sum(1 for _, q in by_house[h] if norm(q.get("last_name")) == norm(last))
+        shown = f"{name[:1]}. {last}" if twins > 1 else last
+        seat = seats.get(pid)
+        return f"{seat}|{shown}" if seat and seat[0] == h else f"{h}|{shown}"
+    return find
+
+
+def add_reports(session, recs, index):
+    """Each divided committee report's signers (data/me/reports.json, read by states/me/reports.py) as a vote of kind "R":
+    [house, "R", committee, day, signed for passing, signed Ought Not to Pass, [[signer, wording], ...]]. Signatures, not a
+    roll call: never counted as votes. The committee is joint; the record's house is the one the report goes back to (the
+    house that referred the bill, as the "Reported Out" step), and each signer is matched within the house the page names
+    ("Senator ...", "Representative ..."), so senators carry Senate seats and representatives House seats."""
+    global _REPORTS
+    if _REPORTS is None:
+        _REPORTS = L.read_json(os.path.join(P.DATA, "reports.json"), {}) or {}
+    mine = _REPORTS.get(str(session)) or {}
+    if not mine:
+        return
+    folder = RULES.session_folders()[session]
+    find = signers(folder, session)
+    for b in L.bills(folder):
+        if not RULES.include(b):
+            continue
+        x = mine.get(L.number(b["bill_number"])[2:]) or {}
+        day = x.get("day")
+        i = index.get(RULES.number(b))
+        if not x.get("reports") or not day or i is None:
+            continue
+        hist = b.get("history") or []
+        lines = RULES.decode_line_all(b)
+        at = [j for j, a in enumerate(hist) if (a.get("date") or "")[:10] == day and re.match(r"Reported Out:", L.text(a.get("action")), re.I)]
+        house = next((s[0] for j in at for s in lines[j] if s[0] in HOUSE), None) or \
+            (b.get("body") if b.get("body") in HOUSE else "H")
+        committee = re.sub(r"^Joint ", "", RULES.hearing_committee(b, {"date": day}) or "") or None
+        names = [[find(h, name, place), report_wording(words, label)] for label, words, people in x["reports"] for h, name, place, _ in people]
+        yes = sum(len(ps) for _, w, ps in x["reports"] if re.match(r"Ought To Pass", w, re.I))
+        no = sum(len(ps) for _, w, ps in x["reports"] if re.match(r"Ought Not To Pass", w, re.I))
+        recs[i]["votes"].append([house, "R", committee, day, yes, no, names])
+        recs[i]["votes"].sort(key=lambda v: v[3] or "")
 
 
 def agendas(session):

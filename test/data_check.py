@@ -41,7 +41,7 @@ def check(state):
     C = importlib.import_module(f"states.{state}.convert")
     print(f"== {P.STATE_NAME}")
     loaded = {s: C.load_session(s)[0] for s in importlib.import_module("states.window").shown(P.DATA, C.sessions())}
-    # Committee reports' signatures (AK, WA: votes of kind "R") aren't votes: the vote checks below never see them.
+    # Committee reports' signatures (AK, WA, ME: votes of kind "R") aren't votes: the vote checks below never see them.
     # Each signer is a seat ("H:12|Carrick"), a member with no seat now ("S|Hughes"), or no member of the committee's
     # house ("H?Name"), which is the name read wrongly (or a list split wrongly).
     for s, recs in loaded.items():
@@ -57,6 +57,17 @@ def check(state):
                 f"not matched to a member of the house{f', e.g. {collections.Counter(m for _, m in loose).most_common(4)}' if loose else ''}")
             if bad:
                 say(state, "FAIL", f"{s}: {len(bad)} committee reports with no committee, day or signers, e.g. {bad[:4]}")
+            # A signer named twice on one report (a list read twice, two members matched to one seat), and reports dated a
+            # day the bill's history has no line on (ME's bill pages show only the latest report's division: LD 1343 of
+            # 2025-26 was divided in May 2025 and again in February 2026, so a page's signers belong to its latest report).
+            twice = sorted({n for n, v in reps if len({m for m, _ in v[6]}) < len(v[6])})
+            if twice:
+                say(state, "FAIL" if len(twice) > 0.005 * len(reps) else "LOOK",
+                    f"{s}: {len(twice)} committee reports naming a signer twice, e.g. {twice[:4]}")
+            days = {r["nums"][0]: {a[0] for x in r["vers"] for a in x["actions"]} for r in recs if r["reports"]}
+            off = sorted({n for n, v in reps if str(v[3])[:10] not in days.get(n, set())})
+            if off:
+                say(state, "LOOK", f"{s}: {len(off)} committee reports on a day with no history line, e.g. {off[:4]}")
 
     # The shared topics, with the shared names.
     mine = {k: v[0] for k, v in P.TOPICS.items()}

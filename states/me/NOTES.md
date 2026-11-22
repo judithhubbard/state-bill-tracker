@@ -68,3 +68,29 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   been checked by the owner.
 - **Committee agendas (2026-11-22):** from each bill's LegiScan `calendar` (its hearings: date, time, room, description), read with the bill (no queries of their own): `agendas()` calls legiscan_convert.agendas() (states/LEGISCAN.md). Today's and later meetings only. LegiScan's calendar has no cancellations; an entry dropped from a notice goes when the bill is next read, which within the daily getBill allowance can be hours after the change. Maine's entries say only "Hearing": the committee is the one the bill was last referred to by that day (`Maine.hearing_committee()`: its history's referral lines, else LegiScan's referrals), named "Joint ...". Tested against 2026's saved calendars (128 bills, all matched). January check: work sessions appear too, not only public hearings.
 - **Veto messages (looked into 2026-11-22; not read):** the governor's Veto Messages page (maine.gov/governor/mills/official_documents/veto_messages) lists the letters, but www.maine.gov answered 403 to the letters' PDFs (LD 958, LD 1228) for a plain bot User-Agent: dropped, not worked around.
+- **Committee reports' signers (2026-11-22):** Maine's joint committees report unanimously (the report names no one, and
+  the committees' rosters aren't in the data: left out) or in a divided report, whose signers the bill page's "Divided
+  Reports" box lists (display_ps.asp?LD=307&snum=132, #sec9: "A - Ought To Pass As Amended", "Senator Mark Lawrence of
+  York, Chair", ...; MAJ/MIN for two reports, A, B, C ... for more; "Referred" is a report sending it to another
+  committee). robots.txt, re-read 2026-11-22: "User-agent: * / Disallow: /bills/default_ps.asp / Disallow:
+  /legis/bills/default_ps.asp / Disallow: /bills/search_ps.asp / Disallow: /legis/bills/search_ps.asp / Disallow:
+  /LawMakerWeb / Disallow: /legis/LawMakerWeb" (no crawl delay). `states/me/reports.py` (after laws.py in the LegiScan
+  job, at most 6 minutes a run, 1.5 s apart, laws.py's slow-site rules) reads only bills whose latest LegiScan "Reported
+  Out:" line has a slash ("OTP-AM/ONTP": 849 of 2025-26, 844 of 2023-24), each once for that report's day (again once a
+  day for a month while the page shows no division yet), into data/me/reports.json; the first copy, about 1,700 pages, fills
+  in over about ten runs. The page shows only the latest report's division ("Latest Committee Report: Feb 27, 2026; IFW,
+  MAJ: ..."; LD 1343 of 2025-26 was divided in May 2025 and again in February 2026; LD 1745 of 2023-24's divided referral
+  report is gone once the second committee reported unanimously), so signers are kept only when the page's latest report
+  is LegiScan's divided one. `add_reports()` in convert.py adds each as a vote of kind "R" ([house, "R", committee, day,
+  signed Ought to Pass (as amended), signed Ought Not to Pass, [[signer, "Ought to Pass as Amended (majority)"], ...]],
+  wording with "(majority)", "(minority)" or "(report B)", since two reports can both be "Ought to Pass as Amended" with
+  different amendments), shown in History as the committee's report and never counted as votes. The record's house is
+  the one the report goes back to (the house that referred the bill, as the "Reported Out" step), so the line reads
+  "House Judiciary Committee report"; each signer is matched within the house the page names (Senator / Representative)
+  among LegiScan's people of the session: seats ("S:29|Carney") in the current session, "H|Name" in earlier ones. Traps:
+  names written shorter than LegiScan's (the page's "Tiffany Roberts" is "Roberts-Lovell": the last word of the name and
+  the first name); a last name two members of a house share (2023-24's Anne and Joseph Perry, Rebecca and Sawin Millett;
+  2025-26's Boyer, White, Wood: told apart by first name, shown "A. Perry"); a tribal representative LegiScan's people
+  lack (Brian Reynolds of the Houlton Band of Maliseet Indians, 2025-26: "H|Reynolds"). Tested on 31 pages (12 of
+  2023-24, 19 of 2025-26; 374 signatures, all matched); data_check.py counts unmatched signers, signers named twice on one
+  report, and reports dated a day the history has no line on.

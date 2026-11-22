@@ -65,7 +65,7 @@ download.yml (GitHub, every 2 h)       publish.yml (after each quick-lane downlo
   `C.agendas(session)` and `C.parties()`.
 - A record is a dict with `nums`, `title`, `summary`, `stage` (0-6, `stages.py`), `comm`, `vers` (each version's
   actions), `keyDates`, `votes` (`[house, kind, committee, day, yes, no, [[member, code], ...]]`: kind "F" floor, "C"
-  committee; "R" a committee report's signatures, AK and WA, code the recommendation's wording: shown in History by
+  committee; "R" a committee report's signatures, AK, WA and ME (divided reports), code the recommendation's wording: shown in History by
   `reportLine()`, never counted as a vote), `topics`, `narrow`, `shell`, `budget`, `ballot`, `chapter`, `prev` ... The stage is
   decided here, from the history: this is where most "wrong status" bugs live.
 - Shared converters: `states/legiscan_convert.py` (`Rules`, `load_session(Rules, session)`; each LegiScan state
