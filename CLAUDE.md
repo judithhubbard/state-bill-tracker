@@ -448,6 +448,12 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   - Page wording built from written-out lines: billfacts.js's `plainAction()` turned Congress's "Referred to the Committee
     on ..." into "Referred to the The Committee On ... Committee" in every status row; Maine's own lines say "the The
     Majority ... Report". The check fails on "the the" in history lines.
+  - (2026-11-22) An aggregator's hearing list that keeps canceled hearings and names the wrong committee: LegiScan's
+    Tennessee `calendar` field kept 218 hearings of 2025-26 after the bill was taken off notice or the meeting canceled, and
+    named the wrong committee on 1,021 of 6,985 (mostly "Senate Revenue Subcommittee of Finance, Ways & Means"); Rhode
+    Island's kept hearings the history postpones. The bill's own history ("Placed on s/c cal ... for 3/18/2026", "Taken off
+    notice") decides (states/legiscan_convert.py's `history_meetings()` hook). Look in histories for announced meetings when a
+    state's agenda source is missing or weak (Tennessee's House hearings were only there).
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.
