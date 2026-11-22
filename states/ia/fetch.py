@@ -72,7 +72,8 @@ A first copy (about 5,700 bill histories, 5,700 texts, 1,900 study bills and 2,4
 Assemblies, plus about 450 member and committee pages) is about 16,000 requests: about 28 hours at one every 6 seconds,
 so a day or two of runs (two-hour runs every two hours; fewer if the bot check cuts runs short). The histories, members
 and committees come first (about 5,800 requests, 10 hours: what the marker waits for); then roll calls, texts and
-study bills. After
+study bills. Since 2026-11-22 a few texts (EARLY_TEXTS, laws first) go before the histories' backfill each run, since
+the bot check's cut left no requests for them. After
 that, out of session, a run is a few requests (the lists); during a session, the bills that moved and their votes.
 
 Not downloaded: leaders (only under /chambers/, which robots.txt bars); fiscal notes, the governor's letters on vetoes and
@@ -407,15 +408,25 @@ def explanation(page):
     return {"by": " ".join(by), "explanation": "\n\n".join(paras)}
 
 
-def texts(ga, folder, state):
-    """The explanation from each bill's introduced text, once (a 404 is asked again a week later)."""
+LAWISH = re.compile(r"Signed by Governor|Secretary of State|[Ii]tem veto|without signature|Vetoed", re.I)
+
+
+def texts(ga, folder, state, limit=None):
+    """The explanation from each bill's introduced text, once (a 404 is asked again a week later): laws and vetoes
+    first, then the bills that moved most recently (the list's last action). `limit`: at most that many this call (a
+    few go early in each run, before the backfill of histories takes the rest of what the bot check allows)."""
     listing = load(os.path.join(folder, "list.json")) or {}
-    keys = [k for k in listing.get("bills") or {} if re.match(r"[A-Z]+", k).group(0) in BILLS]
+    entries = listing.get("bills") or {}
+    keys = [k for k in entries if re.match(r"[A-Z]+", k).group(0) in BILLS]
+    keys.sort(key=lambda k: (not LAWISH.search((entries[k] or {}).get("last") or ""),
+                             "".join(chr(0x10FFFF - ord(c)) for c in (entries[k] or {}).get("date") or "")))
     os.makedirs(os.path.join(folder, "texts"), exist_ok=True)
     gone = state.setdefault("texts_absent", {})
     todo = [k for k in keys if not os.path.exists(os.path.join(folder, "texts", f"{k}.json")) and stale(gone.get(k))]
     if not todo:
         return
+    if limit is not None:
+        todo = todo[:limit]
     print(f"{ga} texts: {len(todo)} to read", flush=True)
     got = 0
     for k in todo:
@@ -782,6 +793,9 @@ def never_downloaded(gas, begun):
     return out
 
 
+EARLY_TEXTS = 8  # texts read each run before the histories' backfill (about 45 requests a run get through the bot check)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     # Before the first copy, a run cut off without its summary leaves this, so a partial copy isn't published.
@@ -812,6 +826,11 @@ def main():
         if ga_of(YEAR) in gas and not out_of_time():
             members(ga_of(YEAR))
             committees(ga_of(YEAR))
+        # A few texts ("What it does") before the backfill (2026-11-22): it used to take every request the bot check
+        # left, so no text was ever read. The current General Assembly's laws first.
+        for ga in listed[:1]:
+            if not out_of_time():
+                texts(ga, os.path.join(DATA, str(first_year(ga))), states[ga], limit=EARLY_TEXTS)
         for ga in listed:
             if not out_of_time():
                 histories(ga, os.path.join(DATA, str(first_year(ga))), states[ga], BILLS, "bills", backfill=True)

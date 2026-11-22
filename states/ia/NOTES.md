@@ -72,3 +72,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   assignments, committee tallies, amendments filed, sponsors added) are left out of the history, and dating by them left
   523 of 2025-26's status rows with a date and no wording (HF 29: 2026-04-20 "Subcommittee: Wulf, Gjerde and Meggers",
   now 2025-01-14 "REFERRED TO WAYS AND MEANS").
+- **Texts before the backfill (2026-11-22):** the bot check ends each GitHub run after about 45 requests, and the
+  histories' backfill took all of them, so fetch.py never reached the texts (the LSA's explanations, "What it does"). Now
+  `main()` reads EARLY_TEXTS (8) texts of the current General Assembly each run right after the bills that moved and the
+  members, before the backfill: laws and vetoes first (the list's last action), then the bills that moved most recently.
+  About 380 laws and vetoes of 2025-26: a few days of runs. Not run from the owner's computer; shows as the runs read them.
