@@ -49,3 +49,5 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   list plus one request per meeting (about 80 in a busy three weeks, 0.6 s apart). A failure keeps the last file.
   Tested 2026-11-22 with the date set to 2026-02-02: 189 bills on 79 meetings, every key matched a record; live today
   (no meetings). Not yet seen: a cancelled meeting in the window, and next session's first December meetings.
+- This year's session (or next year's) is shown from its first bill (`sessions()` in convert.py, 2026-11-22; older ones
+  need more than 100); the API lists 2027 with its legislators and committees but no bills yet (2026-11-22).

@@ -52,3 +52,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   item vetoes on SB 2015 and HB 1544; 2025-26 608 laws (597 with chapters, 11 special-session), 4 vetoes (HB 1540, SB 2160,
   SB 2261, SB 2307; all sustained), item vetoes on 6 budgets. Places (`towns.py`, run once): cities, Census-designated
   places and counties, one district list for both houses.
+- **The next session's bills (checked 2026-11-22):** `fetch.py` reads every assembly assemblies.json lists, and an assembly listed with no bills file yet (a 404) is noted absent, without a folder; the 70th (2027) wasn't listed on 2026-11-22. Its prefiled bills appear from the organizational session in December; before it convenes (`begun()`) nothing of it holds North Dakota off the site.

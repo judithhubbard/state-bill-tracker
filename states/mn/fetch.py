@@ -622,9 +622,14 @@ def house_votes(s, folder, state):
 
 # ---- members and committees ------------------------------------------------------------------------------------
 
+# Members are read weekly, but daily in a new Legislature's first January, so its members replace the last one's
+# (which the sites list until it's sworn in) within a day.
+MEMBERS_DAYS = 1 if TODAY.month == 1 and TODAY.year % 2 else WEEK
+
+
 def house_members(folder, state):
     path = os.path.join(folder, "members_house.json")
-    if os.path.exists(path) and not stale_after(state.get("members_house"), WEEK):
+    if os.path.exists(path) and not stale_after(state.get("members_house"), MEMBERS_DAYS):
         return
     page = text_of(request(f"{HOUSE}/members/list", "House members")) or ""
     part = page.split('id="Alpha"', 1)[-1].split('id="District"', 1)[0]
@@ -650,7 +655,7 @@ def house_members(folder, state):
 
 def senate_members(folder, state):
     path = os.path.join(folder, "members_senate.json")
-    if os.path.exists(path) and not stale_after(state.get("members_senate"), WEEK):
+    if os.path.exists(path) and not stale_after(state.get("members_senate"), MEMBERS_DAYS):
         return
     try:
         d = json.loads(request(f"{SENATE}/api/members", "Senate members") or b"")
@@ -1078,6 +1083,21 @@ def missing(s):
     return out
 
 
+def holds(s):
+    """Whether what's missing of a session may hold Minnesota off the site: not before it convenes, nor a new
+    Legislature's before a bill of it is on file (a list search that failed once makes its folder) or in its first
+    January (bills come in daily and are read on later runs, while the last Legislature stays on the site)."""
+    if not begun(s) or not os.path.isdir(folder_of(s)):
+        return False
+    if s["ls"] >= CURRENT_LS:
+        bills = os.path.join(folder_of(s), "bills")
+        if not (os.path.isdir(bills) and os.listdir(bills)):
+            return False
+        if s["year"] == TODAY.year and TODAY.month == 1:
+            return False
+    return True
+
+
 def has_bills(s):
     """Whether a session not yet downloaded has numbered bills."""
     for ftype in ("HF", "SF"):
@@ -1162,7 +1182,7 @@ def main():
         for folder, state, lst in ctx.values():
             save(state, os.path.join(folder, "state.json"))
             save(lst, os.path.join(folder, "list.json"))
-    gaps = [g for s in seen if begun(s) for g in missing(s) if os.path.isdir(folder_of(s))]
+    gaps = [g for s in seen if holds(s) for g in missing(s)]
     if not seen:
         gaps.append("sessions")
     counts = {k: v for k, v in STATS.items() if k != "requests"}

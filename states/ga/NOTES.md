@@ -33,3 +33,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   source is www.legis.ga.gov/schedule/all, the same gated schedule. The API returns only recent and upcoming events
   (none before about November 2026 for any state tried, CA and NY included), and events carry no "created" time, so how
   far ahead meetings appear and how many name bills can only be learned by polling it during a session.
+- **The next session's bills (2026-11-22):** from November of an even year `main()` also reads the next session once the Session service lists it (GetSessions; 2027-2028 not listed on 2026-11-22), one list request a run; its folder is made only when the list has an HB or SB (bills are prefiled after the general election), `sessions()` shows a session after the current one from its first bill (others need 100), and a session that hasn't convened (`begun()`: the second Monday of January) never marks Georgia incomplete.

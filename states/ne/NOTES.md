@@ -60,3 +60,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   counties with their districts, one list (New Jersey's shape: a district has one senator). The governor's contact page and
   phone ((402) 471-2244) are from governor.nebraska.gov (checked by program 2026-11-13, not by the owner); Pillen ran again
   in November 2026: if a new governor takes office in January 2027, add them to `GOVERNORS` and legislatures.json.
+- **Next Legislature (2026-11-22):** Nebraska has no prefiling: the 110th's bills (LB 1 on) come from its first day,
+  January 6, 2027. fetch.py starts the new Legislature on January 5 (one search for LB 1 a run until it's there); a
+  Legislature with LB 1 looked up and not found yet doesn't hold the state back, and convert.py's `sessions()` shows it
+  from its first bill page.

@@ -72,3 +72,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   assignments, committee tallies, amendments filed, sponsors added) are left out of the history, and dating by them left
   523 of 2025-26's status rows with a date and no wording (HF 29: 2026-04-20 "Subcommittee: Wulf, Gjerde and Meggers",
   now 2025-01-14 "REFERRED TO WAYS AND MEANS").
+- A General Assembly of this year or later is shown from its first bill (`sessions()` in convert.py, 2026-11-22; older
+  ones need more than 500), so the 92nd's prefiled bills show as they're read (about 43 a run); its disposition lists
+  weren't up on 2026-11-22 ("92: not listed yet").

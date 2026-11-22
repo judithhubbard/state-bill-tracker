@@ -81,3 +81,5 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   left out) and, with 2025's bills in committee, 189 bills; March 31, 2025, 2 meetings, 41 bills. January check: the
   log's "house schedule: N House committee meetings", and that names match (a schedule name no bill's committee matches
   simply attaches to nothing).
+- This year's session (or next year's) is shown from its first bill history (`sessions()` in convert.py, 2026-11-22;
+  older ones need more than 100); 2027's allmsrs.xml answered 404 on 2026-11-22.

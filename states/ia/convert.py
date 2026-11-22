@@ -121,8 +121,10 @@ def sessions():
         return _CACHE["sessions"]
     out = []
     for f in sorted(os.listdir(P.DATA)) if os.path.isdir(P.DATA) else []:
+        # A General Assembly of this year or later counts from its first bills (prefiled ones); an older one from 500.
         if re.fullmatch(r"\d{4}", f) and int(f) % 2 and len(glob.glob(os.path.join(P.DATA, f, "openstates", "*.json"))
-                                                              + glob.glob(os.path.join(P.DATA, f, "bills", "*.html"))) > 500:
+                                                              + glob.glob(os.path.join(P.DATA, f, "bills", "*.html"))) \
+                > (0 if int(f) >= datetime.now().year else 500):
             out.append(int(f))
     _CACHE["sessions"] = out
     return out

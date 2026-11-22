@@ -41,3 +41,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   by convert.py: no tallies, no member's vote). At about 850 votes a run, the floor votes (about 1,600-1,800 a year) take
   about two runs a year. data_check.py fails on a session where under a fifth of the bills that passed a house have a
   floor vote.
+- This year's session (or a later one) is shown from its first bill (`sessions()` in convert.py, 2026-11-22; older ones
+  need more than 300), so 2027 shows from the day bills are introduced; the bill search had no "2027 Regular Session" on
+  2026-11-22.

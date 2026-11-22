@@ -44,8 +44,10 @@ def folder(session):
 
 
 def sessions():
+    # This year's and next year's sessions show from their first numbered bill (December's, before the session); an
+    # older year once it's mostly there.
     return sorted(int(os.path.basename(f)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4))
-                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > 500)
+                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > (0 if int(os.path.basename(f)) >= CURRENT else 500))
 
 
 def text(x):

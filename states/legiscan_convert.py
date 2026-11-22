@@ -61,13 +61,17 @@ def read_json(path, default=None):
 
 
 def folders(data_dir):
-    """{first year: folder} for each regular session downloaded with at least 100 bills."""
+    """{first year: folder} for each regular session downloaded with at least 100 bills, or with any bills when it
+    starts this year or later (the next Legislature's prefiled bills, a session's first weeks)."""
     out = {}
+    from datetime import date
+    this_year = date.today().year
     for f in glob.glob(os.path.join(data_dir, "legiscan", "*", "meta.json")):
         meta = read_json(f, {}) or {}
         s = meta.get("session") or {}
         folder = os.path.dirname(f)
-        if s.get("special") or len(glob.glob(os.path.join(folder, "bill", "*.json"))) < 100:
+        least = 1 if int(s.get("year_start") or 0) >= this_year else 100
+        if s.get("special") or len(glob.glob(os.path.join(folder, "bill", "*.json"))) < least:
             continue
         out[int(s["year_start"])] = folder
     return dict(sorted(out.items()))

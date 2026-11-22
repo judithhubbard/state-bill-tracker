@@ -33,8 +33,10 @@ def folder(session):
 
 
 def sessions():
+    """The years with bills and members; this year's and next year's session (prefiled bills) from their first bill."""
     return sorted(int(os.path.basename(f)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4))
-                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > 100 and os.path.exists(os.path.join(f, "members.json")))
+                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > (0 if int(os.path.basename(f)) >= CURRENT else 100)
+                  and os.path.exists(os.path.join(f, "members.json")))
 
 
 def text(x):

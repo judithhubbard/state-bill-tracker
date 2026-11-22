@@ -35,3 +35,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (`rc_key()`: "senate_...", "house_..."); the old files are matched by the link they hold, and each run reads the roll
   calls that bill pages already read list but that aren't saved, without reading the bill page again. data_check.py's
   "split floor votes naming members" check compares the houses.
+- **Next session (2026-11-22):** bills are introduced only once a session convenes (January 5, 2027); its bill history
+  file answers 404 until then. From January fetch.py asks for it every run; a missing or bill-less file doesn't hold
+  Pennsylvania back until March 1, and the session just ended is read again until February 1.

@@ -134,8 +134,20 @@ def texts():
         print(f"texts_{s}.json: {len(out)} synopses")
 
 
+def contacts_session():
+    """The session whose contacts to build: the current one once its Assembly's member lists are on file. In January of
+    an odd year the new Assembly's bills (prefiled from December) come before its member lists, and contacts.py can't
+    read lists that aren't there: until they are, the last Assembly's contacts are refreshed and the new session's
+    page is built without legislators (build_data.py allows that when it has no contacts file)."""
+    for s in (CURRENT, CURRENT - 2):
+        ga = P.assembly_of(s)
+        if all(os.path.exists(os.path.join(P.DATA, str(ga), f"{ga}{h}Members.xml")) for h in ("House", "Senate")):
+            return s
+    return CURRENT
+
+
 if __name__ == "__main__":
     main()
     from states.il import contacts  # from the member and committee files just downloaded
-    contacts.main(CURRENT)
+    contacts.main(contacts_session())
     texts()

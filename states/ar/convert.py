@@ -68,7 +68,8 @@ def sessions():
         for s in (b, b + 1):
             sid = P.session_id(s)
             n = sum(1 for r in rows(b, "LegislativeMeasures.txt") if len(r) >= 18 and r[17] == sid and r[1] == "B")
-            if n + len(page_bills(s)) > 100:
+            # This year's session (or next year's, prefiled) counts from its first bills; an older one from 100.
+            if n + len(page_bills(s)) > (0 if s >= datetime.now().year else 100):
                 out.append(s)
     return tuple(sorted(out))
 

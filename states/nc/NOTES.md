@@ -31,3 +31,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   against June 2025's page (141 bills on 71 meetings; 135 matched records, the other 6 confirmation and honorary
   resolutions, which aren't kept); the live page has no committee meetings now (November 2026). The current calendar
   page (/LegislativeCalendar/) only lists what's ahead; month pages were used so a meeting from yesterday still shows.
+- **Next session (2026-11-22):** the 2027 All Bills feed already answers, with no items (no prefiling: bills are filed
+  after the session convenes, January 13, 2027). An empty feed for the current session doesn't hold the state back,
+  convert.py's `sessions()` shows it from its first bill (past sessions still need over 1,000), and the session just
+  ended has the bills whose feed entry changes read again until February 1.

@@ -51,17 +51,30 @@ def save(path, data):
     os.replace(path + ".tmp", path)
 
 
+def has_bills(data):
+    """Whether a bill history zip lists at least one bill (a new session's file may exist before any bill does)."""
+    try:
+        z = zipfile.ZipFile(io.BytesIO(data))
+        return b"<bill" in z.read(z.namelist()[0])
+    except (zipfile.BadZipFile, IndexError, KeyError):
+        return False
+
+
 def history(session):
     """The session's bill history file; returns the parsed bills (or None)."""
     path = os.path.join(DATA, f"billhistory_{session}_0.zip")
-    if session >= CURRENT or not os.path.exists(path):
+    # The session just ended is read again until February (the governor's last actions on it).
+    ending = session == CURRENT - 2 and date.today() < date(CURRENT, 2, 1)
+    if session >= CURRENT or ending or not os.path.exists(path):
         data = get(f"{SITE}/data/file?documentType=BillHistoryData&session={session}_0", binary=True)
-        if data and data[:2] == b"PK":
+        if data and data[:2] == b"PK" and has_bills(data):
             open(path + ".tmp", "wb").write(data)
             os.replace(path + ".tmp", path)
         else:
-            print(f"{session}: no bill history file; kept the last copy")
-            if not os.path.exists(path):  # only a file never downloaded holds the state off the site
+            print(f"{session}: no bill history file (or no bills in it yet); kept the last copy")
+            # Only a file never downloaded holds the state off the site, and not a new session's in its first two
+            # months (the file answers 404 until the session has bills; bills are introduced only once it convenes).
+            if not os.path.exists(path) and not (session == CURRENT and date.today() < date(session, 3, 1)):
                 INCOMPLETE.add(session)
     if not os.path.exists(path):
         return None

@@ -40,11 +40,13 @@ _NEWEST = []
 
 
 def newest():
-    """The year whose files are in the top folder (read once)."""
+    """The year whose files are in the top folder (read once); 0 when its bill_info has a header and no bills (a new
+    session before its first bill: every year is then read from the archive, so an empty top folder never overwrites
+    the last session's files)."""
     if not _NEWEST:
         top = curl(f"{FTP}/bill_info.csv") or b""
         m = re.search(rb'"\w+","\d+","(\d{4})"', top)
-        _NEWEST.append(int(m.group(1)) if m else YEAR)
+        _NEWEST.append(int(m.group(1)) if m else 0 if b"bill_num" in top[:200] else YEAR)
     return _NEWEST[0]
 
 
@@ -121,8 +123,13 @@ def flat_year(y, folder):
 
 def year(y):
     folder = os.path.join(P.DATA, str(y))
-    os.makedirs(folder, exist_ok=True)
     newest_ = newest()
+    if newest_ and y > newest_:
+        # A year the server doesn't have yet (January before the top folder moves on to the new session): no folder,
+        # no requests; the newest year keeps being read from the top folder until then.
+        print(f"{y}: not on the server yet (its top folder is still {newest_})")
+        return
+    os.makedirs(folder, exist_ok=True)
     # A flat year: the archive lists its flat files, or (when the listing failed) the folder already holds them.
     flat_here = os.path.exists(os.path.join(folder, "LegislatorData.csv")) and not os.path.exists(
         os.path.join(folder, "comm_ref.csv"))
@@ -252,7 +259,8 @@ def agendas(y):
 
 
 def main():
-    for y in range(FIRST, YEAR + 1):
+    # Through the new session's year, or the year the top folder holds when it moves on before January 1.
+    for y in range(FIRST, max(YEAR, newest()) + 1):
         year(y)
     texts()
     try:

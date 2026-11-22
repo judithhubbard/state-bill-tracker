@@ -247,8 +247,11 @@ def never_downloaded(ids):
         out.append("people")
     starts = load(os.path.join(DATA, "sessions.json"), {}).get("starts", {})
     for year in range(FIRST, YEAR + 1):
-        if year == YEAR and (year not in ids or starts.get(str(year), "") > TODAY.isoformat()):
-            continue  # the session isn't listed yet, or hasn't begun (its bills are read but don't hold Hawaii back)
+        if year == YEAR:
+            # The current year's first copy never holds Hawaii back: before it's listed, before it begins, or in its
+            # first weeks (a pass cut short by the quota resumes next run; the converter shows a new Legislature only
+            # once a pass over it is whole, and the last one stays current until then).
+            continue
         if not (load(os.path.join(DATA, str(year), "state.json")) or {}).get("complete"):
             out.append(f"{year}:first copy")
     return out

@@ -86,8 +86,10 @@ def session_dir(session):
 
 
 def sessions():
+    # A session of this year or later counts from its first bills; an older one once it has more than 1,000.
     return sorted(int(os.path.basename(f)[:4]) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4 + "-" + "[0-9]" * 4))
-                  if len(glob.glob(os.path.join(f, "*", "*.xml"))) > 1000)
+                  if len(glob.glob(os.path.join(f, "*", "*.xml")))
+                  > (0 if int(os.path.basename(f)[:4]) >= datetime.now().year else 1000))
 
 
 def text(x):

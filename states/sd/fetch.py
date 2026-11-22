@@ -136,7 +136,7 @@ def session(year, sid):
     index = status = None
     if live or not (os.path.exists(paths["bills"]) and os.path.exists(paths["status"])):
         index = get(f"Bills/Session/{sid}")
-        if index == [] and year > YEAR:
+        if index == [] and (year > YEAR or not begun(year)):  # next year's, or this year's before it convenes
             print(f"{year}: no bills yet")
             return
         status = get(f"Bills/BillStatus/{sid}", timeout=600) if index else None

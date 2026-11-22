@@ -15,3 +15,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Bills filed before the session "by order of the President" have no member sponsor: the "at the request of" field names
   who asked. Joint committees (Ways and Means) are listed for both houses. Governor 5 weekdays, or 30 business days after
   adjournment. Separate Senate (30) and House (60) districts by city or county.
+- **The next session's bills (2026-11-22):** from November `main()` asks the API once a run for one measure of next year's session (Measures, `$top=1`) and reads its tables, into data/or/<year>R1/, only once one is there (2025's pre-session filed measures were created 2024-12-31; 2027R1 wasn't in LegislativeSessions on 2026-11-22). The fetcher writes no incomplete marker.

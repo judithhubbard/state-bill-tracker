@@ -73,3 +73,4 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   API for February 17 to March 10, 2026 (97 meetings, 179 bills): all 233 numbers match records. The live pages had only
   interim commissions (14 meetings, no bills). Untested live: the House's /Schedules/All with a session's worth of
   meetings (size), and special-session numbering.
+- **The next Legislature (2026-11-22):** Minnesota has no prefiled bills; the Revisor lists session 0952027 already, with no bills (2026-11-22). fetch.py asks for its first bills each run (`has_bills()`, two searches) and makes its folder only then; a new Legislature with no bills on file, or in its first January, never holds Minnesota off the site (`holds()`), and members are read daily that January (`MEMBERS_DAYS`) so the new members replace the old within a day of the swearing-in (January 12, 2027).

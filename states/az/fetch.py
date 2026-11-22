@@ -85,6 +85,13 @@ def begun(year):
 
 def session(year, sid):
     folder = os.path.join(DATA, str(year), "bills")
+    # A session Open States lists before it has bills (2027's, from 2026-11): one request a run, and no folder until
+    # its first prefiled bill, so no empty session shows.
+    if year > YEAR and not os.path.isdir(folder):
+        d = get("/bills", {"jurisdiction": "az", "session": sid, "per_page": 1})
+        if not (d or {}).get("results"):
+            print(f"{year} ({sid}): no bills prefiled yet", flush=True)
+            return
     os.makedirs(folder, exist_ok=True)
     state_path = os.path.join(DATA, str(year), "state.json")
     try:

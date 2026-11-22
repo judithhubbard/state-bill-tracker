@@ -33,7 +33,9 @@ In session (five running sessions): about 65 fixed queries a day (5 lists + 12 x
 ends near 8,700 at most.
 
 What's kept, per state: the regular sessions (special sessions left out) that end in the shared window's years
-(states/window.py: this year and the four before, not before 2023) and start no later than this year, in data/<st>/legiscan/<session_id>/ with the dataset's own layout:
+(states/window.py: this year and the four before, not before 2023) and start no later than next year (the next
+Legislature's prefiled bills, once LegiScan lists its session: their master list is read once a day until the session
+opens, MASTERLIST_BEFORE), in data/<st>/legiscan/<session_id>/ with the dataset's own layout:
 bill/<bill_number>.json, vote/<roll_call_id>.json, people/<people_id>.json (each as LegiScan gives it: {"bill": ...},
 {"roll_call": ...}, {"person": ...}), plus meta.json (the session, dataset_hash and date, the last master list's time,
 each bill's number, change_hash, when it was last read and the master list's "ml"). data/<st>/incomplete says "running"
@@ -64,6 +66,7 @@ STATES = ("tn", "ok", "me", "ri", "vt")
 MONTHLY_STOP = 9000      # LegiScan's free tier allows 10,000 a month
 PAUSE = 0.6              # seconds between requests
 MASTERLIST_EVERY = 3600  # once an hour per session
+MASTERLIST_BEFORE = 86400  # once a day for a session not yet open (prefiled bills)
 BILL_EVERY = 3 * 3600    # one bill at most every three hours
 PEOPLE_EVERY = 7 * 86400 # once a week
 RUNS_PER_DAY = 12        # download.yml runs every two hours
@@ -220,9 +223,10 @@ def dataset_list(st):
 
 
 def wanted(datasets):
-    """Regular sessions ending in the shared window's years (states/window.py), and starting no later than this year."""
+    """Regular sessions ending in the shared window's years (states/window.py), and starting no later than next year
+    (the next Legislature's prefiled bills, once LegiScan lists its session)."""
     return sorted((d for d in datasets if not int(d.get("special") or 0)
-                   and int(d["year_end"]) >= W.first_year(TODAY) and int(d["year_start"]) <= YEAR),
+                   and int(d["year_end"]) >= W.first_year(TODAY) and int(d["year_start"]) <= YEAR + 1),
                   key=lambda d: -int(d["year_start"]))
 
 
@@ -298,14 +302,15 @@ def allowance():
     nxt = date(today.year + today.month // 12, today.month % 12 + 1, 1)
     days = (nxt - today).days
     sundays = sum(1 for k in range(days) if (today.toordinal() + k) % 7 == 0)  # (toordinal() % 7 == 0: Sunday)
-    sessions = runs = 0
+    sessions = runs = before = 0  # before: sessions not yet open, their master list read once a day
     for st in STATES:
         saved = read_json(os.path.join(SHARED, f"datasetlist_{st}.json")) or {}
         ws = wanted(saved.get("datasetlist") or [])
         sessions += len(ws)
-        runs += sum(1 for d in ws if running(d))
+        runs += sum(1 for d in ws if running(d) and begun(st, d))
+        before += sum(1 for d in ws if running(d) and not begun(st, d))
     reserve = sundays * (sessions + len(STATES))
-    fixed = days * (len(STATES) + RUNS_PER_DAY * runs)
+    fixed = days * (len(STATES) + RUNS_PER_DAY * runs + before)
     each = max(0, (MONTHLY_STOP - MARGIN - start - reserve - fixed) // days)
     how = (f"{MONTHLY_STOP:,} - {MARGIN} margin - {start:,} used before today - {reserve} for {sundays} Sundays - {fixed:,} fixed "
            f"({len(STATES)} lists + {RUNS_PER_DAY} runs x {runs} running sessions, x {days} days), / {days} days")
@@ -339,12 +344,12 @@ MAJOR = re.compile(r"pass|third reading|3rd reading|ayes|yeas|nays|concur|confer
                    r"chapter|public (?:law|act|ch)|became law|adopted|failed|defeated|withdrawn", re.I)
 
 
-def take_masterlist(meta, session_id):
-    """One getMasterList (at most hourly): each bill's change_hash, status, status date and last action, kept in
+def take_masterlist(meta, session_id, every=MASTERLIST_EVERY):
+    """One getMasterList (at most hourly; `every` seconds apart): each bill's change_hash, status, status date and last action, kept in
     meta.json as the bill's "ml" (the converters bring an older saved copy up to date from it: legiscan_convert.bills()).
     Returns False when it wasn't read (within the hour, or a failure)."""
-    if time.time() - meta.get("masterlist_time", 0) < MASTERLIST_EVERY:
-        print("  master list read within the hour; skipped")
+    if time.time() - meta.get("masterlist_time", 0) < every:
+        print("  master list read within the hour; skipped" if every <= 3600 else "  master list read today; skipped")
         return False
     answer = query("getMasterList", id=session_id)
     if answer is None:
@@ -487,8 +492,9 @@ def prepare_state(st, sessions, dry=False):
                 "getDataset x1 (saved list's hash is newer)" if meta.get("dataset_hash") != ds["dataset_hash"] else \
                 "dataset unchanged in the saved list (getDataset only if today's list has a new hash: Sundays)"
             run = running(ds)
-            ml = "" if not run else ("; getMasterList x1" if time.time() - meta.get("masterlist_time", 0) >= MASTERLIST_EVERY
-                                     else "; master list read within the hour")
+            every = MASTERLIST_EVERY if begun(st, ds) else MASTERLIST_BEFORE
+            ml = "" if not run else ("; getMasterList x1" if time.time() - meta.get("masterlist_time", 0) >= every
+                                     else "; master list read recently")
             print(f"  {ds['session_name']} ({sid}, {ds['year_start']}-{ds['year_end']}"
                   f"{', running' if run else ', over'}): {note}{ml}")
             if holds:
@@ -514,7 +520,7 @@ def prepare_state(st, sessions, dry=False):
                 print(f"  dataset unchanged ({ds.get('dataset_date')})")
             # A session over waits for the weekly datasets; the running ones are caught up.
             if running(ds):
-                take_masterlist(meta, sid)
+                take_masterlist(meta, sid, MASTERLIST_EVERY if begun(st, ds) else MASTERLIST_BEFORE)
                 sessions.append((folder, meta, sid))
         finally:
             write_json(meta_path, meta, indent=1)

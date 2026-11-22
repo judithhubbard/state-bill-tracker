@@ -43,7 +43,9 @@ def get(url):
             with urllib.request.urlopen(req, timeout=180) as r:
                 return json.loads(r.read())
         except urllib.error.HTTPError as e:
-            if e.code == 404:
+            # A General Court with nothing public yet (January) answers 400 "Could not locate any public Documents in
+            # General Court "195"." (its members and roll calls likewise): not there, like a 404, not worth retrying.
+            if e.code == 404 or e.code == 400 and b"Could not locate" in e.read()[:500]:
                 return None
             time.sleep(5 * (attempt + 1))
         except Exception:
@@ -59,16 +61,21 @@ def save(path, data):
 def session(session):
     gc = court_of(session)
     folder = os.path.join(DATA, str(session))
-    os.makedirs(os.path.join(folder, "bills"), exist_ok=True)
     docs = get(f"{API}/GeneralCourts/{gc}/Documents")
     if not docs:
         print(f"{session}: no document list; kept the last copy")
-        if not os.path.exists(os.path.join(folder, "documents.json")):  # only a list never read holds the state off
+        # Only a list never read holds the state off; not a new General Court's, which lists nothing until its first
+        # bills are numbered (most in February), while the last court stays on the site.
+        new = session == CURRENT and os.path.exists(os.path.join(DATA, str(session - 2), "documents.json"))
+        if not os.path.exists(os.path.join(folder, "documents.json")) and not new:
             INCOMPLETE.add(session)
         return
+    os.makedirs(os.path.join(folder, "bills"), exist_ok=True)
     bills = {d["BillNumber"]: d for d in docs if (d.get("BillNumber") or "")[:1] in ("H", "S") and d["BillNumber"][1:].isdigit()}
     save(os.path.join(folder, "documents.json"), list(bills.values()))
-    live = session >= CURRENT
+    # The last court too until March 1: its final informal sessions run into the new court's first week of January,
+    # and the governor acts on what they passed in the ten days after.
+    live = session >= CURRENT or session == CURRENT - 2 and date.today() < date(CURRENT, 3, 1)
 
     def one(b):
         path = os.path.join(folder, "bills", f"{b}.json")
@@ -216,7 +223,8 @@ def main():
     from states.ma import contacts
     for s in range(FIRST, CURRENT + 1, 2):
         session(s)
-        rollcalls(s)
+        if os.path.exists(os.path.join(DATA, str(s), "documents.json")):  # (not a new court with nothing listed yet)
+            rollcalls(s)
         if s < CURRENT and not os.path.exists(os.path.join(DATA, str(s), "member_details.json")):
             contacts.details(s)
     try:

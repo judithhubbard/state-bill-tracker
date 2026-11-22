@@ -253,8 +253,9 @@ def agendas(year):
 def sessions():
     """The years of the shared window (states/window.py: this year and the four before, not before 2023), the current
     one first; a year's session from the second Wednesday of January. Each is one file, so a year the window adds back
-    is either there or not, and never holds the state off the site."""
-    return W.years()[::-1]
+    is either there or not, and never holds the state off the site. From November, next year's session first of all:
+    its bill list is there from the autumn, empty ("[]") until bills are prefiled, and is saved once it lists one."""
+    return W.years(ahead=1 if TODAY.month >= 11 else 0)[::-1]
 
 
 def main():
@@ -269,7 +270,10 @@ def main():
             data = json.loads(body) if body else None
         except ValueError:
             data = None
-        if data:
+        if y > TODAY.year and not os.path.exists(path) and not (
+                isinstance(data, list) and any(str(b.get("BillNumber", ""))[:2] in ("HB", "SB") for b in data if isinstance(b, dict))):
+            print(f"{y}: no bills prefiled yet")  # no file (so no empty session shows) until one is listed
+        elif data:
             json.dump(data, open(path + ".tmp", "w"), ensure_ascii=False)
             os.replace(path + ".tmp", path)
             print(f"{y}: {len(data)} bills")

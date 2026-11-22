@@ -39,3 +39,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   re-elected sit until January), else the next session's list (same PersonId), and a missing phone with the member's
   house's switchboard (`SWITCHBOARD`: every member's Capitol phone was one of the two). For 2027, check that list keeps
   its emails through the session.
+- **Next session (2026-11-22):** the API lists next year's session from about November (2027's, SessionId 174, with its
+  members and committees; no bills on 2026-11-22); fetch.py reads it every run and saves it once it has a bill, and an
+  empty list before the session convenes never holds the state back. convert.py's `sessions()` shows this year's and
+  next year's session from its first bill (past years still need over 100).

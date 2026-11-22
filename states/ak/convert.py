@@ -39,8 +39,11 @@ def folder(session):
 
 
 def sessions():
+    # A Legislature of this year or later counts from its first bills (the prefiled ones, before it convenes); an older
+    # one once it has more than 100.
     return sorted(int(os.path.basename(f)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4))
-                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > 100)
+                  if len(glob.glob(os.path.join(f, "bills", "*.json")))
+                  > (0 if int(os.path.basename(f)) >= datetime.now().year else 100))
 
 
 def text(x):

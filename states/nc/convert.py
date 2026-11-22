@@ -26,8 +26,9 @@ def folder(session):
 
 
 def sessions():
+    """Past sessions with their bills; the current (or a next) session from its first bill."""
     return sorted(int(os.path.basename(f)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4))
-                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > 1000)
+                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > (0 if int(os.path.basename(f)) >= CURRENT else 1000))
 
 
 def text(x):

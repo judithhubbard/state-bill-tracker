@@ -81,7 +81,10 @@ def sessions():
     out = set()
     for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4)):
         y = int(os.path.basename(f))
-        if len(glob.glob(os.path.join(f, "bills", "*.json"))) > 500:
+        n = len(glob.glob(os.path.join(f, "bills", "*.json")))
+        # A bulk import's partial first copy shows once it's big; a new Legislature's first year as soon as fetch.py's
+        # first pass over it is whole and has a bill (January: a few hundred bills a day).
+        if n > 500 or (n and (load(os.path.join(f, "state.json")) or {}).get("complete")):
             out.add(P.session_of(y))
     _CACHE["sessions"] = sorted(out)
     return _CACHE["sessions"]

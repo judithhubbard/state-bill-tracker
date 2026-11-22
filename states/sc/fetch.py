@@ -379,6 +379,11 @@ def read_bills(session, folder, state):
         ok_all = ok_all and ok
         if ok:
             st[f"done_{chamber}"] = TODAY.isoformat()
+    # The next session, offered before any bill is prefiled: no bills.json yet (the converter would show it as a
+    # session), and it's asked again with the next day's run.
+    if not bills and not begun(session) and not os.path.exists(path):
+        print(f"{session} bills: none prefiled yet", flush=True)
+        return ok_all
     os.makedirs(folder, exist_ok=True)
     save(bills, path)
     save(numbers, os.path.join(folder, "numbers.json"))
@@ -893,25 +898,34 @@ def main():
             if out_of_time():
                 break
             folder = os.path.join(DATA, str(first_year(session)))
-            os.makedirs(folder, exist_ok=True)
+            # The next session, offered before its first prefiled bill: no folder until it has one (read_bills).
+            waiting = not begun(session) and not os.path.exists(os.path.join(folder, "bills.json"))
+            if not waiting:
+                os.makedirs(folder, exist_ok=True)
             st = (state.get("bills") or {}).get(str(session)) or {}
             often = live(session) and (i == 0 or first_year(session) + 1 >= TODAY.year)
             due = (not st.get("read") or (often and (in_session() or ago(st.get("read"), 1)))
                    or ago(st.get("read"), MONTHLY))
             if due:
                 read_bills(session, folder, state)
+            if waiting and not os.path.exists(os.path.join(folder, "bills.json")):
+                save(state, STATE)
+                continue  # no bills prefiled yet: nothing else of it to read
+            if due:
                 read_vote_lists(session, folder, state)
             read_acts(session, folder, state)
             read_member_lists(session, folder, state, i == 0)
             save(state, STATE)
-        if found and not ONLY and live(found[0]) and not out_of_time():
-            agendas(found[0], os.path.join(DATA, str(first_year(found[0]))))
-        read_member_pages(found, state)
+        # (Leaving out a next session offered with no bills prefiled yet: it has no folder.)
+        have = [s for s in found if begun(s) or os.path.exists(os.path.join(DATA, str(first_year(s)), "bills.json"))]
+        if have and not ONLY and live(have[0]) and not out_of_time():
+            agendas(have[0], os.path.join(DATA, str(first_year(have[0]))))
+        read_member_pages(have, state)
         save(state, STATE)
         if not ONLY:
             read_committees(state)
         save(state, STATE)
-        read_rollcalls(found, state)
+        read_rollcalls(have, state)
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         refused = True

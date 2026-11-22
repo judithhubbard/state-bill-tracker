@@ -617,8 +617,11 @@ def finish():
           + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures")
           + (f"; still to do: {' '.join(sorted(INCOMPLETE))}" if INCOMPLETE else ""), flush=True)
     marker = os.path.join(DATA, "incomplete")
-    # A session not yet begun (no bills or members listed yet) is read when it's there but never holds Wisconsin back.
-    undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4]))}
+    # A session not yet begun (no bills or members listed yet) is read when it's there but never holds Wisconsin back,
+    # nor do a new session's lists, members and committees until April (the site answers 404 for them until they're
+    # posted, and bills come in from mid-January); its bill pages never read do.
+    undone = {g for g in INCOMPLETE if not g[:4].isdigit() or begun(int(g[:4])) and not (
+        int(g[:4]) == CURRENT and date.today() < date(CURRENT, 4, 1) and not g.endswith(":bills"))}
     if undone:
         with open(marker, "w") as f:
             f.write(" ".join(sorted(undone)) + "\n")

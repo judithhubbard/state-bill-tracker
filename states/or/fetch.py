@@ -43,9 +43,19 @@ def table(name, session):
 
 
 def main():
-    for year in range(FIRST, date.today().year + 1):
+    # From November, next year's session too, once the API lists a measure for it (pre-session filed measures appear
+    # in late December: 2025's on 2024-12-31); until then one small request a run, and no folder (the converter
+    # would show it as a session).
+    today = date.today()
+    for year in list(range(FIRST, today.year + 1)) + ([today.year + 1] if today.month >= 11 else []):
         session = f"{year}R1"
         folder = os.path.join(DATA, session)
+        if year > today.year and not os.path.exists(os.path.join(folder, "Measures.json")):
+            probe = get(f"{API}/Measures?" + urllib.parse.urlencode(
+                {"$filter": f"SessionKey eq '{session}'", "$top": "1", "$select": "MeasureNumber", "$format": "json"}))
+            if not (probe or {}).get("value"):
+                print(f"{session}: no measures filed yet")
+                continue
         os.makedirs(folder, exist_ok=True)
         # A session two or more years back is finished: read once.
         if year < date.today().year - 1 and all(os.path.exists(os.path.join(folder, f"{t}.json")) for t in TABLES):

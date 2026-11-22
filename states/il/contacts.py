@@ -47,6 +47,8 @@ def people_of(path, h):
 
 def committees_of(path):
     out = {}
+    if not os.path.exists(path):  # a new Assembly's committees are posted weeks after its members (January)
+        return out
     for c in re.findall(r"<Committee>(.*?)</Committee>", open(path, encoding="utf-8-sig").read(), re.S):
         cname = field(c, "Name")
         members = [(field(m, "Name"), field(m, "Title")) for m in re.findall(r"<Member>(.*?)</Member>", c, re.S)]

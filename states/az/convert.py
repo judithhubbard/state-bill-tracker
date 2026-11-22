@@ -30,8 +30,10 @@ def folder(session):
 
 def sessions():
     # (A first copy still downloading is built too; build_site.sh skips the state while data/az/incomplete exists.)
+    # This year's and next year's sessions show from their first bill (prefiled from mid-November); older ones once
+    # they're mostly there.
     return sorted(int(os.path.basename(f)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4))
-                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > 500)
+                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > (0 if int(os.path.basename(f)) >= CURRENT else 500))
 
 
 def text(x):

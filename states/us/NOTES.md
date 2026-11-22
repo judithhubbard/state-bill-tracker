@@ -99,3 +99,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   test, not to run). On 2026-11-22 (the Thanksgiving recess) no meeting still to come named a bill: the
   House's committee calendar (docs.house.gov) had no meetings posted from November 23 to December 4, and the Senate's five
   (senate.gov's hearings.xml) were nominations, closed briefings and a hearing on caregivers and AI.
+- **A new Congress (2026-11-22):** the 120th becomes current on January 1, 2027 (its bills start January 3; govinfo
+  answers 404 for /BILLSTATUS/120 until then). fetch.py reads its bills from the sitemaps before its first zips are built
+  (updates/), its missing zips don't count for 45 days, and the 119th is read like the current Congress (sitemap updates,
+  weekly zips) until March 1, for the President's last actions. convert.py's `sessions()` shows a Congress from its first
+  House or Senate bill file. contacts.py skips the new Congress's contacts until March 1 while congress-legislators lists
+  too few of its members (none of its terms on 2026-11-22).

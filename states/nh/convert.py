@@ -58,8 +58,11 @@ def rows(path, sep="|"):
 
 @functools.lru_cache(maxsize=None)
 def _sessions():
+    # A past year with its whole file; this year's or next year's (December's requests) from its first numbered bill.
     return tuple(sorted(int(m.group(1)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4, "LSRs_*.txt"))
-                  for m in [re.search(r"LSRs_(\d{4})\.txt$", f)] if m and len(rows(f)) > 100))
+                  for m in [re.search(r"LSRs_(\d{4})\.txt$", f)] if m and (
+                      any(len(r) > 10 and r[4] in KINDS and r[10].strip() for r in rows(f)) if int(m.group(1)) >= CURRENT
+                      else len(rows(f)) > 100)))
 
 
 def sessions():

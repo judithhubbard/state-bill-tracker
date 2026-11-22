@@ -30,8 +30,10 @@ def save(url, stamp):
     """Read the tables and veto messages out of one zip into the folder of the session it holds."""
     z = Zip(url)
     got = z.read([f"{t}_TBL.dat" for t in TABLES])
-    first = got["BILL_TBL.dat"].split(b"\n", 1)[0].split(b"\t")
-    session = int(first[1].strip(b"`")[:4])
+    # The session it holds: the newest one its bill table names (a daily zip around a new session's first day, in
+    # December of an even year, may hold both; the converter keeps each session's own bills).
+    years = {line.split(b"\t")[1].strip(b"`")[:4] for line in got["BILL_TBL.dat"].split(b"\n") if line.count(b"\t")}
+    session = max(int(y) for y in years if y.isdigit())
     folder = os.path.join(P.DATA, str(session))
     os.makedirs(folder, exist_ok=True)
     for name, body in got.items():

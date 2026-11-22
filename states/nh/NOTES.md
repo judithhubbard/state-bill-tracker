@@ -41,3 +41,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2023; HB 274, HB 1415, HB 1581 of 2024). "Veto Sustained" lines (the House's "Veto Sustained 08/19/2026: RC 165-140 ...",
   the Senate's "... Veto Sustained, lacking the necessary two-thirds vote") are read as "VETO SUSTAINED", the day's last
   step (`GROUP["sustain"]`, after "override"), so the last action no longer reads "VETO OVERRIDDEN".
+- **Next year's bills (2026-11-22):** the daily files hold only the current session year (2026 only on 2026-11-22);
+  when they switch to 2027 (around the new General Court's organization day in December), `by_year()` puts its rows in
+  data/nh/2027/, and convert.py's `sessions()` shows this or next year from its first numbered bill (not 100 LSRs). In
+  December, before the session, `missing()` counts the last biennium's per-term files, so the new term's never hold New
+  Hampshire off the site.
