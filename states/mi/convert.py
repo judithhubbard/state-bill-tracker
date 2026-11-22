@@ -14,14 +14,28 @@ reports a bill "with recommendation" and it's "referred to second reading"; a Se
 to the Committee of the Whole. A passage is "passed; given immediate effect Roll Call #4 Yeas 63 Nays 41 ...". The
 other house's line noting a passage ("PASSED BY HOUSE WITH IMMEDIATE EFFECT") isn't a vote. "Ordered enrolled" means
 both houses passed the same text; then "presented to the Governor", "approved by the Governor", "assigned PA 12'25".
-Summaries ("What it does") are the Fiscal Agencies' analyses (states/mi/texts.py); votes are tallies (members' votes are
-only in the journals).
+Summaries ("What it does") are the Fiscal Agencies' analyses (states/mi/texts.py).
+
+Votes: each passage, concurrence, defeat and conference report's history line names its roll call ("Roll Call #241";
+House lines add the tally, many Senate lines don't). The members' votes come from that day's journal
+(states/mi/journals.py), tied by house, year, roll call number and day, and only when the journal's tally is the line's
+and its names come to its counts (`VoteTies.floor()`); else the line's tally alone. The Senate's roll calls name the
+yeas, nays, excused and those not voting; the House's only yeas and nays, so the others are the day's opening roll less
+those named, excused or not voting as the history line's counts say (when it gives both, the opening roll's
+"excused"). Names are surnames ("Carter, B.", "St. Germaine"), tied to today's members (contacts_<current>.json) of that
+house who sponsored a bill that session ("H?Name" otherwise: former members). Committee votes: the journals' committee
+reports with "To Report Out: Yeas: ... Nays: ..." (or "To Refer"), when that day's attendance report for the committee
+(present, absent, excused) holds every voter, and the bill's history has a line that day ("reported ...", a referral):
+[house, "C", committee, meeting day, yeas, nays, [[seat, "N"/"B" (pass or present, not voting)/"A"/"E"]]].
 """
-import glob, json, os, re, sys
+import functools, glob, json, os, re, sys
 import xml.etree.ElementTree as ET
+from collections import Counter
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from fetch_contacts import name_key
+from states.mi import journals as J
 from states.mi import profile as P
 from states.undated import settle
 
@@ -85,6 +99,7 @@ def session_dir(session):
     return os.path.join(P.DATA, f"{session}-{session + 1}")
 
 
+@functools.lru_cache(maxsize=None)
 def sessions():
     # A session of this year or later counts from its first bills; an older one once it has more than 1,000.
     return sorted(int(os.path.basename(f)[:4]) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4 + "-" + "[0-9]" * 4))
@@ -130,7 +145,7 @@ def decode(item):
         return h, "RECONSIDERED"
     if re.search(r"concurred in", low) and "roll call" in low:
         return h, "CONCURRED"
-    if re.search(r"conference report adopted", low):
+    if re.search(r"conference report adopted|adopted conference report", low):
         return h, "CONFERENCE ADOPTED"
     if re.search(r"ordered enrolled", low):
         return h, "ENROLLED"
@@ -156,6 +171,136 @@ def tally(a):
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
+ROLL_NO = re.compile(r"Roll Call #\s*(\d+)", re.I)
+COUNTS = re.compile(r"Yeas (\d+) Nays (\d+) Excused (\d+) Not Voting (\d+)", re.I)
+VOTE_STATS = {}
+VOTE_ODD = {}  # roll calls whose journal names another bill last: (bill, day, house, roll call, the journal's bill)  # per session: how many roll calls were tied to the journals, for checks() and the notes
+
+
+def surname(n):
+    """A roll call's or committee list's name -> (last word folded, first initial or ""): "Carter, B." -> ("carter",
+    "b"), "Brenda Carter" -> ("carter", "b"), "St. Germaine" -> ("germaine", ""), "O’Neal" -> ("oneal", "")."""
+    n = re.sub(r"\s+", " ", n or "").strip(" .")
+    m = re.fullmatch(r"(.+?), ([A-Z])\.?(?: ?[A-Z]\.)?", n)
+    if m:
+        last, init = m.group(1), m.group(2).lower()
+    else:
+        words = n.split(" ")
+        # "Brenda Carter", "Jaime Greene" (committee lists) give a first name; "St. Germaine", "McDonald Rivet",
+        # "Van Woerkom" are surnames.
+        if len(words) > 1 and not re.match(r"(St|Van|Vander|De|La|Le|Mc|Mac)\.?$", words[0]) and words[0] not in ("McDonald",):
+            last, init = words[-1], words[0][0].lower()
+        else:
+            last, init = n, ""
+    w = last.replace("’", "'").split(" ")[-1]
+    return re.sub(r"[^a-z-]", "", w.lower()), init
+
+
+class VoteTies:
+    """Ties a session's roll calls (states/mi/journals.py) to its bills' history lines and the names to seats."""
+
+    def __init__(self, session, people, served):
+        self.session = session
+        self.parsed = J.parse(P.DATA, f"{session}-{session + 1}")
+        self.served = served
+        self.people = {}  # (house, last) -> [(seat, name_key)]
+        for sid, p in people.items():
+            self.people.setdefault((sid[0], name_key(p["name"]).split(" ")[-1]), []).append((sid, name_key(p["name"])))
+        self.current = session == CURRENT
+        self.stats = Counter()
+        self.by_bill = {}
+        for v in self.parsed["committee"]:
+            self.by_bill.setdefault(v["bill"], []).append(v)
+        self.cache = {}
+        self.odd = []
+
+    def seat(self, h, name):
+        """A name in house h -> its member's seat ("H:12"), or "H?Name" when no sitting member who served this session
+        has that surname (and initial)."""
+        k = (h, name)
+        if k in self.cache:
+            return self.cache[k]
+        last, init = surname(name)
+        hits = [(sid, key) for sid, key in self.people.get((h, last), []) if not init or key[:1] == init]
+        if not hits and "-" in last:  # "Myers-Phillips" in the journals, Tonya Myers Phillips in the member list
+            hits = [(sid, key) for sid, key in self.people.get((h, last.split("-")[-1]), []) if not init or key[:1] == init]
+        out = f"{h}?{name}"
+        if len(hits) == 1 and (self.current or hits[0][1] in self.served.get(h, ())):
+            out = hits[0][0]
+        self.cache[k] = out
+        return out
+
+    def floor(self, num, d, h, a):
+        """A floor vote's history line -> [house, "F", None, day, yeas, nays, [[seat, code], ...]]: names when its roll call
+        is in the journal of that day and its names come to the line's tally; the tally alone otherwise (None when
+        there's no tally anywhere)."""
+        t = tally(a)
+        m = ROLL_NO.search(a)
+        rc = self.parsed["rolls"].get((h, d[:4], int(m.group(1)))) if m else None
+        if rc and rc["day"] != d:
+            self.stats["roll call on another day"] += 1
+            rc = None
+        if rc is None:
+            self.stats["no journal roll call" if m else "no roll call number"] += 1
+            return [h, "F", None, d] + list(t) + [[]] if t else None
+        y, n = rc["counts"]["Y"], rc["counts"].get("N", 0)
+        if t and t != (y, n):
+            self.stats["tally differs"] += 1
+            return [h, "F", None, d] + list(t) + [[]]
+        if rc["bill"] and rc["bill"] != num:
+            # The journal read another bill just before this roll call ("House Bill No. 4090, entitled ..."): the
+            # history's roll call number points at another bill's vote, so the tally stays as the history has it,
+            # without names (none in the copies read on 2026-11-22; a line split as "Senate / Bill No. 716" was read
+            # as the bill before it until BILL allowed line breaks).
+            self.stats["journal reads another bill"] += 1
+            self.odd.append((num, d, h, rc["no"], rc["bill"]))
+            return [h, "F", None, d, y, n, []]
+        if rc["bad"]:
+            self.stats["names don't add up"] += 1
+            return [h, "F", None, d, y, n, []]
+        g = rc["groups"]
+        listed = [[x, "N"] for x in g.get("N", [])]
+        if "E" in g or "A" in g:  # the Senate names those excused and not voting
+            listed += [[x, "E"] for x in g.get("E", [])] + [[x, "A"] for x in g.get("A", [])]
+        else:  # the House names only yeas and nays: the others are the day's roll less those named
+            roll = self.parsed["rosters"].get((h, d)) or {}
+            named = set(g.get("Y", [])) | set(g.get("N", []))
+            rest = [x for x in roll if x not in named]
+            c = COUNTS.search(a)
+            if not roll or len(named) != y + n or (c and len(rest) != int(c.group(3)) + int(c.group(4))) \
+                    or (not c and len(roll) != len(named) + len(rest)):
+                self.stats["House roster doesn't fit"] += 1
+                return [h, "F", None, d, y, n, []]
+            ex = int(c.group(3)) if c else None
+            for x in rest:
+                code = "A" if ex == 0 else "E" if c and int(c.group(4)) == 0 else ("E" if roll[x] == "excused" else "A")
+                listed.append([x, code])
+        self.stats["named"] += 1
+        return [h, "F", None, d, y, n, [[self.seat(h, x), code] for x, code in listed]]
+
+    def committee(self, rec):
+        """Committee votes on the bill from the journals' committee reports, with the committee's attendance that day:
+        [house, "C", committee, day, yeas, nays, [[seat, code], ...]] (nays "N", passes "B", absent "A", excused "E")."""
+        out = []
+        acts = rec["vers"][0]["actions"]
+        for v in self.by_bill.get(rec["nums"][0], []):
+            if not v["attend"]:
+                self.stats["committee vote without attendance"] += 1
+                continue
+            if not any(dd == v["journal"] and (t == "REPORTED" or t.startswith("REFERRED TO")) for dd, t in acts):
+                self.stats["committee vote with no history line"] += 1
+                continue
+            a = v["attend"]
+            listed = [[x, "N"] for x in v["nays"]] + [[x, "B"] for x in v["pass"]]
+            voted = set(v["yeas"]) | set(v["nays"]) | set(v["pass"])
+            listed += [[x, "E"] for x in a["excused"]] + [[x, "A"] for x in a["absent"] if x not in a["excused"]]
+            listed += [[x, "B"] for x in a["present"] if x not in voted]
+            out.append([v["house"], "C", v["committee"], v["day"], len(v["yeas"]), len(v["nays"]),
+                        [[self.seat(v["house"], x), code] for x, code in listed]])
+            self.stats["committee votes"] += 1
+        return out
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     path = os.path.join(P.DATA, f"contacts_{session}.json")
@@ -177,9 +322,11 @@ def load_session(session):
         full = hit[1]["name"] if hit else bare
         if hit and hit[1].get("party"):
             parties[(h, full)] = hit[1]["party"][:1]
+        served.setdefault(h, set()).add(name_key(full))
         return full
 
     files = sorted(glob.glob(os.path.join(session_dir(session), "*", "*.xml")))
+    served = {}
     fetched = datetime.fromtimestamp(max(os.path.getmtime(f) for f in files), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
     recs, index = [], {}
     for f in sorted(files, key=order):
@@ -270,8 +417,11 @@ def load_session(session):
             ds = sorted({s[0] for s in steps if test(s[1], s[2]) and s[0]})
             return {"first": ds[0], "last": ds[-1], "all": ";".join(ds)}[mode] if ds else ""
 
-        votes = [[h, "F", None, d] + list(tally(a)) + [[]] for d, h, t, a in steps
-                 if h in HOUSE and (t.startswith("PASSED") or t in ("CONCURRED", "FAILED")) and tally(a)]
+        # Floor votes: each passage, concurrence, defeat or conference report's roll call, by name from the journals
+        # (rolls_of(), after every bill is read: the members who served come from the session's sponsors).
+        votes = [(d, h, a) for d, h, t, a in steps
+                 if h in HOUSE and (t.startswith("PASSED") or t in ("CONCURRED", "FAILED", "CONFERENCE ADOPTED"))
+                 and (tally(a) or ROLL_NO.search(a))]
         action_dates = [s[0] for s in steps if s[0]]
         rec = {
             "nums": [p], "base": [p], "prev": earlier(session, r.findtext("digesttitle"), sponsor),
@@ -305,6 +455,15 @@ def load_session(session):
         }
         index[p] = len(recs)
         recs.append(rec)
+    # The members who served this session (as sponsors), so a roll call's surname is tied only to a sitting member who
+    # was there then.
+    # (Seats are today's: a past session's names are tied to today's members who served then.)
+    now = os.path.join(P.DATA, f"contacts_{CURRENT}.json")
+    vt = VoteTies(session, json.load(open(now))["people"] if os.path.exists(now) else people, served)
+    for rec in recs:
+        rec["votes"] = [v for d, h, a in rec["votes"] if (v := vt.floor(rec["nums"][0], d, h, a))] + vt.committee(rec)
+    VOTE_STATS[session] = vt.stats
+    VOTE_ODD[session] = vt.odd
     settle(recs, session_dir(session))  # bills with no history yet: never dated in the future (states/undated.py)
     return recs, index, fetched, {"SENATE": [], "ASSEMBLY": []}
 
@@ -357,3 +516,10 @@ def agendas(session):
 
 def parties(session, recs):
     return {k: v for k, v in _PARTIES.get(session, {}).items() if v in ("D", "R")}
+
+
+if __name__ == "__main__":
+    # How each session's roll calls were tied to the journals (python3 -m states.mi.convert).
+    for s in sessions():
+        load_session(s)
+        print(s, dict(VOTE_STATS.get(s, {})), VOTE_ODD.get(s, [])[:10])

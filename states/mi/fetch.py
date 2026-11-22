@@ -3,7 +3,8 @@
 (https://www.legislature.mi.gov/documents/<session>/status/<house|senate>/xml/; see the state-survey-2026-10-31
 memory). Its Automated Data Collection Policy allows at most one request per second, so this waits a second between
 requests. Then the House and Senate Fiscal Agencies' bill analyses ("What it does": `analyses()`, states/mi/texts.py),
-which never hold the state off the site. Joint resolutions ("2025-HJR-A.xml", lettered) are kept for the constitutional
+which never hold the state off the site, then the House and Senate Journals (members' floor and committee votes:
+states/mi/journals.py), which don't either. Joint resolutions ("2025-HJR-A.xml", lettered) are kept for the constitutional
 amendments they propose; other resolutions are left out. A finished session's files are read once; the current
 session's when the folder listing shows them newer.
 Usage: python3 states/mi/fetch.py   (2023-2024 and 2025-2026)
@@ -192,6 +193,15 @@ def main():
     for start in range(CURRENT, W.first_session() - 1, -2):
         if not only or start == only:
             analyses(start)
+    # The House and Senate Journals, for members' floor and committee votes (states/mi/journals.py): never holding
+    # Michigan off the site either.
+    from states.mi import journals as J
+    for start in range(CURRENT, W.first_session() - 1, -2):
+        if (not only or start == only) and not out_of_time() and os.path.isdir(os.path.join(DATA, f"{start}-{start + 1}")):
+            try:
+                J.fetch(DATA, f"{start}-{start + 1}", get_doc, out_of_time, same, say=lambda m: print(m, flush=True))
+            except Exception as e:  # a journal that fails to save never stops the run
+                print(f"{start}-{start + 1} journals: failed ({type(e).__name__}: {e})", flush=True)
     print(f"run: {round((time.time() - START) / 60)} min" + ("; stopped at the time limit" if out_of_time() else "")
           + (f"; request failures {dict(FAILS)}" if FAILS else "; no request failures"), flush=True)
 
