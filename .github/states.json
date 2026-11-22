@@ -144,9 +144,9 @@
    "paths": [
     "data/az"
    ],
-   "minutes": 100,
-   "run": "python3 states/openstates_bulk.py az; python3 states/az/fetch.py; python3 states/az/azleg.py && python3 states/az/contacts.py",
-   "note": "Open States (the free tier's daily quota), then azleg.gov at its two-minute crawl delay."
+   "minutes": 110,
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/openstates_bulk.py az; python3 states/az/fetch.py; python3 states/az/azleg.py && python3 states/az/contacts.py",
+   "note": "Open States (the free tier's daily quota), then azleg.gov at its two-minute crawl delay (committee agendas first, at most 14 minutes of PDFs: pdftotext)."
   },
   {
    "name": "North Carolina",
