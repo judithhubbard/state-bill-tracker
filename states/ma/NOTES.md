@@ -28,3 +28,17 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2026) say "Signed by the Governor" on 2026-11-30; the session laws, first also "Nov 30 2026", now say October 30. A
   history line dated after its bill's file was read takes the law's date for a signing, else the read day (`read_day` in
   `load_session()`); the session laws' own future dates were already capped the same way.
+- **Committee hearings (2026-11-22):** `hearings()` in states/ma/fetch.py, run last, writes data/ma/<session>/agendas.json
+  ({"H892": [["Joint Environment and Natural Resources", "2025-10-21T13:00:00"]]}), which convert.py's `agendas()`
+  returns as it is. The API's /api/Hearings lists every hearing's id only (about 4,300, no dates); /api/Hearings/<id>
+  gives the host committee ("Joint Committee on Housing" -> "Joint Housing"; HearingHost's GeneralCourtNumber picks the
+  session), Status ("Confirmed", "Completed", "Canceled"; a moved hearing keeps its id, with the old date under
+  RescheduledHearing), StartTime and the bills on its agenda (HearingAgendas' DocumentsInAgenda, BillNumber "H892").
+  Each hearing read is kept in data/ma/hearings.json ({"floor", "hearings"}); a run reads the ids not yet kept from the
+  floor up (the first run's newest 150, since ids rise as hearings are posted; at most 300 a run) and again every kept
+  hearing dated from yesterday on, three at a time. Only today to three weeks ahead, not canceled, rescheduled or
+  postponed. robots.txt allows everything. Tested live on 2026-11-22 (the newest 10 hearings: 4 upcoming with bills,
+  H5668, H5296, H4963, S3301; the last two not yet in the copied documents.json) and on saved 2025 hearings with today
+  set to 2025-10-01 (111 bills, all matching records). Joint committees hold nearly every bill's hearing; the House and
+  Senate Ways and Means and the like appear as "House ..."/"Senate ...". Untested: the 195th General Court's first
+  hearings (January-March 2027: the floor stays, so new ids are read as they appear).

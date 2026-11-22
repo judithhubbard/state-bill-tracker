@@ -8,9 +8,10 @@ robots.txt allows everything; see the state-survey-2026-10-31 memory).
   read once; the current one's bills are read again when the list shows a change, or every run for bills with
   recent activity.
 - The members (with emails and phones), committees, leadership and session laws.
+- Committee hearings and the bills on their agendas (hearings(): data/ma/hearings.json, <session>/agendas.json).
 Three requests at a time. Usage: python3 states/ma/fetch.py [first_year]   (default: the shared window's first session, states/window.py: from 2023-24 until 2029)
 """
-import json, os, sys, time, urllib.request
+import json, os, re, sys, time, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -128,6 +129,87 @@ def rollcalls(session):
     print(f"{session}: {len(have)} Senate roll calls ({len(todo)} read now)")
 
 
+FIRST_HEARINGS = 150  # with no cache yet, read only this many of the newest hearings (ids rise as hearings are posted)
+NEW_HEARINGS_MAX = 300  # new hearings read in one run at most
+
+
+def committee_label(name):
+    """ "Joint Committee on Environment and Natural Resources" -> "Joint Environment and Natural Resources";
+    "House Committee on Ways and Means" -> "House Ways and Means"."""
+    name = " ".join((name or "").split())
+    m = re.match(r"(Joint|House|Senate) Committee on (?:the )?(.+)$", name)
+    return f"{m.group(1)} {m.group(2)}" if m else name
+
+
+def hearings():
+    """Bills on upcoming committee hearings' agendas, into data/ma/<session>/agendas.json: {"H892": [["Joint
+    Environment and Natural Resources", "2025-10-21T13:00:00"], ...]}. /api/Hearings lists every hearing's id (about
+    4,300 in November 2026, no dates); /api/Hearings/<id> gives its committee (HearingHost), status ("Confirmed",
+    "Completed", "Canceled", "Rescheduled"), date and the bills on its agenda (HearingAgendas' DocumentsInAgenda,
+    with BillNumber). Each hearing read is kept in data/ma/hearings.json ({"floor", "hearings": {id: {d, s, n, c, gc,
+    b}}}); a run reads the hearings not yet kept from the floor up (the first run's newest FIRST_HEARINGS: ids rise as
+    hearings are posted, so older ones are past; at most NEW_HEARINGS_MAX a run) and again those dated from yesterday on
+    (agendas are filled in and hearings canceled or moved up to the day). Only today to three weeks ahead goes into
+    agendas.json; a failure keeps the last files and never marks the state incomplete."""
+    import datetime as dt
+    path = os.path.join(DATA, "hearings.json")
+    try:
+        kept = json.load(open(path))
+    except (OSError, ValueError):
+        kept = {}
+    have = kept.get("hearings") or {}
+    listing = get(f"{API}/Hearings")
+    if not listing:
+        print("hearings: no list; kept the last files", flush=True)
+        return
+    ids = sorted({int(h["EventId"]) for h in listing if h.get("EventId")})
+    # Hearings below the floor (older than the first run's newest FIRST_HEARINGS) are never read.
+    floor = kept.get("floor") or (ids[-FIRST_HEARINGS] if len(ids) >= FIRST_HEARINGS else (ids or [0])[0])
+    new = [i for i in ids if i >= floor and str(i) not in have][:NEW_HEARINGS_MAX]
+    yesterday = (date.today() - dt.timedelta(days=1)).isoformat()
+    again = [int(k) for k, v in have.items() if (v.get("d") or "") >= yesterday and int(k) not in new]
+    failed = 0
+
+    def one(i):
+        return i, get(f"{API}/Hearings/{i}")
+
+    with ThreadPoolExecutor(3) as pool:
+        for i, h in pool.map(one, again + new):
+            if h is None:  # gone (404)
+                have.pop(str(i), None)
+                continue
+            if h is False:
+                failed += 1
+                continue
+            host = h.get("HearingHost") or {}
+            bills = []
+            for a in h.get("HearingAgendas") or []:
+                for d in a.get("DocumentsInAgenda") or []:
+                    b = d.get("BillNumber") or ""
+                    if re.fullmatch(r"[HS]\d+", b) and b not in bills:
+                        bills.append(b)
+            have[str(i)] = {"d": h.get("StartTime") or h.get("EventDate") or "", "s": h.get("Status") or "",
+                            "n": committee_label(h.get("Name")), "c": host.get("CommitteeCode"),
+                            "gc": host.get("GeneralCourtNumber"), "b": bills}
+    save(path, {"floor": floor, "hearings": have})
+    today, last = date.today().isoformat(), (date.today() + dt.timedelta(days=21)).isoformat()
+    by_session = {}
+    for i, v in have.items():
+        when = v.get("d") or ""
+        if not (today <= when[:10] <= last) or re.match(r"cancel|resched|postpon", v.get("s") or "", re.I) or not v.get("gc"):
+            continue
+        out = by_session.setdefault(1637 + 2 * int(v["gc"]), {})
+        entry = [v["n"], when if "T" in when else when[:10] + "T00:00:00"]
+        for b in v["b"]:
+            if entry not in out.setdefault(b, []):
+                out[b].append(entry)
+    for s in sorted(set(by_session) | {CURRENT}):
+        if os.path.isdir(os.path.join(DATA, str(s))):
+            save(os.path.join(DATA, str(s), "agendas.json"), by_session.get(s, {}))
+    print(f"hearings: {len(new)} new and {len(again)} upcoming read ({failed} failed); "
+          f"{sum(len(o) for o in by_session.values())} bills on upcoming agendas", flush=True)
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     sys.path.insert(0, os.path.normpath(os.path.join(DATA, "..", "..")))
@@ -141,6 +223,10 @@ def main():
         contacts.main(CURRENT)
     except SystemExit as e:
         print(e)
+    try:  # committee hearings' agendas: never hold the run back
+        hearings()
+    except Exception as e:
+        print(f"hearings: stopped ({type(e).__name__}: {e}); kept the last files", flush=True)
     marker = os.path.join(DATA, "incomplete")
     # A General Court not yet begun (no documents filed yet) is read when it's there but never holds Massachusetts back.
     undone = {s for s in INCOMPLETE if begun(s)}

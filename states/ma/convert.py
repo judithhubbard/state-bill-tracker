@@ -422,7 +422,8 @@ def load_session(session):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee hearings (states/ma/fetch.py's hearings(): data/ma/<session>/agendas.json)."""
+    return load(session, "agendas.json", {})
 
 
 _PARTIES = {}
