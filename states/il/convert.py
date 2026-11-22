@@ -294,6 +294,40 @@ def earlier(session, bill):
     return out
 
 
+def veto_message(session, p, steps):
+    """The governor's message on a vetoed bill, from the repository's gms file (states/il/fetch.py's veto_messages(),
+    data/il/<GA>/vetoes/HB2682.htm): {"year", "signer", "text", "kind"}, kind "conditional" for an amendatory veto (sent
+    back with changes, as New Jersey's conditional veto), "line-item" for an item or reduction veto (signed, some spending
+    cut), else a total veto. The text is the letter's paragraphs from the first after the salutation ("To the Honorable
+    Members of ... General Assembly:") to before "Sincerely,", which name the bill ("I veto House Bill 2682 ...")."""
+    path = os.path.join(P.DATA, str(P.assembly_of(session)), "vetoes", f"{p}.htm")
+    if p[:2] not in ("HB", "SB") or not os.path.exists(path):
+        return None
+    raw = [a for _, _, _, a in steps]
+    day = next((d for d, _, _, a in steps if re.match(r"Governor (?:Vetoed|Amendatory Veto|Item/Reduction Veto)", a) and d), "")
+    if not day:
+        return None
+    kind = ("line-item" if any(a.startswith("Governor Item/Reduction Veto") for a in raw)
+            else "conditional" if "Governor Amendatory Veto" in raw else None)
+    page = open(path, "rb").read().decode("cp1252", "replace")
+    page = re.sub(r"(?is)<(style|script|head)\b.*?</\1>", "", page)
+    page = re.sub(r"\s+", " ", page)
+    paras = [_html.unescape(re.sub(r"<[^>]+>", "", x)).replace("\xa0", " ") for x in re.split(r"(?i)</p>|<br[^>]*>", page)]
+    paras = [re.sub(r"\s+", " ", x).strip() for x in paras]
+    paras = [x for x in paras if x]
+    start = next((i + 1 for i, x in enumerate(paras) if re.search(r"General Assembly:?$", x)), None)
+    if start is None:
+        start = next((i + 1 for i, x in enumerate(paras) if re.match(r"To the Honorable", x)), 0)
+    end = next((i for i, x in enumerate(paras) if i >= start and re.match(r"Sincerely", x)), len(paras))
+    body = "\n".join(paras[start:end]).strip()
+    if not re.search(r"\b(?:veto|return)", body, re.I):
+        return None
+    out = {"year": int(day[:4]), "signer": P.governor_on(day), "text": body}
+    if kind:
+        out["kind"] = kind
+    return out
+
+
 def load_session(session):
     """Read one session's bills and return (records, bill number -> record index, fetched time, delegation)."""
     live = session >= CURRENT
@@ -400,7 +434,7 @@ def load_session(session):
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": passed_in,
             "chapter": int(pa) if pa and stage == 5 else None,
-            "veto": None, "memo": "", "vetoMemo": None,
+            "veto": None, "memo": "", "vetoMemo": veto_message(session, p, steps),
             "simText": synopsis,
             "comm": committee if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),
