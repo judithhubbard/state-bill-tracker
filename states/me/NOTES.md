@@ -50,7 +50,7 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   on the bill's own questions (`floor_vote()`: accepting an Ought to Pass report, engrossment, enactment, final passage,
   "Reconsideration-veto"), never accepting an Ought Not to Pass report, indefinite postponement, amendments or "Recede And
   Concur" (either house's position). Committee names come from the uppercase referrals, completed from `KNOWN` when cut at a
-  comma. No summaries ("What it does" isn't shown); no committee votes, members or chairs. Totals (each law's page read
+  comma. No committee votes, members or chairs. Totals (each law's page read
   2026-11-19/20; official totals weren't read): 2023-24, 892 laws and 44 vetoes (4 in 2023, 8 in 2024, and the 32 pocket
   vetoes; LegiScan's statuses say 927 laws and 12 vetoes); 2025-26 (LegiScan's statuses agree), 971 laws (680 and 291) and 8 vetoes (5 and 3: news reports count 5 in
   June 2025, LD 1228 among the 61 held bills in January 2026, and LD 307 and LD 1911 sustained on April 29, 2026); HLD949 of
@@ -68,3 +68,26 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   been checked by the owner.
 - **Committee agendas (2026-11-22):** from each bill's LegiScan `calendar` (its hearings: date, time, room, description), read with the bill (no queries of their own): `agendas()` calls legiscan_convert.agendas() (states/LEGISCAN.md). Today's and later meetings only. LegiScan's calendar has no cancellations; an entry dropped from a notice goes when the bill is next read, which within the daily getBill allowance can be hours after the change. Maine's entries say only "Hearing": the committee is the one the bill was last referred to by that day (`Maine.hearing_committee()`: its history's referral lines, else LegiScan's referrals), named "Joint ...". Tested against 2026's saved calendars (128 bills, all matched). January check: work sessions appear too, not only public hearings.
 - **Veto messages (looked into 2026-11-22; not read):** the governor's Veto Messages page (maine.gov/governor/mills/official_documents/veto_messages) lists the letters, but www.maine.gov answered 403 to the letters' PDFs (LD 958, LD 1228) for a plain bot User-Agent: dropped, not worked around.
+- **"What it does" (2026-11-22):** the SUMMARY the drafters print at the end of each bill and amendment, from the printed
+  PDFs (legislature.maine.gov/legis/bills/getPDF.asp?paper=HP0207&item=1&snum=132; item 1 is the bill as printed, later
+  items its amendments). robots.txt (re-read 2026-11-22) bars only default_ps.asp, search_ps.asp and LawMakerWeb.
+  `states/me/texts.py` reads them, 1.5 s apart, at most 8 minutes a run in the LegiScan job, into data/me/summaries.json
+  ({PDF address: {"h": LegiScan's hash, "s": summary, "d": day read}}; read again only when LegiScan's hash changes);
+  convert.py's `what()` reads that file (legiscan_convert.py rewrites texts_<session>.json on every conversion, so the
+  summaries can't live there). The addresses and hashes come from LegiScan's `texts` ("Introduced") and `amendments`.
+  Which one: the committee amendment named in the bill's last "PASSED TO BE ENGROSSED" line (its summary describes the
+  bill as amended: "This amendment replaces the bill, which is a concept draft, ..."), else a floor amendment the bill was
+  engrossed with alone when its summary says it replaces the bill, else the bill as printed. LegiScan marks every
+  amendment "adopted" (LD 307's minority report C-B too), so the history decides. Labels: "From the drafters' summary
+  printed with the bill as introduced." and 'From the drafters' summary of Committee Amendment "A" (H-881), which
+  describes the bill as amended.' ("resolve", "resolution" where they are). Order: laws, then bills that passed a house,
+  then bills reported out, newest session first. Of 2023-24's 2,291 LDs, 1,038 use a committee amendment, 18 a floor
+  amendment, 1,235 the bill; 2025-26: 1,097, 10, 1,138. About 4,550 PDFs for a first copy (the 2023 budget's committee
+  amendment is 11 MB, its summary 55,000 characters in 267 paragraphs with "PART A" headings). Coverage: 0 before; every
+  sampled document (8: both Legislatures, bills, resolves, a constitutional resolution, committee and floor amendments)
+  had a SUMMARY, so all LDs once the first copy is read (a few days of runs); 6 were read locally for testing. Parsing
+  (pdftotext -layout): the margin's line numbers are dropped, a paragraph starts where a line is indented further, page
+  footers ("Page 4 - 132LR1521(02)") and running heads ("COMMITTEE AMENDMENT") are skipped, a line ending in a hyphen is
+  joined without a space ("2022-" "2023"), and it stops at "FISCAL NOTE REQUIRED" or a floor amendment's "SPONSORED BY:"
+  block. Bills are drafted by the Office of the Revisor of Statutes, committee amendments with the Office of Policy and
+  Legal Analysis (both nonpartisan); the label says only "the drafters'".

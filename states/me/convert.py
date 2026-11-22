@@ -384,7 +384,10 @@ class Maine(L.Rules):
         return f"LD {n}{where}: {L.text(b.get('title'))}"
 
     def what(self, b):
-        return None
+        """The drafters' SUMMARY from the bill's printed committee amendment or the bill itself (states/me/texts.py,
+        data/me/summaries.json)."""
+        from states.me import texts
+        return texts.what(b)
 
     def topics(self, b, comms, title):
         return ([P.COMMITTEE_TOPICS[c] for c in comms if c in P.COMMITTEE_TOPICS] +
