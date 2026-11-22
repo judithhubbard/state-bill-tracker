@@ -184,3 +184,5 @@ data/us/*
 .claude/
 # build_data.py keeps slow steps here between builds (BUILD_CACHE).
 .build-cache/
+# The committee agenda log (tools/agenda_seen.py; an Actions cache on GitHub).
+agenda_log/

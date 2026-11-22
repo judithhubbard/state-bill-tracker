@@ -149,6 +149,15 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
   saves `built/` (and deletes all but the newest two `built-pages-` copies: `tools/prune_caches.py`, which download.yml
   runs for each state's copies too), and deploys with `wrangler pages deploy` (project `statebilltracker`) only if some state was rebuilt
   (or it was started by hand).
+- After deploying, every run (rebuilt or not): `tools/agenda_seen.py` logs, per state, when each bill first showed up on
+  a committee agenda, to measure how much notice each state gives (collected since 2026-11-22; no page yet). It reads
+  the live sessions' `_site/<st>/data/status_<session>.json` (whose rows carry the meetings to come), not the
+  converters, and nothing in the build reads its logs. One file per state, `agenda_log/<st>.json`, in its own cache
+  (`agenda-log-<run>`, saved every run, older copies pruned); each item keyed session|bill|committee|meeting time, with
+  the run that first saw it, the state's `last_checked` then and at the run before (the 2-hour window), when it
+  disappeared, and marks for items already listed when the log began or seen after a gap of over 12 hours.
+  `python3 tools/agenda_seen.py --report --logs DIR` prints each state's notice (median, 10th and 90th percentile, in
+  days); the step prints it in each publish run's log.
 - A state whose build failed fails the run after deploying ("The build failed for: ..."), so GitHub emails the owner.
 
 ### Checking

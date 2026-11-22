@@ -374,6 +374,15 @@ jobs:
           key: built-pages-latest
           restore-keys: built-pages-
 
+      # The committee agenda log (tools/agenda_seen.py): when each bill first showed up on an agenda, for how much notice
+      # each state gives. Its own small cache, saved every run; nothing in the build reads it.
+      - name: Restore the agenda log
+        uses: actions/cache/restore@v4
+        with:
+          path: agenda_log
+          key: agenda-log-latest
+          restore-keys: agenda-log-
+
       # Launched 2026-11-21: links, link previews and the visit counter use statebilltracker.org, and search engines may
       # list it (build_site.sh). statebilltracker.pages.dev still serves the same files.
       - name: Build the site
@@ -416,6 +425,30 @@ jobs:
             echo "upload failed (try $try); waiting a minute"; sleep 60
           done
           exit 1
+
+      # The agenda log, from the status files the build just wrote (about a second), and the notice so far by state (in
+      # this step's log). Never holds up the site: it runs after the deploy, and a failure only shows in the step's log.
+      - name: Log the bills on committee agendas
+        id: agendas
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        continue-on-error: true
+        run: |
+          python3 tools/agenda_seen.py --site _site --logs agenda_log
+          python3 tools/agenda_seen.py --report --logs agenda_log
+      - name: Keep the agenda log
+        if: ${{ !cancelled() && steps.agendas.outcome == 'success' }}
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: agenda_log
+          key: agenda-log-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Drop older copies of the agenda log
+        if: ${{ !cancelled() && steps.agendas.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 tools/prune_caches.py agenda-log- "agenda-log-${{ github.run_id }}-${{ github.run_attempt }}"
 
       # After publishing: a state whose build failed kept its last pages (or was left out); fail the run so GitHub emails.
       - name: Report states whose build failed
