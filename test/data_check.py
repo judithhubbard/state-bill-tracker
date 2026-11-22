@@ -383,6 +383,21 @@ def check(state):
         if dup:
             say(state, "FAIL" if len(dup) > 0.005 * sum(len(r["votes"]) for r in recs) else "LOOK",
                 f"{s}: {len(dup)} votes name one seat twice (a surname tied to the wrong member?), e.g. {dup[:4]}")
+        # Committee votes counting more members than the committee has: NV's ayes are the members the minutes list as
+        # present less those named (2026-11-22), so a members list read wrongly, or a motion tied to another committee's
+        # minutes, gives a count above the committee's usual one. (Members away and not named only lower it; a committee
+        # that grew mid-session raises it legitimately, so this LOOKs.)
+        sizes = {}
+        for r in recs:
+            for v in r["votes"]:
+                if v[1] == "C" and v[6]:
+                    sizes.setdefault((v[0], v[2]), []).append(v[4] + sum(1 for _, c in v[6] if c != "Y"))
+        big_c = []
+        for k, ns in sizes.items():
+            usual = max(set(ns), key=ns.count)
+            big_c += [f"{k[0]} {k[1]}: {n} (usually {usual})" for n in ns if n > usual + 1]
+        if big_c:
+            say(state, "LOOK", f"{s}: {len(big_c)} committee votes count more members than their committee usually has, e.g. {big_c[:3]}")
         # Votes put in the wrong house: more ayes and noes than the house has seats (ID's history lines don't name the
         # house, so the converter follows the bill from house to house; WY's roll calls sometimes name the wrong one).
         seats = LEGISLATURES.get(state, {}).get("seats", {})

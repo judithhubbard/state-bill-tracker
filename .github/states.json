@@ -368,7 +368,7 @@
     "data/nv"
    ],
    "minutes": 110,
-   "run": "python3 states/nv/fetch.py && python3 states/nv/contacts.py"
+   "run": "(command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null); python3 states/nv/fetch.py && python3 states/nv/contacts.py"
   },
   {
    "name": "West Virginia",

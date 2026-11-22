@@ -76,3 +76,28 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   2026 election, so 16 members of the 2025 Legislature who sit until February lost their emails (46 of 62). contacts.py's
   `keep_emails()` keeps a seat's email from the last contacts file, else from states/nv/emails_2025.json (60 members'
   emails as Open States gave them on 2026-11-09), when the seat's member has the same name. 2 members had none even then.
+- **Committee votes from the minutes (2026-11-22):** NELIS has no committee roll calls, but the committees' minutes do
+  record each work-session vote. fetch.py reads each standing committee's Meetings tab (meetings.json: every meeting's
+  date, its final minutes' link and each bill's result, "SB20: Amend, and do pass as amended") and downloads, once each,
+  the minutes of meetings that reported a kept bill (about 270 a session; 300 a run at most, after everything else;
+  pdftotext, saved as minutes/<Assembly-JUD-1117>.txt.gz; one failing three times is left, never holding Nevada back).
+  robots.txt (www.leg.state.nv.us and archive.leg.state.nv.us, where the minutes' links redirect, the same file, read
+  2026-11-22) bars, for all agents, `/*.axd`, `*/Reports/*`, `*/ExhibitDocument/*`, `/App/Opinions/*`,
+  `/App/Lobbyist/Paytest` and two fiscal-note folders, with no crawl delay; /Session/<session>/Minutes/ and the
+  Meetings tabs are allowed. convert.py's `committee_votes()` ties each history report ("From committee: Do pass.") to
+  the latest passed motion naming the bill ("ASSEMBLYMEMBER MARZOLA MOVED TO AMEND AND DO PASS SENATE BILL 347 (1ST
+  REPRINT)", "SENATOR DALY MOVED TO DO PASS A.B. 147", "TO DO PASS S.B. 1, S.B. 2 AND S.B. 3") in that committee's
+  minutes on or before the report's day, at a meeting whose result for the bill is a report. The minutes name only the
+  noes and those away ("THE MOTION PASSED. (ASSEMBLYMEMBERS COLE, GRAY, HANSEN, HARDY, AND YUREK VOTED NO.
+  ASSEMBLYMEMBER GOULDING WAS ABSENT FOR THE VOTE.)"; "WAS EXCUSED FOR THE VOTE", "ABSTAINED"): the ayes are the
+  minutes' own "COMMITTEE MEMBERS PRESENT" less those named, and members listed absent are excused or absent; names are
+  matched to that list, then to the session's member list by house and last name. A vote is left out when anything
+  doesn't read: a result in other words, a name not on the committee, a motion with no result. Motions that killed a
+  bill (indefinite postponement, failed do-pass motions) have no history line to tie to and are left out, as are
+  reconsiderations, BDR introductions and joint meetings filed under the other house's committee. On 74 minutes read
+  locally (of 528 wanted), 477 of 490 reports in them got a vote (97%); every vote's ayes plus those named equal the
+  committee's size; SB 347 of 2025 in Assembly Judiciary 9-5, as the minutes say. The rest comes in GitHub Actions'
+  runs (two). Traps: results with typos ("UANIMOUSLY", "UNAMIMOUSLY", "UNANIMOUSY", "THE MOTION CARRED"; `unanimous()`),
+  "THE MOTIONS CARRIED" for several bills; names with suffixes ("Max E. Carter II" in the head, "CARTER" in the result;
+  `_fold()` drops them); a motion rescinded or rewritten before its result (left out). data_check LOOKs at committee votes
+  that count more members than the committee usually has (a members list read wrongly).
