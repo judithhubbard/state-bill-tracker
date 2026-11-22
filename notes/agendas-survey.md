@@ -2,7 +2,7 @@
 
 Upcoming committee meetings with the bills on their agendas ("On an upcoming committee agenda"), from each state's
 `agendas(session)` in states/<st>/convert.py: {bill: [["House Judiciary", "2027-02-03T10:00:00"], ...]}, meetings from today
-on. Before this, 32 states had none: an empty `agendas()` or none at all. All of them were surveyed. 31 now have a reader; Georgia is blocked.
+on. Before this, 32 states had none: an empty `agendas()` or none at all. All of them were surveyed. All 32 now have a reader (Georgia: the House only, from the Daily Report; added later the same day).
 Each state's NOTES.md has a paragraph on its reader.
 
 **Nothing has been tested against a live session's agendas.** It's between sessions: no state had bills on upcoming
@@ -23,7 +23,7 @@ Congress is handled separately.
 | CO | leg.colorado.gov /committees?sess=YYYYa, each committee's "Upcoming Schedule", /agenda/committee/<id> | HTML | yes | next 1-2 meetings per committee | robots bars only floor calendars, journals, downloads; 3 s apart | done (tested on archived 2026 pages; runs January to June 20 only) |
 | CT | www.cga.ct.gov/basin/api/v1/calendar-events/ + each event's agenda PDF | JSON + PDF (pdftotext) | yes | feed ~1 year; PDFs when posted | robots bars /asp/cgabillstatus/, /html/ etc., not /basin/ or /<year>/ | done (tested on March 2026 agendas) |
 | DE | POST legis.delaware.gov/json/CommitteeMeetings/GetUpcomingCommitteeMeetings, then /json/MeetingNotice/GetCommitteeMeetingItems?committeeMeetingId=N | JSON | yes | about a week | no robots.txt | done (tested on the past-meetings grid, May-June 2026: 16 bills, all matched; the upcoming grid's date format is assumed to match the past grid's) |
-| GA | www.legis.ga.gov/api/meetings | JSON | unknown | unknown | gated: 401 without a token built from a key hidden in the site's script; the SOAP services have no meetings service; house.ga.gov and senate.ga.gov time out | **blocked** (a deliberate gate, not worked around; would need the General Assembly's permission or a feed) |
+| GA | House: the House Budget & Research Office's Daily Report, www.legis.ga.gov/api/document/docs/default-source/house-budget-and-research-office-document-library/2026-daily-report/ld<NN>_<dow>_<mon>_<dd>_<yyyy>.pdf (public, no token), and the agenda PDFs it links (/api/document/agendas/...). Senate: none | PDF (pdftohtml -xml for the links, pdftotext) | yes (2026: 284 of 321 meetings linked an agenda) | the next day only, posted the afternoon before | no robots.txt; the schedule API (/api/meetings) is gated and never used; file names tried (no listing), at most 8 a run; legis.ga.gov timed out from a GitHub runner on 2026-11-22 | done for the House (2026-03-04 report as of March 5: 16 meetings, 47 bills, all matched; all 40 reports of 2026 found with 51 requests); unverified from GitHub's runners |
 | ID | legislature.idaho.gov/sessioninfo/agenda/hagenda/ and sagenda/ (fallback: each standing committee's page) | PDF (pdftotext) | yes | days | robots bars only /committee-calendar/action~* | done (tested on 4 live March 2026 PDFs: 16 bills, all matched) |
 | IL | `<committeehearing>` lines in each bill's status XML, ftp.ilga.gov (already downloaded) | XML | per bill | as posted; nightly sync | the file repository is allowed; www.ilga.gov blocks bots (not touched) | done (Senate wording untested) |
 | IN | api.iga.in.gov /<year>/meetings?minDate=&maxDate=, /<year>/meetings/<id> | JSON API (key in hand) | yes | from early December for the next session | API, 0.6 s apart | done (date set to 2026-02-02: 189 bills, all matched) |
@@ -73,7 +73,7 @@ By state:
 - **CO**: from about January 14, compare leg.colorado.gov/committees/2027A/house/Judiciary's "Upcoming Schedule" with the file. Watch for "no committee list" (2027A not set up yet) and for 429s. Check how a canceled agenda is worded.
 - **CT**: check pdftotext ran ("0 agendas unreadable"), and compare one committee's agenda PDF. Watch for revised PDFs.
 - **DE**: compare with legis.delaware.gov/CommitteeMeetings. A "meeting times not understood" warning means the upcoming grid writes dates differently from the past grid.
-- **GA**: nothing to test. Getting agendas needs the General Assembly's web staff to grant API access or offer a feed: the owner's decision.
+- **GA**: tested on 2026's reports and agendas (states/ga/NOTES.md). The Senate needs the web staff's permission or a feed.
 - **ID**: check whether /sessioninfo/agenda/hagenda/ links "...-Agenda.pdf" files. If it doesn't, the log shows about 25 committee-page requests (the fallback).
 - **IL**: once a Senate committee posts hearings, check for "Senate ..." entries with the right times.
 - **IN**: data/in/2027/agendas.json should appear in December, and shows on the site from January. Check a canceled meeting in the window.
@@ -98,7 +98,7 @@ By state:
 
 ## Known gaps
 
-- Georgia: blocked (above). Rechecked 2026-11-22 from a GitHub runner: house.ga.gov, senate.ga.gov and www.legis.ga.gov all time out there; the chamber sites have been retired since 2025 (states/ga/NOTES.md).
+- Georgia: the gated schedule API is still not used. Rechecked 2026-11-22 from a GitHub runner: house.ga.gov, senate.ga.gov and www.legis.ga.gov all time out there, so the Daily Report reader (which reads www.legis.ga.gov's public documents) is unverified on the runners; if they can't reach it, ask the owner rather than route around it (states/ga/NOTES.md).
 - Mississippi House: it publishes no bills with its meeting times; the page says only that a bill's committee meets (kind "meets", states/ms/NOTES.md).
 - Tennessee House: missing from LegiScan since February 2026, and the official site bars robots.
 - Open States (2026-11-22, research only, the owner's decision): its /events had 6 Georgia and 11 Tennessee meetings, all November-December 2026 interim ones with no bills, read from the same gated (GA) or robots-barred (TN, wapp.capitol.tn.gov) pages. The API returns only recent and upcoming events and no creation time, so lead time and bill match rates can only be measured by polling it during the 2027 sessions.
