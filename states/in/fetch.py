@@ -31,7 +31,7 @@ FETCH_MINUTES (set by the workflow) stops the run five minutes before it with ev
 Usage: python3 states/in/fetch.py [first_year]   (default: the shared window's first year, states/window.py: this year and
 the four before, not before 2023; through the newest listed session)
 """
-import hashlib, json, os, sys, time, urllib.error, urllib.request
+import hashlib, json, os, re, sys, time, urllib.error, urllib.request
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -309,6 +309,52 @@ def people(year):
         INCOMPLETE.add(f"{year}:people")
 
 
+def agendas(year):
+    """Bills on committee agendas from yesterday to three weeks ahead, into data/in/<year>/agendas.json: bill ->
+    [["House Public Policy", "2026-01-13T08:30:00"], ...]. The API's meetings list (/<year>/meetings, filtered by date)
+    names each meeting's committee, chamber, day, start and whether it's cancelled; each meeting's detail
+    (/<year>/meetings/<id>) lists its agenda's bills ("billName": "HB1038"). A session's committees meet from December
+    (the next session's bills, prefiled). A failure keeps the last file and never marks Indiana incomplete."""
+    folder = os.path.join(DATA, str(year))
+    os.makedirs(folder, exist_ok=True)
+    first, last = (date.today() - timedelta(days=1)).isoformat(), (date.today() + timedelta(days=21)).isoformat()
+    listing = get(f"/{year}/meetings?minDate={first}&maxDate={last}")
+    if isinstance(listing, dict) and isinstance(listing.get("meetings"), dict):
+        listing = listing["meetings"]  # no meetings: {"meetings": {"itemCount": 0, "items": [one blank item]}}
+    if not (isinstance(listing, dict) and isinstance(listing.get("items"), list)):
+        print(f"{year}: meetings unreadable; kept the last agendas", flush=True)
+        return
+    out, n = {}, 0
+    for m in listing["items"]:
+        day = m.get("meetingdate") or ""
+        if str(m.get("cancelled")).lower() == "true" or not first <= day <= last or not m.get("link"):
+            continue
+        d = get(m["link"])
+        if not isinstance(d, dict):
+            print(f"{year}: a meeting unreadable; kept the last agendas", flush=True)
+            return
+        if str(d.get("cancelled")).lower() == "true":
+            continue
+        c = d.get("committee") or m.get("committee") or {}
+        chamber = c.get("chamber") or ""
+        name = (c.get("name") or "").strip()
+        # Conference committees (named "Conference Committee for HB 1266", listed under one chamber) are joint.
+        joint = chamber not in ("House", "Senate") or name.lower().startswith("conference committee")
+        name = f"Joint {name}" if joint else f"{chamber} {name}"
+        start = (d.get("starttime") or m.get("starttime") or "")[:8]
+        stamp = f"{day}T{start if len(start) == 8 else '00:00:00'}"
+        n += 1
+        for a in d.get("agenda") or []:
+            b = re.match(r"([HS])([BJ])\D*0*(\d+)", ((a.get("bill") or {}).get("billName") or "").upper())
+            if not b:
+                continue
+            k = f"{b.group(1)}{b.group(2)}{int(b.group(3))}"
+            if [name, stamp] not in out.setdefault(k, []):
+                out[k].append([name, stamp])
+    save(os.path.join(folder, "agendas.json"), out)
+    print(f"{year}: agendas: {len(out)} bills on {n} meetings", flush=True)
+
+
 def begun(year):
     """Whether a year's session has convened (by the second Monday of January). The next session, listed from November
     with its first bills and no members yet, is read when it's there but never holds Indiana off the site."""
@@ -352,6 +398,11 @@ def main():
             if not listed:
                 INCOMPLETE.add("sessions")
         years = [y for y in listed if y >= FIRST]
+        for y in sorted(y for y in years if y >= YEAR):  # this year's and next year's committee agendas
+            try:
+                agendas(y)
+            except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:  # never breaks the run
+                print(f"{y}: agendas failed ({type(e).__name__}); kept the last file", flush=True)
         for y in sorted(years, reverse=True):  # the newest session first
             bills(y)
         for y in sorted(years, reverse=True):

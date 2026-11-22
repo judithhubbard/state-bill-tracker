@@ -37,3 +37,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Bankers Association counted 244); 2026 163 and no vetoes. Bill pages: iga.in.gov/legislative/<year>/bills/<house|senate>/
   <n>/details (the joint resolutions' address is a guess). Separate Senate (50) and House (100) districts by city, town or
   county (`states/in/towns.py`).
+
+- **Committee agendas (2026-11-22):** `agendas()` in states/in/fetch.py, run for this year's session and next year's
+  (when the API lists it) before the bills, writes data/in/<year>/agendas.json; `agendas()` in convert.py reads it and
+  keeps meetings from today on. Source: the API's meetings, `/<year>/meetings?minDate=<yesterday>&maxDate=<+21 days>`
+  (committee with its chamber, day, start time, "cancelled": "False"/"True"), then each meeting's detail
+  (`/<year>/meetings/<id>`: `agenda[].bill.billName`, "HB1038"). No meetings answers `{"meetings": {"itemCount": 0,
+  "items": [a blank item]}}`. Names: "House Public Policy", "Senate Appropriations"; conference committees and interim
+  committees "Joint ...". A session's committees start meeting in December (2026's first was 2025-12-02, on prefiled
+  bills), but build_data.py reads agendas only for the current session, so December's meetings show from January. One
+  list plus one request per meeting (about 80 in a busy three weeks, 0.6 s apart). A failure keeps the last file.
+  Tested 2026-11-22 with the date set to 2026-02-02: 189 bills on 79 meetings, every key matched a record; live today
+  (no meetings). Not yet seen: a cancelled meeting in the window, and next session's first December meetings.
