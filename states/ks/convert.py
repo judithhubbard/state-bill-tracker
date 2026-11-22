@@ -904,6 +904,18 @@ def earlier(session, p, b):
     return out
 
 
+def agendas(session):
+    """Bills on upcoming committee hearings (states/ks/fetch.py's agendas(): the API's hearings list), today or later:
+    {"HB2001": [["House Education", "2027-01-20T13:30:00"], ...]}."""
+    today = date.today().isoformat()
+    out = {}
+    for bill, meets in (load(session, "agendas", {}) or {}).items():
+        keep = [m for m in meets if m[1][:10] >= today]
+        if keep:
+            out[bill] = keep
+    return out
+
+
 def parties(session, recs):
     if session not in _PARTIES:
         load_session(session)

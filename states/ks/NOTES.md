@@ -62,3 +62,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (no pocket veto); line items on appropriations; override two-thirds of the members (27, 84). governor.ks.gov answers
   automated requests with 403: the phone (785) 296-3232 and address are from general knowledge, unchecked. Places
   (`towns.py`): cities, Census-designated places and counties, separate Senate and House lists.
+
+- **Committee agendas (2026-11-22):** `agendas()` in states/ks/fetch.py reads the API's hearings list
+  (`/api/v1/hearings/?biennium=b2027_28&from=<yesterday>&to=<3 weeks ahead>`, JSON, one or two requests a run; built from
+  the journal's "Hearing: Tuesday, February 11, 2025, 9:30 AM — Room 548-S" lines, misc_he_200) into
+  data/ks/<first year>/agendas.json, `{"HB2001": [["House Education", "2027-01-20T13:30:00"], ...]}` (canceled hearings
+  left out; "Senate Select Committee on Veterans Affairs" keeps its own name); `agendas()` in convert.py keeps today's and
+  later. Hearings are posted 1 to 9 days ahead (mostly 5-7; 2025-26's history lines). Only bills scheduled for a hearing
+  are listed: committees' "final action" (working) meetings aren't in the journal as hearings. Tested 2026-11-22 against
+  February 2026's hearings (234 bills on 161 hearings, 233 matching records; HCR 5022, a resolution, isn't kept); between
+  sessions the list is empty. A failed read keeps the last file.

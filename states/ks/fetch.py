@@ -55,8 +55,11 @@ detail is read when it's new or its rev_date changed; a supplemental note's text
 Those extras fill in over later runs and never hold the state back: a first copy (about 2,700 roll calls and 1,200
 notes for two bienniums) takes about 2½ hours without a key, so GitHub's runs build it over several.
 
-Not read: bill texts (PDFs; /api/v1/measures/<bill>/text/ has them as lines), fiscal notes (PDFs), testimony, hearings
-(/api/v1/hearings/), committee minutes, and the website's pages, whose emails are hidden behind Cloudflare's script
+- agendas.json (the active biennium): bills on committee hearings from yesterday to three weeks ahead, from
+  /api/v1/hearings/ (see agendas()), every run.
+
+Not read: bill texts (PDFs; /api/v1/measures/<bill>/text/ has them as lines), fiscal notes (PDFs), testimony, past
+hearings, committee minutes, and the website's pages, whose emails are hidden behind Cloudflare's script
 (the API and the members' CSV export give them openly).
 
 data/ks/incomplete says "running" during the first copy, then lists what was never downloaded (a biennium's bill status,
@@ -299,6 +302,48 @@ def biennium_lists(biennium, live):
     save(state, state_path)
 
 
+def hearing_time(t):
+    """"1:30 PM" -> "13:30:00"; "00:00:00" when there's no clock time."""
+    m = re.match(r"\s*(\d{1,2}):(\d\d)\s*([AP])\.?M", t or "", re.I)
+    if not m:
+        return "00:00:00"
+    h = int(m.group(1)) % 12 + (12 if m.group(3).upper() == "P" else 0)
+    return f"{h:02d}:{m.group(2)}:00"
+
+
+def agendas(biennium):
+    """Bills on upcoming committee hearings, from /api/v1/hearings/ (built from the journal's "Hearing: ..." lines,
+    misc_he_200, which committees post a few days to a week ahead): yesterday to three weeks ahead, canceled ones left
+    out, into <first year>/agendas.json as {"HB2001": [["House Education", "2027-01-20T13:30:00"], ...]}. One or two
+    requests. A failure keeps the last file."""
+    path = os.path.join(DATA, str(first_year(biennium)), "agendas.json")
+    try:
+        rows = listing("hearings", "hearings", biennium, **{"from": (TODAY - timedelta(days=1)).isoformat(),
+                                                            "to": (TODAY + timedelta(days=21)).isoformat()})
+    except Refused as e:
+        print(f"agendas: refused ({e}); kept the last copy", flush=True)
+        return
+    if rows is None:
+        print("agendas: unreadable; kept the last copy", flush=True)
+        return
+    out, meets = {}, set()
+    for h in rows:
+        if (h.get("status") or "").lower() in ("canceled", "cancelled") or not h.get("hearing_date"):
+            continue
+        title = re.sub(r"\s+", " ", h.get("committee_title") or "").strip()
+        name = title if re.match(r"(House|Senate|Joint)\b", title) else f"{h.get('chamber') or ''} {title}".strip()
+        when = f"{h['hearing_date']}T{hearing_time(h.get('hearing_time'))}"
+        meets.add((name, when))
+        for bill in h.get("bill_numbers") or []:
+            bill = re.sub(r"\s+", "", bill or "").upper()
+            if WANTED.match(bill) and [name, when] not in out.setdefault(bill, []):
+                out[bill].append([name, when])
+    for meets_of in out.values():
+        meets_of.sort(key=lambda m: m[1])
+    save(out, path)
+    print(f"agendas: {len(out)} bills on {len(meets)} hearings", flush=True)
+
+
 def biennium_extras(biennium):
     """One biennium's supplemental notes' texts (fewer, and they're "What it does"), then its roll calls' members."""
     year = first_year(biennium)
@@ -455,6 +500,8 @@ def main():
             if out_of_time():
                 break
             biennium_lists(x, x == active)
+            if x == active and not out_of_time():
+                agendas(x)
             if x == active and not out_of_time():
                 member_details(x)
         for x in bienniums:
