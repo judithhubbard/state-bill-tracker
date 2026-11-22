@@ -341,6 +341,17 @@ table.oc th { vertical-align: bottom; }
 .legs { max-width: 820px; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); font-size: 13.5px; }
 .legs[hidden] { display: none; }
 .legs p { margin: 8px 0 0; }
+.govrec { display: grid; gap: 26px; min-width: 0; }
+.govrec:empty, #personStats:empty { display: none; }
+.govrec section { display: grid; gap: 8px; min-width: 0; }
+.govrec .govscroll { overflow-x: auto; max-width: 640px; }
+.govtab { border-collapse: collapse; width: 100%; font-size: 14px; }
+.govtab th { text-align: left; font-weight: 600; font-size: 12.5px; color: var(--ink-2); border-bottom: 1px solid var(--rule); padding: 4px 8px 4px 0; vertical-align: bottom; }
+.govtab td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.govtab .n { text-align: right; font-variant-numeric: tabular-nums; }
+.govtab small { color: var(--ink-2); font-size: 12px; white-space: nowrap; }
+.govfrom { white-space: nowrap; font-size: 13px; }
+.person .reach .phone { white-space: nowrap; }
 .legs-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .legs-head h2 { margin: 0; font: 600 15px var(--body); color: var(--ink); }
 .legs-head input { margin-left: auto; width: 11em; max-width: 100%; font-size: 13px; padding: 3px 7px; }
@@ -1388,7 +1399,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
   </section>
 
   <!-- How it works -->
-  <section class="statsview" id="view-person" hidden><div id="personStats"></div></section>
+  <section class="statsview" id="view-person" hidden><div id="personStats"></div><div class="govrec" id="govRec"></div></section>
 
   <section class="howview" id="view-how" hidden>
     <nav class="subtabs" id="howTabs" aria-label="Sections">
@@ -2196,7 +2207,7 @@ function renderMyReps() {
     el.dataset.orig ||= el.innerHTML;
     el.innerHTML = chosen.length ? `(yours: ${andList(chosen.map((r) => esc(`${r.title} ${r.name}`)))})` : el.dataset.orig;
   }
-  if (!DATA.current || !LEGS.length || PRESET?.who || EMBED) { $("whereBox").hidden = true; return; }
+  if (!DATA.current || !LEGS.length || PRESET?.who || PRESET?.gov || EMBED) { $("whereBox").hidden = true; return; }
   $("whereBox").hidden = false;
   // Drawn when it's opened (a long towns list comes in its own part).
   if (!$("whereBox").open) return;
@@ -2285,7 +2296,8 @@ function renderLegs() {
     const who = document.querySelector('#power [data-legs="G"]')?.closest(".bp-ch")?.title || `${EXEC.title} ${DATA.governor || ""}`;
     box.innerHTML = `<div class="legs-head"><h2>${esc(who.trim())}</h2>${close}</div>
       <p class="reach">${GOV_REACH}</p>${govNext() ? `<p>${govNext()}</p>` : ""}
-      <p>${desk ? `<button type="button" class="linkish" data-legsdesk>${num(desk)} bill${desk === 1 ? "" : "s"} waiting for ${esc(EXEC.the)}</button>` : `No bills are waiting for ${esc(EXEC.the)}.`}</p>`;
+      <p>${desk ? `<button type="button" class="linkish" data-legsdesk>${num(desk)} bill${desk === 1 ? "" : "s"} waiting for ${esc(EXEC.the)}</button>` : `No bills are waiting for ${esc(EXEC.the)}.`}</p>
+      ${govLink() ? `<p>${govLink()}</p>` : ""}`;
     return;
   }
   const here = LEGS.filter((L) => L.house === k), parties = {};
@@ -2320,6 +2332,95 @@ function legRows() {
     <td class="lt-name">${ROOT && L.slug ? `<a href="${esc(ROOT + L.slug)}/">${esc(L.name)}</a>` : esc(L.name)}${L === leadL ? `<span class="legrole">${esc(lead.role)}</span>` : ""}</td>
     <td class="lt-district">${esc(dist)}</td><td class="lt-bills">${num(n)}</td><td class="lt-laws">${num(law)}</td></tr>`).join("")
     || `<tr><td colspan="${NOPARTY ? 4 : 5}" class="muted">No one by that name.</td></tr>`;
+}
+
+// ---- The governor's page (/<st>/governor/; Congress: /us/president/, build_data.py's GOV_SLUG), PRESET.gov: who holds
+// the office and how to reach them, the bills waiting on them, this session's decisions, their record in the past
+// sessions shown here (the stats part's govRecord, build_data.py's governor_record()) and vetoes that came with a
+// message (vetoMsgs). Bills open in place (billRow()). ----
+// The page's link to it, from the party line's panel and a decided bill's panel (public site only).
+const govPageUrl = () => (ROOT && DATA.govPage && !PRESET?.gov ? ROOT + DATA.govPage : "");
+const govLink = () => (govPageUrl() ? `<a href="${esc(govPageUrl())}">${EXEC.The}'s page ›</a>` : "");
+// The day the governor in office took office (GOVERNORS), and when a bill was decided.
+const govSince = () => DATA.govNow?.since || "";
+const decidedOn = (b) => b.dates.vetoed || b.dates.signed || "";
+// A law or veto of this session made by the governor in office (any, when the record has no date).
+const byThisGov = (b) => b.stage >= 5 && (!decidedOn(b) || decidedOn(b) >= govSince());
+const PARTY_WORD = { D: "Democrat", R: "Republican", I: "Independent" };
+const GOV_KINDS = {
+  signed: [STATE.noSignatures ? "Became law" : "Signed", (b) => b.stage === 5 && !overriddenLaw(b) && !unsignedLaw(b)],
+  unsigned: ["Became law without signature", unsignedLaw],
+  vetoed: ["Vetoed", (b) => b.stage === 6 || overriddenLaw(b)],
+  overridden: ["Veto overridden", overriddenLaw],
+};
+let GOV_KIND = "signed";
+const GOV_SHOWN = {};
+function renderGovCard() {
+  const g = DATA.govNow || { name: DATA.governor || "" };
+  const name = `${EXEC.title} ${g.name}`.trim();
+  const since = g.since ? `In office since ${fmtDate(g.since)}` : "";
+  const initials = g.name.split(" ").filter((w) => /^[A-Z]/.test(w) && !/^(Jr|Sr|II|III)\.?$/.test(w)).map((w) => w[0]).filter((c, i, a) => i === 0 || i === a.length - 1).join("");
+  $("person").innerHTML = `
+    <div class="photo"><span>${esc(initials)}</span></div>
+    <div class="who-body">
+      <h2>${esc(name)}</h2>
+      <p>${[PARTY_WORD[g.party] || "", since].filter(Boolean).map(esc).join(" · ")}</p>
+      <p class="reach">${GOV_REACH}</p>
+      ${govNext() ? `<p>${govNext()}</p>` : ""}
+      <p><a href="${esc(ROOT || BASE || "./")}">← All bills in ${BODY}</a></p>
+    </div>`;
+  $("person").hidden = false;
+}
+// On a law or veto of the governor in office (this session's): their page.
+const govFrom = (b) => (govPageUrl() && DATA.current && byThisGov(b) ? ` <span class="govfrom">${govLink()}</span>` : "");
+// A list of bills that opens in place, 25 at a time.
+function govList(key, bills) {
+  const n = GOV_SHOWN[key] || 25, more = bills.length - n;
+  return `<div class="list">${bills.slice(0, n).map(billRow).join("") || `<div class="empty">None.</div>`}</div>
+    ${more > 0 ? `<button class="more" type="button" data-govmore="${key}">Show ${num(Math.min(50, more))} more</button>` : ""}`;
+}
+function renderGov() {
+  if (later("person", "gov", renderGov, "govRec", () => ({ parts: ["rows", "stats"] }))) return;
+  const since = govSince(), newest = (a, b) => decidedOn(b).localeCompare(decidedOn(a)) || a.sortKey - b.sortKey;
+  // Waiting: soonest deadline first; and bills that passed both houses but haven't reached them yet.
+  const desk = BILLS.filter((b) => b.stage === 4).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999") || a.sortKey - b.sortKey);
+  const coming = BILLS.filter((b) => b.stage === 3 && !isAmendment(b) && !toVoters(b)).length;
+  // This session: what the governor in office decided.
+  const mine = BILLS.filter(byThisGov);
+  const kinds = Object.entries(GOV_KINDS).map(([k, [label, test]]) => [k, label, mine.filter(test).sort(newest)]).filter(([k, , l]) => l.length || k === "signed" || k === "vetoed");
+  if (!kinds.some(([k]) => k === GOV_KIND)) GOV_KIND = "signed";
+  const shown = kinds.find(([k]) => k === GOV_KIND);
+  // Earlier sessions under the same governor.
+  const past = (DATA.govRecord || []).filter((r) => r[2] === since && r[0] < DATA.session);
+  const noSig = past.some((r) => r[7]);
+  const url = (s) => { const u = DATA.sessions.find((x) => x.session === s)?.url; return u && !/^https?:/.test(u) ? BASE + u : ""; };
+  const pastRows = past.map(([s, , start, reached, signed, vetoed, over, unsigned]) => {
+    // A governor who took office during the session: only their part of it.
+    const part = start > `${s}-01-31` && start <= `${s + YEARS - 1}-12-31` ? ` <small>from ${fmtDate(start)}</small>` : "";
+    return `<tr><td>${url(s) ? `<a href="${esc(url(s))}">${esc(span(s))}</a>` : esc(span(s))}${part}</td><td class="n">${num(reached)}</td><td class="n">${num(signed)}</td>
+      ${noSig ? `<td class="n">${num(unsigned)}</td>` : ""}<td class="n">${num(vetoed)}${over ? ` <small>(${num(over)} overridden)</small>` : ""}</td><td class="n">${pctOf(vetoed, signed + vetoed + unsigned)}%</td></tr>`;
+  }).join("");
+  const msgs = (DATA.vetoMsgs || []).map((i) => BILLS[i]).filter((b) => b && byThisGov(b)).sort(newest);
+  $("govRec").innerHTML = `
+    <section>
+      <h2>On ${EXEC.the}'s desk (${num(desk.length)})</h2>
+      ${desk.length > 1 ? `<p class="muted">Soonest deadline first.</p>` : ""}
+      ${desk.length ? govList("desk", desk) : `<p class="muted">No bills are waiting for ${EXEC.the} right now.</p>`}
+      ${coming ? `<p class="muted">${num(coming)} more ${coming === 1 ? "bill has" : "bills have"} ${passedBothLc} and ${coming === 1 ? "hasn't" : "haven't"} reached ${EXEC.the} yet.</p>` : ""}
+    </section>
+    <section>
+      <h2>${esc(span(DATA.session))} session so far</h2>
+      <nav class="subtabs" aria-label="Decisions">${kinds.map(([k, label, l]) => `<button type="button" data-govkind="${k}" aria-pressed="${k === GOV_KIND}">${esc(label)} (${num(l.length)})</button>`).join("")}</nav>
+      ${govList(GOV_KIND, shown[2])}
+    </section>
+    ${!DATA.sessions.some((x) => x.session < DATA.session) ? "" : `<section>
+      <h2>Earlier sessions</h2>
+      ${past.length ? `<div class="govscroll"><table class="govtab"><thead><tr><th scope="col">Session</th><th scope="col" class="n" title="Bills that passed and went to ${esc(EXEC.the)}">Sent</th>
+        <th scope="col" class="n">${esc(GOV_KINDS.signed[0])}</th>${noSig ? `<th scope="col" class="n">Without signature</th>` : ""}<th scope="col" class="n">Vetoed</th><th scope="col" class="n">Share vetoed</th></tr></thead>
+        <tbody>${pastRows}</tbody></table></div>`
+        : `<p class="muted">The sessions on this site before ${esc(span(DATA.session))} were under an earlier ${EXEC.title.toLowerCase()}.</p>`}
+    </section>`}
+    ${msgs.length ? `<section><h2>Vetoes with a message (${num(msgs.length)})</h2>${govList("msgs", msgs)}</section>` : ""}`;
 }
 function setReps(s, a, more = {}) {
   try { localStorage.setItem(REPS_STORE, JSON.stringify({ S: +s || 0, [LOW]: +a || 0, ...more })); } catch (e) {}
@@ -2802,7 +2903,7 @@ function planFor(b, stance = "support") {
     gov = A("sign it", "veto it") + (b.due ? ` by ${fmtDate(b.due)}` : "");
     book.reps(BOTH, A(`urge ${EXEC.the} to sign it`, `urge ${EXEC.the} to veto it`));
   } else if (b.stage === 5) {
-    what = `<p class="when">${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}.${partlyVetoed(b) ? ` ${EXEC.The} vetoed part of it.` : ""}</p>`;
+    what = `<p class="when">${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}.${partlyVetoed(b) ? ` ${EXEC.The} vetoed part of it.` : ""}${govFrom(b)}</p>`;
     b.vers.forEach((v) => book.sponsor(v));
   } else if (b.stage === 6 && STATE.vetoReturns?.(b)) {
     // Nevada: a veto after the session goes back to the next regular session, which can override it.
@@ -2812,7 +2913,7 @@ function planFor(b, stance = "support") {
   } else if (b.stage === 6) {
     // A two-year session can still take a new bill after a first-year veto.
     const again = live ? "file it again as a new bill this session" : "reintroduce it next session";
-    what = `<p class="when">Vetoed. The sponsors can ${again}.</p>`;
+    what = `<p class="when">Vetoed. The sponsors can ${again}.${govFrom(b)}</p>`;
     b.vers.forEach((v) => book.sponsor(v, A(again, "")));
   }
   // A step taken while the Legislature wasn't meeting isn't progress (interimNote()); and what the break means for it.
@@ -2879,7 +2980,7 @@ function nextSteps(b) {
   // A decided bill (a law, a veto, a bill that died) has no "What you can do" heading, and its outcome isn't said again:
   // the row and the history say it.
   if (!plan.actionable) {
-    if (b.stage === 5) what = partlyVetoed(b) ? `<p class="when">${EXEC.The} vetoed part of it.</p>` : "";
+    if (b.stage === 5) what = (partlyVetoed(b) ? `<p class="when">${EXEC.The} vetoed part of it.</p>` : "") + (govFrom(b) ? `<p class="when">${govFrom(b).trim()}</p>` : "");
     if (b.stage === 6) what = what.replace(/^(<p class="when">)Vetoed\. /, "$1");
     return what || contacts ? `<div class="next">${what}${contacts}</div>` : "";
   }
@@ -5410,17 +5511,21 @@ function keepFocus(fn) {
 }
 
 const VIEWS = ["bills", "watch", "stats", "how", "act", "person"];
+// The tab a page opens on (the governor's page: their record), and the tabs a page doesn't have: a legislator's page has
+// no watchlist, statistics or How; the governor's page (no tabs shown) its record, and Bills for a bill linked from a
+// panel; the others no Record or Coming up.
+const HOME_VIEW = () => (PRESET?.gov ? "person" : "bills");
+const viewOff = (v) => (PRESET?.gov ? !["person", "bills"].includes(v) : PRESET?.who ? ["watch", "stats", "how"].includes(v) : ["person", "act"].includes(v));
 function showView(v, push = true) {
-  if (!VIEWS.includes(v)) v = "bills";
-  if (PRESET?.who ? ["watch", "stats", "how"].includes(v) : ["person", "act"].includes(v)) v = "bills";
+  if (!VIEWS.includes(v) || viewOff(v)) v = HOME_VIEW();
   // A finished session has nothing to watch or weigh in on (a past bill on a shared list still shows its card).
   if (!DATA.current && ["watch", "act"].includes(v) && !(EMBED && v === "watch")) v = "bills";
   // The tab goes in the address bar, so Back moves between tabs and links keep the tab.
   const from = VIEWS.find((x) => !$("view-" + x).hidden);
   if (from && from !== v) countOnce(`move/${from} → ${v}`);
   const here = location.hash.slice(1);
-  if (push && here !== v && !(v === "bills" && !VIEWS.includes(here))) {
-    try { history.pushState(null, "", v === "bills" ? location.pathname + location.search : `#${v}`); } catch (err) {}
+  if (push && here !== v && !(v === HOME_VIEW() && !VIEWS.includes(here))) {
+    try { history.pushState(null, "", v === HOME_VIEW() ? location.pathname + location.search : `#${v}`); } catch (err) {}
   }
   for (const tab of document.querySelectorAll(".view-tab")) {
     if (tab.dataset.view === v) tab.setAttribute("aria-current", "page"); else tab.removeAttribute("aria-current");
@@ -5589,7 +5694,7 @@ function wire() {
     const tab = e.target.closest(".view-tab"); if (tab) showView(tab.dataset.view);
   });
   $("more").addEventListener("click", () => { state.shown += PAGE; renderList(); });
-  for (const id of ["list", "openNow", "wlList"]) $(id).addEventListener("click", (e) => {
+  for (const id of ["list", "openNow", "wlList", "govRec"]) $(id).addEventListener("click", (e) => {
     const ps = e.target.closest("[data-panelstance]");
     if (ps) {
       e.preventDefault(); e.stopPropagation();
@@ -5613,7 +5718,7 @@ function wire() {
     if (btn.closest("#wlList .wrows")) isWatched(b) ? W_GONE.delete(b.idx) : W_GONE.add(b.idx);
     refreshWatchButtons(b);
   });
-  for (const id of ["list", "openNow", "wlList"]) $(id).addEventListener("click", async (e) => {
+  for (const id of ["list", "openNow", "wlList", "govRec"]) $(id).addEventListener("click", async (e) => {
     const btn = e.target.closest("[data-copylink]"); if (!btn) return;
     const link = btn.dataset.copylink, was = btn.textContent;
     try { await navigator.clipboard.writeText(link); btn.textContent = "Copied"; setTimeout(() => { btn.textContent = was; }, 1500); } catch (err) { prompt("Copy this link:", link); }
@@ -5669,7 +5774,7 @@ function wire() {
     if (openFromHash()) { showView("bills", false); render(); openOne(); return; }
     if (VIEWS.includes(h) || !h) {
       if (ONE != null) { leaveOne(); render(); }
-      showView(h || "bills", false);
+      showView(h || HOME_VIEW(), false);
     }
   };
   // Browsers fire popstate for Back, Forward and any change to the #part of the address.
@@ -5832,7 +5937,7 @@ function wire() {
   });
   // Leaving with a save of the shared list still waiting sends it now.
   window.addEventListener("pagehide", flushPub);
-  for (const id of ["list", "openNow", "wlList"]) $(id).addEventListener("toggle", (e) => { if (e.target.open && e.target.matches(".bill")) fillDetail(e.target); }, true);
+  for (const id of ["list", "openNow", "wlList", "govRec"]) $(id).addEventListener("toggle", (e) => { if (e.target.open && e.target.matches(".bill")) fillDetail(e.target); }, true);
   $("wlList").addEventListener("toggle", (e) => {
     if (e.target.matches(".wgroup")) W_GROUP_OPEN.set(e.target.dataset.wgroup, e.target.open);
     if (e.target.matches("details.wsec")) store("wsec", { ...W_SEC_OPEN(), [e.target.dataset.wsec]: e.target.open });
@@ -5841,6 +5946,12 @@ function wire() {
     if (e.target.closest("[data-showagenda]")) { Object.assign(state, blank()); setAgenda(true); showView("bills"); return; }
     const btn = e.target.closest("[data-more]"); if (!btn) return;
     openShown += 25; renderOpenNow();
+  });
+  $("govRec").addEventListener("click", (e) => {
+    const k = e.target.closest("[data-govkind]");
+    if (k) { GOV_KIND = k.dataset.govkind; countOnce(`governor/${GOV_KIND}`); renderGov(); return; }
+    const m = e.target.closest("[data-govmore]");
+    if (m) { GOV_SHOWN[m.dataset.govmore] = (GOV_SHOWN[m.dataset.govmore] || 25) + 50; renderGov(); }
   });
   $("statTopic").addEventListener("change", renderStats);
   $("statGeneral").addEventListener("change", (e) => { STAT_GENERAL = e.target.checked; renderStats(); });
@@ -6881,6 +6992,13 @@ function hydrate(raw) {
     document.querySelector('.view-tab[data-view="act"]').hidden = false;
     for (const sec of document.querySelectorAll("#view-act > .act-sec")) if (sec.id !== "openNow") sec.hidden = true;
   }
+  if (PRESET?.gov) {
+    // The governor's page is their card and record only, with no tabs (build_data.py's frame_tabs() hides them too):
+    // "All bills" on the card goes to the bill list.
+    document.querySelector(".views").hidden = true;
+    renderGovCard();
+    renderGov();
+  }
   // Phones start with the filter panel folded up; wider screens show it as a sidebar.
   // Folded on a narrow screen; opened again when the window widens, since a wide layout has no "Filters" toggle (a
   // page opened in a narrow window and then widened showed an empty column).
@@ -6890,13 +7008,13 @@ function hydrate(raw) {
     narrow.addEventListener?.("change", (e) => { if (!e.matches) $("side").open = true; });
   }
   // The address says which tab to open; a plain link opens Bills.
-  let view = "bills";
+  let view = HOME_VIEW();
   if (PRESET?.watch || SHARED || EMBED) view = "watch";
   if (VIEWS.includes(location.hash.slice(1))) view = location.hash.slice(1);
   if (!DATA.current && !EMBED) for (const v of ["watch", "act"]) document.querySelector(`.view-tab[data-view="${v}"]`).hidden = true;
   // Prefiled bills haven't been anywhere yet: no Weigh in or Statistics.
   if (DATA.upcoming) { for (const v of ["act", "stats"]) document.querySelector(`.view-tab[data-view="${v}"]`).hidden = true; if (["act", "stats"].includes(view)) view = "bills"; }
-  if (PRESET?.who ? ["watch", "stats", "how"].includes(view) : ["person", "act"].includes(view)) view = "bills";
+  if (viewOff(view)) view = HOME_VIEW();
   // Only a legislator's page has the "Open for comment" tab; elsewhere its advice is in How ("Having an impact").
   if (!PRESET?.who) {
     document.querySelector('.view-tab[data-view="act"]').hidden = true;
@@ -6950,7 +7068,8 @@ function prefetchFromAddress() {
   }
   const v = h.startsWith("#v&") ? new URLSearchParams(h.slice(3)) : null;
   const early = (k) => need(k, "high").catch(() => {});
-  if (PRESET?.who || v?.get("q")) early("rows");
+  if (PRESET?.who || PRESET?.gov || v?.get("q")) early("rows");
+  if (PRESET?.gov) early("stats");
   if (PRESET?.who || v?.get("whoCos")) early("cos");
   if (v?.get("voted")) early("votes");
   if (nums.length && SPLIT.hashes.more) { needMore().catch(() => {}); return; }
@@ -7002,6 +7121,7 @@ async function unpack(b64) {
       // A page with nothing to show until a part is in (a legislator's page, a search in a link, a bill named in the
       // address) keeps its frame till then.
       const wait = listNeeds().map((k) => need(k));
+      if (PRESET?.gov) wait.push(need("rows"), need("stats"));
       if (ONE != null) wait.push(needBills([BILLS[ONE]]), need("stats"));
       if (wait.length) await Promise.all(wait).catch(() => {});
     }
