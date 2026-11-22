@@ -1637,6 +1637,7 @@ function vetoMemo(b) {
     return `<div class="chapam"><b>${head}</b>${memoText(v.text, `What ${EXEC.the} wrote`, v.scan)}</div>`;
   }
   if (v.own && v.kind === "line-item") return `<div class="chapam"><b>${gov} signed it but vetoed some spending items.</b>${memoText(v.text, `What ${EXEC.the} wrote`, v.scan)}</div>`;
+  if (v.own && v.kind === "overridden") return `<div class="chapam"><b>Became law over ${gov}'s veto.</b>${memoText(v.text, `Why ${EXEC.the} vetoed it`, v.scan)}</div>`;
   if (v.own) return `<div class="chapam">${memoText(v.text, `Why ${EXEC.the} vetoed it`, v.scan)}</div>`;
   const what = v.kind === "conditional" ? "sent an earlier version" : "vetoed an earlier version";
   return `<div class="chapam"><b>${gov} ${what} (${esc(v.nums)})${v.kind === "conditional" ? " back with changes" : ""} in ${esc(v.year)}.</b>${memoText(v.text, `What ${EXEC.the} wrote`, v.scan)}</div>`;

@@ -2151,6 +2151,9 @@ def compute(prev=None):
             scan = lambda m: [m["url"]] if m.get("ocr") and m.get("url") else []
             if m and (r["stage"] == 6 or m.get("kind") in ("conditional", "line-item")):
                 return [m["year"], m["signer"], S(m["text"]), " / ".join(r["nums"]), 1, m.get("kind") or "absolute"] + scan(m)
+            # A law passed over the veto keeps the governor's reasons (the owner's choice, 2026-11-22).
+            if m and r["stage"] == 5:
+                return [m["year"], m["signer"], S(m["text"]), " / ".join(r["nums"]), 1, "overridden"] + scan(m)
             for (ps, j) in sorted((k for k in hist[session][i] if isinstance(k[1], int) and k[0] < session), reverse=True):
                 old = loaded[ps][0][j]
                 if old["stage"] == 6 and old.get("vetoMemo"):
