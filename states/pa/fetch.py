@@ -141,6 +141,60 @@ def votes(session, bills):
             print(f"{session}: {done} of {len(todo)} bill pages", flush=True)
 
 
+def titled(name):
+    n = re.sub(r"\b([A-Za-z])([A-Za-z']*)", lambda m: m.group(1).upper() + m.group(2).lower(), name)
+    return re.sub(r"(?<!^)\b(And|Of|The|On|For|To|In)\b", lambda m: m.group(1).lower(), n)
+
+
+def agendas(session):
+    """Bills on committee meetings from yesterday to three weeks ahead, from each chamber's committee meeting RSS feed
+    (https://www.palegis.us/house/rss/committee/schedule, /senate/...): each item's <parss:Bills> lists the bills
+    ("HB1964,HB2131,HR403"). Into data/pa/<session>/agendas.json: bill -> [["House Health", "2027-02-03T09:30:00"], ...].
+    A feed that fails keeps the last file."""
+    ns = "{https://www.legis.state.pa.us/RSS}"
+    first, last = date.fromordinal(date.today().toordinal() - 1), date.fromordinal(date.today().toordinal() + 21)
+    out, n = {}, 0
+    for house in ("house", "senate"):
+        body = get(f"{SITE}/{house}/rss/committee/schedule")
+        if not body:
+            print(f"agendas: no {house} feed; kept the last file")
+            return
+        try:
+            items = ET.fromstring(body.encode("utf-8")).iter("item")
+        except ET.ParseError:
+            print(f"agendas: {house} feed unreadable; kept the last file")
+            return
+        for it in items:
+            words = " ".join((it.findtext(k) or "") for k in ("title", "description"))
+            if re.search(r"cancel|postpone", words, re.I):
+                continue
+            m = re.match(r"(\d\d)/(\d\d)/(\d{4})$", (it.findtext(ns + "MeetingDate") or "").strip())
+            if not m:
+                continue
+            day = date(int(m.group(3)), int(m.group(1)), int(m.group(2)))
+            if not first <= day <= last:
+                continue
+            bills = re.findall(r"\b([HS]B)\s*0*(\d+)\b", it.findtext(ns + "Bills") or "")
+            if not bills:
+                continue
+            n += 1
+            t = re.match(r"(\d{1,2}):(\d\d)\s*([AP])M", (it.findtext(ns + "MeetingTime") or "").strip(), re.I)
+            clock = "00:00:00"
+            if t:
+                hour = int(t.group(1)) % 12 + (12 if t.group(3).upper() == "P" else 0)
+                clock = f"{hour:02d}:{t.group(2)}:00"
+            name = re.sub(r"\s*\((H|S)\)$", "", html.unescape(it.findtext(ns + "Committee") or "").strip())
+            if not re.match(r"(HOUSE|SENATE|JOINT)\b", name, re.I):
+                name = f"{house} {name}"
+            entry = [titled(re.sub(r"\s+", " ", name)), f"{day.isoformat()}T{clock}"]
+            for kind, num in bills:
+                if entry not in out.setdefault(f"{kind}{int(num)}", []):
+                    out[f"{kind}{int(num)}"].append(entry)
+    os.makedirs(os.path.join(DATA, str(session)), exist_ok=True)
+    save(os.path.join(DATA, str(session), "agendas.json"), out)
+    print(f"agendas: {len(out)} bills on {n} meetings")
+
+
 def begun(session):
     """Whether a session has convened (the first Tuesday of January of its first year)."""
     return date.today() >= date(session, 1, 1 + (1 - date(session, 1, 1).weekday()) % 7)
@@ -155,6 +209,10 @@ def main():
         contacts.main(CURRENT)
     except SystemExit as e:
         print(e)
+    try:
+        agendas(CURRENT)
+    except Exception as e:  # never holds the run
+        print(f"agendas: {e}")
     # Every session's bill history first (small, and enough for the pages), then the roll calls, the current session's
     # first: a first copy of the roll calls takes several runs.
     got = {}

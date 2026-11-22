@@ -19,3 +19,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   The 2,572 municipalities by district (`towns.py`); townships that share a name carry their county. Full-time
   Legislature (`floorVotesEnd: false`); the session ends November 30 of the even year; governor 10 days (calendar days: Art. IV, sec. 15
   excepts no Sundays), or 30 days after the session ends for a bill still waiting then.
+- **Committee agendas (2026-11-22):** `agendas()` in fetch.py reads each chamber's committee meeting RSS feed
+  (https://www.palegis.us/house/rss/committee/schedule and /senate/rss/committee/schedule; two requests a run, before the
+  roll calls) into data/pa/<session>/agendas.json, meetings from yesterday to three weeks ahead. Each item has
+  `<parss:MeetingDate>` (MM/DD/YYYY), `<parss:MeetingTime>` ("9:30 AM", or "Call of Chair"/"Off the Floor": no time),
+  `<parss:Committee>` ("HOUSE HEALTH"; commissions without a house get the feed's) and `<parss:Bills>` ("HB1964,HB2131,HR403",
+  the records' own numbers; only HB/SB kept). Items whose title or description says canceled or postponed are left out.
+  A feed that fails keeps the last file; convert.py's `agendas()` keeps meetings from today on. Tested against an archived
+  House feed of 2026-03-20 (27 bills on 24 meetings, all matched to 2025-26 records); untested against live session
+  feeds and against the Senate feed with bills (the same format, by its schema). Joint hearings name one committee.

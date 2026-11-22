@@ -397,7 +397,18 @@ def agreed(steps, last_pass):
 
 
 def agendas(session):
-    return {}
+    """Bills on upcoming committee meetings (fetch.py's agendas.json, from the chambers' meeting feeds), today or later."""
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).date().isoformat()
+    try:
+        got = json.load(open(os.path.join(P.DATA, str(session), "agendas.json")))
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for bill, meets in got.items():
+        keep = [m for m in meets if m[1][:10] >= today]
+        if keep:
+            out[bill] = keep
+    return out
 
 
 def parties(session, recs):
