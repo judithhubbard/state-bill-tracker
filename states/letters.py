@@ -77,6 +77,28 @@ def paragraphs(lines, indent=3, blanks=True):
     return [re.sub(r"\s+", " ", re.sub(r"(\w)- (\w)", r"\1-\2", p)).strip() for p in out if p.strip()]
 
 
+def wrapped(lines, short=0.8):
+    """Lines of a block-style letter (no indents) -> paragraphs: a paragraph ends at a blank line, or at a line well
+    short of the text's usual width that ends a sentence ("Authority." before "At the request of the sponsor, ...")."""
+    texts = [t.strip() for t in lines]
+    lens = sorted(len(t) for t in texts if t)
+    width = lens[int(len(lens) * 0.8)] if lens else 0
+    out, cur = [], []
+    for t in texts:
+        if not t:
+            if cur:
+                out.append(" ".join(cur))
+                cur = []
+            continue
+        cur.append(t)
+        if len(t) < width * short and re.search(r"[.:!?\u201d\"]$", t):
+            out.append(" ".join(cur))
+            cur = []
+    if cur:
+        out.append(" ".join(cur))
+    return [re.sub(r"\s+", " ", p).strip() for p in out if p.strip()]
+
+
 def cut(paras, limit=MAX):
     """The first paragraphs, up to `limit` characters (at least one)."""
     s = ""

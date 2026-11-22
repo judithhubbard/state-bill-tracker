@@ -15,6 +15,7 @@ import glob, json, os, re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from states import letters as L
 from states.ga import profile as P
 from states.undated import settle
 
@@ -131,6 +132,31 @@ def earlier(session, b):
     if len(old) == 1 and len(_captions(session).get(k, [])) == 1 and len(k.split()) >= 6:
         return {(session - 2, old[0][0])}
     return set()
+
+
+_VETOES = {}
+KINDS = {"HOUSE BILL": "HB", "SENATE BILL": "SB", "HOUSE RESOLUTION": "HR", "SENATE RESOLUTION": "SR"}
+
+
+def veto_messages(year):
+    """The governor's reasons for each veto of a year, from the year's "Veto Messages" PDF (states/ga/fetch.py's
+    veto_messages(), data/ga/vetoes/<year>.txt): {"HB308": text}. Each "VETO n" section ends "... I VETO HOUSE BILL 308.";
+    the signing statements after them are left out."""
+    if year not in _VETOES:
+        out = {}
+        try:
+            raw = open(os.path.join(P.DATA, "vetoes", f"{year}.txt"), encoding="utf-8").read()
+        except OSError:
+            raw = ""
+        raw = re.split(r"(?m)^\s*SIGNING STATEMENTS?\b", raw)[0]
+        for part in re.split(r"(?m)^\s*VETO \d+\s*$", raw)[1:]:
+            lines = [ln for ln in part.split("\n") if not re.fullmatch(r"\s*Page \d+ of \d+\s*", ln)]
+            body = "\n".join(lines)
+            m = re.search(r"I VETO (HOUSE BILL|SENATE BILL|HOUSE RESOLUTION|SENATE RESOLUTION) (\d+)", body)
+            if m:
+                out[f"{KINDS[m.group(1)]}{m.group(2)}"] = L.cut(L.wrapped(lines))
+        _VETOES[year] = out
+    return _VETOES[year]
 
 
 def load_session(session):
@@ -269,6 +295,8 @@ def load_session(session):
             names_ = [[member(m, h), "N" if m.get("MemberVoted") == "Nay" else "A"] for m in full.get("Votes") or []
                       if m.get("MemberVoted") != "Yea" and not text((m.get("Member") or {}).get("Name")).upper().startswith("VACANT")]
             votes.append([h, "F", None, d, int(v.get("Yeas") or 0), int(v.get("Nays") or 0), names_])
+        vday = dates(lambda h, t: t == "VETOED")
+        vtext = veto_messages(int(vday[:4])).get(p) if stage == 6 and vday else None
         action_dates = [s[0] for s in steps if s[0]]
         rec = {
             "nums": [p], "base": [p], "prev": earlier(session, b),
@@ -279,7 +307,7 @@ def load_session(session):
             "passedS": "S" in passed, "passedA": "H" in passed, "program": None,
             "stage": stage, "passedIn": HOUSE.get(lp[1]) if stage == 2 and lp else None,
             "chapter": int(act.group(0)) if act and stage == 5 else None,
-            "veto": None, "memo": "", "vetoMemo": None,
+            "veto": None, "memo": "", "vetoMemo": {"year": int(vday[:4]), "signer": P.governor_on(vday), "text": vtext} if vtext else None,
             "simText": f"{title} {what}",
             "comm": committee if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),

@@ -16,6 +16,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   reads `v.link`). Two-year General Assemblies, 40-day sessions each year; each year's last day is in `STATE.dated`
   (add the new year's after its session). Governor 6 days in session, 40 after it. The Lieutenant Governor presides over
   the Senate (not a senator).
+- **Veto messages (2026-11-22):** the governor posts one PDF a year on gov.georgia.gov, "Veto Messages and Signing
+  Statement(s)" (robots.txt bars only /core/, /profiles/ and the like), linked from
+  /executive-action/legislation/vetoed-legislation/<year> (2019-2022 pages end "-vetoed-legislation"; special sessions
+  have their own pages, not read). fetch.py's `veto_messages()` reads the index, a year's page until the PDF is posted
+  (after the governor's last day, in May), then the PDF once, into data/ga/vetoes/<year>.txt; convert.py's
+  `veto_messages()` splits it at "VETO n" (each ends "I VETO HOUSE BILL 308.") and leaves the signing statements out.
+  All 45 vetoes of 2023-26 matched on 2026-11-22 (2023: 14, 2024: 12, 2025: 7, 2026: 12). Shows after the next download.
 - **Committee agendas (looked into 2026-11-22; none read):** the meeting schedule is only on www.legis.ga.gov, whose
   API (/api/meetings?startDate=...&endDate=...) answers 401 without a token that the site's script makes from a key
   hidden in its code (/api/authentication/token?key=<SHA-512 of an embedded secret>). That's a deliberate gate on
