@@ -4683,7 +4683,7 @@ function watchRow(b, x) {
   const n = baseNum(b.nums[0]);
   return { key: `${STATE.code}:${DATA.session}:${n}`, st: STATE.code, session: DATA.session, num: n, full: b.nums[0], found: true, b, w: x,
     title: b.title, stage: b.stage, last: b.last || "", stance: watchStance(b) || "", rules: WROW_RULES,
-    label: statusLabel(b),
+    label: statusLabel(b), action: (() => { const [d, t, all] = latestStep(b); return t ? shortStep(t, d, all) : ""; })(),
     ...WatchRows.place(b, { S: STATE, WR, current: !!DATA.current, upcoming: !!DATA.upcoming, act: !!DATA.current && !DATA.upcoming && canActNow(b), exec: EXEC.title,
       session: DATA.session, next: (x) => BillFacts.nextStep(STATE, BF.factsOf(x)) }) };
 }
