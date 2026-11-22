@@ -651,6 +651,18 @@ def parties(session, recs):
 
 
 def agendas(session):
+    """The saved agendas' meetings from today on (local time): a meeting already held drops out at the next build, not
+    only when the next download rewrites the file."""
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d")
+    out = {}
+    for k, meets in _agendas_file(session).items():
+        keep = [e for e in meets if (e[1] or "")[:10] >= today]
+        if keep:
+            out[k] = keep
+    return out
+
+
+def _agendas_file(session):
     """Bills on upcoming committee agendas (states/ky/fetch.py's agendas(): data/ky/<year>/agendas.json), with the
     committees named as in the histories: "House Appropriations & Revenue (H)" -> "House Appropriations and Revenue"."""
     try:

@@ -422,6 +422,18 @@ def load_session(session):
 
 
 def agendas(session):
+    """The saved agendas' meetings from today on (local time): a meeting already held drops out at the next build, not
+    only when the next download rewrites the file."""
+    today = datetime.now(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d")
+    out = {}
+    for k, meets in _agendas_file(session).items():
+        keep = [e for e in meets if (e[1] or "")[:10] >= today]
+        if keep:
+            out[k] = keep
+    return out
+
+
+def _agendas_file(session):
     """Bills on upcoming committee hearings (states/ma/fetch.py's hearings(): data/ma/<session>/agendas.json)."""
     return load(session, "agendas.json", {})
 
