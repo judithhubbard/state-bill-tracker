@@ -664,7 +664,9 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   4. Analytics: GoatCounter's code is `statebilltracker` (site_meta.GOATCOUNTER, one for the whole site; counted only
      with LAUNCHED=1). The front page and issue pages count anonymous events too ("home/...", "issue/...": topics, Map or
      Chart, party filter, search found / found nothing / opened, stars, Your bills, links into states; never typed words).
-     Cloudflare Web Analytics: none yet.
+     Cloudflare Web Analytics: turned on 2026-11-23 in the Pages project's Metrics tab (Cloudflare adds its beacon to
+     each page at deploy; real visitors' load times, Core Web Vitals). GoatCounter's API (read statistics only, this site
+     only) is in ~/.goatcounter_token: /api/v0/stats/hits, sizes, browsers, toprefs.
      Contributions: site_meta.SUPPORT (a Stripe Payment Link; the About page, the footers, and the state pages' "Glad this
      helped" note, `supportNote()` in tracker.html: after an email is copied or an action logged, once per 90 days per
      browser; events support/shown, give, share, close).
