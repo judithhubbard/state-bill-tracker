@@ -4237,6 +4237,7 @@ const APPROVED = /\breport|do pass|recommend|favorabl|\bapprov|ought to pass|exe
 const NO_COMMITTEE = /without (?:going to|reference to|referral to) (?:a |any )?committee|direct(?:ly)? to (?:the )?calendar/i;
 function floorLine(b) {
   const D = b.dates, acts = b.vers.flatMap((v) => v.actions);
+  if (!D.floor) return "";  // not on the floor (historyBlock() asks for every bill; a null date made toISOString() throw)
   const day = acts.filter(([d]) => d === D.floor).map(([, t]) => t);
   const favorable = (t) => APPROVED.test(t) && !DISCHARGED.test(t) && !NO_RECOMMENDATION.test(t) && t !== "REPORTED";
   if (day.some((t) => NO_RECOMMENDATION.test(t)) && !day.some((t) => favorable(t) && /do pass|favorabl|recommend(?:ed|s)? (?:that )?(?:it )?pass/i.test(t)))
