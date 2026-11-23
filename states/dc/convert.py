@@ -574,7 +574,7 @@ def load_session(session):
     os.makedirs(P.DATA, exist_ok=True)
     json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     settle(recs, folder)  # bills with no history yet: never dated in the future (states/undated.py)
-    _LOADED[session] = (recs, index, L.fetched(folder), {"SENATE": [], "ASSEMBLY": []})
+    _LOADED[session] = (recs, index, L.fetched(folder, P.TIMEZONE), {"SENATE": [], "ASSEMBLY": []})
     return _LOADED[session]
 
 

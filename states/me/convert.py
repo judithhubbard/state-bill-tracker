@@ -312,6 +312,7 @@ def decode_bill(b, kind, facts=None):
 
 class Maine(L.Rules):
     data_dir = P.DATA
+    timezone = P.TIMEZONE
     lower = "H"
     gates = set()
     vote_kinds = ("rollcall",)

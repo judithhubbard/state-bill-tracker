@@ -228,6 +228,7 @@ def short_title(b):
 
 class Vermont(L.Rules):
     data_dir = P.DATA
+    timezone = P.TIMEZONE
     lower = "H"
     gates = set()
     vote_kinds = ("second",)

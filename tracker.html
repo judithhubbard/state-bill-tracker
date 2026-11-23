@@ -1985,7 +1985,9 @@ const LAW_WORD = STATE.lawWord || "Chapter";
 // the signature (Maine's) says only that it became law (STATE.noSignatures).
 const overriddenLaw = (b) => b.stage === 5 && !!b.dates.vetoed;
 // A law the governor neither signed nor vetoed in time (or, in some states, returned unsigned), as its history says.
-const NO_SIGNATURE = /without (?:the |my )?(?:governor'?s |president'?s )?signature|w\/o (?:the )?(?:governor'?s? )?sign|w\/out governor/i;
+// (NO_SIGNATURE, SIGNATURE, ENROLL_SIGNED and hasSignature() have Python copies in stages.py: keep them alike;
+// test/wording_check.js compares them.)
+const NO_SIGNATURE = /without (?:the |my )?(?:governor'?s |president'?s |mayor'?s )?signature|w\/o (?:the )?(?:governor'?s? )?sign|w\/out governor/i;
 const unsignedLaw = (b) => b.stage === 5 && !overriddenLaw(b) && b.vers.some((v) => v.actions.some(([, t]) => NO_SIGNATURE.test(t)));
 // A line in the record saying the governor (or the President) signed it: "SIGNED CHAP.7", "Signed by the governor",
 // "Approved by the Governor.", "Signed by President." Not the presiding officers' signatures on the enrolled bill.
@@ -2386,8 +2388,12 @@ const decidedOn = (b) => b.dates.vetoed || b.dates.signed || "";
 // A law or veto of this session made by the governor in office (any, when the record has no date).
 const byThisGov = (b) => b.stage >= 5 && (!decidedOn(b) || decidedOn(b) >= govSince());
 const PARTY_WORD = { D: "Democrat", R: "Republican", I: "Independent" };
+// "Signed" only when the record shows the signature (signedLaw()); a law whose record says neither (Alabama's "Became law:
+// Act 2025-403", every law in a STATE.noSignatures state) is "Became law". build_data.py's governor_record() counts past
+// sessions the same way (stages.py's has_signature(), unsigned()).
 const GOV_KINDS = {
-  signed: [STATE.noSignatures ? "Became law" : "Signed", (b) => b.stage === 5 && !overriddenLaw(b) && !unsignedLaw(b)],
+  signed: ["Signed", signedLaw],
+  law: ["Became law", (b) => b.stage === 5 && !overriddenLaw(b) && !unsignedLaw(b) && !signedLaw(b)],
   unsigned: ["Became law without signature", unsignedLaw],
   vetoed: ["Vetoed", (b) => b.stage === 6 || overriddenLaw(b)],
   overridden: ["Veto overridden", overriddenLaw],
@@ -2426,20 +2432,25 @@ function renderGov() {
   const coming = BILLS.filter((b) => b.stage === 3 && !isAmendment(b) && !toVoters(b)).length;
   // This session: what the governor in office decided.
   const mine = BILLS.filter(byThisGov);
-  // ("Signed" only when the records say so: Alabama's laws carry only their act numbers.)
-  const kinds = Object.entries(GOV_KINDS).map(([k, [label, test]]) => [k, label, mine.filter(test).sort(newest)])
-    .map(([k, label, l]) => [k, k === "signed" && l.some((b) => !signedLaw(b)) ? "Became law" : label, l]).filter(([k, , l]) => l.length || k === "signed" || k === "vetoed");
-  if (!kinds.some(([k]) => k === GOV_KIND)) GOV_KIND = "signed";
+  // (Signed or Became law, whichever the records have, always shows; Vetoed too.)
+  const all = Object.entries(GOV_KINDS).map(([k, [label, test]]) => [k, label, mine.filter(test).sort(newest)]);
+  const lawKind = STATE.noSignatures || (!all[0][2].length && all[1][2].length) ? "law" : "signed";
+  const kinds = all.filter(([k, , l]) => l.length || k === lawKind || k === "vetoed");
+  if (!kinds.some(([k]) => k === GOV_KIND)) GOV_KIND = kinds[0][0];
   const shown = kinds.find(([k]) => k === GOV_KIND);
   // Earlier sessions under the same governor.
   const past = (DATA.govRecord || []).filter((r) => r[2] === since && r[0] < DATA.session);
-  const noSig = past.some((r) => r[7]);
+  // Columns: Signed (the record shows it), Became law (it shows neither; every law where STATE.noSignatures), Without
+  // signature (the record says so), each only when some row has one.
+  const pastSigned = (r) => (STATE.noSignatures ? 0 : r[4]), pastLaw = (r) => (STATE.noSignatures ? r[4] : 0) + (r[9] || 0);
+  const noSig = past.some((r) => r[7]), hasSigned = past.some(pastSigned), hasLaw = past.some(pastLaw) || !hasSigned;
   const url = (s) => { const u = DATA.sessions.find((x) => x.session === s)?.url; return u && !/^https?:/.test(u) ? BASE + u : ""; };
-  const pastRows = past.map(([s, , start, reached, signed, vetoed, over, unsigned]) => {
+  const pastRows = past.map((r) => {
+    const [s, , start, reached, , vetoed, over, unsigned] = r, signed = pastSigned(r), law = pastLaw(r);
     // A governor who took office during the session: only their part of it.
     const part = start > `${s}-01-31` && start <= `${s + YEARS - 1}-12-31` ? ` <small>from ${fmtDate(start)}</small>` : "";
-    return `<tr><td>${url(s) ? `<a href="${esc(url(s))}">${esc(span(s))}</a>` : esc(span(s))}${part}</td><td class="n">${num(reached)}</td><td class="n">${num(signed)}</td>
-      ${noSig ? `<td class="n">${num(unsigned)}</td>` : ""}<td class="n">${num(vetoed)}${over ? ` <small>(${num(over)} overridden)</small>` : ""}</td><td class="n">${pctOf(vetoed, signed + vetoed + unsigned)}%</td></tr>`;
+    return `<tr><td>${url(s) ? `<a href="${esc(url(s))}">${esc(span(s))}</a>` : esc(span(s))}${part}</td><td class="n">${num(reached)}</td>${hasSigned ? `<td class="n">${num(signed)}</td>` : ""}
+      ${hasLaw ? `<td class="n">${num(law)}</td>` : ""}${noSig ? `<td class="n">${num(unsigned)}</td>` : ""}<td class="n">${num(vetoed)}${over ? ` <small>(${num(over)} overridden)</small>` : ""}</td><td class="n">${pctOf(vetoed, signed + law + vetoed + unsigned)}%</td></tr>`;
   }).join("");
   const msgs = (DATA.vetoMsgs || []).map((i) => BILLS[i]).filter((b) => b && byThisGov(b)).sort(newest);
   $("govRec").innerHTML = `
@@ -2457,7 +2468,7 @@ function renderGov() {
     ${!DATA.sessions.some((x) => x.session < DATA.session) ? "" : `<section>
       <h2>Earlier sessions</h2>
       ${past.length ? `<div class="govscroll"><table class="govtab"><thead><tr><th scope="col">Session</th><th scope="col" class="n" title="Bills that passed and went to ${esc(EXEC.the)}">Sent</th>
-        <th scope="col" class="n">${esc(GOV_KINDS.signed[0])}</th>${noSig ? `<th scope="col" class="n">Without signature</th>` : ""}<th scope="col" class="n">Vetoed</th><th scope="col" class="n">Share vetoed</th></tr></thead>
+        ${hasSigned ? `<th scope="col" class="n">Signed</th>` : ""}${hasLaw ? `<th scope="col" class="n"${hasSigned ? ` title="Laws whose record shows neither ${esc(EXEC.the)}'s signature nor that it came without one"` : ""}>Became law</th>` : ""}${noSig ? `<th scope="col" class="n">Without signature</th>` : ""}<th scope="col" class="n">Vetoed</th><th scope="col" class="n">Share vetoed</th></tr></thead>
         <tbody>${pastRows}</tbody></table></div>`
         : `<p class="muted">The sessions on this site before ${esc(span(DATA.session))} were under an earlier ${EXEC.title.toLowerCase()}.</p>`}
     </section>`}
@@ -3333,7 +3344,7 @@ function govTiming(I) {
     [[((s + v) / maxY) * 100, "v"], [(s / maxY) * 100, "l"]], `<b class="big">${num(s + v)}</b> decisions · ${pctOf(v, s + v)}% vetoed`
       + (o ? ` · ${o === v ? (v === 1 ? "overridden" : "all overridden") : `${num(o)} overridden`}` : ""))).join("");
   return `<h3 class="sub">${EXEC.The}'s decisions by year</h3>
-    <p class="key"><span><i class="k-law"></i>Signed</span><span><i class="k-veto"></i>Vetoed</span></p>
+    <p class="key"><span><i class="k-law"></i>Became law</span><span><i class="k-veto"></i>Vetoed</span></p>
     <div class="vlist">${yearRows}</div>
     ${STATE.govYearsNote ? `<p class="note">${STATE.govYearsNote}</p>` : ""}`;
 }
@@ -3865,18 +3876,18 @@ function monthChart(I, t) {
   if (past.signed) {
     const sv = { signed: past.signed.map((x) => x / n), vetoed: past.vetoed.map((x) => x / n) };
     const total = sv.signed.reduce((a, b) => a + b, 0) + sv.vetoed.reduce((a, b) => a + b, 0);
-    gov = [["signed", "Signed", "l"], ["vetoed", "Vetoed", "v"]].map(([k, label, cls]) => {
+    gov = [["signed", "Became law", "l"], ["vetoed", "Vetoed", "v"]].map(([k, label, cls]) => {
       const avg = sv[k], cur = live ? now[k] : null;
       const max = Math.max(1, ...avg, ...(cur || []));
       const cols = avg.map((x, m) => ({ segs: [[(x / max) * 100, cls]], tick: cur && m <= sofar ? (cur[m] / max) * 100 : null,
-        title: `${MONTH_NAMES[m % 12]}${Y > 1 ? `, ${m < 12 ? "first" : "second"} year` : ""}: ${about}${num(Math.round(x))} ${k}${per}${cur ? `; ${CYCLE() ? cycleSpan(start) : "this session"} ${num(cur[m])}` : ""}` }));
+        title: `${MONTH_NAMES[m % 12]}${Y > 1 ? `, ${m < 12 ? "first" : "second"} year` : ""}: ${about}${num(Math.round(x))} ${k === "signed" ? "became law" : k}${per}${cur ? `; ${CYCLE() ? cycleSpan(start) : "this session"} ${num(cur[m])}` : ""}` }));
       const sum = avg.reduce((a, b) => a + b, 0);
       return colRow(label, "", cols, `<b class="big">${num(Math.round(sum))}</b>${per}${k === "vetoed" ? `<small>${pctOf(sum, total)}% of decisions</small>` : ""}`, 12);
     }).join("");
   }
 
   return `<h3 class="sub">Through the session, by month</h3>
-    <p class="key"><span><i class="k-appr"></i>${n === 1 ? pastSpan() : `Average, ${pastSpan()}`}</span><span><i class="k-law"></i>Signed</span><span><i class="k-veto"></i>Vetoed</span>${live ? `<span><i class="k-tick now"></i>${CYCLE() ? `${cycleSpan(start)} so far` : "This session"}</span>` : ""}</p>
+    <p class="key"><span><i class="k-appr"></i>${n === 1 ? pastSpan() : `Average, ${pastSpan()}`}</span><span><i class="k-law"></i>Became law</span><span><i class="k-veto"></i>Vetoed</span>${live ? `<span><i class="k-tick now"></i>${CYCLE() ? `${cycleSpan(start)} so far` : "This session"}</span>` : ""}</p>
     <div class="vlist">${rows}${gov}${monthAxis(12 * Y, 12)}
     <div class="vrow wide"><div class="lab"></div><div class="myears">${Y > 1 ? `<span>${yearName(0)}</span><span>${yearName(1)}</span>` : `<span>${DATA.session}</span>`}</div><div></div></div></div>`;
 }
@@ -4017,7 +4028,7 @@ function renderStats() {
       return n ? `<p>Bills that sat in committee all of the first year: <b>${pctOf(moved, n)}%</b> were approved by a committee in the second year, <b>${pctOf(law, n)}%</b> became law.</p>
     <p class="note">${inState(`${num(n)} bills${t === "all" ? "" : ` (${TOPICS[t]})`}`)}, ${pastSpan()}.${shellsOut()}</p>` : ""; })()}
     ${pers.length ? `<h3 class="sub">This session's most persistent bills</h3>
-    <p class="key track-key">${[["s-1", "Introduced, outcome not available"], ["s0", "Died in committee"], ["s2", "Passed one house"], ["s3", PASSED_BOTH], ["s6", "Vetoed"], ["s5", "Signed"]].filter(([c]) => !UNI || c !== "s2").map(([c, l]) => `<span><i class="dot ${c}"></i>${l}</span>`).join("")}</p>
+    <p class="key track-key">${[["s-1", "Introduced, outcome not available"], ["s0", "Died in committee"], ["s2", "Passed one house"], ["s3", PASSED_BOTH], ["s6", "Vetoed"], ["s5", "Became law"]].filter(([c]) => !UNI || c !== "s2").map(([c, l]) => `<span><i class="dot ${c}"></i>${l}</span>`).join("")}</p>
     <div class="perscards">${pers.map(([n, title]) => persCard(n, title)).join("")}</div>` : ""}`;
 
   // Co-sponsors and party
@@ -4070,7 +4081,7 @@ function renderOutcomes() {
   const row = ({ session, c, share, label, cls }) => `<tr class="${[session === DATA.session ? "here" : "", cls || ""].join(" ").trim()}">
       <td>${label || span(session)}${session === LATEST ? " (so far)" : ""}</td><td>${num(c[0])}</td><td>${num(c[1])}</td><td>${num(c[2])}</td><td>${num(c[3])}</td>
       <td class="bar"><div class="sharebar"><i style="width:${(share / max) * 70}%"></i><b>${pct(c[2], c[0])}</b></div></td>
-      <td>${pct(c[2], c[2] + c[3])}</td></tr>`;
+      <td>${pct(c[3], c[2] + c[3])}</td></tr>`;
   // By two-year cycle (STAT_CYCLE): each cycle's totals, then its two sessions by name.
   let body = rows.map(row).join("");
   if (CYCLE()) {
@@ -4084,7 +4095,7 @@ function renderOutcomes() {
       return total + own.map((r) => row({ ...r, label: `${r.session} ${esc(STATE.sessionKind ? STATE.sessionKind(r.session) : "")} session`, cls: "sub" })).join("");
     }).join("");
   }
-  $("ocTable").innerHTML = `<thead><tr><th>Session</th><th>Bills introduced</th><th>${PASSED_BOTH}</th><th>Signed into law</th><th>Vetoed</th><th>Became law${TIP("Share of all bills introduced.")}</th><th>Signed${TIP(`Share of the bills ${EXEC.the} acted on.`)}</th></tr></thead>
+  $("ocTable").innerHTML = `<thead><tr><th>Session</th><th>Bills introduced</th><th>${PASSED_BOTH}</th><th>Became law</th><th>Vetoed</th><th>Share that became law${TIP("Share of all bills introduced.")}</th><th>Share vetoed${TIP(`Share of the bills ${EXEC.the} acted on (laws and vetoes) that were vetoed. A law can come without ${EXEC.the}'s signature or over a veto.`)}</th></tr></thead>
     <tbody>${body}</tbody>`;
 }
 
@@ -5379,7 +5390,7 @@ function renderWatchView() {
     ${idle.length ? `<details class="wsec idle" data-wsec="idle"${W_SEC_OPEN().idle === false ? "" : " open"}><summary><h2>Out of time this session <span class="n">${num(idle.length)}</span></h2>
       </summary><div class="wcards idle">${idle.map(cardFor).join("")}</div></details>` : ""}
     ${decided.length ? `<details class="wsec idle decided" data-wsec="decided"${W_SEC_OPEN().decided === false ? "" : " open"}><summary><h2>Decided <span class="n">${num(decided.length)}</span></h2>
-      <p class="wsub">Signed into law or vetoed, most recent first.</p></summary><div class="wcards idle">${decided.map(cardFor).join("")}</div></details>` : ""}
+      <p class="wsub">Became law or vetoed, most recent first.</p></summary><div class="wcards idle">${decided.map(cardFor).join("")}</div></details>` : ""}
     ${SHARED ? "" : actionRecord(list)}`;
   if (EMBED) embedSize();
 }

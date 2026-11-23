@@ -133,6 +133,7 @@ def veto_reasons(year):
 
 class Oklahoma(L.Rules):
     data_dir = P.DATA
+    timezone = P.TIMEZONE
     lower = "H"
     gates = set()   # Floor votes are scheduled by each house's majority floor leader, not a committee.
     comm_vote_days = 4  # a committee's report ("CR filed") is entered the day after its vote, or after a weekend

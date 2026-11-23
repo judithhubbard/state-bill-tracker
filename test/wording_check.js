@@ -19,15 +19,17 @@ const page = fs.readFileSync(path.join(REPO, "tracker.html"), "utf8");
 const BillFacts = require(path.join(REPO, "lists_pages", "billfacts.js"));
 
 // A top-level declaration's text in tracker.html (as test/ports_check.js reads them): "function NAME(...) {" to its
-// closing "}" at a line's start, or a one-line "const NAME = ...".
+// closing "}" at a line's start, a "const NAME = {" to its "};" at a line's start, or a one-line "const NAME = ...".
 function decl(name) {
   const i = page.search(new RegExp(`\\n(?:async )?function ${name}\\(`));
   if (i >= 0) return page.slice(i + 1, page.indexOf("\n}\n", i) + 2);
+  const j = page.search(new RegExp(`\\nconst ${name} = \\{\\n`));
+  if (j >= 0) return page.slice(j + 1, page.indexOf("\n};\n", j) + 3);
   const m = new RegExp(`\\nconst ${name} = [^\\n]*\\n`).exec(page);
   if (!m) throw new Error(`tracker.html has no top-level ${name}`);
   return m[0].slice(1);
 }
-const WORDING = ["NO_SIGNATURE", "overriddenLaw", "unsignedLaw", "SIGNATURE", "ENROLL_SIGNED", "hasSignature", "signedLaw", "lawLine",
+const WORDING = ["NO_SIGNATURE", "overriddenLaw", "unsignedLaw", "SIGNATURE", "ENROLL_SIGNED", "hasSignature", "signedLaw", "lawLine", "GOV_KINDS",
   "NO_RECOMMENDATION", "DISCHARGED", "APPROVED", "NO_COMMITTEE", "floorLine", "voteCarried", "voteReconsider"];
 
 const input = JSON.parse(fs.readFileSync(0, "utf8"));
@@ -36,6 +38,8 @@ if (!S) { console.log(JSON.stringify({ fails: ["the profile didn't run"], looks:
 const ctx = vm.createContext({ STATE: S, EXEC: { the: "the governor", ...(S.executive || {}) } });
 vm.runInContext(WORDING.map(decl).join("\n") + `\nglobalThis.T = { ${WORDING.join(", ")} };`, ctx);
 const T = ctx.T;
+// (unsignedLaw() without its stage and override tests: what stages.py's unsigned() reads.)
+T.vers_unsigned = (b) => b.vers.some((v) => v.actions.some(([, t]) => T.NO_SIGNATURE.test(t)));
 
 const fails = [], looks = [];
 const s = input.session;
@@ -120,6 +124,15 @@ const lawWrong = laws.filter((b) => {
   return false;
 }).map((b) => b.n[0]);
 say(lawWrong, laws.length, 0, "law lines the record doesn't bear out");
+// The governor's page: each law not made over a veto is in one of Signed, Became law, Without signature, and Signed only
+// with a signature in the record. Past sessions are counted by build_data.py's governor_record() with stages.py's copies
+// of the same tests (data_check.py sends them as sig: [has_signature, unsigned]): they must agree with the page's.
+const kindsOf = (b) => ["signed", "law", "unsigned"].filter((k) => T.GOV_KINDS[k][1](b));
+const govWrong = laws.filter((b) => !T.overriddenLaw(b)).filter((b) => kindsOf(b).length !== 1 || (kindsOf(b)[0] === "signed" && !T.hasSignature(b)))
+  .map((b) => `${b.n[0]} (${kindsOf(b).join("+") || "none"})`);
+say(govWrong, laws.length, 0, "laws the governor's page counts in no kind, two kinds, or as Signed without a signature");
+const portWrong = laws.filter((b) => b.sig && (b.sig[0] !== T.hasSignature(b) || b.sig[1] !== T.vers_unsigned(b))).map((b) => b.n[0]);
+say(portWrong, laws.length, 0, "laws where stages.py's has_signature()/unsigned() (past sessions on the governor's page) disagree with tracker.html's");
 
 // 5. A bill the status words say ended early (STATE.endedNote: a floor defeat, a deadline; STATE.heldAction: "Held in the
 // ... Committee") whose last step sends it on (a report, a floor placement, a passage): the ending was undone.
@@ -136,5 +149,10 @@ const undone = bills.filter((b) => b.stage <= 2).filter((b) => {
   return last.length && last.every((t) => FORWARD.test(t));
 }).map((b) => `${b.n[0]} ("${BF.endedOf(b).status}")`);
 say(undone, bills.length, 1, "bills worded as ended early whose last step sends them on (LOOK only)");
+
+// 6. Labels that count every law: "Signed" there says it of laws made without a signature or over a veto (the Statistics
+// tab's sessions table and charts said "Signed into law" until 2026-11-23). Checked in the page's source.
+const allLaws = [/<th>Signed/, /k-law"><\/i>Signed/, /\["s5", "Signed"\]/, /\["signed", "Signed", "l"\]/, /Signed into law or vetoed/];
+for (const re of allLaws) if (re.test(page)) fails.push(`tracker.html labels every law "Signed" (${re})`);
 
 console.log(JSON.stringify({ fails, looks }));

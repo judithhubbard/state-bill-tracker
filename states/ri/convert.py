@@ -175,6 +175,7 @@ def same_text(b):
 
 class RhodeIsland(L.Rules):
     data_dir = P.DATA
+    timezone = P.TIMEZONE
     lower = "H"
     gates = set()
     votes_by_version = True

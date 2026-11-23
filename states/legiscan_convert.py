@@ -147,20 +147,24 @@ def number(bill_number):
     return f"{m.group(1)}{m.group(2)}" if m else bill_number
 
 
-def fetched(folder):
-    """When the newest bill in the folder was read (meta.json), as "YYYY-MM-DD HH:MM" UTC."""
-    from datetime import datetime, timezone
+def fetched(folder, tz):
+    """When the newest bill in the folder was read (meta.json), as "YYYY-MM-DD HH:MM" in the state's time zone tz (its
+    profile's TIMEZONE, as every other state's stamp and build_data.py's last_checked(); it was UTC until 2026-11-23,
+    which put the pages' "updated" time hours ahead)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
     meta = read_json(os.path.join(folder, "meta.json"), {}) or {}
     # (the master list, read every run, keeps every bill's stage current: legiscan.py and bills())
     t = max([b.get("fetched") or 0 for b in (meta.get("bills") or {}).values()] + [meta.get("masterlist_time") or 0])
     if not t:
         return (meta.get("dataset_date") or "") + " 00:00"
-    return datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d %H:%M")
+    return datetime.fromtimestamp(t, ZoneInfo(tz)).strftime("%Y-%m-%d %H:%M")
 
 
 class Rules:
     """What a state's convert.py says about its own data. Override what differs."""
     data_dir = ""          # data/<st>
+    timezone = None        # the state's profile TIMEZONE (each state sets it: fetched())
     lower = "H"
     gates = set()          # committees that schedule floor votes (a report sending a bill there sends it to the floor)
     # True: a floor roll call the tally can't place goes to the next untied floor step of that day and house in the
@@ -626,7 +630,7 @@ def load_session(R, session):
     os.makedirs(R.data_dir, exist_ok=True)
     json.dump(texts, open(os.path.join(R.data_dir, f"texts_{session}.json"), "w"), ensure_ascii=False)
     settle(recs, S.folder)  # bills with no history yet: never dated in the future (states/undated.py)
-    return recs, index, fetched(S.folder)
+    return recs, index, fetched(S.folder, R.timezone)
 
 
 def link_earlier(R, session, recs, older):
