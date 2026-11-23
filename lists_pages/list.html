@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!-- A shared list (/list/#<slug>): the page share links lead to, for lists from one state's watchlist and lists across
      states (lists_worker/). Shows each bill's status, the group's introduction and notes, and lets a visitor follow the list
-     (it then shows in Your bills) or add its bills to their own watchlists. build_site.sh writes it to list/index.html, as
+     (it then shows in Your bills) or add its bills to their own watchlists. Its bills are drawn as on Your bills (onelist.js,
+     watchrows.js), each opening its card in place. build_site.sh writes it to list/index.html, as
      yourbills.html. -->
 <html lang="en">
 <head>
@@ -25,6 +26,7 @@
 .grp { font-weight: 600; color: var(--ink); }
 .intro { margin: 0 0 16px; overflow-wrap: anywhere; }
 .intro p { margin: 0 0 10px; }
+h1#title { position: relative; }
 </style>
 </head>
 <body>
@@ -39,19 +41,21 @@
 <script>
 /*common.js*/
 /*embed.js*/
+/*watchrules.js*/
+/*onelist.js*/
 </script>
 <script>
 const today = () => new Date().toISOString().slice(0, 10);
-let LIST = null, ROWS = [];   // ROWS: the list's bills, with lookUp()'s answers once known
+let LIST = null, ROWS = [];   // ROWS: the list's bills, as OneList.items() answers them once known
 const slugNow = () => decodeURIComponent(location.hash.replace(/^#(?:list=)?/, "")).trim();
 function gone(text) {
   document.title = "Shared list · State Bill Tracker";
   $("title").textContent = "List not found";
   $("by").textContent = text;
-  $("intro").innerHTML = ""; Frames.show($("bills"), []); $("stLink").innerHTML = "";
+  $("intro").innerHTML = ""; $("bills").innerHTML = ""; $("stLink").innerHTML = "";
 }
-// The list's bills are shown by each state's own page: its watchlist view, in a frame per state's session (embed.js).
-// A list made in this browser with the list editor sets its sides and takes bills off from there.
+// The list's bills in the same rows as Your bills (onelist.js, watchrows.js): the same groups and order, each row opening
+// its bill's card in place, drawn by its state's page in a frame (embed.js's Opener).
 async function load() {
   const slug = slugNow();
   if (!slug) return gone("This link is missing the list's name.");
@@ -66,28 +70,45 @@ async function load() {
   const one = LIST.state !== "all";
   document.title = `${LIST.title || "Shared list"} · State Bill Tracker`;
   $("title").textContent = LIST.title || "Shared list";
+  if (!editKeyFor(LIST.slug) && !madeHere(LIST)) $("title").insertAdjacentHTML("beforeend", makerTip(LIST));
   $("stLink").innerHTML = one ? ` &middot; <a href="/${esc(LIST.state)}/">${esc(stName(LIST.state))}</a>` : "";
   const bills = listBills(LIST);
   // A list made in this browser (it holds the list's key): Edit and Share instead of Follow, and never in the lists it follows.
   OWN = !!editKeyFor(LIST.slug);
   if (OWN) { const f = readFollows(); if (LIST.slug in f) { delete f[LIST.slug]; writeFollows(f); } }
-  const named = OWN && readNamed()[LIST.slug];
   ROWS = bills;
   drawButtons();
   $("intro").innerHTML = paras(LIST.intro);
-  const extra = (g) => {
-    const notes = {};
-    if (LIST.group) for (const b of g.bills) { const t = noteOf(LIST, b); if (t) notes[baseNum(b.num)] = t; }
-    return { ...(named ? { own: LIST.slug } : {}), ...(Object.keys(notes).length ? { notes, group: LIST.group } : {}) };
-  };
-  const opt = { extra: (g) => (Object.keys(extra(g)).length ? extra(g) : null) };
-  if (!bills.length) { Frames.show($("bills"), []); $("bills").innerHTML = '<p class="muted">No bills on this list yet.</p>'; return; }
-  Frames.show($("bills"), await listGroups(`list:${LIST.slug}`, bills, null, opt));
-  ROWS = await Promise.all(bills.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)) })));
-  Frames.show($("bills"), await listGroups(`list:${LIST.slug}`, bills, ROWS, { ...opt, row: (x) => ({ stance: showStance(LIST) ? x.stance : "", note: noteOf(LIST, x) }) }));
+  if (!bills.length) { $("bills").innerHTML = '<p class="muted">No bills on this list yet.</p>'; return; }
+  const kept = OneList.cached(bills);
+  if (kept.length === bills.length) drawRows(kept);
+  ROWS = await OneList.items(bills);
+  drawRows(ROWS);
   drawButtons();
 }
+const rowOpt = () => ({ tab: "l", oneState: LIST.state !== "all", stance: showStance(LIST), noteOf: (x) => noteOf(LIST, x), onOpen: () => countUse("list/opened a bill") });
+function drawRows(rows) { if (LIST) OneList.draw($("bills"), rows, rowOpt()); }
 let OWN = false;
+// A list shared from a state's Watchlist tab, made in this browser (that page keeps its key).
+function madeHere(l) {
+  if (l.state === "all") return false;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i) || "";
+      if (k.startsWith(`abt:${l.state}:published:`) && JSON.parse(localStorage.getItem(k) || "null")?.slug === l.slug) return true;
+    }
+  } catch (e) {}
+  return false;
+}
+// For a visitor whose browser didn't make the list: how its maker can change it from here.
+function makerTip(l) {
+  const lead = "Made this list? Lists can be changed only from the browser that made them.";
+  if (l.state !== "all") {
+    const w = `/${esc(l.state)}/watchlist/`;
+    return infoTipHtml(`${lead} On that browser, open the <a href="${w}">${esc(stName(l.state))} watchlist</a> and copy the list&rsquo;s key from &ldquo;Use this list on another device&rdquo;. Then paste it into the watchlist here, under &ldquo;Shared this list from another device?&rdquo;`, "wide");
+  }
+  return infoTipHtml(`${lead} On that browser, open <a href="/your-bills/">Your bills</a> and copy the list&rsquo;s key from &ldquo;Use this list on another device&rdquo;. Then paste it into Your bills here, under &ldquo;Using another device? Paste your list&rsquo;s key&rdquo;.`, "wide");
+}
 // The summary line: the group, how many bills, when it changed, and the list's links: Edit · Share ▾ for its maker,
 // Follow (Unfollow) · Add all to my watchlist for anyone else.
 function drawButtons() {
@@ -131,16 +152,29 @@ $("by").addEventListener("click", (e) => {
     drawButtons();
   }
 });
+// A row's star: the bill on this browser's watchlist, or off it.
 $("bills").addEventListener("click", (e) => {
-  if (e.target.closest("li > a")) countUse("list/opened a bill");
+  const b = e.target.closest("button[data-star]");
+  if (!b) return;
+  e.preventDefault();
+  const [st, session, num] = b.dataset.star.split("|"), w = readWatch(st), k = `${session}:${num}`;
+  const x = ROWS.find((r) => r.st === st && +r.session === +session && baseNum(r.full || r.num) === num);
+  const on = !(k in w);
+  if (on) { w[k] = { seen: x?.last || today(), stance: x?.stance || "support" }; countUse("list/starred"); } else { delete w[k]; countUse("list/unstarred"); }
+  writeWatch(st, w);
+  for (const s2 of document.querySelectorAll(`button[data-star="${CSS.escape(b.dataset.star)}"]`)) {
+    s2.setAttribute("aria-pressed", String(on));
+    s2.textContent = on ? "★" : "☆";
+    s2.title = on ? "Remove from your watchlist" : "Add to your watchlist";
+    s2.setAttribute("aria-label", s2.getAttribute("aria-label").replace(/^(Remove|Add) /, on ? "Remove " : "Add ").replace(/ (from|to) your watchlist$/, on ? " from your watchlist" : " to your watchlist"));
+  }
+  drawButtons();
 });
-// The list changed in this browser (its sides or bills, from its cards or the editor): shown again.
-addEventListener("storage", (e) => { if (/^abt:([a-z]{2}):watch$/.test(e.key || "")) { Frames.refresh(); drawButtons(); } if (e.key === NAMED && LIST && readNamed()[LIST.slug]) { const l = readNamed()[LIST.slug]; LIST = { ...LIST, bills: l.bills, title: l.title || LIST.title }; redraw(); } });
+// The list changed in this browser (stars, or the list itself in the editor): shown again.
+addEventListener("storage", (e) => { if (/^abt:([a-z]{2}):watch$/.test(e.key || "")) { drawRows(ROWS); drawButtons(); } if (e.key === NAMED && LIST && readNamed()[LIST.slug]) { const l = readNamed()[LIST.slug]; LIST = { ...LIST, bills: l.bills, title: l.title || LIST.title }; redraw(); } });
 async function redraw() {
-  const bills = listBills(LIST);
-  ROWS = await Promise.all(bills.map(async (b) => ({ ...b, ...(await lookUp(b.st, b.session, b.num)) })));
-  const named = OWN && readNamed()[LIST.slug];
-  Frames.show($("bills"), await listGroups(`list:${LIST.slug}`, bills, ROWS, { extra: () => (named ? { own: LIST.slug } : null), row: (x) => ({ stance: showStance(LIST) ? x.stance : "", note: noteOf(LIST, x) }) }));
+  ROWS = await OneList.items(listBills(LIST));
+  drawRows(ROWS);
   drawButtons();
 }
 addEventListener("hashchange", load);

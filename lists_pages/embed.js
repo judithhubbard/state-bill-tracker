@@ -242,6 +242,7 @@ const Opener = (() => {
       if (again && F.row != null && ROWS.get(F.row)) tell(F, ask(ROWS.get(F.row)));
       return;
     }
+    if (typeof e.data?.sbtMultiAns === "string") { const done = ASKED.get(e.data.sbtMultiAns); ASKED.delete(e.data.sbtMultiAns); done?.(e.data.lines || []); return; }
     if (typeof e.data?.sbtEmbed !== "number" || F.row == null || e.data.bill !== F.bill) return;
     F.h = Math.max(40, Math.min(e.data.sbtEmbed, 20000));
     F.f.style.height = `${F.h}px`;
@@ -271,5 +272,21 @@ const Opener = (() => {
     return ids;
   }
   function reopen(ids) { for (const id of ids) if (btnOf(id) && ROWS.get(id)) open(id); }
-  return { wire, row, open, close, parkAll, reopen, place };
+  // Several bills of one state's session that need the same person: the state's page works out whom to ask and the email
+  // (tracker.html's embedMulti()). x: {st, session, page}; code: "2025.list.A1.-S2"; mine: this browser's own stars.
+  // Answers [{g, n, who, label, text, nums}] ([] after 60 seconds without an answer); each question is asked once a page.
+  const ASKED = new Map(), MULTI = new Map();
+  function multi(x, code, mine) {
+    const k = `${x.page}|${code}|${mine ? 1 : 0}`;
+    if (MULTI.has(k)) return MULTI.get(k);
+    const id = `m${N++}`;
+    const p = new Promise((done) => {
+      ASKED.set(id, done);
+      setTimeout(() => { if (ASKED.has(id)) { ASKED.delete(id); MULTI.delete(k); done([]); } }, 60000);
+    });
+    MULTI.set(k, p);
+    tell(frameFor(x), { sbtMulti: id, code, ...(mine ? { mine: true } : {}) });
+    return p;
+  }
+  return { wire, row, open, close, parkAll, reopen, place, multi };
 })();

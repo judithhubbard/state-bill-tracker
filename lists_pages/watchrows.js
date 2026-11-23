@@ -7,7 +7,8 @@
 // WatchRows.place(b, ctx): a bill's group and deadline (b: stage, due, agenda and what the state's originDeadline() reads;
 //   ctx: {S (the state's profile), WR (watchrules.js's rules), current, upcoming, act (WR.canAct()), exec}).
 // WatchRows.draw(box, items, opt): the rows (items: {key, st, session, num, full, title, stage, label, last, action, group,
-//   date, due, out, later, sessionLabel, old, found, gone, stance, rules, yearGroup}; label: the status words, from
+//   date, due, out, later, sessionLabel, old, found, gone, stance, rules, yearGroup, other (the second number, New York's
+//   same-as bill, shown under the first as on the state's Bills list)}; label: the status words, from
 //   billfacts.js: the state's page works them out, the other pages read them from the status rows).
 // WatchRows.newsHtml(entries): "New since you last looked", one box at the top of the list.
 const WatchRows = (() => {
@@ -85,7 +86,8 @@ const WatchRows = (() => {
         + `<span class="wr-tt">${h(x.sessionLabel || x.session)}: no longer on this site</span>`
         + (opt.remove ? `<button type="button" class="btn quiet small" data-remove="${h(`${x.st}|${x.session}|${x.num}`)}">Remove</button>` : "") + "</div></li>";
     }
-    const shown = h(numText(x.st, x.full || x.num)), note = opt.noteOf?.(x);
+    const two = x.other ? `<small class="wr-other">${h(numText(x.st, x.other))}</small>` : "";
+    const shown = `<span class="wr-n1">${h(numText(x.st, x.full || x.num))}</span>${two}`, note = opt.noteOf?.(x);
     // The side, when one is chosen (stars start with none, so a missing tag means none chosen, not "support").
     // (A shared or named list marks every bill with a side: Support shows there only when the list uses sides, opt.stance.)
     const stance = x.stance === "oppose" || (x.stance === "support" && opt.stance !== false) ? `<span class="wr-stance ${x.stance}">${x.stance === "oppose" ? "Oppose" : "Support"}</span>` : "";
@@ -101,19 +103,22 @@ const WatchRows = (() => {
     // (With a deadline beside it, the last action's day says what it is: "Last action Oct 22, 2026 · Floor vote Oct 29".)
     // The latest action in the state's words, then its day, as the state's Bills list shows it ("Referred to the Health
     // Committee · Oct 22, 2026"); a "New:" line already says it when the action is new.
-    const act = x.action && !(opt.isNew?.(x)) ? `${h(x.action)} · ` : "";
-    const when = [x.found && x.last && !sameDay ? `<span>${act}${fullDay(x.last)}</span>` : "",
-      due ? `<span class="wr-dl">${h(due)}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""].filter(Boolean).join("");
+    // (Not when it says what the status label beside it says: "Passed both houses · Passed both houses · Jun 4, 2026".)
+    const plain = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const told = plain(x.action) && plain(x.label).includes(plain(x.action));
+    const act = x.action && !told && !(opt.isNew?.(x)) ? `${h(x.action)} · ` : "";
+    const when = [x.found && x.last && !sameDay ? `<span>${act}${fullDay(x.last).replace(/ /g, "\u00a0")}</span>` : "",
+      due ? `<span class="wr-dl">${h(due).replace(/\b([A-Z][a-z]{2}) (\d)/g, "$1 $2")}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""].filter(Boolean).join("");
     const where = `<span class="wr-where bstat">${x.found ? BillFacts.pips(x.stage, uni, over.trim(), x.label, x.st) + `<span class="stg s${x.stage}${over}">${h(x.label)}</span>` : ""}`
       + `${when ? `<span class="stw">${when}</span>` : ""}${stance}${x.found ? "" : '<span class="wr-todo">Open</span>'}</span>`;
     const back = x.later && x.later[0] > x.session ? `<p class="wr-again">Back in ${h(x.later[2])} as <a href="${h(x.later[3])}#${h(x.later[1])}">${h(numText(x.st, x.later[1]))}</a>${x.laterStar || ""}</p>` : "";
     if (!x.found) {
-      return `<li class="wr-row${yr ? " wr-yr" : ""}" data-key="${h(x.key)}"><a class="wr-btn rowbtn" href="${h(x.href || `/${x.st}/`)}"><span class="wr-num">${st}${shown}${yr}</span>`
+      return `<li class="wr-row${yr ? " wr-yr" : ""}${two ? " wr-two" : ""}" data-key="${h(x.key)}"><a class="wr-btn rowbtn" href="${h(x.href || `/${x.st}/`)}"><span class="wr-num">${st}${shown}${yr}</span>`
         + `<span class="wr-tt">Not in ${h(x.sessionLabel || x.session)}'s data</span>${where}</a>${btns}</li>`;
     }
     opt.onRow?.(id, x);
     const card = opt.card ? opt.card(x) : null;
-    return `<li class="wr-row${yr ? " wr-yr" : ""}" data-key="${h(x.key)}"><button type="button" class="wr-btn rowbtn" data-open="${h(id)}" aria-controls="emb-${h(id)}" aria-expanded="${card != null}">`
+    return `<li class="wr-row${yr ? " wr-yr" : ""}${two ? " wr-two" : ""}" data-key="${h(x.key)}"><button type="button" class="wr-btn rowbtn" data-open="${h(id)}" aria-controls="emb-${h(id)}" aria-expanded="${card != null}">`
       + `<span class="wr-num">${st}${shown}${yr}</span><span class="wr-tt">${h(x.title)}</span>${note ? `<span class="wr-note">${h(note)}</span>` : ""}${news}${where}</button>`
       + `${btns}${back}<div class="wr-emb" id="emb-${h(id)}"${card != null ? "" : " hidden"}>${card || ""}</div></li>`;
   }
@@ -170,7 +175,17 @@ const WatchRows = (() => {
       }).join("");
     }
     box.innerHTML = html;
+    for (const n of box.querySelectorAll(".wr-num")) { RO?.observe(n); placeBtns(n); }
   }
+  // The star and list button sit under the number, however many lines it takes (a state's badge on its own line at phone
+  // width, a second number, a session): placed when the number's column is drawn or changes size.
+  function placeBtns(num) {
+    const li = num.closest(".wr-row"), b = li?.querySelector(":scope > .wr-btns");
+    if (!b || !num.offsetParent) return;
+    const pad = parseFloat(getComputedStyle(num).paddingBottom) || 0;
+    b.style.top = `${Math.round(num.getBoundingClientRect().bottom - pad - li.getBoundingClientRect().top + 2)}px`;
+  }
+  const RO = typeof ResizeObserver === "function" ? new ResizeObserver((es) => { for (const e of es) placeBtns(e.target); }) : null;
   // "New since you last looked": entries [{key, kind ("ok" a law, "no" a veto, ""), what, num, title, date, more (how many
   // other changes)}], the biggest news first. A row's button is data-wnews="<key>"; "Mark all as seen" is data-wseenall.
   function newsHtml(entries) {

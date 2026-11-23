@@ -202,7 +202,7 @@ async function openList() {
     return;
   }
   const mine = readNamed()[slug];
-  if (!mine) return gone("This browser can't edit that list. To edit it here, paste its key into Your lists on this device.");
+  if (!mine) return gone("This browser can't edit that list. To edit it here, copy its key in the browser that made it, then paste it under “Using another device? Paste your list's key” in");
   L = { notes: {}, intro: "", group: "", ...mine, bills: Array.isArray(mine.bills) ? mine.bills : [] };
   // (A save made from a bill's list button counts toward the Worker's 10 seconds between saves.)
   LAST_SAVE = L.savedAt || 0;
@@ -470,7 +470,7 @@ function drawShare() {
     + `<div class="row">${shareIcons(url, title)}<a class="muted" href="/list/#${esc(L.slug)}">Preview</a></div>`
     + (THANKS ? `<p class="thanks">${THANKS}</p>` : "")
     + ""  // (no group-code line: the owner, 2026-11-19)
-    + `<details><summary>Use this list on another device</summary><p class="muted">Paste this key into Your lists on the other device. Anyone with it can change the list.</p>`
+    + `<details><summary>Use this list on another device</summary><p class="muted">Paste this key into Your bills on the other device. Anyone with it can change the list.</p>`
     + `<div class="row"><input type="text" readonly id="key" value="${esc(`${L.slug} ${L.editKey}`)}" aria-label="The list's key"><button type="button" class="btn" data-act="copykey">Copy</button></div></details>`
     + `<p class="row"><button type="button" class="btn quiet" data-act="stop">Stop sharing and delete</button></p>`;
 }
