@@ -306,6 +306,11 @@ if __name__ == "__main__":
     main()
     from states.wa import contacts  # the legislator list and committee pages, with the member list just downloaded
     contacts.main(CURRENT)
-    from states.wa import texts  # "What it does": the current biennium's bill reports
+    from states.wa import texts, billtext  # "What it does": the current biennium's bill reports
+    # Bills with no report: a lead from the bill's own text (five minutes a run; the next biennium's prefiled bills after).
+    billtext.main(CURRENT, billtext.wanted(CURRENT, texts.reports(CURRENT)))
     texts.main(CURRENT)
+    if os.path.isdir(os.path.join(P.DATA, str(CURRENT + 2), "bills")):
+        billtext.main(CURRENT + 2, billtext.wanted(CURRENT + 2, texts.reports(CURRENT + 2)), 2)
+        texts.main(CURRENT + 2)
     texts.all_signatures(CURRENT)  # committee reports' signatures, ten minutes a run until every biennium's are read

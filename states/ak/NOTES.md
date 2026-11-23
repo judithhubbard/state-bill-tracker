@@ -26,7 +26,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   as "Independent". Bipartisan coalitions run both houses (legislatures.json `note`; seat counts show Republican majorities,
   so balance.py's "unified" and the front page's dots would mislead: fix before adding Alaska there). Titles are the short
   titles, sentence-cased with abbreviations spelled out (`titled()`); the summary is the official title. No "What it does"
-  (decided 2026-11-08): the only plain account is the sponsor statement (PDF), an advocate's case for the bill as introduced
+  (decided 2026-11-08; since 2026-11-22 a lead quoted from the bill's text, below): the only plain account is the sponsor statement (PDF), an advocate's case for the bill as introduced
   (HB 57 of 2025's is about phones in classrooms; the law became the education funding bill), with letterheads and staff
   contacts, and on about half the bills. Constitutional amendments (HJR/SJR "Proposing amendments to the Constitution"):
   two-thirds of each house's members, then the voters (`amendmentOnce`); none passed both houses in 2023-26. Governor 15
@@ -53,3 +53,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   "H:12|Carrick"; "S|Hughes" for a member who left; "H?Name" for no member); two members with one last name are written
   with an initial ("C.JOHNSON", "D.NELSON"), matched by first initial. data_check.py counts unmatched signers (FAIL over
   1%): 0 of 4,142 in 2023-24 and 0 of 4,223 in 2025-26.
+- **"What it does" from the bill's text (2026-11-22):** `states/ak/billtext.py` reads each bill's text as introduced
+  from BASIS's full-text page (/basis/Bill/Text/34?Hsid=HB0057A; robots.txt allows /basis/ and bars /PDF/, the same texts
+  as PDFs, not read), five seconds apart, ten minutes a run (fetch.py, last; the current Legislature first, the bills acted
+  on latest first). The page is a line-numbered <pre> with CR line ends: "* Section 1." / "* Sec. 2." begin sections, "is
+  amended by adding a new section/subsection to read:" is new law (its "Sec. 14.33.300. Catchline." is dropped), new wording
+  in an amended section is bold-underlined and deleted wording [IN CAPITALS IN BRACKETS]. `states/billtext_lead.py` quotes
+  the opening sentence of each new section (or the sentences an amendment adds, else "Amends AS 14.17.500."); sections kept
+  in data/ak/<first year>/leads.json, leads written to texts_<first year>.json. Hand check of 25 bills of 2025-26: 16
+  informative, 3 partly (a Medicaid state-plan clause rather than the change), 6 only "Amends AS ...".

@@ -577,6 +577,17 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   build_site.sh puts in the front page for the map's "Bills that became law" (a CUSTOM view, `lawsView()` in home.html:
   shaded under 10%, 10-24%, 25% or more). The odds chart's drawing is `drawSankey()` in lists_pages/sankey.js, shared by
   tracker.html's `sankey()` (build_data.py puts the file in each page) and /compare/; its styles stay in each page.
+- **"What it does" from a bill's own text (2026-11-22):** for bills with no official summary, `states/billtext_lead.py`
+  quotes the bill as written, no AI: its statement of intent ("It is the intent of the legislature to ..."), the opening
+  sentence of each section that makes new law (skipping definitions, effective dates, severability, short titles,
+  appropriation boilerplate), or the whole sentences an amendment adds (underlined), else "Amends RCW 59.12.040."; only
+  whitespace and section numbers change, a long sentence is cut at a clause with "…". Paragraph plus "• " lines (as other
+  states' lists), label "From the bill's text as introduced: its statement of intent and the opening of its new sections."
+  (worded for what's there). Shared readers: `paragraphs()` (HTML with underline/strike), `split()` at "SECTION 1." marks.
+  Wired in WA (bills with no bill report), AK and MA (no summaries); measured and left out: MS (long titles already say
+  it, and quoted sections of restated law misled), OK (LegiScan getBillText would cost about 11,000 queries).
+  States cache sections (not leads) in data/<st>/<session>/leads.json, so a rule change needs no download. data_check
+  fails (over 1%) on leads that are boilerplate, over 1,200 characters, or the title's words again.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).

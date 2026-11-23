@@ -364,6 +364,19 @@ def main():
             if only and legislature != only:
                 continue
             problems += statements_run(legislature, problems)
+        if not only:
+            # "What it does": a lead quoted from each bill's text (states/ak/billtext.py), ten minutes a run, the current
+            # Legislature's bills first; an earlier one's once the current one's are all read. Never holds the run back.
+            from states.ak import billtext
+            for legislature in LEGISLATURES:
+                if out_of_time():
+                    break
+                try:
+                    if billtext.main(first_year(legislature), 10):
+                        break
+                except Exception as e:
+                    print(f"{legislature}: bill texts: stopped ({type(e).__name__}: {e}); kept the last copy", flush=True)
+                    break
     except Refused as e:
         print(f"Stopped: the server refused a request ({e})", flush=True)
         problems.append("refused")

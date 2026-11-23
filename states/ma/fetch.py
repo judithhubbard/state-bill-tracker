@@ -322,6 +322,14 @@ def main():
         hearings()
     except Exception as e:
         print(f"hearings: stopped ({type(e).__name__}: {e}); kept the last files", flush=True)
+    try:  # "What it does": a lead quoted from each bill's text (states/ma/billtext.py), eight minutes a run, the current
+        # court first, the last one once the current one's are all read; never holds the run back
+        from states.ma import billtext
+        for s in range(CURRENT, FIRST - 1, -2):
+            if os.path.exists(os.path.join(DATA, str(s), "documents.json")) and billtext.main(s, 8):
+                break
+    except Exception as e:
+        print(f"bill texts: stopped ({type(e).__name__}: {e}); kept the last copy", flush=True)
     marker = os.path.join(DATA, "incomplete")
     # A General Court not yet begun (no documents filed yet) is read when it's there but never holds Massachusetts back.
     undone = {s for s in INCOMPLETE if begun(s)}
