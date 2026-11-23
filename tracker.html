@@ -5899,7 +5899,9 @@ function wire() {
     const g = e.target.closest("[data-g]");
     if (g) { state.stage = String(state.stage) === g.dataset.g ? null : g.dataset.g; state.shown = PAGE; render(); return; }
     if (e.target.closest("[data-agenda]")) { const v = e.target.closest("[data-agenda]").dataset.agenda || "soon"; setAgenda(state.agenda === v ? "" : v); return; }
-    if (e.target.closest("[data-amend]")) { state.amend = state.amend ? "" : "1"; state.shown = PAGE; syncControls(); render(); return; }
+    // The row sits under "Passed both houses" and counts only those: it picks that stage too (the topic filter, "const",
+    // is every amendment, wherever it is).
+    if (e.target.closest("[data-amend]")) { const on = !state.amend; state.amend = on ? "1" : ""; if (on && state.stage == null) state.stage = 3; else if (!on && state.stage === 3) state.stage = null; state.shown = PAGE; syncControls(); render(); return; }
     const btn = e.target.closest(".srow"); if (!btn) return;
     const k = +btn.dataset.k; state.stage = state.stage === k ? null : k; state.shown = PAGE; render();
   });
