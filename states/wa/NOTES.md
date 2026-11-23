@@ -73,3 +73,14 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   kept). Bills and joint resolutions only (gubernatorial appointments and resolutions don't match). Shown as "listed": the
   House calendar carries a bill for weeks ("Added 2/14/2026"), and of the 2026 calendars from February 24 to March 12
   (23 PDFs, 324 bills, all records) 41% (House) and 43% (Senate) of the bills had a floor step that day or the next.
+- **Bills with no bill report (2026-11-22):** staff write a report only once a committee hears a bill, so 941 of 2025-26's
+  3,138 bills had no "What it does" (HB 1810). `states/wa/billtext.py` reads each one's text as introduced (the web
+  services' "Bills" documents, GetDocumentsByClass; the page at lawfilesext.leg.wa.gov, no robots.txt) and keeps its
+  sections in data/wa/<session>/leads.json (once per document date; about 3 MB a biennium); `states/billtext_lead.py`
+  quotes its statement of intent and the opening sentence of each "NEW SECTION" (skipping definitions, effective dates,
+  severability, tax-preference paperwork ...), or for a bill that only amends RCW sections the whole sentences it adds
+  (underlined), else "Amends RCW 59.12.040." texts.py adds them to texts_<session>.json for bills with no report, with the
+  label "From the bill's text as introduced: its statement of intent and the opening of its new sections." (worded for
+  what's there); a report, when one comes, replaces it. fetch.py reads five minutes a run (a page a second), the bills
+  acted on latest first, then the next biennium's prefiled bills. Earlier bienniums have no reports read, so no leads
+  either (left as they were).

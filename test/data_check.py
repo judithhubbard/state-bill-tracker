@@ -616,7 +616,8 @@ def check(state):
             say(state, "LOOK", f"{name}: {len(hollow)} texts empty or a placeholder (\"Pending\"), e.g. {hollow[:4]}")
         enc = sum(1 for t in texts if re.search("ï¿½|�|â€|Ã©", t))
         lost = sum(1 for t in texts if re.search(r"(?<=[a-z])\?(?=[a-z]+[\s.,;])|(^|\s)\?\s+\d", re.sub(r"\S*[/=]\S*", "", t)))
-        cut = sum(1 for t in texts if any(len(p) > 20 and not re.search(r"[.:;?!)\"”\]]$", p.strip()) for p in t.split("\n")[:-1]))
+        # ("…" ends a sentence a lead from a bill's text cut on purpose.)
+        cut = sum(1 for t in texts if any(len(p) > 20 and not re.search(r"[.:;?!)\"”\]…]$", p.strip()) for p in t.split("\n")[:-1]))
         title = sum(1 for t in texts if re.fullmatch(r"(?:As proposed, )?(?:C\.S\.)?\S+ amends current law relating to [^.]*\.?", t.strip()))
         if enc:
             say(state, "FAIL", f"{name}: {enc} texts with wrongly decoded characters")
@@ -657,6 +658,21 @@ def check(state):
                 and sw <= tw_(bytitle[n])]
         if echo:
             say(state, "LOOK", f"{s}: {len(echo)} summaries only repeat the title's words, e.g. {echo[:4]}")
+        # Leads quoted from a bill's own text where there's no summary (states/billtext_lead.py, 2026-11-22: WA, AK,
+        # MA): none may be only boilerplate (an effective date, severability), longer than 1,200 characters, or the
+        # title's words again. FAIL over 1% of them, else LOOK.
+        from states import billtext_lead
+        leads = [(n, v["statement"]) for n, v in T.items() if (v.get("label") or "").startswith("From the bill's text")]
+        bad = collections.defaultdict(list)
+        for n, t in leads:
+            for p in billtext_lead.problems(t, bytitle.get(n, "")):
+                bad[p].append(n)
+        for p, ns in sorted(bad.items()):
+            say(state, "FAIL" if len(ns) > 0.01 * len(leads) else "LOOK",
+                f"{s}: {len(ns)} of {len(leads)} leads from bill texts: {p}, e.g. {ns[:4]}")
+        if leads:
+            amends = sum(1 for _, t in leads if t.startswith("Amends "))
+            say(state, "LOOK", f"{s}: {len(leads)} leads from bill texts ({amends} only name the laws they amend)")
         # A summary of an earlier version that another bill's contents replaced: KS conference reports often put other
         # bills into a bill (HB 2043 of 2025-26: an insurance bill as passed, a property tax law after conference), and the
         # supplemental note describes it before. Laws whose summary shares almost no words with their own title.

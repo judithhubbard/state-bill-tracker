@@ -15,7 +15,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   "Passed to be engrossed" is a house passing it; "Enacted ... laid before the Governor" sends it. Committees are almost
   all joint; House Steering, Policy and Scheduling decides which bills reach the House floor; the Committee on Bills in
   the Third Reading counts as the floor. Formal sessions end July 31 of the second year (`formalEnds()`), informal ones
-  when the court ends. Governor 10 days. No summaries in the data ("What it does" isn't shown); Senate and (since
+  when the court ends. Governor 10 days. No summaries in the data ("What it does" is a lead quoted from the bill's text
+  since 2026-11-22, below); Senate and (since
   2026-11-22, below) House votes by member. Earlier courts linked by identical title (`earlier()`). Cities and towns (351) by district.
 - **Passed both houses (2026-11-19):** only when the branches agree on one text: the second branch passed it unamended,
   or the first concurred in its amendment (the last word, not "NON-concurred" or "concurred ... with a further
@@ -87,3 +88,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
 - **A member code with a space (2026-11-22):** Sen. Liz Miranda's code is "L M0"; contacts.py asked for her record
   unquoted, it failed, and she was missing from member_details.json and the contacts (39 senators). The address is
   quoted now. data_check's "named votes aren't tied to a seat" LOOK shows such a name ("S?L M0").
+- **"What it does" from the bill's text (2026-11-22):** `states/ma/billtext.py` reads each bill's document record
+  (/api/GeneralCourts/194/Documents/H100: its DocumentText, the bill as filed or as a committee redrafted it, plain text
+  whose lines are sometimes wrapped) one at a time, eight minutes a run (fetch.py, last; the current court first, the
+  bills acted on latest first; about 9,000 a court, so a few days of runs). "SECTION 1." begins a section; "... by
+  inserting after section 116G the following section:-" is new law, "... striking out ... and inserting in place thereof
+  ...:-" counts its new wording as added, a short instruction quoting its words ("by striking out “Thanksgiving day” in line
+  22.") is itself the change, and a section with no instruction is uncodified new law. "Amends M.G.L. c. 90, § 32C." only
+  when the section says "General Laws" (not special acts or town charters). Label "From the bill's text: ...". Hand check
+  of 20 of 2025-26 (before the last fixes): 14 informative, 6 weak (two only "Amends", a heading, definitions, a charter
+  instruction).

@@ -295,8 +295,13 @@ def main(session):
         text = re.sub(r"(?m)^([A-Z][^.\n]{0,60}\.)\n(?=[A-Z])", r"\1 ", text)
         if text:
             out[key] = {"statement": text, "label": label(name)}
+    reported = len(out)
+    # Bills with no report (none until a committee hears the bill): a lead quoted from the bill's text (billtext.py).
+    from states.wa import billtext
+    for key, entry in billtext.entries(session).items():
+        out.setdefault(key, entry)
     json.dump(out, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
-    print(f"texts_{session}.json: {len(out)} bill reports ({len(todo)} read now)")
+    print(f"texts_{session}.json: {reported} bill reports ({len(todo)} read now), {len(out) - reported} leads from bill texts")
 
 
 def all_signatures(current, minutes=10):

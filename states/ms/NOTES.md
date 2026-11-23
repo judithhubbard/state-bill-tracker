@@ -129,3 +129,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   scan: check it by hand after elections (h_roster.pdf's Last-Modified). The Census district files (towns.py) still
   predate the 2025 maps. data_check's "names voting in the last four months ... aren't tied to a seat" LOOK now lists
   the four who left after the 2026 session.
+- **Leads from bill texts: measured, not used (2026-11-22).** The shared extractor (states/billtext_lead.py) read 250
+  bills of 2026 as introduced (billstatus.ls.state.ms.us/documents/2026/html/..IN.htm, a new section's mark underlined) and
+  gave a lead for 208; a hand check of 20: 15 local appropriations that only add the dollar amount to the long title, 3
+  more informative, and 2 misleading (SC 504 and SB 3328 quote sections of existing law the bill restates in full, as if
+  new). The long title, already the summary, says what these leads say; the reader stays out of fetch.py.
