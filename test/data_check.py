@@ -43,6 +43,7 @@ def wording(state, loaded):
     """The page's own wording of each bill's history (the reset, floor and law lines, committee votes) against the record:
     test/wording_check.js runs tracker.html's code on each session's bills as the page sees them."""
     import subprocess
+    from stages import has_signature, unsigned
     profile = open(os.path.join(HERE, "states", state, "profile.js"), encoding="utf-8").read()
     day = lambda d: str(d or "")[:10]
     for s, recs in loaded.items():
@@ -56,7 +57,9 @@ def wording(state, loaded):
                           "dates": {"floor": last(1), "died": last(4), "passSAll": [day(x) for x in k(2)], "passAAll": [day(x) for x in k(3)],
                                     "deliv": last(5), "signed": last(6), "vetoed": last(7)},
                           "vers": [{"p": v["p"], "actions": [[day(a[0]), a[1]] for a in v["actions"]]} for v in r["vers"]],
-                          "votes": [[v[0], v[1], v[2], day(v[3]), v[4], v[5], v[7] if len(v) > 7 else ""] for v in r.get("votes") or []]})
+                          "votes": [[v[0], v[1], v[2], day(v[3]), v[4], v[5], v[7] if len(v) > 7 else ""] for v in r.get("votes") or []],
+                          # (stages.py's reading of a law's history, for the governor's page's past sessions: compared there)
+                          **({"sig": [has_signature(r), unsigned(r)]} if r["stage"] == 5 else {})})
         run = subprocess.run(["node", os.path.join(HERE, "test", "wording_check.js")], capture_output=True, text=True,
                              input=json.dumps({"profile": profile, "session": s, "current": s == max(loaded), "bills": bills}))
         if run.returncode:

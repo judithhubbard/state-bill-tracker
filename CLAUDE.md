@@ -843,9 +843,10 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
   The governor's page (2026-11-22), /<st>/governor/ (Congress: /us/president/, build_data.py's `GOV_SLUG` from
   legislatures.json's "executive"; `PRESET.gov`): `renderGovCard()` and `renderGov()` (`#govRec`, the Record view; the page
   has no tabs, the owner's choice 2026-11-22: the card's "All bills" link goes to the list): on the desk (soonest deadline first), this session's decisions by the governor in office
-  (decided on or after `govNow.since`; signed, without signature, vetoed, overridden: `GOV_KINDS`), earlier sessions under
-  the same governor (`govRecord` in the stats part, `governor_record()`: by the governor in office on the decision's day;
-  its `NO_SIGNATURE` is tracker.html's, keep them alike) and vetoes with a message (`vetoMsgs`). Bills open in place
+  (decided on or after `govNow.since`; signed (only when the record shows the signature: `signedLaw()`), became law (the
+  record shows neither), without signature, vetoed, overridden: `GOV_KINDS`), earlier sessions under the same governor
+  (`govRecord` in the stats part, `governor_record()`: by the governor in office on the decision's day; stages.py's
+  `NO_SIGNATURE`, `SIGNATURE`, `ENROLL_SIGNED`, `has_signature()` are tracker.html's, kept alike: test/wording_check.js compares them) and vetoes with a message (`vetoMsgs`). Bills open in place
   (`billRow()`). Linked from the Governor panel and from a decided bill's "What you can do" line (`govLink()`, `govFrom()`).
 - **Statistics:** `renderStats()`, which builds every stats section, plus `sankey()` (odds),
   `monthChart()`, `oddsLine()` (the "In past sessions…" line in a bill panel) and the network

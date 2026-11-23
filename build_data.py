@@ -20,7 +20,7 @@ Usage: python3 build_data.py            builds every session found in data/
 import base64, contextlib, glob, gzip, hashlib, importlib, json, os, re, sys
 from fetch_contacts import committee_key, name_key, senate_url
 from collections import Counter, defaultdict
-from stages import STAGE_LABEL, rank
+from stages import STAGE_LABEL, rank, unsigned, has_signature
 
 ARGS = sys.argv[1:]
 STATE = "ny"
@@ -939,15 +939,14 @@ def insights(loaded, hist, current):
     }
 
 
-# A law the governor neither signed nor vetoed in time, as its history says (tracker.html's NO_SIGNATURE: keep the two alike).
-NO_SIGNATURE = re.compile(r"without (?:the |my )?(?:governor'?s |president'?s )?signature|w/o (?:the )?(?:governor'?s? )?sign|w/out governor", re.I)
-
-
 def governor_record(done, current):
     """The governor's page's "Past sessions": per finished session and governor (the one in office the day of the decision,
-    or the day the bill was sent), [session, surname, the day they took office, bills that reached them, signed, vetoed
-    (overridden or not), of those overridden, law without signature, no decision recorded]. Counted as the page counts
-    the current session: stage 4 to 6; a veto is the governor's even when overridden."""
+    or the day the bill was sent), [session, surname, the day they took office, bills that reached them, signed (the
+    history shows the signature), vetoed (overridden or not), of those overridden, law without signature (the history
+    says so), no decision recorded, law with neither in the history (Alabama's "Became law: Act 2025-403")]. Counted as
+    the page counts the current session (tracker.html's GOV_KINDS, signedLaw(), unsignedLaw(); stages.py's ports): stage 4
+    to 6; a veto is the governor's even when overridden. A state whose records never show the signature
+    (STATE.noSignatures) has the page add signed and the last together as "Became law"."""
     out = {}
     for s in sorted(done):
         if s >= current:
@@ -960,16 +959,18 @@ def governor_record(done, current):
             if not day:
                 continue
             name, start = governors.in_office(P, day)
-            c = out.setdefault((s, start), [s, name, start, 0, 0, 0, 0, 0, 0])
+            c = out.setdefault((s, start), [s, name, start, 0, 0, 0, 0, 0, 0, 0])
             c[3] += 1
             if k[6]:
                 c[5] += 1
                 c[6] += r["stage"] == 5
             elif r["stage"] == 5:
-                if any(NO_SIGNATURE.search(a[1] or "") for v in r["vers"] for a in v["actions"]):
+                if unsigned(r):
                     c[7] += 1
-                else:
+                elif has_signature(r):
                     c[4] += 1
+                else:
+                    c[9] += 1
             elif r["stage"] == 4:
                 c[8] += 1
             else:

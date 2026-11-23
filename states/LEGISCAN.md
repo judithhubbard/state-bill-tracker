@@ -60,3 +60,7 @@ Moved from CLAUDE.md (2026-11-19). Each state's own notes: states/tn, ok, me, ri
 - **Roll calls' results (2026-11-23):** LegiScan's `passed` is kept where the tally says otherwise (vote[7]): a
   committee needs a majority of its members (Tennessee's Senate Judiciary 4-3 on SB 1044 of 2023, "Failed in Senate Judiciary
   Committee", read "Approved by"), and a vote to reconsider isn't one on the bill.
+- **The "updated" time (2026-11-23):** `fetched()` gives the newest bill's read time in the state's own time zone (each
+  converter's `timezone = P.TIMEZONE`; the District's passes it), as every other state's stamp and build_data.py's
+  `last_checked()`. It was UTC, so the pages' "updated" time ran four to six hours ahead (the site check: "DC: 'updated'
+  time 2026-11-23 12:48 is in the future"; it was 7:48 a.m. Eastern).

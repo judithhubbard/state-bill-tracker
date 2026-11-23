@@ -257,6 +257,7 @@ def short_title(b):
 
 class Tennessee(L.Rules):
     data_dir = P.DATA
+    timezone = P.TIMEZONE
     lower = "H"
     gates = {"Calendar", "Calendar and Rules"}
 
