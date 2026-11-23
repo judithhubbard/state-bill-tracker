@@ -4839,7 +4839,7 @@ function newsBox(rows) {
   }));
 }
 // A new star has no side yet: the person picks support or oppose (a decided bill has none to pick).
-function toggleWatch(b) { if (!isWatched(b)) { countUse(`starred/${baseNum(b.nums[0])}`); step("starred"); } setWatch(b, isWatched(b) ? null : { seen: b.last || "", stance: null }); }
+function toggleWatch(b) { if (!isWatched(b)) { countUse(`starred/${STATE.code}/${baseNum(b.nums[0])}`); step("starred"); } setWatch(b, isWatched(b) ? null : { seen: b.last || "", stance: null }); }
 function markSeen(b) { const e = watchEntry(b); if (e && e.seen !== (b.last || "")) { setWatch(b, { ...e, seen: b.last || "" }); updateWatchTab(); } }
 // The Watchlist tab: how many bills, and a badge for how many have news.
 let TAB_LATER = false;
@@ -4947,7 +4947,7 @@ function countVisit() {
   try { localStorage.setItem(STORE + "lastvisit", today); } catch (e) {}
   countUse(last ? "visit/returning" : "visit/first");
   const n = [...WATCH.keys()].filter((k) => k.startsWith(`${DATA.session}:`)).length;
-  countUse(`watchlist/${n === 0 ? "none" : n <= 5 ? "1-5 bills" : n <= 20 ? "6-20 bills" : "21+ bills"}`);
+  countUse(`watchlist/${STATE.code}/${n === 0 ? "none" : n <= 5 ? "1-5 bills" : n <= 20 ? "6-20 bills" : "21+ bills"}`);
 }
 async function listsApi(path, opts = {}) {
   if (!LISTS_API) throw new Error("Sharing isn't available here.");
@@ -5729,7 +5729,7 @@ function fillDetail(el) {
   if (!d._counted) {
     d._counted = true;
     markSeen(b);
-    countUse(`opened/${baseNum(b.nums[0])}`);
+    countUse(`opened/${STATE.code}/${baseNum(b.nums[0])}`);
     step("opened a bill");
   }
   // On a watchlist card, what you can do is the card's own, above. A card opened below its row (inplace) shows the rest

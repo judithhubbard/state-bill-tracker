@@ -993,7 +993,8 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
   - `step()` counts pairs of steps within one visit (`steps/opened a bill → starred`, and so on).
     `countOnce()` counts tab moves (`move/`), sections (`stats/`, `how/`), tips (`tip/`) and
     searches (`search/used`, `search/found nothing`; never the words typed).
-  - Event names in use: `starred/`, `opened/`, `email-copied/`, `email-copied-several`,
+  - Event names in use (since 2026-11-23 `starred/`, `opened/` and `watchlist/` name the state: `opened/ny/S896`,
+    `watchlist/ny/1-5 bills`): `starred/`, `opened/`, `email-copied/`, `email-copied-several`,
     `share-link-copied`, `list-viewed`, `list-published`, `list-updated`, `list-link-copied`,
     `shared-list-added`, `action-logged`, `county/`, `error/`, `visit/first`, `visit/returning`,
     `watchlist/`.
