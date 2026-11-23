@@ -28,6 +28,7 @@ its committees, titles, topics, links), and passes it to `load_session()`. What'
   step. Noes are "N", not voting or absent "A"; members by seat ("S:12") when `Rules.seat()` knows them, else "S?Name".
 """
 import glob, html, json, os, re
+from datetime import date
 from collections import defaultdict
 from states.undated import settle
 
@@ -116,6 +117,13 @@ def bills(folder):
                 b["history"] = hist
             if m.get("status") is not None:
                 b["status"], b["status_date"] = m["status"], m.get("status_date") or b.get("status_date")
+    # Lines dated after today haven't happened: Oklahoma gives each prefiled bill its "First Reading" (and "Authored by")
+    # on the day the session opens (HB 1001 of 2027, filed in November 2026: "2027-02-01 First Reading"). They show
+    # from that day; until then the bill has no history and settle() dates it.
+    today = date.today().isoformat()
+    for b in out:
+        if any((a.get("date") or "")[:10] > today for a in b.get("history") or []):
+            b["history"] = [a for a in b["history"] if (a.get("date") or "")[:10] <= today]
     return out
 
 

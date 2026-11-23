@@ -117,3 +117,11 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   lack (Brian Reynolds of the Houlton Band of Maliseet Indians, 2025-26: "H|Reynolds"). Tested on 31 pages (12 of
   2023-24, 19 of 2025-26; 374 signatures, all matched); data_check.py counts unmatched signers, signers named twice on one
   report, and reports dated a day the history has no line on.
+- **Referrals the houses argued over (2026-11-23).** "The Senate RECEDED From REFERENCE to the Committee on ..." takes a
+  referral back (it was read as one: LD 383 of 2025 looked like Housing and Economic Development's); "REFERENCED to" is a
+  referral (LD 383's Senate line to Agriculture); "RECEDED and CONCURRED to REFERENCE to the Committee on X" sends the bill
+  to X, where it ends up (it was skipped, so 5 reports of 2023-26 named the committee one house first chose: LD 1116 of
+  2023 Housing for Labor and Housing, LD 1942 of 2025 Veterans and Legal Affairs for Taxation). A report goes to the house
+  that reads it first, the next line's (37 reports had the other house). A committee's own bill (LD 1982 of 2025, LD 2012
+  of 2023) has no referral: its report's committee is the one its co-chairs' other reports that session name, when they
+  name only one (`add_reports()`). Found by the data check's "committee reports with no committee".

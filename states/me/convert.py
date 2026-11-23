@@ -41,7 +41,7 @@ build_data.py reads. The shared reading is states/legiscan_convert.py; this file
   page), shown as the committee's report (votes of kind "R", `add_reports()`), never counted as votes.
 - No summaries: LegiScan's description is the title. "What it does" isn't shown.
 """
-import json, os, re, sys
+import collections, json, os, re, sys
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 if HERE not in sys.path:
@@ -87,11 +87,13 @@ def comm(c):
 
 def referral(t):
     """The committee a line refers the bill to, or None."""
-    if re.search(r"without REFERENCE|INSISTED on REFERENCE|RECEDED and CONCURRED (?:to|with) (?:REFERENCE|the Bill REFERRED)|"
+    # "RECEDED From REFERENCE to the Committee on ..." takes a referral back (LD 383 of 2025, which went to Environment
+    # and Natural Resources in the end).
+    if re.search(r"without REFERENCE|INSISTED on REFERENCE|RECEDED From REFERENCE|"
                  r"\bmoved\b|FAILED|pending|Report of the Committee on .* was READ and REJECTED", t, re.I) and not re.match(r"Committee on .+ suggested", t):
         return None
-    m = re.search(r"(?:REFERRED|REFERENCE|COMMITTED)\s+to (?:the )?(?:Joint (?:Standing |Select )?)?Comm?itt?ee on ([A-Z][A-Z ,&'-]+[A-Z])(?![a-z])", t) or \
-        re.search(r"(?:REFERRED|REFERENCE|COMMITTED)\s+to (?:the )?(?:Joint (?:Standing |Select )?)?Comm?itt?ee on ([A-Z][\w ,&'-]+?)(?:,|\s+pursuant|\s+and ordered|\s+in concurrence|\.|$)", t)
+    m = re.search(r"(?:REFERRED|REFERENCED?|COMMITTED)\s+to (?:the )?(?:Joint (?:Standing |Select )?)?Comm?itt?ee on ([A-Z][A-Z ,&'-]+[A-Z])(?![a-z])", t) or \
+        re.search(r"(?:REFERRED|REFERENCED?|COMMITTED)\s+to (?:the )?(?:Joint (?:Standing |Select )?)?Comm?itt?ee on ([A-Z][\w ,&'-]+?)(?:,|\s+pursuant|\s+and ordered|\s+in concurrence|\.|$)", t)
     if not m:
         return None
     c = comm(re.sub(r"\s+(?:PREVAILED|ORDERED|IN CONCURRENCE|IN NON-CONCURRENCE)\b.*$", "", m.group(1)))
@@ -148,18 +150,21 @@ def decode_bill(b, kind, facts=None):
             # The joint committee's lines.
             m = re.match(r"Reported Out:\s*(.+)$", t, re.I)
             if m:
+                # The report goes to the house that reads it first, the next to act (where the two houses argued over
+                # the referral, the house that last referred it may not be that one).
+                to = next((x[1] for x in lines[i + 1:] if x[1]), comm_house)
                 codes = [c.strip().upper() for c in m.group(1).split("/")]
                 main = codes[0]
                 last_report = main
                 words = report_words(main) + (f" (divided report; the minority: {', '.join(report_words(c) for c in codes[1:])})" if len(codes) > 1 else "")
                 if main.startswith("OTP"):
-                    steps.append((comm_house, "report", f"Committee report: {words}", {}))
+                    steps.append((to, "report", f"Committee report: {words}", {}))
                 elif main == "ONTP":
-                    steps.append((comm_house, "commfail", f"Committee report: {words}", {}))
+                    steps.append((to, "commfail", f"Committee report: {words}", {}))
                 elif main == "LTW":
-                    steps.append((comm_house, "held", f"Committee report: {words}", {}))
+                    steps.append((to, "held", f"Committee report: {words}", {}))
                 else:
-                    steps.append((comm_house, None, t, {}))
+                    steps.append((to, None, t, {}))
             elif re.match(r"HELD BY (?:THE )?GOVERNOR", t, re.I):
                 held_at = i
                 steps.append(("G", "sent", "Held by the governor until the Legislature meets again", {}))
@@ -516,6 +521,8 @@ def add_reports(session, recs, index):
         return
     folder = RULES.session_folders()[session]
     find = signers(folder, session)
+    chairs = lambda x: frozenset(name for _, _, people in x["reports"] for h, name, _, chair in people if chair)
+    made = []
     for b in L.bills(folder):
         if not RULES.include(b):
             continue
@@ -533,8 +540,19 @@ def add_reports(session, recs, index):
         names = [[find(h, name, place), report_wording(words, label)] for label, words, people in x["reports"] for h, name, place, _ in people]
         yes = sum(len(ps) for _, w, ps in x["reports"] if re.match(r"Ought To Pass", w, re.I))
         no = sum(len(ps) for _, w, ps in x["reports"] if re.match(r"Ought Not To Pass", w, re.I))
-        recs[i]["votes"].append([house, "R", committee, day, yes, no, names])
-        recs[i]["votes"].sort(key=lambda v: v[3] or "")
+        made.append((recs[i], [house, "R", committee, day, yes, no, names], chairs(x)))
+    # A committee's own bill (HLD1982 of 2025, HLD2012 of 2023) was never referred, so nothing above names the committee:
+    # its co-chairs (marked on the report) sign every report of their committee, so take the committee their other
+    # reports that session name, when they name only one.
+    by_chairs = collections.defaultdict(set)
+    for _, v, c in made:
+        if v[2] and c:
+            by_chairs[c].add(v[2])
+    for r, v, c in made:
+        if not v[2] and len(by_chairs.get(c, ())) == 1:
+            v[2] = next(iter(by_chairs[c]))
+        r["votes"].append(v)
+        r["votes"].sort(key=lambda v: v[3] or "")
 
 
 def agendas(session):

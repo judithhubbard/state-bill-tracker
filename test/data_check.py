@@ -427,6 +427,10 @@ def check(state):
                 continue
             h, cname = r["firstComms"][0][0], r["firstComms"][0][1]
             cv = [v for v in r["votes"] if v[1] == "C" and v[0] == h and ckey(v[2]) == ckey(cname) and v[4] + v[5]]
+            # A bill past its committee whose report was against it is no contradiction where every report goes to the
+            # floor: ND's HB 1139 of 2025, "recommended it not pass, 8-5", then passed the House 49-38.
+            if r["commFate"] == "passed" and any(re.search(r"not pass|unfavorabl", a, re.I) for v in r["vers"] for _, a in v["actions"]):
+                continue
             if cv and (all(carried(v) for v in cv) if r["commFate"] == "defeated" else all(not carried(v) and v[5] > v[4] for v in cv)):
                 upside.append(r["nums"][0])
         if upside:

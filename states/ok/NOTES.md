@@ -70,3 +70,8 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   page data lists every member's district and portrait; the 400x500 "small" size is used (about 35 KB). The Senate's site
   (oksenate.gov) answers its pages with a script challenge (Sucuri), so its roster isn't read; Open States' links to its
   photo files (/sites/default/files/, allowed) still load and are copied small.
+- **Prefiled bills (2026-11-23).** LegiScan gives each prefiled bill its "First Reading" and "Authored by" lines on the day
+  the session opens (HB 1001 of 2027, filed November 4, 2026: "2027-02-01 First Reading"). The shared reader
+  (legiscan_convert.py's `bills()`) leaves out lines dated after today; until then the bill has no history and settle()
+  dates it by its file. And 2027's LegiScan people came with phones for 7 of 146 members: contacts.py keeps the last
+  contacts file's id, phone and office for a member in the same seat (as Tennessee's): 143 of 146.
