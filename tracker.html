@@ -4216,7 +4216,7 @@ function historyBlock(b) {
     [D.floor, "Approved by committee and sent to the floor", "floor"],
     ...D.passSAll.map((d, i) => [d, i ? "Passed the Senate again" : "Passed the Senate", "S"]),
     ...D.passAAll.map((d, i) => [d, i ? `Passed the ${HOUSE[LOW]} again` : `Passed the ${HOUSE[LOW]}`, LOW]),
-    [D.died, "Sent back to committee for the new year (had to pass again)"],
+    [D.died, STATE.resetLine?.(b) || "Sent back to committee for the new year (had to pass again)"],
     [D.deliv, `Sent to ${EXEC.the}`, null, 3],
     [D.signed, `${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}`, null, after(D.signed) ? 5 : 4],
     [D.vetoed, `Vetoed${b.veto ? `, Memo ${b.veto}` : ""}`, null, 4],

@@ -94,6 +94,17 @@ const STATE = {
     }
     return null;
   },
+  // The history's line for that January return (dates.died). A bill the Assembly passed goes back to the Assembly's
+  // floor calendar ("RETURNED TO ASSEMBLY", "ORDERED TO THIRD READING CAL.31": A836 of 2025); one the Senate passed goes
+  // back to a Senate committee ("RETURNED TO SENATE", "REFERRED TO HEALTH": S11 of 2025).
+  resetLine(b) {
+    const D = b.dates, reset = D.died;
+    if (!reset) return "";
+    const senate = (D.passSAll || []).some((d) => d < reset), assembly = (D.passAAll || []).some((d) => d < reset);
+    if (assembly && !senate) return "Returned to the Assembly's floor calendar for the new year (has to pass again)";
+    if (senate && !assembly) return "Returned to a Senate committee for the new year (has to pass again)";
+    return "";
+  },
   // The panel's one-line summary for a bill whose first-year passage was reset that way (dates.died).
   resetNote(b) {
     const D = b.dates, reset = D.died, H = { S: "Senate", A: "Assembly" };
