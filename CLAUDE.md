@@ -567,6 +567,13 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   first. 50 at a time; each with its status label and a star that writes the state's watchlist (with the last
   action's date from the status file). Size: 50,000 bills (NY, NJ, TX, VA, US) are 0.9 MB brotli; all states should
   be about 3 MB the first time someone searches every state.
+  **Earlier sessions (2026-11-22):** an "Earlier sessions" checkbox in the results' head (remembered in abt:searchpast)
+  also loads search/<st>.past.json (every other session the state's site shows, newest first; a state whose earlier
+  sessions are over 600 KB gzipped, as New York's, puts the others in search/<st>.past.<session>.json, named in "more"),
+  most populous first, four at a time. Their bills come after this session's under "Earlier sessions", each with its
+  session's label, linking to that session's page (#<num>) with a star for that session's watchlist; "Show on the map"
+  then counts every session, and the panel groups a state's bills by session, newest first. Sizes (5 states, brotli):
+  past 1.8 MB vs. current 0.7 MB; all states' past files should be about 7 MB, about 60 files.
 - **How the states compare (built 2026-11-19, approved by the owner):** each state's build writes data/compare.json
   (`write_compare()` in build_data.py): every finished session's odds chart numbers (`reached()`, as `insights()` counts
   them) one session at a time, without shells, narrow bills and constitutional amendments; as a check, the same counts with

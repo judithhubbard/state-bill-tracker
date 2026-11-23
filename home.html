@@ -513,6 +513,20 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .found .more { display: block; width: 100%; font: inherit; font-size: 14px; font-weight: 600; color: var(--navy); background: none; border: 0;
   border-top: 1px solid var(--rule); padding: 8px 12px; cursor: pointer; text-align: left; }
 .found .more:hover { background: var(--paper); }
+/* "Earlier sessions": a checkbox in the results' head; their bills come after this session's, under the session's name
+   (as do the map panel's, newest session first). */
+.found .fpast { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; color: var(--ink); cursor: pointer; }
+.found .fpast input { margin: 0; width: 15px; height: 15px; accent-color: var(--navy); }
+.found .fpast input:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
+/* On a phone the state, number and session keep their room; a long status label is cut short instead. */
+@media (max-width: 600px) {
+  .found li a { grid-template-columns: auto minmax(0, 1fr); }
+  .found .fst { overflow: hidden; max-width: 100%; }
+  .found .fst > * { flex: none; }
+  .found .fst > .pips { display: none; }
+  .found .fst > .stg { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+}
+.found li.fsess, .panel li.fsess { padding: 8px 12px 3px; font: 600 12px/1.3 var(--body); color: var(--ink-2); background: var(--paper); }
 /* "Bills that became law": the panel's numbers for the state pointed at. */
 .panel table.lawt { border-collapse: collapse; width: 100%; font-size: 14px; margin: 4px 0 10px; font-variant-numeric: tabular-nums; }
 .lawt th, .lawt td { padding: 4px 0; border-bottom: 1px solid var(--rule); text-align: right; }
@@ -1152,16 +1166,18 @@ function lawsView() {
       + (Object.keys(built).some((c) => !CMP[c.toLowerCase()]) ? `<span class="key"><i class="sq h0"></i>No finished session yet</span>` : "")
       + (Object.keys(GRID).some((c) => !built[c]) ? `<span class="key"><i class="sq" style="border:1px dashed var(--rule)"></i>Not on the site yet</span>` : "") };
 }
-// A search's matches on the map (search's "Show on the map"): hits are [{st, num, title, stage, label, href, star}].
-function searchView(words, hits) {
+// A search's matches on the map (search's "Show on the map"): hits are [{st, num, title, stage, label, href, star,
+// session, slabel}]. With earlier sessions (past), each state's bills are grouped by session, newest first, under its name.
+function searchView(words, hits, past) {
   const by = {}, rows = {};
   for (const h of hits) {
-    (rows[h.st] ||= []).push(h);
+    (rows[h.st] ||= []).push(past ? h : { ...h, slabel: "" });
     const c = (by[h.st] ||= [0, 0]); c[0]++; if (h.stage === 5) c[1]++;
   }
+  if (past) for (const xs of Object.values(rows)) xs.sort((a, b) => b.session - a.session);
   const states = Object.keys(by).filter((x) => x !== "us").length;
   return { kind: "search", label: `“${words}”`, by, rows, step, badge: "lawn",
-    head: `${hits.length.toLocaleString()} bill${hits.length === 1 ? "" : "s"} on “${esc(words)}”, by their titles or topic, in ${states} state${states === 1 ? "" : "s"}${by.us ? " and Congress" : ""}: this session's bills and next year's prefiled ones.`,
+    head: `${hits.length.toLocaleString()} bill${hits.length === 1 ? "" : "s"} on “${esc(words)}”, by their titles or topic, in ${states} state${states === 1 ? "" : "s"}${by.us ? " and Congress" : ""}: ${past ? "this session and earlier ones" : "this session's bills and next year's prefiled ones"}.`,
     none: (st) => `No bills with “${esc(words)}” in ${nameOf(st)}.`,
     some: (st, k, l) => `${k} bill${k === 1 ? "" : "s"} with “${esc(words)}”${l ? `, ${l} became law` : ""}.`,
     legend: `<span class="key"><i class="sq h0"></i>None</span><span class="key"><i class="sq h1"></i>1&ndash;4 bills</span>`
@@ -1202,7 +1218,7 @@ function customPanel(st) {
   const rows = v.rows[st] || [], [n, b] = v.by[st] || [0, 0];
   body.innerHTML = `<h3>${esc(nameOf(st))}</h3><p>${n ? v.some(st, n, b) : v.none(st)} <a href="${esc(built[st.toUpperCase()] || `${st}/`)}">Open ${esc(nameOf(st))}'s bills</a>`
     + `${st === pinned ? ` · <a href="#" data-unpin>Close</a>` : ""}</p>`
-    + (rows.length ? `<ul>${rows.slice(0, 200).map((x) => `<li><a href="${esc(x.href)}" title="${esc(x.title)}"${x.seen ? ` data-seen="${esc(x.seen)}"` : ""}><b>${esc(x.num)}</b>`
+    + (rows.length ? `<ul>${rows.slice(0, 200).map((x, i, xs) => `${x.slabel && x.slabel !== xs[i - 1]?.slabel ? `<li class="fsess">${esc(x.slabel)}</li>` : ""}<li><a href="${esc(x.href)}" title="${esc(x.title)}"${x.seen ? ` data-seen="${esc(x.seen)}"` : ""}><b>${esc(x.num)}</b>`
       + `<span class="tt">${esc(x.title)}</span><span class="tags">${x.fresh ? '<span class="new">New</span>' : ""}${BillFacts.pips(x.stage, BillFacts.oneHouse(st), "mini", x.stg, st)}<span class="stg s${x.stage}" title="${esc(x.stg)}">${esc(x.stg)}</span></span></a>${x.star}</li>`).join("")}</ul>` : "");
 }
 // The controls: year buttons, then "Show" (party control or a national issue). For party control, this year is now and
@@ -1507,6 +1523,36 @@ drawMine();
     return SEARCH[st] ||= fetch(`search/${st}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
       .then((d) => { ready[st] = d ? prep(d) : { st, name: stateName(st), s: [] }; schedule(0); return ready[st]; });
   }
+  // Earlier sessions (the "Earlier sessions" box, remembered in abt:searchpast): search/<st>.past.json, newest session
+  // first; a big state's other sessions are in search/<st>.past.<session>.json files it names in "more".
+  const PAST = {}, pastAsked = {}, pastDone = {};
+  let pastOn = false;
+  try { pastOn = localStorage.getItem("abt:searchpast") === "1"; } catch (e) {}
+  const getJson = (url) => fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  function loadPast(st) {
+    return pastAsked[st] ||= getJson(`search/${st}.past.json`).then((d) => {
+      PAST[st] = d ? prep(d).s : [];
+      schedule(0);
+      return Promise.all((d && d.more || []).map((x) => getJson(`search/${st}.past.${x}.json`).then((e) => {
+        if (e) { PAST[st].push(...prep(e).s); PAST[st].sort((a, b) => b.session - a.session); schedule(0); }
+      })));
+    }).then(() => { pastDone[st] = true; schedule(0); });
+  }
+  const sessionsOf = (st) => (pastOn && PAST[st] ? [...ready[st].s, ...PAST[st]] : ready[st].s);
+  // Files load four at a time, in the order asked (the most populous states first).
+  const jobs = [];
+  let running = 0;
+  function enqueue(fns) { jobs.push(...fns); pump(); }
+  function pump() {
+    while (running < 4 && jobs.length) { running++; jobs.shift()().finally(() => { running--; pump(); }); }
+  }
+  const byPeople = () => { const all = codes(); return [...BY_PEOPLE.filter((c) => all.includes(c)), ...all.filter((c) => !BY_PEOPLE.includes(c))]; };
+  let pastWarmed = false;
+  function warmPast() {
+    if (pastWarmed) return;
+    pastWarmed = true;
+    enqueue(byPeople().map((st) => () => loadPast(st)));
+  }
   // The query: a state named in it, bill numbers, and the other words.
   function parse(raw) {
     let text = " " + raw.replace(/\s+/g, " ") + " ", st = only === "all" ? "" : only;
@@ -1546,11 +1592,12 @@ drawMine();
     const want = p.st ? [p.st] : codes();
     const missing = want.filter((st) => !ready[st]);
     for (const st of missing) load(st);
+    if (pastOn) { if (p.st) loadPast(p.st); warmPast(); }
     let hits = [];
     if (p.nums.length) {
       for (const st of want) {
         const d = ready[st];
-        if (d) for (const s of d.s) for (const r of s.b) {
+        if (d) for (const s of sessionsOf(st)) for (const r of s.b) {
           const [n, which] = numScore(r, p.nums);
           if (n) hits.push({ st, name: d.name, s, r, tier: 10 + n, score: 0, shown: which });
         }
@@ -1568,7 +1615,7 @@ drawMine();
     for (const st of words.length ? want : []) {
       const d = ready[st];
       if (!d) continue;
-      for (const s of d.s) for (const r of s.b) {
+      for (const s of sessionsOf(st)) for (const r of s.b) {
         total++;
         if (byNum.has(r)) continue;
         const has = keys.map((w) => r.low.includes(w)), k = has.filter(Boolean).length;
@@ -1587,22 +1634,25 @@ drawMine();
     for (const h of part) if (h.tier === 1) h.score = h.has.reduce((t, x, i) => t + (x ? idf[i] : 0), 0);
     // Bills with only some of the words are listed only when no bill has them all (or the number).
     if (hits.some((h) => h.tier >= 5)) hits = hits.filter((h) => h.tier >= 5);
-    // Within a tier: laws first, then vetoed bills, then the furthest along.
+    // Within a tier: laws first, then vetoed bills, then the furthest along. Earlier sessions' bills come after this
+    // session's, the newest session first.
     const rank = (r) => (r[2] === 5 ? 9 : r[2] === 6 ? 8 : r[2]);
-    hits.sort((a, b) => b.tier - a.tier || b.score - a.score || (a.s.up - b.s.up) || rank(b.r) - rank(a.r) || a.name.localeCompare(b.name));
+    hits.sort((a, b) => b.s.live - a.s.live || b.tier - a.tier || b.score - a.score || (a.s.up - b.s.up)
+      || (a.s.live ? 0 : b.s.session - a.s.session) || rank(b.r) - rank(a.r) || a.name.localeCompare(b.name));
     // While states are still loading, the rows already shown keep their places and the new states' bills go below them,
     // so a click lands on the bill it was aimed at; all are ranked together once every state is in, but not while the
     // pointer is on the results (then when it leaves them).
-    const pending = want.filter((st) => !ready[st]).length, key = `${raw}|${only}`, keyOf = (h) => `${h.st}|${h.s.session}|${h.r[0]}`;
+    const pending = want.filter((st) => !ready[st]).length, pastPending = pastOn ? want.filter((st) => !pastDone[st]).length : 0;
+    const key = `${raw}|${only}|${pastOn}`, keyOf = (h) => `${h.st}|${h.s.session}|${h.r[0]}`;
     if (shownKey !== key) { shownKey = key; shown = []; }
     const hovering = found.matches(":hover");
-    reRank = !pending && hovering && shown.length > 0;
-    if (shown.length && (pending || hovering)) {
+    reRank = !pending && !pastPending && hovering && shown.length > 0;
+    if (shown.length && (pending || pastPending || hovering)) {
       const at = new Map(shown.map((k, i) => [k, i]));
       hits = [...hits.filter((h) => at.has(keyOf(h))).sort((a, b) => at.get(keyOf(a)) - at.get(keyOf(b))), ...hits.filter((h) => !at.has(keyOf(h)))];
     }
     shown = hits.slice(0, limit).map(keyOf);
-    draw(hits, p, pending);
+    draw(hits, p, pending, pastPending);
   }
   let shown = [], shownKey = "", reRank = false;
   found.addEventListener("mouseleave", () => { if (reRank) { reRank = false; shown = []; run(); } });
@@ -1613,38 +1663,43 @@ drawMine();
     if (qf.length >= 3) for (const c of codes()) if (fold(stateName(c)).startsWith(qf) || (c === "us" && "u.s. congress".startsWith(qf))) out.add(c);
     return [...out].filter((c) => built[c.toUpperCase()]).sort((a, b) => stateName(a).localeCompare(stateName(b)));
   }
-  function draw(hits, p, loading) {
+  function draw(hits, p, loading, pastLoading) {
     const most = hits.length && hits.every((h) => h.tier === 1);
     const where = p.st ? ` in ${esc(stateName(p.st))}` : "";
     const go = goTo(p);
     let count;
     if (!hits.length && go.length && !p.words.length && !p.nums.length) count = `Type a bill number or words to search ${esc(stateName(go[0]))}&rsquo;s bills`;
-    else if (!hits.length) count = loading ? "Searching…" : `No bills found${where}. Try other words, or a number such as HB 1234.`;
+    else if (!hits.length) count = loading || pastLoading ? "Searching…" : `No bills found${where}. Try other words, or a number such as HB 1234.`;
     else if (p.nums.length && hits.every((h) => h.tier > 5)) count = `<b>${hits.length.toLocaleString()}</b> bill${hits.length === 1 ? "" : "s"} with that number${where}`;
     else if (most) count = `No exact match${where}. Closest:`;
     else count = `<b>${hits.length.toLocaleString()}</b> bill${hits.length === 1 ? "" : "s"} found${where}`;
     if (loading && hits.length) count += ` · loading ${loading} more state${loading === 1 ? "" : "s"}…`;
+    else if (pastLoading && hits.length) count += " · loading earlier sessions…";
+    const busy = loading || pastLoading;
     const opts = [["", "All states"], ...codes().map((c) => [c, stateName(c)]).sort((a, b) => (a[0] === "us" ? -1 : b[0] === "us" ? 1 : a[1].localeCompare(b[1])))];
     const pick = `<select id="fstate" aria-label="Search one state, or all">${opts.map(([c, n]) => `<option value="${c}"${c === (only === "all" ? "" : only || p.st || "") ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
-    const rows = hits.slice(0, limit).map(({ st, name, s, r, shown }) => {
+    const rows = hits.slice(0, limit).map(({ st, name, s, r, shown }, i, xs) => {
       const [num, title, stage, w] = r, label = s.w[w] || "";
       const page = s.page ? s.page : "";
       const same = shown !== num ? ` <span>(same bill as ${esc(numText(st, num))})</span>` : "";
-      // The session, when the state has two in the search (this one and next year's prefiled bills).
-      const sess = (ready[st] || { s: [] }).s.length > 1 ? ` <small>${esc(s.label || String(s.session))}</small>` : "";
-      return `<li><a href="${st}/${page}#${esc(num)}" title="${esc(title)}"><span class="fn">${esc(name)} <b>${esc(numText(st, shown))}</b>${sess}${same}</span>`
+      // The session, when the state has two in the search (this one and next year's prefiled bills), and on every
+      // earlier session's bill (they come after this session's, under "Earlier sessions").
+      const sess = !s.live || (ready[st] || { s: [] }).s.length > 1 ? ` <small>${esc(s.label || String(s.session))}</small>` : "";
+      const head = !s.live && (i === 0 || xs[i - 1].s.live) ? `<li class="fsess">Earlier sessions</li>` : "";
+      return `${head}<li><a href="${st}/${page}#${esc(num)}" title="${esc(title)}"><span class="fn">${esc(name)} <b>${esc(numText(st, shown))}</b>${sess}${same}</span>`
         + `<span class="fst">${BillFacts.pips(s.up ? 0 : stage, BillFacts.oneHouse(st), "mini", label, st)}<span class="stg s${s.up ? 0 : stage}">${esc(label)}</span></span><span class="tt">${esc(title)}</span></a>${starBtn(st, s.session, num, "", `${name} ${numText(st, num)}`)}${listBtn(st, s.session, num, `${name} ${numText(st, num)}`)}</li>`;
     }).join("");
     const more = hits.length > limit ? `<li><button type="button" class="more">Show ${Math.min(PAGE, hits.length - limit)} more</button></li>` : "";
     // Words found in several places: "Show on the map" shades each state by its matches (searchView()).
     const mapIt = !p.st && !only && p.words.length && hits.length > 1 && !most && hits.some((h) => h.tier === 5 || h.tier === 6) && new Set(hits.map((h) => h.st)).size > 1;
-    lastHits = mapIt ? [p.words.join(" "), hits.filter((h) => h.tier === 5 || h.tier === 6)] : null;
+    lastHits = mapIt ? [p.words.join(" "), hits.filter((h) => h.tier === 5 || h.tier === 6), pastOn] : null;
     const goHtml = go.length ? `<ul class="goto">${go.map((c) => `<li><a href="${esc(built[c.toUpperCase()])}" data-goto="${c}">${esc(stateName(c))}&rsquo;s bills &rarr;</a></li>`).join("")}</ul>` : "";
-    if (!loading) document.getElementById("foundStatus").textContent = count.replace(/<[^>]+>/g, "").replace(/&rsquo;/g, "’");
-    found.innerHTML = `<div class="fhead"><span class="cnt">${count}</span>${mapIt && !loading ? '<button type="button" class="onmap">Show on the map</button>' : ""}${pick}</div>` + goHtml + (rows ? `<ul>${rows}${more}</ul>` : "");
+    if (!busy) document.getElementById("foundStatus").textContent = count.replace(/<[^>]+>/g, "").replace(/&rsquo;/g, "’");
+    found.innerHTML = `<div class="fhead"><span class="cnt">${count}</span>${mapIt && !busy ? '<button type="button" class="onmap">Show on the map</button>' : ""}${pick}`
+      + `<label class="fpast" title="Also bills from the sessions before this one"><input type="checkbox" id="fpast"${pastOn ? " checked" : ""}> Earlier sessions</label></div>` + goHtml + (rows ? `<ul>${rows}${more}</ul>` : "");
     found.hidden = false;
     q.setAttribute("aria-expanded", "true");
-    if (!loading) {
+    if (!busy) {
       clearTimeout(countTimer);
       const key = q.value.trim().toLowerCase();
       countTimer = setTimeout(() => { if (key !== countedKey) { countedKey = key; countUse(hits.length ? "home/search/found bills" : "home/search/found nothing"); } }, 1500);
@@ -1672,9 +1727,8 @@ drawMine();
     if (warmed) return;
     warmed = true;
     loadTopics();
-    const all = codes(), queue = [...BY_PEOPLE.filter((c) => all.includes(c)), ...all.filter((c) => !BY_PEOPLE.includes(c))];
-    const next = () => { const st = queue.shift(); if (st) load(st).then(next); };
-    for (let i = 0; i < 4; i++) next();
+    enqueue(byPeople().map((st) => () => load(st)));
+    if (pastOn) warmPast();
   });
   const links = () => [...found.querySelectorAll("li a, li .more")];
   q.addEventListener("keydown", (e) => {
@@ -1692,6 +1746,14 @@ drawMine();
     else xs[Math.min(xs.length - 1, i + (e.key === "ArrowDown" ? 1 : -1))]?.focus();
   });
   found.addEventListener("change", (e) => {
+    if (e.target.id === "fpast") {
+      pastOn = e.target.checked; limit = PAGE;
+      try { if (pastOn) localStorage.setItem("abt:searchpast", "1"); else localStorage.removeItem("abt:searchpast"); } catch (err) {}
+      countUse(`home/search/earlier sessions ${pastOn ? "on" : "off"}`);
+      run();
+      document.getElementById("fpast")?.focus();
+      return;
+    }
     if (e.target.id !== "fstate") return;
     // "All states" also overrides a state named in the words, until the box is cleared.
     only = e.target.value || "all"; limit = PAGE;
@@ -1699,12 +1761,13 @@ drawMine();
   });
   found.addEventListener("click", (e) => {
     if (e.target.closest(".onmap") && lastHits) {
-      const [words, hits] = lastHits;
+      const [words, hits, past] = lastHits;
       CUSTOM = searchView(words, hits.map(({ st, s, r }) => {
         const [num, title, stage, w] = r, label = s.w[w] || "";
         return { st, num: numText(st, num), title, stage: s.up ? 0 : stage, href: `${st}/${s.page || ""}#${num}`, stg: label,
+          session: s.session, slabel: s.label || String(s.session),
           star: starBtn(st, s.session, num, "", `${stateName(st)} ${numText(st, num)}`) + listBtn(st, s.session, num, `${stateName(st)} ${numText(st, num)}`) };
-      }));
+      }), past);
       issue = null; pinned = null;
       countUse("home/search/shown on the map");
       close(); render(); remember();
