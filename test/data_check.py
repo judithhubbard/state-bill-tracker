@@ -28,12 +28,45 @@ TOPICS = {"ag": "Agriculture and natural resources", "biz": "Business and consum
           "health": "Health", "housing": "Housing", "human": "Social services",
           "labor": "Jobs and workers", "local": "Local government", "safety": "Public safety and courts",
           "tax": "Taxes", "transp": "Transportation"}
+# Whether a vote carried: its result where the converter gives one (vote[7], "P"/"F", "RP"/"RF" for a motion to
+# reconsider: a California committee's 8-0 with 11 not voting failed), else more ayes than noes (tracker.html's voteCarried()).
+carried = lambda v: v[7].endswith("P") if len(v) > 7 and v[7] else v[4] > v[5]
 
 
 def say(state, kind, msg):
     print(f"  {kind:4} {msg}")
     if kind == "FAIL":
         fails.append(f"{state}: {msg}")
+
+
+def wording(state, loaded):
+    """The page's own wording of each bill's history (the reset, floor and law lines, committee votes) against the record:
+    test/wording_check.js runs tracker.html's code on each session's bills as the page sees them."""
+    import subprocess
+    profile = open(os.path.join(HERE, "states", state, "profile.js"), encoding="utf-8").read()
+    day = lambda d: str(d or "")[:10]
+    for s, recs in loaded.items():
+        bills = []
+        for r in recs:
+            kd = [r.get("first")] + list(r.get("keyDates") or [])
+            # (As tracker.html's decode() reads them: intro, floor, passS, passA, died, deliv, signed, vetoed.)
+            k = lambda i: [x for x in (kd[i] or "").split(";") if x] if i < len(kd) and kd[i] else []
+            last = lambda i: day(k(i)[-1]) if k(i) else None
+            bills.append({"n": r["nums"], "stage": r["stage"],
+                          "dates": {"floor": last(1), "died": last(4), "passSAll": [day(x) for x in k(2)], "passAAll": [day(x) for x in k(3)],
+                                    "deliv": last(5), "signed": last(6), "vetoed": last(7)},
+                          "vers": [{"p": v["p"], "actions": [[day(a[0]), a[1]] for a in v["actions"]]} for v in r["vers"]],
+                          "votes": [[v[0], v[1], v[2], day(v[3]), v[4], v[5], v[7] if len(v) > 7 else ""] for v in r.get("votes") or []]})
+        run = subprocess.run(["node", os.path.join(HERE, "test", "wording_check.js")], capture_output=True, text=True,
+                             input=json.dumps({"profile": profile, "session": s, "current": s == max(loaded), "bills": bills}))
+        if run.returncode:
+            say(state, "FAIL", f"{s}: test/wording_check.js failed: {run.stderr.strip()[-400:]}")
+            continue
+        out = json.loads(run.stdout)
+        for m in out["fails"]:
+            say(state, "FAIL", f"wording: {m}")
+        for m in out["looks"]:
+            say(state, "LOOK", f"wording: {m}")
 
 
 def check(state):
@@ -44,6 +77,7 @@ def check(state):
     if not loaded:  # (no session's data at all: the District's folder before its first LegiScan download crashed here)
         say(state, "FAIL", "no session's data to check (download missing?)")
         return
+    wording(state, loaded)
     # Committee reports' signatures (AK, WA, ME: votes of kind "R") aren't votes: the vote checks below never see them.
     # Each signer is a seat ("H:12|Carrick"), a member with no seat now ("S|Hughes"), or no member of the committee's
     # house ("H?Name"), which is the name read wrongly (or a list split wrongly).
@@ -390,7 +424,7 @@ def check(state):
                 continue
             h, cname = r["firstComms"][0][0], r["firstComms"][0][1]
             cv = [v for v in r["votes"] if v[1] == "C" and v[0] == h and ckey(v[2]) == ckey(cname) and v[4] + v[5]]
-            if cv and (all(v[4] > v[5] for v in cv) if r["commFate"] == "defeated" else all(v[5] > v[4] for v in cv)):
+            if cv and (all(carried(v) for v in cv) if r["commFate"] == "defeated" else all(not carried(v) and v[5] > v[4] for v in cv)):
                 upside.append(r["nums"][0])
         if upside:
             with_c = sum(1 for r in recs if any(v[1] == "C" for v in r["votes"]))
@@ -445,7 +479,7 @@ def check(state):
                     days[str(d)[:10]].append(t)
             for v in r["votes"]:
                 ts = days.get(str(v[3])[:10], [])
-                if v[1] == "C" and v[4] > v[5] and any(against.search(t) for t in ts) and \
+                if v[1] == "C" and carried(v) and any(against.search(t) for t in ts) and \
                         not any(favor.search(t) and not against.search(t) for t in ts):
                     flipped.append(r["nums"][0])
                     break

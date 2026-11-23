@@ -70,3 +70,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   day (91% of Senate and 93% of House listings had a vote that day or the next; the rest were tabled or deferred).
   Tested on nine saved calendars of Feb 23-Mar 2, 2026 (127 bills, all records' numbers but SJR 508, a joint resolution
   the converter leaves out).
+- **Committee votes against the bill (2026-11-23):** "Deferred to the 41st legislative day" (28), "Tabled" (26) and "Do
+  Not Pass" (29, 30) carry with their yeas, which are against the bill: they read "Approved by the ... Committee" (HB 1001
+  of 2024, killed 7-2 in Senate Appropriations; 571 votes in 2024-26). Their tallies and names are turned round (as North
+  Dakota's); one that failed decided nothing and isn't shown, nor are recalls (306, 307) and taking from the table (77). A
+  "Do Pass" that failed with more yeas than nays (short of a majority of the members) and "Reconsidered" carry their result
+  (vote[7]).

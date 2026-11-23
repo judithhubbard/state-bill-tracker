@@ -49,3 +49,5 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   disallows, so photos.py no longer asks for or copies them (it did before, from Open States' links). Light ones (13)
   stay linked from earlier answers; the heavy originals (1.5-5.7 MB, 32) are left out, and Ballotpedia's (17) remain. Asking
   the Legislature (or an allowed address for the photos) would bring the rest back.
+- **Committee votes (2026-11-23):** "Lay Over" motions decide nothing and aren't kept; a "Postpone Indefinitely" vote is
+  against the bill, so its tally and names are turned round (it read "Approved by").

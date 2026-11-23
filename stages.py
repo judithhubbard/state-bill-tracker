@@ -2,7 +2,7 @@
 
 
 STAGE_LABEL = ["In committee", "On the floor", "Passed one house", "Passed both houses",
-               "Delivered to governor", "Signed into law", "Vetoed"]
+               "Delivered to governor", "Became law", "Vetoed"]
 
 
 def rank(stage):

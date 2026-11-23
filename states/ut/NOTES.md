@@ -44,3 +44,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   bill's paragraphs from such a letter (from the first naming it, by number or by its number and short title, since OCR
   read "HB 239" as "Jub 239", to the next bill, list item or turn). Checked 2026-11-22: all 7, 6 and 2 vetoes of 2024-26
   and the line-item vetoes (HB 2, HB 3 of 2024; HB 3, SB 3 of 2025; HB 3 of 2026). Both sites' Crawl-delay is 10.
+- **Wording fixes (2026-11-23):** "Became Law w/o Governor Signature" (GNOSIGN) was read as SIGNED, so six laws of 2024-26
+  said "Signed into law"; it's now its own line. A committee's "Substitute Recommendation" or "Amendment Recommendation"
+  followed that day by "Motion to Recommend Failed", "Held" or "Tabled" is the committee changing the bill, not reporting it
+  ("Committee amended it": HB 86 of 2025, HB 109 of 2024; 15-22 a session read "Approved by committee and sent to the
+  floor"). A vote to hold or table is against the bill: its tally and names are turned round.

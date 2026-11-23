@@ -348,7 +348,13 @@ def load_session(session):
                 floor_days.add((r["house"], d))
                 votes.append([r["house"], "F", None, d, yes, no, [[member(m), code.get(m[2], "A")] for m in ms if m[2] != "Yea"]])
             else:
-                votes.append([r["house"], "C", cname(r.get("committee") or ""), d, yes, no, [[member(m), code.get(m[2], "A")] for m in ms if m[2] != "Yea"]])
+                # Only the committee's votes on the bill (reporting it, re-reporting it, sending it to another committee):
+                # its votes on amendments, tabling and other motions read as "Approved by" or "Voted down in" the
+                # committee (HB 181 of 2023: "Voted down in the House Labor & Industry Committee, 9-12" was an amendment
+                # that failed the day the committee reported the bill, 11-10). The Senate's motions are blank.
+                if not re.search(r"amend(?!ed\b)|table|strike|postpone|appeal|germ|reconsider|bring up", r.get("motion") or "", re.I) \
+                        or re.search(r"report|re-?refer", r.get("motion") or "", re.I):
+                    votes.append([r["house"], "C", cname(r.get("committee") or ""), d, yes, no, [[member(m), code.get(m[2], "A")] for m in ms if m[2] != "Yea"]])
                 if r.get("description") and not says_title(r["description"], title):
                     texts[p] = {"statement": r["description"], "label": "From the committee's description of the bill."}
         if p in cal and not says_title(cal[p][1], title):

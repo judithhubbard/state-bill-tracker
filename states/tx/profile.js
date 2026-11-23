@@ -129,16 +129,16 @@ const STATE = {
     return t > STATE.sessionEnds(s) && t < STATE.opens(s + 2);
   },
   stageWords: {
-    pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-    long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-    chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Signed", "Vetoed"],
+    pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"],
+    long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"],
+    chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Became law", "Vetoed"],
   },
   stageText: {
     get live() { return STATE.between() ? STATE.stageText.final : STATE.stageWords; },
     prefiled: {
-      pipe: ["Prefiled", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-      long: ["Prefiled", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-      chart: ["Prefiled", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Signed", "Vetoed"],
+      pipe: ["Prefiled", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"],
+      long: ["Prefiled", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"],
+      chart: ["Prefiled", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Became law", "Vetoed"],
     },
     final: {
       pipe: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses", "Sent to the governor", "Became law", "Vetoed"],

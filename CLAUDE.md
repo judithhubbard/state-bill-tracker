@@ -491,6 +491,31 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   - A member list the legislature stopped updating: MS's ss_membs.xml (Last-Modified 2025-07-01) and member files still have
     members the November 2025 special elections replaced, while 2026's author lists and roll calls have the new ones (DuPree,
     Hartness, Crosby ...). The "names voting in the last four months aren't tied to a seat" LOOK found it.
+  - (2026-11-23, an audit of every line the site writes in its own words; test/wording_check.js runs tracker.html's own
+    wording code on every state's bills from data_check.py, "wording:" lines) Words that claim more than the record:
+    - The second-year reset: "Sent back to committee for the new year" for every New York bill, while Assembly bills go back
+      to the floor calendar (A836 of 2025) and some to a committee (A5577B: Ways and Means). Each state that resets
+      passages says where from the record (`STATE.resetLine(b, short)`: NY reads the day's lines; WA's Rules Committee);
+      the check fails on a state with resets and no resetLine, and on a line naming a committee or calendar the day's
+      lines don't.
+    - A committee vote's count isn't its result: a committee needs a majority of its members (CA's 8-0 with 11 not voting
+      failed, AB 273 of 2021; TN's 4-3), a vote to reconsider isn't a vote on the bill (CA's "Reconsideration granted"),
+      and a motion against the bill carries with its yeas (SD's "Deferred to the 41st legislative day" and "Tabled", 571
+      votes in 2024-26; UT's "Held"; CO's "Postpone Indefinitely"): all read "Approved by". Votes on amendments in
+      committee read as the bill's (PA's "Adopt Amendment", 9-12 "Voted down" the day it was reported). Converters keep
+      only votes on the bill, turn round votes against it (as ND's), and give the result where the count says otherwise
+      (vote[7]: "P"/"F", "RP"/"RF" reconsideration; CA, SD, LegiScan's `passed`). The check fails on committee votes
+      read as carried on a day the record says the bill failed there.
+    - "Signed into law" for laws the record doesn't show signed: AL's laws carry only "Became law: Act 2025-403"; NC's
+      local acts aren't presented to the governor; UT's "Became Law w/o Governor Signature" was mapped to SIGNED; VA's
+      "Enacted, Chapter N" (the governor's amendments accepted) was "SIGNED CHAP."; and
+      stage 5's name "Signed into law" counted laws over a veto or without the signature. The page says "Signed" only
+      with a signature line (`signedLaw()`); the check fails when a profile names stage 5 "Signed ..." and a law isn't.
+    - "Approved by committee and sent to the floor" for bills taken out of committee (NY's Senate "COMMITTEE DISCHARGED"),
+      reported without a recommendation (NV, NM, MN, WV), placed on the calendar "without going to a committee" (SC, a
+      fifth of its floor dates) or with no committee step at all (Congress's Senate calendar, MA's "Rules suspended"), and
+      UT's "Substitute Recommendation" followed by a failed motion to recommend read as a report (HB 109 of 2024 died in
+      committee). `floorLine()` reads the record: an approval that day or in the two weeks before, else what it shows.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.

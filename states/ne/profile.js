@@ -188,17 +188,17 @@ const STATE = {
     ["Three rounds on the floor.", "General File is the first round of debate, then Select File, then Final Reading, the vote that passes it. The Speaker sets the agenda, and priority bills come first; ending a filibuster takes 33 votes (cloture)."],
   ],
   stageWords: {
-    pipe: ["In committee", "On the floor", "", "Passed the Legislature", "On the governor's desk", "Signed into law", "Vetoed"],
-    long: ["In committee", "On the floor", "", "Passed the Legislature", "On the governor's desk", "Signed into law", "Vetoed"],
-    chart: ["In committee", "On the floor", "", "Passed", "Governor's desk", "Signed", "Vetoed"],
+    pipe: ["In committee", "On the floor", "", "Passed the Legislature", "On the governor's desk", "Became law", "Vetoed"],
+    long: ["In committee", "On the floor", "", "Passed the Legislature", "On the governor's desk", "Became law", "Vetoed"],
+    chart: ["In committee", "On the floor", "", "Passed", "Governor's desk", "Became law", "Vetoed"],
   },
   stageText: {
     get live() { return STATE.between() ? STATE.stageText.final : STATE.stageWords; },
     get prefiled() { return Object.fromEntries(Object.entries(STATE.stageWords).map(([k, v]) => [k, ["Introduced", ...v.slice(1)]])); },
     final: {
-      pipe: ["Died in committee", "Died on the floor", "", "Passed the Legislature", "Sent to the governor", "Signed into law", "Vetoed"],
-      long: ["Died in committee", "Died on the floor", "", "Passed the Legislature", "Sent to the governor, no action recorded", "Signed into law", "Vetoed"],
-      chart: ["Died in committee", "Died on the floor", "", "Passed", "Sent, no action", "Signed", "Vetoed"],
+      pipe: ["Died in committee", "Died on the floor", "", "Passed the Legislature", "Sent to the governor", "Became law", "Vetoed"],
+      long: ["Died in committee", "Died on the floor", "", "Passed the Legislature", "Sent to the governor, no action recorded", "Became law", "Vetoed"],
+      chart: ["Died in committee", "Died on the floor", "", "Passed", "Sent, no action", "Became law", "Vetoed"],
     },
   },
   stageTips: [

@@ -84,3 +84,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   what's there); a report, when one comes, replaces it. fetch.py reads five minutes a run (a page a second), the bills
   acted on latest first, then the next biennium's prefiled bills. Earlier bienniums have no reports read, so no leads
   either (left as they were).
+- **The end-of-year return in the History (2026-11-23):** "By resolution, returned to Senate Rules Committee for third
+  reading" (keyDates[3]) reads "Returned to the Senate Rules Committee when the 2025 session ended (has to pass again)"
+  (profile.js's `resetLine()`), not the shared "Sent back to committee for the new year".

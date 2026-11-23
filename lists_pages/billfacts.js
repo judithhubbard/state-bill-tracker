@@ -117,6 +117,11 @@ const BillFacts = (() => {
     function plainAction(t, d, acts, short) {
       const own = d && S.actionWords?.(t, d, acts || [], short);
       if (own) return own;
+      // A committee report without a recommendation isn't an approval (Nevada's "recommended: without recommendation", New
+      // Mexico's, Minnesota's, West Virginia's lines beside the shared "REPORTED"; not Washington's minority reports).
+      const sameDay = (re) => !!d && (acts || []).some(([x, u]) => x === d && re.test(u || ""));
+      if (t === "REPORTED" && sameDay(/^(?!minority).*(?:without (?:a )?recommendation|no recommendation\b(?! \())/i)
+        && !sameDay(/do pass|favorabl|recommend(?:ed|s)? (?:that )?(?:it )?pass/i)) return "Sent on by committee without a recommendation";
       // Actions already written in plain English (Virginia's) are kept as written unless a rule below fits.
       const written = /[a-z]/.test(t || "");
       // A referral written out that already names the committee as one ("Referred to the Committee on Oversight and
@@ -159,6 +164,7 @@ const BillFacts = (() => {
         [/^delivered to Governor$/, () => `Sent to ${EXEC_THE}`],
         [/^died in (Senate|Assembly|House)$/, (m, h) => `Died in the ${h}`],
         [/^signed chapter (\d+)$/, (m, n) => `Signed into law (chapter ${n})`],
+        [/^enacted chapter (\d+)$/, (m, n) => `Became law (chapter ${n})`],  // (Virginia: the governor's amendments accepted)
         [/^vetoed memo (\d+)$/, (m, n) => `Vetoed (memo ${n})`],
         [/^approval memo (\d+)$/, (m, n) => `Governor's signing memo (memo ${n})`],
         [/^(?:recommit, )?enacting clause stricken$/, () => "Withdrawn by the sponsor"],
@@ -188,7 +194,7 @@ const BillFacts = (() => {
       plainAction, newsWhat, latestNews };
   }
   // Which news matters most, so a "New: ..." names the step that matters.
-  const WEIGHT = [/^SIGNED/, /^VETOED/, /^DELIVERED TO GOVERNOR/, /^(RE)?PASSED/, /^SUBSTITUTED/, /ENACTING CLAUSE STRICKEN/, /^DIED/,
+  const WEIGHT = [/^SIGNED|^ENACTED CHAP/, /^VETOED/, /^DELIVERED TO GOVERNOR/, /^(RE)?PASSED/, /^SUBSTITUTED/, /ENACTING CLAUSE STRICKEN/, /^DIED/,
     /THIRD READING|^REPORTED|RULES REPORT|DISCHARGED/, /^AMEND/, /HELD/, /REFERRED|COMMITTED/];
   const weightOf = (t) => { const i = WEIGHT.findIndex((re) => re.test(t)); return i < 0 ? WEIGHT.length : i; };
   // The status words. f: factsOf()'s, or the same fields from a status row.

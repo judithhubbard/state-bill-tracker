@@ -238,6 +238,11 @@ def load_session(session):
                                     [v for k, v in P.COMMITTEE_TOPICS.items() if any(c.lower().startswith(k.lower()) for _, c in refs)] +
                                     [k for k in P.TOPIC_WORDS if P.TOPIC_WORDS[k].search(title)]))
         left = any(t == "REPORTED" or t.startswith("PASSED") for _, _, t, _ in steps)
+        # (A bill its committee killed and the house then recalled from it, Rule 7-7 (HB 1004 of 2026), left the committee
+        # without its approval: the committee's fate is "held".)
+        first_out = next((i for i, t in enumerate(texts_) if t == "REPORTED" or t.startswith("PASSED")), None)
+        if first_out is not None and "KILLED IN COMMITTEE" in texts_[:first_out]:
+            left = False
         fate = ("passed" if left else "held" if "KILLED IN COMMITTEE" in texts_
                 else "defeated" if any(t.endswith("(failed)") for t in texts_) else "none")
         names = []
@@ -271,8 +276,18 @@ def load_session(session):
             v = a.get("Vote") or {}
             ac = a.get("ActionCommittee") or {}
             h = ac.get("Body")
-            if not v.get("VoteId") or h not in HOUSE or a.get("ActionId") in (37, 84, 82, 5, 141, 61):
-                continue  # amendments, deferrals and procedural motions aren't shown
+            k, won = a.get("ActionId"), {"P": True, "F": False}.get(a.get("Result"))
+            if not v.get("VoteId") or h not in HOUSE or k in (37, 84, 82, 5, 141, 61, 306, 307, 77):
+                continue  # amendments, deferrals, recalls, taking from the table and other procedural motions aren't shown
+            whole = bool(ac.get("FullBody"))
+            # A committee's vote on a motion against the bill ("Deferred to the 41st legislative day", "Tabled", "Do Not
+            # Pass"): its yeas are against the bill, so the tally and names are turned round, as North Dakota's "do not
+            # pass" reports are (states/nd/convert.py's committee_vote()), and the page reads "Voted down in the ...
+            # Committee". Until 2026-11-23 the 7-2 vote that killed HB 1001 of 2024 in the Senate Appropriations
+            # Committee read "Approved by" (571 votes in 2024-26). One that failed decided nothing and isn't shown.
+            against = k in (26, 28, 29, 30) and not whole
+            if against and won is False:
+                continue
             try:
                 rolls = json.load(open(os.path.join(folder(session), "votes", f"{v['VoteId']}.json"))).get("RollCalls") or []
             except (OSError, ValueError):
@@ -280,13 +295,24 @@ def load_session(session):
             names_ = []
             for rc in rolls:
                 how = (rc.get("Vote1") or "").lower()
-                if how.startswith("yea"):
+                yea, nay = how.startswith("yea"), how.startswith("nay")
+                if against:
+                    yea, nay = nay, yea
+                if yea:
                     continue
                 sid = seat_of.get(rc.get("SessionMemberId")) or f"{h}?{rc.get('UniqueName') or rc.get('LastName')}"
-                names_.append([sid, "N" if how.startswith("nay") else "A"])
-            whole = bool(ac.get("FullBody"))
-            votes.append([h, "F" if whole else "C", None if whole else proper(comm_name(ac)), (a.get("ActionDate") or "")[:10],
-                          int(v.get("Yeas") or 0), int(v.get("Nays") or 0), names_])
+                names_.append([sid, "N" if nay else "A"])
+            yes, no = int(v.get("Yeas") or 0), int(v.get("Nays") or 0)
+            if against:
+                yes, no = no, yes
+            vote = [h, "F" if whole else "C", None if whole else proper(comm_name(ac)), (a.get("ActionDate") or "")[:10], yes, no, names_]
+            # The result where the tally alone says otherwise (vote[7], tracker.html's decodeVotes()): a "Do Pass" with more
+            # yeas than nays fails short of a majority of the committee's members ("Do Pass (failed)"); "Reconsidered".
+            if k == 58 and won is not None:
+                vote.append("RP" if won else "RF")
+            elif k in PASS and won is not None and won != (yes > no):
+                vote.append("P" if won else "F")
+            votes.append(vote)
         action_dates = [s[0] for s in steps if s[0]]
         rec = {
             "nums": [p], "base": [p], "prev": earlier(session, d, p),

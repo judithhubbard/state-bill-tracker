@@ -1659,7 +1659,8 @@ function signingMemo(b) {
 function outcomeLabel(stage, session, chapter, veto) {
   if (stage === -2) return "Withdrawn by sponsor";
   if (stage < 0) return "Outcome not available";
-  if (stage === 5 && chapter) return `Signed, ${LAW_WORD} ${chapter}`;
+  // (Not "Signed": a law can be made without the signature, or over a veto.)
+  if (stage === 5 && chapter) return `Became law, ${LAW_WORD} ${chapter}`;
   if (stage === 6 && veto) return `Vetoed, Memo ${veto}`;
   return (session > LATEST ? STAGE_TEXT.prefiled : session === LATEST ? STAGE_TEXT.live : STAGE_TEXT.final).long[stage];
 }
@@ -1984,10 +1985,18 @@ const LAW_WORD = STATE.lawWord || "Chapter";
 // the signature (Maine's) says only that it became law (STATE.noSignatures).
 const overriddenLaw = (b) => b.stage === 5 && !!b.dates.vetoed;
 // A law the governor neither signed nor vetoed in time (or, in some states, returned unsigned), as its history says.
-const NO_SIGNATURE = /without (?:the |my )?(?:governor'?s |president'?s )?signature|w\/o sign|w\/out governor/i;
+const NO_SIGNATURE = /without (?:the |my )?(?:governor'?s |president'?s )?signature|w\/o (?:the )?(?:governor'?s? )?sign|w\/out governor/i;
 const unsignedLaw = (b) => b.stage === 5 && !overriddenLaw(b) && b.vers.some((v) => v.actions.some(([, t]) => NO_SIGNATURE.test(t)));
+// A line in the record saying the governor (or the President) signed it: "SIGNED CHAP.7", "Signed by the governor",
+// "Approved by the Governor.", "Signed by President." Not the presiding officers' signatures on the enrolled bill.
+const SIGNATURE = /\bsigned\b(?! by the (?:speaker|president of the senate|president pro|senate president|lieutenant|presiding|chief clerk|secretary))|approved by (?:the )?governor|governor approved/i;
+const ENROLL_SIGNED = /signed by the (?:speaker|president of the senate|president pro|senate president|lieutenant|presiding)|presiding officers?'? signature|\(enrolled\)/i;
+const hasSignature = (b) => b.vers.some((v) => v.actions.some(([, t]) => SIGNATURE.test(t) && !ENROLL_SIGNED.test(t)));
+// "Signed into law" only when the record says it was signed: Alabama's records give only the act number ("Became law: Act
+// 2025-403"), which a law without the governor's signature gets too.
+const signedLaw = (b) => b.stage === 5 && !overriddenLaw(b) && !unsignedLaw(b) && !STATE.noSignatures && hasSignature(b);
 // (A state's own words, STATE.lawLine: the District's acts are "Signed by the Mayor" and become law after Congress's review.)
-const lawLine = (b) => STATE.lawLine?.(b) || (overriddenLaw(b) ? `Became law over ${EXEC.the}'s veto` : unsignedLaw(b) ? `Became law without ${EXEC.the}'s signature` : STATE.noSignatures ? "Became law" : "Signed into law");
+const lawLine = (b) => STATE.lawLine?.(b) || (overriddenLaw(b) ? `Became law over ${EXEC.the}'s veto` : unsignedLaw(b) ? `Became law without ${EXEC.the}'s signature` : signedLaw(b) ? "Signed into law" : "Became law");
 const partlyVetoed = (b) => b.stage === 5 && b.vers.some((v) => v.actions.some(([, t]) => /partially vetoed|line-item veto|item veto/i.test(t)));
 // Lines that only name who wrote or signed on to a bill ("Coauthored by Representative George (principal House author)"):
 // never a bill's "latest action".
@@ -2024,7 +2033,8 @@ function statusParts(b) {
   const passedOn = () => fmtDate([D.passS, D.passA].sort().pop());
   if (b.stage === 0 && !DATA.upcoming) {
     const passed = D.passS ? HOUSE.S : D.passA ? HOUSE[LOW] : null;
-    if (passed && D.died) small = `Passed ${passed} ${fmtDate((D.passSAll[0] || D.passAAll[0]))}; sent back to committee ${fmtMonth(D.died)}`;
+    // (Where the reset sent it, in the state's words: STATE.resetLine(b, true), "back to the Senate Health Committee".)
+    if (passed && D.died) small = `Passed ${passed} ${fmtDate((D.passSAll[0] || D.passAAll[0]))}; ${STATE.resetLine?.(b, true) || "its earlier vote was reset"} ${fmtMonth(D.died)}`;
     // Illinois: back in Rules or Assignments after a committee approved it means it missed a deadline.
     const g = f.gate && BF.gateBack(b);
     if (g) small = `Approved by committee ${fmtDate(g.ok[0])}; missed a deadline ${fmtDate(g.back[0])}`;
@@ -2416,7 +2426,9 @@ function renderGov() {
   const coming = BILLS.filter((b) => b.stage === 3 && !isAmendment(b) && !toVoters(b)).length;
   // This session: what the governor in office decided.
   const mine = BILLS.filter(byThisGov);
-  const kinds = Object.entries(GOV_KINDS).map(([k, [label, test]]) => [k, label, mine.filter(test).sort(newest)]).filter(([k, , l]) => l.length || k === "signed" || k === "vetoed");
+  // ("Signed" only when the records say so: Alabama's laws carry only their act numbers.)
+  const kinds = Object.entries(GOV_KINDS).map(([k, [label, test]]) => [k, label, mine.filter(test).sort(newest)])
+    .map(([k, label, l]) => [k, k === "signed" && l.some((b) => !signedLaw(b)) ? "Became law" : label, l]).filter(([k, , l]) => l.length || k === "signed" || k === "vetoed");
   if (!kinds.some(([k]) => k === GOV_KIND)) GOV_KIND = "signed";
   const shown = kinds.find(([k]) => k === GOV_KIND);
   // Earlier sessions under the same governor.
@@ -4200,6 +4212,35 @@ function reportLine(v, people) {
   const list = [...groups].map(([w, ns]) => `<b>${esc(w)}</b>: ${ns.map(esc).join(", ")}`).join("; ");
   return `${what}${TIPI(REPORT_TIP)} <span class="tally">· ${list}${mine.length ? `<br><span class="theirs">${mine.join(" · ")}</span>` : ""}</span>`;
 }
+// The History's line for the day a bill reached the floor (dates.floor). A committee's approval, unless that day's lines say
+// it was taken out of committee instead and none says a committee approved it (New York's Senate: "COMMITTEE DISCHARGED
+// AND COMMITTED TO RULES", "ORDERED TO THIRD READING CAL.1185", with no Rules vote recorded). A committee vote that
+// carried that day still names the committee ("Approved by the Senate Rules Committee and sent to the floor"). A committee
+// that reported it without a recommendation didn't approve it either (Nevada's "recommended: without recommendation", New
+// Mexico's, Minnesota's, West Virginia's; not Washington's "Minority; without recommendation.", a minority's report).
+const NO_RECOMMENDATION = /^(?!minority).*(?:without (?:a )?recommendation|no recommendation\b(?! \())/i;
+const DISCHARGED = /discharg|withdrawn from (?:the )?committee|relieved of further consideration|taken from (?:the )?committee/i;
+const APPROVED = /\breport|do pass|recommend|favorabl|\bapprov|ought to pass|executive action|\bpassed\b.*committee|committee.*\bpassed\b/i;
+// Bills put on the calendar with no committee at all: South Carolina's "Placed on the Senate calendar without going to a
+// committee" (about a fifth of its floor dates), Oklahoma's "Direct to Calendar".
+const NO_COMMITTEE = /without (?:going to|reference to|referral to) (?:a |any )?committee|direct(?:ly)? to (?:the )?calendar/i;
+function floorLine(b) {
+  const D = b.dates, acts = b.vers.flatMap((v) => v.actions);
+  const day = acts.filter(([d]) => d === D.floor).map(([, t]) => t);
+  const favorable = (t) => APPROVED.test(t) && !DISCHARGED.test(t) && !NO_RECOMMENDATION.test(t) && t !== "REPORTED";
+  if (day.some((t) => NO_RECOMMENDATION.test(t)) && !day.some((t) => favorable(t) && /do pass|favorabl|recommend(?:ed|s)? (?:that )?(?:it )?pass/i.test(t)))
+    return "Sent to the floor by committee without a recommendation";
+  if (day.some((t) => DISCHARGED.test(t)) && !day.some((t) => APPROVED.test(t) && !DISCHARGED.test(t))) return "Taken out of committee and sent to the floor";
+  // A committee's approval that day or in the two weeks before (New York's Senate reports a bill, "1ST REPORT CAL.", days
+  // before "ADVANCED TO THIRD READING"), in the lines or a committee vote that carried; else only that it reached the floor
+  // (Congress's bills placed on the Senate calendar, Massachusetts's "Rules suspended").
+  const since = new Date(new Date(`${D.floor}T12:00:00Z`).getTime() - 14 * 864e5).toISOString().slice(0, 10);
+  const recent = (d) => d >= since && d <= D.floor;
+  if (acts.some(([d, t]) => recent(d) && APPROVED.test(t) && !NO_RECOMMENDATION.test(t) && !DISCHARGED.test(t))
+    || (b.votes || []).some((v) => v.kind !== "F" && v.kind !== "R" && recent(v.date || "") && voteCarried(v) && !voteReconsider(v)))
+    return "Approved by committee and sent to the floor";
+  return day.some((t) => NO_COMMITTEE.test(t)) ? "Placed on the floor calendar without going to a committee" : "Sent to the floor";
+}
 // "History": the bill's main steps and its recorded votes in one dated list. A floor vote that passed goes on the line of
 // the passage it records ("Passed the Senate · 26–11"); other votes (committees, votes that failed) keep a line of their
 // own, worded as in the old Votes list. Your legislators' votes are under the vote. While the bill waits on the governor,
@@ -4213,10 +4254,12 @@ function historyBlock(b) {
   const after = (d) => !!D.vetoed && d >= D.vetoed;
   const items = [
     [D.intro, "Introduced", null, 0],
-    [D.floor, "Approved by committee and sent to the floor", "floor"],
+    [D.floor, floorLine(b), "floor"],
     ...D.passSAll.map((d, i) => [d, i ? "Passed the Senate again" : "Passed the Senate", "S"]),
     ...D.passAAll.map((d, i) => [d, i ? `Passed the ${HOUSE[LOW]} again` : `Passed the ${HOUSE[LOW]}`, LOW]),
-    [D.died, STATE.resetLine?.(b) || "Sent back to committee for the new year (had to pass again)"],
+    // (Where it went is the state's: STATE.resetLine(), read from the record. New York's Assembly bills go back to the floor
+    // calendar, not a committee; a line saying "committee" for every state was wrong for them.)
+    [D.died, STATE.resetLine?.(b) || "Its earlier passage was reset for the new year (had to pass again)"],
     [D.deliv, `Sent to ${EXEC.the}`, null, 3],
     [D.signed, `${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}`, null, after(D.signed) ? 5 : 4],
     [D.vetoed, `Vetoed${b.veto ? `, Memo ${b.veto}` : ""}`, null, 4],
@@ -4227,16 +4270,25 @@ function historyBlock(b) {
     const theirs = people.map((L) => { const x = voteOf(v, L); return x ? `${L.title} ${esc(shortName(L.name))}: <b class="v${x.startsWith("Yes") ? "y" : x === "No" ? "n" : "o"}">${x}</b>` : ""; }).filter(Boolean).join(" · ");
     const rest = othersYes(v);
     const tally = `<b>${v.yes}–${v.no}</b>${other ? ` <span class="muted">(${other} not voting)</span>` : ""}${rest ? `, ${rest}` : ""}${theirs ? `<br><span class="theirs">${theirs}</span>` : ""}`;
-    const step = v.kind === "F" && v.yes > v.no && !STATE.voteWhat?.(v) && items.find((x) => x.house === v.house && x.d === v.date && !x.voted);
+    const step = v.kind === "F" && voteCarried(v) && !voteReconsider(v) && !STATE.voteWhat?.(v) && items.find((x) => x.house === v.house && x.d === v.date && !x.voted);
     if (step) { step.voted = true; step.seq = seq; step.html += ` <span class="tally">· ${tally}</span>`; return; }
     // (A state can name the vote itself: Nebraska's floor rounds, STATE.voteWhat.)
     const what = STATE.voteWhat?.(v) || (v.kind === "F" ? `${HOUSE[v.house]} floor` : `${HOUSE[v.house]} ${esc(v.committee || "")}${/ommittee$/.test(v.committee || "") ? "" : " Committee"}`);  // (Tennessee's subcommittees)
     // The committee vote that sent the bill to the floor joins that line: "Approved by the Assembly Appropriations
     // Committee and sent to the floor · 11–3", not two lines for one step.
-    const sent = v.kind !== "F" && v.yes > v.no && !STATE.voteWhat?.(v) && items.find((x) => x.house === "floor" && x.d === v.date && !x.voted);
-    if (sent) { sent.voted = true; sent.rank = 1; sent.seq = seq; sent.html = `Approved by the ${what} and sent to the floor <span class="tally">· ${tally}</span>`; return; }
+    const sent = v.kind !== "F" && voteCarried(v) && !voteReconsider(v) && !STATE.voteWhat?.(v) && items.find((x) => x.house === "floor" && x.d === v.date && !x.voted);
+    // (Without a recommendation: "Sent to the floor by the Revenue Committee without a recommendation · 5–2".)
+    if (sent) {
+      sent.voted = true; sent.rank = 1; sent.seq = seq;
+      sent.html = `${/without a recommendation/.test(sent.html) ? `Sent to the floor by the ${what} without a recommendation` : `Approved by the ${what} and sent to the floor`} <span class="tally">· ${tally}</span>`;
+      return;
+    }
     // A committee vote says what happened: "Approved by the Senate Labor Committee · 3–1", "Voted down in the ...".
-    const html = v.kind === "F" ? `${what}: ${tally}` : `${v.yes > v.no ? "Approved by" : "Voted down in"} the ${what} <span class="tally">· ${tally}</span>`;
+    // (Its result where the record gives one: a California committee's 8–0 with 11 not voting failed, short of a majority
+    // of its members; a vote to reconsider isn't a vote on the bill.)
+    const html = voteReconsider(v) ? `${v.kind === "F" ? `${what}, motion to reconsider` : `Motion to reconsider in the ${what}`}${voteCarried(v) ? " (granted)" : " (refused)"}: ${tally}`
+      : v.kind === "F" ? `${what}${v.result === "F" ? " (failed)" : ""}: ${tally}`
+      : `${voteCarried(v) ? "Approved by" : "Voted down in"} the ${what} <span class="tally">· ${tally}</span>`;
     items.push({ d: v.date || "", html, seq, rank: v.kind !== "F" ? 1 : after(v.date || "") ? 5 : 2 });
   });
   items.sort((x, y) => x.d.localeCompare(y.d) || x.rank - y.rank || x.seq - y.seq);
@@ -4391,7 +4443,7 @@ function verBlock(v, b) {
 function whenLine(b) {
   const D = b.dates;
   if (b.stage === 2 && b.passedIn) return esc(`Passed the ${b.passedIn} ${fmtDate(b.passedIn === "Senate" ? D.passS : D.passA)}`);
-  if (b.stage === 5 && D.signed) return esc(`${overriddenLaw(b) ? "Became law over the veto" : unsignedLaw(b) ? "Became law without signature" : STATE.noSignatures ? "Became law" : "Signed"} ${fmtDate(D.signed)}`);
+  if (b.stage === 5 && D.signed) return esc(`${overriddenLaw(b) ? "Became law over the veto" : unsignedLaw(b) ? "Became law without signature" : signedLaw(b) ? "Signed" : "Became law"} ${fmtDate(D.signed)}`);
   if (b.stage === 6 && D.vetoed) return esc(`Vetoed ${fmtDate(D.vetoed)}`);
   return esc(statusParts(b)[1]);
 }
@@ -6578,9 +6630,15 @@ const dayOf = (d) => `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
 // strings table it came with.
 const decodeSummary = (summary, title) => (summary && summary[0] === "\x01" ? title + summary.slice(1) : summary);
 const decodeSimilar = (similar) => (similar || []).map(([j, s]) => ({ j, s }));
-const decodeVotes = (votes, T = STRINGS) => (votes || []).map(([house, kind, cm, date, yes, no, ny]) => ({
-  house, kind, committee: cm < 0 ? null : T[cm], date: dayOf(date), yes, no, notYes: new Map(ny.map(([m, code]) => [T[m], code])),
+// result: what the record says happened where the count alone says otherwise (build_data.py's enc_votes(): "F" failed
+// with more ayes than noes, as a California committee needing a majority of its members; "P"; "RP"/"RF" a motion to
+// reconsider), else "".
+const decodeVotes = (votes, T = STRINGS) => (votes || []).map(([house, kind, cm, date, yes, no, ny, result]) => ({
+  house, kind, committee: cm < 0 ? null : T[cm], date: dayOf(date), yes, no, notYes: new Map(ny.map(([m, code]) => [T[m], code])), result: result || "",
 }));
+// Whether a vote carried, and whether it was on a motion to reconsider rather than on the bill.
+const voteCarried = (v) => (v.result ? v.result.endsWith("P") : v.yes > v.no);
+const voteReconsider = (v) => (v.result || "").startsWith("R");
 // The governor's veto message: this bill's own, or an earlier version's.
 const decodeVeto = (vetoNote, T = STRINGS) => (vetoNote ? { year: vetoNote[0], governor: vetoNote[1], text: vetoNote[2] < 0 ? null : T[vetoNote[2]], nums: vetoNote[3], own: !!vetoNote[4], kind: vetoNote[5] || "absolute", scan: vetoNote[6] || "" } : null);
 // Its versions in other sessions: [session, numbers, stage, chapter, veto]. The net part carries only each one's
@@ -7085,7 +7143,7 @@ function monthsOf(b) {
   let first = "9999", signed = null;
   for (const v of b.vers) for (const [d, txt] of v.actions) {
     if (d < first) first = d;
-    if (!signed && txt.startsWith("SIGNED CHAP")) signed = d;
+    if (!signed && /^(?:SIGNED|ENACTED) CHAP/.test(txt)) signed = d;  // (Virginia's "ENACTED CHAP.": law once the governor's amendments are accepted)
   }
   b.firstMonth = first.slice(0, 7); b.signedMonth = signed ? signed.slice(0, 7) : null;
 }

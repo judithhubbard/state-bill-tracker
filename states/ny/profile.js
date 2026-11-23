@@ -94,16 +94,27 @@ const STATE = {
     }
     return null;
   },
-  // The history's line for that January return (dates.died). A bill the Assembly passed goes back to the Assembly's
-  // floor calendar ("RETURNED TO ASSEMBLY", "ORDERED TO THIRD READING CAL.31": A836 of 2025); one the Senate passed goes
-  // back to a Senate committee ("RETURNED TO SENATE", "REFERRED TO HEALTH": S11 of 2025).
-  resetLine(b) {
-    const D = b.dates, reset = D.died;
+  // The history's line for that January return (dates.died), from what each version that had passed its own house shows
+  // that day: most Assembly bills go back to the Assembly's floor calendar ("RETURNED TO ASSEMBLY", "ORDERED TO THIRD
+  // READING CAL.31": A836 of 2025), but some to a committee ("REFERRED TO WAYS AND MEANS": A5577B of 2025); Senate bills
+  // go back to a committee ("RETURNED TO SENATE", "REFERRED TO HEALTH": S11 of 2025). short: for the bill's row
+  // ("back to the Senate Health Committee"). (test/wording_check.js checks every line against the record.)
+  resetLine(b, short) {
+    const reset = b.dates.died;
     if (!reset) return "";
-    const senate = (D.passSAll || []).some((d) => d < reset), assembly = (D.passAAll || []).some((d) => d < reset);
-    if (assembly && !senate) return "Returned to the Assembly's floor calendar for the new year (has to pass again)";
-    if (senate && !assembly) return "Returned to a Senate committee for the new year (has to pass again)";
-    return "";
+    const H = { S: "Senate", A: "Assembly" }, where = [];
+    const cap = (c) => c.toLowerCase().replace(/\b[a-z]/g, (x) => x.toUpperCase()).replace(/ (And|Of|The|For|On)\b/g, (m, w) => ` ${w.toLowerCase()}`);
+    for (const v of b.vers) {
+      const h = H[v.p[0]];
+      if (!h || !v.actions.some(([d, t]) => d < reset && (t === `PASSED ${h.toUpperCase()}` || t === `REPASSED ${h.toUpperCase()}`))) continue;
+      const day = v.actions.filter(([d]) => d === reset).map(([, t]) => t);
+      const ref = day.map((t) => /^REFERRED TO (.+)$/.exec(t)).find(Boolean);
+      if (day.some((t) => /^ORDERED TO THIRD READING/.test(t))) where.push(`the ${h}'s floor calendar`);
+      else if (ref) where.push(`the ${h} ${cap(ref[1])} Committee`);
+      else if (day.some((t) => t === `RETURNED TO ${h.toUpperCase()}`)) where.push(`the ${h}`);
+    }
+    if (!where.length) return short ? "its earlier vote was reset" : "";
+    return short ? `back to ${where.join(" and ")}` : `Returned to ${where.join(" and ")} for the new year (has to pass again)`;
   },
   // The panel's one-line summary for a bill whose first-year passage was reset that way (dates.died).
   resetNote(b) {
@@ -128,14 +139,14 @@ const STATE = {
   // Stage names (the stage numbers are build_data.py's), and their tips.
   stageText: {
     live: {
-      pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-      long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses, not yet requested by the governor", "On the governor's desk", "Signed into law", "Vetoed"],
-      chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both, not requested", "Governor's desk", "Signed", "Vetoed"],
+      pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"],
+      long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses, not yet requested by the governor", "On the governor's desk", "Became law", "Vetoed"],
+      chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both, not requested", "Governor's desk", "Became law", "Vetoed"],
     },
     final: {
-      pipe: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses", "Sent to the governor", "Signed into law", "Vetoed"],
-      long: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses, never requested by the governor", "Sent to the governor, no action recorded", "Signed into law", "Vetoed"],
-      chart: ["Died in committee", "Died awaiting vote", "Passed one house", "Passed both, not requested", "Sent, no action", "Signed", "Vetoed"],
+      pipe: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses", "Sent to the governor", "Became law", "Vetoed"],
+      long: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses, never requested by the governor", "Sent to the governor, no action recorded", "Became law", "Vetoed"],
+      chart: ["Died in committee", "Died awaiting vote", "Passed one house", "Passed both, not requested", "Sent, no action", "Became law", "Vetoed"],
     },
   },
   stageTips: [
