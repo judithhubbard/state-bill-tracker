@@ -247,7 +247,9 @@ printf '/:state/data/v/*\n  Cache-Control: public, max-age=31536000, immutable\n
 printf '/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n' >> "$OUT/_headers"
 if [ "${LAUNCHED:-0}" = 1 ]; then
   # (New York was kept out of search engines until it moved here from albanybilltracker.org, 2026-11-22.)
-  printf 'User-agent: *\nAllow: /\n' > "$OUT/robots.txt"
+  # The sitemap (tools/sitemap.py): every page search engines should find, at the public address.
+  python3 tools/sitemap.py "$OUT" "${SITE_BASE:-https://statebilltracker.org/}"
+  printf 'User-agent: *\nAllow: /\nSitemap: %ssitemap.xml\n' "${SITE_BASE:-https://statebilltracker.org/}" > "$OUT/robots.txt"
 else
   printf 'User-agent: *\nDisallow: /\n' > "$OUT/robots.txt"
   printf '/*\n  X-Robots-Tag: noindex\n' >> "$OUT/_headers"
