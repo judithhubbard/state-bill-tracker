@@ -26,3 +26,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   third reading file for weeks, so each is "listed": "On the Senate calendar Tue, Aug 25". Second reading, the inactive
   file, held at the desk and governor's vetoes are left out. Only file days from today on (the table has 66,801 rows for
   2025-26). Tested with FLOOR_TODAY=2026-08-17: 1,041 bills on files Aug 17-31, all matched to records.
+- **Committee votes' results (2026-11-23):** a committee needs a majority of its members, so a roll call with more ayes than
+  noes can fail (AB 273 of 2021: 8-0 with 11 not voting, "(FAIL)"), and a vote to reconsider ("[First] hearing set for ...:
+  Failed passage in Committee. Reconsideration granted", BILL_MOTION_TBL) isn't a vote on the bill: both read "Approved by"
+  in the History. The converter now gives each such vote its result (vote[7]: "F", "P", "RP"/"RF") from
+  BILL_SUMMARY_VOTE's vote_result and the motion's text: about 35-60 failed committee votes and 60-75 reconsiderations a
+  session, and 10-40 floor votes that failed with more ayes than noes.

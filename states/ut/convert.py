@@ -53,6 +53,8 @@ FLOOR = {"SON2ND", "SREAD2", "SREAD3", "HREAD2", "HREAD3", "SREAD23SP", "SRUL2ND
          "SON3TBL", "HMOVE3RD", "SMOVE2ND", "SMOVE3RD", "HPLACETC", "SPLACETC", "HCC", "HREAD2SP"}
 PASSED = {"HPASS3": "H", "SPASS3": "S", "SPASS23SP": "S"}
 FINAL = {"HCOMFINALP": "H", "SCOMFINALP": "S"}  # passing the conference committee's version
+# A law the governor let stand without signing ("Became Law w/o Governor Signature"), in the words the page reads as that.
+NOSIGN = "BECAME LAW WITHOUT THE GOVERNOR'S SIGNATURE"
 VOTED = REPORTED | COMMITTEE_NO | HELD | set(PASSED) | set(FINAL) | {"HFAIL", "SFAIL", "HCONCUR", "SCONCUR", "HCOMREPADP",
                                                                      "SCOMREPADP", "SPASS2", "HRECONCUR", "SRECONCUR"}
 
@@ -223,8 +225,11 @@ def load_session(session):
                 t, h = "DELIVERED TO GOVERNOR", "G"
             elif code in ("HTOLTGOV", "STOLTGOV"):
                 t, h = "To the Lieutenant Governor", "G"
-            elif code in ("GSIGN", "GNOSIGN"):
+            elif code == "GSIGN":
                 t, h = "SIGNED", "G"
+            elif code == "GNOSIGN":
+                # (Until 2026-11-23 "SIGNED", so the page said "Signed into law": HB 86's kind, six laws in 2024-26.)
+                t, h = NOSIGN, "G"
             elif code == "GOVLVETO":
                 t, h = "Signed with item vetoes", "G"
             elif code == "GVETO":
@@ -234,6 +239,14 @@ def load_session(session):
             else:
                 t = desc
             steps.append((ts[:10], h, t, desc, code, key, tally, owner))
+        # A committee's "Substitute Recommendation" or "Amendment Recommendation" is its vote to change the bill; when a
+        # later action that day by the same committee is "Motion to Recommend Failed", "Held" or "Tabled", the committee
+        # didn't report it (HB 86 of 2025: substituted 7-0, then the motion to recommend failed 2-5; it read "Approved by
+        # committee and sent to the floor" that day, and HB 109 of 2024, which died there, too).
+        for i, st_ in enumerate(steps):
+            if st_[2] == "REPORTED" and st_[4] in ("HCASUB", "HCAAMD", "SCASUB", "SCAAMD") and any(
+                    x[0] == st_[0] and x[7] == st_[7] and (x[4] in COMMITTEE_NO or x[4] in HELD) for x in steps[i + 1:]):
+                steps[i] = (*st_[:2], "Committee amended it", *st_[3:])
         passed = set()
         for _, h, t, _, _, _, _, _ in steps:  # in order: a reconsidered passage no longer counts
             if t.startswith("PASSED") or t == "CONFERENCE PASSED":
@@ -247,7 +260,7 @@ def load_session(session):
         line_veto = "Signed with item vetoes" in texts_
         if amendment:
             stage = 3 if len(passed) == 2 and ("ENROLLED" in texts_ or "To the Lieutenant Governor" in texts_) else None
-        elif "SIGNED" in texts_ or line_veto:
+        elif "SIGNED" in texts_ or NOSIGN in texts_ or line_veto:
             stage = 5
         elif "VETOED" in texts_:
             stage = 6
@@ -322,7 +335,11 @@ def load_session(session):
             vh = code[:1] if code[:1] in HOUSE else h
             roll = votes_seen.get(key) or {}
             names_v = []
-            for kind_, mark in (("nays", "N"), ("absent", "A")):
+            # A committee's vote to hold or table the bill is against it: its tally and names are turned round, so the
+            # page reads "Voted down in the ... Committee", not "Approved by" (HB 79 of 2024, held 11-0; as South
+            # Dakota's and North Dakota's).
+            against = committee and code in HELD
+            for kind_, mark in ((("yeas" if against else "nays"), "N"), ("absent", "A")):
                 for name, district in roll.get(kind_) or []:
                     sid = f"{vh}:{int(district)}" if str(district).isdigit() else None
                     if not sid:
@@ -333,6 +350,8 @@ def load_session(session):
             yes, no = tally[0], tally[1]
             if roll.get("ok") and (roll.get("yeas") or roll.get("nays")):  # the vote page's own list wins (SB 141 of 2026: 6-0 vs 5-1)
                 yes, no = len(roll.get("yeas") or []), len(roll.get("nays") or [])
+            if against:
+                yes, no = no, yes
             votes.append([vh, "C" if committee else "F", proper(comm_name(owner_of_vote(steps, code, owner))) if committee else None,
                           d, yes, no, names_v])
         # A committee voting on a substitute, then amendments, then the bill, the same day: only the last vote shows.
@@ -350,7 +369,7 @@ def load_session(session):
             "stage": stage, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
             "chapter": None, "veto": None, "memo": "",
             "vetoMemo": veto_memo(session, p, stage, dates(lambda h, t: t == "VETOED")
-                                  or dates(lambda h, t: t in ("SIGNED", "Signed with item vetoes"))),
+                                  or dates(lambda h, t: t in ("SIGNED", NOSIGN, "Signed with item vetoes"))),
             "simText": f"{title} {' '.join(subjects)}",
             "comm": comm if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),
@@ -362,7 +381,7 @@ def load_session(session):
                 dates(lambda h, t: t == "PASSED HOUSE", "all"),
                 "",
                 dates(lambda h, t: t == "DELIVERED TO GOVERNOR"),
-                dates(lambda h, t: t in ("SIGNED", "Signed with item vetoes")),
+                dates(lambda h, t: t in ("SIGNED", NOSIGN, "Signed with item vetoes")),
                 dates(lambda h, t: t == "VETOED"),
             ],
             "votes": votes, "firstComms": [(first[0], first[1], left)] if first else [],

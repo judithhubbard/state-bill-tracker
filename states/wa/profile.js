@@ -83,6 +83,15 @@ const STATE = {
     if (!since.length) return `${was}, and it hasn't passed either house since.`;
     return `${was}. Since then it has passed ${since.map(([h, ds]) => `the ${H[h]}${before.includes(h) ? " again" : ""} on ${fmtDate(ds[0])}`).join(" and ")}.`;
   },
+  // The history's line for that return (dates.died): the resolution sends every such bill back to its own house's Rules
+  // Committee ("By resolution, returned to Senate Rules Committee for third reading"), not to the committee it came from.
+  // short: for the bill's row.
+  resetLine(b, short) {
+    const reset = b.dates.died;
+    if (!reset) return "";
+    const where = `the ${b.nums[0][0] === "S" ? "Senate" : "House"} Rules Committee`;
+    return short ? `back to ${where}` : `Returned to ${where} when the ${reset.slice(0, 4)} session ended (has to pass again)`;
+  },
   passedBothNext: () => ({
     what: "the Speaker and the Senate President sign it, and it goes to the governor, who can sign it, veto it, or veto parts of it. A bill the governor doesn't act on becomes law.",
     gov: ["sign it", "veto it"],
@@ -142,14 +151,14 @@ const STATE = {
 
   stageText: {
     live: {
-      pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-      long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Signed into law", "Vetoed"],
-      chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Signed", "Vetoed"],
+      pipe: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"],
+      long: ["In committee", "Awaiting a floor vote", "Passed one house", "Passed both houses", "On the governor's desk", "Became law", "Vetoed"],
+      chart: ["In committee", "Awaiting floor vote", "Passed one house", "Passed both", "Governor's desk", "Became law", "Vetoed"],
     },
     final: {
-      pipe: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses", "Sent to the governor", "Signed into law", "Vetoed"],
-      long: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses", "Sent to the governor, no action recorded", "Signed into law", "Vetoed"],
-      chart: ["Died in committee", "Died awaiting vote", "Passed one house", "Passed both", "Sent, no action", "Signed", "Vetoed"],
+      pipe: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses", "Sent to the governor", "Became law", "Vetoed"],
+      long: ["Died in committee", "Died awaiting a floor vote", "Passed one house only", "Passed both houses", "Sent to the governor, no action recorded", "Became law", "Vetoed"],
+      chart: ["Died in committee", "Died awaiting vote", "Passed one house", "Passed both", "Sent, no action", "Became law", "Vetoed"],
     },
   },
   stageTips: [

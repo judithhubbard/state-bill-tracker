@@ -244,8 +244,12 @@ def load_session(session):
             committee = v.get("kind") == "committee"
             # The bill's own votes: passage, concurrence, conference reports and overrides on the floor; a committee's vote
             # to send it on or kill it (not amendments).
-            if committee and not re.search(r"\bRefer\b|Postpone Indefinitely|Lay Over", motion, re.I):
+            # (A motion to lay it over decides nothing; one to postpone it indefinitely is a vote against the bill: its
+            # tally and names are turned round below, so the page reads "Voted down in the ... Committee", not "Approved
+            # by", as South Dakota's and North Dakota's are.)
+            if committee and not re.search(r"\bRefer\b|Postpone Indefinitely", motion, re.I):
                 continue
+            against = committee and bool(re.search(r"Postpone Indefinitely", motion, re.I))
             if not committee and not (re.match(r"Third reading$", v.get("calendar") or "", re.I) and motion.lower() == "bill"
                                       or re.match(r"(?:Repass|Concur|Adopt(?: ccr)?|Override)\b", motion, re.I)):
                 continue  # amendments ("Amd (h.001)", "Amend (l.008)"), "Perm", "Not concur" and other motions
@@ -261,6 +265,8 @@ def load_session(session):
             for name, how in members:
                 if name in twice:
                     continue
+                if against:
+                    how = {"Yes": "No", "No": "Yes"}.get(how, how)
                 if how == "Yes":
                     continue
                 # A committee page's full name, else its surname in that house ("Stephani Luck" for Stephanie Luck).
@@ -271,8 +277,8 @@ def load_session(session):
                 mm = re.match(r"(\d\d)/(\d\d)/(\d{4})", v.get("time") or "")
                 d = f"{mm.group(3)}-{mm.group(1)}-{mm.group(2)}" if mm else ""
             cname = re.sub(r"^(?:House|Senate) ", "", v.get("committee") or "") if committee else None
-            votes.append([h, "C" if committee else "F", cname, d, int(counts.get("Yes") or counts.get("AYE") or 0),
-                          int(counts.get("No") or counts.get("NO") or 0), marks])
+            yes, no = int(counts.get("Yes") or counts.get("AYE") or 0), int(counts.get("No") or counts.get("NO") or 0)
+            votes.append([h, "C" if committee else "F", cname, d, *((no, yes) if against else (yes, no)), marks])
         votes.sort(key=lambda v: v[3])
         action_dates = [s[0] for s in steps if s[0]]
         chapter = next((int(x["chapter"]) for x in laws if str(x.get("chapter") or "").isdigit()), None)

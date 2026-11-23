@@ -455,7 +455,17 @@ class Session:
             used.add(key)
             names = [[self.member(m["people_id"], h), "N" if m.get("vote_text") == "Nay" else "A"]
                      for m in r.get("votes") or [] if m.get("vote_text") != "Yea"]
-            out.append([h, kind, comm, d, int(r.get("yea") or 0), int(r.get("nay") or 0), names])
+            vote = [h, kind, comm, d, int(r.get("yea") or 0), int(r.get("nay") or 0), names]
+            # The roll call's own result where the tally alone says otherwise (vote[7], tracker.html's decodeVotes()): a
+            # committee needs a majority of its members, so Tennessee's Senate Judiciary Committee's 4-3 on SB 1044 of
+            # 2023 failed ("Failed in Senate Judiciary Committee") and read "Approved by"; a vote to reconsider isn't one
+            # on the bill.
+            won = {1: True, 0: False}.get(r.get("passed"))
+            if won is not None and re.search(r"reconsider", desc, re.I):
+                vote.append("RP" if won else "RF")
+            elif won is not None and won != (vote[4] > vote[5]):
+                vote.append("P" if won else "F")
+            out.append(vote)
         return out
 
 

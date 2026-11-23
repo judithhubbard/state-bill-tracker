@@ -51,3 +51,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
 - **Next session (2026-11-22):** bills are introduced only once a session convenes (January 5, 2027); its bill history
   file answers 404 until then. From January fetch.py asks for it every run; a missing or bill-less file doesn't hold
   Pennsylvania back until March 1, and the session just ended is read again until February 1.
+- **Committee roll calls (2026-11-23):** only the committee's votes on the bill (report, re-report, re-refer; the
+  Senate's motions are blank) are kept: votes on amendments, tabling and other motions read "Approved by" or "Voted down in"
+  the committee (HB 181 of 2023: "Voted down ... 9-12" was an amendment, the day the committee reported the bill 11-10;
+  about 500 a session).

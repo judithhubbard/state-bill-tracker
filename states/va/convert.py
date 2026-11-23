@@ -128,10 +128,11 @@ def decode(desc, comms):
         return f"PASSED {m.group(1).upper()}"
     if re.match(r"(?:Enrolled Bill )?[Cc]ommunicated to Governor", d):
         return "DELIVERED TO GOVERNOR"
-    # Signed, or enacted once the Legislature accepted the governor's amendments.
-    m = re.match(r"(?:Approved by Governor-Chapter|Enacted, Chapter) (\d+)", d)
+    # Signed, or enacted once the Legislature accepted the governor's amendments (LIS writes "Enacted", not "Approved by
+    # Governor": about 60 laws a year). Until 2026-11-23 both were "SIGNED CHAP.", which the page words "Signed into law".
+    m = re.match(r"(Approved by Governor-Chapter|Enacted, Chapter) (\d+)", d)
     if m:
-        return f"SIGNED CHAP.{m.group(1)}"
+        return f"{'SIGNED' if m.group(1).startswith('Approved') else 'ENACTED'} CHAP.{m.group(2)}"
     if re.match(r"Vetoed by Governor", d):
         return "VETOED"
     if re.match(r"Stricken (?:at|by) (?:the )?request of (?:the )?Patron", d, re.I):
@@ -160,7 +161,7 @@ def stage_of(b, acts, live):
     texts = [t for _, h, t, _ in acts]
     # The file's Approved and Vetoed flags are sometimes both set, or (2025) neither: the history decides,
     # and a signature after a veto (a vetoed bill can come back amended) wins.
-    if any(t.startswith("SIGNED") for t in texts) or (b["Approved"] == "Y" and b["Chapter_id"]):
+    if any(t.startswith(("SIGNED", "ENACTED")) for t in texts) or (b["Approved"] == "Y" and b["Chapter_id"]):
         return 5
     if b["Vetoed"] == "Y" or "VETOED" in texts:
         return 6
@@ -460,7 +461,7 @@ def load_session(session):
                 dates(lambda h, t, x: t == "PASSED HOUSE", "all"),
                 "",
                 dates(lambda h, t, x: t == "DELIVERED TO GOVERNOR"),
-                dates(lambda h, t, x: t.startswith("SIGNED")),
+                dates(lambda h, t, x: t.startswith(("SIGNED", "ENACTED"))),
                 dates(lambda h, t, x: t == "VETOED"),
             ],
             "votes": votes, "firstComms": first_comms, "vers": [vers],

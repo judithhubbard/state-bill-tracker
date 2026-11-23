@@ -66,3 +66,5 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   predicts again), later 0.8%, never 0.4%. Floor days are weekdays (a Saturday or Sunday 1-3 times a session). Lines of
   bills continued from the last session (dated then) are left out. Not handled: a second reading on the session's last
   day or on crossover day (the next weekday is past the deadline; rare).
+- **"Enacted, Chapter N" (2026-11-23):** a bill that became law when the General Assembly accepted the governor's
+  amendments (about 60 a year) is "ENACTED CHAP.N", not "SIGNED CHAP.N": the page said "Signed into law"; now "Became law".

@@ -57,3 +57,6 @@ Moved from CLAUDE.md (2026-11-19). Each state's own notes: states/tn, ok, me, ri
   hearings), Rhode Island the second ("Meeting postponed (04/22/2025)"). Oklahoma, Maine and Vermont have nothing to add:
   their histories name no upcoming committee meetings (Oklahoma's and Vermont's calendar lines are floor calendars, "Direct
   to Calendar", "Entered on Notice Calendar"; Maine's "Work Session Held" is after the fact).
+- **Roll calls' results (2026-11-23):** LegiScan's `passed` is kept where the tally says otherwise (vote[7]): a
+  committee needs a majority of its members (Tennessee's Senate Judiciary 4-3 on SB 1044 of 2023, "Failed in Senate Judiciary
+  Committee", read "Approved by"), and a vote to reconsider isn't one on the bill.

@@ -296,6 +296,9 @@ def load_session(session):
     for r in rows(session, "BILL_SUMMARY_VOTE"):
         if r[0] in bills:
             summary[r[0]].append(r)
+    # Each roll call's motion ("Do pass and be re-referred to ...", "[First] hearing set for ...: Failed passage in
+    # Committee. Reconsideration granted"), to tell a vote to reconsider from a vote on the bill.
+    motions = {r[0]: r[1] or "" for r in rows(session, "BILL_MOTION")}
 
     seat_of, party_of = seats(session) if session == CURRENT else ({}, {})
     if session != CURRENT:
@@ -422,7 +425,17 @@ def load_session(session):
             # this one's, leave the names off rather than show the wrong ones.
             if sum(1 for _, c in names if c == "N") != int(r[6] or 0):
                 names = []
-            votes.append([vh, kind, cname, iso(r[2]), int(r[5] or 0), int(r[6] or 0), names])
+            vote = [vh, kind, cname, iso(r[2]), int(r[5] or 0), int(r[6] or 0), names]
+            # The result, when the count alone says otherwise: a committee (or the floor) needs a majority of its members,
+            # so 8-0 with 11 not voting fails (AB 273 of 2021: "Failed passage in committee"; the page showed "Approved
+            # by"); and a vote to reconsider ("Reconsideration granted", 11-0, after AB 386's 4-3 failed in the Senate
+            # Judiciary Committee on 2021-07-13) isn't a vote on the bill. vote[7]: "P"/"F" passed or failed, "RP"/"RF"
+            # a motion to reconsider that passed or failed (tracker.html's decodeVotes(): `result`).
+            won = {"(PASS)": True, "(FAIL)": False}.get((r[8] or "").strip())
+            recon = bool(re.search(r"reconsider", motions.get(r[4], ""), re.I))
+            if won is not None and (recon or won != (vote[4] > vote[5])):
+                vote.append(("R" if recon else "") + ("P" if won else "F"))
+            votes.append(vote)
 
         action_dates = [d for d, _, _, _, _ in steps if d]
         for h, n in leads + co:

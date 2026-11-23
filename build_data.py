@@ -940,7 +940,7 @@ def insights(loaded, hist, current):
 
 
 # A law the governor neither signed nor vetoed in time, as its history says (tracker.html's NO_SIGNATURE: keep the two alike).
-NO_SIGNATURE = re.compile(r"without (?:the |my )?(?:governor'?s |president'?s )?signature|w/o sign|w/out governor", re.I)
+NO_SIGNATURE = re.compile(r"without (?:the |my )?(?:governor'?s |president'?s )?signature|w/o (?:the )?(?:governor'?s? )?sign|w/out governor", re.I)
 
 
 def governor_record(done, current):
@@ -1101,7 +1101,7 @@ def profiles(session, recs, legs, party_of):
             seat = seat_of(v["p"][0], v)
             if seat in stats and v["actions"] and name_key(v["sponsor"] or "").split()[-1:] == [last_of[seat]]:
                 first_bill[seat] = min(first_bill.get(seat, "9999"), v["actions"][0][0])
-        for h, kind, comm, date, y, n, ny in r["votes"]:
+        for h, kind, comm, date, y, n, ny, *_ in r["votes"]:
             if kind != "F":
                 continue
             absent = set()
@@ -1795,7 +1795,8 @@ def _map_strings(cols, f):
 
 def _map_votes(votes, f):
     g = _keep_none(f)
-    return [[x[0], x[1], g(x[2])] + x[3:6] + [[[g(m), code] for m, code in x[6]]] for x in votes or []]
+    # (x[7:]: the vote's result where the count alone says otherwise, enc_votes()'s.)
+    return [[x[0], x[1], g(x[2])] + x[3:6] + [[[g(m), code] for m, code in x[6]]] + x[7:] for x in votes or []]
 
 
 def _map_veto(v, f):
@@ -2231,9 +2232,12 @@ def compute(prev=None):
             d = resolve(who)
             return f"A:{d}" if d else f"A?{who}"
 
+        # A vote's eighth field, when a converter gives one, is its result where the count alone says otherwise ("F": a
+        # majority of those voting that still failed, "P", and "RP"/"RF" for a motion to reconsider: California's), read
+        # by tracker.html's decodeVotes() as `result`.
         def enc_votes(votes):
-            return [[h, kind, S(comm), date.replace("-", ""), y, n, [[S(member_id(m)), code] for m, code in ny]]
-                    for h, kind, comm, date, y, n, ny in votes]
+            return [[h, kind, S(comm), date.replace("-", ""), y, n, [[S(member_id(m)), code] for m, code in ny]] + list(rest[:1])
+                    for h, kind, comm, date, y, n, ny, *rest in votes]
         def veto_note(i, r):
             """[year, governor, reasons, bill numbers, 1 if this bill's own veto, kind(, scanned letter's address)] or 0.
             Kind is "conditional" for a bill sent back with the governor's changes (New Jersey), else "absolute"."""

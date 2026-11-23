@@ -73,3 +73,6 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   kept). Bills and joint resolutions only (gubernatorial appointments and resolutions don't match). Shown as "listed": the
   House calendar carries a bill for weeks ("Added 2/14/2026"), and of the 2026 calendars from February 24 to March 12
   (23 PDFs, 324 bills, all records) 41% (House) and 43% (Senate) of the bills had a floor step that day or the next.
+- **The end-of-year return in the History (2026-11-23):** "By resolution, returned to Senate Rules Committee for third
+  reading" (keyDates[3]) reads "Returned to the Senate Rules Committee when the 2025 session ended (has to pass again)"
+  (profile.js's `resetLine()`), not the shared "Sent back to committee for the new year".
