@@ -892,6 +892,10 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
     saved}); a group code adds the introduction and per-bill notes (`pubText()`). `followedHere()` lists followed lists
     with this state's bills. Old addresses, `watchlist/#list=<slug>`, redirect to /list/ before the data loads; snapshot
     links, `#w=<session>.S1234.-A5678` ("-" means oppose), still open here with "Add all to my watchlist".
+  - /list/ draws the same rows as Your bills (2026-11-23, the owner's decision; watchrows.js, onelist.js): the same groups,
+    both bill numbers (the status files' last column), the group line ("4 of these need the governor's office. Copy one
+    message about all 4", also on /your-bills/), and an ⓘ for a browser that didn't make the list. A bill's side or removal
+    is changed through Edit. The paragraph below describes the frames that open each row's card.
   - A shared list's bills open in place on /list/ (2026-11-18): each row is a button that opens, below it, the bill's
     watchlist card drawn by its state's page in a frame. One frame per state's session (list.html's `FRAMES`), loaded at
     `#embed=<session>` (only the list part): the first state shown as soon as the list's bills are known (at the state's
