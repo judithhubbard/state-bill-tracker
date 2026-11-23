@@ -178,7 +178,7 @@ export default {
             const page = await env.LISTS.list({ prefix: "list:", cursor });
             for (const k of page.keys) {
               const l = await getJSON(env, k.name);
-              if (l) out.push({ slug: l.slug, state: l.state, title: l.title, group: l.group || "", bills: l.bills.length, hidden: !!l.hidden, updated: l.updated,
+              if (l) out.push({ slug: l.slug, state: l.state, states: [...new Set(l.bills.map((b) => String(b).replace(/^-/, "").split(":")[0]).filter(Boolean))], title: l.title, group: l.group || "", bills: l.bills.length, hidden: !!l.hidden, updated: l.updated,
                 ...(l.code ? { views: viewSummary(await getJSON(env, `views:${l.slug}`)) } : {}) });
             }
             cursor = page.list_complete ? null : page.cursor;
@@ -333,7 +333,7 @@ async function load() {
   lists.sort((a, b) => (b.updated || "").localeCompare(a.updated || ""));
   document.getElementById("rows").innerHTML = lists.length ? lists.map((l) => '<tr class="' + (l.hidden ? "hid" : "") + '"><td><b>' + esc(l.title || "(no title)") + "</b>"
     + (l.group ? '<br><span class="muted">' + esc(l.group) + "</span>" : "") + (l.views ? '<br><span class="muted">opened ' + l.views.total + " times, " + l.views.week + " this week</span>" : "")
-    + (l.hidden ? '<br><span class="muted">Hidden</span>' : "") + "</td><td>" + (l.state === "all" ? "Several" : esc((l.state || "").toUpperCase())) + "</td><td>" + l.bills + "</td><td>" + esc((l.updated || "").slice(0, 10)) + '</td><td class="acts">'
+    + (l.hidden ? '<br><span class="muted">Hidden</span>' : "") + "</td><td>" + (l.state === "all" ? ((l.states || []).length === 1 ? esc(l.states[0].toUpperCase()) : (l.states || []).length ? esc(l.states.map((x) => x.toUpperCase()).join(", ")) : "Several") : esc((l.state || "").toUpperCase())) + "</td><td>" + l.bills + "</td><td>" + esc((l.updated || "").slice(0, 10)) + '</td><td class="acts">'
     + '<a href="' + SITE + "list/#" + esc(l.slug) + '" target="_blank" rel="noopener">View</a> '
     + '<button type="button" data-hide="' + esc(l.slug) + '" data-to="' + (l.hidden ? "0" : "1") + '">' + (l.hidden ? "Show" : "Hide") + "</button>"
     + '<button type="button" class="del" data-del="' + esc(l.slug) + '" data-title="' + esc(l.title) + '">Delete</button></td></tr>').join("")

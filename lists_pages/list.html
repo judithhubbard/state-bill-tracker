@@ -67,6 +67,8 @@ async function load() {
     return gone(e.status === 404 ? "This list isn't available. Its owner may have stopped sharing it." : "The list couldn't be loaded just now. Try again in a moment.");
   }
   countOnce("list/opened");
+  // Each list's views apart (its random code, never its title); not the list's own maker (who reads it with its key).
+  if (!key) countOnce(`list/opened/${slug}`);
   const one = LIST.state !== "all";
   document.title = `${LIST.title || "Shared list"} · State Bill Tracker`;
   $("title").textContent = LIST.title || "Shared list";
