@@ -438,6 +438,8 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
   text-decoration: none; font-size: 14px; border: 0; border-radius: 0; background: none; height: auto; }
 .mine li a:hover, .mine li a:focus-visible { background: var(--paper); }
 .mine .num { font-weight: 600; color: var(--navy); white-space: nowrap; }
+/* (The second number, New York's same-as bill, under the first.) */
+.mine .num small.other { display: block; font-weight: 400; font-size: 12.5px; color: var(--ink-2); }
 .mine .tt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mine .where { grid-column: 1 / -1; color: var(--ink-2); font-size: 13px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; }
 .mine .stg { white-space: normal; }
@@ -1435,12 +1437,12 @@ async function drawMine() {
       if (!b && st === "ny") return null;
       if (!b) return { last: "", html: `<li><a href="${st}/"><span class="num">${esc(spaced(num))}</span><span class="tt">${session} session</span></a>${starBtn(st, +session, num, "", spaced(num))}</li>` };
       // (The status words as the state's page has them; "New" as everywhere: lists_pages/billfacts.js.)
-      const { full, title, stage, last, action, label, news } = rowOf(b), fresh = BillFacts.isNew(seen, news);
+      const { full, title, stage, last, action, label, news, other } = rowOf(b), fresh = BillFacts.isNew(seen, news);
       return { last, fresh, st, session: +session, full, title, stage, label,
         href: `${st}/${page}#${full}`, seen: `${st}|${k}|${last}`, html: `<li><a href="${st}/${page}#${esc(full)}" data-seen="${esc(st)}|${esc(k)}|${esc(last)}">`
-        + `<span class="num">${esc(numText(st, full))}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh && !action ? '<span class="new">New</span>' : ""}</span>`
+        + `<span class="num">${esc(numText(st, full))}${other ? `<small class="other">${esc(numText(st, other))}</small>` : ""}${+session < NOW - 1 ? ` <small>(${session})</small>` : ""}</span><span class="tt">${esc(title)}${fresh && !action ? '<span class="new">New</span>' : ""}</span>`
         + (fresh && action ? `<span class="what"><b>New:</b> ${esc(action)}</span>` : "")
-        + `<span class="where">${BillFacts.pips(stage, BillFacts.oneHouse(st), "mini", label, st)}<span class="stg s${stage}">${esc(label)}</span>${last ? `<span>${fmtDay(last)}</span>` : ""}</span></a>`
+        + `<span class="where">${BillFacts.pips(stage, BillFacts.oneHouse(st), "mini", label, st)}<span class="stg s${stage}">${esc(label)}</span>${last ? `<span>${fmtDay(last).replace(/ /g, "\u00a0")}</span>` : ""}</span></a>`
         + `${starBtn(st, +session, full, last, numText(st, full))}</li>` };
     }));
     const kept = rows.filter(Boolean).sort((a, b) => (b.last > a.last ? 1 : b.last < a.last ? -1 : 0));

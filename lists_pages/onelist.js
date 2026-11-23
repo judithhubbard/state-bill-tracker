@@ -50,10 +50,10 @@ const OneList = (() => {
     const s = await statusOf(b.st, b.session, x.num);
     const lead = s ? (s.bills[x.num] ? x.num : s.alias?.[x.num]) : null, r = lead && s.bills[lead];
     if (!r) return { ...x, found: false, gone: !s, group: "done", full: x.num, title: "", href: `/${b.st}/` };
-    const { full, title, stage, last, action, comm, kind, deliv, meets, flags, later, label, news } = rowOf(r);
+    const { full, title, stage, last, action, comm, kind, deliv, meets, flags, later, label, news, other } = rowOf(r);
     const page = `/${b.st}/${s.page && s.page !== "./" ? s.page : ""}`, up = !!(ix?.f?.u ?? +b.session > THIS_YEAR);
     // (The status words and the day of the latest news, as the state's page has them: the build wrote them.)
-    Object.assign(x, { found: true, full, title: cut(title), stage, last, action, page, href: `${page}#${full}`, label, news });
+    Object.assign(x, { found: true, full, other, title: cut(title), stage, last, action, page, href: `${page}#${full}`, label, news });
     if (later) {
       const lp = named?.[later[0]]?.p;
       x.later = [later[0], later[1], sessionText(R, later[0]), `/${b.st}/${lp && lp !== "./" ? lp : ""}`];
@@ -83,7 +83,7 @@ const OneList = (() => {
     return out;
   }
   // ---- Kept in this browser, to show the rows at once next time ----
-  const FIELDS = ["key", "st", "session", "num", "found", "gone", "full", "title", "stage", "label", "last", "action", "group", "date", "due", "out", "later", "sessionLabel", "old", "upcoming", "href", "page", "yearGroup", "news"];
+  const FIELDS = ["key", "st", "session", "num", "found", "gone", "full", "title", "stage", "label", "last", "action", "group", "date", "due", "out", "later", "sessionLabel", "old", "upcoming", "href", "page", "yearGroup", "news", "other"];
   function keep(list) {
     try {
       const o = JSON.parse(localStorage.getItem(CACHE) || "{}");
@@ -123,6 +123,52 @@ const OneList = (() => {
       onRow: (id, x) => { byId.set(id, x); Opener.row(id, { st: x.st, session: x.session, page: x.page, full: x.full, stance: x.stance, href: x.href, name: nameOf(x), mine: !!opt.mine }); } });
     box._rows = byId;
     Opener.reopen(open);
+    multi(box, list, opt);
+  }
+  // Above a group, where several of its bills of one state need the same person (as on the state's Watchlist tab): "4 of
+  // these need the governor's office. Copy one message about all 4". Whom to ask and the email come from the state's page
+  // (Opener.multi(): a frame of the session's page), asked once per state's session with two or more bills in a group.
+  const TEXTS = new Map();
+  let M = 0;
+  async function multi(box, list, opt) {
+    if (opt.byState) return;
+    const ask = ["soon", "session", "year", "later"];
+    const by = new Map();
+    for (const x of list) {
+      if (!x.found || !x.page || !ask.includes(x.group) || x.on === false) continue;
+      const k = `${x.st}|${x.session}`;
+      (by.get(k) || by.set(k, []).get(k)).push(x);
+    }
+    const draw = box._drawn = {};
+    for (const xs of by.values()) {
+      const groups = new Set(xs.map((x) => x.group));
+      if (groups.size === xs.length) continue;   // (no group with two of its bills)
+      const code = `${xs[0].session}.list.${xs.map((x) => (x.stance === "oppose" ? "-" : "") + baseNum(x.full || x.num)).join(".")}`;
+      Opener.multi(xs[0], code, !!opt.mine).then((lines) => {
+        if (box._drawn !== draw) return;   // (drawn again since)
+        for (const l of lines) {
+          const sec = box.querySelector(`section.wr-grp[data-g="${l.g}"]`), ol = sec?.querySelector("ol.wr-list");
+          if (!ol) continue;
+          // (In a group with several states, which state's.)
+          const many = new Set(list.filter((x) => x.group === l.g).map((x) => x.st)).size > 1;
+          const id = `mc${M++}`;
+          TEXTS.set(id, l.text);
+          ol.insertAdjacentHTML("beforebegin", `<p class="wr-multi">${many ? `${esc(xs[0].st === "us" ? "In Congress" : `In ${stName(xs[0].st)}`)}, ${esc(String(l.n))}` : esc(String(l.n))} of these need ${esc(l.who)}. `
+            + `<button type="button" class="btn small" data-multicopy="${id}">${esc(l.label)}</button></p>`);
+        }
+      });
+    }
+    if (!box._multiWired) {
+      box._multiWired = true;
+      box.addEventListener("click", async (e) => {
+        const b = e.target.closest("button[data-multicopy]");
+        if (!b) return;
+        const text = TEXTS.get(b.dataset.multicopy) || "";
+        countUse("list/email-copied-several");
+        try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; }
+        catch (err) { const t = document.createElement("textarea"); t.className = "draft"; t.rows = 9; t.readOnly = true; t.value = text; b.replaceWith(t); }
+      });
+    }
   }
   // The bills in the order the list shows them.
   const ordered = (list) => WatchRows.ordered(list, stName);

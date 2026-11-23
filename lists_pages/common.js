@@ -22,6 +22,9 @@ function countUse(name, tries = 0) {
 }
 // An ⓘ whose explanation shows on hover or focus (a tap focuses it on a phone): common.css's .info.
 const infoTip = (text) => `<span class="info" tabindex="0" role="note" aria-label="${String(text).replace(/"/g, "&quot;")}"><span aria-hidden="true">i</span><span class="info-t" aria-hidden="true">${String(text).replace(/</g, "&lt;")}</span></span>`;
+// The same with links in it (html is markup; the ⓘ stays open while a link in it has focus). "wide": the explanation spans
+// its positioned parent, not centred on the ⓘ, so it can't run off a phone's screen.
+const infoTipHtml = (html, cls = "") => `<span class="info${cls ? ` ${cls}` : ""}" tabindex="0" role="note" aria-label="${esc(html.replace(/<[^>]+>/g, "").replace(/&rsquo;/g, "’").replace(/&ldquo;/g, "“").replace(/&rdquo;/g, "”"))}"><span aria-hidden="true">i</span><span class="info-t">${html}</span></span>`;
 const COUNTED = new Set();
 function countOnce(name) { if (!COUNTED.has(name)) { COUNTED.add(name); countUse(name); } }
 

@@ -4746,7 +4746,7 @@ const canActNow = (b) => WR.canAct(b, WR.live(WR.standing(b), b.stage <= 2 && en
 const WROW_RULES = { get WR() { return WR; } };
 function watchRow(b, x) {
   const n = baseNum(b.nums[0]);
-  return { key: `${STATE.code}:${DATA.session}:${n}`, st: STATE.code, session: DATA.session, num: n, full: b.nums[0], found: true, b, w: x,
+  return { key: `${STATE.code}:${DATA.session}:${n}`, st: STATE.code, session: DATA.session, num: n, full: b.nums[0], other: b.nums[1] || "", found: true, b, w: x,
     title: b.title, stage: b.stage, last: b.last || "", stance: watchStance(b) || "", rules: WROW_RULES,
     label: statusLabel(b), action: (() => { const [d, t, all] = latestStep(b); return t ? shortStep(t, d, all) : ""; })(),
     ...WatchRows.place(b, { S: STATE, WR, current: !!DATA.current, upcoming: !!DATA.upcoming, act: !!DATA.current && !DATA.upcoming && canActNow(b), exec: EXEC.title,
@@ -5292,14 +5292,10 @@ function renderWatchView() {
   // Grouped by deadline; each group offers one email per person covering several of its bills.
   const groups = Object.keys(W_GROUPS).map((g) => [g, active.filter((x) => deadlineOf(x.b).g === g)]).filter(([, xs]) => xs.length);
   const multiAll = {};
-  const multiFor = (g, xs) => {
-    const byPerson = new Map();
-    for (const x of xs) { const k = `${g}|${x.key.gov ? "gov" : `${x.key.house}:${lastName(x.key.name)}`}`; (byPerson.get(k) || byPerson.set(k, []).get(k)).push(x); }
-    return [...byPerson.entries()].filter(([, ys]) => ys.length > 1).map(([k, ys]) => {
-      multiAll[k] = ys;
-      return `<p class="multi">${num(ys.length)} of these need ${ys[0].key.gov ? EXEC.office.replace(/^\w/, (c) => c.toLowerCase()).replace(/^(?!the )/, "the ") : esc(titleOf(ys[0].key))}. <button class="act-btn" type="button" data-multi="${esc(k)}">${copyLabel(ys[0].key).replace("Copy", "Copy one")} about all ${num(ys.length)}</button></p>`;
-    }).join("");
-  };
+  const multiFor = (g, xs) => multiOf(g, xs).map(({ k, ys, who, label }) => {
+    multiAll[k] = ys;
+    return `<p class="multi">${num(ys.length)} of these need ${esc(who)}. <button class="act-btn" type="button" data-multi="${esc(k)}">${esc(label)}</button></p>`;
+  }).join("");
   $("wlActions").innerHTML = ""; $("wlActions").hidden = true;
   $("wlList")._multi = multiAll;
   if (ONE_CARD()) return embedCard(every[0], (x) => watchCard(x, true));
@@ -5334,6 +5330,50 @@ function renderWatchView() {
       <p class="wsub">Signed into law or vetoed, most recent first.</p></summary><div class="wcards idle">${decided.map(cardFor).join("")}</div></details>` : ""}
     ${SHARED ? "" : actionRecord(list)}`;
   if (EMBED) embedSize();
+}
+// A group's bills (watchItems() entries with someone to ask) that need the same person, two or more: one email about all
+// of them. [{k, ys, who ("the governor's office"), label ("Copy one email about all 4")}]. The Watchlist tab's groups, and
+// the list pages' (/list/, /your-bills/: embedMulti()).
+function multiOf(g, xs) {
+  const byPerson = new Map();
+  for (const x of xs) { const k = `${g}|${x.key.gov ? "gov" : `${x.key.house}:${lastName(x.key.name)}`}`; (byPerson.get(k) || byPerson.set(k, []).get(k)).push(x); }
+  return [...byPerson.entries()].filter(([, ys]) => ys.length > 1).map(([k, ys]) => ({ k, ys,
+    who: ys[0].key.gov ? EXEC.office.replace(/^\w/, (c) => c.toLowerCase()).replace(/^(?!the )/, "the ") : titleOf(ys[0].key),
+    label: `${copyLabel(ys[0].key).replace("Copy", "Copy one")} about all ${num(ys.length)}` }));
+}
+// The list pages ask a state's frame for those lines ({sbtMulti: id, code: "2025.list.A1.-S2", mine}): it answers
+// {sbtMultiAns: id, lines: [{g (the group: watchrules.js's soon, session, year, later), n, who, label, text (the email),
+// nums}]}; the page copies the text itself when its button is pressed. mine: this browser's own stars (their sides).
+async function embedMulti(id, code, mine) {
+  while (!DATA) await new Promise((r) => setTimeout(r, 200));
+  const e = embedOf(code);
+  const answer = (lines) => { try { parent.postMessage({ sbtMultiAns: id, lines }, location.origin); } catch (err) {} };
+  if (!e || !e.list || e.session !== DATA.session) return answer([]);
+  const bills = BILLS.filter((b) => b.nums.some((n) => e.shared.has(baseNum(n))));
+  try {
+    await needBills(bills);
+    await need("stats");
+    for (let pass = 0; pass < 3; pass++) {
+      if (mine) loadWatch();
+      const keep = SHARED;
+      SHARED = mine ? null : e.shared;
+      let lines = [];
+      try {
+        MISSING.clear();
+        const stanceOf = (b) => (mine ? watchStance(b) : sharedStance(b)) || "support";
+        const { active } = watchItems(bills, stanceOf);
+        if (!MISSING.size) {
+          const gs = new Map();
+          for (const x of active) { const g = deadlineOf(x.b).g; (gs.get(g) || gs.set(g, []).get(g)).push(x); }
+          lines = [...gs].flatMap(([g, xs]) => multiOf(g, xs).map(({ ys, who, label }) => ({ g, n: ys.length, who, label,
+            text: draftFor(ys[0].key, ys.map((x) => ({ b: x.b, ask: x.key.ask }))), nums: ys.map((x) => baseNum(x.b.nums[0])) })));
+        }
+      } finally { SHARED = keep; }
+      if (!MISSING.size) return answer(lines);
+      await Promise.all([...MISSING].map((k) => need(k)));
+    }
+  } catch (err) {}
+  answer([]);
 }
 // A bill's card: what it does, where it stands, the one thing to ask now and whom, your side and the actions you've logged,
 // and "More about this bill". bodyOnly: without its heading (number, star, status, title), for a card opened below its
@@ -6208,6 +6248,7 @@ function wire() {
       if (e.origin !== location.origin || e.source !== parent) return;
       if (typeof e.data?.sbtShow === "string") embedShow(e.data.sbtShow, e.data);
       if (typeof e.data?.sbtWarm === "string") embedWarm(e.data.sbtWarm);
+      if (typeof e.data?.sbtMulti === "string") embedMulti(e.data.sbtMulti, e.data.code, !!e.data.mine);
     });
     try { parent.postMessage({ sbtReady: true }, location.origin); } catch (e) {}
   }

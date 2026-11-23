@@ -213,8 +213,8 @@ meta = site_meta.tags("About · State Bill Tracker", "Why State Bill Tracker was
 open(sys.argv[1], "w").write(page.replace("<!--meta-->\n", meta, 1).replace("SUPPORT_URL", site_meta.SUPPORT))
 PY
 # "Your bills" across states (/your-bills/), a shared list's page (/list/#<slug>) and the list editor (/lists/edit/#<slug>),
-# from lists_pages/: the shared styles and script put inside each (on the first two also embed.js, bills opened in place;
-# on Your bills also watchrules.js and onelist.js, its one list across states, and named.js),
+# from lists_pages/: the shared styles and script put inside each (on the first two also embed.js, bills opened in place, and watchrules.js and onelist.js, their one list across states;
+# on Your bills also named.js),
 # the link preview tags, the visit counter, the lists Worker's address (LISTS_API, default the state-lists Worker), the
 # contributions link and, for the editor's search, the states with "Find a bill" data (search/<st>.json, written above).
 python3 - "$OUT" <<'PY'

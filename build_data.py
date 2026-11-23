@@ -1628,7 +1628,8 @@ def bill_labels(session, bills, profile_js, facts):
 def status_inputs(session, recs, agenda_of=None, later_of=None):
     """What write_status() reads from a session's records: {"rows": [[record index, number, its row's first seven
     columns, the day it went to the governor, its committee meetings ([[when, committee]], all of them: write_status()
-    keeps those still to come), "b"/"v" flags, its later version]], "alias"}. Kept with the data (data_bundle())."""
+    keeps those still to come), "b"/"v" flags, its later version, its second number]], "alias"}. Kept with the data
+    (data_bundle())."""
     base = lambda n: re.sub(r"[A-Z]$", "", n)
     rows, alias, taken = [], {}, {}
     for i, r in enumerate(recs):
@@ -1644,7 +1645,8 @@ def status_inputs(session, recs, agenda_of=None, later_of=None):
         flags = ("b" if r.get("budget") else "") + ("v" if r.get("ballot") else "")
         later = later_of(i) if later_of else None
         rows.append([i, lead, [r["nums"][0], r["title"][:140], r["stage"], r["last"] or "", (acts[-1][1] if acts else "")[:120],
-                               r["comm"] or "", "const" if "const" in (r["topics"] or []) else ""], deliv, meets, flags, later])
+                               r["comm"] or "", "const" if "const" in (r["topics"] or []) else ""], deliv, meets, flags, later,
+                     r["nums"][1] if len(r["nums"]) > 1 else ""])
         for n in r["nums"][1:]:
             alias[base(n)] = lead
     return {"rows": rows, "alias": alias}
@@ -1659,18 +1661,19 @@ def write_status(session, inputs, page, live, facts=None, labels=None):
     to the voters; and bill_labels()'s: "e" ended before the session did, "a" an amendment that doesn't go to the governor,
     "2" its second passage, "d" decided by the voters, "r" a veto that can still be overridden), its version in the newest
     later session ([session, number]), the status words (bill_labels(): as its state's page words them), the latest day
-    with news (an action that isn't paperwork; left empty when it's the last action's day, "-" when there's none)]}, "alias": {the record's other
+    with news (an action that isn't paperwork; left empty when it's the last action's day, "-" when there's none), its
+    second number as the state's Bills list shows it under the first (New York's same-as bill: "S7547A")]}, "alias": {the record's other
     numbers: its first}}; the columns after the seventh are left off from the last one that's empty. The watchlist keys
     bills as "<session>:<number without the letter>". facts: the session's facts the rules read (write_status_shards())."""
     from datetime import date, timedelta
     soon = (date.today() - timedelta(days=1)).isoformat()
     bills, alias = {}, inputs["alias"]
-    for i, lead, row, deliv, meets, flags, later in inputs["rows"]:
+    for i, lead, row, deliv, meets, flags, later, *other in inputs["rows"]:
         meets = [m for m in meets if m[0] >= soon]
         lab = labels[i] if labels else ["", "", ""]
         flags += lab[1]
         news = "" if lab[2] == row[3] else lab[2] or "-"  # ("-": nothing but paperwork)
-        extra = [deliv, meets, flags, later or "", lab[0], news]
+        extra = [deliv, meets, flags, later or "", lab[0], news, (other or [""])[0]]
         while extra and not extra[-1]:
             extra.pop()
         # (The latest news in the state page's own words, bill_labels()'s: what "New:" says on the pages without it.)

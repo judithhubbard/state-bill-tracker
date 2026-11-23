@@ -5,7 +5,7 @@
 // letter (older entries are just the date). Where each bill is comes from the state's data/status_<session>.json
 // (build_data.py's write_status()): {page, live, bills: {number: [full number, title, stage, last action's date, its
 // latest news in plain words (as the state's page says it after "New:"), committee, kind, the day sent to the governor, meetings, flags, later version, status words, latest day with
-// news]}, alias: {other number: number}}, read in pieces (statusOf()).
+// news, its second number (New York's same-as bill)]}, alias: {other number: number}}, read in pieces (statusOf()).
 const WKEY = (st) => `abt:${st}:watch`;
 const baseNum = (n) => n.replace(/[A-Z]$/, "");
 const spaced = (n) => n.replace(/^([A-Z]+)(\d)/, "$1 $2");
@@ -48,9 +48,9 @@ async function statusOf(st, session, num) {
 // action's day, and writes "-" when there's none); flags: see build_data.py's write_status().
 function rowOf(r) {
   // (action: the latest news in the state page's own words, billfacts.js's latestNews(), run by the build.)
-  const [full, title, stage, last, action, comm, kind, deliv, meets, flags, later, label, news] = r;
+  const [full, title, stage, last, action, comm, kind, deliv, meets, flags, later, label, news, other] = r;
   return { full, title, stage, last, action, comm, kind, deliv, meets: meets || [], flags: flags || "", later: Array.isArray(later) ? later : null,
-    label: label || "", news: news === "-" ? "" : news || last || "" };
+    label: label || "", news: news === "-" ? "" : news || last || "", other: other || "" };
 }
 const fmtDay = (d) => (d ? new Date(`${d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
 // Finding a bill by number or words, in search/<st>.json (search_site.py): the front page's "Find a bill" and the list
