@@ -277,6 +277,16 @@ def read_lists(year, folder):
             if page is None:
                 return None
             count = count_of(page)
+            bid = re.search(r'id="ctl00_PageBody_LabelBillID"[^>]*>(.*?)</span>', page)
+            if count is None and bid:
+                # A range holding a single bill answers with that bill's own page, not a one-row list (18RS's HB901, the
+                # last of 2018's House bills; found reading older sessions for the light history, 2026-11-24).
+                key = one_line(bid.group(1)).replace(" ", "")
+                b = bill(page, key, year)
+                out["bills"][key] = {"id": b["id"], "author": b["author"], "status": b["status"], "considered": "",
+                                     "title": b["title"]}
+                n += SPAN
+                continue
             if count is None:
                 if "Session ID" in page and n == 1 and kind == TYPES[0]:
                     return "none"  # "An invalid Session ID was provided": the site has no such session yet

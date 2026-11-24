@@ -325,6 +325,83 @@ def old_wording(t, l):
     return t
 
 
+# ALISON's wording before 2023 (2015-2022, read for the light history: states/al/light.py), unlike both 2023's
+# (old_wording()) and today's: "Read for the first time and referred to the House of Representatives committee on Ways and
+# Means General Fund", "Pending third reading on day 11 Favorable from Judiciary" (the committee's report, undated),
+# "Motion to Read a Third Time and Pass adopted Roll Call 123" with "Third Reading Passed" (and "Passed Second House") after
+# it, "Orr motion to Adopt adopted Roll Call 45", "Concurrence Requested", "Delivered to Governor at 3:15 p.m. on March
+# 21, 2018." (undated but for its text), "Forwarded to Governor ...", "Assigned Act No. 2018-496." (undated),
+# "Motion to Read a Third Time, Veto to the Contrary Not Withstanding adopted" (an override, not a veto).
+_OLDER = {}
+OLDER_FIRST = re.compile(r"Read for the first time and referred to the (House of Representatives|Senate) committee on\s*(.*)$", re.I)
+MONTHS = {m: i + 1 for i, m in enumerate("January February March April May June July August September October November "
+                                          "December".split())}
+
+
+def older_dates(hl, act_day):
+    """A bill's (index, line) pairs with undated lines dated: from their own text ("on March 21, 2018", "on 3/27/2018"),
+    a committee's report by the next second reading in its house (the same day in Alabama), the Act number by the bill's
+    last action day."""
+    out = []
+    for i, l in hl:
+        if not l.get("calendarDate"):
+            t = l.get("matter") or ""
+            day = None
+            m = list(re.finditer(r"on (January|February|March|April|May|June|July|August|September|October|November|"
+                                 r"December) (\d{1,2}), (\d{4})", t))
+            m2 = re.search(r"on (\d{1,2})/(\d{1,2})/(\d{4})", t)
+            if m:
+                day = f"{m[-1].group(3)}-{MONTHS[m[-1].group(1)]:02d}-{int(m[-1].group(2)):02d}"
+            elif m2:
+                day = f"{m2.group(3)}-{int(m2.group(1)):02d}-{int(m2.group(2)):02d}"
+            elif re.match(r"Pending third reading on day \d+ Favorable", t):
+                day = min((x.get("calendarDate") for _, x in hl if x.get("calendarDate") and x.get("body") == l.get("body")
+                           and re.match(r"Read for the second time", x.get("matter") or "", re.I)), default=None)
+            elif re.match(r"Assigned Act No\.", t):
+                day = act_day
+            if day:
+                l = {**l, "calendarDate": day}
+        out.append((i, l))
+    return out
+
+
+def older_wording(t, l):
+    """A line in ALISON's wording before 2023 (above) in the wording kind_of() reads, or None to drop it."""
+    t = re.sub(r"\blost\b", "Lost", t)
+    m = OLDER_FIRST.match(t)
+    if m:
+        comm = m.group(2).strip() or (l.get("committee") or "").strip()
+        house = "House" if m.group(1).startswith("House") else "Senate"
+        return f"Read for the first time and referred to the {house} Committee on {comm}" if comm else None
+    if re.match(r"Read for the second time and placed on the calendar", t, re.I):
+        return "Read for the Second Time and placed on the Calendar"
+    if re.match(r"Pending third reading on day \d+ Favorable from|Reported from .+ as Favorable", t):
+        return "Reported Out of Committee"
+    if re.search(r"Veto to the Contrary Not ?Withstanding", t, re.I):
+        return "Passed notwithstanding the governor's objections" + (" (motion lost)" if "Lost" in t else "")
+    m = re.match(r"(?:(.+?) )?[Mm]otion to Read (Again )?a Third Time and Pass( as Amended)? (adopted|Lost)\b(.*)", t)
+    if m:
+        return (f"Motion to Read {m.group(2) or ''}a Third Time and Pass{m.group(3) or ''} - "
+                f"{'Adopted' if m.group(4) == 'adopted' else 'Lost'}{m.group(5)}")
+    if re.fullmatch(r"Third Reading Passed|Passed Second House", t):
+        return None  # (the motion's line before it, with the roll call, is the passage)
+    m = re.match(r"(?:(.+?) )?[Mm]otion to (Adopt|Table) (adopted|Lost)\b(.*)", t)
+    if m:
+        return (f"{(m.group(1) + ' ') if m.group(1) else ''}motion to {m.group(2)} - "
+                f"{'Adopted' if m.group(3) == 'adopted' else 'Lost'}{m.group(4)}")
+    if re.match(r"(?:Conference Report )?Concurrence Requested", t):
+        return "Returned to the other house for its agreement"  # (asked, not given: not a concurrence)
+    if re.match(r"(?:Delivered|Forwarded) to (?:the )?(?:Governor|Executive Department)", t):
+        return "Delivered to Governor"
+    if re.match(r"(?:Delivered|Forwarded) to Secretary of State", t):
+        return "Sent to Secretary of State"
+    if re.match(r"Assigned Act No\. \d{4}-\d+", t):
+        return "Enacted"
+    if t == "Executive Amendment Offered":
+        return "Pending with Executive Amendment"
+    return t
+
+
 PHASE_FINAL = {"concur","conf", "ccr", "govamend", "execconcur", "enroll", "enrolled", "signature", "sent", "sos",
                "signed", "enacted", "pocket", "veto"}
 
@@ -353,9 +430,17 @@ def load_session(session):
     texts = load(session, "texts.json", {}) or {}
     votes = load(session, "votes.json", {}) or {}
     _OLD[session] = any((l.get("matter") or "").strip() == "Introduced and Referred" for l in lines)  # old_wording()
+    # (Told apart by the House's referrals, "the House of Representatives committee on", case and all: today's say "the
+    # House Committee on", and a Senate referral reads alike in both.)
+    _OLDER[session] = not _OLD[session] and any((l.get("matter") or "").startswith(
+        "Read for the first time and referred to the House of Representatives committee on") for l in lines)  # older_wording()
     by = defaultdict(list)
     for i, l in enumerate(lines):
         by[l["instrumentNbr"]].append((i, l))
+    if _OLDER[session]:
+        acts = {b_["instrumentNbr"]: b_.get("lastActionDate") for b_ in bills if b_.get("actNbr")}
+        for key, hl in by.items():
+            by[key] = older_dates(hl, acts.get(key))
     find = sponsor_resolver(session)
     parties = _PARTIES.setdefault(session, {})
     path = os.path.join(folder(session), "bills.json")
@@ -419,6 +504,10 @@ def record(session, b, tx, hist, votes, find, parties, house_names):
         t = re.sub(r"\s+", " ", l.get("matter") or "").strip()
         if old:
             t = old_wording(t, l)
+            if t is None:
+                continue
+        elif _OLDER.get(session):
+            t = older_wording(t, l)
             if t is None:
                 continue
         k, r = kind_of(t)

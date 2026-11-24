@@ -288,6 +288,14 @@ def parse_bill(page, num, year):
     links = set(v["link"] for v in votes if v["link"]) | set(x["href"] for h in hist for x in h.get("votes", []))
     out["voteIds"] = sorted(vid for vid in (vote_id(l) for l in links) if vid)
     out["otherVoteLinks"] = sorted(l for l in links if not vote_id(l))
+    # Older pages' headings name no session law ("Senate Bill 2" in 2015, "House Bill 3 / SL 2025-13" now): the
+    # history's last "Ch. SL 2015-75" (or "Ch. Res 2015-1") line says it (2026-11-24, light history).
+    if not out["law"]:
+        for h in reversed(hist):
+            m = re.match(r"Ch\.\s*(SL|Res\.?)\s+(\d{4}-\d+)", h.get("action") or "")
+            if m:
+                out["law"] = f"{m.group(1)} {m.group(2)}"
+                break
     return out
 
 

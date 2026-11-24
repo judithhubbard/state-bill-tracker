@@ -351,7 +351,8 @@ def is_const(official):
 
 
 TALLY = re.compile(r"\b(?:passed|adopted)(?: with)?\s+(\d+)-(\d+)(?:-(\d+))?", re.I)
-CHAPTER = re.compile(r"Acts Ch\.?\s*(\d+)", re.I)
+# ("Acts Ch. 4" now; "Acts, ch. 127" in 2015's record, read for the light history.)
+CHAPTER = re.compile(r"Acts,?\s*Ch\.?\s*(\d+)", re.I)
 
 
 def tally(line):

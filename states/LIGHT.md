@@ -112,6 +112,38 @@ downloading (marked incomplete_2023) shows none until it's in.
 A hook that writes through the state's profile (CA's save(), CT's flat_year() and texts(): `P.DATA`) sets `P.DATA` to the
 scratch folder itself: states/light.py points it there only after `fetch()`, and puts the real one back.
 
+## Third batch, first half (written 2026-11-24, not yet run on GitHub)
+
+Each state's own fetch.py functions read the old sessions in today's formats (each checked with a few requests); two
+needed a converter change for older wording, two a fetch.py fix, noted below. robots.txt read for each host first.
+
+| state | source | sessions | requests a session (pace) | about | lacks |
+|---|---|---|---|---|---|
+| Alaska | akleg.gov/publicservice/basis (legislature_run(); /publicservice/ allowed) | 2015-2021 (29th-32nd) | list + 900-1,200 bills (1 s) | 30-45 min | sponsor statements, texts, fiscal notes |
+| Alabama | ALISON GraphQL (read_bills(), read_history()) | 2015-2022 | 2-8 (1 s) | 1 min | roll calls, texts, summaries |
+| Idaho | legislature.idaho.gov /sessioninfo/<year>/ (session()) | 2015-2022 | list + 550-700 bills + 25 committees (1 s) | 12-15 min | statements of purpose |
+| Iowa | Open States bulk JSON (as 2023-24; never legis.iowa.gov) | 2015-2021 (86th-89th GA) | 1 | 1 min | needs each file's name in states/ia/light_bulk.json |
+| Kentucky | apps.legislature.ky.gov/record/<yy>rs/ (session(); no robots.txt) | 2015-2022 | 15 lists + 800-1,300 bills (1 s) | 15-25 min | members of the time (today's only), vote and veto PDFs |
+| Louisiana | legis.la.gov lists and BillInfo pages (session(); no robots.txt) | 2015-2022 | 15-30 lists + 1,000-2,300 bills (1 s) | 20-40 min | floor-vote, digest and veto PDFs |
+| North Carolina | ncleg.gov feed and bill pages (session(); Crawl-delay 2) | 2015-2021 | feed + 2,000-2,300 bills (2 s) | 70-80 min | roll calls, so sponsors' parties; summaries |
+
+- **Alabama**: 2015-2022's history is in a third wording (neither 2023's nor today's): `older_wording()` and `older_dates()` in
+  convert.py ("Read for the first time and referred to the House of Representatives committee on ...", "Motion to Read a
+  Third Time and Pass adopted Roll Call 123", "Delivered to Governor at 3:15 p.m. on March 21, 2018." undated but for its
+  text, "Assigned Act No." undated, "Pending third reading on day 11 Favorable from X" the undated report, an override's
+  "Veto to the Contrary Not Withstanding"). Told apart by the House's referral wording, case and all; 2025 converts as
+  before. Written locally from full downloads: 2015 1,210 bills, 346 laws, 3 vetoes; 2018 922 / 298 / 5 (the press: 922
+  introduced, 324 passed both houses, ours 323); 2022 873 / 291 / 0.
+- **Kentucky**: 2015's record says "(Acts, ch. 127)" where today's says "(Acts Ch. 4)": convert.py's `CHAPTER` reads both.
+  The record's vetoed and enrolled status lists don't open for 15rs (the bill pages decide stages anyway).
+- **North Carolina**: 2015's bill pages' headings name no session law ("Senate Bill 2"; today "House Bill 3 / SL 2025-13"),
+  so parse_bill() takes it from the history's "Ch. SL 2015-75" line when the heading has none (S2 of 2015 then reads as
+  a law over the veto, as it was).
+- **Louisiana**: a list range holding one bill answers with that bill's page (18RS's HB 901, 2018's last House bill):
+  read_lists() reads it as the range's one row.
+- **Iowa**: the 2015-21 files' names are listed only on open.pluralpolicy.com (the owner's login); the path was tested end to
+  end with 2023-24's file (2,055 records, 352 laws, 2 vetoes, as the live site).
+
 ## How the build uses them (stage 2, 2026-11-24)
 
 `load_light()` in build_data.py reads the light sessions in an unbroken run back from the state's first full session (one
