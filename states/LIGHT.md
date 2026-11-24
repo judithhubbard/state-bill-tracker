@@ -62,6 +62,41 @@ bills past both houses without both passage flags, and laws with neither a chapt
 Checked 2026-11-24 with one or two requests each: every source serves 2015 in the format the converter reads now. The
 whole pipeline (download stand-in, converter, file, checks) was run on each state's current session.
 
+## Second batch (written 2026-11-24, not yet run)
+
+| state | source | sessions | requests a session (pace) | about | lacks |
+|---|---|---|---|---|---|
+| California | pubinfo_<year>.zip, tables and digests by HTTP range (as fetch.py) | 2015, 2017, 2019 | a few hundred ranges of a 0.8-1.2 GB zip | 10-20 min | nothing the converter reads |
+| Connecticut | FTP archive flat files (flat_year(), as 2023) + statements of purpose | 2015-2021 | 5 | 1 min | comm_ref, committee and actions files (as 2023); journals |
+| Indiana | api.iga.in.gov (bills(), people()); INDIANA_API_KEY | 2015-2022 | 1,000-1,800 (0.6 s) | 20-25 min | agendas |
+| Missouri | House past-exports zip + senate.mo.gov bill pages (house_zip(), senate_year()) | 2015-2022 | House 2 (20 s); Senate 1,000-1,400 (1 s) | 30-45 min | House summaries (PDFs), journals (member votes), Senate committee votes |
+| Mississippi | billstatus.ls.state.ms.us lists and history XML (session()), current members | 2015-2022 | 3,500-4,000 (1 s) | about 80 min | roll-call PDFs, veto messages; parties from today's members |
+| New Mexico | nmlegis.gov list, bill pages, database, members file, fiscal impact reports | 2015-2022 | 2,000-3,000 (1 s) | about an hour | floor-vote PDFs, committee reports, messages |
+| South Dakota | sdlegislature.gov/api (session(), votes skipped), Title Summaries | 2015-2022 | 1,000-1,200 (1 s) | about 20 min | member votes |
+| Congress | GovInfo BILLSTATUS zips (bills()) + congress-legislators (members()) | 114th-116th (2015, 2017, 2019) | 8 | a few min | roll calls, veto messages |
+| Tennessee | LegiScan dataset (states/legiscan_light.py); LEGISCAN_API_KEY | 2015, 2017, 2019, 2021 | 1 query (+1 list a day) | 1 min | contacts |
+| Oklahoma | LegiScan datasets, both years of each Legislature | 2015, 2017, 2019, 2021 | 2 queries | 1 min | staff summaries (supplements), veto pages |
+| Rhode Island | LegiScan dataset | 2015-2022 | 1 query | 1 min | chapters (as now) |
+| Vermont | LegiScan dataset | 2015, 2017, 2019, 2021 | 1 query | 1 min | Legislative Counsel summaries |
+| District of Columbia | LegiScan dataset + the Council's law library (laws.py's refresh(), table()) | 2015, 2017, 2019, 2021 (Periods 21-24) | 1 query + 600-1,000 GitHub files (0.25 s) | 5 min | contacts |
+
+Each state is one run (`gh workflow run light-history.yml -f state=<st>`); the 340-minute limit covers every state but
+Mississippi (about 11 hours: run it again, and it goes on from the first session not yet committed) and perhaps Missouri
+and New Mexico. LegiScan's queries (about 35 for all five states) are counted in the runner's own data/legiscan/usage.json,
+not the download job's: legiscan.py's 300-query margin covers them.
+
+Tried locally (2026-11-24): Connecticut 2015 end to end (3,247 bills, 269 laws, 9 vetoes); Rhode Island 2015 end to end
+(1,537 bills, 320 laws, 0 vetoes; the 2015 committee names "H.E.W", "Municipal Government" and "Government Oversight" are now
+in states/ri/profile.py's COMMITTEE_TOPICS); Congress's 114th joint resolutions (41, 4 vetoed, as the record shows). The
+others with one or two requests: Indiana's 2015 list and bill detail, Missouri's 2015 zip listing and Senate pages, Mississippi's 2015 list and history
+file, New Mexico's 2015 session id, bill page and firs folder, California's 2015-2019 zips (same tables).
+
+The build reads light sessions only back from the first full one without a gap (`load_light()`): a state whose 2023 is still
+downloading (marked incomplete_2023) shows none until it's in.
+
+A hook that writes through the state's profile (CA's save(), CT's flat_year() and texts(): `P.DATA`) sets `P.DATA` to the
+scratch folder itself: states/light.py points it there only after `fetch()`, and puts the real one back.
+
 ## How the build uses them (stage 2, 2026-11-24)
 
 `load_light()` in build_data.py reads the light sessions in an unbroken run back from the state's first full session (one

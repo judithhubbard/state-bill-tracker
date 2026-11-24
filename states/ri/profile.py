@@ -78,6 +78,8 @@ COMMITTEE_TOPICS = {
     "Labor": "labor", "Labor and Gaming": "labor",
     "Environment and Natural Resources": "env", "Environment and Agriculture": "env",
     "Veterans Affairs": "human",
+    # Earlier names, in the light history's sessions (states/ri/light.py; 2015's dataset names them).
+    "H.E.W": "health", "Municipal Government": "local", "Government Oversight": "gov",
 }
 # The first part of a bill's heading, the title of the General Laws it amends ("COMMERCIAL LAW -- GENERAL REGULATORY
 # PROVISIONS -- ...") -> topic.

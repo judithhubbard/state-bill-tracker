@@ -6,12 +6,13 @@ name: Light history
 #   gh workflow run light-history.yml -f state=mt
 #   gh workflow run light-history.yml -f state=wy -f sessions="2015 2016"
 # The state needs a hook, states/<st>/light.py (its SESSIONS and how to download one). The downloads happen here, never
-# on the owner's computer; each hook keeps its source's pace (Montana: ten seconds between requests).
+# on the owner's computer; each hook keeps its source's pace (Montana: ten seconds between requests). A run stopped by
+# the time limit keeps the sessions it committed: run it again for the rest (states/LIGHT.md lists each state's pace).
 on:
   workflow_dispatch:
     inputs:
       state:
-        description: "State code with a states/<st>/light.py (mt, wy, nd, or)"
+        description: "State code with a states/<st>/light.py (mt, wy, nd, or, ca, ct, in, mo, ms, nm, sd, us, tn, ok, ri, vt, dc)"
         type: string
         required: true
       sessions:
@@ -35,10 +36,16 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+      - name: Install pdftotext
+        # (New Mexico's fiscal impact reports are PDFs; states/nm/fetch.py skips them without it.)
+        run: command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null
       - name: Read the sessions, committing each
         env:
           ST: ${{ inputs.state }}
           WANT: ${{ inputs.sessions }}
+          # Only the sources that need a key: Indiana's API, and LegiScan (tn, ok, ri, vt, dc). Hooks never print them.
+          INDIANA_API_KEY: ${{ secrets.INDIANA_API_KEY }}
+          LEGISCAN_API_KEY: ${{ secrets.LEGISCAN_API_KEY }}
         run: |
           set -u
           # (One identity for every git step, the pull's autostash included: a state's download may change tracked files.)
