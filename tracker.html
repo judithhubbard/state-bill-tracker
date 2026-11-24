@@ -2854,7 +2854,9 @@ function holdUp(b, v, oppose) {
   const members = c.members || [];
   const most = members.filter((m) => sponsors.has(lastName(m))).length > members.length / 2;
   const money = commKey(STATE.moneyCommittees?.[house]) === commKey(cname);
-  const skipChair = chairBacks ? ` The chair, ${chairName}, is a sponsor but hasn't brought it up for a vote.` : "";
+  // On this committee's agenda already (NJ A2380 of 2026, Senate Transportation on Nov 30): the chair has brought it up.
+  const meet = nextMeeting(b), here = meet && commKey(String(meet.committee || "").replace(/^(?:Senate|House|Assembly)\s+/i, "")) === commKey(cname);
+  const skipChair = chairBacks ? (here ? ` The chair, ${chairName}, is a sponsor and has put it on the agenda.` : ` The chair, ${chairName}, is a sponsor but hasn't brought it up for a vote.`) : "";
   if (money && most && !budgetPassed()) return { leader: true, gov: true, chairBacks, ask: "include it in the budget",
     note: `Bills that cost money often wait for the budget, which ${EXEC.the} and the ${lead ? leadTitle : "leaders"} negotiate until about April. Ask them to include it.${skipChair}` };
   if (money && most && skipped()) return { leader: true, gov: true, chairBacks,
