@@ -934,6 +934,34 @@ def filters_of(issue_id, text):
     return [k for k, ps in BY_ID[issue_id]["_filters"].items() if any(p.search(text) for p in ps)]
 
 
+# A period that ends an abbreviation, not a sentence (2026-11-24: Texas's "S.B. 477 seeks to ..." was cut to "477 seeks to
+# ...", and "Sec. 2", "No. 320", "R.S. 18:104", "c. 44" the same way).
+_ABBR = re.compile(r"(?:\b(?:[A-Za-z]\.){2,}|\b(?:[Ss]ecs?|[Nn]os?|[Aa]rts?|[Cc]hs?|c|[Ss]tats?|[Ss]ubd|[Pp]ar|[Pp]ara|[Cc]l|Inc|Co|Corp|"
+                   r"Jr|Sr|Mr|Mrs|Ms|Dr|St|Rev|Gen|Ann|Comp|[Vv]ol|vs|v|al|approx|Dept|Div|Regs?|Supp|pp|p|Minn|Fla|Tex|Ill|Mass|"
+                   r"Wash|Mich|Wis|Tenn|Ala|Miss|Ariz|Colo|Conn|Okla)|\b[A-Z])\.$")
+
+
+def _stop_before(text, i):
+    """The last sentence end (". ") before i that isn't an abbreviation's period, or -1."""
+    j = text.rfind(". ", 0, i)
+    while j >= 0 and _ABBR.search(text[max(0, j - 12):j + 1]):
+        j = text.rfind(". ", 0, j)
+    return j
+
+
+def _stop_after(text, i):
+    """The first sentence end (". ") from i that isn't an abbreviation's period, or -1."""
+    j = text.find(". ", i)
+    while j >= 0 and _ABBR.search(text[max(0, j - 12):j + 1]):
+        j = text.find(". ", j + 1)
+    return j
+
+
+# What an excerpt shouldn't start with: a bullet, stray punctuation (New York's memos: ": This bill would ..."), a dash,
+# a list marker ("(2) ", "(iii) ", "4. ").
+_LEAD_JUNK = re.compile(r"^(?:[\s•:;,.\-–—]+|\((?:\d{1,3}|[a-z]|[ivx]{1,5})\)\s+|\d{1,3}[.)]\s+)+")
+
+
 def excerpt(issue_id, head, body="", limit=220):
     """The sentence (or clause between semicolons) where the issue matched, for showing why a bill with a bare title
     ("Wages") is on the issue: from the summary if it matched there, else from "What it does". A leading statute
@@ -947,9 +975,10 @@ def excerpt(issue_id, head, body="", limit=220):
                 win = text[max(0, m.start() - WINDOW):m.end() + WINDOW]
                 if not all(p.search(win) for p in need[1:]) or any(p.search(win) for p in issue["_none"] + avoid):
                     continue
-                a = max(text.rfind(". ", 0, m.start()), text.rfind("; ", 0, m.start()))
-                b = min([x for x in (text.find(". ", m.end()), text.find("; ", m.end())) if x >= 0] or [len(text)])
+                a = max(_stop_before(text, m.start()), text.rfind("; ", 0, m.start()), text.rfind("• ", 0, m.start()))
+                b = min([x for x in (_stop_after(text, m.end()), text.find("; ", m.end()), text.find(" • ", m.end())) if x >= 0] or [len(text)])
                 s = re.sub(r"\s+", " ", text[a + 2 if a >= 0 else 0:b]).strip()
+                s = _LEAD_JUNK.sub("", s)
                 s = re.sub(r"^(?:[Aa]mends?|[Cc]reates?|[Rr]epeals?)(?: (?:a )?new sections? of)? [A-Z]{2,5} (?:Chapter )?[\d.,A-Z\s-]+?(?:and [\d.]+ )?to ", "", s)
                 if len(s) > limit:
                     s = s[:limit].rsplit(" ", 1)[0] + " …"

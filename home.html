@@ -1557,12 +1557,16 @@ drawMine();
     topicsAsked = true;
     fetch("search/topics.json").then((r) => (r.ok ? r.json() : {})).catch(() => ({})).then((t) => { TOPICS = t; schedule(0); });
   }
-  function topicsOf(words) {
+  // named: the query is an issue's word or starts one ("voting", "data cen"); otherwise also issues whose word is inside a
+  // longer query ("kratom ban"; "National Popular Vote Interstate Compact" holds Voting's "popular vote").
+  function topicsOf(words, named) {
     const q = words.join(" ");
     if (!TOPICS || q.length < 3) return new Set();
     return new Set(Object.entries(TOPICS).filter(([, ts]) => ts.some((t) => {
       const f = fold(t).replace(/[^a-z0-9]+/g, " ").trim();
-      return f === q || (q.length >= 4 && f.startsWith(q)) || (` ${q} `).includes(` ${f} `);
+      // (Inside a longer query only with one word more, "kratom ban": a phrase such as "National Popular Vote Interstate
+      // Compact" is searched as words, not as Voting's 2,754 bills.)
+      return f === q || (q.length >= 4 && f.startsWith(q)) || (!named && (` ${q} `).includes(` ${f} `) && words.length - f.split(" ").length <= 1);
     })).map(([id]) => id));
   }
   function load(st) {
@@ -1654,7 +1658,12 @@ drawMine();
     // A word matches the start of a title's word ("center" finds "centers"); words of three letters or fewer ("ai") only whole.
     const keys = words.map((w) => (w.length <= 3 ? ` ${w} ` : ` ${w}`));
     const byNum = new Set(hits.map((h) => h.r));
-    const onTopic = p.allNumbers ? new Set() : topicsOf(fold(p.words.join(" ")).replace(/[^a-z0-9]+/g, " ").trim().split(" "));
+    // An issue the query names lists all its bills first. One whose word is only part of a longer query lists its bills
+    // only when no bill has all the words (2026-11-24: "National Popular Vote Interstate Compact" listed 2,754 voting bills).
+    const qWords = fold(p.words.join(" ")).replace(/[^a-z0-9]+/g, " ").trim().split(" ");
+    const onTopic = p.allNumbers ? new Set() : topicsOf(qWords, true);
+    const inTopic = p.allNumbers || onTopic.size ? new Set() : topicsOf(qWords, false);
+    const fallback = [];
     // Bills with some of the words rank by how rare the words they have are ("data" before "center").
     const df = keys.map(() => 0), part = [];
     let total = 0;
@@ -1670,6 +1679,7 @@ drawMine();
           hits.push({ st, name: d.name, s, r, tier: 6, score: k === words.length ? 1 : 0, shown: r[0] });
           continue;
         }
+        if (inTopic.size && k < words.length && r.iss && r.iss.some((x) => inTopic.has(x))) fallback.push({ st, name: d.name, s, r, tier: 6, score: 0, shown: r[0] });
         if (k < need) continue;
         const h = { st, name: d.name, s, r, tier: k === words.length ? 5 : 1, score: 0, shown: r[0], has };
         if (h.tier === 5) h.score = phrase && r.low.includes(phrase) ? 1 : 0;
@@ -1678,6 +1688,7 @@ drawMine();
     }
     const idf = df.map((n) => Math.log((total + 1) / (n + 1)));
     for (const h of part) if (h.tier === 1) h.score = h.has.reduce((t, x, i) => t + (x ? idf[i] : 0), 0);
+    if (fallback.length && !hits.some((h) => h.tier >= 5)) hits.push(...fallback);
     // Bills with only some of the words are listed only when no bill has them all (or the number).
     if (hits.some((h) => h.tier >= 5)) hits = hits.filter((h) => h.tier >= 5);
     // Within a tier: laws first, then vetoed bills, then the furthest along. Earlier sessions' bills come after this
@@ -1740,7 +1751,7 @@ drawMine();
     const mapIt = !p.st && !only && p.words.length && hits.length > 1 && !most && hits.some((h) => h.tier === 5 || h.tier === 6) && new Set(hits.map((h) => h.st)).size > 1;
     lastHits = mapIt ? [p.words.join(" "), hits.filter((h) => h.tier === 5 || h.tier === 6), pastOn] : null;
     // National issues the words name ("data cent" -> Data centers): shown on the map, as the issues column does.
-    const iss = p.allNumbers || p.st ? [] : [...topicsOf(fold(p.words.join(" ")).replace(/[^a-z0-9]+/g, " ").trim().split(" "))]
+    const iss = p.allNumbers || p.st ? [] : [...topicsOf(fold(p.words.join(" ")).replace(/[^a-z0-9]+/g, " ").trim().split(" "), true)]
       .map((id) => issues.issues.find((i) => i.id === id)).filter(Boolean).slice(0, 3);
     const goHtml = go.length || iss.length ? `<ul class="goto">${go.map((c) => `<li><a href="${esc(built[c.toUpperCase()])}" data-goto="${c}">${esc(stateName(c))}&rsquo;s bills &rarr;</a></li>`).join("")}`
       + `${iss.map((i) => `<li><button type="button" class="goiss" data-goissue="${esc(i.id)}">${esc(i.name)} on the map &rarr;</button></li>`).join("")}</ul>` : "";
