@@ -9,6 +9,8 @@
 // drops down to the bills that stopped there; how many were reintroduced the next session is in an ⓘ on its label.
 // Bills that died in committee are split by what happened to them there.
 function drawSankey(odds, fate, cfate, o) {
+  // (No bill counted in it, as when the only past session has no next one to follow it to: no breakdown, and no room kept.)
+  if (cfate && !Object.values(cfate).some((v) => (v || [0])[0] > 0)) cfate = null;
   const { uni: UNI, passedBoth: PASSED_BOTH, exits, heldLabel, linked, exec, num, esc } = o;
   const n = (k) => (odds[k] || [0, 0])[0];
   const N = UNI ? [n("intro"), n("floor"), n("both")] : [n("intro"), n("floor"), n("house"), n("both")], law = (odds.intro || [0, 0])[1], vetoed = n("vetoed");

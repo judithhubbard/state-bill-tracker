@@ -107,6 +107,84 @@ def save_cached_json(name, version, results):
 # Sessions whose first copy is still downloading (data/<state>/incomplete_<session>: an older year added back to the
 # window, states/window.py) are left out until it's finished.
 SESSIONS = importlib.import_module("states.window").shown(P.DATA, C.sessions())
+# Light history (states/LIGHT.md; the owner's decision, 2026-11-24): sessions older than the state's first full one, kept
+# as each bill's outcome in data/<state>/light_<session>.json.gz. They count in the Statistics tab, Trends, the sessions
+# table and /compare/, but make no page, search entry, issue match or status file (they're never in SESSIONS). LIGHT: those
+# sessions (and, by cycle, their cycles); LIGHT_PARTIES: each one's sponsors' parties, from the file's header.
+LIGHT, LIGHT_PARTIES, LIGHT_LACKS = set(), {}, {}
+LIGHT_FIELDS = {"summary": "", "stage": 0, "passedS": False, "passedA": False, "passedIn": "", "first": "", "last": "",
+                "firstComms": [], "commFate": "none", "comms": [], "topics": [], "mainTopic": None, "chapter": None, "cosp": 0,
+                "prev": [], "veto": 0, "votes": [], "laws": [], "places": [], "memo": None}
+
+
+def load_light():
+    """{session: (records, number -> index, fetched, {})} for each light session before the first full one, back without a gap."""
+    out = {}
+    first = min(SESSIONS) if SESSIONS else None
+    have = {int(m.group(1)): p for p in glob.glob(os.path.join(P.DATA, "light_*.json.gz"))
+            if (m := re.search(r"light_(\d{4})\.json\.gz$", p))}
+    # Only an unbroken run back from the first full session (one every YEARS): a gap (Wyoming's 2017-2023 still to
+    # come) would pool far-apart sessions as if they followed each other.
+    run, s = [], (first - YEARS if first else None)
+    while s in have:
+        run.append(s)
+        s -= YEARS
+    for s in sorted(run):
+        path = have[s]
+        d = json.load(gzip.open(path, "rt", encoding="utf-8"))
+        recs = []
+        for r in d.get("bills") or []:
+            r = {**LIGHT_FIELDS, **r}
+            r["keyDates"] = (list(r.get("keyDates") or []) + [""] * 7)[:7]
+            r["summary"] = r["summary"] or ""
+            r["topics"] = r["topics"] or []
+            r["firstComms"] = [tuple(x) for x in r["firstComms"] or []]
+            r["vers"] = [{"cosponsors": [], "actions": [], "district": None, **v} for v in r.get("vers") or []]
+            recs.append(r)
+        out[s] = (recs, {n: i for i, r in enumerate(recs) for n in r["nums"]}, d.get("fetched", ""), {})
+        LIGHT.add(s)
+        LIGHT_LACKS[s] = sorted(d.get("lacks") or [])
+        LIGHT_PARTIES[s] = {(h, n): p for h, n, p in d.get("parties") or [] if p in ("D", "R")}
+    return out
+
+
+def link_light(loaded, hist, light):
+    """Earlier versions in the light session just before the first full one, where the converter names none there (its
+    links reach only sessions it reads): the bill by a prime sponsor of the same surname whose title shares the most words
+    with this one's, at least three in four of the two titles' words together, and more than any other bill of theirs.
+    Not stock titles ("Generally revise ... laws", appropriations) of four words or fewer, nor an earlier bill that became
+    law or a budget bill (they come back every session as new bills). Shown as a version with no
+    page, its outcome from the light file."""
+    if not light or not SESSIONS:
+        return
+    first = min(SESSIONS)
+    ls = max(light)
+    if any(ps == ls for r in loaded[first][0] for ps, _ in r["prev"]):
+        return
+    stop = {"a", "an", "the", "of", "to", "and", "for", "in", "on", "act", "bill", "relating", "related", "laws", "law",
+            "generally", "revise", "revising", "provide", "providing", "establish", "create", "certain"}
+    words = lambda r: set(re.findall(r"[a-z0-9]+", r["title"].lower())) - stop
+    stock = lambda r: len(r["title"].split()) <= 4 and re.match(r"(?i)(generally )?revise|(general )?appropriat", r["title"])
+    who = lambda r: (name_key((r["vers"][0].get("sponsor") if r["vers"] else "") or "").split() or [""])[-1]
+    by = defaultdict(list)
+    # (As Montana's converter: never a bill that became law or a budget bill, which come back every session as new bills.)
+    for j, r in enumerate(light[ls][0]):
+        if not stock(r) and who(r) and r["stage"] != 5 and not r.get("budget"):
+            by[who(r)].append((j, words(r)))
+    linked = 0
+    for i, r in enumerate(loaded[first][0]):
+        w = words(r)
+        if stock(r) or len(w) < 3 or not who(r):
+            continue
+        sc = sorted(((len(w & x) / len(w | x), j) for j, x in by.get(who(r), [])), reverse=True)
+        if not sc or sc[0][0] < 0.75 or (len(sc) > 1 and sc[1][0] == sc[0][0]):
+            continue
+        o = light[ls][0][sc[0][1]]
+        hist[first][i][(ls, "light")] = [ls, " / ".join(o["nums"]), o["stage"], o["chapter"] or 0, 0]
+        linked += 1
+    print(f"   light history: {linked} bills of {first} linked to their versions in {ls}")
+
+
 # The lower house's letter ("A" for an Assembly, "H" for Virginia's House of Delegates) and members' titles.
 LOW = getattr(P, "LOWER", "A")
 TITLES = getattr(P, "TITLES", {"S": "Sen.", LOW: "Asm."})
@@ -278,6 +356,8 @@ _PARTIES = {}
 
 def parties(session, recs):
     """(Worked out once per session and list of records in a build: compute() asks for each session's several times.)"""
+    if session in LIGHT_PARTIES:  # (a light session: the parties its file's header gives)
+        return LIGHT_PARTIES[session]
     k = (session, tuple(map(id, recs)))
     if k not in _PARTIES:
         _PARTIES[k] = _parties(session, recs)
@@ -735,6 +815,8 @@ def insights(loaded, hist, current):
     gov_months = defaultdict(lambda: [0, 0])
     gov_years = defaultdict(lambda: [0, 0, 0])  # signed, vetoed (overridden or not), of those overridden
     for s in sorted(loaded):
+        if s in LIGHT:
+            continue
         for r in loaded[s][0]:
             for i, kind in ((5, 0), (6, 1)):
                 d = r["keyDates"][i]
@@ -750,9 +832,12 @@ def insights(loaded, hist, current):
                 gov_years[f"{d[:4]}|{who}"][kind] += 1
     late_sign = sum(d[5:7] in ("10", "11", "12") for d in signed)
 
+    # (Light sessions have no links between a bill's versions, no co-sponsor names and may predate the profile's governors:
+    # what reads those counts full sessions only.)
+    hpast = [s for s in past if s not in LIGHT]
     # Persistence: how many earlier sessions laws took, and what happens to bills that die.
     persist = {t: [0, 0, 0, 0, 0] for t in topics}  # laws with 0, 1, 2, 3+ earlier sessions; total
-    for s in past[1:]:
+    for s in hpast[1:]:
         for i, r in enumerate(loaded[s][0]):
             if r["stage"] != 5:
                 continue
@@ -762,7 +847,7 @@ def insights(loaded, hist, current):
                     persist[t][min(n, 3)] += 1
                     persist[t][4] += 1
     comeback = {t: [0, 0, 0] for t in topics}  # died in committee; reintroduced next session; later became law
-    for s in past[:-1]:
+    for s in hpast[:-1]:
         nxt = s + YEARS
         for i, r in enumerate(loaded[s][0]):
             if r["stage"] != 0:
@@ -792,7 +877,7 @@ def insights(loaded, hist, current):
 
     # Bills that died in committee, by what happened there: [died, back next session, later law].
     comm_fate = {t: {k: [0, 0, 0] for k in ("none", "amended", "held", "defeated", "passed")} for t in topics}
-    for s in past[:-1]:
+    for s in hpast[:-1]:
         for i, r in enumerate(loaded[s][0]):
             if r["stage"] != 0:
                 continue
@@ -806,7 +891,7 @@ def insights(loaded, hist, current):
 
     # What happened to bills that died, by how far they got: [died, back next session, later law].
     fate = {t: {k: [0, 0, 0] for k in ("committee", "floor", "oneHouse", "vetoed")} for t in topics}
-    for s in past[:-1]:
+    for s in hpast[:-1]:
         nxt = s + YEARS
         for i, r in enumerate(loaded[s][0]):
             k = {0: "committee", 1: "floor", 2: "oneHouse", 6: "vetoed"}.get(r["stage"])
@@ -852,6 +937,8 @@ def insights(loaded, hist, current):
     # The same by party of sponsors and co-sponsors: both parties, Democrats only, Republicans only.
     party = {}
     for s in sorted(loaded):
+        if s in LIGHT:
+            continue
         party_of = party_map(s, loaded[s][0])
         key = "past" if s != current else "current"
         for r in loaded[s][0]:
@@ -962,6 +1049,8 @@ def insights(loaded, hist, current):
         "commFate": comm_fate,
         "persistent": persistent,
         "pastSessions": past,
+        # (The full sessions among them: what persistence, the party table and the governor's counts cover.)
+        **({"fullPast": hpast} if hpast != past else {}),
         "pastKind": past_kind if past_kind and all(P.session_kind(s) == past_kind for s in past) else "",
         "committees": {"current": committee_table([current], minimum=False), "past": committee_table(past, minimum=False)},
         "odds": {t: dict(v) for t, v in odds.items()},
@@ -1037,7 +1126,7 @@ def write_compare(done, hist, current, insight):
         recs = loaded[s][0]
         odds, cfate, fate = defaultdict(lambda: [0, 0]), {}, {}
         left = {"shell": sum(1 for r in done[s][0] if r.get("shell")), "narrow": 0, "const": 0}
-        nxt = s + YEARS in loaded
+        nxt = s + YEARS in loaded and s not in LIGHT  # (a light session has no links to the next one's bills)
         for i, r in enumerate(recs):
             if narrow_bill(r):
                 left["narrow"] += 1
@@ -1468,15 +1557,16 @@ def topic_ring(loaded):
     return [start] + [rest[i] for i in path]
 
 
-def trends(loaded):
-    """Per subject: bills per 1,000 in each session, the first bill on it, who sponsors most now, laws."""
+def trends(loaded, titles_only=False):
+    """Per subject: bills per 1,000 in each session, the first bill on it, who sponsors most now, laws. titles_only: a
+    light session lacks summaries (Montana's archive), so every session is matched on titles alone, like for like."""
     sessions = sorted(loaded)
     def scan(pattern, nocase):
         rx = re.compile(pattern, re.I if nocase else 0)
         per, counts, first, now, laws, total = [], [], None, Counter(), 0, 0
         for sn in sessions:
             recs = loaded[sn][0]
-            hits = [r for r in recs if rx.search(r["title"] + " . " + r["summary"][:600])]
+            hits = [r for r in recs if rx.search(r["title"] if titles_only else r["title"] + " . " + r["summary"][:600])]
             per.append(round(1000 * len(hits) / max(1, len(recs)), 1))
             counts.append(len(hits))
             total += len(hits)
@@ -1494,7 +1584,7 @@ def trends(loaded):
         lead = [[h, name, c] for (h, name), c in now.most_common(3)]
         return {"per": per, "n": counts, "bills": total, "laws": laws, "lead": lead,
                 "first": [first[1], first[2], first[0][0], first[0][2]] if first else None}
-    out = {"sessions": sessions, "subjects": [], "wording": []}
+    out = {"sessions": sessions, "subjects": [], "wording": [], **({"titlesOnly": True} if titles_only else {})}
     for kind, label, pattern, nocase in P.TRENDS:
         out["subjects"].append({"kind": kind, "label": label, **scan(pattern, nocase)})
     for old, new, *note in P.WORDING:
@@ -2295,6 +2385,8 @@ def compute(prev=None):
 
     old_path = os.path.join(P.DATA, "old_outcomes.json.gz")
     old = json.load(gzip.open(old_path, "rt")) if os.path.exists(old_path) else {}
+    # The light history's older sessions (load_light()): their outcomes for "earlier version" links, and the statistics.
+    light = load_light()
     hist = {s: defaultdict(dict) for s in SESSIONS}  # session -> rec index -> {(s, idx|printNo): entry}
     for s in SESSIONS:
         recs, index = loaded[s][0], loaded[s][1]
@@ -2316,24 +2408,35 @@ def compute(prev=None):
                     codes = [old.get(str(ps), {}).get(n[:1] + re.sub(r"[A-Z]+$", "", n[1:]))
                              for n in e[1].split(" / ")]
                     codes = [c for c in codes if c is not None]
+                    # (A light session's bill: its stage, as a code like the short list's, stage * 4 + passage bits.)
+                    if not codes and ps in light:
+                        lrecs, lidx = light[ps][0], light[ps][1]
+                        codes = [lrecs[lidx[n]]["stage"] * 4 + bool(lrecs[lidx[n]]["passedS"]) + 2 * bool(lrecs[lidx[n]]["passedA"])
+                                 for n in e[1].split(" / ") if n in lidx]
                     if codes:
                         st = max((c // 4 for c in codes), key=rank)
                         flags = 0
                         for c in codes:
                             flags |= c & 3
                         e[2] = 3 if rank(st) < rank(3) and flags == 3 else st
+    link_light(loaded, hist, light)
 
     current = CURRENT
     # Statistics, outcomes and histories leave out an upcoming session's prefiled bills.
     done = {s: v for s, v in loaded.items() if s <= current}
-    summary = {s: outcomes(loaded[s][0]) for s in done}
+    # With the light history's older sessions: what the Statistics tab, Trends and /compare/ count.
+    sdone = {**light, **done}
+    shist = {**{s: defaultdict(dict) for s in light}, **hist}
+    titles_only = any("summary" in LIGHT_LACKS[s] for s in light)
+    summary = {s: outcomes(sdone[s][0]) for s in sdone}
     if CYCLE:
-        cdone, chist = to_cycles(done, hist)
+        LIGHT.update({cyc(s) for s in light if all(cyc(x) != cyc(s) for x in done)})
+        cdone, chist = to_cycles(sdone, shist)
         with cycle_years():
             insight = insights(cdone, chist, cyc(current))
     else:
-        insight = insights(done, hist, current)
-    insight["trends"] = trends(done)
+        insight = insights(sdone, shist, current)
+    insight["trends"] = trends(sdone, titles_only)
     insight["topicRing"] = topic_ring(done)
     # Where sessions alternate in kind (Arkansas's regular and fiscal sessions, Oregon's long and short ones), a page
     # for a session of another kind than the current one compares it with past sessions of its own kind: the newest
@@ -2345,14 +2448,14 @@ def compute(prev=None):
             newest[P.session_kind(s_)] = s_
         for kind, ref in newest.items():
             if kind != P.session_kind(current):
-                insight_of[kind] = {**insights(done, hist, ref), "trends": insight["trends"], "topicRing": insight["topicRing"]}
+                insight_of[kind] = {**insights(sdone, shist, ref), "trends": insight["trends"], "topicRing": insight["topicRing"]}
     gov_record = governor_record(done, current)
     # Each finished session's odds chart, for /compare/ (compare_site.py).
     if CYCLE and GITHUB:
         with cycle_years():
             compare_out = write_compare(cdone, chist, cyc(current), insight)
     else:
-        compare_out = write_compare(done, hist, current, insight) if GITHUB else None
+        compare_out = write_compare(sdone, shist, current, insight) if GITHUB else None
     cores = {}
 
     # Current legislators for past sessions' pages (profile card and the sessions they served in).
@@ -2489,6 +2592,8 @@ def compute(prev=None):
             "delegation": names,
             "sessions": [{"session": s, "url": urls.get(str(s)), **({"upcoming": True} if s > current else {})} for s in SESSIONS],
             "outcomes": {str(s): summary[s] for s in summary},
+            # Light sessions (no page): their outcomes are above; "lacks" names what their source didn't have.
+            **({"lightSessions": [{"session": s, "lacks": LIGHT_LACKS.get(s, [])} for s in sorted(LIGHT_LACKS)]} if LIGHT_LACKS else {}),
             "insights": insight_of.get(P.session_kind(session), insight) if insight_of and session < current else
                         # (By cycle, the deadline rules still read when past sessions of this one's kind ended.)
                         {**insight, "sessionTiming": [t for t in insight["timing"] if t["year"] % 2 == session % 2]} if CYCLE else insight,

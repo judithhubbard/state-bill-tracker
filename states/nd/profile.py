@@ -113,10 +113,16 @@ def governor_on(day):
     return who
 
 
-# ---- What's changing: subjects whose share of bills changed most between 2023 and 2025, picked by hand from an
-# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Only two sessions are shown,
-# so only the one clear shift. Matched on title and summary.
+# ---- What's changing: subjects whose share of bills changed most from 2015 to 2025 (2015-2021 from the light history,
+# states/LIGHT.md), picked by hand from an automatic phrase scan and checked against samples of the bills matched
+# (notes/trends.md). Matched on title and summary.
 TRENDS = [
-    ("rise", "Tribal governments and schools", r"tribal|tribes?\b", True),
+    ("rise", "Charitable gaming and gambling", r"gaming|gambling|sports betting|pull tabs?\b", True),
+    ("rise", "Memorial highways and bridges", r"designat\w* .{0,60}(?:highway|bridge|interchange)|memorial (?:highway|bridge)", True),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
 ]
-WORDING = []
+WORDING = [
+    (("“Department of Human Services”", r"department of human services"),
+     ("“Department of Health and Human Services”", r"department of health and human services"),
+     "The Department of Health and the Department of Human Services were merged into one in 2022."),
+]

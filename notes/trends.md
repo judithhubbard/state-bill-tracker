@@ -396,15 +396,29 @@ Looked at and left out: broadband (12, 10, 3, z -2.5); hemp and THC (1, 7, 5); i
 
 ## Montana (mt)
 
-Sessions shown: 2023 (1,534 bills), 2025 (1,516). Two sessions, and the records have short titles only (no summaries), so only the one clear shift.
+**Redone 2026-11-24 with the light history** (states/LIGHT.md): sessions 2015, 2017, 2019, 2021 (light: 1,062, 1,041, 1,140,
+1,119 bills), 2023 (1,534), 2025 (1,516). Montana's records have short titles only, the light ones too, so every session is
+matched on titles alone (`trends()`'s `titles_only`, set when any light session lacks summaries). Scanned as before: phrases
+of one to three words and the candidate subjects, the first two sessions against the last two (two-proportion z), then
+samples of each session's matches read by hand.
 
 | Subject | Kind | Bills by session | Per 1,000 | Why |
 |---|---|---|---|---|
-| Alcohol laws | spike | 56, 16 | 36.5, 10.6 | The scan's strongest real phrase ("alcohol" 45 to 15, z -3.9): 2023 had dozens of bills revising alcohol licenses, beer and wine rules; 2025 far fewer. Samples all on topic. |
+| Property taxes | rise | 11, 17, 19, 30, 40, 45 | 10.4, 16.3, 16.7, 26.8, 26.1, 29.7 | z +3.7, steady: exemptions, credits, relief, levies. Samples all on topic. |
+| Housing and zoning | rise | 12, 18, 10, 28, 43, 34 | 11.3, 17.3, 8.8, 25.0, 28.0, 22.4 | z +2.7, just under the bar but a clear step up from 2021 (duplex-fourplex zoning, lot sizes, subdivision review, parking minimums). Kept, marked here as under the bar. |
+| Child abuse and neglect | rise | 4, 9, 7, 13, 30, 20 | 3.8, 8.6, 6.1, 11.6, 19.6, 13.2 | z +3.3: CPS investigations, removals, reporting, foster care. The pattern leaves out abuse of vulnerable adults. |
+| Marijuana | rise | 6, 3, 6, 16, 22, 15 | 5.6, 2.9, 5.3, 14.3, 14.3, 9.9 | z +3.0: a step up after the 2020 initiative legalized adult use (taxes, licensing, local option). |
+| Elections and voting | rise | 30, 28, 33, 30, 61, 68 | 28.2, 26.9, 28.9, 26.8, 39.8, 44.9 | z +3.2: flat through 2021, then half again as many (ballots, voter registration, judicial and partisan elections). General, but the shift is real and steady. |
+| Alcohol laws | spike | 16, 18, 17, 13, 56, 16 | 15.1, 17.3, 14.9, 11.6, 36.5, 10.6 | Kept from the first pick: 2023's licensing and beer and wine bills, about three times any other session. |
+| Oil and gas | spike | 19, 6, 6, 4, 5, 1 | 17.9, 5.8, 5.3, 3.6, 3.3, 0.7 | z -4.5: 2015's Bakken-era impact fees, revenue sharing and damage mitigation, then fewer each session. "oil/gas" added for 2023's titles. |
+| Net metering | spike | 8, 11, 0, 2, 1, 0 | 7.5, 10.6, 0.0, 1.8, 0.7, 0.0 | z -4.5: 2015 and 2017's fights over the net metering cap and rates, then almost none. |
 
 Wording pairs: none found.
 
-Looked at and left out: artificial intelligence (0 to 6) is too few; "voter" (2 to 12), "attorney" (1 to 11) and child protective services (8 to 0) are small and mixed.
+Looked at and left out: courts and judges (14 to 23 a session, but "justice" and "election judges" mix in unrelated bills);
+AI (0 to 6) too few; public defender (6, 8, 7, 1, 1, 1) under 8 in every session; "clarify", "establish", "regarding" are
+drafting words; water (24 to 27, a dip in 2021) has no direction.
+
 
 ## North Carolina (nc)
 
@@ -423,15 +437,23 @@ Reviewed and dropped: vaping and nicotine (0 to 8, z +2.5) is under the bar.
 
 ## North Dakota (nd)
 
-Sessions shown: 2023 (959 bills), 2025 (1,051). Two sessions only, so only the one clear shift.
+**Redone 2026-11-24 with the light history** (states/LIGHT.md): sessions 2015, 2017, 2019, 2021 (light: 865, 783, 925, 883
+bills), 2023 (959), 2025 (1,051). Matched on title and summary (the light files have both). The first pick, tribal
+governments and schools (16.2, 10.2, 8.6, 15.9, 6.3, 18.1 per 1,000), is no trend over ten years: 2023 was its low point.
 
 | Subject | Kind | Bills by session | Per 1,000 | Why |
 |---|---|---|---|---|
-| Tribal governments and schools | rise | 3, 17 | 3.1, 16.2 | The scan's top policy phrase ("tribal" 2 to 15, z +3.0): tribal schools in school bills, tribal-state compacts, tribal consultation, tribal arrest warrants, tribal land and oil taxes. Samples all on topic. |
+| Charitable gaming and gambling | rise | 2, 8, 9, 12, 22, 18 | 2.3, 10.2, 9.7, 13.6, 22.9, 17.1 | z +3.6: electronic pull tabs, gaming taxes and proceeds, sports betting, tribal gaming compacts. Samples all on topic. |
+| Memorial highways and bridges | rise | 0, 0, 1, 1, 7, 10 | 0.0, 0.0, 1.1, 1.1, 7.3, 9.5 | z about +3.3: bills naming a highway, bridge or interchange for veterans and fallen officers, from none to about ten a session. A narrow kind of bill, but a real change; kept so North Dakota has three subjects (the owner may drop it). |
+| COVID-19 | spike | 0, 0, 0, 10, 1, 0 | 0.0, 0.0, 0.0, 11.3, 1.0, 0.0 | 2021's pandemic bills (relief money, liability, mandates). |
 
-Wording pairs: none found.
+Wording pair: "Department of Human Services" (31.2, 10.2, 15.1, 9.1, 0, 0 per 1,000) to "Department of Health and Human
+Services" (0, 0, 0, 1.1, 28.2, 15.2): the two departments were merged into one in 2022.
 
-Looked at and left out: "time" (0 to 11) mixes unrelated bills (central standard time, parenting time, instructional time); "schools" (5 to 19) and tax credits (18 to 7) are small and mixed; no candidate subject reached the bar.
+Looked at and left out: "health and human", "department of human" (the merger, as the wording pair); "defraying the expenses"
+(2017's budget bills, a drafting change); "legislative management report" (study reports, a kind of bill); primary-residence
+property tax credits (2015's homestead credit bills were as many); oil and gas (28.9 to 10.5, no steady direction after 2015).
+
 
 ## Nebraska (ne)
 
@@ -540,15 +562,25 @@ Looked at and left out: Medicaid (32 to 69: real, but generic and mostly program
 
 ## Oregon (or)
 
-Sessions shown: 2022 (263 bills, short), 2023 (2,898, long), 2024 (271, short), 2025 (3,360, long), 2026 (290, short). The short sessions are too small to compare on their own, so the scan was also run on 2023 against 2025. That comparison is dominated by a change in how the summaries are written ("directs department" 127 to 0, "directs the department" 0 to 125: the 2025 summaries keep the articles), so phrase shares say little.
+**Redone 2026-11-24 with the light history** (states/LIGHT.md): long sessions 2015, 2017, 2019, 2021 (light: 2,700, 2,725,
+2,663, 2,434 bills), 2023 (2,898), 2025 (3,360); short sessions 2016, 2018, 2020, 2022, 2024, 2026 (237 to 290 bills). The
+scan compared the long sessions (2015 and 2017 against 2023 and 2025). Its strongest phrases are summary style ("directs the
+department", "requires the Oregon", "study", which rose from 86 to 645 as study bills multiplied and 2025's summaries
+changed), not subjects. The chart shows every session, so the short ones (a tenth the size) make the lines zigzag.
 
-| Subject | Kind | Bills by session | Per 1,000 | Why |
+| Subject | Kind | Bills by session (2015-2026) | Per 1,000 | Why |
 |---|---|---|---|---|
-| COVID-19 | spike | 6, 18, 3, 2, 0 | 22.8, 6.2, 11.1, 0.6, 0.0 | The one candidate that clearly fell in both the long sessions (18 to 2, z -3.9) and the short ones (6, 3, 0): vaccine mandates, relief, emergency-era rent. |
+| Housing | rise | 36, 12, 73, 6, 72, 12, 80, 9, 125, 17, 128, 11 | long: 13.3, 26.8, 27.0, 32.9, 43.1, 38.1 | z +6.3 in the long sessions: affordable housing finance, rent, land divisions and urban growth boundaries for housing. Samples all on topic. |
+| Wildfire | rise | 3, 0, 7, 2, 7, 6, 43, 5, 38, 5, 45, 4 | long: 1.1, 2.6, 2.6, 17.7, 13.1, 13.4 | z +6.4: a step up after the September 2020 fires (response plans, insurance, rebuilt homesteads, utility liability). |
+| COVID-19 | spike | 0, 0, 0, 0, 0, 0, 38, 6, 18, 3, 2, 0 | 2021: 15.6; 2022: 22.8 | Kept from the first pick, now with five sessions of none before it. |
 
-Wording pairs: none (the summaries' change is a house style, not a change of words for one thing).
+Wording pair: "Oregon Liquor Control Commission" (6.3 to 19.4 per 1,000 through 2021, then 0) to "Oregon Liquor and Cannabis
+Commission" (0 until 2022, then 3.4 to 11.1): the commission was renamed in 2021.
 
-Looked at and left out: vaccines (24 to 5 in the long sessions, but most 2023 hits are COVID-19 vaccine mandates already counted); property tax (no steady direction); every rising phrase in the long-session scan was a summary-style change.
+Looked at and left out: the corporate activity tax (0, 0, 3, 10, 20, 22 in the long sessions) is a new tax's upkeep since 2019,
+not a change of subject; behavioral health (3 to 45) and mental health (27 to 64) rise together, partly a change of words;
+water (35 to 92) mixes water rights, drinking water and water quality; task forces fell (87 to 0), a drafting change.
+
 
 ## Pennsylvania (pa)
 
