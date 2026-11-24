@@ -71,8 +71,9 @@ def write(state, session, recs, parties, source, data, P=None):
     body = {"format": FORMAT, "state": state, "session": session, "source": source,
             "fetched": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "has": has, "lacks": lacks,
             # The converter's parties ({(house, name): "D"/"R"}) as [house, name, party] rows, for the sponsors named here.
-            "counts": counts(recs), "parties": sorted([k[0], k[1], p] for k, p in (parties or {}).items()
-                                                      if isinstance(k, tuple) and len(k) == 2 and k[1] in names),
+            "counts": counts(recs), "parties": sorted(([k[0], k[1], p] for k, p in (parties or {}).items()
+                                                       if isinstance(k, tuple) and len(k) == 2 and k[1] in names),
+                                                      key=lambda x: [str(y or "") for y in x]),  # (a house or name may be None)
             "noTopic": sum(1 for r in recs if not r.get("topics")), "unmappedCommittees": unmapped(recs, P) if P else [],
             "bills": [light_record(r) for r in recs]}
     tmp = path_of(data, session) + ".tmp"
