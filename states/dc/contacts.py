@@ -167,10 +167,13 @@ def build(session):
     pages = json.load(open(os.path.join(FOLDER, "pages.json")))
     ms = [member(u) for u in pages["members"]]
     # LegiScan's ids (the roll calls'), by name.
-    folder = L.folders(P.DATA)[max(C.sessions())]
-    ids = {name_key(L.text(p.get("name"))): p["people_id"] for p in L.people(folder).values() if p.get("state_id") == 51}
+    # (With LIMS as the source, people are matched by name (the "key" below) and LegiScan's files, when still there, give
+    # only these ids and a party for a page that names none.)
+    folder = L.folders(P.DATA).get(max(L.folders(P.DATA) or [0]))
+    lpeople = [p for p in (L.people(folder).values() if folder else []) if p.get("state_id") == 51]
+    ids = {name_key(L.text(p.get("name"))): p["people_id"] for p in lpeople}
     # (A member whose page names no affiliation yet, Jamal Holtz's in November 2026: LegiScan's party.)
-    lparty = {p["people_id"]: p.get("party") or "" for p in L.people(folder).values() if p.get("state_id") == 51}
+    lparty = {p["people_id"]: p.get("party") or "" for p in lpeople}
     sponsors = set()
     if not latest:
         for r in C.load_session(session)[0]:

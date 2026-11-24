@@ -7,6 +7,55 @@ Started 2026-11-22. Shared conventions, the data traps list and the site's code 
   use the API despite robots.txt's blanket "Disallow: /": the Council issues keys so programs can use it. Gently: one
   request every few seconds, identified as statebilltracker.org, only changed records; LegiScan stays as the fallback until
   the LIMS build matches or beats it.
+- **LIMS as the source (built 2026-11-24, not yet switched on GitHub):** `states/dc/fetch_lims.py` reads the API
+  (https://lims.dccouncil.gov/api/v2/PublicData/, spec /api-docs/v2.0/swagger.json) into data/dc/lims/<period>/, one request
+  every 3 seconds with the User-Agent naming statebilltracker.org:
+  - `POST BulkData/1/<period>` (category 1, "Bill"): every bill of the period (permanent, emergency, temporary,
+    congressional review emergency; 882 for the 26th Council on 2026-11-24) with its whole history in LIMS's wording, act
+    and law numbers and status, in one ~2 MB answer: every run for a running period, once a day for a finished one.
+  - `GET LegislationDetails/<B26-0164>` for each permanent bill whose list entry changed (`sig()`: history, status,
+    numbers, title, referral, introducers) or is a month old (20 a run): introducers, co-introducers and co-sponsors as
+    lists ("Allen, Charles"), the Secretary's abstract in `additionalInformation` ("BILL SUMMARY - As introduced, ...", often
+    after a referral note), hearings and mark-ups (dates, notices, reports, videos), the Mayor's and Congress's review
+    dates, and every meeting action with its vote member by member ("Roll Call" and "Voice Vote" alike: Yes, No, Present,
+    Absent). The first copy is about 945 requests (~50 minutes for both periods); later runs a few.
+  - `GET Members/<period>` once a day: the period's Councilmembers with start and end dates ("Trayon White, Sr." ended
+    2025-02-04 and votes again from his return; "Robert C. White, Jr." ended 2026-11-03).
+  - `CouncilPeriods` each run: the periods in the window (states/window.py), 27 once LIMS lists it (January 2, 2027).
+  `states/dc/lims_source.py` turns them into LegiScan's shape (people keyed by `name_key()`, names written "First Last" from
+  the member list, as LegiScan wrote them), so convert.py serves both: LIMS once every period in data/dc/lims/ has its whole first copy (`whole` in its meta.json), unless
+  `DC_SOURCE=legiscan` (`DC_SOURCE=lims` insists). LIMS names no parties: members' pages (contacts_<session>.json), and
+  `FORMER_PARTIES` in convert.py for members who have left (LegiScan's, read 2026-11-24). contacts.py no longer needs
+  LegiScan's files (it uses their ids and a party for a page with none, Jamal Holtz's, while they're there).
+  LIMS's list words some lines differently from LegiScan's copies, and `decode()` reads both: "B26-0164 Introduced by
+  Chairman Mendelson at Office of the Secretary" (LegiScan: "Introduced in Office of the Secretary"), "Public Hearing on
+  B26-0164 View Public Hearing Record" or "Roundtable on B25-0012" (LegiScan: "Public Hearing Held"; listed ahead of time
+  the same way, so `agendas()` reads them: 6 bills on 4 upcoming hearings on 2026-11-24, LegiScan's copies none), "...
+  Published in the District of Columbia Register". LIMS's list has no "Committee Report Filed" lines (193 in LegiScan's
+  2023-24): `lims_source.py` adds one on each mark-up's `reportFiledDate` from the details, within the bill's own dates
+  (the budget acts' details list later years' reports). A mark-up with no committee print or report a month later
+  (B25-0743, B26-0121: "Agendized; not considered" or nothing since) is not read as the committee's approval: the history
+  says "Committee mark-up scheduled; no committee print or report filed" and the bill stays in committee (7 bills of
+  2023-24, 6 of 2025-26 moved from "on the floor" back to committee; the LegiScan path is unchanged).
+  What changed against LegiScan (both read 2026-11-24): the same 467 and 478 permanent bills. 2025-26: 9 bills LegiScan
+  hadn't yet seen go to the Mayor (B26-0012 ... sent that day); 12 more with "What it does" (462 of 478; LegiScan's copies
+  lag, and keep the "BILL SUMMARY-" label on some) and the fiscal notes added since. 2023-24: 401 summaries (LegiScan
+  352); B25-0010's law number (L25-0260, March 2025), which LegiScan never got. Every committee of a sequential referral or
+  re-referral (LegiScan kept the first: B26-0103 "Facilities, and Committee on Business and Economic Development",
+  re-referred to Facilities and Human Services), now in the history and the committee filter (`decode()` splits them; it
+  helps the LegiScan path too, whose B26-0164 line named three committees as one). Votes as LIMS has them now (45 bills'
+  readings differ): LegiScan labels some first readings "Final" (B26-0589, B26-0708, B26-0770, B25-0126: two "final"
+  readings), files a 13-0 final reading on B25-0997, which LIMS shows expired with no reading (a companion act's vote),
+  and has older tallies (B26-0109's first reading: LIMS has Brooke Pinto absent; B26-0016's readings were changed after
+  LegiScan copied them). Emergency and temporary acts are told apart by LIMS's own kind (`kind_of()`), not the title. A
+  voters' initiative (B25-1075) names "Voters" as its introducer: left out, as LegiScan did.
+  **To switch GitHub to LIMS** (not done; the owner decides): in .github/states.json's "LegiScan states" entry, run
+  `python3 states/dc/fetch_lims.py --minutes 20` after `legiscan.py tn ok me ri vt dc` (the job's 60 minutes are shared;
+  the first copy takes about 50 minutes, so it finishes over three runs, newest activity first, and the build keeps reading
+  LegiScan's copy until every period's first copy is whole); add `DC_LIMS_KEY: ${{ secrets.DC_LIMS_KEY }}` to download.yml's
+  fetch step env (beside LEGISCAN_API_KEY). data/dc is already in that job's cache paths and publish.yml's restore step, so
+  nothing else changes. Once LIMS has run a few weeks, drop `dc` from legiscan.py's command (it saves LegiScan queries) and
+  set DC_SOURCE=legiscan only to fall back.
 - **Source (decided by necessity, for the owner to confirm).** The Council's own system, LIMS (lims.dccouncil.gov), has a
   documented public API (Swagger at /api/help/index.html, spec /api-docs/v2.0/swagger.json: PublicData/BulkData,
   LegislationDetails, Members, Committees, LegislationVoteDetails ...), but (1) every endpoint answers 401 "Valid Access

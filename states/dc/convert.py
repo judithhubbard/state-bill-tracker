@@ -1,12 +1,13 @@
 """The District of Columbia's bills in the shape build_data.py reads. A page per two-year Council Period (2025 is Council
 Period 26, 2025-26).
 
-Source: LegiScan's files for the Council (legiscan.py into data/dc/legiscan/<session_id>/; CC BY 4.0, credited on every
-page), read with the shared helpers in states/legiscan_convert.py (bills(): each bill brought up to date from the last
-master list; people(); folders(); fetched()). The Council's own Legislative Information Management System (LIMS,
-lims.dccouncil.gov) has a public API, but it needs a developer key from a sign-up form, and LIMS's robots.txt says
-"Disallow: /" for every reader: states/dc/NOTES.md. LegiScan copies its records from LIMS (each bill's `state_link` is
-its LIMS page), with the same history wording.
+Source (2026-11-24): the Council's own Legislative Information Management System (LIMS, lims.dccouncil.gov), through its
+API with the owner's developer key (states/dc/fetch_lims.py into data/dc/lims/<period>/, read by states/dc/lims_source.py
+into the shape below), whenever that folder has a bill list; otherwise, or with DC_SOURCE=legiscan, LegiScan's files for
+the Council (legiscan.py into data/dc/legiscan/<session_id>/; CC BY 4.0), read with the shared helpers in
+states/legiscan_convert.py (bills(): each bill brought up to date from the last master list; people(); folders();
+fetched()). LegiScan copies its records from LIMS (each bill's `state_link` is its LIMS page), with the same history
+wording, so both give the same records: states/dc/NOTES.md.
 
 One house: the Council ("B", P.LOWER; bills "B26-0001" are "B1" here, shown "B 1"). Only permanent bills are records.
 Every act the Council passes is a "B" bill, and about half of them are emergency acts (one reading, in effect up to 90
@@ -39,10 +40,12 @@ until the law number (STATE.lawText()). Votes: the readings' and overrides' roll
 current members' ("B:3", the at-large "B:9a" ...: contacts.py) in the current Council Period, names otherwise.
 """
 import json, os, re
-from datetime import date
+from datetime import date, timedelta
 from collections import Counter, defaultdict
 
+from fetch_contacts import name_key
 from states import legiscan_convert as L
+from states.dc import lims_source as S
 from states.dc import profile as P
 from states.undated import settle
 
@@ -57,8 +60,24 @@ SHORT_TERM = re.compile(r"\b(Emergency|Temporary)(?: (?:Amendment|Approval|Decla
 MONTHS = {m: i for i, m in enumerate("jan feb mar apr may jun jul aug sep oct nov dec".split(), 1)}
 
 
+# LIMS once every period downloaded is whole (states/dc/fetch_lims.py), unless DC_SOURCE=legiscan; DC_SOURCE=lims insists.
+LIMS = os.environ.get("DC_SOURCE") == "lims" or (os.environ.get("DC_SOURCE") != "legiscan" and S.ready())
+
+
+def folders():
+    return S.available() if LIMS else L.folders(P.DATA)
+
+
 def sessions():
-    return list(L.folders(P.DATA))
+    return list(folders())
+
+
+def source_bills(folder):
+    return S.bills(folder) if LIMS else L.bills(folder)
+
+
+def source_people(folder):
+    return S.people(folder) if LIMS else L.people(folder)
 
 
 def number(n):
@@ -82,7 +101,11 @@ def iso(text):
 
 
 def kind_of(b):
-    """"emergency", "temporary" or "" (a permanent bill), from the title as introduced."""
+    """"emergency", "temporary" or "" (a permanent bill): LIMS's own kind ("Congressional Review Emergency Bill" is an
+    emergency act), else the title as introduced (LegiScan's records have no kind)."""
+    k = b.get("kind") or ""
+    if k:
+        return "emergency" if "Emergency" in k else "temporary" if "Temporary" in k else ""
     m = SHORT_TERM.search(base_title(b.get("title")))
     return m.group(1).lower() if m else ""
 
@@ -124,7 +147,9 @@ def comm_name(c):
 
 
 def roll_calls(folder, b):
-    """The bill's roll calls (vote/<id>.json), oldest first."""
+    """The bill's roll calls (vote/<id>.json; LIMS's records carry their own), oldest first."""
+    if "_calls" in b:
+        return sorted(b["_calls"], key=lambda r: r.get("date") or "")
     out = []
     for v in b.get("votes") or []:
         r = (L.read_json(os.path.join(folder, "vote", f"{v['roll_call_id']}.json")) or {}).get("roll_call") or v
@@ -139,7 +164,10 @@ def seats(session):
         out = {}
         if session == max(sessions() or [session]):
             c = L.read_json(os.path.join(P.DATA, f"contacts_{session}.json"), {}) or {}
-            out = {int(p["id"]): sid for sid, p in (c.get("people") or {}).items() if str(p.get("id", "")).isdigit()}
+            if LIMS:  # (LIMS's people are keyed by name: lims_source.py)
+                out = {p.get("key") or name_key(p.get("name")): sid for sid, p in (c.get("people") or {}).items()}
+            else:
+                out = {int(p["id"]): sid for sid, p in (c.get("people") or {}).items() if str(p.get("id", "")).isdigit()}
         _SEATS[session] = out
     return _SEATS[session]
 
@@ -184,12 +212,18 @@ def decode(t):
     veto, override, congress, law, withdrawn, killed, amend, None (kept as written, changes nothing)."""
     m = re.match(r"(?:Re-?)?[Rr]eferred to (?:the )?(Committee .+?)(?: with comments from .*)?$", t)
     if m:
-        return "refer", {"comm": comm_name(m.group(1))}
-    if t.startswith("Introduced"):
+        # (LIMS names every committee of a sequential or joint referral: "Referred to Committee on Housing, Committee on
+        # Human Services, and Committee of the Whole"; "Re-Referred to Committee on Facilities, and Committee on Human
+        # Services". The first is where the bill is now.)
+        comms = [comm_name(c) for c in re.split(r",\s*(?:and\s+)?(?=(?:the\s+)?Committee\b)|\s+and\s+(?=(?:the\s+)?Committee on\b)", m.group(1)) if c.strip()]
+        return "refer", {"comm": comms[0], "comms": comms}
+    if re.match(r"(?:B\d+-\d+ )?Introduced\b", t):  # (LIMS: "B26-0164 Introduced by Chairman Mendelson at Office of the Secretary")
         return "intro", {}
     if t.startswith("Retained by the Council"):
         return "retained", {}
-    if re.match(r"(?:Public|Roundtable) Hearing Held", t):
+    # (LegiScan: "Public Hearing Held"; LIMS: "Public Hearing on B26-0164 View Public Hearing Record", "Roundtable on B25-0012";
+    # LIMS lists a hearing ahead of time the same way, dated the hearing's day: agendas().)
+    if re.match(r"(?:Public|Roundtable) Hearing Held|(?:Public Hearing|Roundtable) on B\d", t) or t == "Public Hearing":
         return "hearing", {}
     if re.match(r"Committee Mark-?up of", t):
         return "markup", {}
@@ -228,14 +262,15 @@ def decode(t):
 def plain(t, kind, extra, b, session):
     """A history line as the page shows it."""
     if kind == "refer":
-        c = extra["comm"]
-        return f"Referred to the {c}" if c.startswith("Committee") else f"Referred to the Committee on {c}"
+        one = lambda c: f"the {c}" if c.startswith("Committee") else f"the Committee on {c}"
+        cs = [one(c) for c in extra.get("comms") or [extra["comm"]]]
+        return "Referred to " + (cs[0] if len(cs) == 1 else ", ".join(cs[:-1]) + (", and " if len(cs) > 2 else " and ") + cs[-1])
     if kind == "markup":
         return "Marked up by the committee"
     if kind == "report":
         return "Committee report filed (approved by the committee)"
-    if t == "Public Hearing":
-        return "Public hearing"
+    if kind == "hearing":
+        return "Roundtable held" if t.startswith("Roundtable") else "Public hearing held"
     if kind == "first":
         return "First reading" + (" (consent agenda)" if t.endswith(", CC") else "")
     if kind == "final":
@@ -259,7 +294,7 @@ def plain(t, kind, extra, b, session):
         return "Introduced"
     if kind == "retained":
         return "Kept by the full Council (no committee)"
-    m = re.match(r"Notice of Intent to Act on .* Published in the DC Register", t)
+    m = re.match(r"Notice of Intent to Act on .* Published in the (?:DC|District of Columbia) Register", t)
     if m:
         return "Notice of intent to act published in the D.C. Register"
     if t.startswith("Act A") and "Published in DC Register" in t:
@@ -289,6 +324,7 @@ def record(session, folder, b, comps, ppl):
     calls = roll_calls(folder, b)
     steps = []   # (date, kind, text, extra)
     today = date.today().isoformat()
+    recent = (date.today() - timedelta(days=30)).isoformat()
     for _, a in hist:
         d = (a.get("date") or "")[:10]
         t = L.text(a.get("action"))
@@ -297,6 +333,9 @@ def record(session, folder, b, comps, ppl):
             # A step LIMS lists ahead of time: an upcoming hearing or mark-up (agendas()), or a referral that takes effect
             # at the next legislative meeting (B26-0883: introduced November 16, 2026, "Referred" December 1).
             continue
+        if k == "markup" and d in (b.get("_markups") or {}) and not b["_markups"][d] and d < recent:
+            # (LIMS's details: a mark-up with no committee print or report a month on wasn't the committee's approval.)
+            k, t = None, "Committee mark-up scheduled; no committee print or report filed"
         if k in ("first", "final"):
             rc = passed_call(calls, d, "First Reading" if k == "first" else "Final Reading")
             if rc and not rc[2]:
@@ -380,7 +419,7 @@ def record(session, folder, b, comps, ppl):
         stage = 1
 
     title = title_of(b)
-    refs = [e["comm"] for _, k, _, e in steps if k == "refer"]
+    refs = list(dict.fromkeys(c for _, k, _, e in steps if k == "refer" for c in e.get("comms") or [e["comm"]]))
     topics = []
     for c in refs:
         tp = P.COMMITTEE_TOPICS.get(c)
@@ -531,9 +570,9 @@ def load_session(session):
     """(records, number -> record index, fetched time, delegation)."""
     if session in _LOADED:
         return _LOADED[session]
-    folder = L.folders(P.DATA)[session]
-    bills = [b for b in L.bills(folder) if b.get("bill_type") == "B" and number(b.get("bill_number"))]
-    ppl = L.people(folder)
+    folder = folders()[session]
+    bills = [b for b in source_bills(folder) if b.get("bill_type") == "B" and number(b.get("bill_number"))]
+    ppl = source_people(folder)
     comp = companions(session, bills)
     recs, index = [], {}
     for b in sorted(bills, key=lambda b: int(number(b["bill_number"])[1:])):
@@ -580,7 +619,7 @@ def load_session(session):
     os.makedirs(P.DATA, exist_ok=True)
     json.dump(texts, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
     settle(recs, folder)  # bills with no history yet: never dated in the future (states/undated.py)
-    _LOADED[session] = (recs, index, L.fetched(folder, P.TIMEZONE), {"SENATE": [], "ASSEMBLY": []})
+    _LOADED[session] = (recs, index, (S.fetched if LIMS else L.fetched)(folder, P.TIMEZONE), {"SENATE": [], "ASSEMBLY": []})
     return _LOADED[session]
 
 
@@ -594,8 +633,8 @@ def agendas(session):
         return {}
     today = date.today().isoformat()
     out = {}
-    folder = L.folders(P.DATA)[session]
-    for b in L.bills(folder):
+    folder = folders()[session]
+    for b in source_bills(folder):
         n = number(b.get("bill_number"))
         if b.get("bill_type") != "B" or not n or kind_of(b):
             continue
@@ -605,7 +644,7 @@ def agendas(session):
             k, extra = decode(t)
             if k == "refer":
                 comm = extra["comm"]
-            elif d >= today and comm and (k == "markup" or t == "Public Hearing"):
+            elif d >= today and comm and k in ("markup", "hearing"):
                 e = [f"{HOUSE[H]} {comm}", f"{d}T00:00:00", "markup" if k == "markup" else "hearing"]
                 if e not in out.setdefault(n, []):
                     out[n].append(e)
@@ -613,13 +652,30 @@ def agendas(session):
 
 
 def parties(session, recs):
-    """(house, name) -> party, from LegiScan's people records (Democrats, independents; "I" counts as neither party)."""
+    """(house, name) -> party, from LegiScan's people records (Democrats, independents; "I" counts as neither party); with
+    LIMS (which names no parties), the Councilmembers' pages (contacts_<session>.json, the latest's for members still
+    sitting) and, for members who have left, FORMER_PARTIES."""
+    if LIMS:
+        folder = folders().get(session)
+        words = {"Democratic": "D", "Republican": "R", "Independent": "I"}
+        by_key = dict(FORMER_PARTIES)
+        for s in sorted({session, max(sessions() or [session])}):
+            c = L.read_json(os.path.join(P.DATA, f"contacts_{s}.json"), {}) or {}
+            for p in (c.get("people") or {}).values():
+                if words.get(p.get("party")):
+                    by_key[p.get("key") or name_key(p.get("name"))] = words[p["party"]]
+        return {(H, p["name"]): by_key[k] for k, p in (S.people(folder) if folder else {}).items() if k in by_key}
     folder = L.folders(P.DATA).get(session)
     out = {}
     for p in (L.people(folder) if folder else {}).values():
         if p.get("party") in ("D", "R", "I") and re.match(r"SD-|HD-", p.get("district") or "") and p.get("state_id") == 51:
             out[(H, L.text(p.get("name")))] = p["party"]
     return out
+
+
+# Members who have left the Council, whose pages dccouncil.gov no longer has (LIMS names no parties): the parties LegiScan
+# gave them (read 2026-11-24), as they served. Doni Crawford (interim, February-July 2026) had none there.
+FORMER_PARTIES = {"vincent gray": "D", "kenyan mcduffie": "I", "robert white": "D", "trayon white": "D"}
 
 
 def checks(session):
