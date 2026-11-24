@@ -2,6 +2,11 @@
 
 Started 2026-11-22. Shared conventions, the data traps list and the site's code notes are in CLAUDE.md.
 
+- **LIMS decided (2026-11-24, the owner's decision):** the owner registered for a LIMS developer key (~/.dc_lims_key, GitHub
+  secret DC_LIMS_KEY; header "Authorization: <key>"; tested: /api/v2/PublicData/CouncilPeriods answers 200) and chose to
+  use the API despite robots.txt's blanket "Disallow: /": the Council issues keys so programs can use it. Gently: one
+  request every few seconds, identified as statebilltracker.org, only changed records; LegiScan stays as the fallback until
+  the LIMS build matches or beats it.
 - **Source (decided by necessity, for the owner to confirm).** The Council's own system, LIMS (lims.dccouncil.gov), has a
   documented public API (Swagger at /api/help/index.html, spec /api-docs/v2.0/swagger.json: PublicData/BulkData,
   LegislationDetails, Members, Committees, LegislationVoteDetails ...), but (1) every endpoint answers 401 "Valid Access
