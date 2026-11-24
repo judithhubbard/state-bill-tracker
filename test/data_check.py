@@ -925,10 +925,49 @@ def check_balance(state):
                                                for c, ch in b["chambers"].items()) + f" | governor {b['governor'][1]}")
 
 
+def check_light(state):
+    """The state's light history (data/<st>/light_<session>.json.gz, states/LIGHT.md): its counts to compare with the
+    official totals (LOOK), and what can't be right (FAIL): a date in the future, a law number on a bill that isn't a law,
+    passage flags that disagree with the stage, a law with no signature, chapter or other date where the session's laws
+    otherwise have one."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    import states.light as LH
+    P = importlib.import_module(f"states.{state}.profile")
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    for s in LH.sessions_on_disk(P.DATA):
+        b = LH.read(P.DATA, s)
+        if not b:
+            say(state, "FAIL", f"light {s}: unreadable")
+            continue
+        bills = b["bills"]
+        say(state, "LOOK", f"light {s}: {b['counts']} (compare with the official totals); lacks {b['lacks'] or 'nothing'}; "
+                            f"{b.get('noTopic', 0)} with no topic")
+        future = sorted({x["nums"][0] for x in bills if any(str(d)[:10] > tomorrow for d in
+                         [x.get("first") or "", x.get("last") or ""] + [p for d in x.get("keyDates") or [] for p in str(d).split(";")])})
+        if future:
+            say(state, "FAIL", f"light {s}: {len(future)} bills dated in the future, e.g. {future[:4]}")
+        chap = [x["nums"][0] for x in bills if x.get("chapter") and x.get("stage") != 5]
+        if chap:
+            say(state, "FAIL" if len(chap) > 0.005 * len(bills) else "LOOK",
+                f"light {s}: {len(chap)} law numbers on bills that aren't laws, e.g. {chap[:4]}")
+        one_house = getattr(P, "UNICAMERAL", False) or state == "ne"
+        both = [x["nums"][0] for x in bills if not one_house and x.get("stage") in (3, 4, 5, 6)
+                and "const" not in (x.get("topics") or []) and not (x.get("passedS") and x.get("passedA"))]
+        if both:
+            say(state, "FAIL" if len(both) > 0.005 * len(bills) else "LOOK",
+                f"light {s}: {len(both)} bills past both houses without both passage flags, e.g. {both[:4]}")
+        laws = [x for x in bills if x.get("stage") == 5]
+        bare = [x["nums"][0] for x in laws if not x.get("chapter") and not (x.get("keyDates") or [""] * 7)[5]]
+        if laws and "chapter" in b["has"] and bare:
+            say(state, "FAIL" if len(bare) > 0.02 * len(laws) else "LOOK",
+                f"light {s}: {len(bare)} of {len(laws)} laws with neither a chapter nor a signing date, e.g. {bare[:4]}")
+
+
 def main():
     for state in (sys.argv[1:] or STATES):
         check(state)
         check_balance(state)
+        check_light(state)
     print(f"\n{len(fails)} problem(s)" + ("".join(f"\n- {f}" for f in fails) if fails else ""))
     sys.exit(1 if fails else 0)
 

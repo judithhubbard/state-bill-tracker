@@ -1,0 +1,58 @@
+name: Light history
+
+# Downloads a state's older sessions once, as each bill's outcome (states/LIGHT.md, states/light.py), and commits each
+# session's data/<st>/light_<session>.json.gz as soon as it is written, so a run that stops partway keeps what it got
+# (a session already in git is skipped; finished sessions don't change). Run by hand:
+#   gh workflow run light-history.yml -f state=mt
+#   gh workflow run light-history.yml -f state=wy -f sessions="2015 2016"
+# The state needs a hook, states/<st>/light.py (its SESSIONS and how to download one). The downloads happen here, never
+# on the owner's computer; each hook keeps its source's pace (Montana: ten seconds between requests).
+on:
+  workflow_dispatch:
+    inputs:
+      state:
+        description: "State code with a states/<st>/light.py (mt, wy, nd, or)"
+        type: string
+        required: true
+      sessions:
+        description: "Sessions to read, space-separated (default: the hook's SESSIONS)"
+        type: string
+        required: false
+
+permissions:
+  contents: write           # to commit data/<st>/light_*.json.gz
+
+concurrency:
+  group: light-${{ inputs.state }}
+  cancel-in-progress: false
+
+jobs:
+  light:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Read the sessions, committing each
+        env:
+          ST: ${{ inputs.state }}
+          WANT: ${{ inputs.sessions }}
+        run: |
+          set -u
+          if [ ! -f "states/$ST/light.py" ]; then echo "No states/$ST/light.py"; exit 1; fi
+          SESSIONS="${WANT:-$(python3 -c "import importlib,sys; sys.path.insert(0,'.'); print(' '.join(map(str, importlib.import_module('states.$ST.light').SESSIONS)))")}"
+          echo "Sessions: $SESSIONS"
+          for s in $SESSIONS; do
+            python3 states/light.py "$ST" "$s" || { echo "$ST $s: failed"; continue; }
+            if [ -f "data/$ST/light_$s.json.gz" ]; then
+              git add "data/$ST/light_$s.json.gz"
+              if ! git diff --cached --quiet; then
+                git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+                  commit -q -m "Light history: $ST $s"
+                for i in 1 2 3; do git pull -q --rebase && git push -q && break; sleep 5; done
+              fi
+            fi
+          done
+          python3 states/light.py --counts "$ST"

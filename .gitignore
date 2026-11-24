@@ -192,3 +192,6 @@ agenda_log/
 data/dc/*
 !data/dc/district_towns.json
 !data/dc/district_names.json
+
+# Light history (states/LIGHT.md): older sessions as each bill's outcome, downloaded once by light-history.yml and kept in git.
+!data/*/light_*.json.gz
