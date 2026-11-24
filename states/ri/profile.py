@@ -145,5 +145,9 @@ def governor_on(day):
 # clearly in 2024-26. Matched on title and summary.
 TRENDS = [
     ("rise", "Affordable housing", r"low[- ](?:and|or) moderate[- ]income housing|comprehensive permit|affordable housing", True),
+    ("rise", "Landlords and tenants", r"landlord|(?<!lieu)tenant|eviction", True),
+    ("rise", "Climate", r"climate|greenhouse gas|carbon (?:emission|dioxide|capture)", True),
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|deepfake|\bgenerative|chatbot|algorithmic|synthetic media|automated decision)|\bAI\b", False),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
 ]
 WORDING = []

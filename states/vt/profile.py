@@ -124,5 +124,10 @@ def governor_on(day):
 # legislature are shown, so only the one clear shift. Matched on title and summary.
 TRENDS = [
     ("rise", "Artificial intelligence", r"(?i:artificial intelligence|deepfake|\bgenerative|chatbot|algorithmic|synthetic media|automated decision)|\bAI\b", False),
+    ("rise", "Housing", r"\bhousing\b", True),
+    ("rise", "Flooding", r"\bflood", True),
+    ("rise", "Immigration", r"immigra|undocumented|noncitizen|asylum", True),
+    ("rise", "PFAS (“forever chemicals”)", r"\bPFAS\b|perfluoro|polyfluoro|forever chemical", True),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
 ]
 WORDING = []

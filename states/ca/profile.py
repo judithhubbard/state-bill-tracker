@@ -132,6 +132,7 @@ TRENDS = [
     ("rise", "Wildfire", r"wildfire|wildland fire", True),
     ("rise", "Home insurance", r"residential property insurance|\bFAIR Plan|homeowners'?s? insurance|\bproperty insurance", True),
     ("rise", "E-bikes and scooters", r"electric[- ]assist(?:ed)? bicycle|electric bicycle|e-bikes?\b|electric (?:motorized )?scooter|motorized scooter", True),
+    ("rise", "Housing production", r"housing development|accessory dwelling|density bonus|by[- ]right|housing elements?\b|surplus land|prohousing|(?:zoning|planning)[^.;]{0,40}housing", True),
     ("spike", "COVID-19", r"covid|coronavirus|pandemic|sars-cov", True),
     ("spike", "Cannabis", r"cannabis|marijuana", True),
     ("spike", "Fentanyl", r"fentanyl|xylazine|carfentanil", True),
@@ -139,4 +140,9 @@ TRENDS = [
     ("spike", "Mental health", r"\bmental health", True),
     ("spike", "Catalytic converters", r"catalytic converter", True),
 ]
-WORDING = []
+WORDING = [
+    (("“marijuana”", r"marijuana"), ("“cannabis”", r"cannabis"),
+     "California's laws said “marijuana” until the Medicinal and Adult-Use Cannabis Regulation and Safety Act of 2017."),
+    (("“child care”", r"child care"), ("“childcare”", r"childcare"),
+     "The Legislative Counsel's digests have written “childcare” as one word since 2019."),
+]

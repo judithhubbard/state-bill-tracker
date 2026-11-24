@@ -103,5 +103,9 @@ def governor_on(day):
     return who
 
 
-TRENDS = []
+TRENDS = [
+    ("rise", "Property tax", r"property tax|ad valorem tax|homestead", True),
+    ("rise", "Gambling and gaming", r"gaming|gambling|skill (?:based amusement )?games|sports wager|pari-?mutuel|historic horse racing", True),
+    ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
+]
 WORDING = []

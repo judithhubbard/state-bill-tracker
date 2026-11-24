@@ -136,5 +136,6 @@ def governor_on(day):
 TRENDS = [
     ("rise", "Property tax", r"property tax|ad valorem|homestead exemption|property taxation", True),
     ("rise", "Data centers", r"data cent(?:er|re)s?\b", True),
+    ("spike", "Cannabis", r"cannabis|marijuana", True),
 ]
 WORDING = []
