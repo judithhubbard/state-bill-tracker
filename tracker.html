@@ -3313,7 +3313,7 @@ function nextSteps(b) {
   }
   // Inside the gold rule: the step (bold), its context in grey, then whom to ask. The side switch and your legislators
   // follow it, outside (2026-11-24, the owner: the block was too busy).
-  what = what.replace(/<p class="when">/g, '<p class="when m">');
+  what = what.replace(/<p class="when">/g, '<p class="when m">').replace(/<p>/g, '<p class="m">');
   return `<div class="next nx">${roadPic(b)}<div class="nxb">${head ? `<p class="t">${head}</p>` : ""}${what}${odds}${lines.join("")}</div>${stance}${repsLine()}${contacts}</div>`;
 }
 
