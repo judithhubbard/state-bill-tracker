@@ -375,6 +375,11 @@ jobs:
             data/senate_memos_*.json
           key: ny-bills-v1-latest
           restore-keys: ny-bills-v1-
+      # The light history files (data/<st>/light_<session>.json.gz) are kept in git, but each state's folder is also in
+      # its cache, saved with whatever copy was there then: a restored cache would put back a file git has since corrected
+      # (DC's light_2015 with "2016/11/29", 2026-11-24). Git's copies win.
+      - name: Use git's light history files
+        run: git checkout -- $(git ls-files 'data/*/light_*.json.gz') 2>/dev/null || true
       - name: Bring New York's old copies up to date
         if: steps.ny.outputs.cache-matched-key == ''
         env:
