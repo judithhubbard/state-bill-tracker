@@ -42,3 +42,24 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   "Committee postponed at request of sponsor (05/15/2025)" (143), "Withdrawn at sponsor's request (04/09/2025)" (29).
   `history_meetings()` in convert.py leaves out the calendar's meetings on those days (unless a later line schedules the
   bill for that day again): as of 2026-03-01, 2,828 entries instead of 2,914.
+- **Official agendas looked into (2026-11-24; not built):** the General Assembly's own agendas can't be read within its robots
+  rules. Its committee calendars and agendas are on status.rilegislature.gov (agendas.aspx, legislative_committee_calendar.aspx,
+  calendars.aspx), whose robots.txt is "User-agent: * / Disallow: /". On www.rilegislature.gov the agendas themselves are PDFs
+  in the committee document libraries, /Special/comdoc/<Committee> <year>/ (House) and /senators/SenateComDocs/ (Senate), which
+  robots.txt bars ("Blocks all testimony and agenda PDFs"). What is allowed is each library's HTML index (Forms/AllItems.aspx,
+  30 files a page, 5 s apart): file names, posting time, "Agenda Date" and one "Bill Number" per file, e.g.
+  "01-22-2026---Agenda--enr" posted 1/21 9:59 AM, and testimony files "01-22-2026--H7071--Adam_Yorks(...)--enr". That gives a
+  committee's agenda days and the bills someone sent testimony on, not the bills on an agenda, times, rooms or cancellations,
+  and it's incomplete: House Environment and Natural Resources 2026 (23 pages, 663 files) lists 11 agendas; LegiScan's
+  calendar has 11 meeting days; 10 agree. 3/31 has no agenda file but testimony on exactly the 10 bills LegiScan lists that
+  day (the hearing was held); 1/29 has an agenda file (posted 1/24) but no LegiScan entries, no testimony and no history line
+  for that committee and day. So LegiScan's calendar stays the source; the index could at most add a check, at about 400
+  requests a year for all committees, which isn't worth it. A request to Legislative Data Systems (Nicholas Budano,
+  Director, 401-222-3580) for permission to read status.rilegislature.gov's agendas, or an agenda feed, is the way to
+  official agendas.
+- **Could the Legislature's own sites replace LegiScan (surveyed 2026-11-24)?** Not for status: bill histories, sponsors and
+  agendas are on status.rilegislature.gov (barred, above). Allowed: floor roll calls by session day at
+  votes.rilegislature.gov (no robots.txt; /Votes/House/Session/20260106 ..., one page a session day: about 60 a year per
+  house, 2003 on), bill text at webserver.rilegislature.gov/BillText<yy>/ (no robots.txt; one PDF a bill and version), and
+  the House and Senate Journals on www (/journals/). LegiScan already has member-by-member roll calls and texts, so these
+  would replace only what works; replacing LegiScan needs status.rilegislature.gov.
