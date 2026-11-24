@@ -16,7 +16,7 @@ connection is still fully checked.
 Usage: python3 states/il/fetch.py [first_year]   (default 2021)
 """
 import glob, json, os, re, subprocess, sys, time, urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -38,6 +38,7 @@ STARTED = time.time()
 # for the member lists and Open States; what's left comes next run.
 BUDGET = (float(os.environ.get("FETCH_MINUTES", "110")) - 12) * 60
 _last = [0.0]
+LEFT = [0]  # files (and veto messages) left for the next run
 
 
 def pace():
@@ -131,6 +132,7 @@ def session(ga):
             json.dump(seen, open(path, "w"))
     json.dump(seen, open(path, "w"))
     left = len(todo) - got
+    LEFT[0] += left
     print(f"GA {ga}: {got} bill status files downloaded, {len(files)} listed"
           + (f"; {left} left for the next run (one request every {DELAY} seconds)" if left else ""), flush=True)
 
@@ -177,8 +179,9 @@ def veto_messages(ga):
         if VETO_ACTION.search(open(f, encoding="utf-8", errors="replace").read()):
             todo.append((bill, f"{REPO}/Legislation/{ga}/{m[1]}/{ga}00{m[1]}{m[2]}gms.htm"))
     got = 0
-    for bill, url in todo:
+    for k_, (bill, url) in enumerate(todo):
         if out_of_time():
+            LEFT[0] += len(todo) - k_
             break
         pace()
         r = subprocess.run(["curl", "-sS", "--cacert", CA, "--max-time", "120", "-A", AGENT, "-w", "%{http_code}", url],
@@ -199,7 +202,30 @@ def veto_messages(ga):
         print(f"GA {ga}: {got} of {len(todo)} veto messages downloaded", flush=True)
 
 
+DONE = os.path.join(P.DATA, "done_at")  # when a run last read everything the repository had changed
+
+
+def refreshed_since(stamp):
+    """Whether the repository has refreshed since `stamp`: it rewrites its files once a day, around 11 PM to midnight
+    Illinois time (its listing's dates); counted from 1 AM, once it's surely done."""
+    now = datetime.now(ZoneInfo("America/Chicago"))
+    last = now.replace(hour=1, minute=0, second=0, microsecond=0)
+    if now < last:
+        last -= timedelta(days=1)
+    return stamp < last
+
+
 def main():
+    # Once a day (the General Assembly's webmaster, 2026-11-24: "The data refreshes once every 24 hours ... we're unable at
+    # this time to accommodate more frequent or real-time access when using automated processes"): after a run that read
+    # everything, the next runs make no request until the next refresh.
+    try:
+        done = datetime.fromisoformat(open(DONE).read().strip())
+    except (OSError, ValueError):
+        done = None
+    if done and not refreshed_since(done):
+        print(f"Illinois: read everything at {done:%Y-%m-%d %H:%M %Z}; the repository refreshes once a day, so nothing to ask until after 1 AM Illinois time")
+        return
     ca_bundle()
     for year in sorted(range(FIRST, CURRENT + 3, 2), reverse=True):  # newest first
         ga = P.assembly_of(year)
@@ -211,6 +237,8 @@ def main():
             except Exception as e:  # never holds Illinois back
                 print(f"GA {ga}: veto messages failed ({type(e).__name__}: {e})", flush=True)
     people()
+    if not LEFT[0]:
+        open(DONE, "w").write(datetime.now(ZoneInfo("America/Chicago")).isoformat())
 
 
 def people():

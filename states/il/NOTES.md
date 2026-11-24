@@ -75,3 +75,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   typical session day (about 200) takes about 35 minutes; the busiest days (1,500-3,000, at the deadlines) take 4-8 hours,
   so on those days the last bills to change reach the site a few hours late. Illinois moves to the slow lane on its own
   when its runs are long.
+- **The General Assembly's answer (2026-11-24, its Webmaster, to the owner's request for roll calls and a faster rate):**
+  "We provide legislation data through our FTP site located at http://ftp.ilga.gov ... Please use the FTP site as your
+  source for accessing the information. The data refreshes once every 24 hours, and this frequency will need to meet your
+  requirements, as we're unable at this time to accommodate more frequent or real-time access when using automated
+  processes." So: no faster rate, no reading www.ilga.gov's vote pages (votes stay tallies only), and once a day. The
+  repository's files are rewritten around 11 PM to midnight Illinois time (the listing's dates): fetch.py makes no request
+  after a run that read everything (data/il/done_at) until 1 AM Illinois time, then reads that night's changes, carrying on
+  over later runs when they don't fit in one (one request every 10 seconds, as before).
