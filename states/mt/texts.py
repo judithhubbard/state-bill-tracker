@@ -108,8 +108,10 @@ def casing(title, body):
 
 DATES = re.compile(r"PROVIDING (?:AN? |FOR AN? )?(?:(?:IMMEDIATE|DELAYED|RETROACTIVE|CONTINGENT) )*"
                    r"(?:EFFECTIVE|APPLICABILITY)\b")
+# (Each number is matched whole, "(?![\d.\-])": when "15-1-1012" could also be "15-1-101" then "2", a long section list
+# that isn't all sections took exponential time to fail; Montana's download hung on one on 2026-11-23 and 24.)
 SECTIONS = re.compile(r"(?:AMENDING|REPEALING|AND|SECTIONS?|SUBSECTIONS?|MCA|TITLES?|CHAPTERS?|PARTS?|OF|THE|LAWS|"
-                      r"[\d][\d.\-]*(?:\([\dA-Za-z]+\))*|[,()\s])+")
+                      r"[\d][\d.\-]*(?![\d.\-])(?:\([\dA-Za-z]+\))*|[,()\s])+")
 STOP = set("the a an of to and or for in on by with that from as at be is are its this any certain other act "
            "revise revising revises generally general provide providing provides create creating creates law laws related "
            "relating establish establishing require requiring allow allowing include including".split())
