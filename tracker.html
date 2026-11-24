@@ -3784,7 +3784,6 @@ function showStatSec(id) {
   statSec = id;
   for (const s of document.querySelectorAll(".statsec")) s.hidden = s.id !== id;
   for (const b of document.querySelectorAll("#statTabs button")) b.setAttribute("aria-pressed", b.dataset.sec === id);
-  try { localStorage.setItem(STORE + "statsec", id); } catch (e) {}
   if (id === "statNet") renderNet();
   // Partners and Topics lead to the member lists (the header's Senate / Assembly buttons), on the current session's page.
   const jump = $("statLegsJump"), houses = [...new Set(LEGS.map((L) => L.house))].filter((h) => document.querySelector(`#power [data-legs="${h}"]`));
@@ -6268,6 +6267,8 @@ function showView(v, push = true) {
   // How opens on its first section each time it's opened from another tab (the owner: coming back to the last one read
   // was odd); a link to one of its sections picks that one after this.
   if (v === "how" && from && from !== "how") showHowSec("howSteps");
+  // (Statistics the same: its first section, Odds, each time; a link to a section picks it after this.)
+  if (v === "stats" && from && from !== "stats" && STATS_SET) showStatSec("statOdds");
   if (v === "watch") renderWatchView();
   // What wasn't drawn while the tab was hidden (later()); the statistics draw the network themselves.
   if (STALE[v]?.size) drawStale(v);
@@ -7873,10 +7874,11 @@ function setupStats() {
   // explore legislators), linked both ways with the header's member lists. Repeat tries stays hidden (one line under Odds).
   $("statNetBtn").hidden = !((DATA.current && LEGS.length) || DATA.network);
   $("statWhoBtn").hidden = !(DATA.current && LEGS.length);
-  try { const s = localStorage.getItem(STORE + "statsec"); if (s && $(s) && s !== "statPersist" && !(s === "statNet" && $("statNetBtn").hidden) && !(s === "statWho" && $("statWhoBtn").hidden)) statSec = s; } catch (e) {}
   // "What's changing" needs subjects picked by hand (TRENDS in the state's profile.py).
   if (NOPARTY) document.querySelector('[data-sec="statCosp"]').textContent = "Co-sponsors";
-  if (!DATA.insights?.trends?.subjects?.length) { document.querySelector('[data-sec="statTrend"]').hidden = true; if (statSec === "statTrend") statSec = "statOdds"; }
+  // Trends shows only with at least three subjects (2026-11-24, the owner: one or two lonely cards, as Montana's single
+  // "Alcohol laws", looked broken); states with few sessions gain them as their history grows.
+  if ((DATA.insights?.trends?.subjects?.length || 0) < 3) { document.querySelector('[data-sec="statTrend"]').hidden = true; if (statSec === "statTrend") statSec = "statOdds"; }
   showStatSec(statSec);
 }
 
