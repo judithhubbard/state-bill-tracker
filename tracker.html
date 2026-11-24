@@ -1021,6 +1021,15 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .road .rj { width: 26px; height: 64px; display: block; }
 .road .rj path { fill: none; stroke: var(--refer); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .road .rj path.on { stroke: var(--navy); }
+/* A law's steps in the green of its progress bars (rows.css), not the teal of a bill still moving. */
+.road.law .rp.done { background: color-mix(in srgb, #1fa652 16%, transparent); color: #17853f; }
+.road.law .rl.on { background: #1fa652; }
+.road.law .rj path.on { stroke: #1fa652; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .road.law .rp.done { background: color-mix(in srgb, #34d36b 16%, transparent); color: #34d36b; }
+  :root:not([data-theme="light"]) .road.law .rl.on { background: #34d36b; } :root:not([data-theme="light"]) .road.law .rj path.on { stroke: #34d36b; } }
+:root[data-theme="dark"] .road.law .rp.done { background: color-mix(in srgb, #34d36b 16%, transparent); color: #34d36b; }
+:root[data-theme="dark"] .road.law .rl.on { background: #34d36b; }
+:root[data-theme="dark"] .road.law .rj path.on { stroke: #34d36b; }
 @media (max-width: 560px) {
   .road { grid-template-columns: auto 82px 6px 54px 14px 70px; grid-template-rows: 26px 26px; }
   .road.one { grid-template-columns: auto 82px 6px 54px 6px 70px; grid-template-rows: 26px; }
@@ -1035,6 +1044,7 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .next.nx .nxb .m { color: var(--ink-2); }
 .next.nx .nxb .ask1 { margin-top: 4px; }
 .next.nx .nxb .hint { margin-top: 4px; }
+.next.nx > .hint { margin: 10px 0 0; }
 .next.nx.done .nxb:empty { display: none; }
 /* The rest of a bill's panel, folded (fillDetail()'s pfold()): a line each, with a hint of what's inside. */
 details.pfold { border-top: 1px solid var(--rule); max-width: 78ch; }
@@ -3183,7 +3193,7 @@ function roadPic(b, dead = false) {
     out.push(`<span class="rl${R.lanes[0].floor === "done" ? " on" : ""}" style="grid-area:1/5"></span>`, pill(R.gov === "veto" ? "veto" : R.gov, govLabel, govTip, "1/6"));
   }
   const said = R.lanes.map((l) => `${HOUSE[l.h]}: ${l.floor === "done" ? "passed" : l.comm === "now" ? "in committee now" : l.floor === "now" ? "waiting for a floor vote" : l.comm === "stop" || l.floor === "stop" ? "stopped here" : "not yet"}`).join("; ");
-  return `<div class="road${rows === 1 ? " one" : ""}" role="img" aria-label="${esc(`${said}; ${R.final}: ${R.gov === "done" ? "done" : R.gov === "veto" ? "vetoed" : R.gov === "now" ? "next" : "not yet"}.`)}">${out.join("")}</div>`;
+  return `<div class="road${rows === 1 ? " one" : ""}${b.stage === 5 ? " law" : ""}" role="img" aria-label="${esc(`${said}; ${R.final}: ${R.gov === "done" ? "done" : R.gov === "veto" ? "vetoed" : R.gov === "now" ? "next" : "not yet"}.`)}">${out.join("")}</div>`;
 }
 // The share of past sessions' bills that got through the step the bill is on (build_data.py's insights.steps, and the
 // odds for the governor), as a sentence; "" when too few bills went through it to say.
@@ -3301,7 +3311,10 @@ function nextSteps(b) {
     if (b.stage === 6) what = what.replace(/^(<p class="when">)Vetoed\. /, "$1");
     return `<div class="next nx done">${roadPic(b, b.stage <= 2)}<div class="nxb">${outcome ? `<p class="t">${esc(outcome)}</p>` : ""}${what}${contacts}</div></div>`;
   }
-  return `<div class="next nx">${roadPic(b)}<div class="nxb">${head ? `<p class="t">${head}</p>` : ""}${what}${odds}${lines.join("")}${stance}</div>${repsLine()}${contacts}</div>`;
+  // Inside the gold rule: the step (bold), its context in grey, then whom to ask. The side switch and your legislators
+  // follow it, outside (2026-11-24, the owner: the block was too busy).
+  what = what.replace(/<p class="when">/g, '<p class="when m">');
+  return `<div class="next nx">${roadPic(b)}<div class="nxb">${head ? `<p class="t">${head}</p>` : ""}${what}${odds}${lines.join("")}</div>${stance}${repsLine()}${contacts}</div>`;
 }
 
 // Bills still open for comment, listed right here (filters on the Bills tab don't apply).
@@ -5983,8 +5996,8 @@ function fillDetail(el) {
     ${folded ? "" : twinLine(b)}
     ${inCard ? lineage(b) : pfold("This bill in other sessions", [...new Set(b.hist.map((e) => e[0]))].sort().map(span).join(", "), lineage(b))}
     ${inCard ? sim : pfold("Similar bills", simHint(b), sim)}
-    <div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>
-    ${inCard ? "" : `<p class="sharebill"><button class="act-btn" type="button" data-copylink="${esc(billLink(b))}">Copy link to share this bill</button></p>`}
+    ${inCard ? `<div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>` : pfold("Every action", b.vers.map((v) => v.p).join(", "), `<div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>`)}
+    ${inCard ? "" : `<p class="sharebill"><button class="act-btn small" type="button" data-copylink="${esc(billLink(b))}">Copy link to share this bill</button></p>`}
     ${officialMore(b)}`;
   // (Who decides can depend on every bill's history: meetings().)
   if (MISSING.size) return waitIn(d, Promise.all([...MISSING].map((k) => need(k))), again);
