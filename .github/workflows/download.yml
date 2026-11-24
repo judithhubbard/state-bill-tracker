@@ -185,6 +185,7 @@ jobs:
           UTAH_API_TOKEN: ${{ secrets.UTAH_API_TOKEN }}
           INDIANA_API_KEY: ${{ secrets.INDIANA_API_KEY }}
           LEGISCAN_API_KEY: ${{ secrets.LEGISCAN_API_KEY }}
+          DC_LIMS_KEY: ${{ secrets.DC_LIMS_KEY }}
           CONGRESS_API_KEY: ${{ secrets.CONGRESS_API_KEY }}
           KANSAS_API_KEY: ${{ secrets.KANSAS_API_KEY }}
           # Georgia's documents through the state-ga-relay Worker (runners can't reach www.legis.ga.gov): states/ga/daily.py.
