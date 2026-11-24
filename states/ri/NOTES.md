@@ -31,10 +31,9 @@ This state's data comes from LegiScan: the shared design (legiscan.py, the budge
   Leaders: Speaker Chris Blazejewski (since May 7, 2026, after Joe Shekarchi stepped down) and Senate President Val Lawson
   (check both when the General Assembly elected in November 2026 meets in January 2027). Governor Dan McKee; add a new
   governor (January 2027) to `GOVERNORS` and states/legislatures.json. The governor's contact page and phone (401-222-2080)
-  haven't been checked by the owner. rilegislature.gov does NOT bar automated readers (corrected 2026-11-24; the note of 2026-11-08 said it did): its robots.txt
-  ("Updated: August 2026", re-read 2026-11-24) bars only committee testimony PDFs (/Special/comdoc/*.pdf,
-  /senators/SenateComDocs/*.pdf), and its pages answer a named program 200. Bills still come from LegiScan; reading the
-  Legislature's own pages (bill status, committee agendas) needs no permission, only a gentle pace.
+  haven't been checked by the owner. www.rilegislature.gov's robots.txt ("Updated: August 2026") bars only committee testimony and agenda PDFs,
+  but bill status, sponsors and agendas are on status.rilegislature.gov, whose robots.txt bars everything (re-read
+  2026-11-24; the short-lived note that the site was open looked only at www): see "Official agendas looked into" below.
 - **Committee agendas (2026-11-22):** from each bill's LegiScan `calendar` (its hearings: date, time, room, description), read with the bill (no queries of their own): `agendas()` calls legiscan_convert.agendas() (states/LEGISCAN.md). Today's and later meetings only. LegiScan's calendar has no cancellations; an entry dropped from a notice goes when the bill is next read, which within the daily getBill allowance can be hours after the change. "Consideration" entries (a committee vote after the hearing) count as meetings. Times are often 00:00 ("Rise of the House/Senate"). Tested against 2026's saved calendars (2,144 bills, all matched).
   The history (2026-11-22): every dated "Scheduled for hearing and/or consideration (04/02/2025)" line of 2024-26 is
   also in the calendar (2,852, 2,909 and 3,221 of them; posted 2-6 days ahead), so the history adds no meetings. But the
