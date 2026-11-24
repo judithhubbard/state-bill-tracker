@@ -11,7 +11,7 @@ STATES=${ONLY:-"ak al ar az ca co ct dc de fl ga hi ia id il in ks ky la ma md m
 # albanybilltracker.org runs from its own repo), when the current session's bills are here (the workflow
 # downloads them with the Senate API key).
 NY=$(python3 -c "import datetime; y = datetime.date.today().year; print(y if y % 2 else y - 1)")
-if [ -f "data/bills_$NY.json" ]; then STATES="$STATES ny"; fi
+case " $STATES " in *" ny "*) ;; *) if [ -f "data/bills_$NY.json" ]; then STATES="$STATES ny"; fi ;; esac  # (ONLY="ny" names it already: built twice at once, the two builds deleted each other's data)
 rm -rf "$OUT" && mkdir -p "$OUT"
 # Each state's pages from earlier builds, with the fingerprint they were built from.
 BUILT=${BUILT:-built}

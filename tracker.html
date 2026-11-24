@@ -1070,6 +1070,8 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 @media (max-width: 600px) { .ta-ppl { font-size: 13px; gap: 6px; } .ta-ppl li { line-height: 1.35; } }
 .ta-gov { margin: 0; font-size: 14px; }
 .ta-all { justify-self: start; font-size: 13.5px; }
+.ta-write { justify-self: start; }
+.ta-hide { margin-left: auto; font-size: 13.5px; }
 .ta-msg { border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; font-size: 14px; line-height: 1.5; }
 .ta .ta-msg p { margin: 0 0 8px; }
 .ta .ta-msg .ta-to { color: var(--ink-2); font-size: 13px; margin: 0 0 2px; overflow-wrap: anywhere; }
@@ -3434,7 +3436,9 @@ function taPanel(b, stance) {
       const n = g.extra?.length || 0;
       const more = n ? `<button type="button" class="linkish ta-all" data-ta-all="${b.idx}">${st.all ? `Leave out the ${n} sponsor${n > 1 ? "s" : ""}` : `Also write to the ${n} sponsor${n > 1 ? "s" : ""} on the committee (${esc(andList(g.extra.map((p) => shortName(p.name))))})`}</button>` : "";
       const name = (SEND_WITH.find(([v]) => v === how) || [])[1];
-      body = `<div class="ta-mail">${contact ? `<ul class="ta-ppl">${contact}</ul>` : ""}${gov}${more}
+      // The drafted message opens only when asked for (2026-11-24, the owner: the whole email open was too bulky).
+      const write = `<button type="button" class="act-btn primary ta-write" data-ta-write="${esc(g.k)}" data-idx="${b.idx}" aria-expanded="false">Write a message</button>`;
+      body = st.m !== g.k ? `<div class="ta-mail">${contact ? `<ul class="ta-ppl">${contact}</ul>` : ""}${gov}${write}</div>` : `<div class="ta-mail">${contact ? `<ul class="ta-ppl">${contact}</ul>` : ""}${gov}${more}
         <div class="ta-msg">${d.to.length ? `<p class="ta-to">To: ${esc(d.to.join(", "))}</p>` : ""}<p class="ta-subj"><b>Subject:</b> ${esc(d.subject)}</p>
           <p>${esc(d.greet)}</p><p>${esc(d.line)}</p>
           <label class="ta-lbl" for="taw-${b.idx}">Why it matters to you</label>
@@ -3444,11 +3448,11 @@ function taPanel(b, stance) {
           <span class="ta-box"><input id="tas-${b.idx}" class="ta-fld" data-ta-sign value="${esc(sign)}" placeholder="Your name and town" autocomplete="name"><span class="ta-kept" aria-hidden="true">Kept for all your bills</span></span>
         </div>
         ${d.form.length && !d.to.length ? `<p class="ta-note">${esc(andList(d.form.map((p) => titledList([p]))))} ${d.form.length > 1 ? "take" : "takes"} messages through a web form: copy the message, then open the form above.</p>` : ""}
-        <div class="ta-send">${d.to.length ? `<button type="button" class="act-btn primary" data-ta-send="${b.idx}">${name ? `Open in ${esc(name)}` : "Open in your email app"}</button>` : ""}<button type="button" class="act-btn" data-ta-copy="${b.idx}">Copy message</button>${d.to.length ? `<label class="ta-with">Send with <select data-ta-with>${SEND_WITH.map(([v, l]) => `<option value="${v}"${v === (how || "app") ? " selected" : ""}>${esc(l.charAt(0).toUpperCase() + l.slice(1))}</option>`).join("")}</select></label>` : ""}</div>
+        <div class="ta-send">${d.to.length ? `<button type="button" class="act-btn primary" data-ta-send="${b.idx}">${name ? `Open in ${esc(name)}` : "Open in your email app"}</button>` : ""}<button type="button" class="act-btn" data-ta-copy="${b.idx}">Copy message</button>${d.to.length ? `<label class="ta-with">Send with <select data-ta-with>${SEND_WITH.map(([v, l]) => `<option value="${v}"${v === (how || "app") ? " selected" : ""}>${esc(l.charAt(0).toUpperCase() + l.slice(1))}</option>`).join("")}</select></label>` : ""}<button type="button" class="linkish ta-hide" data-ta-write="${esc(g.k)}" data-idx="${b.idx}" aria-expanded="true">Hide message</button></div>
         ${st.asked === g.k ? `<p class="ta-did"><b>Did you send it?</b> <button type="button" class="act-btn primary small" data-ta-yes="${b.idx}">Yes, note it</button> <button type="button" class="act-btn small" data-ta-no="${b.idx}">Not yet</button></p>` : ""}
       </div>`;
     }
-    return `<li class="${on ? "sel" : ""}"><button type="button" class="ta-pick" data-ta-pick="${esc(g.k)}" data-idx="${b.idx}" aria-expanded="${on}"><span class="w">${esc(g.label)}</span><span class="d">${esc(g.desc)}</span><span class="go">${on ? "Writing" : "Write ›"}</span></button>${body}</li>`;
+    return `<li class="${on ? "sel" : ""}"><button type="button" class="ta-pick" data-ta-pick="${esc(g.k)}" data-idx="${b.idx}" aria-expanded="${on}"><span class="w">${esc(g.label)}</span><span class="d">${esc(g.desc)}</span>${on ? "" : `<span class="go">Write ›</span>`}</button>${body}</li>`;
   };
   return `<div class="ta" data-ta="${b.idx}" data-tastance="${stance === "oppose" ? "oppose" : "support"}"><p class="ta-h">Who to write to</p><ul class="ta-who">${groups.map(item).join("")}</ul></div>`;
 }
@@ -6508,6 +6512,16 @@ function wire() {
       taRedraw(b);
       // (From the keyboard, focus stays on the choice; a click doesn't move it, so no outline is drawn.)
       if (e.detail === 0) document.querySelector(`.ta[data-ta="${b.idx}"] [data-ta-pick="${CSS.escape(tp.dataset.taPick)}"]`)?.focus();
+      return;
+    }
+    const tw = e.target.closest("[data-ta-write]");
+    if (tw) {
+      const b = BILLS[+tw.dataset.idx], k = billKey(b), st = TA_STATE.get(k) || {}, g = tw.dataset.taWrite, on = st.m !== g;
+      TA_STATE.set(k, { ...st, m: on ? g : null, asked: null });
+      taRedraw(b);
+      const box = document.querySelector(`.ta[data-ta="${b.idx}"]`);
+      if (on) { countUse("act/write"); box?.querySelector("[data-ta-why]")?.focus({ preventScroll: true }); }
+      else box?.querySelector("[data-ta-write]")?.focus({ preventScroll: true });
       return;
     }
     const ta = e.target.closest("[data-ta-all]");
