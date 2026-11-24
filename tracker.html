@@ -1001,6 +1001,56 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .next .mainask { background: var(--gold-soft); border-radius: 8px; padding: 10px 12px; margin-top: 6px; }
 .next .mainask ul { margin: 0; }
 .next .mainask li.key { border-left: 0; padding-left: 0; }
+/* The road (roadPic()): a lane per house, its committee and floor as labeled steps, joined by one curve into the governor.
+   Every step in a column has the column's width, the connectors have columns of their own, and the rows are 28px with
+   an 8px gap, so the curve's ends (y 14 and 50 of its 64px box) meet the lanes' middles. Done: teal with a check; now:
+   solid gold; ahead: outlined; stopped (a session over): dashed and faded; vetoed: red. */
+.road { display: grid; grid-template-columns: auto 116px 14px 80px 26px 94px; grid-template-rows: 28px 28px; row-gap: 8px;
+  align-items: center; justify-content: start; margin: 2px 0 4px; max-width: 100%; }
+.road.one { grid-template-columns: auto 116px 14px 80px 14px 94px; grid-template-rows: 28px; }
+.road .rh { font: 700 11px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); padding-right: 14px; white-space: nowrap; }
+.road .rp { height: 28px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 14px;
+  font-size: 13px; font-weight: 600; white-space: nowrap; border: 1.5px solid var(--refer); color: var(--ink-2); }
+.road .rp.done { background: color-mix(in srgb, var(--navy) 15%, transparent); border-color: transparent; color: var(--navy); }
+.road .rp.now { background: var(--gold); border-color: var(--gold); color: #1d1a10; }
+.road .rp.stop { border-style: dashed; opacity: .6; }
+.road .rp.veto { background: var(--veto-soft); border-color: transparent; color: var(--veto-ink, var(--veto)); }
+.road .rp.mid { grid-row: 1 / 3; align-self: center; }
+.road .rl { height: 1.5px; background: var(--refer); }
+.road .rl.on { background: var(--navy); }
+.road .rj { width: 26px; height: 64px; display: block; }
+.road .rj path { fill: none; stroke: var(--refer); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.road .rj path.on { stroke: var(--navy); }
+@media (max-width: 560px) {
+  .road { grid-template-columns: auto 82px 6px 54px 14px 70px; grid-template-rows: 26px 26px; }
+  .road.one { grid-template-columns: auto 82px 6px 54px 6px 70px; grid-template-rows: 26px; }
+  .road .rp { height: 26px; font-size: 11.5px; }
+  .road .rh { font-size: 9.5px; letter-spacing: .05em; padding-right: 6px; }
+  .road .rj { width: 14px; height: 60px; }
+}
+/* The next step under the road: a gold rule while someone can act, grey once it's decided. */
+.next.nx .nxb { border-left: 3px solid var(--gold); padding: 1px 0 1px 12px; display: grid; gap: 3px; }
+.next.nx.done .nxb { border-left-color: var(--refer); }
+.next.nx .nxb .t { font-weight: 700; }
+.next.nx .nxb .m { color: var(--ink-2); }
+.next.nx .nxb .ask1 { margin-top: 4px; }
+.next.nx .nxb .hint { margin-top: 4px; }
+.next.nx.done .nxb:empty { display: none; }
+/* The rest of a bill's panel, folded (fillDetail()'s pfold()): a line each, with a hint of what's inside. */
+details.pfold { border-top: 1px solid var(--rule); max-width: 78ch; }
+details.pfold { border-bottom: 1px solid var(--rule); }
+details.pfold > summary { cursor: pointer; padding: 7px 0 7px 16px; margin: 0; font-size: 15px; list-style: none; position: relative; }
+details.pfold { margin: 0; }
+/* (The panel spaces its parts 16px apart: folds one after another sit together, as one list.) */
+details.pfold + details.pfold { margin-top: -16px; border-top: 1px solid var(--rule); }
+details.pfold:has(+ details.pfold) { border-bottom: 0; }
+details.pfold > summary::-webkit-details-marker { display: none; }
+details.pfold > summary::before { content: ""; position: absolute; left: 2px; top: 50%; width: 0; height: 0; margin-top: -5px;
+  border-style: solid; border-width: 5px 0 5px 7px; border-color: transparent transparent transparent var(--ink-2); transition: transform .15s; }
+details.pfold[open] > summary::before { transform: rotate(90deg); }
+details.pfold > summary .pfn { font-weight: 600; color: var(--ink); }
+details.pfold > summary .pfh { color: var(--ink-2); }
+details.pfold > .pfb { padding: 0 0 10px; }
 .next .mainask .ask { font-size: 15px; font-weight: 700; color: var(--ink); }
 .next details.others { margin-top: 8px; }
 .next details.others > summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--navy); }
@@ -3065,40 +3115,193 @@ function floorAsk(fl, on) {
     : floorLikely(fl) ? [`vote yes at its expected floor vote ${day}`, `vote no at its expected floor vote ${day}`]
     : [`vote yes when it comes to a vote (on the ${floorHouse(fl)} calendar from ${day})`, `vote no when it comes to a vote (on the ${floorHouse(fl)} calendar from ${day})`];
 }
+// ---- The bill's road (2026-11-23, the owner's design): a lane per house (its committee and its floor) joined into the
+// governor, as labeled steps: done in teal with a check, where the bill is now in gold, what's ahead outlined, where it
+// stopped dimmed (a session over). The bill's own house is the top lane. roadOf() works out each step's state; road()
+// draws it, and the next-step line under it reads the same "now" (roadNow()).
+function roadOf(b, dead = false) {
+  const D = b.dates, origin = b.vers[0]?.p[0];
+  const houses = UNI ? [LOW] : origin === LOW ? [LOW, "S"] : ["S", LOW];
+  const passed = (h) => (h === "S" && !UNI ? D.passS : D.passA) || "";
+  const vIn = (h) => (STATE.oneNumber ? b.vers[0] : b.vers.find((v) => v.p[0] === h));
+  const inComm = (v) => !!(v && v.committee && /committee/i.test(v.statusDesc || ""));
+  const lanes = houses.map((h) => ({ h, comm: passed(h) ? "done" : "", floor: passed(h) ? "done" : "", v: vIn(h), date: passed(h) }));
+  let now = null;   // {h, step: "comm" | "floor"} or {step: "gov"}
+  const lane = (h) => lanes.find((l) => l.h === h);
+  if (b.stage === 0) {
+    // Twins (each house's own version): every house where a version waits in committee; else the bill's own house.
+    const ws = lanes.filter((l) => !l.date && inComm(STATE.oneNumber ? (l.h === origin ? l.v : null) : l.v));
+    (ws.length ? ws : [lane(origin) || lanes[0]]).forEach((l) => { l.comm = "now"; now = now || { h: l.h, step: "comm", v: l.v }; });
+  } else if (b.stage === 1) {
+    let hs = b.vers.filter((v) => /floor/i.test(v.statusDesc || "")).map((v) => v.p[0]);
+    if (!hs.length) hs = b.vers.filter((v) => !inComm(v)).map((v) => v.p[0]).slice(0, 1);
+    if (!hs.length) hs = [origin];
+    const fl = nextFloor(b), flH = fl && floorCode(fl);
+    if (flH) hs = [flH];
+    for (const h of hs) { const l = lane(h); if (l) { l.comm = "done"; l.floor = "now"; now = now || { h, step: "floor" }; } }
+    // (Twins: the other house's own version, still in its committee, is decided there at the same time.)
+    if (!STATE.oneNumber) for (const l of lanes) if (!hs.includes(l.h) && !l.date && inComm(l.v)) l.comm = "now";
+  } else if (b.stage === 2) {
+    const l = lanes.find((x) => !x.date) || lanes[1];
+    const v = STATE.oneNumber ? b.vers[0] : l?.v;
+    // (STATE.oneNumber: the one version, now in the other house: in committee if its status says so.)
+    // (As planFor(): a version that names a committee is in it, unless its status puts it on the floor.)
+    if (l && v && (inComm(v) || (v.committee && !/floor|calendar|third reading/i.test(v.statusDesc || "")))) { l.comm = "now"; now = { h: l.h, step: "comm", v }; }
+    else if (l) { l.comm = "done"; l.floor = "now"; now = { h: l.h, step: "floor" }; }
+  } else {
+    lanes.forEach((l) => { l.comm = l.floor = "done"; });
+    if (b.stage === 3 || b.stage === 4) now = { step: "gov" };
+  }
+  // A bill that can't move any more stops where it was.
+  if (dead && now && now.step !== "gov") for (const l of lanes) for (const k of ["comm", "floor"]) if (l[k] === "now") l[k] = "stop";
+  const final = isAmendment(b) || toVoters(b) ? "Voters" : EXEC.title;
+  const gov = b.stage === 5 ? "done" : b.stage === 6 ? "veto" : now?.step === "gov" ? (dead ? "stop" : "now") : "";
+  return { lanes, now, gov, final };
+}
+function roadPic(b, dead = false) {
+  const R = roadOf(b, dead), D = b.dates;
+  const short = (h) => { const n = HOUSE[h] || ""; return n.length > 10 ? n.split(" ")[0] : n; };
+  const pill = (state, label, tip, area, cls = "") => `<span class="rp ${state || "ahead"}${cls}" style="grid-area:${area}"${tip ? ` title="${esc(tip)}"` : ""}>${state === "done" ? "✓ " : ""}${esc(label)}</span>`;
+  const out = [];
+  R.lanes.forEach((l, i) => {
+    const row = i + 1, comm = l.v?.committee ? commWord(commPlain(l.v.committee)) : "Committee";
+    const commTip = l.comm === "now" ? `In the ${HOUSE[l.h]} ${comm}` : l.comm === "done" ? `Through committee in the ${HOUSE[l.h]}` : "";
+    const floorTip = l.floor === "done" && l.date ? `Passed the ${HOUSE[l.h]} ${fmtDate(l.date.split(";")[0])}` : l.floor === "now" ? `Waiting for a vote of the full ${HOUSE[l.h]}` : "";
+    out.push(`<span class="rh" style="grid-area:${row}/1">${esc(UNI ? HOUSE[l.h] : short(l.h))}</span>`,
+      pill(l.comm, "Committee", commTip, `${row}/2`), `<span class="rl${l.comm === "done" ? " on" : ""}" style="grid-area:${row}/3"></span>`,
+      pill(l.floor, "Floor", floorTip, `${row}/4`));
+  });
+  const govTip = R.gov === "done" ? `${lawLine(b)}${D.signed ? ` ${fmtDate(D.signed)}` : ""}` : R.gov === "veto" ? `Vetoed${D.vetoed ? ` ${fmtDate(D.vetoed)}` : ""}`
+    : D.deliv ? `Sent to ${EXEC.the} ${fmtDate(D.deliv)}` : "";
+  const govLabel = R.gov === "veto" ? "Vetoed" : R.final;
+  const rows = R.lanes.length;
+  if (rows === 2) {
+    const on = (l) => l.floor === "done";
+    out.push(`<svg class="rj" style="grid-area:1/5/3/6" viewBox="0 0 26 64" preserveAspectRatio="none" aria-hidden="true"><path class="${on(R.lanes[0]) ? "on" : ""}" d="M0 14C13 14 13 32 26 32"/><path class="${on(R.lanes[1]) ? "on" : ""}" d="M0 50C13 50 13 32 26 32"/></svg>`);
+    out.push(pill(R.gov === "veto" ? "veto" : R.gov, govLabel, govTip, "1/6/3/7", " mid"));
+  } else {
+    out.push(`<span class="rl${R.lanes[0].floor === "done" ? " on" : ""}" style="grid-area:1/5"></span>`, pill(R.gov === "veto" ? "veto" : R.gov, govLabel, govTip, "1/6"));
+  }
+  const said = R.lanes.map((l) => `${HOUSE[l.h]}: ${l.floor === "done" ? "passed" : l.comm === "now" ? "in committee now" : l.floor === "now" ? "waiting for a floor vote" : l.comm === "stop" || l.floor === "stop" ? "stopped here" : "not yet"}`).join("; ");
+  return `<div class="road${rows === 1 ? " one" : ""}" role="img" aria-label="${esc(`${said}; ${R.final}: ${R.gov === "done" ? "done" : R.gov === "veto" ? "vetoed" : R.gov === "now" ? "next" : "not yet"}.`)}">${out.join("")}</div>`;
+}
+// The share of past sessions' bills that got through the step the bill is on (build_data.py's insights.steps, and the
+// odds for the governor), as a sentence; "" when too few bills went through it to say.
+function stepOdds(b, now) {
+  const S = DATA.insights?.steps, pc = (o, n) => Math.round((100 * o) / n);
+  if (!now) return "";
+  if (now.step === "gov") {
+    const both = DATA.insights?.odds?.all?.both;
+    return both && both[0] >= 40 && !isAmendment(b) && !toVoters(b) ? `${pc(both[1], both[0])}% of bills that pass ${UNI ? `the ${HOUSE[LOW]}` : "both houses"} become law.` : "";
+  }
+  if (!S) return "";
+  const h = now.h, other = UNI ? "" : h === "S" ? LOW : "S";
+  if (now.step === "floor") {
+    const f = S.floor?.[h];
+    return f && f[0] >= 40 ? `${pc(f[1], f[0])}% of bills that reach the ${UNI ? "floor" : `${HOUSE[h]} floor`} pass it.` : "";
+  }
+  const after = !!other && !!(other === "S" ? b.dates.passS : b.dates.passA);
+  const c = S.comm?.[`${h} · ${now.v?.committee || ""}`], all = S.house?.[h];
+  const pick = (x, min) => (x && x[after ? 2 : 0] >= min ? [x[after ? 3 : 1], x[after ? 2 : 0]] : null);
+  const passedOther = after ? ` that passed the ${HOUSE[other]}` : "";
+  const one = pick(c, 20);
+  if (one) return `${pc(...one)}% of bills${passedOther} make it out of this committee.`;
+  const house = pick(all, 40);
+  return house ? `${pc(...house)}% of bills${passedOther} make it out of ${UNI ? "" : `${HOUSE[h]} `}committees.` : "";
+}
+// The people who decide the next step, a line each: "Ask the chair, Sen. Patrick Diegnan (a co-sponsor), to put it on the
+// committee agenda. [Copy email]". The governor's ask (gov) first when it's theirs. Returns the lines and everyone else.
+function deciderLines(b, plan) {
+  const people = DATA.contacts?.people || {}, meet = nextAgenda(b);
+  const infoOf = (p) => people[p.name] || Object.entries(people).find(([n]) => lastName(n) === lastName(p.name) && (LEGS.find((L) => L.name === n)?.house || p.house) === p.house)?.[1] || {};
+  const backer = (p) => b.vers.some((v) => v.p[0] === p.house && lastName(v.sponsor) === lastName(p.name)) ? " (a sponsor)"
+    : b.vers.some((v) => v.p[0] === p.house && v.cosponsors.some((n) => lastName(n) === lastName(p.name))) ? " (a co-sponsor)" : "";
+  const roleOf = (p) => {
+    const r = p.roles[0] || "";
+    if (/decides which bills/.test(r)) { const L = DATA.contacts?.leaders?.[p.house]; return L ? `the ${leaderTitle(L)}` : "the leader"; }
+    if (/^chair of/.test(r)) return "the chair";
+    if (/^member of/.test(r)) return "a member of the committee";
+    if (/^your /.test(r)) return r;
+    return /^sponsor/.test(r) ? "the sponsor" : r;
+  };
+  const lines = [];
+  const keys = plan.book.entries().filter((p) => p.star && p.asks.length);
+  if (plan.leaderFirst) keys.sort((x, y) => /decides which bills/.test(y.roles[0] || "") - /decides which bills/.test(x.roles[0] || ""));
+  if (plan.gov) lines.push(`<p class="ask1">Ask ${EXEC.the} to ${esc(plan.gov)}. ${draftBtn(b, "G", "", plan.gov)}</p>`);
+  for (const p of keys) {
+    const info = infoOf(p), title = info.title || (/\b(?:Committee|Board)\b/.test(p.name) ? "" : TITLE[p.house]);
+    const same = LEGS.filter((x) => x.house === p.house && lastName(x.name) === lastName(p.name));
+    const L = LEGS.find((x) => x.house === p.house && (x.apiName === p.name || x.name === p.name)) || (same.length === 1 ? same[0] : null);
+    const label = `${title ? `${title} ` : ""}${esc(p.name)}`;
+    const name = L && ROOT && L.slug ? `<a href="${esc(ROOT + L.slug + "/")}">${label}</a>` : label;
+    let ask = p.asks.join("; ").replace(/ \(you sponsor it\)/g, "").replace(/your committee's agenda/g, "the committee agenda");
+    // On its committee's agenda already: the chair has put it there; what's left is the vote.
+    const chairHere = /^chair of/.test(p.roles[0] || "") && meet && commKey(meet.committee.replace(/^(?:Senate|House|Assembly)\s+/i, "")) === commKey((p.roles[0] || "").replace(/^chair of the (?:Senate |House |Assembly )?/i, "").replace(/ \(meets.*$/, ""));
+    const draftAsk = chairHere ? (plan.opp ? `vote against it when the committee meets on ${fmtMeet(meet.when)}` : `support it when the committee meets on ${fmtMeet(meet.when)}`) : ask;
+    const text = chairHere ? `Tell ${roleOf(p)}, ${name}${backer(p)}, what you think.` : `Ask ${roleOf(p)}, ${name}${backer(p)}, to ${esc(ask)}.`;
+    const btn = info.email || info.url ? ` ${draftBtn(b, p.house, p.name, draftAsk, !info.email)}` : "";
+    lines.push(`<p class="ask1">${text}${btn}</p>`);
+  }
+  if (plan.govAlso) lines.push(`<p class="ask1">Ask ${EXEC.the} to ${esc(plan.govAlso)}. ${draftBtn(b, "G", "", plan.govAlso)}</p>`);
+  return lines;
+}
+// The block's first line: "Next: Senate Transportation Committee · Mon, Nov 30", "Next: a vote of the full Senate",
+// "Next: the governor decides · by Jan 13".
+function nextHead(b, now) {
+  if (!now) return "";
+  if (now.step === "gov") return b.stage === 4 ? `Next: ${EXEC.the} decides${b.due ? ` · by about ${fmtDate(b.due)}` : ""}` : "";
+  if (now.step === "floor") {
+    const fl = nextFloor(b), sure = fl && floorSure(fl) && floorCode(fl) === now.h;
+    return `Next: a vote of the full ${HOUSE[now.h]}${sure ? ` · ${fmtMeet(fl.when)}` : ""}`;
+  }
+  // (The meeting's date only when it's this committee's: "Senate Transportation" for the Transportation Committee.)
+  const m = nextAgenda(b), name = now.v?.committee ? commWord(commPlain(now.v.committee)) : "a committee vote";
+  const meet = m && now.v?.committee && commKey(m.committee.replace(/^(?:Senate|House|Assembly)\s+/i, "").replace(/ Committee$/i, "")) === commKey(commPlain(now.v.committee)) ? m : null;
+  return `Next: ${now.v?.committee ? `${UNI ? "the " : `${HOUSE[now.h]} `}${esc(name)}` : name}${meet ? ` · ${fmtMeet(meet.when)}` : ""}`;
+}
 function nextSteps(b) {
   // No side chosen yet: the support asks, each "If you support it: ..." (book.html()'s ifSupport).
   const side = panelStance(b);
   const plan = planFor(b, side || "support");
-  if (!plan) return "";
+  // (A past session, or no contacts: the road alone.)
+  if (!plan) return `<div class="next nx done">${roadPic(b, !DATA.current && b.stage <= 2)}</div>`;
   plan.book.ifSupport = !side;
+  const R = roadOf(b, !plan.actionable), head = plan.actionable ? nextHead(b, R.now) : "";
   let what = plan.what;
+  // The step and its date are the block's first line; the plan's own "Next: ..." would say it again.
+  if (head) what = what.replace(/^<p class="when">Next:.*?<\/p>/, "");
   const meet = nextDate(b);
-  // (A floor day's date is in the ask on your legislators' card: floorAsk().)
+  // (A floor day's date is in the head, and in the ask on your legislators' lines: floorAsk().)
   if (meet?.kind === "floor") {}
   else if (meet?.kind === "meets") what += `<p class="when">The ${esc(meetComm(meet))} meets ${meetWhen(meet)}; this bill could come up.</p>`;
-  else if (meet) what += `<p class="when">${meetHead(meet)}: ${esc(meetComm(meet))}, ${fmtMeet(meet.when, true)}.</p>`;
-  what += plan.notes.map((n) => `<p class="holdup">${esc(n)}</p>`).join("");
-  if (plan.actionable && oddsLine(b)) what += `<p class="odds">${oddsLine(b)}</p>`;
+  else if (meet && !(R.now?.step === "comm" && head.includes(" · "))) what += `<p class="when">${meetHead(meet)}: ${esc(meetComm(meet))}, ${fmtMeet(meet.when, true)}.</p>`;
+  // How likely the step is, or, when there's a reason it waits (the budget, a leader), that reason instead.
+  // (A chair who sponsors it and hasn't scheduled it: the ask's "(a sponsor)" says that; the line keeps the odds.)
+  const why = plan.notes.filter((n) => !/^The chair, .+ is a sponsor but hasn't brought it up/.test(n));
+  const odds = plan.actionable ? (why.length ? why.map((n) => `<p class="m">${esc(n)}</p>`).join("") : stepOdds(b, R.now) && `<p class="m">${stepOdds(b, R.now)}</p>`) : "";
   const who = plan.book.html((plan.gov ? govItem(plan.gov, b) : "") + (plan.govAlso ? govItem(plan.govAlso, b, false) : ""));
   // The sponsors' contact details are on their cards below: the reintroduce line doesn't repeat them.
   if (!plan.actionable) what += reintroAsk(b, panelStance(b), !!who);
-  if (plan.actionable && who) what += `<p class="hint">You <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${side === s}">${s}</button>`).join("")}</span> this bill</p>`;
-  // The person who decides the next step comes first, set apart; everyone else folds away.
+  const stance = plan.actionable && who ? `<p class="hint">You <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${side === s}">${s}</button>`).join("")}</span> this bill</p>` : "";
+  // The people who decide the next step, a line each; everyone else folds away.
   const box = document.createElement("ul");
   box.innerHTML = who;
   const items = [...box.children], keys = items.filter((li) => li.classList.contains("key")), rest = items.filter((li) => !keys.includes(li));
   const list = (lis) => `<ul>${lis.map((li) => li.outerHTML).join("")}</ul>`;
-  const contacts = !items.length ? "" : keys.length
-    ? `<div class="mainask">${list(keys)}</div>${rest.length ? `<details class="others"><summary>Others to contact (${rest.length})</summary>${list(rest)}</details>` : ""}`
-    : list(rest);
-  // A decided bill (a law, a veto, a bill that died) has no "What you can do" heading, and its outcome isn't said again:
-  // the row and the history say it.
+  const lines = plan.actionable ? deciderLines(b, plan) : [];
+  const shownKeys = lines.length ? [] : keys;
+  const others = rest.length ? (shownKeys.length || lines.length ? `<details class="others"><summary>Others to contact (${rest.length})</summary>${list(rest)}</details>` : list(rest)) : "";
+  const contacts = (shownKeys.length ? `<div class="mainask">${list(shownKeys)}</div>` : "") + others;
+  // A decided bill (a law, a veto, a bill that died): grey, its outcome and date first.
   if (!plan.actionable) {
+    const D = b.dates;
+    const outcome = b.stage === 5 ? `${lawLine(b)}${D.signed ? ` ${fmtDate(D.signed)}` : ""}${b.chapter ? ` · ${LAW_WORD} ${b.chapter}` : ""}`
+      : b.stage === 6 ? `Vetoed${D.vetoed ? ` ${fmtDate(D.vetoed)}` : ""}` : "";
     if (b.stage === 5) what = (partlyVetoed(b) ? `<p class="when">${EXEC.The} vetoed part of it.</p>` : "") + (govFrom(b) ? `<p class="when">${govFrom(b).trim()}</p>` : "");
     if (b.stage === 6) what = what.replace(/^(<p class="when">)Vetoed\. /, "$1");
-    return what || contacts ? `<div class="next">${what}${contacts}</div>` : "";
+    return `<div class="next nx done">${roadPic(b, b.stage <= 2)}<div class="nxb">${outcome ? `<p class="t">${esc(outcome)}</p>` : ""}${what}${contacts}</div></div>`;
   }
-  return `<div class="next"><h4>What you can do</h4>${what}${repsLine()}${contacts}</div>`;
+  return `<div class="next nx">${roadPic(b)}<div class="nxb">${head ? `<p class="t">${head}</p>` : ""}${what}${odds}${lines.join("")}${stance}</div>${repsLine()}${contacts}</div>`;
 }
 
 // Bills still open for comment, listed right here (filters on the Bills tab don't apply).
@@ -5719,6 +5922,29 @@ function drawAll() {
   if (ONE == null) store("filters", saved);  // a one-bill link leaves the visitor's saved filters as they were
 }
 
+// A folded section of a bill's panel: its name and a hint of what's in it on the line, the section (without its own
+// heading) inside.
+function pfold(name, hint, body) {
+  if (!body || !body.trim()) return "";
+  return `<details class="pfold"><summary><span class="pfn">${name}</span>${hint ? `<span class="pfh"> · ${esc(hint)}</span>` : ""}</summary>`
+    + `<div class="pfb">${body.replace(/<h4>[^<]*<\/h4>/, "")}</div></details>`;
+}
+const clipText = (s, n) => { const t = String(s).replace(/\s+/g, " ").trim(); return t.length > n ? `${t.slice(0, n).replace(/\s+\S*$/, "")}…` : t; };
+// "8 steps, last Jun 30" (the History list's lines and its last date).
+function histHint(html) {
+  const n = (html.match(/<li>/g) || []).length, times = html.match(/<time>([^<]*)<\/time>/g) || [];
+  const last = times.length ? times[times.length - 1].replace(/<\/?time>/g, "") : "";
+  return n ? `${n} step${n === 1 ? "" : "s"}${last ? `, last ${last}` : ""}` : "";
+}
+// "Robert Wittke and 29 others · 30 Republicans".
+function sponsHint(b) {
+  const names = new Set(b.vers.flatMap((v) => [v.sponsor, ...v.cosponsors]).filter(Boolean).map(lastName));
+  const listed = Math.max(names.size, ...b.vers.map((v) => (v.cosp || 0) + (v.sponsor ? 1 : 0)));
+  const lead = b.vers[0]?.sponsor || "";
+  const party = NOPARTY ? "" : partyTag(b).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").replace(/^.*?Sponsors?:\s*/i, "").trim();
+  return [lead ? `${lead}${listed > 1 ? ` and ${num(listed - 1)} other${listed === 2 ? "" : "s"}` : ""}` : "", party].filter(Boolean).join(" · ");
+}
+const simHint = (b) => { const k = b.similar.filter((x) => x.s >= 70).length; return b.similar.length ? `${b.similar.length}${k ? `, ${k} nearly the same` : ""}` : ""; };
 function fillDetail(el) {
   const d = el.querySelector(".detail");
   if (d.dataset.done) return;
@@ -5742,17 +5968,21 @@ function fillDetail(el) {
   // The order: what you can do; what it does; its history (steps and votes); who sponsors it; the rest; the official
   // "Copy link to share this bill" and the official links last.
   const sum = b.summary && !folded ? `<p>${esc(b.summary)}</p>` : "";
+  const what = sum ? `<div class="whatdoes"><h4>What it does</h4>${sum}${whatItDoes(b, false)}</div>` : whatItDoes(b, inCard);
+  // In a bill's own panel (2026-11-23, the owner's design), the road and the next step come first and the rest is folded,
+  // each fold's line saying a little of what's in it; a watchlist card keeps its sections open.
+  const hist = historyBlock(b), spons = sponsorsBlock(b), sim = similarBlock(b);
   const html = `${inCard ? "" : nextSteps(b)}
     ${STATE.resetNote?.(b) ? `<p class="reset">${esc(STATE.resetNote(b))}</p>` : ""}
-    ${sum ? `<div class="whatdoes"><h4>What it does</h4>${sum}${whatItDoes(b, false)}</div>` : whatItDoes(b)}
-    ${historyBlock(b)}
-    ${sponsorsBlock(b)}
-    ${panelTags(b, folded)}
+    ${inCard ? what : pfold("What it does", b.summary ? clipText(b.summary, 90) : "", what)}
+    ${inCard ? hist : pfold("History", histHint(hist), hist)}
+    ${inCard ? spons : pfold("Who sponsors it", sponsHint(b), spons + panelTags(b, folded))}
+    ${inCard ? panelTags(b, folded) : ""}
     ${chapterAmendment(b)}
     ${signingMemo(b)}${vetoMemo(b)}
     ${folded ? "" : twinLine(b)}
-    ${lineage(b)}
-    ${similarBlock(b)}
+    ${inCard ? lineage(b) : pfold("This bill in other sessions", [...new Set(b.hist.map((e) => e[0]))].sort().map(span).join(", "), lineage(b))}
+    ${inCard ? sim : pfold("Similar bills", simHint(b), sim)}
     <div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>
     ${inCard ? "" : `<p class="sharebill"><button class="act-btn" type="button" data-copylink="${esc(billLink(b))}">Copy link to share this bill</button></p>`}
     ${officialMore(b)}`;

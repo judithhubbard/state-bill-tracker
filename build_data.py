@@ -655,6 +655,34 @@ def insights(loaded, hist, current):
         # gives its number of bills, so a share from a handful reads as what it is).
         return {t: {k: v for k, v in d.items() if k in current_comms and (not minimum or v[0] >= (40 if t == "all" else 15))} for t, d in out.items()}
 
+    # Each step's odds, for an opened bill's next step (2026-11-23): of past sessions' bills, per committee (by house and
+    # name, as committee_table() keys them) how many got out of it, counted apart for bills that hadn't passed the other
+    # house when they got there ("fresh") and bills that had ("after": the other house passed it first, or it never passed
+    # this one); the same for each house's committees together, for a committee with few bills; and per house, of the bills
+    # that got out of its committee or passed it (or, with one house, reached its floor), how many passed it.
+    def pass_day(r, h):
+        d = r["keyDates"][1 if h == "S" else 2]
+        return min(d.split(";")) if d else ""
+    two_houses = any(r["keyDates"][1] for s in past for r in loaded[s][0])
+    st_comm, st_house, st_floor = defaultdict(lambda: [0, 0, 0, 0]), defaultdict(lambda: [0, 0, 0, 0]), defaultdict(lambda: [0, 0])
+    for s in past:
+        for r in loaded[s][0]:
+            out_of = {}
+            for h, name, left in r["firstComms"]:
+                other = ("S" if h != "S" else LOW) if two_houses else ""
+                o, mine = (pass_day(r, other) if other else ""), pass_day(r, h)
+                after = bool(o) and (not mine or o < mine)
+                for c in (st_comm[f"{h} · {name}"], st_house[h]):
+                    c[2 if after else 0] += 1
+                    c[3 if after else 1] += bool(left)
+                out_of[h] = out_of.get(h, False) or bool(left)
+            for h in (("S", LOW) if two_houses else (LOW,)):
+                if out_of.get(h) or pass_day(r, h) or (not two_houses and r["keyDates"][0]):
+                    st_floor[h][0] += 1
+                    st_floor[h][1] += bool(pass_day(r, h))
+    steps = {"comm": {k: v for k, v in st_comm.items() if k in current_comms and max(v[0], v[2]) >= 20},
+             "house": dict(st_house), "floor": dict(st_floor)}
+
     # What usually happens next: of bills that reached each point, how many became law.
     odds = {t: defaultdict(lambda: [0, 0]) for t in topics}
     for s in past:
@@ -926,6 +954,7 @@ def insights(loaded, hist, current):
         "pastKind": past_kind if past_kind and all(P.session_kind(s) == past_kind for s in past) else "",
         "committees": {"current": committee_table([current], minimum=False), "past": committee_table(past, minimum=False)},
         "odds": {t: dict(v) for t, v in odds.items()},
+        "steps": steps,
         "timing": timing,
         "lateSigning": [late_sign, len(signed)],
         "govMonths": dict(sorted(gov_months.items())),
