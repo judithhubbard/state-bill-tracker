@@ -823,7 +823,12 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
   `renderList()`, `billRow()`, `statusText()`, `track()` (the progress bar in each row),
   `fillDetail()` (the panel that opens under a bill, indented under its title: What you can do, What it does, History
   (`historyBlock()`: steps and votes in one list), Who sponsors it, the rest, the official links and "Copy link to this
-  bill" last; the owner's chosen design "A · Tidied", 2026-11-20; a row's pips, label and date are lists_pages/rows.css's,
+  bill" last; the owner's chosen design "A · Tidied", 2026-11-20; since 2026-11-24 (the owner's design, after several rounds)
+  a bill's own panel opens with `roadPic()` (labeled steps: a lane per house, Committee and Floor, joined into Governor; done
+  teal with ✓, a law's green, now gold, ahead outlined) and `nextSteps()`'s block (bold "Next: ...", grey context and the
+  step's odds from `insights.steps` (`stepOdds()`: per committee, split by whether the bill passed the other house first),
+  then one "Ask ..." line and email per person who decides), and folds the rest (`pfold()`: What it does, History, Who
+  sponsors it, other sessions, Similar bills, Every action); watchlist cards keep their sections open; a row's pips, label and date are lists_pages/rows.css's,
   the same in every view) and `nextSteps()` / `planFor()` /
   `contactBook()` (who to contact and what to ask; `draftBtn()` adds "Copy email" / "Copy message",
   which uses `draftFor()`).
