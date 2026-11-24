@@ -116,3 +116,8 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   a report with no more ayes than noes. Senate committee votes had no tallies before (none shown); on the four reports
   saved for testing (SB 1300 of 2024; SB 869, SB 1142, HB 1707 of 2026) all four became named votes. The first copy is
   about 1,300 reports for 2024-2026 at a second each, alongside the Senate's other work.
+- **Summary line (2026-11-23):** the House's short description ("Gender transition procedures") is the summary line only
+  when it says something the title doesn't (`repeats()` in states/lead_first.py: its words in order in the title, as in
+  "Modifies provisions relating to gender transition procedures"); 907 of 2,494 (2024), 979 of 2,592 (2025) and 1,146 of
+  3,055 (2026) were only the title again and are left out; no issue or trend match changed. Ones that add something
+  ("Missouri national guard" for 'Establishes the "Defend the Guard Act"', "Withdrawn") stay.

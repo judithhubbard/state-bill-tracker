@@ -51,3 +51,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   the Legislature (or an allowed address for the photos) would bring the rest back.
 - **Committee votes (2026-11-23):** "Lay Over" motions decide nothing and aren't kept; a "Postpone Indefinitely" vote is
   against the bill, so its tally and names are turned round (it read "Approved by").
+- **"What it does" leads with the bill (2026-11-23):** about a sixth of the Legislative Council Staff summaries open with
+  current law ("Under current law, ... The act ..."); `what_it_does()` now puts the first sentence about the bill first
+  (states/lead_first.py, shared with WI; the background follows word for word, "(Note: This summary applies to this bill as
+  enacted.)" stays last), except where that sentence leans on the background ("The act removes the existing permission").
+  Reordered on the local copy: 44 of 702 (2024), 46 of 656 (2025), 38 of 626 (2026); a list whose lines aren't
+  numbered stays where it is. Issue matches that moved with the new opening: 2024 +1/-1 "assault", 2025 +1 "incometax",
+  2026 -1 "proptax" (SB 116), -1 "assault". Under 5% now open with current law (17% before). The long title
+  ("Concerning county commissioner redistricting.") is no longer the summary line when it only repeats the short title's words in order
+  (`repeats()`): 37, 50 and 47 bills; long titles that say more ("Concerning ..., and, in connection therewith, ...") stay.
+  A rebuild picks both up, no download.

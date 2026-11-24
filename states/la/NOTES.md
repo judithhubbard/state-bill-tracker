@@ -77,3 +77,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   matching records; HR 243 left out) and live on 2026-11-22 (6 interim meetings listed, no bills). Untested live: the
   Senate's agenda pages during a session (same Agenda.aspx template, not seen with bills), and how far ahead meetings are
   listed (House notices are posted about a week ahead under the rules).
+- **Summary line (2026-11-23):** the subject keyword ("Capital outlay", "Schools/charter") is the summary line only when it
+  says something the title doesn't: when its words appear in order in the title (`repeats()` in states/lead_first.py:
+  "Capital outlay" for "Provides for the comprehensive Capital Outlay budget") it's left out, so the panel's "What it
+  does" isn't a label repeating the title. 348 of 1,484 bills (2024), 194 of 930 (2025), 349 of 1,776 (2026); no issue or
+  trend match changed. Keywords that add a subject ("Property/expropriation" for "Enacts the Louisiana Landowners
+  Protection Act") stay, above the digest: putting them after it would need a page change (the summary line always comes
+  first). The keyword still gives topics.

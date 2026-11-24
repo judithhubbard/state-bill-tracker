@@ -53,6 +53,7 @@ from zoneinfo import ZoneInfo
 
 from states.hi import profile as P
 from states.undated import settle
+from states.lead_first import repeats
 
 HOUSE = {"S": "Senate", "H": "House"}
 OTHER = {"S": "H", "H": "S"}
@@ -690,7 +691,15 @@ def record(session, key, b, parties):
     official = sentence(title_raw)
     if const and not re.search(r"constitution", title, re.I):
         title = f"Constitutional amendment: {title[:1].lower() + title[1:]}"
-    summary = f"{official}. {desc}" if desc else official
+    # The description first (what the bill does), then the official title ("Relating to taxation."), left out when every
+    # word of it is already in the description; a description that's only the title's sentence isn't repeated.
+    if not desc:
+        summary = official
+    elif repeats(official, desc):
+        summary = "" if desc.rstrip(".") == title else desc
+    else:
+        stop = "" if re.search(r"[.!?)”\"]$", desc) else "."  # (a few descriptions end without one)
+        summary = f"{desc}{stop} {official}."
     subjects = " ".join(b.get("subject") or [])
     topics = ["const"] if const else []
     for h_, c in refs:

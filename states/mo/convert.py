@@ -44,6 +44,7 @@ from zoneinfo import ZoneInfo
 
 from states.mo import profile as P
 from states.undated import settle
+from states.lead_first import repeats
 from states import floorcal
 
 HOUSE = {"S": "Senate", "H": "House"}
@@ -1371,7 +1372,10 @@ def record(session, b, src):
         (senate_list(session).get(p) or {}).get("mainBillUrl") or "https://www.senate.mo.gov/BillTracking/Bills/BillList"
     rec = {
         "nums": [p], "base": [p], "prev": earlier(session, b),
-        "title": title, "summary": sentence_case(b.get("short")), "act": "", "lawCode": "", "law": None, "laws": [],
+        # The short description ("Gender transition procedures") is the summary line only when it says something the
+        # title doesn't ("Missouri national guard" for 'Establishes the "Defend the Guard Act"').
+        "title": title, "summary": "" if repeats(sentence_case(b.get("short")), title) else sentence_case(b.get("short")),
+        "act": "", "lawCode": "", "law": None, "laws": [],
         "comms": sorted({f"{h_} · {c}" for h_, c in w.refs}), "topics": topics, "places": [],
         "narrow": P.narrow_kind(title),
         "commFate": "passed" if w.reported or passed else "none", "mainTopic": topics[0] if topics else "",

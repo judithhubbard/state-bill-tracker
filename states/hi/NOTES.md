@@ -79,3 +79,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Gedeon, Pierick, Shimizu, Ihara, Rhoads, Fevella; Sayama, moving to the Senate) have none, as before. The directory's
   typo "sensayama@capitol.hawaii,gov" is fixed; emails stay Open States' (they agree for 66 of the 67; Sue Lee Loy's is repleeloy@ there, repkeohokapuleeloy@ in the directory). data_check's "emails
   that aren't addresses" FAIL came from it, and found three more states' (CT, AL, CO: their NOTES).
+- **Summary line (2026-11-23):** the summary was the official title then the description ("Relating to building codes.
+  Amends responsibilities of the State Building Code Council."), so 91% of panels opened with a heading. Now the
+  description comes first; the official title follows it ("... Relating to building codes.") unless its words already
+  appear in order in the description (`repeats()` in states/lead_first.py: "Relating to state funds." for a description
+  defining "state funds"), and the summary is empty when the description is only the title's sentence (the page doesn't
+  repeat the title). 2023-24: 2,770 titles moved to the end, 2,457 left out as repeated, 434 summaries now empty; 2025-26:
+  2,419, 2,720 and 371. Issue matches (title + summary) changed for one bill (SB 2609 of 2023, "Relating to minimum wage",
+  a guaranteed-compensation threshold, no longer matches the minimum wage issue); the "Homeowners and condo insurance"
+  trend lost three 2025-26 bills (HB 285, HB 1201, HB 1341) that matched only across the title and summary's join.
