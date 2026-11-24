@@ -118,7 +118,7 @@ def governor_on(day):
 # (notes/trends.md). Matched on title and summary.
 TRENDS = [
     ("rise", "Charitable gaming and gambling", r"gaming|gambling|sports betting|pull tabs?\b", True),
-    ("rise", "Memorial highways and bridges", r"designat\w* .{0,60}(?:highway|bridge|interchange)|memorial (?:highway|bridge)", True),
+    ("rise", "New grant programs", r"\bgrant programs?\b", True),
     ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
 ]
 WORDING = [

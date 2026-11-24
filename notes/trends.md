@@ -444,7 +444,7 @@ governments and schools (16.2, 10.2, 8.6, 15.9, 6.3, 18.1 per 1,000), is no tren
 | Subject | Kind | Bills by session | Per 1,000 | Why |
 |---|---|---|---|---|
 | Charitable gaming and gambling | rise | 2, 8, 9, 12, 22, 18 | 2.3, 10.2, 9.7, 13.6, 22.9, 17.1 | z +3.6: electronic pull tabs, gaming taxes and proceeds, sports betting, tribal gaming compacts. Samples all on topic. |
-| Memorial highways and bridges | rise | 0, 0, 1, 1, 7, 10 | 0.0, 0.0, 1.1, 1.1, 7.3, 9.5 | z about +3.3: bills naming a highway, bridge or interchange for veterans and fallen officers, from none to about ten a session. A narrow kind of bill, but a real change; kept so North Dakota has three subjects (the owner may drop it). |
+| New grant programs | rise | 9, 2, 4, 6, 12, 18 | (per 1,000 about 10, 2, 4, 7, 13, 17) | Bills creating or funding a named grant program (2025: agriculture infrastructure, peace officer and corrections, natural gas distribution, historic theater renovation), from 2 in 2017 to 18 in 2025. Replaced "memorial highways and bridges" (0 to 10, naming bills) on 2026-11-24 at the owner's request: a ceremonial kind of bill, not a policy shift. Also looked at and left out: property tax (21, 12, 18, 19, 31, 24: no steady direction), foreign ownership (0 to 5) and school choice (2 to 6), too few; mental health, flat. |
 | COVID-19 | spike | 0, 0, 0, 10, 1, 0 | 0.0, 0.0, 0.0, 11.3, 1.0, 0.0 | 2021's pandemic bills (relief money, liability, mandates). |
 
 Wording pair: "Department of Human Services" (31.2, 10.2, 15.1, 9.1, 0, 0 per 1,000) to "Department of Health and Human
