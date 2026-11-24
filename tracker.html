@@ -6265,6 +6265,9 @@ function showView(v, push = true) {
     if (tab.dataset.view === v) tab.setAttribute("aria-current", "page"); else tab.removeAttribute("aria-current");
   }
   for (const id of ["bills", "watch", "stats", "how", "act", "person"]) $("view-" + id).hidden = id !== v;
+  // How opens on its first section each time it's opened from another tab (the owner: coming back to the last one read
+  // was odd); a link to one of its sections picks that one after this.
+  if (v === "how" && from && from !== "how") showHowSec("howSteps");
   if (v === "watch") renderWatchView();
   // What wasn't drawn while the tab was hidden (later()); the statistics draw the network themselves.
   if (STALE[v]?.size) drawStale(v);
@@ -6866,7 +6869,6 @@ function showHowSec(id) {
   if (!$("view-how").hidden) countOnce(`how/${id}`);
   for (const s of document.querySelectorAll(".howsec")) s.hidden = s.id !== id;
   for (const b of document.querySelectorAll("#howTabs button")) b.setAttribute("aria-pressed", b.dataset.how === id);
-  try { localStorage.setItem(STORE + "howsec", id); } catch (e) {}
 }
 
 // "How a bill becomes law in <state>": a picture at the top of How's steps, one lane per house, drawn from the profile:
@@ -7729,7 +7731,6 @@ function hydrate(raw) {
   if (!embedded) try { renderHowComm(); } catch (e) { console.error(e); }
   // (Inside a list page's frame only the watchlist is shown: no How tab, introduction or notices.)
   if (!embedded) {
-    try { const h = localStorage.getItem(STORE + "howsec"); if (h && $(h)?.classList.contains("howsec")) showHowSec(h); } catch (e) {}
     const parts = [staleNotice(raw), sessionNotice(raw)].filter(Boolean);
     $("notice").innerHTML = shortNotice(parts);
     $("notice").hidden = !parts.length;
@@ -7786,7 +7787,10 @@ function hydrate(raw) {
   const saved = recall("filters");
   if (saved) {
     if (saved.area === "near" || saved.area === "broad" || saved.hideOther || saved.hideNarrow) saved.nearby = true;
-    for (const k of FILTER_KEYS) if (k in saved) state[k] = k === "topics" ? new Set((saved.topics || []).filter((t) => t in TOPICS)) : saved[k];
+    // Only lasting preferences come back on a new visit: the sort and "Hide bills about other places" (with the county).
+    // A stage, topic or other filter from last time starts cleared (the owner, 2026-11-24: "On the governor's desk" was
+    // still picked on coming back). Within a visit the address (#v&...) keeps them, so Back returns to the filtered list.
+    for (const k of ["sort", "nearby"]) if (k in saved) state[k] = saved[k];
     if (state.hist && !(state.hist in HIST_FILTERS)) state.hist = "";
     if (state.progress && !(state.progress in PROGRESS)) state.progress = "";
     if ((state.sort === "due" || state.sort === "meeting") && (!raw.current || raw.upcoming)) state.sort = "recent";
