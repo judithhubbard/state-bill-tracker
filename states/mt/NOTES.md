@@ -87,3 +87,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   than two words to the short title is left out. Checked by
   hand on HB 182 and HB 93 of 2025, SB 44 and HB 2 of 2023. Never holds Montana back (a refusal stops the step; errors
   are logged).
+- **Light history's vetoes checked (2026-11-24)** against each bill's official history (api.legmt.gov archive/v1, the
+  light reader's own source, re-read 2026-11-24): 2015 53 bills with "Vetoed by Governor" (our stage 6: the same 53; the
+  10 "Returned with Governor's Proposed Amendments" are amendatory vetoes, read apart, and 5 line-item vetoes are laws);
+  2021 16 bills vetoed (15 stood, SB 227 overridden in session and a law; HB 691's line-item veto a law, chapter 577),
+  our 15 at stage 6 the same bills. News counts: 2017 56 and 2019 36 (AP, Montana Free Press) match ours; 2015's "29"
+  (Helena Independent Record, AP) was a count at adjournment, before the post-session vetoes; 2021's "14" (NBC Montana,
+  2023) is short of the Legislature's own record. No converter change was needed.
