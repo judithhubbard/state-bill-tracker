@@ -1067,6 +1067,7 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .ta-ppl b { font-weight: 600; margin-right: 4px; }
 .ta .ta-ppl a { display: inline; overflow-wrap: anywhere; }
 .ta-ppl .phone, .ta-gov .phone { white-space: nowrap; }
+@media (max-width: 600px) { .ta-ppl { font-size: 13px; gap: 6px; } .ta-ppl li { line-height: 1.35; } }
 .ta-gov { margin: 0; font-size: 14px; }
 .ta-all { justify-self: start; font-size: 13.5px; }
 .ta-msg { border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; font-size: 14px; line-height: 1.5; }
@@ -2972,7 +2973,9 @@ function holdUp(b, v, oppose) {
 
 // What to ask a committee's chair (support, oppose): a state can word it for committees that schedule floor votes
 // (Texas's House Calendars Committee).
-const agendaAsk = (committee) => STATE.chairAsks?.[committee] || ["put it on the committee agenda", "keep it off the committee agenda"];
+// Between a two-year session's years (nothing scheduled: WatchRules' recess), the ask is for when the body returns.
+const recessTail = () => { try { const s = WR.standing({ stage: 2 }); return s.recess ? ` when ${BODY_CAP.replace(/^The /, "the ")} returns in ${STATE.opens ? fmtDate(STATE.opens(s.y2)) : `January ${s.y2}`}` : ""; } catch (e) { return ""; } };
+const agendaAsk = (committee) => (STATE.chairAsks?.[committee] || ["put it on the committee agenda", "keep it off the committee agenda"]).map((a) => a + recessTail());
 
 // What happens next for a bill, who decides it, and what to ask each person. Asks follow
 // the reader's side: supporters by default, opponents for bills marked Oppose on the watchlist.
@@ -3011,7 +3014,7 @@ function planFor(b, stance = "support") {
   const stalled = ended && !adjourned ? ended.tail : missed ? `It missed ${STATE.originWord || "the deadline"} on ${fmtDate(missed)}, the last day to pass its own house, so it can't pass this ${YEARS > 1 ? "session" : "year"}.`
     : adjourned
     ? overLine
-    : recess ? `${BODY_CAP} is out until ${STATE.opens ? fmtDate(STATE.opens(y2)) : `January ${y2}`}.` : "";
+    : recess ? `Nothing is scheduled before ${BODY_CAP.replace(/^The /, "the ")} returns in ${STATE.opens ? fmtDate(STATE.opens(y2)) : `January ${y2}`}.` : "";
   const live = WR.live(standing, ended); // can anything move before the session ends?
   // Once the session is over and its bills have died (not New York's, which can move until December 31), a bill
   // still at stage 0-2 has no next step: say where it stopped instead.
@@ -3343,8 +3346,8 @@ function taGroups(b, stance) {
         : { k: "chair", label: `The chair, ${titledList([chair])}`, desc: `The chair decides when it comes up. Ask the chair to ${ask}.`, people: [chair], kind: "ask", ask };
       // (Not on the agenda yet and the chair doesn't sponsor it: whether it comes up at all is the chair's call, so first.)
       if (chairG && chairG.kind === "ask") out.push(chairG);
-      if (myOn.length) out.push({ k: "mine", label: `Your ${MEMBER[h]}${myOn.length > 1 ? "s" : ""}, ${titledList(myOn)}`, desc: `On this committee. As a constituent, ask for a ${opp ? "no" : "yes"} vote.`, people: myOn, kind: "vote" });
-      if (rest.length) out.push({ k: "members", label: `${myOn.length ? "The other members" : "Members"} who don't sponsor it`, desc: `${titledList(rest)}. Ask them to ${yes}.`, people: rest, extra: backers, kind: "vote" });
+      if (myOn.length) out.push({ k: "mine", label: `Your ${MEMBER[h]}${myOn.length > 1 ? "s" : ""}, ${titledList(myOn)}`, desc: `On this committee. As a constituent, ask for a ${opp ? "no" : "yes"} vote${here ? "" : " when it comes up"}.`, people: myOn, kind: "vote" });
+      if (rest.length) out.push({ k: "members", label: `${myOn.length ? "The other members" : "Members"} who don't sponsor it`, desc: `${titledList(rest)}. Ask them to ${yes}${here ? "" : " when it comes up"}.`, people: rest, extra: backers, kind: "vote" });
       else if (backers.length) out.push({ k: "members", label: "The committee's members", desc: `${titledList(backers)}, all sponsors. Tell them what you think.`, people: backers, kind: "tell" });
       if (chairG && chairG.kind !== "ask") out.push(chairG);
       for (const g of out) { g.meet = here ? meet : null; g.cw = cw; }
@@ -3368,17 +3371,26 @@ function taGroups(b, stance) {
   }
   return out;
 }
+// The bill in a sentence: "A3481, which revises the Homelessness Prevention Program and requires a new charge for filing
+// of eviction action" when its title starts with what it does ("Revises ...; requires ..."), else "A3481 ("<title>")".
+function billPhrase(b) {
+  const n = b.nums[0], t = b.title.replace(/[.\s]+$/, "");
+  if (!/^[A-Z][a-z]+s\b/.test(t) || /^(?:Relates|Relating)\b/.test(t)) return `${n} ("${t}")`;
+  const parts = t.split(/;\s*/).map((x, i) => (i === 0 ? x[0].toLowerCase() + x.slice(1) : /^[A-Z][a-z]+s\b/.test(x) ? x[0].toLowerCase() + x.slice(1) : x));
+  const said = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0];
+  return `${n}, which ${said.replace(/"([^"]+)"/g, "the $1")}`;
+}
 // The drafted email for one choice: {subject, greet, line (the ask), to, form (people with only a web form), ps}.
 function taDraft(b, g, stance, all) {
   const opp = stance === "oppose", n = b.nums[0], ps = all && g.extra ? [...g.people, ...g.extra] : g.people;
-  const what = `${n} (${b.title.replace(/[.\s]+$/, "")})`;
+  const what = billPhrase(b);
   const long = (w) => new Date(w).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   const greet = g.gov ? EXEC.dear : ps.length === 1 ? `Dear ${GREET[ps[0].house]} ${shortName(ps[0].name)},`
     : `Dear ${GREET[ps[0].house]}s ${andList(ps.map((p) => shortName(p.name)))},`;
   const when = g.meet ? `, when ${g.cw || "the committee"} meets on ${long(g.meet.when)}` : "";
   const md = g.meet ? ` on ${new Date(g.meet.when).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "";
   let subject, line;
-  if (g.kind === "vote") { subject = `Please vote ${opp ? "no" : "yes"} on ${n}${md}`; line = `I'm writing to ask you to vote ${opp ? "no" : "yes"} on ${what}${when}.`; }
+  if (g.kind === "vote") { subject = `Please vote ${opp ? "no" : "yes"} on ${n}${md}`; line = `I'm writing to ask you to vote ${opp ? "no" : "yes"} on ${what}${when || ` when it comes before ${g.cw || "the committee"}`}.`; }
   else if (g.kind === "tell") { subject = `${n}: I ${opp ? "oppose" : "support"} it`; line = `I'm writing ${opp ? "in opposition to" : "in support of"} ${what}${g.meet ? `, which is on the committee's agenda for ${long(g.meet.when)}` : ""}.`; }
   else { subject = `${n}: please ${g.ask}`; line = `I'm writing ${opp ? "in opposition to" : "in support of"} ${what}. Please ${g.ask}.`; }
   return { subject, greet, line, to: ps.filter((p) => p.info.email).map((p) => p.info.email), form: ps.filter((p) => !p.info.email && (p.info.form || p.info.url)), ps };
@@ -5874,7 +5886,7 @@ function watchCard(x, bodyOnly) {
     const e = !SHARED && watchEntry(b);
     const lb = SHARED ? "" : listButton(b);
     const top = bodyOnly && (showStance(b, e) || lb) ? `<p class="wside">${showStance(b, e) ? `Your side: ${sideButtons(b, e.stance, `data-stance="${b.idx}"`)}` : ""}${lb ? `<span class="wlists">Lists ${lb}</span>` : ""}</p>` : "";
-    const odds = x.key && oddsLine(b) ? `<p class="odds">${oddsLine(b)}</p>` : "";
+    const odds = "";  // (the row and the next step carry the step's odds; the old whole-path line said a different number)
     const why = `${!x.key && x.plan?.reason ? `<p class="why">${esc(x.plan.reason)}</p>` : ""}${!x.key ? reintroAsk(b, x.stance) : ""}`;
     const note = !SHARED && myPublished()?.group ? `<details class="noteedit"${pubText().notes[baseNum(b.nums[0])] ? " open" : ""}><summary>Add a note</summary><textarea data-pubnote="${esc(baseNum(b.nums[0]))}" rows="2" maxlength="1000" placeholder="Why this bill matters or what to say about it">${esc(pubText().notes[baseNum(b.nums[0])] || "")}</textarea></details>` : "";
     const log = SHARED ? "" : logBlock(x);

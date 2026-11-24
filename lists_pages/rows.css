@@ -113,3 +113,6 @@
 .wrows .wr-btn[aria-expanded="true"] .wr-ta { display: none; }
 .wnews-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 14px; margin: 0 0 10px; font-size: 14.5px; color: var(--ink-2); }
 .wnews-line .linkish { font-size: 14px; }
+
+/* The side shows as the row's left stripe (wr-opp, wr-sup, wr-won): no tag beside it as well. */
+.wrows .wr-row.wr-opp .wr-stance, .wrows .wr-row.wr-sup .wr-stance, .wrows .wr-row.wr-won .wr-stance { display: none; }
