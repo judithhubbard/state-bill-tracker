@@ -86,3 +86,44 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   "statebilltracker.org", stopping at once if asked. The Webmaster answered the same day (2:11 PM Arizona time): "This
   should be fine. Thank you". Those are the terms: keep to them (rate, scope, User-Agent). Until a build from
   apps.azleg.gov is compared with the Open States one and switched, Arizona still comes from Open States.
+- **apps.azleg.gov as the source (built 2026-11-24, not switched yet):** `states/az/fetch_azleg.py` reads the
+  Legislature's own data service within the webmaster's terms (above): one request every 10 seconds, the User-Agent naming
+  statebilltracker.org, only bill status/actions/votes (sponsors are part of a bill's status), a 403 or 429 stops the run.
+  Sessions from 2025 (the 57th Legislature) on; 2023 and 2024 stay Open States' finished copies. Endpoints (JSON, gzip):
+  /api/Session/ (session ids: 2023 127, 2024 128, 2025 129, 2026 130, 2027 131); /api/Bill/?sessionId=<id> (the
+  session's whole bill list, about 2,000 measures, 7 MB compressed: reading dates, the governor's action and date, chapter,
+  final disposition; each entry also carries the public's Request to Speak positions with people's names, dropped on
+  arrival and never saved); /api/Bill/?billNumber=HB2001&sessionId=<id>&legislativeBody=H&verbose=true (every committee
+  assignment and action with its tally, the floor actions' headers, the transmittals); /api/BillSponsor/?id=<BillId>;
+  /api/BillStatusFloorAction/?billStatusId=<BillId>&billStatusActionId=<id>&includeVotes=true (a roll call, each member's
+  vote with party). Not read: anything else there (documents, agendas, the positions), outside the terms.
+  A bill is read again only when its list entry changes (`sig()`: every field of the entry); the list itself at most every
+  4 hours (a finished session weekly). Order: laws and vetoes, then bills that passed a house or failed on the floor, then
+  the rest, newest activity first. Concurrent resolutions that aren't constitutional amendments (azleg.py's
+  resolutions.json) aren't read. Requests: 2 a bill (status, sponsors) plus one per third-reading or final roll call
+  (Committee of the Whole, concurrence and other motions have none): about 10,700 for 2025-26, about 30 hours at the
+  10-second pace, so the first copy takes many runs; then a run is the list and the few changed bills.
+  `states/az/azleg_source.py` turns the saved records into the Open States shape convert.py reads, with the converter's
+  wording decided per action ("_text"): each committee a bill was assigned to, by name, in order (the next referral dated
+  when the committee before reported it), each committee's report with its tally ("DP (10-2)", Rules' "C&P"/"PFC"), the
+  Committee of the Whole as its own line (never a passage: the Open States trap above can't happen), third readings and
+  final votes as passages or failures with each member's vote, concurrence, transmittals, the governor's action with the
+  chapter ("Signed by the Governor (Chapter 118)"). The NOW title (after a strike-everything amendment) is the title when
+  there is one. convert.py uses this source for a session once its copy is whole (data/az/azleg_api/<year>/complete);
+  AZ_SOURCE=openstates keeps Open States everywhere, AZ_SOURCE=azleg uses a partial copy (for testing).
+  A committee's "W/D" (withdrawn) moves the bill on, to its next committee or the floor (convert.py treats "Withdrawn
+  from ..." like a report for where the bill is, never as an approval). The Committee of the Whole's code is the line's
+  description ("DPA"), so a floor amendment in the second house still means the first must agree again.
+  **Compared (2026-11-24, local copies):** the Open States path is unchanged bill for bill (2024, 2025: every field the
+  same as before). The apps.azleg.gov build of 49 sampled 2025 bills (14 laws, 8 vetoes, 3 passed both, 8 passed one,
+  6 on the floor, 10 in committee) and 25 laws of 2026: every floor vote the same (tallies and the names of members who
+  didn't vote yes); every law gets its chapter (Open States' have none) and every bill its committees (Open States' only
+  when a committee reported it). Stage differences, all where the official record corrects Open States: SB 1734 and
+  SB 1530 of 2025 (Open States has "PASSED" lines for a house that never voted on them; shown as passed both houses, they
+  passed one), HB 2454 and HB 2930 (reported by Public Safety, held in Appropriations: in committee, not on the floor).
+  The Committee of the Whole trap can't recur here. `python3 test/data_check.py az` (AZ_SOURCE=azleg): 0 problems.
+  Request cost measured: the 49 bills took 170 requests (3.5 a bill), the 25 laws about 5 each.
+  **To switch** (the owner decides): in .github/states.json's Arizona entry, run `python3 states/az/fetch_azleg.py` after
+  azleg.py (it needs data/az/azleg/resolutions.json) with enough minutes (it stops 5 minutes before FETCH_MINUTES; e.g.
+  100), `|| true` so a failure never holds Arizona back. data/az is already the job's cache. Each session switches by
+  itself when its copy is whole; Open States keeps running until then and for 2023-24. No secret is needed.

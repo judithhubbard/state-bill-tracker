@@ -15,7 +15,7 @@ from collections import defaultdict
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from states.az import books, profile as P
+from states.az import azleg_source as A, books, profile as P
 from states.undated import settle
 from states import letters as L
 
@@ -29,12 +29,37 @@ def folder(session):
     return os.path.join(P.DATA, str(session))
 
 
+# The source of each session's bills (2026-11-24): the Legislature's own apps.azleg.gov (states/az/fetch_azleg.py,
+# azleg_source.py, the webmaster's permission) once that session's copy is whole, else Open States' files. AZ_SOURCE=
+# openstates keeps Open States for every session; AZ_SOURCE=azleg uses apps.azleg.gov wherever any of it is read.
+SOURCE = os.environ.get("AZ_SOURCE", "")
+
+
+def azleg(session):
+    if SOURCE == "openstates":
+        return False
+    return A.available(session) and (A.complete(session) or SOURCE == "azleg")
+
+
+def records(session):
+    """The session's bills, Open States-shaped, from whichever source it uses."""
+    if azleg(session):
+        return A.bills(session)
+    out = []
+    for f in glob.glob(os.path.join(folder(session), "bills", "*.json")):
+        with open(f, encoding="utf-8") as fh:
+            out.append(json.load(fh))
+    return out
+
+
 def sessions():
     # (A first copy still downloading is built too; build_site.sh skips the state while data/az/incomplete exists.)
     # This year's and next year's sessions show from their first bill (prefiled from mid-November); older ones once
     # they're mostly there.
-    return sorted(int(os.path.basename(f)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4))
-                  if len(glob.glob(os.path.join(f, "bills", "*.json"))) > (0 if int(os.path.basename(f)) >= CURRENT else 500))
+    years = {int(os.path.basename(f)) for f in glob.glob(os.path.join(P.DATA, "[0-9]" * 4))
+             if len(glob.glob(os.path.join(f, "bills", "*.json"))) > (0 if int(os.path.basename(f)) >= CURRENT else 500)}
+    years |= {int(os.path.basename(f)) for f in glob.glob(os.path.join(A.ROOT, "[0-9]" * 4)) if azleg(int(os.path.basename(f)))}
+    return sorted(years)
 
 
 def text(x):
@@ -42,7 +67,9 @@ def text(x):
 
 
 def decode(a):
-    """One Open States action -> (house, shared wording)."""
+    """One Open States action -> (house, shared wording). (apps.azleg.gov's actions come with theirs decided.)"""
+    if "_text" in a:
+        return a["_house"], a["_text"]
     h = ORG.get((a.get("organization") or {}).get("classification"), "")
     kinds, desc = a.get("classification") or [], text(a.get("description"))
     comm = next((e.get("name") for e in a.get("related_entities") or [] if e.get("entity_type") == "organization"), None)
@@ -96,8 +123,9 @@ def _titles(session):
     """Short title -> [(bill, first sponsor)] for one session's bills."""
     if session not in _TITLES:
         out = {}
-        for f in glob.glob(os.path.join(folder(session), "bills", "[HS]B*.json")):
-            b = json.load(open(f))
+        for b in records(session):
+            if not re.match(r"[HS]B", b["identifier"]):
+                continue
             sp = next((x.get("name") for x in b.get("sponsorships") or [] if x.get("primary")), "")
             out.setdefault(text(b.get("title")).lower(), []).append((b["identifier"].replace(" ", ""), sp))
         _TITLES[session] = out
@@ -261,16 +289,17 @@ def load_session(session):
             if hit:
                 pid, name = hit["id"], hit["name"]
         return seat_of.get(pid) or f"{h}?{name}"
-    files = glob.glob(os.path.join(folder(session), "bills", "*.json"))
-    fetched = datetime.fromtimestamp(max(os.path.getmtime(f) for f in files), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
+    bills_ = records(session)
+    stamp = A.fetched_mtime(session) if azleg(session) else \
+        max((os.path.getmtime(f) for f in glob.glob(os.path.join(folder(session), "bills", "*.json"))), default=None)
+    fetched = datetime.fromtimestamp(stamp, ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
     recs, index = [], {}
     official = resolution_titles(session)
     # "What it does": the research staffs' yearly Summary of Legislation (states/az/books.py), on every measure that
     # passed the Legislature.
     book = books.summaries(os.path.join(P.DATA, "azleg", "books"), session)
     texts = {}
-    for f in sorted(files, key=lambda f: (os.path.basename(f)[0], int(re.sub(r"\D", "", os.path.basename(f)) or 0))):
-        b = json.load(open(f))
+    for b in sorted(bills_, key=lambda b: (b["identifier"][0], int(re.sub(r"\D", "", b["identifier"]) or 0))):
         p = b["identifier"].replace(" ", "")
         amendment = p[:3] in ("HCR", "SCR") and (official.get(p) or {}).get("kind") == "amendment"
         if not amendment and (p[:2] not in ("HB", "SB") or "bill" not in (b.get("classification") or [])):
@@ -284,6 +313,9 @@ def load_session(session):
         for d, h, t, a in steps:
             if t.startswith("REPORTED|") and t.split("|")[1]:
                 reports.setdefault(h, t.split("|")[1])
+            # (apps.azleg.gov names each committee a bill was assigned to, reported or not: the first one in a house.)
+            elif t.startswith("REFERRED TO ") and a.startswith("Assigned to "):
+                reports.setdefault(h, a[len("Assigned to "):])
         steps = [(d, h, f"REFERRED TO {reports[h].upper()}" if t == "REFERRED" and h in reports else "Referred to committee" if t == "REFERRED" else
                   "REPORTED" if t.startswith("REPORTED|") else t, a) for d, h, t, a in steps]
         # A third-reading vote that failed outranks a "PASSED" the same day in the same house: Open States also lists the
@@ -325,7 +357,8 @@ def load_session(session):
         for d, h, t, a in steps:
             if t.startswith("REFERRED TO") or t == "Referred to committee":
                 where_h, place, comm = (h if h in HOUSE else where_h), "committee", t[len("REFERRED TO "):] if t.startswith("REFERRED TO") else None
-            elif t == "REPORTED":
+            elif t == "REPORTED" or t.startswith("Withdrawn from "):
+                # (apps.azleg.gov's "W/D": the committee no longer has it; the next referral, if any, follows.)
                 where_h, place, comm = (h if h in HOUSE else where_h), "floor", None
             elif t.startswith("PASSED"):
                 place, comm = "desk", None
