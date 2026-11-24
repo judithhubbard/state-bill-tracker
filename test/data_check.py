@@ -946,6 +946,11 @@ def check_light(state):
                          [x.get("first") or "", x.get("last") or ""] + [p for d in x.get("keyDates") or [] for p in str(d).split(";")])})
         if future:
             say(state, "FAIL", f"light {s}: {len(future)} bills dated in the future, e.g. {future[:4]}")
+        # (DC's B21-0455 of 2015 had "2016/11/29" from the law library, and the build stopped on it: dates are ISO only.)
+        odd = sorted({x["nums"][0] for x in bills if any(p and not re.fullmatch(r"\d{4}-\d\d-\d\d.*", p) for p in
+                      [x.get("first") or "", x.get("last") or ""] + [p for d in x.get("keyDates") or [] for p in str(d).split(";")])})
+        if odd:
+            say(state, "FAIL", f"light {s}: {len(odd)} bills with dates not written YYYY-MM-DD, e.g. {odd[:4]}")
         chap = [x["nums"][0] for x in bills if x.get("chapter") and x.get("stage") != 5]
         if chap:
             say(state, "FAIL" if len(chap) > 0.005 * len(bills) else "LOOK",

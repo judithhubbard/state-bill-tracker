@@ -483,7 +483,13 @@ def law_table(session):
     """The Council Period's acts and laws by bill number (data/dc/laws_<session>.json, written by laws.py)."""
     key = ("laws", session)
     if key not in _SEATS:
-        _SEATS[key] = L.read_json(os.path.join(P.DATA, f"laws_{session}.json"), {}) or {}
+        table = L.read_json(os.path.join(P.DATA, f"laws_{session}.json"), {}) or {}
+        # (Older laws' files write some dates "2016/11/29": B21-0455's effective date. The build reads ISO dates only.)
+        for lx in table.values():
+            for f in ("effective", "enacted"):
+                if isinstance(lx.get(f), str):
+                    lx[f] = re.sub(r"^(\d{4})/(\d{1,2})/(\d{1,2})", lambda m: f"{m[1]}-{int(m[2]):02d}-{int(m[3]):02d}", lx[f])
+        _SEATS[key] = table
     return _SEATS[key]
 
 
