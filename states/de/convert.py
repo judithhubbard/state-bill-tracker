@@ -364,6 +364,19 @@ def report_counts(t):
     return out
 
 
+def old_wording(t):
+    """The 148th-151st Assemblies' (2015-22, light history) passage lines in today's wording: "Passed in House" (no tally:
+    a passage with no vote record), "Passed by Senate. Votes: Passed   21 YES     0 NO ..." (the result repeated before
+    the tally) -> "Passed By Senate. Votes: 21 YES 0 NO ...". Lines in today's wording are unchanged."""
+    m = re.match(r"(Passed|Defeated) (?:in|by|By|In) (House|Senate)(?: by Voice Vote)?\.?\s*$", t)
+    if m:
+        return f"{m.group(1)} By {m.group(2)}. Votes:"
+    m = re.match(r"(Passed|Defeated) (?:in|by|In) (House|Senate)\. Votes?:\s*(?:Passed|Defeated|Failed)?\s*(.*)$", t)
+    if m:
+        return f"{m.group(1)} By {m.group(2)}. Votes: {m.group(3)}"
+    return t
+
+
 def line_key(t):
     """What a history line says, to find the same line in a bill's and its substitute's histories: the event after the
     last " - ", and for a vote its house, yeas and nays (one copy can count one more member not voting: HB 168 of 2023-24)."""
@@ -439,7 +452,7 @@ def record(session, row, p, sub_rows, seat):
             acts.append((d, i, t))
     for r, sf in sub_files:
         for a in sf.get("actions") or []:
-            t, d = text(a.get("ActionDescription")), day(a.get("OccuredAtDateTime"))
+            t, d = old_wording(text(a.get("ActionDescription"))), day(a.get("OccuredAtDateTime"))
             if re.match(r"(?:was introduced and )?adopted in lieu of", t, re.I):
                 continue
             m = PREFIX.match(t)
@@ -447,7 +460,7 @@ def record(session, row, p, sub_rows, seat):
                 continue  # another substitute's line, copied (SS 1 for SB 278 carries SS 2's)
             add(d, a.get("LegislationActionLogId") or 0, t if m else f"{label_of(r)} - {t}")
     for a in f.get("actions") or []:
-        t, d = text(a.get("ActionDescription")), day(a.get("OccuredAtDateTime"))
+        t, d = old_wording(text(a.get("ActionDescription"))), day(a.get("OccuredAtDateTime"))
         m = PREFIX.match(t)
         if m and m.group("sub") in own:
             continue

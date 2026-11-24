@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       state:
-        description: "State code with a states/<st>/light.py (mt, wy, nd, or, ca, ct, in, mo, ms, nm, sd, us, tn, ok, ri, vt, dc, ak, al, id, ia, ky, la, nc)"
+        description: "State code with a states/<st>/light.py (mt, wy, nd, or, ca, ct, in, mo, ms, nm, sd, us, tn, ok, ri, vt, dc, ak, al, id, ia, ky, la, nc, oh, ga, nh, de, nv, wi, wv, az, hi)"
         type: string
         required: true
       sessions:
@@ -39,6 +39,11 @@ jobs:
       - name: Install pdftotext
         # (New Mexico's fiscal impact reports are PDFs; states/nm/fetch.py skips them without it.)
         run: command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null
+      - name: Install New Hampshire's SQL Server reader
+        # (states/nh/light.py reads the General Court's public SQL Server with pymssql, its login from the Legislature's
+        # PDF with pypdf, as download.yml's New Hampshire job does.)
+        if: inputs.state == 'nh'
+        run: pip install -q pymssql pypdf
       - name: Read the sessions, committing each
         env:
           ST: ${{ inputs.state }}

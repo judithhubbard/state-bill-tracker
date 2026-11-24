@@ -144,6 +144,37 @@ needed a converter change for older wording, two a fetch.py fix, noted below. ro
 - **Iowa**: the 2015-21 files' names are listed only on open.pluralpolicy.com (the owner's login); the path was tested end to
   end with 2023-24's file (2,055 records, 352 laws, 2 vetoes, as the live site).
 
+## Third batch, part b (written 2026-11-24, not yet run on GitHub)
+
+Readers for states whose old sessions are in their current sources: each hook calls the state's own fetch.py functions
+for an old session (members' votes, roll-call PDFs, committee records, texts and veto messages skipped), so the
+converter reads them as it reads the window's years.
+
+| state | source | sessions | requests a session (pace) | about | lacks |
+|---|---|---|---|---|---|
+| Ohio | LSC API v2 (session(): list, each bill's versions and actions) | 2015, 2017, 2019 (131st-133rd) | about 2,800 (three at a time) | 20-40 min | signing dates (the 131st-133rd versions carry none: a law is dated by its last action, HB 64 of 2015 by its 2016 line-item veto receipt); analyses |
+| Georgia | SOAP services (session(): list, each bill's detail, members, committees; GetVote skipped) | 2015, 2017, 2019, 2021 | 1,900-2,700 (three at a time) | 30-45 min | members' votes, summaries (as now), veto messages |
+| New Hampshire | public SQL Server (sql_year() for both years of the General Court, members_of()) + gc.nh.gov code tables | 2015-2022 | about 20 queries (1 s) + 5 pages (11 s crawl delay) | 2 min | analyses ("What it does"); old committee names read from the Docket keep journal page notes ("Commerce and Consumer Affairs Hj P. 18", "... (In Recess of"): their bills lose that committee's topic |
+| Delaware | legis.delaware.gov (assembly_lists(), people(), assembly(); roll-call lists skipped) | 2015, 2017, 2019, 2021 (148th-151st) | 2,300-3,100 (1 s) | 40-55 min | roll calls by member, chapters on some bills (the 148th's pages say "N/A") |
+| Nevada | NELIS (lists(), overviews(), members(), committees()) | 2015, 2017, 2019, 2021 (78th-81st) | 1,100-1,400 (1 s; Overviews take about 1.7 s) | 35-60 min | votes by member, committee minutes, veto messages (barred) |
+| Wisconsin | docs.legis.wisconsin.gov (session(): lists, histories, LRB analyses, members, committees; roll calls, committee records, veto messages skipped) | 2015, 2017, 2019, 2021 | about 3,500-4,000 (1 s) | about an hour | votes by member, committee votes |
+| West Virginia | wvlegislature.gov Bill_Status (members(), session(): lists and histories) | 2015-2022 | 2,000-2,500 (1 s) | 35-45 min | roll calls, drafters' notes; old sponsors' parties only where today's members have the name |
+| Arizona | Open States bulk files (states/openstates_light.py), named in states/az/light_bulk.json | 2015-2022 | 1 download | 1 min | chapters; sponsors' parties (people.json's roles start in 2023) |
+| Hawaii | Open States bulk files (both years of each Legislature), named in states/hi/light_bulk.json | 2015, 2017, 2019, 2021 | 2 downloads | 1 min | sponsors' parties (openstates_people.csv isn't in git) |
+
+Tried locally (2026-11-24): New Hampshire 2015 and 2016 end to end (written: 869 bills, 274 laws, 11 vetoes; 1,057 bills,
+330 laws, 13 vetoes; NHPR counted 330 laws and 13 vetoes in 2016, and 12 vetoes in 2015 counting the budget's HB 1 and
+HB 2). One or a few bills each, converted: Ohio's 131st (HB 64), Georgia 2015 (HB 170, Act 46; SB 1), Delaware's 148th
+(HB 450, HB 446: their passage lines are worded the old way, "Passed in House" and "Passed by Senate. Votes: Passed 21
+YES ...", which convert.py's old_wording() now reads as today's; it changes none of 2023-26's lines), Nevada 2015 (AB 1,
+AB 326 vetoed, SB 1 chapter 1; the official vetoed list has 7), Wisconsin 2015 (AB 1, AB 21, SB 21: 2015 Act 55). The
+Open States path with the 2023 files on the owner's computer: Arizona 2023 205 laws and 143 vetoes, Hawaii 2023-24 516
+laws and 18 vetoes. West Virginia wasn't tried: www.wvlegislature.gov didn't answer the owner's computer (GitHub's
+runners read it daily), so its first run is the check. The Open States file names (each has an id) must come from the
+owner: Arizona's 2015-2022 regular sessions ("AZ_52nd-1st-regular" ... "AZ_55th-2nd-regular") and Hawaii's 2015-2022
+years, from open.pluralpolicy.com/data/session-json/ (login), into light_bulk.json (not bulk.json, whose names every
+download imports into the site's own data).
+
 ## How the build uses them (stage 2, 2026-11-24)
 
 `load_light()` in build_data.py reads the light sessions in an unbroken run back from the state's first full session (one
