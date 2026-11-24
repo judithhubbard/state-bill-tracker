@@ -7232,6 +7232,8 @@ function hydrate(raw) {
   loadWatch();
   loadLog();
   if (!/^#embed=/.test(location.hash)) countVisit();
+  // The front page's "Your state" link names the last state page visited (not frames, not Claude copies).
+  if (ROOT && !/^#embed=/.test(location.hash)) try { localStorage.setItem("abt:laststate", STATE.code); } catch (e) {}
   const m = location.hash.match(/^#w=(\d{4})\.([A-Z0-9.-]+)$/);
   const pub = location.hash.match(/^#list=([a-z0-9-]{1,61})$/);
   if (pub) { SHARED = new Map(); SHARED_META = { title: "Loading the list…", group: "", updated: new Date().toISOString() }; loadPublishedList(pub[1]); }

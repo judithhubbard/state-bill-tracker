@@ -475,6 +475,33 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .show { position: relative; }
 .find { flex: 0 1 300px; margin-left: auto; min-width: 0; position: relative; display: flex; }
 @media (max-width: 760px) { .find { flex: 1 1 100%; margin-left: 0; } }
+/* "Your state": a button opening every state's page as a link, beside "Find a bill" (2026-11-23: visitors didn't see that
+   each state has its own page; the map's squares say so only on hover). The last state visited (abt:laststate, set here
+   and by each state's page) is a link before it. On a phone both come first, on their own lines. */
+.gost { margin-left: auto; display: inline-flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; min-width: 0; }
+.gost + .find { margin-left: 0; }
+.golast { font-weight: 600; color: var(--navy); white-space: nowrap; }
+.golast:hover { color: var(--hover); }
+.stpick { position: relative; }
+#stBtn { font: inherit; font-size: 15px; padding: 6px 30px 6px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet);
+  color: var(--ink); cursor: pointer; text-align: left; position: relative; white-space: nowrap; }
+#stBtn::after { content: ""; position: absolute; right: 11px; top: 50%; width: 6px; height: 6px; margin-top: -5px;
+  border: solid var(--ink-2); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+#stBtn:focus-visible, .stmenu a:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
+.stmenu { left: auto; right: 0; z-index: 7; }
+.stmenu ul { list-style: none; margin: 0; padding: 0; columns: 3 150px; column-gap: 20px; }
+.stmenu li { break-inside: avoid; }
+.stmenu a { display: block; font-size: 14px; color: var(--ink); text-decoration: none; border-radius: 5px; padding: 3px 6px; margin: 0 -6px; }
+.stmenu a:hover { background: var(--paper); color: var(--navy); }
+.stmenu .us { border-bottom: 1px solid var(--rule); padding-bottom: 8px; margin-bottom: 10px; }
+.stmenu .us a { display: inline-block; font-weight: 600; }
+@media (max-width: 760px) {
+  .gost { flex: 1 1 100%; margin-left: 0; order: -2; }
+  .gost + .find { order: -1; }
+  .stpick { flex: 1 1 auto; }
+  #stBtn { width: 100%; }
+  .stmenu { left: 0; right: auto; }
+}
 .find svg { position: absolute; left: 10px; top: 50%; width: 15px; height: 15px; margin-top: -7.5px; fill: none; stroke: var(--ink-2);
   stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
 #q { width: 100%; min-width: 0; font: inherit; font-size: 15px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule);
@@ -560,6 +587,7 @@ footer { margin-top: 18px; color: var(--ink-2); font-size: 12.5px; opacity: .85;
     <a class="allis" href="issues/">All issues</a>
     <div class="when" id="years" role="group" aria-label="Year"></div>
     <div class="when" id="vsw" role="group" aria-label="Show as" hidden><button type="button" data-v="map" aria-pressed="true">Map</button><button type="button" data-v="chart" aria-pressed="false">Chart</button></div>
+    <span class="gost"><a class="golast" id="goLast" hidden></a><span class="stpick"><button type="button" id="stBtn" aria-haspopup="true" aria-expanded="false" aria-controls="stMenu">Your state</button><nav class="menu stmenu" id="stMenu" aria-label="States" hidden></nav></span></span>
     <span class="find"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg><span class="sr" id="foundStatus" role="status"></span><input type="search" id="q" placeholder="Find a bill: HB 1234, or words" aria-label="Find a bill by its number or words in its title, in any state or Congress" autocomplete="off" spellcheck="false" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-controls="found" aria-expanded="false"></span>
     <div class="found" id="found" role="region" aria-label="Bills found" hidden></div>
   </div>
@@ -1335,9 +1363,47 @@ yearsEl.addEventListener("click", (e) => {
 document.addEventListener("click", (e) => {
   const a = e.target.closest("a[href]");
   if (!a || e.defaultPrevented) return;
-  const from = a.closest("#panel") ? "panel" : a.closest("#tiles") ? "map" : a.closest("#mine") ? "your bills" : a.closest(".allst") ? "states list" : a.closest(".goto") ? "search" : "";
+  const from = a.closest("#panel") ? "panel" : a.closest("#tiles") ? "map" : a.closest("#mine") ? "your bills" : a.closest(".allst") ? "states list" : a.closest(".goto") ? "search"
+    : a.closest("#stMenu") ? "state menu" : a.closest("#goLast") ? "last state" : "";
   if (from) countUse(`home/to a state/${from}${issue ? " (topic)" : ""}`);
+  // The state it goes to is "your state" next time (a bill's link from search too: its state's page sets it anyway).
+  const st = (a.getAttribute("href") || "").match(/^([a-z]{2})\//);
+  if (st && built[st[1].toUpperCase()]) try { localStorage.setItem("abt:laststate", st[1]); } catch (err) {}
 });
+// "Your state": every state's page as a link (from the states list the build writes: Congress first), and the last state
+// visited before it.
+{
+  const btn = document.getElementById("stBtn"), stMenu = document.getElementById("stMenu"), last = document.getElementById("goLast");
+  const links = [...document.querySelectorAll("#states a")].map((a) => [a.getAttribute("href"), a.textContent.trim()]);
+  const us = links.filter(([h]) => h.startsWith("us/")), rest = links.filter(([h]) => !h.startsWith("us/"));
+  const li = ([h, t]) => `<li><a href="${esc(h)}">${esc(t)}</a></li>`;
+  stMenu.innerHTML = (us.length ? `<ul class="us">${us.map(li).join("")}</ul>` : "") + `<ul>${rest.map(li).join("")}</ul>`;
+  let mine = "";
+  try { mine = localStorage.getItem("abt:laststate") || ""; } catch (e) {}
+  if (/^[a-z]{2}$/.test(mine) && built[mine.toUpperCase()]) {
+    last.href = built[mine.toUpperCase()];
+    last.textContent = mine === "us" ? "Bills in Congress \u2192" : `${NAMES[mine.toUpperCase()]}\u2019s bills \u2192`;
+    last.hidden = false;
+    btn.textContent = "Another state";
+  }
+  const openSt = (on, keys) => {
+    stMenu.hidden = !on;
+    btn.setAttribute("aria-expanded", String(on));
+    if (on && keys) stMenu.querySelector("a")?.focus();
+  };
+  btn.addEventListener("click", (e) => openSt(stMenu.hidden, e.detail === 0));
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowDown" && stMenu.hidden) { e.preventDefault(); openSt(true, true); } });
+  stMenu.addEventListener("keydown", (e) => {
+    const xs = [...stMenu.querySelectorAll("a")], i = xs.indexOf(document.activeElement);
+    const to = { ArrowDown: i + 1, ArrowRight: i + 1, ArrowUp: i - 1, ArrowLeft: i - 1, Home: 0, End: xs.length - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    xs[(to + xs.length) % xs.length].focus();
+  });
+  document.addEventListener("click", (e) => { if (!stMenu.hidden && !e.target.closest(".stpick")) openSt(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !stMenu.hidden) { openSt(false); btn.focus(); } });
+  stMenu.addEventListener("focusout", (e) => { if (!e.relatedTarget || !e.relatedTarget.closest(".stpick")) openSt(false); });
+}
 let WANT_MINE = location.hash === "#mine";  // shown once "Your bills" has loaded (drawMine())
 if (location.hash === "#laws" && HAS_CMP) CUSTOM = lawsView();
 {

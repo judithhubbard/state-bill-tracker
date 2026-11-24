@@ -138,7 +138,8 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   Your bills). `adoptShared()` takes a state's own bills, once, from the watchlist, log and stances saved under the plain
   names before this; New York's page moves its own once (`moveNewYork()`: odd-year A and S bills, odd-year sessions'
   settings). Every watchlist scan (`/^abt:([a-z]{2}):watch$/`) needs the state in the name. Site-wide names stay plain:
-  abt:follows, abt:lists, abt:all:published, abt:yourbills:*, abt:tabseen, abt:issueview, abt:supportnote.
+  abt:follows, abt:lists, abt:all:published, abt:yourbills:*, abt:tabseen, abt:issueview, abt:supportnote, abt:laststate (the
+  front page's "Your state" menu: the last state page visited, set by tracker.html and the front page's links).
 - **Adding a state (learned from NJ and VA):** missing settings fall back to New York's rules and wording, silently.
   Copy states/nj or states/va and decide each of these: in profile.py, `YEARS`, `LOWER`/`LOWER_NAME`/`TITLES`,
   `LEADERS`, `GOVERNORS`, `TOPICS`, `TOWNS_PATH`; in profile.js, `code`, `houses`, `titles`, `memberWords`,
