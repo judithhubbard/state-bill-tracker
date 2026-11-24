@@ -59,6 +59,14 @@ class OutOfTime(Exception):
     pass
 
 
+
+def _seq(v):
+    """An action's sequence number; 2015-17's records have some "NaN" (they sort by date, then last)."""
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return 10 ** 6
+
 def out_of_time():
     return bool(BUDGET) and time.time() - START > BUDGET
 
@@ -223,7 +231,7 @@ def bills(year):
                 FAILS["bill unreadable"] += 1
                 continue
             d["actionsLink"] = (d.get("actions") or {}).get("link") if isinstance(d.get("actions"), dict) else None
-            d["actions"] = sorted(by_bill.get(name, []), key=lambda a: (a.get("date") or "", int(a.get("sequence") or 0)))
+            d["actions"] = sorted(by_bill.get(name, []), key=lambda a: (a.get("date") or "", _seq(a.get("sequence"))))
             d["listEntry"] = i
             save(path, d)
             prints[name] = fp
