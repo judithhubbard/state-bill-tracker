@@ -416,7 +416,9 @@ def votes(minutes):
                 if m:
                     vid, h = m.groups()
                     wanted[f"{h}{vid}"] = (f"{SITE}/DynaBill/svotes.jsp?sessionid={year}GS&voteid={vid}&house={h}", parse_floor)
-        todo = [k for k in sorted(wanted) if k not in have]
+        # le.utah.gov's robots.txt disallows /DynaBill/svotes.jsp since 2026-11-23 (floor roll calls): not read any more;
+        # floor votes saved before then stay. Committee votes (mtgvotes.jsp) are still allowed.
+        todo = [k for k in sorted(wanted) if k not in have and "/DynaBill/svotes.jsp" not in wanted[k][0]]
         got = bad = 0
         for k in todo:
             if (deadline and time.time() > deadline) or out_of_time():

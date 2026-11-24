@@ -49,3 +49,9 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   followed that day by "Motion to Recommend Failed", "Held" or "Tabled" is the committee changing the bill, not reporting it
   ("Committee amended it": HB 86 of 2025, HB 109 of 2024; 15-22 a session read "Approved by committee and sent to the
   floor"). A vote to hold or table is against the bill: its tally and names are turned round.
+- **Floor roll calls stopped (2026-11-24).** le.utah.gov's robots.txt, rewritten 2026-11-23 ("Curated ... for Google organic
+  indexing"; "Expensive scrape hot-paths ..."), now disallows `/DynaBill/svotes.jsp`, the page fetch.py read floor roll calls
+  from (by name). fetch.py no longer requests it; floor votes saved before stay. Committee votes (mtgvotes.jsp) are still
+  allowed. New floor votes (2027 on) will have tallies only where the API gives them, and no names, unless the owner finds an
+  allowed source (the Legislature's API, or asking le.utah.gov). The data check's "under a fifth of bills that passed a house
+  have a floor vote" may FAIL for 2027.
