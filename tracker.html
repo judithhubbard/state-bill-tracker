@@ -1077,6 +1077,8 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .ta-msg .ta-subj b { color: var(--ink); font-weight: 600; }
 .ta-lbl { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 10px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin: 2px 0 3px; }
 .ta-lbl, .ta-lbl span { white-space: nowrap; }
+/* The boxes' own placeholders say what goes in them: the labels are for screen readers only (2026-11-24, the owner). */
+.ta-msg .ta-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
 .ta-lbl span { font-weight: 500; }
 /* "Kept on this device": small and grey, inside the box's lower right corner (the owner's choice, 2026-11-24). */
 .ta-box { position: relative; display: block; }
@@ -3436,10 +3438,10 @@ function taPanel(b, stance) {
         <div class="ta-msg">${d.to.length ? `<p class="ta-to">To: ${esc(d.to.join(", "))}</p>` : ""}<p class="ta-subj"><b>Subject:</b> ${esc(d.subject)}</p>
           <p>${esc(d.greet)}</p><p>${esc(d.line)}</p>
           <label class="ta-lbl" for="taw-${b.idx}">Why it matters to you</label>
-          <span class="ta-box"><textarea id="taw-${b.idx}" class="ta-fld" rows="3" data-ta-why="${b.idx}" placeholder="A sentence or two in your own words. Offices give these the most weight.">${esc(why)}</textarea><span class="ta-kept" aria-hidden="true">Kept on this device</span></span>
+          <span class="ta-box"><textarea id="taw-${b.idx}" class="ta-fld" rows="3" data-ta-why="${b.idx}" placeholder="Why it matters to you, in a sentence or two. Offices give your own words the most weight.">${esc(why)}</textarea><span class="ta-kept" aria-hidden="true">Kept on this device</span></span>
           <p class="ta-thanks">Thank you,</p>
           <label class="ta-lbl" for="tas-${b.idx}">Your name and town</label>
-          <span class="ta-box"><input id="tas-${b.idx}" class="ta-fld" data-ta-sign value="${esc(sign)}" placeholder="Your name, your town" autocomplete="name"><span class="ta-kept" aria-hidden="true">Kept for all your bills</span></span>
+          <span class="ta-box"><input id="tas-${b.idx}" class="ta-fld" data-ta-sign value="${esc(sign)}" placeholder="Your name and town" autocomplete="name"><span class="ta-kept" aria-hidden="true">Kept for all your bills</span></span>
         </div>
         ${d.form.length && !d.to.length ? `<p class="ta-note">${esc(andList(d.form.map((p) => titledList([p]))))} ${d.form.length > 1 ? "take" : "takes"} messages through a web form: copy the message, then open the form above.</p>` : ""}
         <div class="ta-send">${d.to.length ? `<button type="button" class="act-btn primary" data-ta-send="${b.idx}">${name ? `Open in ${esc(name)}` : "Open in your email app"}</button>` : ""}<button type="button" class="act-btn" data-ta-copy="${b.idx}">Copy message</button>${d.to.length ? `<label class="ta-with">Send with <select data-ta-with>${SEND_WITH.map(([v, l]) => `<option value="${v}"${v === (how || "app") ? " selected" : ""}>${esc(l.charAt(0).toUpperCase() + l.slice(1))}</option>`).join("")}</select></label>` : ""}</div>
@@ -5902,7 +5904,9 @@ function watchCard(x, bodyOnly) {
       // Whom to write to, with the drafted emails (taPanel(): the same as the bill panel's Take action), open.
       const ta = x.key ? taPanel(b, x.stance) : "", wrote = taWrote(b);
       const can = `${top}${wrote ? `<p class="ta-wrote">${esc(wrote)}</p>` : ""}${ta || action}${ta ? repsLine() : ""}${odds}${why}${note}${log}`;
+      // The bill's steps first, as in its own panel (roadPic(): 2026-11-24, the owner missed it on watchlist cards).
       return `<article class="wcard open${ONE_CARD() ? "" : " inplace"}" data-idx="${b.idx}"><div class="wbody">
+        ${roadPic(b, !DATA.current && b.stage <= 2)}
         ${can.trim() ? `<div class="wcan"><h3>What you can do</h3>${can}</div>` : ""}
         <details class="bill morebill inplace" data-idx="${b.idx}" open><summary>More about this bill</summary><div class="detail"></div></details>
       </div></article>`;
@@ -6196,20 +6200,19 @@ function fillDetail(el) {
   const sum = b.summary && !folded ? `<p>${esc(b.summary)}</p>` : "";
   const what = sum ? `<div class="whatdoes"><h4>What it does</h4>${sum}${whatItDoes(b, false)}</div>` : whatItDoes(b, inCard);
   // In a bill's own panel (2026-11-23, the owner's design), the road and the next step come first and the rest is folded,
-  // each fold's line saying a little of what's in it; a watchlist card keeps its sections open.
+  // each fold's line saying a little of what's in it; a watchlist card folds the same way (2026-11-24, the owner).
   const hist = historyBlock(b), spons = sponsorsBlock(b), sim = similarBlock(b);
   const html = `${inCard ? "" : nextSteps(b)}
     ${STATE.resetNote?.(b) ? `<p class="reset">${esc(STATE.resetNote(b))}</p>` : ""}
-    ${inCard ? what : pfold("What it does", b.summary ? clipText(b.summary, 90) : "", what)}
-    ${inCard ? hist : pfold("History", histHint(hist), hist)}
-    ${inCard ? spons : pfold("Who sponsors it", sponsHint(b), spons + panelTags(b, folded))}
-    ${inCard ? panelTags(b, folded) : ""}
+    ${pfold("What it does", b.summary ? clipText(b.summary, 90) : "", what)}
+    ${pfold("History", histHint(hist), hist)}
+    ${pfold("Who sponsors it", sponsHint(b), spons + panelTags(b, folded))}
     ${chapterAmendment(b)}
     ${signingMemo(b)}${vetoMemo(b)}
     ${folded ? "" : twinLine(b)}
-    ${inCard ? lineage(b) : pfold("This bill in other sessions", [...new Set(b.hist.map((e) => e[0]))].sort().map(span).join(", "), lineage(b))}
-    ${inCard ? sim : pfold("Similar bills", simHint(b), sim)}
-    ${inCard ? `<div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>` : pfold("Every action", b.vers.map((v) => v.p).join(", "), `<div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>`)}
+    ${pfold("This bill in other sessions", [...new Set(b.hist.map((e) => e[0]))].sort().map(span).join(", "), lineage(b))}
+    ${pfold("Similar bills", simHint(b), sim)}
+    ${pfold("Every action", b.vers.map((v) => v.p).join(", "), `<div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>`)}
     ${inCard ? "" : `<p class="sharebill"><button class="act-btn small" type="button" data-copylink="${esc(billLink(b))}">Copy link to share this bill</button></p>`}
     ${officialMore(b)}`;
   // (Who decides can depend on every bill's history: meetings().)
