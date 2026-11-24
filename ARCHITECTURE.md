@@ -136,7 +136,17 @@ Without `--github` it writes `site/<st>/<session>.html` with all data embedded (
   the key, and the build writes only the pages and page-dependent files ("data unchanged: pages only" in the log):
   seconds per state instead of minutes. Also kept: each bill's issue matches (`issues_<session>.json.gz`, keyed by its
   text and issues.py), billlabels.js's answers (`labels_<session>`), and, on a new day or new data, the last bundle's
-  similar bills and split files where their inputs are unchanged. `BUILD_CACHE=off` works everything out.
+  similar bills and split files where their inputs are unchanged. **Finished sessions are converted once**
+  (2026-11-24, `load_session_kept()`): each past session's records (`C.load_session()`'s output) are kept in
+  `sessions/<session>.pickle.gz` with the files the converter opened or listed while converting it (recorded by an audit
+  hook, each with a hash of its contents or listing) and a key of the build's code and the site's address, not the date;
+  a new day reuses them while those files are unchanged. What converting a session left in the converters' own tables
+  (module-level dicts, lists and sets, and those on objects such as `RULES`: South Dakota's `parties()` reads one) is kept
+  with it and put back. Measured 2026-11-24 (a next day's build, the cache in place): New York 93 s -> 70 s, New Jersey
+  48 s -> 31 s. `KEEP_SESSIONS=off` turns this part off. A finished session's status words (`bill_labels()`) are keyed
+  without the date too. What spans sessions (statistics, trends, networks, links between versions, parties) is still worked
+  out every build, from the kept records. `BUILD_CACHE=off` works everything out; `NEXT_DAY=YYYY-MM-DD test/cache_same.sh`
+  checks a next day's build from the cache against one without it (build_data.py's `BUILD_TODAY`).
 - Then, from the built states: `issues_site.py` (/issues/, `issues/summary.json`, `issues/<id>/bills.json`),
   `compare_site.py` (/compare/, `compare/summary.json`), `search_site.py` (`search/<st>.json`, `search/topics.json`),
   `/status.json` (every state's `data/status.json`), the front page (home.html with JSON blocks `#issues`, `#compare`,

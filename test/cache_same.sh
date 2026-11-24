@@ -4,7 +4,10 @@
 # reads that isn't in its key, test/cache_key_check.py's subject) shows up here as a difference.
 # The cache is a copy of CACHE_FROM (a build cache folder, such as publish.yml's built/cache, so what's compared is what
 # the next publish would reuse), or, without it, made by one build first. Nothing outside a temporary folder is changed.
+# NEXT_DAY=YYYY-MM-DD: the cache is made today and both builds compared are the next day's (build_data.py's BUILD_TODAY),
+# so the cached one works the data out again from the kept finished sessions (load_session_kept()) and their status words.
 # Usage: test/cache_same.sh wy sd ...
+#        NEXT_DAY=2026-11-25 test/cache_same.sh ny nj
 #        CACHE_FROM=built/cache SITE_BASE=https://statebilltracker.pages.dev/ test/cache_same.sh wy sd   (publish.yml's cache)
 set -u
 cd "$(dirname "$0")/.."
@@ -21,10 +24,12 @@ for s in "$@"; do
     BUILD_CACHE="$TMP/cache" python3 build_data.py --state "$s" --github "$TMP/prime/$s" > "$TMP/$s.prime.log" 2>&1 \
       || { echo "FAIL $s: the build failed"; tail -5 "$TMP/$s.prime.log"; status=1; continue; }
   fi
+  if [ -n "${NEXT_DAY:-}" ]; then export BUILD_TODAY="$NEXT_DAY"; fi
   BUILD_CACHE=off python3 build_data.py --state "$s" --github "$TMP/off/$s" > "$TMP/$s.off.log" 2>&1 \
     || { echo "FAIL $s: the build failed"; tail -5 "$TMP/$s.off.log"; status=1; continue; }
   BUILD_CACHE="$TMP/cache" python3 build_data.py --state "$s" --github "$TMP/cached/$s" > "$TMP/$s.cached.log" 2>&1 \
     || { echo "FAIL $s: the build from the cache failed"; tail -5 "$TMP/$s.cached.log"; status=1; continue; }
+  unset BUILD_TODAY
   how=$(grep -q '^data unchanged' "$TMP/$s.cached.log" && echo "its data from the cache" || echo "its data worked out again (the cache's key didn't match), the slow steps' caches reused")
   if diff -rq "$TMP/off/$s" "$TMP/cached/$s" > "$TMP/$s.diff"; then
     echo "$s: the same both ways ($(find "$TMP/off/$s" -type f | wc -l | tr -d ' ') files; the cached build took $how)."

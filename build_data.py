@@ -273,7 +273,18 @@ def assembly_resolver(session):
     return resolve
 
 
+_PARTIES = {}
+
+
 def parties(session, recs):
+    """(Worked out once per session and list of records in a build: compute() asks for each session's several times.)"""
+    k = (session, tuple(map(id, recs)))
+    if k not in _PARTIES:
+        _PARTIES[k] = _parties(session, recs)
+    return _PARTIES[k]
+
+
+def _parties(session, recs):
     """Party ("D" or "R") for each legislator name as the bill data spells it, keyed by
     (house, name). Names are tied to parties through the seat each sponsor holds: sitting
     members from the contacts file, earlier holders from the Open States archive. A state's converter
@@ -1632,7 +1643,10 @@ def bill_labels(session, bills, profile_js, facts):
     it), so an unchanged state isn't run through Node again."""
     import subprocess
     js = [os.path.join(HERE, "lists_pages", f) for f in ("billlabels.js", "billfacts.js", "watchrules.js")]
-    key = hashlib.sha256(json.dumps([profile_js, session, facts, bills, today_here()], ensure_ascii=False).encode("utf-8")).hexdigest()[:20]
+    # (A finished session's words don't change with the date: its key leaves the date out, so a new day doesn't run it
+    # through Node again. test/cache_same.sh's next-day check compares with a build that works everything out.)
+    key = hashlib.sha256(json.dumps([profile_js, session, facts, bills, today_here() if facts.get("c") or os.environ.get("KEEP_SESSIONS") == "off" else ""],
+                                    ensure_ascii=False).encode("utf-8")).hexdigest()[:20]
     version = file_hash(*js)
     saved = cached_json(f"labels_{session}", version)
     if saved.get("key") == key and len(saved.get("out") or []) == len(bills):
@@ -2100,13 +2114,159 @@ def last_checked():
     return t.astimezone(ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
 
 
+# A finished session's converted records (C.load_session()) are kept between builds and reused while every file the
+# converter read for it is unchanged (2026-11-24: a state's daily rebuild worked its past sessions out again from the same
+# files; New York's four took about a minute of 2 min 40 s). The files are those it opened or listed while converting that
+# session, recorded by an audit hook; the key also covers the build's own code (the state's code and the shared code in
+# state_hash.data_files(), not its data) and the site's address, but not today's date: a finished session's records
+# don't depend on it (test/cache_same.sh's next-day check compares with a build that works it all out).
+_READS = None
+
+
+def _audit(event, args):
+    if _READS is None:
+        return
+    try:
+        if event == "open" and isinstance(args[0], (str, bytes, os.PathLike)) and not str(args[1] or "r").startswith(("w", "a", "x")):
+            _READS[0].add(os.path.abspath(os.fsdecode(args[0])))
+        elif event in ("os.listdir", "os.scandir") and args and args[0] is not None and not isinstance(args[0], int):
+            _READS[1].add(os.path.abspath(os.fsdecode(args[0])))
+    except Exception:
+        pass
+
+
+sys.addaudithook(_audit)
+
+
+def _code_key():
+    """The build's own code and tables (no data) and the site's address."""
+    import state_hash
+    data_dir = os.path.join(HERE, "data") + os.sep
+    h = hashlib.sha256(json.dumps([STATE, os.environ.get("SITE_URL", ""), os.environ.get("SITE_BASE", ""),
+                                   os.environ.get("LAUNCHED", "0"), bool(GITHUB)]).encode())
+    state_hash.digest(h, [p for p in state_hash.data_files(STATE) if not p.startswith(data_dir)])
+    return h.hexdigest()
+
+
+def _file_sig(path):
+    try:
+        with open(path, "rb") as f:
+            return hashlib.sha1(f.read()).hexdigest()
+    except OSError:
+        return None
+
+
+def _dir_sig(path):
+    try:
+        return hashlib.sha1("\0".join(sorted(os.listdir(path))).encode()).hexdigest()
+    except OSError:
+        return None
+
+
+def _containers():
+    """The state modules' tables a converter may fill while converting (module-level dicts, lists and sets, and those on
+    module-level objects such as legiscan_convert's RULES): {(module, name, attribute or ""): the table}."""
+    out = {}
+    for mname, m in list(sys.modules.items()):
+        if not (mname.startswith("states.") or mname == "states") or m is None:
+            continue
+        for name, v in list(vars(m).items()):
+            if name.startswith("__"):
+                continue
+            if isinstance(v, (dict, list, set)):
+                out[(mname, name, "")] = v
+            elif hasattr(v, "__dict__") and not isinstance(v, (type, type(sys))) and not callable(v):
+                for an, av in list(vars(v).items()):
+                    if isinstance(av, (dict, list, set)):
+                        out[(mname, name, an)] = av
+    return out
+
+
+def _snapshot(conts):
+    return {k: (dict(v) if isinstance(v, dict) else len(v) if isinstance(v, list) else set(v)) for k, v in conts.items()}
+
+
+def _delta(conts, before):
+    """What converting added to each table: new or replaced dict entries, appended list items, added set items."""
+    out = {}
+    for k, v in conts.items():
+        b = before.get(k)
+        if isinstance(v, dict):
+            d = {kk: vv for kk, vv in v.items() if b is None or kk not in b or b[kk] is not vv}
+        elif isinstance(v, list):
+            d = v[b or 0:] if b is not None else list(v)
+        else:
+            d = v - (b or set())
+        if d:
+            out[k] = d
+    return out
+
+
+def _restore(delta):
+    conts = _containers()
+    if any(not isinstance(conts.get(k), (dict, list, set)) for k in delta):
+        raise KeyError("a converter table is gone")  # (checked first: nothing half put back)
+    for k, d in delta.items():
+        v = conts[k]
+        if isinstance(v, dict):
+            v.update(d)
+        elif isinstance(v, list):
+            v.extend(d)
+        else:
+            v.update(d)
+
+
+def load_session_kept(s, code_key):
+    """C.load_session(s), from the cache when s is a finished session whose files are unchanged."""
+    global _READS
+    import pickle
+    if not code_key or CURRENT is None or s >= CURRENT:
+        return C.load_session(s)
+    path = os.path.join(CACHE_DIR, "sessions", f"{s}.pickle.gz")
+    try:
+        with gzip.open(path, "rb") as f:
+            saved = pickle.load(f)
+        if saved["code"] == code_key and all(_file_sig(p) == sig for p, sig in saved["files"].items()) \
+                and all(_dir_sig(p) == sig for p, sig in saved["dirs"].items()):
+            # (What converting it left in the converter's tables, put back: South Dakota's parties() reads the party
+            # each session's member list gave, filled while converting.)
+            _restore(saved["state"])
+            print(f"{s}: its records from the last build (its files unchanged)")
+            return saved["out"]
+    except (OSError, EOFError, ValueError, KeyError, TypeError, pickle.UnpicklingError, AttributeError, ImportError):
+        pass
+    before = _snapshot(_containers())
+    _READS = (set(), set())
+    try:
+        out = C.load_session(s)
+    finally:
+        reads, _READS = _READS, None
+    state = _delta(_containers(), before)
+    here = os.path.abspath(HERE) + os.sep
+    files = {p: _file_sig(p) for p in sorted(reads[0]) if p.startswith(here) and os.path.isfile(p) and not p.endswith(".pyc")}
+    dirs = {p: _dir_sig(p) for p in sorted(reads[1]) if p.startswith(here) and os.path.isdir(p)}
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = f"{path}.{os.getpid()}"
+        with gzip.open(tmp, "wb", compresslevel=1) as f:
+            pickle.dump({"code": code_key, "files": files, "dirs": dirs, "state": state, "out": out}, f, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(tmp, path)
+    except (OSError, pickle.PicklingError, TypeError, AttributeError) as e:
+        # (A converter's table that can't be kept: the session is worked out every time, as before.)
+        print(f"   ({s}'s records not kept: {e})")
+        with contextlib.suppress(OSError):
+            os.remove(f"{path}.{os.getpid()}")
+    return out
+
+
 def compute(prev=None):
     """Everything a build works out from the state's data (not from the page's code): per session a core dict that
     finish() (in main()) turns into the files. On the public site it's kept between builds (data_bundle()). prev: the
     last build's cores (another day, or other data), whose similar bills and split files are reused where their inputs
     are the same."""
     prev = prev or {}
-    loaded = {s: C.load_session(s) for s in SESSIONS}
+    code_key = _code_key() if CACHE_DIR and GITHUB and os.environ.get("KEEP_SESSIONS") != "off" else None
+    loaded = {s: load_session_kept(s, code_key) for s in SESSIONS}
     # A number with no title and no dates is a placeholder the source lists before a bill exists: left out. One with
     # dates but no title yet (OH SB 342 of 2023, IL SB 4214 of 2025) gets a stand-in title.
     for s in SESSIONS:
