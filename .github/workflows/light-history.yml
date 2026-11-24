@@ -41,6 +41,9 @@ jobs:
           WANT: ${{ inputs.sessions }}
         run: |
           set -u
+          # (One identity for every git step, the pull's autostash included: a state's download may change tracked files.)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if [ ! -f "states/$ST/light.py" ]; then echo "No states/$ST/light.py"; exit 1; fi
           SESSIONS="${WANT:-$(python3 -c "import importlib,sys; sys.path.insert(0,'.'); print(' '.join(map(str, importlib.import_module('states.$ST.light').SESSIONS)))")}"
           echo "Sessions: $SESSIONS"
