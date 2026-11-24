@@ -107,11 +107,18 @@ def governor_on(day):
     return who
 
 
-# ---- What's changing: subjects whose share of bills changed most across the sessions shown, picked by hand from an
-# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Oregon alternates long and
-# short sessions, and the summaries' wording changed in 2025 (the scan's phrases mostly measure that), so only the one
-# clear shift. Matched on title and summary.
+# ---- What's changing: subjects whose share of bills changed most from 2015 to 2026 (2015-2021 from the light history,
+# states/LIGHT.md), picked by hand from an automatic phrase scan of the long sessions (the short ones are too small to
+# compare on their own) and checked against samples of the bills matched (notes/trends.md). The summaries' wording changed
+# in 2025 (most of the scan's phrases measure that), so only subjects named the same way throughout. Matched on title and
+# summary.
 TRENDS = [
+    ("rise", "Housing", r"housing", True),
+    ("rise", "Wildfire", r"wildfire", True),
     ("spike", "COVID-19", r"covid|coronavirus|pandemic|sars-cov", True),
 ]
-WORDING = []
+WORDING = [
+    (("“Oregon Liquor Control Commission”", r"liquor control commission"),
+     ("“Oregon Liquor and Cannabis Commission”", r"liquor and cannabis commission"),
+     "The commission was renamed in 2021."),
+]

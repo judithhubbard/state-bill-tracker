@@ -127,10 +127,18 @@ def governor_on(day):
     return who
 
 
-# ---- What's changing: subjects whose share of bills changed most between 2023 and 2025, picked by hand from an
-# automatic phrase scan and checked against samples of the bills matched (notes/trends.md). Only two sessions are shown
-# and the records have titles only, so only the one clear shift. Matched on title and summary.
+# ---- What's changing: subjects whose share of bills changed most from 2015 to 2025 (2015-2021 from the light history,
+# states/LIGHT.md), picked by hand from an automatic phrase scan and checked against samples of the bills matched
+# (notes/trends.md). Montana's records have short titles only (no summaries), so every session is matched on titles alone
+# (trends()'s titles_only).
 TRENDS = [
+    ("rise", "Property taxes", r"property tax", True),
+    ("rise", "Housing and zoning", r"housing|zoning|subdivision|accessory dwelling|duplex|multifamily", True),
+    ("rise", "Child abuse and neglect", r"child abuse|abuse(?:/| and )neglect|neglect (?:case|proceeding)|child protective|\bCPS\b|foster care|youth in care", True),
+    ("rise", "Marijuana", r"marijuana|cannabis", True),
+    ("rise", "Elections and voting", r"election|ballot|\bvoters?\b|absentee", True),
     ("spike", "Alcohol laws", r"alcohol|\bbeer\b|\bwine\b|liquor|brew", True),
+    ("spike", "Oil and gas", r"oil and gas|oil/gas|\boil\b|natural gas", True),
+    ("spike", "Net metering", r"net metering", True),
 ]
 WORDING = []

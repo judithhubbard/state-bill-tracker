@@ -61,3 +61,23 @@ bills past both houses without both passage flags, and laws with neither a chapt
 
 Checked 2026-11-24 with one or two requests each: every source serves 2015 in the format the converter reads now. The
 whole pipeline (download stand-in, converter, file, checks) was run on each state's current session.
+
+## How the build uses them (stage 2, 2026-11-24)
+
+`load_light()` in build_data.py reads the light sessions in an unbroken run back from the state's first full session (one
+every `YEARS`; a gap stops it, so Wyoming's 2015-16 wait until 2017-2023 are in). They never join `SESSIONS`: no page, nav
+button, search, issue or status file. They do count in:
+
+- `insights()`: the odds chart, committee tables, timing, the steps' odds. What needs links between versions, co-sponsors'
+  parties or the profile's governors (persistence, what happened to bills that died, the party table, the governor's
+  counts) counts full sessions only; `insights.fullPast` names them, and the page's notes say those years.
+- The Sessions table: each light session with a "*" and the note "No page on this site for these sessions: counted from
+  each bill's outcome in the Legislature's records." (`DATA.lightSessions`, with each file's `lacks`).
+- `trends()`: like for like, when any light session lacks summaries every session is matched on titles alone
+  (`trends.titlesOnly`; the ⓘ then says "title").
+- `write_compare()` / /compare/: each light session is a row of compare.json (with no "back next session" numbers); the
+  page's "Sessions that began in" menu lists their years; "All finished sessions since 2023" is unchanged.
+- "This bill in other sessions": `link_light()` links the first full session's bills to the light session just before
+  (same sponsor surname, titles sharing at least three in four words, the best match only), shown with the light
+  record's outcome and the Legislature's link (MT 30, ND 13, OR 18 bills); never to an earlier law or budget bill.
+- Parties come from each file's header (`LIGHT_PARTIES`).

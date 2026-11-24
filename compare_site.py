@@ -213,7 +213,8 @@ function remember() {
   const opts = DATA.map((d) => `<option value="${d.state}">${esc(d.name)}</option>`).join("");
   A.innerHTML = `<option value="all">All states</option>${opts}`;
   B.innerHTML = `<option value="">Compare with…</option><option value="all">All states</option>${opts}`;
-  const years = [...new Set(DATA.flatMap((d) => d.sessions.map((s) => s.session)).filter((s) => s >= FIRST))].sort().reverse();
+  // (Years before FIRST: the few states with a light history of older sessions, states/LIGHT.md.)
+  const years = [...new Set(DATA.flatMap((d) => d.sessions.map((s) => s.session)))].sort().reverse();
   PERIOD.innerHTML = `<option value="latest">Latest finished session</option><option value="all">All finished sessions since ${FIRST}</option>`
     + years.map((y) => `<option value="${y}">Sessions that began in ${y}</option>`).join("");
   const h = new URLSearchParams(location.hash.slice(1));
