@@ -769,6 +769,20 @@ def record(congress, p, b):
             continue
         add(d, h, t, kind)
 
+    # The 115th Congress's records (2017-18) have no "Became Public Law No:" line, only "Signed by President." and the
+    # law in <laws> (HR 1, the Tax Cuts and Jobs Act: 115-97): 113 laws read as only presented. The law is the record's
+    # <laws> item, dated by the signature (else the override, else the bill's last step). Only for a bill that itself went
+    # to the President: a bill whose text another bill enacted names that law too (HR 766 of the 119th, the SEWER Act, never
+    # out of committee: "119-120").
+    if not law and (signed or presented or overrides):
+        it = next((x for x in b.findall("laws/item") if (x.findtext("number") or "").strip()), None)
+        if it is not None:
+            law, law_no = True, it.findtext("number").strip()
+            law_kind = "Private" if "private" in (it.findtext("type") or "").lower() else "Public"
+            day = max([s[0] for s in steps if s[3] == "signed"] or [s[0] for s in steps if s[3] == "override"]
+                      or [s[0] for s in steps] or [""])
+            add(day, "G", f"Became {law_kind} Law {law_no}", "law")
+
     # Laws and vetoes. A veto stands unless both houses overrode it.
     overridden = vetoed and overrides >= {"S", "H"}
     if law and vetoed and not overridden:

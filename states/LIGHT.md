@@ -91,6 +91,21 @@ in states/ri/profile.py's COMMITTEE_TOPICS); Congress's 114th joint resolutions 
 others with one or two requests: Indiana's 2015 list and bill detail, Missouri's 2015 zip listing and Senate pages, Mississippi's 2015 list and history
 file, New Mexico's 2015 session id, bill page and firs folder, California's 2015-2019 zips (same tables).
 
+Fixed after the first GitHub runs (2026-11-24):
+- Congress's 115th: its BILLSTATUS records have no "Became Public Law No:" line (only "Signed by President." and the law in
+  `<laws>`), so 113 laws read as only presented (330 laws). convert.py now takes the law from `<laws>` when the bill itself
+  was signed, presented or overridden (a bill whose text another enacted names that law too: HR 766 of the 119th, never
+  out of committee, "119-120"). The 115th: 443 laws (442 public, 1 private), 0 vetoes; the 114th's 9 vetoes plus JASTA
+  (overridden) are Obama's 10 that Congress, the 116th's 9 plus the FY2021 NDAA (overridden) Trump's 10. The 117th-119th
+  convert exactly as before (stages, laws, key dates and actions compared).
+- Connecticut: the FTP server times out from GitHub's runners (the archive listing failed for 2016-2018; 2015 and
+  2019-2021 each lost a file or two), and nothing was written. light.py no longer needs the listing (the files are named
+  by year) and asks again for what's missing, five rounds a minute apart; a session missing only the legislator
+  spreadsheet is written without sponsors' parties. All seven sessions were written from clean scratch folders locally:
+  2015 3,247 bills, 269 laws, 9 vetoes; 2016 1,126/236/8; 2017 3,431/265/6; 2018 1,138/206/7; 2019 3,641/236/3; 2020
+  (the session cut short in March) 1,035/14/0; 2021 2,838/237/4. About a quarter of bills have no topic (old years have no
+  committee referral file; topics come from subjects).
+
 The build reads light sessions only back from the first full one without a gap (`load_light()`): a state whose 2023 is still
 downloading (marked incomplete_2023) shows none until it's in.
 
