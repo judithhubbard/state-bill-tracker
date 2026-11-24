@@ -2478,7 +2478,7 @@ def profile_hooks():
 
 def today_here():
     from datetime import date
-    return date.today().isoformat()
+    return os.environ.get("BUILD_TODAY") or date.today().isoformat()  # (BUILD_TODAY: a test of the next day's build)
 
 
 # What compute() works out from the data is kept between builds (BUILD_CACHE/<state>/bundle.pickle.gz), keyed by
