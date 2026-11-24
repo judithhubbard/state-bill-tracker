@@ -21,6 +21,7 @@ from zoneinfo import ZoneInfo
 from fetch_contacts import name_key
 from states.co import profile as P
 from states.undated import settle
+from states.lead_first import lead_first, repeats
 
 HOUSE = {"S": "Senate", "H": "House"}
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
@@ -95,7 +96,9 @@ def what_it_does(b):
         t = re.sub(r"^[A-Z][^.]{0,200}\bCommittee\b[^.]{0,200}\.\s+(?=(?:Under|Current|Existing|The bill|The act|Section)\b)", "", t)
         t = re.sub(r"[;,]?\s*(?:\band|\bor)?\s*[;,]?\s*$", "", t)
         out.append(t[:1].upper() + t[1:] + ("" if t.endswith((".", ":")) else "."))
-    return "\n".join(out[:8])
+    # What the bill does first when the summary opens with current law ("Under current law, ... The act ..."); the
+    # background follows, word for word (states/lead_first.py).
+    return "\n".join(lead_first(out[:8]))
 
 
 def load_session(session):
@@ -284,7 +287,10 @@ def load_session(session):
         chapter = next((int(x["chapter"]) for x in laws if str(x.get("chapter") or "").isdigit()), None)
         rec = {
             "nums": [p], "base": [p], "prev": earlier(session, title, b),
-            "title": title, "summary": long_title, "act": "", "lawCode": "", "law": None, "laws": [],
+            # The long title ("Concerning ..."), unless it's only the short title again ("Concerning county commissioner
+            # redistricting." for "County Commissioner Redistricting").
+            "title": title, "summary": "" if repeats(long_title, title) else long_title,
+            "act": "", "lawCode": "", "law": None, "laws": [],
             "comms": comm_list, "topics": topics, "places": [], "narrow": P.narrow_kind(title),
             "commFate": fate, "mainTopic": topics[0] if topics else "", "local": "local" in topics,
             "senDeleg": False, "asmDeleg": False, "budget": bool(re.search(r"general appropriation act|long bill", f"{title} {long_title}", re.I)),

@@ -63,3 +63,7 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   addresses are personal ones, e.g. Simmons's gmail.com, as Open States lists them) and 177 pages. Illinois is no longer
   in data_check.py's `CONTACT_GAPS`. Open States' file also has photos (cdn.ilga.gov) not used yet.
 - **The next General Assembly (2026-11-22):** members prefile bills from early December (1,081 of the 104th's were "Prefiled with Clerk" on 2024-12-02); fetch.py asks for the next Assembly's BillStatus folder every run (`main()`: up to `CURRENT + 2`; /Legislation/105/ answered 404 on 2026-11-22) and reads it as soon as it's listed, so the 105th shows as an upcoming session from its first prefiled bills. Its member and committee lists come later: until both member lists are on file, `contacts_session()` keeps refreshing the 104th's contacts (contacts.py couldn't read lists that aren't there), and a missing committee list reads as none.
+- **"What it does" left as written (2026-11-23):** 78% of the LRB synopses open with the law they amend ("Amends the School
+  Code.") and the next sentence says what the bill does ("Provides ...", "Requires ...", "Makes a technical change ...").
+  Not reordered: the line is short, names the law changed, and in 952 of 2025-26's synopses each "Amends ..." heads its own
+  part ("Amends the A Act. Provides ... Also amends the B Act. ..."), which moving the first would break.

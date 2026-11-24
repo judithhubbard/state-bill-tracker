@@ -55,6 +55,7 @@ from zoneinfo import ZoneInfo
 from states import letters as L
 from states.la import profile as P
 from states.undated import settle
+from states.lead_first import repeats
 
 HOUSE = {"S": "Senate", "H": "House"}
 OTHER = {"S": "H", "H": "S"}
@@ -850,7 +851,9 @@ def record(session, b, parties):
         vmemo["kind"] = "line-item"
     rec = {
         "nums": [p], "base": [p], "prev": earlier(session, b),
-        "title": title, "summary": keyword_text(kw), "act": "", "lawCode": "", "law": None, "laws": [],
+        # The subject keyword ("Capital outlay") is the summary line only when it says something the title doesn't.
+        "title": title, "summary": "" if repeats(keyword_text(kw), title) else keyword_text(kw),
+        "act": "", "lawCode": "", "law": None, "laws": [],
         "comms": sorted({f"{h_} · {c}" for h_, c in refs}), "topics": topics, "places": [],
         "narrow": "" if const else P.narrow_kind(short, kw, local_bill),
         "commFate": fate, "mainTopic": topics[0] if topics else "",

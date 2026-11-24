@@ -20,6 +20,12 @@ from zoneinfo import ZoneInfo
 from states import letters as L
 from states.wi import profile as P
 from states.undated import settle
+from states.lead_first import lead_first, does
+
+# The LRB's sentences about the bill ("This bill ...", "Under the substitute amendment, ..."); "the act" in an analysis
+# is an earlier law ("2011 Wisconsin Act 10").
+LRB_DOES = does("bill", "resolution", "joint resolution", "substitute amendment", "proposed constitutional amendment",
+                "constitutional amendment", "proposal")
 from states import floorcal
 
 HOUSE = {"S": "Senate", "A": "Assembly"}
@@ -391,7 +397,10 @@ def load_session(session):
         sponsor = names[0] if names else (re.sub(r"^Introduced by\s+", "", text(b.get("by"))).split(",")[0] or "—")
         analysis = [t for kind, t in b.get("analysis") or [] if kind == "text" and text(t)]
         if analysis:
-            texts[p] = {"statement": "\n".join(text(t) for t in analysis[:6]), "label": "From the Legislative Reference Bureau's analysis."}
+            # What the bill does first: a third of the analyses open with current law ("Under current law, ... This bill
+            # ..."); the background follows, word for word (states/lead_first.py).
+            texts[p] = {"statement": "\n".join(lead_first([text(t) for t in analysis[:6]], LRB_DOES)),
+                        "label": "From the Legislative Reference Bureau's analysis."}
         if stage == 0 and comm:
             desc = f"In {HOUSE[where_h]} committee"
         elif stage <= 1 and place == "floor":

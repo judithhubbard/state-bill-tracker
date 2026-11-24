@@ -670,6 +670,26 @@ def check(state):
             say(state, "LOOK", f"{name}: {100 * cut // len(texts)}% of texts have a paragraph without end punctuation "
                                f"(cut mid-sentence, or real headings and lists)")
 
+    for s, recs in loaded.items():
+        path = os.path.join(P.DATA, f"texts_{s}.json")
+        T = json.load(open(path)) if os.path.exists(path) else {}
+        # (2026-11-23) "What it does" opens with what the bill does: not with the law as it stands ("Under current law,
+        # ..." in Wisconsin's and Colorado's analyses, moved after the bill's part by states/lead_first.py), nor with a
+        # subject label that repeats the title (Missouri's "Gender transition procedures", Louisiana's "Capital outlay",
+        # Hawaii's "Relating to building codes."). The panel's first line is the summary when it isn't the title, else the
+        # statement. LOOK over 5% of a session's texts (left: bills whose part about the bill leans on the background,
+        # "This bill eliminates that prohibition.", or has no "This bill" sentence).
+        from states import lead_first as LF
+        firsts = [(r["nums"][0], r.get("summary") if r.get("summary") and r.get("summary") != r["title"]
+                   else (T.get(r["nums"][0]) or {}).get("statement") or "", r) for r in recs]
+        firsts = [x for x in firsts if x[1]]
+        back = [n for n, t, _ in firsts if LF.opens_with_background(t)]
+        label = [n for n, t, r in firsts if t == r.get("summary") and (LF.repeats(t, r["title"]) or re.match(r"Relating to [^.;]{1,80}\.(?:\s|$)", t))]
+        for what, ns in (("open with the law as it stands (\"Under current law, ...\")", back),
+                         ("open with a subject label that repeats the title", label)):
+            if firsts and len(ns) > 0.05 * len(firsts):
+                say(state, "LOOK", f"{s}: {len(ns)} of {len(firsts)} \"What it does\" texts ({100 * len(ns) // len(firsts)}%) {what}, e.g. {ns[:4]}")
+
     # Laws whose "What it does" describes a placeholder: the summary of the bill as filed, when an amendment rewrote it
     # (Illinois's shell bills: "Makes a technical change"; California's spot bills).
     for s, recs in loaded.items():

@@ -60,3 +60,14 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   calendar <day>" (`"listed"`): in 2025-26, 94% of Senate and 76% of Assembly placements had a floor vote that day or the
   next; the rest were laid on the table or sent back to Rules. Days from today on. Tested with FLOOR_TODAY=2026-01-01: 357
   bills on 12 calendar days, all records' numbers. (`agendas()` no longer returns nothing when agendas.json is missing.)
+- **"What it does" leads with the bill (2026-11-23):** a third of the LRB analyses open with current law ("Under current
+  law, ..."), and in most of those "This bill ..." comes third or later. `lead_first()` (states/lead_first.py, shared with
+  CO) now moves the first sentence that says what the bill does ("This bill ...", "Under the bill, ...", "Beginning ..., this
+  bill requires ...") to the top with the rest of its paragraph and any numbered list it introduces; the background follows
+  in its own order, word for word (only the order and, where a paragraph is split, a line break change). It stays put when
+  that sentence leans on the background ("This bill eliminates that prohibition.", "expands this definition", "the same",
+  "instead", "these", "the program" with nothing saying which), so 14-15% still open with current law (32% and 35%
+  before; data_check LOOKs over 5%). On the local copy: 400 of 2,295 analyses of 2023-24 and 481 of 2,424 of 2025-26 reordered; no word added
+  or lost. A few issue matches move with the new opening (issues.py reads the first 250 characters like the summary):
+  2023-24 +4/-2 "assault"; 2025-26 +8/-2 "assault", -4 "homeless" (e.g. AB 596, AB 597).
+  Done in convert.py when texts_<session>.json is written: a rebuild picks it up, no download.
