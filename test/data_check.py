@@ -81,6 +81,9 @@ def check(state):
         say(state, "FAIL", "no session's data to check (download missing?)")
         return
     wording(state, loaded)
+    # A converter's own checks of its sources (Arizona: apps.azleg.gov's codes, and its stages beside Open States').
+    for level, msg in (getattr(C, "source_checks", None) or (lambda _: []))(loaded):
+        say(state, level, msg)
     # Committee reports' signatures (AK, WA, ME: votes of kind "R") aren't votes: the vote checks below never see them.
     # Each signer is a seat ("H:12|Carrick"), a member with no seat now ("S|Hughes"), or no member of the committee's
     # house ("H?Name"), which is the name read wrongly (or a list split wrongly).

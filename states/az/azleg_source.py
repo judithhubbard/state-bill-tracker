@@ -12,13 +12,16 @@ What the service gives that Open States' copy didn't:
 A bill assigned to several committees in a house goes to them in order (DisplayOrder): the next one's referral is dated
 when the one before reported it, so the page says which committee it's in now.
 """
-import json, os, re
+import collections, json, os, re
 
 from states.az import profile as P
 
 ROOT = os.path.join(P.DATA, "azleg_api")
 HOUSE = {"H": "House", "S": "Senate"}
 ORG = {"H": "lower", "S": "upper", "G": "executive"}
+# Action codes read only as their bare code (none of the cases below knew them), by kind: the data check lists them, so
+# the first conference committee or veto override in this data is looked at, not quietly misread (convert.source_checks()).
+UNKNOWN = collections.Counter()
 FLOOR = {"COW", "THIRD", "FINAL", "CONCUR", "RECON", "OVERRIDE", "CONF", "CC", "REFUSE"}
 PASS_CODE = re.compile(r"^(DP|DPA|C&P|PFC|PFCA|DPA/SE|DP/SE|DPA/SO|DPAA)\b", re.I)
 
@@ -92,6 +95,8 @@ def _actions(d):
             else:
                 word = {"HELD": "Held", "FAILED": "Failed", "FAIL": "Failed",
                         "S/E": "Strike-everything amendment in"}.get(code.upper(), code)
+                if word == code:
+                    UNKNOWN[f"committee {code}"] += 1
                 add(done, h, f"{word} {name}{tally}" if word != code else f"{name}: {code}{tally}")
                 prev_report = None
     # The floor: the Committee of the Whole (no roll call), the third reading and final votes, concurrence.
@@ -108,16 +113,22 @@ def _actions(d):
         elif short in ("THIRD", "FINAL", "RECON", "OVERRIDE") and re.match(r"fail", code, re.I):
             add(when, h, "FAILED", f"{c.get('CommitteeName')}: failed{tally}")
         elif short == "COW":
-            words = {"DP": "do pass", "DPA": "do pass amended", "FAILED": "failed", "RETAINED": "retained on the calendar"}
+            words = {"DP": "do pass", "DPA": "do pass amended", "FAILED": "failed", "RETAINED": "retained on the calendar",
+                     "RET ON CAL": "retained on the calendar"}
             # (The code as the description: a floor amendment in the second house ("DPA") means the first has to agree
             # again, convert.py's amended_by_other, as Open States' "DPA" lines did.)
+            if code.upper() not in words:
+                UNKNOWN[f"COW {code}"] += 1
             add(when, h, f"Committee of the Whole: {words.get(code.upper(), code)}", code)
         elif short == "CONCUR":
             them = HOUSE["S" if h == "H" else "H"]
             word = f"concurred in the {them}'s amendments" if re.match(r"pass|concur", code, re.I) else \
                    f"refused to concur in the {them}'s amendments" if re.match(r"refus", code, re.I) else f"concurrence: {code}"
+            if word.startswith("concurrence:"):
+                UNKNOWN[f"CONCUR {code}"] += 1
             add(when, h, f"{HOUSE[h]} {word}")
         elif code and code.lower() != "none":
+            UNKNOWN[f"{short} {code}"] += 1
             add(when, h, f"{c.get('CommitteeName')}: {code}{tally}")
     for t in d.get("BodyTransmittedTo") or []:
         to = t.get("LegislativeBody")
@@ -135,6 +146,7 @@ def _actions(d):
     elif re.match(r"veto", gov, re.I):
         add(d.get("GovernorActionDate"), "G", "VETOED", "Vetoed by the Governor")
     elif gov:
+        UNKNOWN[f"governor {gov}"] += 1
         add(d.get("GovernorActionDate"), "G", f"Governor: {gov}{chap}")
     out.sort(key=lambda a: a["date"])
     for i, a in enumerate(out):

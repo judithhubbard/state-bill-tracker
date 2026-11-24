@@ -35,6 +35,38 @@ def folder(session):
 SOURCE = os.environ.get("AZ_SOURCE", "")
 
 
+def source_checks(loaded):
+    """For test/data_check.py: (level, message) lines about the apps.azleg.gov sessions. Action codes the reader doesn't
+    know (LOOK), and, while Open States' copy of a session is still downloaded beside the official one (until it's dropped,
+    after January 2027), the bills whose stage the two disagree on: a committee action that changes nothing in the bill
+    list fetch_azleg.py watches would leave the official copy behind (LOOK: many are Open States' own errors, 4 of a
+    49-bill sample of 2025, so the list is read, not counted).""" 
+    global SOURCE
+    out = []
+    if A.UNKNOWN:
+        out.append(("LOOK", "apps.azleg.gov action codes read only as their code: "
+                    + ", ".join(f"{k} ({n})" for k, n in A.UNKNOWN.most_common(8))))
+    for s, recs in loaded.items():
+        if not azleg(s) or not glob.glob(os.path.join(folder(s), "bills", "*.json")):
+            continue
+        keep = SOURCE
+        try:
+            SOURCE = "openstates"
+            theirs = {r["nums"][0]: r["stage"] for r in load_session(s)[0]}
+        except Exception as e:
+            out.append(("LOOK", f"{s}: Open States' copy couldn't be read to compare ({type(e).__name__}: {e})"))
+            continue
+        finally:
+            SOURCE = keep
+        ours = {r["nums"][0]: r["stage"] for r in recs}
+        both = set(ours) & set(theirs)
+        diff = sorted(n for n in both if ours[n] != theirs[n])
+        if diff:
+            out.append(("LOOK", f"{s}: {len(diff)} of {len(both)} bills at a different stage in Open States' copy (official "
+                               f"first): " + ", ".join(f"{n} {ours[n]}/{theirs[n]}" for n in diff[:6])))
+    return out
+
+
 def azleg(session):
     if SOURCE == "openstates":
         return False

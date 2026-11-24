@@ -145,7 +145,7 @@
     "data/az"
    ],
    "minutes": 110,
-   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/openstates_bulk.py az; python3 states/az/fetch.py; python3 states/az/azleg.py && python3 states/az/contacts.py",
+   "run": "(command -v tesseract >/dev/null && command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils tesseract-ocr >/dev/null); python3 states/openstates_bulk.py az; python3 states/az/fetch.py; python3 states/az/azleg.py && python3 states/az/contacts.py; m=$(( (${FETCH_MINUTES:-110} * 60 - SECONDS) / 60 - 8 )); if [ $m -gt 3 ]; then python3 states/az/fetch_azleg.py --minutes $m || true; fi",
    "note": "Open States (the free tier's daily quota), then azleg.gov at its two-minute crawl delay (committee agendas first, at most 14 minutes of PDFs: pdftotext)."
   },
   {
