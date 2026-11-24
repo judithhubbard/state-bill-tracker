@@ -4,7 +4,9 @@
 
 - /Legislation/<GA>/BillStatus/XML/: one XML per bill (HB, SB) and per joint resolution proposing a constitutional
   amendment (HC = HJRCA, SC = SJRCA); other resolutions are left out. The folder listing's dates decide which changed since the last
-  run, and only those are downloaded (six at a time). Into data/il/<GA>/billstatus/, with listing dates in dates.json.
+  run, and only those are downloaded, one request every 10 seconds (robots.txt's Crawl-delay, obeyed since 2026-11-24;
+  before that six at a time), the most recently changed first, until the run's time is used (12 minutes before FETCH_MINUTES):
+  the rest come next run. Into data/il/<GA>/billstatus/, with listing dates in dates.json.
 - /Legislation/<GA>/HB|SB/<GA>00HB2682gms.htm: the governor's message on each vetoed bill (`veto_messages()`).
 - /Members/<GA>HouseMembers.xml, <GA>SenateMembers.xml and /Committees/<GA>...CommitteeMembers.xml, every run.
 
@@ -14,7 +16,6 @@ connection is still fully checked.
 Usage: python3 states/il/fetch.py [first_year]   (default 2021)
 """
 import glob, json, os, re, subprocess, sys, time, urllib.request
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -31,6 +32,24 @@ SYSTEM_CAS = ["/etc/ssl/certs/ca-certificates.crt", "/etc/ssl/cert.pem", "/etc/p
 FIRST = int(sys.argv[1]) if len(sys.argv) > 1 else 2021
 CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 CA = os.path.join(P.DATA, "ca.pem")
+DELAY = 10  # robots.txt (ftp.ilga.gov and www.ilga.gov): "User-agent: *  Crawl-delay: 10", for every request to the host
+STARTED = time.time()
+# The bill files stop 12 minutes before the workflow step's limit (FETCH_MINUTES, from .github/states.json), leaving time
+# for the member lists and Open States; what's left comes next run.
+BUDGET = (float(os.environ.get("FETCH_MINUTES", "110")) - 12) * 60
+_last = [0.0]
+
+
+def pace():
+    """Wait until DELAY seconds have passed since the last request to the repository."""
+    wait = _last[0] + DELAY - time.time()
+    if wait > 0:
+        time.sleep(wait)
+    _last[0] = time.time()
+
+
+def out_of_time():
+    return time.time() - STARTED > BUDGET
 
 
 def ca_bundle():
@@ -48,7 +67,8 @@ def ca_bundle():
 
 def curl(args, check=True):
     for attempt in range(4):
-        r = subprocess.run(["curl", "-sS", "--cacert", CA, "--max-time", "300", *args], capture_output=True)
+        pace()
+        r = subprocess.run(["curl", "-sS", "--cacert", CA, "--max-time", "300", "-A", AGENT, *args], capture_output=True)
         if r.returncode == 0:
             return r.stdout.decode("utf-8", "replace")
         time.sleep(5 * (attempt + 1))
@@ -94,16 +114,25 @@ def session(ga):
             return name
         return None
 
+    def stamp(n):  # the listing's time, newest first: the bills that just moved come before the rest
+        try:
+            return datetime.strptime(" ".join(files[n].split()[:3]), "%m/%d/%Y %I:%M %p")
+        except ValueError:
+            return datetime.min
+    todo.sort(key=stamp, reverse=True)
     got = 0
-    with ThreadPoolExecutor(6) as pool:
-        for k, name in enumerate(pool.map(get, todo)):
-            if name:
-                seen[name] = files[name]
-                got += 1
-            if k % 500 == 499:
-                json.dump(seen, open(path, "w"))
+    for k, name in enumerate(todo):
+        if out_of_time():
+            break
+        if get(name):
+            seen[name] = files[name]
+            got += 1
+        if k % 25 == 24:
+            json.dump(seen, open(path, "w"))
     json.dump(seen, open(path, "w"))
-    print(f"GA {ga}: {got} bill status files downloaded, {len(files)} listed")
+    left = len(todo) - got
+    print(f"GA {ga}: {got} bill status files downloaded, {len(files)} listed"
+          + (f"; {left} left for the next run (one request every {DELAY} seconds)" if left else ""), flush=True)
 
 
 def members(ga):
@@ -121,7 +150,6 @@ def members(ga):
 
 
 VETO_ACTION = re.compile(r"<action>Governor (?:Vetoed|Amendatory Veto|Item/Reduction Veto)")
-VETO_DELAY = 10  # robots.txt: Crawl-delay: 10 (the bill status files are read six at a time, as before 2026-11-22)
 VETO_AGAIN = 7 * 86400  # a message not there yet is asked for again after a week
 
 
@@ -130,7 +158,7 @@ def veto_messages(ga):
     repository: /Legislation/104/HB/10400HB2682gms.htm ("gms": governor's message), a Word page in Windows-1252, read once
     into data/il/<GA>/vetoes/HB2682.htm. The bills are the status files whose actions include "Governor Vetoed",
     "Governor Amendatory Veto" or "Governor Item/Reduction Veto". A 404 (the message is filed a few days after the veto) is
-    noted in vetoes/missing.json and asked for again a week later. One request every VETO_DELAY seconds."""
+    noted in vetoes/missing.json and asked for again a week later. One request every DELAY seconds."""
     base = os.path.join(P.DATA, str(ga))
     out = os.path.join(base, "vetoes")
     path = os.path.join(out, "missing.json")
@@ -150,7 +178,9 @@ def veto_messages(ga):
             todo.append((bill, f"{REPO}/Legislation/{ga}/{m[1]}/{ga}00{m[1]}{m[2]}gms.htm"))
     got = 0
     for bill, url in todo:
-        time.sleep(VETO_DELAY)
+        if out_of_time():
+            break
+        pace()
         r = subprocess.run(["curl", "-sS", "--cacert", CA, "--max-time", "120", "-A", AGENT, "-w", "%{http_code}", url],
                            capture_output=True)
         body, code = r.stdout[:-3], r.stdout[-3:].decode(errors="replace")

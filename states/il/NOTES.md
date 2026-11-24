@@ -67,3 +67,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   Code.") and the next sentence says what the bill does ("Provides ...", "Requires ...", "Makes a technical change ...").
   Not reordered: the line is short, names the law changed, and in 952 of 2025-26's synopses each "Amends ..." heads its own
   part ("Amends the A Act. Provides ... Also amends the B Act. ..."), which moving the first would break.
+- **Crawl-delay obeyed (2026-11-24):** ftp.ilga.gov's robots.txt asks every program for 10 seconds between requests
+  ("User-agent: *  Crawl-delay: 10"); the bill status files had been read six at a time. fetch.py now makes one request
+  every 10 seconds (`pace()`, for listings, files, member lists and veto messages), the most recently changed bills first,
+  and stops 12 minutes before the step's limit (`FETCH_MINUTES`, 110 in .github/states.json); what's left comes next run.
+  What that costs, measured from 2023's and 2025's histories (bills with an action that day, each a changed file): a
+  typical session day (about 200) takes about 35 minutes; the busiest days (1,500-3,000, at the deadlines) take 4-8 hours,
+  so on those days the last bills to change reach the site a few hours late. Illinois moves to the slow lane on its own
+  when its runs are long.

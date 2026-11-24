@@ -41,7 +41,7 @@
    "paths": [
     "data/il"
    ],
-   "minutes": 40,
+   "minutes": 110,
    "run": "python3 states/il/fetch.py"
   },
   {
