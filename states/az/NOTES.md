@@ -78,3 +78,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (after "RE: ..." and "Speaker Montenegro,", to "Sincerely,") on the vetoed bill, with `ocr` and the letter's address
   (the page says it was read from a scan and links it). Quality on four letters (HB 4115 of 2026, HB 2091 and SB 1001 of
   2025, HB 2063 of 2024): typed, clean scans in Hobbs's one-page format; read with no errors seen against the page image.
+
+- **Permission for apps.azleg.gov (2026-11-24):** the owner asked the Legislature's webmaster (webmaster@azleg.gov,
+  through azleg.gov's contact form, 2026-11-24 18:01 UTC) whether our program may read apps.azleg.gov's bill data directly
+  despite its robots.txt ("Disallow: /"): each bill's status, actions and votes and the session's member list, only bills
+  changed since the last run plus the session's bill list, one request every 10 seconds, identified as
+  "statebilltracker.org", stopping at once if asked. The Webmaster answered the same day (2:11 PM Arizona time): "This
+  should be fine. Thank you". Those are the terms: keep to them (rate, scope, User-Agent). Until a build from
+  apps.azleg.gov is compared with the Open States one and switched, Arizona still comes from Open States.
