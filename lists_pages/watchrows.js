@@ -10,7 +10,7 @@
 //   date, due, out, later, sessionLabel, old, found, gone, stance, rules, yearGroup, other (the second number, New York's
 //   same-as bill, shown under the first as on the state's Bills list)}; label: the status words, from
 //   billfacts.js: the state's page works them out, the other pages read them from the status rows).
-// WatchRows.newsHtml(entries): "New since you last looked", one box at the top of the list.
+// WatchRows.newsHtml(entries): "3 with news since you last looked · Mark all as seen", above the list.
 const WatchRows = (() => {
   const ORDER = ["soon", "session", "year", "later", "idle", "done"];
   const NAMES = { soon: "Due soon", session: "In the legislature", later: "Later", idle: "Out of time this session", done: "Decided or ended" };
@@ -91,8 +91,14 @@ const WatchRows = (() => {
     // The side, when one is chosen (stars start with none, so a missing tag means none chosen, not "support").
     // (A shared or named list marks every bill with a side: Support shows there only when the list uses sides, opt.stance.)
     const stance = x.stance === "oppose" || (x.stance === "support" && opt.stance !== false) ? `<span class="wr-stance ${x.stance}">${x.stance === "oppose" ? "Oppose" : "Support"}</span>` : "";
-    // (newText(x): what's new, with its day; else the last action and its day.)
-    const news = opt.isNew?.(x) ? `<span class="wr-new"><b>New:</b> ${h(opt.newText ? opt.newText(x) : `${x.action || ""}${x.last ? ` (${fullDay(x.last)})` : ""}`)}</span>` : "";
+    // What's new, inside the row (2026-11-24, the owner's design: no separate box above the list): what happened and its
+    // day in bold (newText(x)), then the step's odds in grey (oddsOf(x), the state's page only). And what the person did
+    // about it ("✓ You wrote to Sens. Amato and Schepisi · Nov 26": wroteOf(x)), and "Take action" on a bill that can
+    // still move (the row opens its card, whose "Who to write to" has the emails).
+    const fresh = !!opt.isNew?.(x), odds = fresh ? opt.oddsOf?.(x) || "" : "", wrote = opt.wroteOf?.(x) || "";
+    const news = fresh ? `<span class="wr-news"><b class="wr-what">${h(opt.newText ? opt.newText(x) : `${x.action || ""}${x.last ? ` · ${fullDay(x.last)}` : ""}`)}</b>${odds ? `<span class="wr-odds">${h(odds)}</span>` : ""}</span>` : "";
+    const did = wrote ? `<span class="wr-wrote">${h(wrote)}</span>` : "";
+    const go = opt.act !== false && x.found && ["soon", "session", "year", "later"].includes(groupOf(x)) && !x.upcoming ? '<span class="wr-ta">Take action ›</span>' : "";
     // The status column, as on the state's Bills list: the pips, the status label, then the date of the latest action
     // and the deadline (lists_pages/rows.css). A bill out of time this session is greyed, as there.
     const over = (x.out || x.group === "done") && x.stage <= 2 ? " over" : "", uni = opt.uni ? opt.uni(x) : BillFacts.oneHouse(x.st);
@@ -106,7 +112,7 @@ const WatchRows = (() => {
     // (Not when it says what the status label beside it says: "Passed both houses · Passed both houses · Jun 4, 2026".)
     const plain = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     const told = plain(x.action) && plain(x.label).includes(plain(x.action));
-    const act = x.action && !told && !(opt.isNew?.(x)) ? `${h(x.action)} · ` : "";
+    const act = x.action && !told && !fresh ? `${h(x.action)} · ` : "";
     const when = [x.found && x.last && !sameDay ? `<span>${act}${fullDay(x.last).replace(/ /g, "\u00a0")}</span>` : "",
       due ? `<span class="wr-dl">${h(due).replace(/\b([A-Z][a-z]{2}) (\d)/g, "$1 $2")}</span>` : x.out && opt.byState ? '<span class="wr-dl">Out of time this session</span>' : ""].filter(Boolean).join("");
     const where = `<span class="wr-where bstat">${x.found ? BillFacts.pips(x.stage, uni, over.trim(), x.label, x.st) + `<span class="stg s${x.stage}${over}">${h(x.label)}</span>` : ""}`
@@ -118,8 +124,11 @@ const WatchRows = (() => {
     }
     opt.onRow?.(id, x);
     const card = opt.card ? opt.card(x) : null;
-    return `<li class="wr-row${yr ? " wr-yr" : ""}${two ? " wr-two" : ""}" data-key="${h(x.key)}"><button type="button" class="wr-btn rowbtn" data-open="${h(id)}" aria-controls="emb-${h(id)}" aria-expanded="${card != null}">`
-      + `<span class="wr-num">${st}${shown}${yr}</span><span class="wr-tt">${h(x.title)}</span>${note ? `<span class="wr-note">${h(note)}</span>` : ""}${news}${where}</button>`
+    // (The side down the row's left edge: red for a bill the person opposes, teal for one they support, green for a law
+    // they wanted.)
+    const side = x.stance === "oppose" ? " wr-opp" : x.stance === "support" ? (x.stage === 5 ? " wr-won" : " wr-sup") : "";
+    return `<li class="wr-row${yr ? " wr-yr" : ""}${two ? " wr-two" : ""}${side}${fresh ? " wr-fresh" : ""}" data-key="${h(x.key)}"><button type="button" class="wr-btn rowbtn" data-open="${h(id)}" aria-controls="emb-${h(id)}" aria-expanded="${card != null}">`
+      + `<span class="wr-num">${st}${shown}${yr}${fresh ? '<span class="wr-newmark">New</span>' : ""}</span><span class="wr-tt">${h(x.title)}</span>${note ? `<span class="wr-note">${h(note)}</span>` : ""}${news}${did}${go}${where}</button>`
       + `${btns}${back}<div class="wr-emb" id="emb-${h(id)}"${card != null ? "" : " hidden"}>${card || ""}</div></li>`;
   }
   // A group's heading: its name and note (when the group is one state's, that state's note on it), and anything the page
@@ -186,13 +195,11 @@ const WatchRows = (() => {
     b.style.top = `${Math.round(num.getBoundingClientRect().bottom - pad - li.getBoundingClientRect().top + 2)}px`;
   }
   const RO = typeof ResizeObserver === "function" ? new ResizeObserver((es) => { for (const e of es) placeBtns(e.target); }) : null;
-  // "New since you last looked": entries [{key, kind ("ok" a law, "no" a veto, ""), what, num, title, date, more (how many
-  // other changes)}], the biggest news first. A row's button is data-wnews="<key>"; "Mark all as seen" is data-wseenall.
+  // Above the list, one line: "3 with news since you last looked · Mark all as seen" (the news itself is in the rows,
+  // 2026-11-24; this was a box listing it). entries: the bills with news. "Mark all as seen" is data-wseenall.
   function newsHtml(entries) {
     if (!entries.length) return "";
-    return `<section class="wnews"><div class="wnews-h"><h2>New since you last looked</h2><button type="button" class="linkish" data-wseenall>Mark all as seen</button></div>`
-      + `<ul>${entries.map((n) => `<li><button type="button" class="wnewsrow" data-wnews="${h(n.key)}"><span class="nk ${n.kind || ""}">${h(n.what)}</span> <span class="bn">${h(n.num)}</span> ${h(n.title)}`
-        + ` <span class="wr-muted">· ${h(n.date)}${n.more ? ` · ${n.more} more change${n.more > 1 ? "s" : ""}` : ""}</span></button></li>`).join("")}</ul></section>`;
+    return `<p class="wnews-line"><span>${entries.length} with news since you last looked</span><button type="button" class="linkish" data-wseenall>Mark all as seen</button></p>`;
   }
   return { ORDER, NAMES, place, ordered, sortIn, rowHtml, draw, newsHtml, numText, day, fullDay, idOf };
 })();

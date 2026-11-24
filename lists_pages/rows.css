@@ -94,17 +94,22 @@
   .wrows .wr-again { padding-left: 98px; }
   .wrows .wr-emb { margin-left: 20px; padding-left: 14px; }
 }
-/* "New since you last looked", at the top of the list. */
-.wnews { border: 1px solid var(--navy); border-radius: 12px; padding: 12px 16px 10px; margin: 0 0 18px; background: var(--sheet); }
-.wnews-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.wnews .wnews-h h2 { margin: 0; font: 700 18px/1.2 var(--display); letter-spacing: 0; text-transform: none; color: var(--ink); }
-.wnews .wnews-h .linkish { font-size: 14px; }
-.wnews ul { list-style: none; margin: 8px 0 0; padding: 0; }
-.wnews li + li { border-top: 1px solid var(--rule); }
-.wnewsrow { appearance: none; background: none; border: 0; font: inherit; font-size: 14.5px; color: var(--ink); text-align: left; width: 100%; padding: 8px 0; cursor: pointer; line-height: 1.5; }
-.wnewsrow:hover .bn, .wnewsrow:focus-visible .bn { text-decoration: underline; }
-.wnewsrow.read { opacity: .55; }
-.wnewsrow .bn { font-weight: 700; color: var(--navy); white-space: nowrap; }
-.wnewsrow .nk { font: 700 12.5px var(--body); background: var(--st-3); color: var(--st-3-ink); border-radius: 4px; padding: 2px 7px; }
-.wnewsrow .nk.ok { background: var(--st-5); color: var(--st-5-ink); }
-.wnewsrow .nk.no { background: var(--st-6); color: var(--st-6-ink); }
+/* What's new, inside its row (2026-11-24): "New" by the number; what happened in bold, the step's odds in grey; what you
+   did about it; "Take action" (the row opens its card, with whom to write to). The side down the row's left edge: teal
+   support, red oppose, green a law you supported. Above the list, one line: "3 with news since you last looked". */
+.wrows .wr-row.wr-sup::before, .wrows .wr-row.wr-opp::before, .wrows .wr-row.wr-won::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px; border-radius: 0 2px 2px 0; background: var(--navy); }
+.wrows .wr-row.wr-opp::before { background: var(--veto-ink); }
+.wrows .wr-row.wr-won::before { background: #1fa652; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .wrows .wr-row.wr-won::before { background: #34d36b; } }
+:root[data-theme="dark"] .wrows .wr-row.wr-won::before { background: #34d36b; }
+.wrows .wr-newmark { display: table; margin-top: 4px; font: 700 11.5px/1.5 var(--body); color: #fff; background: var(--new-ink); border-radius: 9px; padding: 0 7px; }
+.wrows .wr-news, .wrows .wr-wrote, .wrows .wr-ta { grid-column: 2; }
+.wrows .wr-news { display: grid; gap: 1px; margin-top: 2px; }
+.wrows .wr-what { font-weight: 700; font-size: 15px; color: var(--ink); }
+.wrows .wr-odds { color: var(--ink-2); font-size: 14px; }
+.wrows .wr-wrote { font-size: 13.5px; font-weight: 600; color: var(--st-5-ink); }
+.wrows .wr-ta { justify-self: start; margin-top: 4px; font: 600 13.5px/1.4 var(--body); color: var(--navy); border: 1.5px solid var(--navy); border-radius: 7px; padding: 2px 10px; }
+.wrows .wr-btn:hover .wr-ta { background: var(--navy); color: var(--sheet); }
+.wrows .wr-btn[aria-expanded="true"] .wr-ta { display: none; }
+.wnews-line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 14px; margin: 0 0 10px; font-size: 14.5px; color: var(--ink-2); }
+.wnews-line .linkish { font-size: 14px; }

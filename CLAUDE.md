@@ -139,7 +139,9 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   names before this; New York's page moves its own once (`moveNewYork()`: odd-year A and S bills, odd-year sessions'
   settings). Every watchlist scan (`/^abt:([a-z]{2}):watch$/`) needs the state in the name. Site-wide names stay plain:
   abt:follows, abt:lists, abt:all:published, abt:yourbills:*, abt:tabseen, abt:issueview, abt:supportnote, abt:laststate (the
-  front page's "Your state" menu: the last state page visited, set by tracker.html and the front page's links).
+  front page's "Your state" menu: the last state page visited, set by tracker.html and the front page's links),
+  abt:signoff (Take action's "Your name and town", for every state) and abt:sendwith (how its emails are sent: gmail,
+  outlook, yahoo, app). Per state, STORE + "why": Take action's "Why it matters to you", one per bill; never published.
 - **Adding a state (learned from NJ and VA):** missing settings fall back to New York's rules and wording, silently.
   Copy states/nj or states/va and decide each of these: in profile.py, `YEARS`, `LOWER`/`LOWER_NAME`/`TITLES`,
   `LEADERS`, `GOVERNORS`, `TOPICS`, `TOWNS_PATH`; in profile.js, `code`, `houses`, `titles`, `memberWords`,
