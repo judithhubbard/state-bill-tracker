@@ -10,6 +10,11 @@
 .pips i.on { background: var(--st-1-ink); }
 .pips.s3 i.on, .pips.s4 i.on { background: var(--st-3-ink); }
 .pips.s5 i.on { background: var(--st-5-ink); }
+/* A law's bars in a brighter green than the label's ink (2026-11-24, the owner: teal for a live bill and the old green
+   for a law were too alike), in light and dark. */
+.pips.s5 i.on { background: #1fa652; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pips.s5 i.on { background: #34d36b; } }
+:root[data-theme="dark"] .pips.s5 i.on { background: #34d36b; }
 .pips.s6 i.on { background: var(--st-6-ink); }
 .pips.over i.on { background: var(--st-0-ink); }
 .stg { display: inline-block; justify-self: start; font: 600 12.5px/1.45 var(--body); padding: 1px 8px; border-radius: 10px; background: var(--st-0); color: var(--st-0-ink); }
