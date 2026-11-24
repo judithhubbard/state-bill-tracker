@@ -2427,7 +2427,10 @@ def compute(prev=None):
     # With the light history's older sessions: what the Statistics tab, Trends and /compare/ count.
     sdone = {**light, **done}
     shist = {**{s: defaultdict(dict) for s in light}, **hist}
-    titles_only = any("summary" in LIGHT_LACKS[s] for s in light)
+    # (Also when a light session's summaries are mostly missing: Rhode Island's 2015-22 from LegiScan have them for about 20
+    # bills a year, against nearly every bill since 2024, so titles plus summaries would make every subject look like it rose.)
+    titles_only = any("summary" in LIGHT_LACKS[s] or sum(1 for r in light[s][0] if r["summary"]) < len(light[s][0]) / 2
+                      for s in light)
     summary = {s: outcomes(sdone[s][0]) for s in sdone}
     if CYCLE:
         LIGHT.update({cyc(s) for s in light if all(cyc(x) != cyc(s) for x in done)})

@@ -218,9 +218,11 @@ TRENDS = [
     ("rise", "Antisemitism", r"antisemit|anti-semit", True),
     ("rise", "Pharmacy benefit managers", r"pharmacy benefits? manager|\bPBMs?\b", True),
     ("rise", "Diversity, equity and inclusion", r"diversity, equity|diversity and equity|diversity equity|\bDEI\b", True),
+    ("rise", "China and foreign adversaries", r"foreign adversar|people.s republic of china|chinese communist party|\bCCP\b|communist china", True),
     ("spike", "Fentanyl", r"fentanyl|xylazine|carfentanil", True),
     ("spike", "COVID-19", r"covid|coronavirus|pandemic|sars-cov", True),
     ("spike", "Russia and Ukraine", r"russia|ukrain", True),
     ("spike", "Afghanistan", r"afghan", True),
+    ("spike", "Opioids", r"opioid|opiate|naloxone", True),
 ]
 WORDING = []

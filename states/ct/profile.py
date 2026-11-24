@@ -106,7 +106,11 @@ def governor_on(day):
 # sessions were compared with their own kind too. Matched on the bills' titles (no separate summaries).
 TRENDS = [
     ("rise", "Artificial intelligence", r"(?i:artificial intelligence|automated decision|algorithmic|deep ?fake|synthetic media|\bgenerative|chatbot)|\bAI\b", False),
+    ("rise", "Cannabis", r"cannabis|marijuana", True),
+    ("rise", "PFAS (“forever chemicals”)", r"\bPFAS\b|perfluoro|polyfluoro|forever chemical", True),
+    ("rise", "Solar power", r"\bsolar\b", True),
+    ("spike", "Opioids", r"opioid|opiate|naloxone", True),
+    ("spike", "Sexual harassment", r"sexual harassment", True),
     ("spike", "COVID-19", r"covid|coronavirus|pandemic", True),
-    ("spike", "Mental health", r"\bmental|behavioral health", True),
 ]
 WORDING = []

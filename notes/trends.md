@@ -111,6 +111,8 @@ Wording pairs: none. ("Income taxes: credits" gave way to "Personal Income Tax L
 
 Looked at and left out: "gold and silver as money" (matched "species", false); paid leave (11, 8, 1) and broadband (22, 15, 7): too few or too slight; "budget" and "personal income tax" (drafting).
 
+**Re-picked 2026-11-24 with the light history (2015 on; bills by session, first to last):** titles only (the light sessions have no digests). Kept all twelve: AI (0, 0, 5, 1, 25, 51), data centers (0 ... 11), wildfire (4, 12, 41, 40, 33, 66), home insurance (4 ... 22), e-bikes (2 ... 12), COVID-19 (peak 71 in 2021-22), cannabis (peak 73 in 2017-18, the year of legal sales), fentanyl (peak 25 in 2023-24), homelessness (peak 56 in 2019-20), mental health (peak 93 in 2019-20), catalytic converters (peak 10 in 2021-22). Immigration (23, 34, 31, 13, 14, 43) dips and comes back rather than rising steadily, but doubles from 2015-16 to now: kept. Added "Housing production" (16, 34, 70, 67, 78, 80: housing development projects, accessory dwelling units, density bonuses, housing elements, surplus land; z about +7.6, rising every session; "zoning" only near "housing", since "Planning and zoning" heads unrelated digests). Added two WORDING pairs: "marijuana" (13, 10, 0, 1, 0, 0) to "cannabis" (12, 64, 61, ...) after the 2017 cannabis act, and "child care" (27, 27, 3, 3, 0, 0) to "childcare" (0, 0, 16, 13, 27, 23), the digests' spelling since 2019. Looked at and left out: housing in general (any "housing", too broad), personal income tax and "taxes"/"tax" (digest headings that changed form), independent contractors (37 in 2019-20, AB 5's follow-ups: one law's aftermath), budget trailer bills.
+
 ## Colorado (co)
 
 Sessions shown: 2024 (705 bills), 2025 (657), 2026 (626). (2023 isn't in the local copy.)
@@ -136,6 +138,8 @@ Sessions shown: 2022 (1,003 bills), 2023 (3,224), 2024 (990), 2025 (3,895), 2026
 Wording pairs: none.
 
 Looked at and left out: the meals tax (dedicating or sharing the local meals tax: 1, 9, 7, 14, 13) rose in short sessions only; elections (10.0 to 20.7 per 1,000) is broad and peaks in 2025; "elderly"/"senior" dropped only in 2026; paid leave and solar peak and fall back with no trend.
+
+**Re-picked 2026-11-24 with the light history (2015 on; bills by session, first to last):** titles only. Long (odd) and short (even) sessions alternate, so the line zigzags; compared long with long. Kept AI (0 through 2022, then 1, 3, 16, 6) and COVID-19 (63 in 2021). Dropped mental health: 12.3 per 1,000 in 2015 and about 9 now, with a 2022 high of 22.9 (no direction over twelve sessions). Added cannabis (long sessions 8, 15, 26, 18, 32, 29: medical, then the 2021 adult-use law and its regulation), PFAS (0 until 2019, 12 in 2021 and 12 in 2025: firefighting foam, then products), solar power (long sessions 8, 5, 8, 13, 17, 39), opioids (peak 31 in 2017, 3 in 2025-26) and sexual harassment (16 in 2018, the #MeToo year: training, nondisclosure agreements; about 1 a year since). Left out: "grocery" (the meals-tax wording "eating establishment, caterer or grocery store", a drafting habit), the highway use tax (one 2022 tax and the bills to repeal it), the ambulatory surgical center tax (2016-18), business entity and estate tax phase-outs, climate (19 at most, no steady direction), rent (a 2025 jump only).
 
 ## Delaware (de)
 
@@ -246,6 +250,8 @@ Sessions shown: 2024 (745 bills, short session), 2025 (1,239, long), 2026 (748, 
 Wording pairs: none.
 
 Looked at and left out: data centers (0, 2, 5) too few; "minors" (10, 3, 0) mixes age verification, work permits and checking accounts; no candidate subject reached |z| 2.5.
+
+**Not yet re-picked (2026-11-24):** its light history was still downloading; redo with 2015 on once it's in.
 
 ## Kansas (ks)
 
@@ -380,6 +386,8 @@ Wording pairs: none found.
 
 Looked at and left out: firearms (108, 51, 61) fell after 2024's many identical "Constitutional amendment: firearms" filings, so it isn't a steady change; age verification online (6, 4, 10) is too small, and the scan's "abusive website access litigation" is about ADA website lawsuits; kratom (0, 3, 9, z +2.7) and child care (25, 21, 13, z -2.6) are just short of the bar; disabled veterans' property tax exemptions (7, 14, 27) are a handful of repeated filings.
 
+**Not yet re-picked (2026-11-24):** its light history was still downloading; redo with 2015 on once it's in.
+
 ## Mississippi (ms)
 
 Sessions shown: 2024 (3,390 bills), 2025 (3,329), 2026 (3,631). Most of the scan's biggest movers are appropriation and local-bill wording ("FY2027", "defraying costs", town names), left out.
@@ -393,6 +401,8 @@ Sessions shown: 2024 (3,390 bills), 2025 (3,329), 2026 (3,631). Most of the scan
 Wording pairs: none found.
 
 Looked at and left out: broadband (12, 10, 3, z -2.5); hemp and THC (1, 7, 5); income tax (55, 71, 62) has no steady direction.
+
+**Not yet re-picked (2026-11-24):** its light history was still downloading; redo with 2015 on once it's in.
 
 ## Montana (mt)
 
@@ -515,6 +525,8 @@ Wording pairs: none found.
 
 Looked at and left out: cannabis (12, 8, 3: falling, but z about 2.4 on so few bills); medical malpractice (4, 7, 8); "rate", "county", "plate" (drafting and budget-session words, not subjects).
 
+**Not yet re-picked (2026-11-24):** its light history was still downloading; redo with 2015 on once it's in.
+
 ## Nevada (nv)
 
 Sessions shown: 2023 (1,049 bills), 2025 (1,119). Two sessions only, so only the two clearest shifts, both from almost nothing.
@@ -559,6 +571,8 @@ Sessions shown: 2023-24 (5,269 bills), 2025-26 (5,809). LegiScan titles only (ab
 Wording pairs: none found.
 
 Looked at and left out: Medicaid (32 to 69: real, but generic and mostly program code titles); AI (8 to 22, z 2.3), lab-grown meat (0 to 7), phones in schools (0 to 5), foreign land ownership (8 to 12): too few or too small a change.
+
+**Re-picked 2026-11-24 with the light history (2015 on; bills by session, first to last):** titles only (the light sessions have no summaries). Kept property tax (43, 27, 36, 50, 43, 109), eminent domain (5, 2, 10, 13, 8, 31), immigration (4, 2, 3, 5, 3, 19), data centers (0 through 2023-24, 9 now) and medical marijuana (0, 9, 77, 112, 98, 61: State Question 788 passed in 2018). Dropped wind energy (12, 15, 13, 3, 2, 21: falls, then comes back; no direction over ten years). Added AI (0 through 2021-22, then 8 and 22), mental health (30, 35, 69, 71, 74, 85; per 1,000 7.6 to 14.6, rising every session but one; "environmental health" excluded) and teacher pay (17, 45, 7, 5, 8, 6: the 2017-18 Legislature, of the April 2018 teacher walkout). Left out: "clarifying language", "ballot title" and "budgetary" (titles' boilerplate that fell out of use), "modernization"/"reform" (title habits), broadband (peak 22 in 2021-22), gender identity (10 at most).
 
 ## Oregon (or)
 
@@ -607,6 +621,8 @@ Wording pairs: none found.
 
 Looked at and left out: vaping (0, 2, 6), short-term rentals (6, 2, 1), COVID-19 (5, 4, 1): too few; Medicaid (12, 21, 27: z 1.8); "Tiverton" (2, 16, 20: one town's local bills, partly in affordable housing).
 
+**Re-picked 2026-11-24 with the light history (2015 on; bills by session, first to last):** titles only: LegiScan has descriptions for only about 20 bills a year in 2015-22 and for nearly every bill since 2024, so build_data.py now compares titles alone when a light session's summaries are mostly missing (before, only when the light file said it had none). The local copy lacks 2023 (the site has it); counts here bridge it. Kept affordable housing (12, 4, 6, 10, 9, 3, 6, 15 | 10, 19, 31). Added landlords and tenants (10, 6, 5, 7, 7, 10, 12, 13 | 27, 27, 35: security deposits, evictions, rent increases, algorithmic rent pricing; "lieutenant" excluded), climate (0, 3, 3, 2, 4, 5, 10, 12 | 12, 11, 16: the 2021 Act on Climate, adaptation funds, a climate superfund), AI (none until 2022, then 6, 6, 11) and COVID-19 (22 in 2022). Left out: Medicaid (too general), zoning (overlaps affordable housing), PFAS (10 in 2022 only), "healthcare" (a spelling the descriptions adopted in 2024).
+
 ## South Carolina (sc)
 
 Sessions shown: 2023-24 (2,253 bills), 2025-26 (2,286). Two sessions only, so only the two clearest subjects. Many of the scan's moves are the 2024 split of DHEC ("Department of Health and Environmental Control" 30 to 0, "Department of Environmental Services" 1 to 19) and judicial-election and precinct-map bills, not subjects.
@@ -633,6 +649,8 @@ Wording pairs: none found.
 
 Looked at and left out: tax increment financing (0, 0, 11: one year only, often local); "Indian" (13, 2, 5: no steady direction); other candidates under |z| 2.5.
 
+**Re-picked 2026-11-24 with the light history (2015 on; bills by session, first to last):** title + summary. The local copy lacks 2023 (the site has it); counts here bridge it. Kept property tax (10, 4, 2, 6, 7, 5, 4, 10 | 5, 15, 23: owner-occupied property tax relief in 2025-26) and data centers (none until 2025, then 1 and 9). Added cannabis (43 in 2022, after voters approved medical cannabis in November 2020: the program's rules, cultivation, cardholders; 9 in 2026), which brings South Dakota to the three Trends needs. Left out: elections (too general), "modify provisions"/"penalty therefor" (title habits that grew).
+
 ## Tennessee (tn)
 
 Sessions shown: 2023-24 (3,089 bills), 2025-26 (2,819). Two sessions only, so five subjects; the three rising ones are near the edge (z about 2.6-2.7) and were kept because their samples are all on topic and the rise is steady across the bills.
@@ -648,6 +666,8 @@ Sessions shown: 2023-24 (3,089 bills), 2025-26 (2,819). Two sessions only, so fi
 Wording pairs: none found.
 
 Looked at and left out: "public charter schools" (19 to 38) is a drafting habit (mandates on LEAs now name charter schools too); data centers (2 to 7), hemp (10 to 14) and abortion (22 to 12) are too few or too flat; "freedom" and "planning" are act names.
+
+**Re-picked 2026-11-24 with the light history (2015 on; bills by session, first to last):** title + summary (LegiScan has descriptions for every year). All five held: immigration (4, 5, 2, 4, 11, 25), AI (1, 0, 0, 0, 9, 20), sales tax on groceries (1, 5, 3, 3, 7, 19), firearms (about 65-70 a session, 129 in 2023-24 after the Covenant School shooting), third-grade retention (16 in 2023-24). Added school vouchers and education savings accounts (0, 1, 4, 3, 9, 17: the ESA pilot, then the 2025 Education Freedom Act and its follow-ups). Left out: charter schools (22 to 78, but the descriptions now name "LEAs and public charter schools" in most education bills: a wording habit), child care (peak 38 in 2023-24, no steady direction), foreign adversaries (10 at most, mixed with "Victims of Communism Day"), hemp. LegiScan's descriptions from 2021 on cite "Tennessee Code Annotated" in nearly every bill (2 bills in 2019, 2,916 in 2021): phrases from the citations are left out of the scan's reading.
 
 ## Texas (tx)
 
@@ -699,6 +719,8 @@ Wording pairs: none found.
 
 Looked at and left out: vaccines (196, 60, 34) and federal pandemic aid mostly repeat COVID-19; telehealth (66, 44, 30), broadband, hydrogen and electric vehicles fell but less clearly (pandemic-era and 2021-22 infrastructure bills); "fraud" (53 to 193) mixes many kinds of fraud; "codify executive order" and "Trump" are about one administration, not a subject; agriculture and the farm bill peaked in 2023-24 only with the farm bill's cycle; foreign adversaries (155, 243, 189) is too broad a pattern.
 
+**Re-picked 2026-11-24 with the light history (2015 on; bills by session, first to last):** title + summary. All fifteen held over 2015-2026 (AI 0 to 267; overturning agency rules 13 to 204; wildfire 18 to 111; child care 21 to 93; DEI 0 to 16; COVID-19 868 in 2019-20; Russia and Ukraine 181 in 2021-22; Afghanistan 62 in 2021-22; fentanyl 94 in 2023-24). Government shutdowns (18, 36, 89, 12, 36, 118) and war powers (8, 12, 14, 11, 8, 36) come in waves rather than rising steadily, but end well above where they started: kept. Added China and foreign adversaries (11, 11, 78, 151, 244, 196: "foreign adversary", the People's Republic of China, the Chinese Communist Party) and opioids (159 in 2017-18, the SUPPORT Act Congress; about 55-75 since). Left out: housing (rising but broad), mental health (peak 225), crypto (0 to 45, still small per 1,000), the 2023-24 appropriations riders ("limitation on availability of funds", 521 in one Congress: amendments, not bills).
+
 ## Utah (ut)
 
 Sessions shown (full data, 2026-11-22): 2023 (871 bills), 2024 (863), 2025 (912), 2026 (939), all general sessions. Utah's records are short (titles and a one-line summary, about 125 characters a bill), so two steady rises, each just under the bar, were kept.
@@ -741,6 +763,8 @@ Sessions shown: 2023-24 (1,202 bills), 2025-26 (1,286). Two sessions of a small 
 Wording pairs: none found.
 
 Looked at and left out: immigration (4 to 11) and flooding (9 to 15) rose but too little to tell from chance (z about 2); "resilience" (13 to 4) is grant-program names; "flood response" (0 to 8) is a few bills' wording.
+
+**Re-picked 2026-11-24 with the light history (2015 on; bills by session, first to last):** title + summary. Had only AI, so no Trends showed. Kept AI (0, 1, 3, 3, 4, 20). Added housing (9, 11, 21, 14, 31, 32), flooding (1, 2, 1, 1, 9, 15: after the July 2023 and 2024 floods, buyouts, dam drawdowns, tax relief for flooded towns), immigration (0, 2, 2, 3, 4, 11), PFAS (0, 0, 7, 6, 9, 5) and COVID-19 (19 in 2019-20, 13 in 2021-22). Left out: cannabis (10, 14, 7, 15, 13, 10: no direction, legal since 2018), solar (falling, 12 to 4, but small), unemployment insurance (2021-22 pandemic claims only).
 
 ## Washington (wa)
 
@@ -796,3 +820,8 @@ Even-year budget sessions take only bills two-thirds of a house votes to introdu
 
 Wording pairs: none found.
 
+**Re-picked 2026-11-24 with the light history (2015 on; bills by session, first to last):** title + summary. Wyoming was left empty on 2026-11-22 with 2024-26 only; the local copy lacks 2023 (the site has it), and counts here bridge it. Property tax (6, 3, 7, 5, 7, 13, 14, 14 | 21, 25, 20: per 1,000 about 15 in 2015-19 and 46-62 since 2024), gambling and gaming (0, 0, 2, 3, 6, 5, 4, 3 | 4, 8, 9: skill games, historic horse racing, pari-mutuel, a gaming commission) and COVID-19 (7 in 2021, 9 in 2022). Sessions alternate general and budget, so counts zigzag. Left out: digital assets (Wyoming's blockchain laws are well known, but 5 bills at most a year), nuclear and carbon capture (5 at most), and "making conforming amendments"/"specifying applicability" (drafting habits that grew steadily).
+
+## District of Columbia (dc)
+
+**Re-picked 2026-11-24 with the light history (2015 on; bills by session, first to last):** title + summary (the Secretary's abstracts). Nothing clears the bar over 2015-2025: the Council's 470-630 bills a session are mostly ceremonial designations ("... Way Designation Act", rising 9 to 27, which the owner rules out), tax exemptions for particular properties, and the same steady subjects (housing 16-26, property tax 6-17 a session). Left empty, as before.

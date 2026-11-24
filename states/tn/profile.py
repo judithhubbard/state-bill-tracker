@@ -174,6 +174,7 @@ TRENDS = [
     ("rise", "Immigration", r"immigra|illegal aliens?|unlawfully present|undocumented|noncitizen|unauthorized aliens?", True),
     ("rise", "Artificial intelligence", r"(?i:artificial intelligence|deepfake|\bgenerative|chatbot|algorithm)|\bAI\b", False),
     ("rise", "Sales tax on groceries", r"food and food ingredients|grocery tax|food retail sales tax|sales tax on food|tax on the retail sale of food", True),
+    ("rise", "School vouchers and education savings accounts", r"education savings account|education freedom|school choice|scholarship account|school voucher", True),
     ("spike", "Firearms", r"firearm|handgun|\bguns?\b|machine gun|auto sear|ammunition", True),
     ("spike", "Third-grade retention", r"third[- ]grade", True),
 ]

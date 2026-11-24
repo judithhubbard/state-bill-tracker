@@ -194,9 +194,11 @@ def governor_on(day):
 TRENDS = [
     ("rise", "Property tax", r"property tax|ad valorem|homestead exemption|property taxation", True),
     ("rise", "Eminent domain", r"eminent domain", True),
-    ("rise", "Wind energy", r"wind (?:energy|turbine|farm|facilit|power|tower)", True),
     ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen|illegal aliens?|unauthorized aliens?|undocumented (?:immigrant|person|individual|alien|worker|student)", True),
+    ("rise", "Artificial intelligence", r"(?i:artificial intelligence|deepfake|\bgenerative|chatbot|algorithmic|synthetic media|automated decision)|\bAI\b", False),
+    ("rise", "Mental health", r"(?<!environ)mental health|behavioral health", True),
     ("rise", "Data centers", r"(?<!State )data cent(?:er|re)s?\b", True),
     ("spike", "Medical marijuana", r"marijuana|cannabis", True),
+    ("spike", "Teacher pay", r"teacher[^;]{0,20}(?:salar|pay\b|compensation)", True),
 ]
 WORDING = []
