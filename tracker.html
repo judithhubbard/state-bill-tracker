@@ -1078,6 +1078,13 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .ta-lbl { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 10px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin: 2px 0 3px; }
 .ta-lbl, .ta-lbl span { white-space: nowrap; }
 .ta-lbl span { font-weight: 500; }
+/* "Kept on this device": small and grey, inside the box's lower right corner (the owner's choice, 2026-11-24). */
+.ta-box { position: relative; display: block; }
+.ta-box .ta-fld { padding-bottom: 20px; }
+.ta-box input.ta-fld { padding-bottom: 6px; padding-right: 150px; }
+.ta-kept { position: absolute; right: 9px; bottom: 6px; font-size: 11.5px; color: var(--ink-2); opacity: .75; pointer-events: none; }
+.ta-box:has(input) .ta-kept { top: 50%; bottom: auto; transform: translateY(-50%); }
+@media (max-width: 600px) { .ta-box input.ta-fld { padding-right: 9px; padding-bottom: 20px; } .ta-box:has(input) .ta-kept { top: auto; bottom: 5px; transform: none; } }
 .ta-fld { display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; line-height: 1.5; color: var(--ink); background: var(--sheet);
   border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; margin: 0 0 8px; }
 textarea.ta-fld { resize: vertical; min-height: 4.6em; }
@@ -3390,7 +3397,7 @@ function taDraft(b, g, stance, all) {
   const when = g.meet ? `, when ${g.cw || "the committee"} meets on ${long(g.meet.when)}` : "";
   const md = g.meet ? ` on ${new Date(g.meet.when).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "";
   let subject, line;
-  if (g.kind === "vote") { subject = `Please vote ${opp ? "no" : "yes"} on ${n}${md}`; line = `I'm writing to ask you to vote ${opp ? "no" : "yes"} on ${what}${when || ` when it comes before ${g.cw || "the committee"}`}.`; }
+  if (g.kind === "vote") { subject = `Please vote ${opp ? "no" : "yes"} on ${n}${md}`; line = `I'm writing to ask you to vote ${opp ? "no" : "yes"} on ${what}${when || `, when it comes before ${g.cw || "the committee"}`}.`; }
   else if (g.kind === "tell") { subject = `${n}: I ${opp ? "oppose" : "support"} it`; line = `I'm writing ${opp ? "in opposition to" : "in support of"} ${what}${g.meet ? `, which is on the committee's agenda for ${long(g.meet.when)}` : ""}.`; }
   else { subject = `${n}: please ${g.ask}`; line = `I'm writing ${opp ? "in opposition to" : "in support of"} ${what}. Please ${g.ask}.`; }
   return { subject, greet, line, to: ps.filter((p) => p.info.email).map((p) => p.info.email), form: ps.filter((p) => !p.info.email && (p.info.form || p.info.url)), ps };
@@ -3428,11 +3435,11 @@ function taPanel(b, stance) {
       body = `<div class="ta-mail">${contact ? `<ul class="ta-ppl">${contact}</ul>` : ""}${gov}${more}
         <div class="ta-msg">${d.to.length ? `<p class="ta-to">To: ${esc(d.to.join(", "))}</p>` : ""}<p class="ta-subj"><b>Subject:</b> ${esc(d.subject)}</p>
           <p>${esc(d.greet)}</p><p>${esc(d.line)}</p>
-          <label class="ta-lbl" for="taw-${b.idx}">Why it matters to you <span>Kept on this device</span></label>
-          <textarea id="taw-${b.idx}" class="ta-fld" rows="3" data-ta-why="${b.idx}" placeholder="A sentence or two in your own words. Offices give these the most weight.">${esc(why)}</textarea>
+          <label class="ta-lbl" for="taw-${b.idx}">Why it matters to you</label>
+          <span class="ta-box"><textarea id="taw-${b.idx}" class="ta-fld" rows="3" data-ta-why="${b.idx}" placeholder="A sentence or two in your own words. Offices give these the most weight.">${esc(why)}</textarea><span class="ta-kept" aria-hidden="true">Kept on this device</span></span>
           <p class="ta-thanks">Thank you,</p>
-          <label class="ta-lbl" for="tas-${b.idx}">Your name and town <span>Kept for all your bills</span></label>
-          <input id="tas-${b.idx}" class="ta-fld" data-ta-sign value="${esc(sign)}" placeholder="Your name, your town" autocomplete="name">
+          <label class="ta-lbl" for="tas-${b.idx}">Your name and town</label>
+          <span class="ta-box"><input id="tas-${b.idx}" class="ta-fld" data-ta-sign value="${esc(sign)}" placeholder="Your name, your town" autocomplete="name"><span class="ta-kept" aria-hidden="true">Kept for all your bills</span></span>
         </div>
         ${d.form.length && !d.to.length ? `<p class="ta-note">${esc(andList(d.form.map((p) => titledList([p]))))} ${d.form.length > 1 ? "take" : "takes"} messages through a web form: copy the message, then open the form above.</p>` : ""}
         <div class="ta-send">${d.to.length ? `<button type="button" class="act-btn primary" data-ta-send="${b.idx}">${name ? `Open in ${esc(name)}` : "Open in your email app"}</button>` : ""}<button type="button" class="act-btn" data-ta-copy="${b.idx}">Copy message</button>${d.to.length ? `<label class="ta-with">Send with <select data-ta-with>${SEND_WITH.map(([v, l]) => `<option value="${v}"${v === (how || "app") ? " selected" : ""}>${esc(l.charAt(0).toUpperCase() + l.slice(1))}</option>`).join("")}</select></label>` : ""}</div>
