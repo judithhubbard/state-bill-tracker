@@ -929,6 +929,14 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
   bill rows, and `comingUp()` (a legislator's "Open for comment" tab: the next two weeks' meetings, each folding open to its bills).
   `CHANGED` also has "Introduced since your last visit" and "in the last 7 days" (`b.dates.intro`).
     `markSeen()` runs when a bill's details or its watchlist card are opened.
+  - Feeds (2026-11-25, the owner's plan: groups send their bills' news through their own newsletters): each shared list
+    has an RSS feed, GET <listsApi>/lists/<slug>/feed (lists_worker/src/feed.js): one item per bill, its latest step in the
+    status rows' words (paperwork left out by the build), newest first, guid per bill and step, the list's title and
+    introduction as the channel's, a group's note per bill; read from the site's /status.json and status pieces, kept 30
+    minutes at the edge; not counted as a view, nothing about the maker. "Send updates to your followers" (feed address and
+    Copy, with a tip on Mailchimp/Substack/Buttondown "RSS to email" and Slack) under a shared list's link: tracker.html's
+    shareBox() (feedUrl()), and common.js's feedLine() on /your-bills/ and the list editor. Not offered for personal
+    watchlists (they're on the device; phone notifications are the plan for individuals).
   - Sharing (2026-11-18; public site only): "Share this list" makes one live list in the state-lists Worker (every
     profile's `listsApi`), viewed at /list/#<slug> (lists_pages/list.html); no code needed. `shareBox()` draws the
     options (Copy link, share icons, "Use this list on another device", "Stop sharing", the group-code line, the

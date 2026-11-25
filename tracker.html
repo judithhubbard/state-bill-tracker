@@ -987,6 +987,9 @@ table.commcounts td { font-variant-numeric: tabular-nums; font-weight: 600; }
 .sharebox details[open] > summary { margin-bottom: 6px; }
 .sharebox details > p { margin-bottom: 6px; }
 .sharebox .seeit { font-size: 13px; }
+/* The list's feed (feedUrl()): its own small group, under the link and share icons. */
+.sharebox .feedline { display: grid; gap: 4px; border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 2px; }
+.sharebox .feedline .fl-h { margin: 0; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .sharebox .thanks { color: var(--ink-2); }
 .sharebox .err { color: var(--veto); }
 .sharebox .act-btn:disabled { opacity: .5; cursor: default; }
@@ -5385,6 +5388,9 @@ const watchCodes = () => WatchRows.ordered(BILLS.filter(isWatched).map((b) => wa
 // The site's top (the folder above the state's), where /list/ and /your-bills/ are.
 const siteTop = () => (ROOT ? new URL("../", ROOT).href : "");
 const listUrl = (slug) => `${siteTop()}list/#${slug}`;
+// A shared list's feed (RSS: lists_worker/src/feed.js), for a group's newsletter or Slack (2026-11-25, the owner).
+const feedUrl = (slug) => `${LISTS_API}/lists/${encodeURIComponent(slug)}/feed`;
+const FEED_TIP = "Your list's news as a feed: each time a bill moves, a new item. In Mailchimp, Substack or Buttondown, choose \u201cRSS to email\u201d and paste this address to send it to your subscribers; Slack's RSS app posts it to a channel.";
 // Counts a use of a feature ("copied an email", "starred S1234") on the public site, when its
 // counter is loaded. Only totals are kept; nothing identifies who did it.
 // On the public site, a warning when the daily update has fallen behind.
@@ -5575,6 +5581,8 @@ function shareBox(n) {
     <p class="muted">Add a note to any bill on its card below.</p>` : ""}
     <div class="row"><input type="text" readonly value="${esc(url)}" aria-label="Link to the shared list"><button type="button" class="act-btn" data-pub="copy">Copy link</button></div>
     <div class="row">${shareIconLinks(url, mine.title || PUB_DEFAULT)}<a class="seeit" href="${esc(url)}">Preview</a></div>
+    ${LISTS_API ? `<div class="feedline"><p class="fl-h">Send updates to your followers${TIP(FEED_TIP)}</p>
+    <div class="row"><input type="text" readonly value="${esc(feedUrl(mine.slug))}" aria-label="The list's feed address"><button type="button" class="act-btn" data-pub="copyfeed">Copy</button></div></div>` : ""}
     <p class="muted" id="pubMsg"></p>
     ${group ? `<p class="muted" id="pubViews"></p>` : ""}
     ${PUB_THANKS ? `<p class="thanks">${PUB_THANKS}</p>` : ""}
@@ -5589,6 +5597,7 @@ async function publishAction(btn) {
   try {
     if (act === "copy") { countUse("list-link-copied"); return copy(listUrl(mine.slug)); }
     if (act === "copykey") return copy(`${mine.slug} ${mine.editKey}`);
+    if (act === "copyfeed") { countUse("list-feed-copied"); return copy(feedUrl(mine.slug)); }
     if (act === "havecode") { $("codeRow").hidden = false; $("codeName").value = mine?.title || ""; $("codeName").focus(); return; }
     if (act === "share") {
       btn.disabled = true; pubSay("Sharing…");

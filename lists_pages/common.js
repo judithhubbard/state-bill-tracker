@@ -147,6 +147,14 @@ function sharePop(slug, title) {
     + `<span class="spopbox" hidden><span class="row"><button type="button" class="btn" data-copylink="${esc(slug)}">Copy link</button><a href="/list/#${esc(slug)}">Preview</a></span>`
     + `${shareIcons(url, title)}</span></span>`;
 }
+// A shared list's feed (RSS: lists_worker/src/feed.js), for a group's newsletter or Slack (2026-11-25, the owner): one
+// labelled line under a list's link, with Copy (data-copyfeed).
+const feedLink = (slug) => `${LISTS_API}/lists/${encodeURIComponent(slug)}/feed`;
+function feedLine(slug) {
+  if (!LISTS_API) return "";
+  return `<div class="feedline"><p class="fl-h">Send updates to your followers ${infoTip("Your list's news as a feed: each time a bill moves, a new item. In Mailchimp, Substack or Buttondown, choose “RSS to email” and paste this address to send it to your subscribers; Slack's RSS app posts it to a channel.")}</p>`
+    + `<div class="row"><input type="text" readonly value="${esc(feedLink(slug))}" aria-label="The list's feed address"><button type="button" class="btn" data-copyfeed="${esc(slug)}">Copy</button></div></div>`;
+}
 function closePops(but) {
   for (const b of document.querySelectorAll("[data-sharepop][aria-expanded=\"true\"]")) if (b !== but) { b.setAttribute("aria-expanded", "false"); b.nextElementSibling.hidden = true; }
 }
@@ -155,6 +163,8 @@ document.addEventListener("click", (e) => {
   if (b) { const on = b.getAttribute("aria-expanded") !== "true"; closePops(b); b.setAttribute("aria-expanded", String(on)); b.nextElementSibling.hidden = !on; return; }
   const c = e.target.closest?.("[data-copylink]");
   if (c) { countUse("list/link copied"); return copy(c, listLink(c.dataset.copylink)); }
+  const f = e.target.closest?.("[data-copyfeed]");
+  if (f) { countUse("list/feed copied"); return copy(f, feedLink(f.dataset.copyfeed)); }
   if (!e.target.closest?.(".spopbox")) closePops();
 });
 document.addEventListener("keydown", (e) => {
