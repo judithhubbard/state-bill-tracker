@@ -69,14 +69,14 @@ function page({ title, desc, image, url, to, name }) {
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:url" content="${esc(url)}">
-<meta property="og:image" content="${esc(image)}">
+${image ? `<meta property="og:image" content="${esc(image)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="${esc(name)} · State Bill Tracker">
-<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${esc(image)}">
+` : ""}<meta name="twitter:card" content="${image ? "summary_large_image" : "summary"}">
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(desc)}">
-<meta name="twitter:image" content="${esc(image)}">
 <link rel="canonical" href="${esc(url)}">
 <script>location.replace(${JSON.stringify(to)});</script>
 <noscript><meta http-equiv="refresh" content="0; url=${esc(to)}"></noscript>
@@ -113,7 +113,9 @@ export default {
       const t = `${full}: ${title} · ${name}`;
       const canon = `${ROOT}${st}/bill/${session ? `${session}/` : ""}${bill.num}`;
       const to = `/${st}/${bill.page === "./" ? "" : bill.page}#${bill.num}&share`;
-      html = page({ title: t, desc, image, url: canon, to, name });
+      // (No image for a bill: the title and status are the preview, a compact card, not the state's big banner; 2026-11-24,
+      // the owner. The state's card stays for an unknown number, which goes to the state's page.)
+      html = page({ title: t, desc, image: "", url: canon, to, name });
     } else {
       html = page({ title: `${name} bills · State Bill Tracker`, desc: `No ${raw.toUpperCase()} on file for ${name}: see every bill there.`,
                     image, url: `${ROOT}${st}/`, to: `/${st}/`, name });
