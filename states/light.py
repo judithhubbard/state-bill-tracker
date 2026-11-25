@@ -9,7 +9,7 @@ Usage:
   python3 states/light.py ST [SESSION ...]     download and write the state's light sessions (default: the hook's SESSIONS)
   python3 states/light.py --counts [ST ...]    each light file's counts, to compare with the official totals
 """
-import gzip, importlib, json, os, shutil, sys, tempfile
+import re, gzip, importlib, json, os, shutil, sys, tempfile
 from datetime import datetime, timezone
 
 HERE = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -27,8 +27,30 @@ def path_of(data, session):
     return os.path.join(data, f"light_{session}.json.gz")
 
 
-def light_record(r):
+def fix_day(d, session):
+    """A date the source mistyped by a thousand years (Open States' HI HB 186 of 2017: signed "3017-06-30") back in its
+    session's years; one still outside them (or in the future) dropped."""
+    d = str(d or "")
+    m = re.match(r"(\d{4})(-\d\d-\d\d.*)$", d)
+    if not m:
+        return d
+    y = int(m.group(1))
+    if session - 1 <= y <= session + 3:
+        return d
+    if session - 1 <= y - 1000 <= session + 3:
+        return f"{y - 1000}{m.group(2)}"
+    return "" if y > session + 3 else d
+
+
+def light_record(r, session=None):
     out = {k: r[k] for k in KEEP if k in r}
+    if session:
+        for k in ("first", "last"):
+            if out.get(k):
+                out[k] = fix_day(out[k], session) or out[k][:0]
+        if out.get("keyDates"):
+            out["keyDates"] = [";".join(x for x in (fix_day(p, session) for p in str(kd or "").split(";")) if x)
+                               for kd in out["keyDates"]]
     if out.get("summary"):
         out["summary"] = out["summary"][:SUMMARY_MAX]
     out["firstComms"] = [list(x) for x in (out.get("firstComms") or [])]
@@ -75,7 +97,7 @@ def write(state, session, recs, parties, source, data, P=None):
                                                        if isinstance(k, tuple) and len(k) == 2 and k[1] in names),
                                                       key=lambda x: [str(y or "") for y in x]),  # (a house or name may be None)
             "noTopic": sum(1 for r in recs if not r.get("topics")), "unmappedCommittees": unmapped(recs, P) if P else [],
-            "bills": [light_record(r) for r in recs]}
+            "bills": [light_record(r, session) for r in recs]}
     tmp = path_of(data, session) + ".tmp"
     with gzip.open(tmp, "wt", encoding="utf-8") as f:
         json.dump(body, f, ensure_ascii=False, separators=(",", ":"), default=list)
