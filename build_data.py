@@ -1631,9 +1631,11 @@ def outcomes(recs):
 def sec_line(x):
     """"(Sec. 70411) This section establishes ..." -> "Sec. 70411 establishes ...": the section's number stays, so the issue's
     box on the bill says where in the law it is (2026-11-25, the owner); other openings as they are."""
-    m = re.match(r"^\((?:Sec|Section)s?\.?\s*([^)]*)\)\s*(This section\s+)?", x or "")
+    # (Tidied: the summaries' spacing slips, "destructive devices . As", "entities ." and doubled spaces.)
+    x = re.sub(r"\s+", " ", re.sub(r"\s+([.,;:)])", r"\1", re.sub(r"\(\s+", "(", x or ""))).strip()
+    m = re.match(r"^\((?:Sec|Section)s?\.?\s*([^)]*)\)\s*(This section\s+)?", x)
     if not m:
-        return x or ""
+        return x
     rest = x[m.end():]
     return f"Sec. {m.group(1)} {rest}" if m.group(2) else f"Sec. {m.group(1)}: {rest[:1].upper()}{rest[1:]}"
 

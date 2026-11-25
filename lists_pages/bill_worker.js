@@ -17,7 +17,7 @@ const CACHE = "public, max-age=900, s-maxage=3600";
 
 const baseNum = (n) => n.replace(/[A-Z]$/, "");
 // A long sentence cut at a word, with "…".
-const cut = (s, n) => { s = String(s || ""); if (s.length <= n) return s; const c = s.slice(0, n); const i = c.lastIndexOf(" "); return (i > n * 0.6 ? c.slice(0, i) : c).replace(/[,;:\s]+$/, "") + "…"; };
+const cut = (s, n) => { s = String(s || "").replace(/\s+([.,;:)])/g, "$1").replace(/\s+/g, " ").trim(); if (s.length <= n) return s; s = s.replace(/ ?\([^()]{16,}\)/g, "").replace(/\s+([.,;:])/g, "$1"); if (s.length <= n) return s; const c = s.slice(0, n); const i = c.lastIndexOf(" "); return (i > n * 0.6 ? c.slice(0, i) : c).replace(/[,;:.\s]+$/, "") + "…"; };
 function hash(num) {
   let h = 0x811c9dc5;
   for (const c of new TextEncoder().encode(baseNum(num))) h = Math.imul(h ^ c, 0x01000193) >>> 0;

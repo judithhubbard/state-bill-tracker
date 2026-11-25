@@ -465,7 +465,11 @@ ISSUES = [
      "rules": [[r"\bwork (?:or|and) community engagement\b"], [r"\bcommunity engagement requirements?\b"],
                [r"\bwork requirements?\b", r"\b(?:medicaid|medical assistance|MassHealth|Medi-Cal|TennCare|SoonerCare|HUSKY|BadgerCare|KanCare|Healthy Indiana Plan|HIP|Pathways|ARHOME|Arkansas Works|expansion (?:population|adults?))\b"],
                [r"\bable-bodied adults?\b", r"\b(?:work|employment|volunteer)\b", r"\b(?:medicaid|medical assistance|Medicaid expansion)\b", r"!\b(?:SNAP|food (?:assistance|stamps))\b"],
-               [r"\b(?:employment|work) (?:as a )?(?:condition|requirement) (?:of|for) (?:medicaid|medical assistance) eligibility\b"]]},
+               [r"\b(?:employment|work) (?:as a )?(?:condition|requirement) (?:of|for) (?:medicaid|medical assistance) eligibility\b"],
+               # Work or service required to qualify or stay covered, in other words (2026-11-25: H.R. 1 of the 119th, Sec.
+               # 71119, "to engage in community service, work, or other activities in order to qualify for Medicaid").
+               [r"\b(?:engage in|complete|perform|meet|participate in)\b[^.]{0,60}\b(?:work|employment|community service)\b[^.]{0,60}\b(?:in order to|to) (?:qualify|remain eligible|be eligible|keep (?:their )?coverage|maintain (?:eligibility|coverage))\b",
+                r"\b(?:medicaid|medical assistance|expansion population)\b"]]},
     {"id": "dst", "group": "Elections and government", "name": "Daylight saving time", "words": ["daylight saving", "daylight savings", "standard time", "clock change", "time change"],
      "rules": [[r"\bdaylight sav(?:ing|ings)\b"], [r"\bstandard time\b", r"\b(?:year[- ]round|permanent\w*|observ\w*|exempt\w*|daylight)\b"],
                [r"\b(?:Atlantic|Central|Eastern|Mountain|Pacific) (?:standard )?time\b", r"\b(?:year[- ]round|permanent\w*|observ\w*|time zones?)\b"]]},
@@ -984,12 +988,17 @@ def part_issues(head, body="", secs=None):
 def short_line(text, n=140):
     """A section's sentence in short (the issue's box, the share preview, "Its main parts"): whole up to n characters, else
     cut at a word with "…" (tracker.html's shortLine(), lists_pages/bill_worker.js's cut(): the same rule)."""
-    text = re.sub(r"\s+", " ", text or "").strip()
+    text = re.sub(r"\s+", " ", re.sub(r"\s+([.,;:)])", r"\1", text or "")).strip()
+    if len(text) <= n:
+        return text
+    # (A long aside in parentheses goes first, so the short form says what the section does: "(or earlier, at the option
+    # of the state)".)
+    text = re.sub(r"\s+([.,;:])", r"\1", re.sub(r" ?\([^()]{16,}\)", "", text))
     if len(text) <= n:
         return text
     c = text[:n]
     i = c.rfind(" ")
-    return (c[:i] if i > n * 0.6 else c).rstrip(",;: ") + "…"
+    return (c[:i] if i > n * 0.6 else c).rstrip(",;:. ") + "…"
 
 
 def part_section(issue_id, secs):

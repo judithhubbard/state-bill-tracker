@@ -304,6 +304,10 @@ Scope decided here:
 - Crypto ATMs: virtual currency, cryptocurrency and digital asset kiosks; broader crypto laws only where they cover kiosks.
 - Medicaid work requirements: work or community engagement requirements for Medicaid (and its state names), waivers to
   seek them, studies of their effects, constitutional amendments allowing them. Not SNAP or TANF work rules alone.
+  2026-11-25: a rule for the requirement in other words ("to engage in community service, work, or other activities in
+  order to qualify for Medicaid": H.R. 1 of the 119th, Sec. 71119, which the section rule missed). Over the published
+  bills (458,764, test/issues/check.py's cache) it adds no other bill; among Congress's sections it finds H.R. 1's Sec.
+  71119 and the 2023 Limit, Save, Grow Act's Sec. 321 (already found), both right.
 - Daylight saving time: permanent standard or daylight time, leaving or joining the clock change, time zones, studies.
 - Book removals: challenges to and removal of books and materials in school and public libraries, "harmful to minors"
   and obscenity rules for libraries (including removing schools' and libraries' exemption from obscenity laws), "freedom

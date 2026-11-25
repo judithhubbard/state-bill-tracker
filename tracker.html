@@ -1930,18 +1930,21 @@ const issueOf = (b) => (ISSUE_CTX && b && ISSUE_CTX.num === baseNum(b.nums[0]) &
 function issueBox(b) {
   const x = issueOf(b);
   if (!x) return "";
-  const s = shortLine(x.text);
+  const s = shortLine(x.text), full = shortLine(x.text, 1e6);
   // (The sentence in short, with "more" for the whole of it in place: 2026-11-25, the owner.)
-  return `<p class="issuectx"><b>On ${esc(x.short)}:</b> <span class="ic-s">${esc(s)}</span>${s === x.text ? ""
-    : `<span class="ic-f" hidden>${esc(x.text)}</span> <button type="button" class="linkish ic-more" aria-expanded="false">more</button>`}</p>`;
+  return `<p class="issuectx"><b>On ${esc(x.short)}:</b> <span class="ic-s">${esc(s)}</span>${s === full ? ""
+    : `<span class="ic-f" hidden>${esc(full)}</span> <button type="button" class="linkish ic-more" aria-expanded="false">more</button>`}</p>`;
 }
 // A section's sentence in short: whole up to n characters, else cut at a word with "…" (issues.py's short_line(), the
 // bill-link Function's cut(): the same rule).
 function shortLine(t, n = 140) {
-  t = String(t || "").replace(/\s+/g, " ").trim();
+  t = String(t || "").replace(/\s+([.,;:)])/g, "$1").replace(/\s+/g, " ").trim();
+  if (t.length <= n) return t;
+  // (A long aside in parentheses goes first, as issues.py's short_line() does.)
+  t = t.replace(/ ?\([^()]{16,}\)/g, "").replace(/\s+([.,;:])/g, "$1");
   if (t.length <= n) return t;
   const c = t.slice(0, n), i = c.lastIndexOf(" ");
-  return (i > n * 0.6 ? c.slice(0, i) : c).replace(/[,;:\s]+$/, "") + "…";
+  return (i > n * 0.6 ? c.slice(0, i) : c).replace(/[,;:.\s]+$/, "") + "…";
 }
 // A large bill's main parts (issues it's on through a section), from its text's 7th entry (build_data.py's bill_parts()).
 const mainParts = (b) => billTextOf(b)?.[baseNum(b.nums[0])]?.[6] || null;
@@ -4907,8 +4910,14 @@ function whatItDoesHtml(b, head = true) {
   const lead = ps.length > 1 && ps.join(" ").length > 700 ? `${paras(ps[0])}<details class="memo"><summary>Read the rest</summary>${paras(ps.slice(1).join("\n"))}</details>` : paras(stmt);
   // A large bill (sections): its main parts, each issue linked to its page, then every section folded (2026-11-25, the owner).
   const top = ROOT ? new URL("../", ROOT).href : "../";
-  const mp = parts ? `<div class="mainparts">${parts.main.length ? `<p class="mp-h"><b>Its main parts</b></p><ul>${parts.main.map(([id, name, , sec]) =>
-      `<li><a href="${esc(top)}issues/${esc(id)}/">${esc(name)}</a>: ${esc(sec)}</li>`).join("")}</ul>` : ""}
+  // (Issues one section puts the bill on share its line: "Abortion · Contraception: Sec. 71113 ...".)
+  const groups = [];
+  for (const [id, name, , sec] of parts ? parts.main : []) {
+    const g = groups.find((x) => x.sec === sec);
+    if (g) g.items.push([id, name]); else groups.push({ sec, items: [[id, name]] });
+  }
+  const mp = parts ? `<div class="mainparts">${groups.length ? `<p class="mp-h"><b>Its main parts</b></p><ul>${groups.map((g) =>
+      `<li>${g.items.map(([id, name]) => `<a href="${esc(top)}issues/${esc(id)}/">${esc(name)}</a>`).join(" · ")}: ${esc(g.sec)}</li>`).join("")}</ul>` : ""}
     ${(parts.secs || []).length || parts.n ? `<details class="memo" data-secs="${b.idx}"><summary>Every section (${num(parts.n || parts.secs.length)})</summary><ol class="secs">${parts.secs
       ? parts.secs.map((x) => `<li>${esc(x)}</li>`).join("") : '<li class="loading">Loading…</li>'}</ol></details>` : ""}</div>` : "";
   const body = `${mp}${stmt ? `<div class="wd-stmt">${lead}<p class="muted">${esc(label || "From the sponsor's statement.")}</p></div>` : ""}
