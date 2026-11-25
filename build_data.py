@@ -2762,7 +2762,14 @@ def compute(prev=None):
             # opening a bill loads only its piece; named in the page so it asks only for those (a range of numbers with
             # no summaries has no piece: Missouri's House bills).
             core["texts"] = defaultdict(dict)
+            # (A large bill's every section, hundreds of lines (NDAAs: over a thousand), is its own file,
+            # data/<session>-text/secs/HR2670.json, fetched when its fold opens; the piece keeps the count: a defense bill
+            # added 55 KB gzipped to the piece every bill numbered near it loads.)
+            core["secs"] = {}
             for k, v in texts.items():
+                if len(v) > 6 and isinstance(v[6], dict) and v[6].get("secs"):
+                    core["secs"][k] = v[6]["secs"]
+                    v = v[:6] + [{**{x: y for x, y in v[6].items() if x != "secs"}, "n": len(v[6]["secs"])}]
                 core["texts"][f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}"][k] = v
             core["texts"] = dict(core["texts"])
             core["text_names"] = sorted({f"{k[0]}{int(re.sub(r'[^0-9]', '', k) or 0) // 500}" for k in texts}) if texts else []
@@ -2929,6 +2936,11 @@ def finish(session, core, current, urls):
             for name, part in core["texts"].items():
                 with open(os.path.join(GITHUB, "data", f"{session}-text", f"{name}.json"), "w", encoding="utf-8") as f:
                     json.dump(part, f, separators=(",", ":"), ensure_ascii=False)
+            if core.get("secs"):
+                os.makedirs(os.path.join(GITHUB, "data", f"{session}-text", "secs"), exist_ok=True)
+                for k, secs in core["secs"].items():
+                    with open(os.path.join(GITHUB, "data", f"{session}-text", "secs", f"{k}.json"), "w", encoding="utf-8") as f:
+                        json.dump(secs, f, separators=(",", ":"), ensure_ascii=False)
         # The state's profile (its STATE object) as its own file, data/v/profile.<hash>.js, so /your-bills/ loads only
         # the starred states' rules; its hash is the facts' "s".
         prof_js = state_profile_js(P)

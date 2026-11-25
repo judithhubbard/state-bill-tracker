@@ -4909,7 +4909,8 @@ function whatItDoesHtml(b, head = true) {
   const top = ROOT ? new URL("../", ROOT).href : "../";
   const mp = parts ? `<div class="mainparts">${parts.main.length ? `<p class="mp-h"><b>Its main parts</b></p><ul>${parts.main.map(([id, name, , sec]) =>
       `<li><a href="${esc(top)}issues/${esc(id)}/">${esc(name)}</a>: ${esc(sec)}</li>`).join("")}</ul>` : ""}
-    ${parts.secs.length ? `<details class="memo"><summary>Every section (${num(parts.secs.length)})</summary><ol class="secs">${parts.secs.map((x) => `<li>${esc(x)}</li>`).join("")}</ol></details>` : ""}</div>` : "";
+    ${(parts.secs || []).length || parts.n ? `<details class="memo" data-secs="${b.idx}"><summary>Every section (${num(parts.n || parts.secs.length)})</summary><ol class="secs">${parts.secs
+      ? parts.secs.map((x) => `<li>${esc(x)}</li>`).join("") : '<li class="loading">Loading…</li>'}</ol></details>` : ""}</div>` : "";
   const body = `${mp}${stmt ? `<div class="wd-stmt">${lead}<p class="muted">${esc(label || "From the sponsor's statement.")}</p></div>` : ""}
     ${commText ? `<details class="memo"><summary${comm ? ` title="${esc(comm)}"` : ""}>Committee statement${when ? `, ${when.slice(0, 4) === isoToday().slice(0, 4) ? fmtDate(when).replace(/, \d{4}$/, "") : fmtDate(when)}` : ""}</summary>${paras(commText)}</details>` : ""}
     ${cost ? `<details class="memo"><summary>What it would cost (${BODY}'s budget office)</summary>${paras(cost)}</details>` : ""}`;
@@ -6611,6 +6612,17 @@ function wire() {
     if (btn && name) btn.textContent = `Open in ${name}`;
     countUse(`act/send with/${sel.value}`);
   });
+  // A large bill's every section, its own file (data/<session>-text/secs/HR1.json), fetched the first time its fold opens.
+  document.addEventListener("toggle", (e) => {
+    const d = e.target;
+    if (!d.open || !d.matches?.("details[data-secs]") || d.dataset.got) return;
+    d.dataset.got = "1";
+    const b = BILLS[+d.dataset.secs], src = $("bill-data").dataset.texts;
+    if (!b || !src) return;
+    fetch(`${src}secs/${baseNum(b.nums[0])}.json`).then((r) => (r.ok ? r.json() : [])).catch(() => []).then((secs) => {
+      d.querySelector("ol.secs").innerHTML = (secs || []).map((x) => `<li>${esc(x)}</li>`).join("") || "<li>Not available just now.</li>";
+    });
+  }, true);
   document.addEventListener("click", (e) => {
     const icm = e.target.closest(".ic-more");
     if (icm) {
