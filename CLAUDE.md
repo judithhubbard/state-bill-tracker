@@ -626,6 +626,13 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   it, and quoted sections of restated law misled), OK (LegiScan getBillText would cost about 11,000 queries).
   States cache sections (not leads) in data/<st>/<session>/leads.json, so a rule change needs no download. data_check
   fails (over 1%) on leads that are boilerplate, over 1,200 characters, or the title's words again.
+- **Bill links with their own previews (2026-11-24, approved by the owner):** "Copy link to share this bill" (`billLink()`)
+  copies /<st>/bill/<NUM> (another session: /<st>/bill/<session>/<NUM>). Link previews ignore what follows "#", so a Pages
+  Function (advanced mode: tools/bill_worker.py writes lists_pages/bill_worker.js to _site/_worker.js; `_routes.json` sends
+  only /*/bill/* to it) answers with og: tags (the bill's number and title, its status from /status.json's pieces, the
+  state's card /cards/<st>.png, made once by tools/state_cards.sh) and sends people on to /<st>/#<NUM>&share, the clean
+  single-bill view (`soloOn()`: the site's home link, the state's name, the bill, "See all <state> bills"). Plain
+  /<st>/#<NUM> still opens the bill in the tracker. Cached an hour; one Function request per preview or click.
 - **Hosting (set up 2026-10-29):** statebilltracker.org will be served by Cloudflare Pages (project
   `statebilltracker`), not GitHub Pages. `./build_site.sh [DIR]` builds the whole site: `home.html` (the
   list of states) at the top, the icons, and each state's public site in its folder (`--github DIR/<state>`).
