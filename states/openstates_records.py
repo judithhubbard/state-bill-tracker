@@ -73,6 +73,52 @@ def _kept(b):
     return None
 
 
+NOT_PASSAGE = re.compile(r"committee of the whole|\bC\.?O\.?W\.?\b|^\s*(?:DPA?|DP/SE|do pass)\b|reconsider|motion to", re.I)
+GOV_SIGNED = re.compile(r"\b(?:approved by (?:the )?governor|governor signed|signed by (?:the )?governor)\b", re.I)
+# (Maryland's laws that took effect without the governor's signature: "Enacted under Article II, Section 17(c) of the
+# Maryland Constitution", 217 in 2019-20.)
+GOV_NOSIGN = re.compile(r"\bbecame law\b|without (?:the )?governor'?s? signature|w/o governor|"
+                        r"enacted under article ii, section 17", re.I)
+GOV_LINE = re.compile(r"\bline[- ]item veto", re.I)
+GOV_VETO = re.compile(r"\b(?:governor vetoed|vetoed by (?:the )?governor)\b", re.I)
+GOV_SENT = re.compile(r"\b(?:to|communicated to|presented to|delivered to|sent to|transmitted to|laid before) (?:the )?governor\b", re.I)
+GOV_NOT = re.compile(r"deadline|lieutenant|recommendation|override|sustain|if not signed", re.I)
+
+
+def _implied(text, cls):
+    """The governor's actions some states' records leave unclassified (Utah's "Became Law w/o Governor Signature",
+    "Governor Line Item Veto"; Virginia's "Enrolled Bill communicated to Governor")."""
+    if cls & {"executive-signature", "became-law", "executive-veto", "executive-veto-line-item", "executive-receipt"} \
+            or GOV_NOT.search(text or ""):
+        return set()
+    for rx, c in ((GOV_LINE, "executive-veto-line-item"), (GOV_NOSIGN, "became-law"), (GOV_SIGNED, "executive-signature"),
+                  (GOV_VETO, "executive-veto"), (GOV_SENT, "executive-receipt")):
+        if rx.search(text or ""):
+            return {c}
+    return set()
+
+
+def _whole(org):
+    """An organization that is the whole legislature, not a house ("Utah State Legislature", "Virginia General Assembly")."""
+    o = (org or "").lower()
+    return bool(o) and not any(w in o for w in ("senate", "house", "delegates", "upper", "lower")) and \
+        any(w in o for w in ("legislature", "general assembly", "general court"))
+
+
+def _house_in(text, P):
+    """The house a line's own words name ("Passed House BLOCK VOTE", "Senate/ passed 3rd reading"), or None."""
+    t = text or ""
+    s = re.search(r"\bSenate\b", t)
+    h = re.search(r"\b(?:House|Assembly|Delegates)\b", t)
+    if s and not h:
+        return "S"
+    if h and not s:
+        return P.LOWER
+    if s and h:
+        return "S" if s.start() < h.start() else P.LOWER
+    return None
+
+
 def _house(org, P):
     org = (org or "").lower()
     if "senate" in org or org == "upper":
@@ -89,7 +135,9 @@ def records(st, session, data, P):
     d = B.load(os.path.join(data, "openstates_bills.json"), {}) or {}
     bills = d.get("bills") or []
     uni = not getattr(P, "UPPER", True) or st == "ne"
-    third = any("reading-3" in (a.get("classification") or []) for b in bills for a in b.get("actions") or [])
+    # (Whether the session's records say when bills went to the governor: classified, or in words _implied() reads.)
+    receipts = any("executive-receipt" in (a.get("classification") or []) or "executive-receipt" in _implied(a.get("description") or "", set())
+                   for b in bills for a in b.get("actions") or [])
     narrow = getattr(P, "narrow_kind", None)
     table = getattr(P, "COMMITTEE_TOPICS", None) or {}
     by_comm = {}
@@ -106,19 +154,37 @@ def records(st, session, data, P):
         if not num:
             continue
         acts = sorted(b.get("actions") or [], key=lambda a: ((a.get("date") or "")[:10], a.get("order") or 0))
+        origin = "S" if (b.get("chamber") or "") == "upper" else P.LOWER
+        other = P.LOWER if origin == "S" else "S"
         steps = []
+        passes_seen = []  # (Utah's records name no house at all: passages go to the origin house, then the other.)
         for a in acts:
             cls = set(a.get("classification") or [])
             org = a.get("organization__name") or (a.get("organization") or {}).get("name") or ""
-            steps.append(((a.get("date") or "")[:10], cls, _house(org, P), org, a.get("description") or "", a))
+            text = a.get("description") or ""
+            h = (P.LOWER if uni else None) if _whole(org) else _house(org, P)
+            if h is None:
+                # (Virginia's and Utah's records name the whole legislature: the line's own words may name the house.)
+                h = _house_in(text, P)
+            if h is None and "passage" in cls and not uni and not NOT_PASSAGE.search(text):
+                day = (a.get("date") or "")[:10]
+                if day not in passes_seen:
+                    passes_seen.append(day)
+                h = origin if passes_seen.index(day) == 0 else other
+            cls |= _implied(text, cls)
+            steps.append(((a.get("date") or "")[:10], cls, h, org, text, a))
 
         def days(test):
             return sorted({s[0] for s in steps if s[0] and test(s)})
 
         passed = {}
         for h in ("S", P.LOWER):
-            passed[h] = days(lambda s, h=h: s[2] == h and "passage" in s[1] and (not third or "reading-3" in s[1])
-                             and "failure" not in s[1])
+            # (A passage line is the house's vote on the bill unless it's the Committee of the Whole's or a "do pass"
+            # recommendation, which Open States also marks "passage" (Arizona's "DP"). Third readings are on the passage
+            # line in some states, on a line of their own in others (Texas, Michigan), and missing from Virginia's block
+            # votes, so they decide nothing (until 2026-11-25 they did, and most passages were lost).)
+            passed[h] = days(lambda s, h=h: s[2] == h and "passage" in s[1] and "failure" not in s[1]
+                             and not NOT_PASSAGE.search(s[4]))
         if uni:
             both_dates = passed[P.LOWER] or passed["S"]
             passed = {"S": both_dates, P.LOWER: both_dates}
@@ -140,8 +206,15 @@ def records(st, session, data, P):
             stage = 6
         elif sent:
             stage = 4
-        elif both:
+        elif both and (not receipts or uni):
             stage = 3
+        elif both:
+            # (A finished session's bill past each house but never sent to the governor died between them: the second
+            # house amended it and the first never agreed, or a conference failed. Washington 2017-18: 447 such, all
+            # "passed both houses" until 2026-11-25. Light history is always finished sessions; where a session's
+            # records carry no delivery lines at all, stage 3 stays.)
+            stage = 2
+            passed = {**passed, other: []}
         elif one:
             stage = 2
         elif reported:

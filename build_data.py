@@ -122,16 +122,20 @@ def light_plausible(path):
     passed one house only. Open States' older records read by states/openstates_records.py before its fix gave none
     (Texas 2019: 1,285 laws, no bill past one house, 2026-11-25), and such a session stays off the site until it's read
     again (with the sessions before it: the run back from the first full session stops there)."""
-    if STATE in ("ne", "dc"):
-        return True
     try:
         bills = json.load(gzip.open(path, "rt", encoding="utf-8")).get("bills") or []
     except (OSError, ValueError):
         return False
     laws = sum(1 for r in bills if r.get("stage") == 5)
     one = sum(1 for r in bills if (r.get("stage") or 0) < 3 and (r.get("passedS") or r.get("passedA")))
-    if len(bills) > 300 and laws > 50 and not one:
+    if STATE not in ("ne", "dc") and len(bills) > 300 and laws > 50 and not one:
         print(f"   light {os.path.basename(path)}: {laws} laws but no bill past one house only: left out until read again")
+        return False
+    # A finished session has nothing left on the governor's desk: many there means the records stop short of the
+    # outcomes (Open States' Virginia 2018: 382 bills past both houses, 282 approvals recorded; 2026-11-25).
+    waiting = sum(1 for r in bills if r.get("stage") in (3, 4) and "const" not in (r.get("topics") or []))
+    if laws > 50 and waiting > 0.15 * (laws + waiting):
+        print(f"   light {os.path.basename(path)}: {waiting} bills past both houses with no outcome against {laws} laws: left out")
         return False
     return True
 

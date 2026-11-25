@@ -340,6 +340,18 @@ def load_session(session):
         other = "S" if origin == "H" else "H"
         acts = sorted(b.get("actions") or [], key=lambda a: (a.get("date") or "", a.get("order") or 0))
         steps = [((a.get("date") or "")[:10],) + decode(a) + (text(a.get("description")),) for a in acts]
+        # Open States' 2017-22 files name the whole "Arizona State Legislature" on every action (organization classification
+        # "legislature", no house): steps go to the origin house until its first passage, then to the other (light history,
+        # 2026-11-25: 2017 showed no bill past one house only).
+        if steps and not any(h in HOUSE for _, h, _, _ in steps):
+            cur, out, switch = origin, [], None
+            for d, h, t, a in steps:
+                if switch and d > switch:
+                    cur = other
+                out.append((d, h if h == "G" else cur, t, a))
+                if t.startswith("PASSED") and switch is None:
+                    switch = d
+            steps = out
         # A referral names no committee: it's the committee that later reports it in that house, if any.
         reports = {}
         for d, h, t, a in steps:

@@ -9,8 +9,12 @@ whose pagination.total_items is the session's number of bills and whose one resu
 Compared with the site's own status file (_site/<st>/data/status_<session>.json: its bills, and the newest "last action"
 day among them):
 
-- Behind: Open States has an action newer than our newest. 3 days or more is a LOOK, 7 or more a FAIL (in session a
-  legislature acts every week; out of session both sides are quiet and agree).
+- Behind: one of the five bills Open States saw act most recently (the request asks for five, with their actions) has a
+  real step newer than our own record of that bill, or isn't in our data at all. A real step is a classified action dated
+  no later than today that isn't paperwork (effective dates, often in the future; fiscal notes; filing with the Secretary of
+  State; printer and enrollment lines); resolutions Open States classifies as bills (Nevada's "SR 9") are skipped. 3 days
+  or more is a LOOK, 7 or more a FAIL. (Until 2026-11-25 it compared Open States' newest action of any kind with our newest
+  day: the first run's six FAILs, GA, IA, MN, ND, NM and NV, were all paperwork, future effective dates or a resolution.)
 - Bills: the two counts never match exactly (ours keeps bills and constitutional amendments and merges some companion bills,
   New York's same-as bills, Rhode Island's twins; Open States' "bill" classification counts each house's bills, and some
   states' resolutions are classified as bills). So each state's ratio ours/theirs is kept day to day (.openstates-check/
@@ -25,7 +29,7 @@ primary session starting that year. About 55 requests a day of the free tier's 2
 Usage: python3 tools/openstates_check.py [--site _site] [--states "ny nj"] [--dry-run] [--max N]
   --dry-run: print the mapping (our session -> Open States' session) and make no bill requests.
 Prints LOOK and FAIL lines; writes them to $GITHUB_STEP_SUMMARY when set; exits 1 on a FAIL."""
-import json, os, statistics, sys, time, urllib.error, urllib.parse, urllib.request
+import json, os, re, statistics, sys, time, urllib.error, urllib.parse, urllib.request
 from datetime import date, datetime, timedelta
 
 API = "https://v3.openstates.org"
@@ -130,14 +134,44 @@ def os_session(sessions, year):
 
 
 def ours(site, st, session):
-    """(bills, newest last-action day) from the site's own status file."""
+    """(bills, newest last-action day, {number: last-action day}) from the site's own status file."""
     try:
         d = json.load(open(os.path.join(site, st, "data", f"status_{session}.json")))
     except (OSError, ValueError):
-        return None, None
-    rows = list((d.get("bills") or {}).values())
-    days = [r[3] for r in rows if len(r) > 3 and isinstance(r[3], str) and r[3][:4].isdigit() and r[3] <= date.today().isoformat()]
-    return len(rows), max(days, default=None)
+        return None, None, {}
+    bills = d.get("bills") or {}
+    rows = list(bills.values())
+    ok = lambda x: isinstance(x, str) and x[:4].isdigit() and x <= date.today().isoformat()
+    days = [r[3] for r in rows if len(r) > 3 and ok(r[3])]
+    last = {norm(k): (r[3] if len(r) > 3 and ok(r[3]) else "") for k, r in bills.items()}
+    for other, lead in (d.get("alias") or {}).items():
+        if norm(lead) in last:
+            last.setdefault(norm(other), last[norm(lead)])
+    return len(rows), max(days, default=None), last
+
+
+def norm(num):
+    """"HB 1234", "H.B.1234", "HB1234A" -> "HB1234" (a version letter left off)."""
+    n = re.sub(r"[\s.]", "", num or "").upper()
+    return re.sub(r"(?<=\d)[A-Z]$", "", n)
+
+
+# What we don't record as a step, so it can't put us "behind" (2026-11-25, the first run's six false alarms): effective
+# dates (often future: Georgia SB 160's "2028-07-01"), fiscal notes, explanations of votes, filing with the Secretary of
+# State (North Dakota's, classified "introduction"), printer and enrollment paperwork, chapter numbers given afterwards.
+PAPERWORK = re.compile(r"effective date|fiscal note|explanation of vote|filed with (?:the )?secretary of state|"
+                       r"secretary of state|printer|enroll|chapter \d+|act \d+$|transmitted to|journal", re.I)
+# Resolutions Open States classifies as bills (Nevada's "SR 9"): we keep bills and constitutional amendments only.
+RESOLUTION = re.compile(r"^[A-Z]{0,3}R\d")  # (on norm()'s form: SR9, HCR3, SJR5, HR12; Congress's HR is a bill)
+
+
+def newest_step(bill):
+    """The day of a bill's newest real step in Open States (classified, dated no later than today, not paperwork)."""
+    today = date.today().isoformat()
+    days = [(a.get("date") or "")[:10] for a in bill.get("actions") or []
+            if (a.get("classification") or []) and (a.get("date") or "")[:10] <= today
+            and not PAPERWORK.search(a.get("description") or "")]
+    return max(days, default="")
 
 
 def main():
@@ -178,13 +212,15 @@ def main():
             if REQUESTS[0] >= cap:
                 lines.append(("LOOK", f"openstates: stopped at {cap} requests; {st} {session} and later not checked"))
                 break
-            n, newest = ours(site, st, session)
+            n, newest, last = ours(site, st, session)
             if n is None:
                 lines.append(("LOOK", f"openstates {st} {session}: no status file in the built site to compare"))
                 continue
             try:
+                # (The five bills Open States saw act most recently, with their actions: each compared with our own
+                # record of the same bill, one request as before.)
                 d = get("/bills", {"jurisdiction": jid(st), "session": ident, "classification": "bill",
-                                   "sort": "latest_action_desc", "per_page": 1})
+                                   "sort": "latest_action_desc", "per_page": 5, "include": "actions"})
             except QuotaUsed as e:
                 lines.append(("LOOK", f"openstates: daily limit used up at {st} {session}; the rest not checked ({e})"))
                 break
@@ -192,20 +228,32 @@ def main():
                 lines.append(("LOOK", f"openstates {st} {session}: no answer for session {ident!r}"))
                 continue
             theirs = (d.get("pagination") or {}).get("total_items") or 0
-            top = (d.get("results") or [{}])[0] if d.get("results") else {}
-            their_day = (top.get("latest_action_date") or "")[:10]
-            if their_day > today:
-                their_day = today
             label = f"{st} {session}"
-            # Behind: an action Open States has and we don't.
-            if their_day and newest:
-                lag = (date.fromisoformat(their_day) - date.fromisoformat(newest)).days
-                if lag >= LAG_LOOK:
-                    lines.append(("FAIL" if lag >= LAG_FAIL else "LOOK",
-                                  f"{label}: our newest action is {newest}, Open States has {top.get('identifier', '?')} acted on "
-                                  f"{their_day} ({lag} days later)"))
-            elif their_day and not newest and n:
-                lines.append(("LOOK", f"{label}: no dated action in our {n} bills; Open States' newest is {their_day}"))
+            # Behind: a real step Open States has on a bill and our record of that bill doesn't (each of the five
+            # compared with its own record, not our newest day with theirs: paperwork and future effective dates gave
+            # six false alarms on the first run).
+            worst, top, their_day = None, {}, ""
+            for b in d.get("results") or []:
+                num = norm(b.get("identifier"))
+                if st != "us" and RESOLUTION.match(num):
+                    continue
+                step = newest_step(b)
+                if not step:
+                    continue
+                if step > their_day:
+                    top, their_day = b, step
+                mine = last.get(num)
+                if mine is None:
+                    gap = (date.fromisoformat(step) - date.fromisoformat(newest)).days if newest else 0
+                    if gap >= LAG_LOOK:
+                        worst = max(worst or (0, ""), (gap, f"{b.get('identifier')} isn't in our data (Open States: a step on {step})"))
+                    continue
+                if mine and step > mine:
+                    lag = (date.fromisoformat(step) - date.fromisoformat(mine)).days
+                    if lag >= LAG_LOOK:
+                        worst = max(worst or (0, ""), (lag, f"{b.get('identifier')}: our last action {mine}, Open States has a step on {step}"))
+            if worst:
+                lines.append(("FAIL" if worst[0] >= LAG_FAIL else "LOOK", f"{label}: {worst[1]} ({worst[0]} days later)"))
             # Bills: today's ratio against the state's own recent median.
             if theirs:
                 ratio = n / theirs
