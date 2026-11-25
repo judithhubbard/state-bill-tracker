@@ -181,7 +181,9 @@ def records(st, session, data, P):
         house_of = "S" if (b.get("chamber") or "") == "upper" else P.LOWER
         recs.append({
             "nums": [num], "title": title, "summary": re.sub(r"\s+", " ", abstract).strip(),
-            "stage": stage, "passedS": bool(passed["S"]), "passedA": bool(passed[P.LOWER]),
+            # (A bill past both houses passed each one, whatever its records say: Open States' older sessions often miss a
+            # house's vote line. The data check's "past both houses without both passage flags", 2026-11-25.)
+            "stage": stage, "passedS": bool(passed["S"]) or stage >= 3, "passedA": bool(passed[P.LOWER]) or stage >= 3,
             "passedIn": ("Senate" if passed["S"] else getattr(P, "LOWER_NAME", "House")) if stage == 2 and not uni else None,
             "first": min(dates, default=f"{session}-01-01"), "last": max(dates, default=f"{session}-01-01"),
             "keyDates": [reported[0] if reported else "", ";".join(passed["S"]), ";".join(passed[P.LOWER]), "",
