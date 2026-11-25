@@ -143,7 +143,9 @@ def ours(site, st, session):
     rows = list(bills.values())
     ok = lambda x: isinstance(x, str) and x[:4].isdigit() and x <= date.today().isoformat()
     days = [r[3] for r in rows if len(r) > 3 and ok(r[3])]
-    last = {norm(k): (r[3] if len(r) > 3 and ok(r[3]) else "") for k, r in bills.items()}
+    # {number: (last-action day, stage)}: whether Open States shows a bill further along is decided on the stage.
+    last = {norm(k): ((r[3] if len(r) > 3 and ok(r[3]) else ""), (r[2] if len(r) > 2 and isinstance(r[2], int) else 0))
+            for k, r in bills.items()}
     for other, lead in (d.get("alias") or {}).items():
         if norm(lead) in last:
             last.setdefault(norm(other), last[norm(lead)])
@@ -163,6 +165,29 @@ PAPERWORK = re.compile(r"effective date|fiscal note|explanation of vote|filed wi
                        r"secretary of state|printer|enroll|chapter \d+|act \d+$|transmitted to|journal", re.I)
 # Resolutions Open States classifies as bills (Nevada's "SR 9"): we keep bills and constitutional amendments only.
 RESOLUTION = re.compile(r"^[A-Z]{0,3}R\d")  # (on norm()'s form: SR9, HCR3, SJR5, HR12; Congress's HR is a bill)
+
+
+def their_stage(bill):
+    """How far Open States shows a bill (our stage numbers: 2 passed one house, 3 both, 4 sent to the governor, 5 law,
+    6 vetoed), from its classified steps. Dates aren't compared (2026-11-25: Alaska's HB 10 "VETOED BY GOVERNOR 8/31/26" is
+    dated the day Open States posted it, Sep 30; Montana's HB 643 has "Chapter Number Assigned" a week after its override)."""
+    kinds = [c for a in bill.get("actions") or [] for c in (a.get("classification") or [])
+             if not PAPERWORK.search(a.get("description") or "") or c in ("became-law", "executive-signature")]
+    if "became-law" in kinds or "executive-signature" in kinds or "veto-override-passage" in kinds:
+        return 5
+    if "executive-veto" in kinds:
+        return 6
+    if "executive-receipt" in kinds:
+        return 4
+    n = kinds.count("passage")
+    return 3 if n >= 2 else 2 if n == 1 else 0
+
+
+def behind(ours_stage, theirs):
+    """Whether our record is short of where Open States has the bill (a law or a veto, either way, counts as decided)."""
+    if theirs >= 5:
+        return ours_stage < 5
+    return ours_stage < theirs
 
 
 def newest_step(bill):
@@ -242,16 +267,18 @@ def main():
                     continue
                 if step > their_day:
                     top, their_day = b, step
-                mine = last.get(num)
-                if mine is None:
+                rec = last.get(num)
+                mine, mine_stage = rec if rec else (None, 0)
+                if rec is None:
                     gap = (date.fromisoformat(step) - date.fromisoformat(newest)).days if newest else 0
                     if gap >= LAG_LOOK:
                         worst = max(worst or (0, ""), (gap, f"{b.get('identifier')} isn't in our data (Open States: a step on {step})"))
                     continue
-                if mine and step > mine:
+                st_their = their_stage(b)
+                if mine and step > mine and behind(mine_stage, st_their):
                     lag = (date.fromisoformat(step) - date.fromisoformat(mine)).days
                     if lag >= LAG_LOOK:
-                        worst = max(worst or (0, ""), (lag, f"{b.get('identifier')}: our last action {mine}, Open States has a step on {step}"))
+                        worst = max(worst or (0, ""), (lag, f"{b.get('identifier')}: we show stage {mine_stage} (last action {mine}), Open States shows it further along (stage {st_their}, a step on {step})"))
             if worst:
                 lines.append(("FAIL" if worst[0] >= LAG_FAIL else "LOOK", f"{label}: {worst[1]} ({worst[0]} days later)"))
             # Bills: today's ratio against the state's own recent median.
