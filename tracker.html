@@ -91,6 +91,11 @@ html:not(.ready) .views { pointer-events: none; }
 /* A shared list's bills inside the list's page (#embed=: EMBED): only the watchlist (or one bill's card's body), on the
    list's own card. */
 html.embed body { padding: 0; background: var(--sheet); }
+/* A bill opened from an issue it's on through one of its sections (issueBox()): what that section does, first. */
+.issuectx { margin: 2px 0 14px; padding: 9px 12px; border-left: 3px solid var(--navy); border-radius: 0 8px 8px 0;
+  background: var(--sheet); border-top: 1px solid var(--rule); border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  color: var(--ink); font-size: 14.5px; line-height: 1.5; max-width: 78ch; }
+.issuectx b { font-weight: 700; }
 /* A shared bill on its own (soloOn()): the site's home link (a newcomer learns what site this is), the state's name, the bill,
    and "See all <state> bills". */
 html.solo #siteYours, html.solo #siteAboutTop, html.solo #sessions, html.solo #power, html.solo #legsBox, html.solo #whereBox, html.solo #notice,
@@ -1902,20 +1907,49 @@ function billLink(b) {
   // On the public site, the bill's own address (/ny/bill/S7421; another session's /ny/bill/2023/S7421), whose link previews
   // name the bill (lists_pages/bill_worker.js, 2026-11-24, the owner); it sends people on to #S7421&share. Elsewhere (a
   // local copy with no ROOT), the page's own address with #S7421&share.
-  if (ROOT) return `${ROOT}bill/${DATA.session === LATEST ? "" : `${DATA.session}/`}${num_}`;
+  // (Opened from an issue, a bill that's on it through one of its sections keeps the issue: /us/bill/HR1?issue=vouchers
+  // previews the section, and opens with its box: issueBox().)
+  const iss = issueOf(b);
+  if (ROOT) return `${ROOT}bill/${DATA.session === LATEST ? "" : `${DATA.session}/`}${num_}${iss ? `?issue=${iss.id}` : ""}`;
   const root = new URL(BASE || "./", location.href).href.replace(/[^/]*$/, "");
-  return `${root}${DATA.session === LATEST ? "" : `${DATA.session}.html`}#${num_}&share`;
+  return `${root}${DATA.session === LATEST ? "" : `${DATA.session}.html`}#${num_}&share${iss ? `&issue=${iss.id}` : ""}`;
+}
+// A bill opened from an issue it's on through one of its sections ("One part of a larger bill": #HR1&issue=vouchers, from
+// the issue pages and the front page's map panel; 2026-11-25, the owner): its card opens with what that section does, from
+// the issue's parts.json (issues_site.py: {"short", "bills": {"us:2025:HR1": "Sec. 70411 establishes ..."}}).
+let ISSUE_CTX = null; // {id, short, num, text} once read
+const issueOf = (b) => (ISSUE_CTX && b && ISSUE_CTX.num === baseNum(b.nums[0]) && ISSUE_CTX.text ? ISSUE_CTX : null);
+function issueBox(b) {
+  const x = issueOf(b);
+  return x ? `<p class="issuectx"><b>On ${esc(x.short)}:</b> ${esc(x.text)}</p>` : "";
+}
+function readIssue(id, b) {
+  if (!id || !b || !/^[a-z0-9-]{1,40}$/.test(id)) return;
+  const num_ = baseNum(b.nums[0]), top = ROOT ? new URL("../", ROOT).href : "";
+  if (!top) return;
+  fetch(`${top}issues/${id}/parts.json`).then((r) => (r.ok ? r.json() : null)).then((d) => {
+    const text = d && d.bills && d.bills[`${STATE.code}:${DATA.session}:${num_}`];
+    if (!text) return;
+    ISSUE_CTX = { id, short: d.short || d.name || id, num: num_, text };
+    // (The card is redrawn if it's open; and the address bar's bill link gains the issue.)
+    for (const el of document.querySelectorAll(`#list .bill[data-idx="${b.idx}"]`)) {
+      const det = el.querySelector(".detail");
+      if (el.open && det && det.dataset.done) { delete det.dataset.done; fillDetail(el); }
+    }
+    if (document.documentElement.classList.contains("solo")) soloAddress(b);
+  }).catch(() => {});
 }
 // A shared bill link ("Copy link to share this bill": #S7421&share, 2026-11-24, the owner) opens the bill on its own: a slim
 // title line, the bill and its panel, and "See all New York bills" (html.solo); a plain #S7421 opens it in the tracker.
-const SOLO_RE = /^#([A-Z]{1,3}\d{1,5})&share$/i;
+const SOLO_RE = /^#([A-Z]{1,3}\d{1,5})&share(?:&issue=[a-z0-9-]+)?$/i;
 function openFromHash() {
-  const m = location.hash.match(/^#([A-Z]{1,3}\d{1,5})(?:&share)?$/i);
+  const m = location.hash.match(/^#([A-Z]{1,3}\d{1,5})(?:&share)?(?:&issue=([a-z0-9-]+))?$/i);
   if (!m) return false;
   const solo = SOLO_RE.test(location.hash);
   if (solo) soloOn();
   const ok = openNum(m[1]);
   if (ok && solo) soloAddress(BILLS[ONE]);
+  if (ok && m[2]) readIssue(m[2].toLowerCase(), BILLS[ONE]);
   return ok;
 }
 // The address bar shows the bill's own link (/ny/bill/S7421: what people copy from it previews the bill, 2026-11-24, the
@@ -1928,7 +1962,8 @@ function soloAddress(b) {
       base.href = new URL("./", location.href).href;
       document.head.prepend(base);
     }
-    history.replaceState(history.state, "", new URL(billLink(b)).pathname);
+    const u = new URL(billLink(b));
+    history.replaceState(history.state, "", u.pathname + u.search);
   } catch (e) {}
 }
 function soloOn() {
@@ -6260,7 +6295,7 @@ function fillDetail(el) {
   // In a bill's own panel (2026-11-23, the owner's design), the road and the next step come first and the rest is folded,
   // each fold's line saying a little of what's in it; a watchlist card folds the same way (2026-11-24, the owner).
   const hist = historyBlock(b), spons = sponsorsBlock(b), sim = similarBlock(b);
-  const html = `${inCard ? "" : nextSteps(b)}
+  const html = `${inCard ? "" : issueBox(b)}${inCard ? "" : nextSteps(b)}
     ${STATE.resetNote?.(b) ? `<p class="reset">${esc(STATE.resetNote(b))}</p>` : ""}
     ${pfold("What it does", b.summary ? clipText(b.summary, 90) : "", what)}
     ${pfold("History", histHint(hist), hist)}
@@ -7958,7 +7993,7 @@ wire();
 // downloading at once, while the list part is still on its way.
 function prefetchFromAddress() {
   const h = location.hash, nums = [];
-  const one = h.match(/^#([A-Z]{1,3}\d{1,5})(?:&share)?$/i);
+  const one = h.match(/^#([A-Z]{1,3}\d{1,5})(?:&share)?(?:&issue=[a-z0-9-]+)?$/i);
   if (one) nums.push(one[1].toUpperCase());
   const w = h.match(/^#(?:w|embed)=(\d{4})\.([A-Z0-9.-]+)$/);
   if (w && w[1] === SPLIT.session) nums.push(...w[2].split(".").filter(Boolean).map((n) => n.replace(/^-/, "")));

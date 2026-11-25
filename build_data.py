@@ -1687,8 +1687,15 @@ def write_issues(session, inputs, page, current, labels=None):
             both = f"{head} {body}"
             # (A larger bill's line under its title is the section that put it on the issue, as the summary says it:
             # "Establishes a nonrefundable tax credit of up to $1,700 for cash contributions ...".)
-            psec = {i: re.sub(r"^\((?:Sec|Section)s?\.?[^)]*\)\s*(?:This section\s+)?", "", issues.part_section(i, secs or issues.sections(body)))
-                    for i in parts}
+            # ("(Sec. 70411) This section establishes ..." -> "Sec. 70411 establishes ...": the section's number stays, so the
+            # issue's box on the bill says where in the law it is; 2026-11-25, the owner.)
+            def sec_line(x):
+                m = re.match(r"^\((?:Sec|Section)s?\.?\s*([^)]*)\)\s*(This section\s+)?", x)
+                if not m:
+                    return x
+                rest = x[m.end():]
+                return f"Sec. {m.group(1)} {rest}" if m.group(2) else f"Sec. {m.group(1)}: {rest[:1].upper()}{rest[1:]}"
+            psec = {i: sec_line(issues.part_section(i, secs or issues.sections(body))) for i in parts}
             memo[k] = [found, {i: issues.filters_of(i, both) for i in found if issues.BY_ID[i].get("filters")},
                        {i: (psec[i][:1].upper() + psec[i][1:]) if i in psec else issues.excerpt(i, head, body) for i in found}, parts]
         seen[k] = memo[k]
