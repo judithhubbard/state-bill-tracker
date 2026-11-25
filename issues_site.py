@@ -445,9 +445,15 @@ def shown(num, others=(), st=""):
     return " / ".join(out)
 
 
-def link(f, num):
+def link(f, num, issue=None):
+    """A bill on its state's page; a bill on the issue through one of its sections ("One part of a larger bill") carries
+    the issue (#HR1&issue=vouchers), so its card opens with what the section does (tracker.html's issueBox())."""
     page = f["page"] if f["page"] != "./" else ""
-    return f"../../{f['state']}/{page}#{re.sub(r'[A-Z]$', '', num)}"
+    return f"../../{f['state']}/{page}#{re.sub(r'[A-Z]$', '', num)}" + (f"&issue={issue}" if issue else "")
+
+
+def is_part(iid, b):
+    return iid in (b[13] if len(b) > 13 else [])
 
 
 # The tile map's grid (row, column): the front page's (home.html's GRID, read from it: one copy).
@@ -613,7 +619,7 @@ def bill_items(iid, st, mine):
         why = (b[9].get(iid) if len(b) > 9 else "") or ""
         # On the issue through one of its sections (build_data.py's write_issues(), issues.part_issues()).
         part = '<span class="part">One part of a larger bill</span>' if iid in (b[13] if len(b) > 13 else []) else ""
-        items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}" data-k="{f["session"]}|{e(b[2])}|{e(b[5] or "")}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else (), st))}</a>'
+        items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}" data-k="{f["session"]}|{e(b[2])}|{e(b[5] or "")}"><a href="{e(link(f, b[2], iid if is_part(iid, b) else None))}">{e(shown(b[2], b[10] if len(b) > 10 else (), st))}</a>'
                      f'<span class="tags">{party_tag(party(b))}{pips(b[4], st, stage_text(b) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}<span class="stg s{b[4]}">{e(stage_text(b) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span>'
                      + (f'<span class="stw">{day(b[5])}</span>' if b[5] else "") + '</span>'
                      f'<span class="t">{e(b[3])}</span>' + part
@@ -1047,14 +1053,21 @@ def main(site):
     nodata = {str(y): sorted(no_data(states, y)) for y in years if y <= default}
     for issue in issues.ISSUES:
         os.makedirs(os.path.join(site, "issues", issue["id"]), exist_ok=True)
-        per_year, panel = {}, {}
+        per_year, panel, parts = {}, {}, {}
         for y in years:
             # The front page map's panel (home.html): each state's bills that year, one line each, laws first.
             by, _, _ = year_view(issue["id"], states, y)
             # Congress: its own entries, apart from the states' totals ("N bills in M states" leaves it out).
             us_by, us_open, _ = year_view(issue["id"], congress, y) if congress else ({}, set(), {})
+            # The bills on the issue through one of their sections, with what the section does: parts.json, read by the
+            # bill-link Function (lists_pages/bill_worker.js: a shared /us/bill/HR1?issue=vouchers previews the section)
+            # and the state's page (the box at the top of the bill's card: tracker.html's issueBox()).
+            for st, (_, _, rows) in {**by, **us_by}.items():
+                for f, b, _, _ in rows:
+                    if is_part(issue["id"], b):
+                        parts[f"{f['state']}:{f['session']}:{re.sub(r'[A-Z]$', '', b[2])}"] = (b[9].get(issue["id"]) if len(b) > 9 else "") or ""
             panel[str(y)] = {st: [[shown(b[2], b[10] if len(b) > 10 else (), st), b[3], (b[9].get(issue["id"]) if len(b) > 9 else "") or "", b[4],
-                                   link(f, b[2])[len("../../"):], b[6],
+                                   link(f, b[2], issue["id"] if is_part(issue["id"], b) else None)[len("../../"):], b[6],
                                    # For the star (home.html): the bill's number, its session and its last action's
                                    # date, which make its watchlist entry, as on the state's own page.
                                    b[2], f["session"], b[5],
@@ -1085,6 +1098,8 @@ def main(site):
         opened["all"] = sorted(open_ | set(us_by))
         json.dump(panel, open(os.path.join(site, "issues", issue["id"], "bills.json"), "w"), ensure_ascii=False,
                   separators=(",", ":"))
+        json.dump({"short": SHORT.get(issue["id"], issue["name"]), "name": issue["name"], "bills": parts},
+                  open(os.path.join(site, "issues", issue["id"], "parts.json"), "w"), ensure_ascii=False, separators=(",", ":"))
         summary.append({"id": issue["id"], "name": issue["name"], "group": issue.get("group", ""),
                         "short": SHORT.get(issue["id"], issue["name"]), "y": per_year})
     # The issues by group (issues.GROUPS), as in the front page's menu.

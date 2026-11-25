@@ -16,6 +16,8 @@ const NUM = /^\/([a-z]{2})\/bill\/(?:(\d{4})\/)?([A-Za-z]{1,7}\d{1,6}[A-Za-z]?)\
 const CACHE = "public, max-age=900, s-maxage=3600";
 
 const baseNum = (n) => n.replace(/[A-Z]$/, "");
+// A long sentence cut at a word, with "…".
+const cut = (s, n) => { s = String(s || "").replace(/\s+([.,;:)])/g, "$1").replace(/\s+/g, " ").trim(); if (s.length <= n) return s; s = s.replace(/ ?\([^()]{16,}\)/g, "").replace(/\s+([.,;:])/g, "$1"); if (s.length <= n) return s; const c = s.slice(0, n); const i = c.lastIndexOf(" "); return (i > n * 0.6 ? c.slice(0, i) : c).replace(/[,;:.\s]+$/, "") + "…"; };
 function hash(num) {
   let h = 0x811c9dc5;
   for (const c of new TextEncoder().encode(baseNum(num))) h = Math.imul(h ^ c, 0x01000193) >>> 0;
@@ -95,7 +97,10 @@ export default {
     const url = new URL(request.url);
     const m = NUM.exec(url.pathname);
     if (!m || !NAMES[m[1]]) return env.ASSETS.fetch(request);
-    const cache = caches.default, key = new Request(url.origin + url.pathname);
+    // (?issue=vouchers: a bill on an issue through one of its sections, shared from that issue: its preview names the section,
+    // from the issue's parts.json, and it opens with the issue's box; 2026-11-25, the owner.)
+    const issue = /^[a-z0-9-]{1,40}$/.test(url.searchParams.get("issue") || "") ? url.searchParams.get("issue") : "";
+    const cache = caches.default, key = new Request(url.origin + url.pathname + (issue ? `?issue=${issue}` : ""));
     const hit = await cache.match(key);
     if (hit) return hit;
     const [, st, session, raw] = m;
@@ -110,12 +115,21 @@ export default {
       const where = label || news || "";
       const desc = [where, last && `last action ${fmtDay(last)}`].filter(Boolean).join(" · ")
         + `. See where it is, who decides next, and what to ask them.`;
-      const t = `${full}: ${title} · ${name}`;
-      const canon = `${ROOT}${st}/bill/${session ? `${session}/` : ""}${bill.num}`;
-      const to = `/${st}/${bill.page === "./" ? "" : bill.page}#${bill.num}&share`;
+      let t = `${full}: ${title} · ${name}`, d = desc;
+      let canon = `${ROOT}${st}/bill/${session ? `${session}/` : ""}${bill.num}`;
+      let to = `/${st}/${bill.page === "./" ? "" : bill.page}#${bill.num}&share`;
+      const part = issue ? await json(env, url.origin, `/issues/${issue}/parts.json`).catch(() => null) : null;
+      const sec = part && part.bills && part.bills[`${st}:${bill.session}:${bill.num}`];
+      if (sec) {
+        const short = String(part.short || part.name || issue);
+        t = `${full} · ${short[0].toUpperCase()}${short.slice(1)} section: ${cut(sec, 140)}`;
+        d = `${where || "On the issue"}. One part of a larger bill: ${title}.`;
+        canon += `?issue=${issue}`;
+        to += `&issue=${issue}`;
+      }
       // (No image for a bill: the title and status are the preview, a compact card, not the state's big banner; 2026-11-24,
       // the owner. The state's card stays for an unknown number, which goes to the state's page.)
-      html = page({ title: t, desc, image: "", url: canon, to, name });
+      html = page({ title: t, desc: d, image: "", url: canon, to, name });
     } else {
       html = page({ title: `${name} bills · State Bill Tracker`, desc: `No ${raw.toUpperCase()} on file for ${name}: see every bill there.`,
                     image, url: `${ROOT}${st}/`, to: `/${st}/`, name });
