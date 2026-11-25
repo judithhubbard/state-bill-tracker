@@ -200,6 +200,10 @@ cp static/favicon.ico static/favicon-32.png static/apple-touch-icon.png "$OUT/"
 # The link preview image every page names (og:image; made by tools/og_image.sh), and the page for addresses that aren't
 # there (Cloudflare Pages serves 404.html with status 404, instead of the front page).
 cp tools/og-image.png "$OUT/og-image.png"
+# Bill links with their own link previews, /<st>/bill/<number> (lists_pages/bill_worker.js): the Pages Function in advanced
+# mode (_worker.js, found in the deployed folder wherever the deploy runs from; _routes.json gives it only /*/bill/*, so
+# every other address stays plain files) and each state's card (/cards/<st>.png).
+python3 tools/bill_worker.py "$OUT"
 python3 -c 'import sys, site_fonts; open(sys.argv[1], "w").write(site_fonts.swap_google(open("notfound.html").read()))' "$OUT/404.html"
 # The fonts (site_fonts.py), for every page (the state pages' builds put them in too).
 python3 -c 'import sys, site_fonts; site_fonts.install(sys.argv[1])' "$OUT/assets/fonts"
