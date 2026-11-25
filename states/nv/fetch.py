@@ -756,6 +756,11 @@ def parse_member_page(page):
     return info
 
 
+def vacant(m):
+    """A member list's row for an empty seat ("Vacant" in the name column)."""
+    return (m.get("name") or "").strip().lower() == "vacant"
+
+
 def members(year, folder, state, newest):
     """Each house's member list and every member's page: weekly for the newest session with members, else once."""
     last = state.get("members") or ""
@@ -778,7 +783,7 @@ def members(year, folder, state, newest):
         return os.path.exists(path)
     seen, got = {}, 0
     for m in found:
-        if m["page"]:
+        if m["page"] and not vacant(m):
             seen.setdefault(m["page"], m)
     for page_path, m in seen.items():
         if out_of_time():
@@ -794,6 +799,10 @@ def members(year, folder, state, newest):
     for m in found:
         if not m["page"]:
             continue  # a member who left: only the list's line
+        if vacant(m):
+            # (A seat the list calls "Vacant": its page saved earlier is the last holder's, whose name, offices and phone
+            # would fill the row (84th Legislature's Assembly 3 and Senate 6, listed vacant from November 2026).)
+            continue
         try:
             with open(os.path.join(out_dir, f"{m['house'][0]}{m['district']:02d}.html"), encoding="utf-8") as f:
                 m.update(parse_member_page(f.read()))

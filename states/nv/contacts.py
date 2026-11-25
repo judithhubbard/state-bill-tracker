@@ -76,6 +76,11 @@ def build(session):
         h = C.CHAMBER.get(m.get("house"))
         if not h or not m.get("district") or GONE.search(m.get("status") or ""):
             continue
+        if (m.get("name") or "").strip().lower() == "vacant":
+            # (An empty seat, the list's "Vacant" (the 84th's Assembly 3 and Senate 6 from November 2026): left out, so it
+            # counts as vacant, never as a member with no party under the last holder's name (members.json files written
+            # before fetch.py skipped such rows carry that name from the seat's old page).)
+            continue
         sid = f"{h}:{int(m['district'])}"
         name = C.full_name(m)
         o = os_by.get((h, int(m["district"])))
