@@ -497,7 +497,6 @@ function drawShare(keepMsg) {
       + `<details id="notesBox"><summary>Notes on each bill</summary><div id="notes"></div></details>` : "")
     + `<div class="row"><input type="text" readonly value="${esc(url)}" aria-label="Link to the shared list" id="link"><button type="button" class="btn" data-act="copy">Copy link</button></div>`
     + `<div class="row">${shareIcons(url, mine.title || DEFAULT_TITLE)}<a class="muted" href="/list/#${esc(mine.slug)}">Preview</a></div>`
-    + feedLine(mine.slug)
     + `<p class="muted" id="saved"></p>`
     + (THANKS ? `<p class="thanks">${THANKS}</p>` : "")
     + ""  // (no group-code line: the owner, 2026-11-19)

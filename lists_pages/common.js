@@ -150,10 +150,12 @@ function sharePop(slug, title) {
 // A shared list's feed (RSS: lists_worker/src/feed.js), for a group's newsletter or Slack (2026-11-25, the owner): one
 // labelled line under a list's link, with Copy (data-copyfeed).
 const feedLink = (slug) => `${LISTS_API}/lists/${encodeURIComponent(slug)}/feed`;
+// Only in the list editor, folded (the owner, 2026-11-25: feeds are specialized; the share boxes stay as they were).
 function feedLine(slug) {
   if (!LISTS_API) return "";
-  return `<div class="feedline"><p class="fl-h">Send updates to your followers ${infoTip("Your list's news as a feed: each time a bill moves, a new item. In Mailchimp, Substack or Buttondown, choose “RSS to email” and paste this address to send it to your subscribers; Slack's RSS app posts it to a channel.")}</p>`
-    + `<div class="row"><input type="text" readonly value="${esc(feedLink(slug))}" aria-label="The list's feed address"><button type="button" class="btn" data-copyfeed="${esc(slug)}">Copy</button></div></div>`;
+  return `<details class="feedline"><summary class="fl-h">Send this list's updates in your newsletter</summary>`
+    + `<p>Your list's address for newsletters and Slack. In Mailchimp, Substack or Buttondown, choose “RSS to email” and paste it; Slack's RSS app posts it to a channel. Each time one of the list's bills moves, it adds an item.</p>`
+    + `<div class="row"><input type="text" readonly value="${esc(feedLink(slug))}" aria-label="The list's address for newsletters"><button type="button" class="btn" data-copyfeed="${esc(slug)}">Copy</button></div></details>`;
 }
 function closePops(but) {
   for (const b of document.querySelectorAll("[data-sharepop][aria-expanded=\"true\"]")) if (b !== but) { b.setAttribute("aria-expanded", "false"); b.nextElementSibling.hidden = true; }
