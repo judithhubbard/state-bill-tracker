@@ -196,6 +196,9 @@ ISSUES = [
                 r"!\b(?:colleges?|universit\w*|postsecondary|higher education|community college|dual (?:enrollment|credit)|teach\w*|work obligation|independent charter schools?)\b"]]},
     {"id": "voting", "group": "Elections and government", "name": "Voting and elections", "words": ["elections", "voter id", "mail ballots", "absentee", "voter registration", "popular vote", "electoral college", "winner-take-all"],
      # How people vote and how elections are run. Not campaign finance, local election dates or district lines.
+     # Not through one section of a larger bill ("sections": False): short passages trip its patterns ("a unanimous vote of
+     # all Board members in order to grant parole", Kansas SB 459 of 2025), and election changes come in election bills.
+     "sections": False,
      "rules": [[r"\bvoter (?:ID|identification|registration|rolls?|lists?|fraud|intimidation|suppression|participation|access|eligibility|challenges?)\b"],
                # "registered voters" near a petition is usually a local referendum on something else (Louisiana's fluoridation
                # elections): recalls, initiatives and candidates' petitions are caught by their own rules.
@@ -271,7 +274,10 @@ ISSUES = [
                 # Not funds or acts named for relief that pay for school aid ("Property Tax Relief Fund to DOE"), levy-cap
                 # exceptions, or farmland.
                 r"!\b(?:exclusions?|exceptions?|exceed\w*|overrid\w*|adjust\w*|waiv\w*|cap calculations?|property tax relief (?:fund|act)|"
-                r"education (?:aid|equity)|equalization aid|school aid|agricultur\w*|farm\w*|grocery|stores?|business(?:es)?|cancellations?)\b"],
+                r"education (?:aid|equity)|equalization aid|school aid|agricultur\w*|farm\w*|grocery|stores?|business(?:es)?|cancellations?|"
+                # (Federal tax credits for "property" in the sense of equipment: H.R. 1 of 2025's "alternative fuel
+                # refueling property tax credit".)
+                r"refueling property|energy property|clean energy property)\b"],
                [r"\b(?:relief|rebates?|refunds?) (?:from|of|on) (?:residential )?property tax"],
                [r"\bcircuit[- ]breaker\b", r"\b(?:tax\w*|property|renters?|homeowners?)\b"],
                [r"\b(?:assessment|valuation) (?:caps?|limit\w*|freez\w*)\b", r"!\b(?:vehicles?|cars|watercraft|boats|adjust\w*|exclusions?|exceptions?|megaprojects?|renovat\w*|affordable housing|job creation)\b"],
@@ -357,7 +363,8 @@ ISSUES = [
                [r"\bpolitical (?:advertis\w*|ads?)\b", r"!\b(?:artificial intelligence|deep ?fakes?|synthetic|deceptive|materially|manipulated|AI)\b"],
                [r"(?-i)\b(?:super )?PACs?\b"], [r"\bdark money\b"], [r"\bindependent expenditures?\b"], [r"\belectioneering communications?\b", r"!\b(?:deep ?fakes?|synthetic media)\b"],
                [r"\bclean elections?\b"], [r"\bpublic (?:campaign )?financ\w*\b", r"\b(?:campaigns?|candidates?|elections?)\b"],
-               [r"\bcontribution limits?\b"], [r"\bpay[- ]to[- ]play\b"],
+               # (Not tax-advantaged accounts' limits: H.R. 1 of 2025's ABLE accounts, IRAs, health savings accounts.)
+               [r"\bcontribution limits?\b", r"!\b(?:ABLE accounts?|retirement|IRAs?|401\(k\)|health savings|education savings|529)\b"], [r"\bpay[- ]to[- ]play\b"],
                [r"\b(?:contributions?|donations?)\b", r"\b(?:candidates?|campaign committees?|political part(?:y|ies)|inaugura\w*)\b", r"\b(?:limit\w*|report\w*|disclos\w*|prohibit\w*|accept\w*|solicit\w*)\b"]],
      # California's digests open with the Political Reform Act as background on bills about other things.
      # Bills on AI and deepfakes in political ads name the committees that pay for them.
@@ -885,9 +892,99 @@ def _hits(issue, text, enough):
     return len(found)
 
 
-def issues_of(head, body=""):
-    """The ids of the issues a bill matches: in its title and summary (head), or twice in its "What it does" (body)."""
-    return [i["id"] for i in ISSUES if matches(i, head, body)]
+def issues_of(head, body="", secs=None):
+    """The ids of the issues a bill matches: in its title and summary (head), or twice in its "What it does" (body), or
+    (a large bill) in one of its sections that creates or changes the program (part_issues())."""
+    found = [i["id"] for i in ISSUES if matches(i, head, body)]
+    return found + [x for x in part_issues(head, body, secs) if x not in found]
+
+
+# ---- Large bills: one section about the issue (2026-11-25, the owner) ----
+# A budget or omnibus bill names many subjects in passing, so "What it does" needs two mentions; but such a bill can also
+# create or change a program in one of its sections (H.R. 1 of the 119th Congress, Sec. 70411: "Tax credit for
+# contributions of individuals to scholarship granting organizations", the federal tax-credit scholarships from 2027).
+# Such a bill counts for an issue when a section's opening (its heading and first sentence) matches the issue's rules AND
+# says it creates or changes something (CHANGE), and isn't money for it (FUNDS_ONLY: "$5 million for the X program").
+# The issue lists mark these "One part of a larger bill" (write_issues(), issues_site.py). Sections come from the record
+# (Congress's full CRS summary, one per "(Sec. N)" paragraph: its "sections"), else from a long "What it does" marked off
+# in sections ("Section 4.", "Sec. 12.", "SECTION 3", "(Sec. 101)").
+LARGE = 6000  # a "What it does" at least this long (or a record with its own "sections") is a large bill
+CHANGE = re.compile(r"\b(?:establish\w*|creat\w*|expand\w*|amend\w*|modif\w*|repeal\w*|replac\w*|extend\w*|"
+                    r"allow\w*|authoriz\w*|requir\w*|prohibit\w*|increas\w*|decreas\w*|reduc\w*|eliminat\w*|"
+                    r"limit\w*|exempt\w*|revis\w*|chang\w*|permit\w*|bans?|bann\w*|caps?|phas\w* (?:in|out)|"
+                    r"makes? permanent|terminat\w*|restrict\w*|lower\w*|rais\w*)\b", re.I)
+# Money, not policy: appropriations, and riders on what "funds provided by this division" may be used for. (Dollar
+# amounts alone don't count: H.R. 1's scholarship credit is "of up to $1,700".) And routine extensions to a date in a
+# continuing resolution ("extends through FY2026 the VA's Health Care for Homeless Veterans program").
+FUNDS_ONLY = re.compile(r"\b(?:appropriat\w*|funds?|funding|moneys?|apportion\w*|project authorizations?|"
+                        r"extends?,? (?:\S+ ){0,12}?(?:through|until) "
+                        r"(?:FY\d*|fiscal|January|February|March|April|May|June|July|August|September|October|November|December|\d+)|"
+                        # Authorizations of a year's activities or of construction projects (NDAAs: "authorizes DOE
+                        # nuclear energy activities for FY2025").
+                        r"authoriz\w* (?:\S+ ){0,6}?(?:activities|projects) (?:for|at|in)|"
+                        # Reports, studies and "nothing in this title" aren't changes to a program (Congress's NDAAs: "a
+                        # report on the Uyghur genocide (including ... forced abortion ...)").
+                        r"reports?|reporting|stud(?:y|ies)|assess\w*|brief\w*|whether|nothing in this|"
+                        r"exceptions to the prohibition)\b", re.I)
+# Examples a section gives in passing ("(e.g., a survivor of domestic violence or human trafficking)") aren't its subject.
+ASIDE = re.compile(r"\((?:e\.g\.|i\.e\.|for example|such as)[^)]*\)", re.I)
+SECTION_MARK = re.compile(r"(?:^|(?<=\n)|(?<=\. ))(?:\(Sec(?:tion|s)?\.? \d[\w.-]*(?:, [\w.-]+)*\)|(?:SECTION|Section|SEC\.|Sec\.) \d+[A-Za-z]?(?:\.\d+)*[.:)]?)\s")
+# For what the rule still misses: {"<st>:<session>:<number>": {"<issue>": "why it belongs"}}. Empty (2026-11-25).
+OVERRIDES = {}
+# And what it matches wrongly: {"<st>:<session>:<number>": {"<issue>": "why it doesn't belong"}} (2026-11-25, the owner:
+# the Congress additions read by hand, about 1 in 10 wrong; notes/issues-check.md).
+EXCLUDE = {
+    "us:2023:HR2670": {"firearms": "NDAA FY2024 Sec. 2402: energy resilience projects (ERCIP), not firearms",
+                       "dei": "NDAA FY2024 Sec. 1101: civilian personnel pay rates",
+                       "wildfire": "NDAA FY2024 Sec. 1832: wildfire operations named in a list of exceptions"},
+    "us:2021:HR2617": {"plastics": "Sec. 210: agencies to coordinate with food service providers",
+                       "childcare": "Sec. 2236: an advisory committee's membership",
+                       "assault": "Sec. 213: DOJ grant matching waivers for offender reentry programs"},
+    "us:2023:HR2882": {"plastics": "Sec. 210: agencies to coordinate with food service providers"},
+    "us:2023:HR4366": {"assault": "Sec. 213: DOJ grant matching waivers for offender reentry programs"},
+}
+
+
+def sections(body):
+    """The opening of each section of a long "What it does" marked off in sections; [] when it isn't."""
+    if len(body or "") < LARGE:
+        return []
+    # (Only text marked off in sections. California's digests, in "This bill would ..." paragraphs, were tried on
+    # 2026-11-25 and left out: their sentences name subjects in passing ("a payment or voucher" for foster care, a
+    # bankruptcy exemption for "sick leave, family leave"), about half the 28 matches of 2021-22 wrong.)
+    starts = [m.start() for m in SECTION_MARK.finditer(body)]
+    if len(starts) < 3:
+        return []
+    return [opening(body[a:b]) for a, b in zip(starts, starts[1:] + [len(body)])]
+
+
+def opening(text, size=400):
+    """A section's heading and first sentence (up to `size` characters), without its examples in passing."""
+    text = ASIDE.sub("", text.strip())
+    # (Missouri's summaries put "(Section 115.706)" after a section's text: the next one starts with it.)
+    text = re.sub(r"^\(Sections? [\d.,\sand-]+\)\s*", "", text)
+    m = re.search(r"(?<=[a-z0-9)\]])\.(?=\s+[A-Z(])", text[40:size])
+    return text[:40 + m.start() + 1] if m else text[:size]
+
+
+def part_issues(head, body="", secs=None):
+    """The issues a large bill matches only through one of its sections (see above)."""
+    secs = secs or sections(body)
+    if not secs:
+        return []
+    out = []
+    for i in ISSUES:
+        if i.get("sections") is False or matches(i, head, body):
+            continue
+        if any(_hit(i, s) and CHANGE.search(s) and not FUNDS_ONLY.search(s) for s in secs):
+            out.append(i["id"])
+    return out
+
+
+def part_section(issue_id, secs):
+    """The section that put a large bill on the issue (for the issue lists' line under the title)."""
+    i = BY_ID[issue_id]
+    return next((s for s in secs if _hit(i, s) and CHANGE.search(s) and not FUNDS_ONLY.search(s)), "")
 
 
 def matches(issue, head, body=""):

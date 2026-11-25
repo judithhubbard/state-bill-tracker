@@ -1655,7 +1655,9 @@ def issue_inputs(session, recs, texts, party_of=None):
             law = (r["keyDates"][5].split(";")[-1] if len(r["keyDates"]) > 5 else "") or r["last"] or ""
         rows.append([i, head, body, r["nums"][0], r["title"], r["stage"], r["last"] or "",
                      "const" if "const" in (r["topics"] or []) else "", intro, law, len(r["title"].split()) < 8,
-                     r["nums"][1:], sponsor_class(r, party_of or {})])
+                     r["nums"][1:], sponsor_class(r, party_of or {}),
+                     # A large bill's own sections (Congress's full CRS summary: issues.part_issues()), else [].
+                     r.get("sections") or []])
     return {"total": total, "active": active, "rows": rows}
 
 
@@ -1666,7 +1668,8 @@ def write_issues(session, inputs, page, current, labels=None):
     title, stage, last action's date, "const" or "", year introduced (the session's first year at the earliest, so a
     bill prefiled in December counts in its session's year), date it became law or "", {issue: the sentence that
     matched} for titles under eight words, the record's other numbers, the sponsors' party (sponsor_class(): "D", "R", "B"
-    or ""), the status words (bill_labels())], ...]}. Local bills for one
+    or ""), the status words (bill_labels()), the issues it's on through one section of a larger bill (issues.part_issues():
+    the lists say "One part of a larger bill")], ...]}. Local bills for one
     place and placeholder bills are left out, as in the statistics."""
     import issues
     # Matching is most of a state's build time, and a bill's matches depend only on its text and issues.py's rules: each
@@ -1676,28 +1679,43 @@ def write_issues(session, inputs, page, current, labels=None):
     memo = cached_json(f"issues_{session}", version)
     seen = {}
 
-    def match(head, body):
-        k = hashlib.sha1(f"{head}\0{body}".encode("utf-8")).hexdigest()[:20]
+    def match(head, body, secs):
+        k = hashlib.sha1(f"{head}\0{body}\0{json.dumps(secs)}".encode("utf-8")).hexdigest()[:20]
         if k not in memo:
-            found = issues.issues_of(head, body)
+            found = issues.issues_of(head, body, secs)
+            parts = issues.part_issues(head, body, secs)
             both = f"{head} {body}"
+            # (A larger bill's line under its title is the section that put it on the issue, as the summary says it:
+            # "Establishes a nonrefundable tax credit of up to $1,700 for cash contributions ...".)
+            psec = {i: re.sub(r"^\((?:Sec|Section)s?\.?[^)]*\)\s*(?:This section\s+)?", "", issues.part_section(i, secs or issues.sections(body)))
+                    for i in parts}
             memo[k] = [found, {i: issues.filters_of(i, both) for i in found if issues.BY_ID[i].get("filters")},
-                       {i: issues.excerpt(i, head, body) for i in found}]
+                       {i: (psec[i][:1].upper() + psec[i][1:]) if i in psec else issues.excerpt(i, head, body) for i in found}, parts]
         seen[k] = memo[k]
         return memo[k]
     bills = []
-    for i, head, body, num, title, stage, last, const, intro, law, short, others, party in inputs["rows"]:
-        found, filters, excerpts = match(head, body)
+    for i, head, body, num, title, stage, last, const, intro, law, short, others, party, *more in inputs["rows"]:
+        found, filters, excerpts, parts = match(head, body, more[0] if more else [])
+        # A bill the rules miss, put on an issue by hand with its reason (issues.OVERRIDES; empty since 2026-11-25).
+        extra = [k for k in issues.OVERRIDES.get(f"{STATE}:{session}:{re.sub(r'[A-Z]$', '', num)}", {}) if k not in found]
+        if extra:
+            found, parts = found + extra, parts + extra
+        # And one the rules put on an issue wrongly, taken off with its reason (issues.EXCLUDE).
+        drop = issues.EXCLUDE.get(f"{STATE}:{session}:{re.sub(r'[A-Z]$', '', num)}", {})
+        if drop:
+            found, parts = [k for k in found if k not in drop], [k for k in parts if k not in drop]
         if not found:
             continue
         bills.append([found, filters, num, title, stage, last, const, intro, law,
                       # Under a bare title ("Wages"), or a title that doesn't name the issue (a budget bill carrying
                       # an immigration package), the sentence that matched, so readers see why the bill is there.
                       {k: re.sub(r"\s*\((?:Sub)?[Pp]art [A-Z]+(?:-\d+)?\)", "", x) for k, x in excerpts.items()
-                       if x and (short or not issues.matches(issues.BY_ID[k], title))},
+                       if x and (short or k in parts or not issues.matches(issues.BY_ID[k], title))},
                       # The record's other numbers (New York's identical Assembly and Senate bills are one record).
                       others, party,
-                      labels[i][0] if labels else ""])
+                      labels[i][0] if labels else "",
+                      # The issues it's on through one of its sections ("One part of a larger bill").
+                      parts])
     out = {"state": STATE, "name": P.STATE_NAME, "session": session, "years": getattr(P, "YEARS", 2),
            "upcoming": session > current,
            "label": P.session_label(session), "page": page, "total": inputs["total"], "active": inputs["active"], "bills": bills}

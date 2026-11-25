@@ -383,6 +383,8 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 /* The number and stage on the first line, the title below them across the whole width. */
 .panel .tt { grid-row: 2; grid-column: 1 / -1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .panel .why { color: var(--ink-2); }
+.panel .tt .part { display: block; color: var(--ink-2); }
+.panel .tt .part i { font-style: italic; }
 /* A bill that became law stands out: a green edge and a light green tint (its pips are dropped in the panel, so the
    label fits). */
 .panel li:has(.stg.s5) > a { border-left: 4px solid var(--lawn); padding-left: 8px; background: color-mix(in srgb, var(--law-1) 50%, transparent); }
@@ -921,7 +923,7 @@ function showPanel(st) {
       // The state's own page, showing its bills on the issue (its Issue filter), where people can star them and act
       // (2026-11-23: with an issue shown, a click on a state lists its bills here, and there was no way on to its page).
       + (pageOf(st.toUpperCase()) ? `<p class="pgo"><a href="${esc(pageOf(st.toUpperCase()))}#v&amp;issue=${esc(issue.id)}">${st === "us" ? "Go to the Congress page" : `Go to ${esc(nameOf(st))}&rsquo;s page`} &rarr;</a></p>` : "");
-    body.innerHTML = head + pbig(splitOf((issue.y[year] || { by: {} }).by[st])) + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last, pc, , lawHere, label]) => {
+    body.innerHTML = head + pbig(splitOf((issue.y[year] || { by: {} }).by[st])) + (rows.length ? `<ul>${rows.map(([num, title, why, stage, link, kind, raw, session, last, pc, , lawHere, label, part]) => {
       // The status words as the state's page has them (issues_site.py passes the build's); a law from a later (or
       // earlier) year than the one shown says when, as on the issue pages: the map counts laws by year.
       const stg = `${label || ""}${stage === 5 && lawHere === 0 && last ? ` in ${last.slice(0, 4)}` : ""}`;
@@ -932,7 +934,11 @@ function showPanel(st) {
       // A long title that doesn't name the issue (a budget bill) would push the reason out of sight: the reason is shown,
       // the title is in the tip.
       if (why && title.split(/\s+/).length >= 8) { title = why; why = ""; }
-      return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}</span><span class="tags">${partyTag(pc)}${BillFacts.pips(stage, BillFacts.oneHouse(st), "mini", stg, st)}<span class="stg s${stage}" title="${esc(stg)}">${esc(stg)}</span></span></a>${raw ? starBtn(st, session, raw, last, num) + listBtn(st, session, raw, `${nameOf(st)} ${num}`) : ""}</li>`;
+      // (A budget or omnibus bill on the issue through one of its sections: issues_site.py's last column.)
+      // (Its own line, first, so the three lines' clamp never hides it: "One part of a larger bill: Establishes ...".)
+      const tt = part ? `${esc(title)}<span class="part"><i>One part of a larger bill</i>${why ? `: ${esc(why)}` : ""}</span>`
+        : `${esc(title)}${why ? `<span class="why">: ${esc(why)}</span>` : ""}`;
+      return `<li><a href="${esc(link)}" title="${esc(full)}"><b>${esc(num)}</b><span class="tt">${tt}</span><span class="tags">${partyTag(pc)}${BillFacts.pips(stage, BillFacts.oneHouse(st), "mini", stg, st)}<span class="stg s${stage}" title="${esc(stg)}">${esc(stg)}</span></span></a>${raw ? starBtn(st, session, raw, last, num) + listBtn(st, session, raw, `${nameOf(st)} ${num}`) : ""}</li>`;
     }).join("")}</ul>` : "");
     ppFocus(body);
   });
