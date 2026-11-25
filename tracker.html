@@ -5328,7 +5328,12 @@ function newsBox(rows) {
   }));
 }
 // A new star has no side yet: the person picks support or oppose (a decided bill has none to pick).
-function toggleWatch(b) { if (!isWatched(b)) { countUse(`starred/${STATE.code}/${baseNum(b.nums[0])}`); step("starred"); } setWatch(b, isWatched(b) ? null : { seen: b.last || "", stance: null }); }
+// (Starring keeps the side already picked in the bill panel, 2026-11-25, the owner: "I already selected support".)
+function toggleWatch(b) {
+  if (!isWatched(b)) { countUse(`starred/${STATE.code}/${baseNum(b.nums[0])}`); step("starred"); }
+  else if (watchStance(b)) { const all = panelStances(); all[billKey(b)] = watchStance(b); try { localStorage.setItem(STANCE_STORE, JSON.stringify(all)); } catch (e) {} }  // (and unstarring keeps it)
+  setWatch(b, isWatched(b) ? null : { seen: b.last || "", stance: panelStances()[billKey(b)] || null });
+}
 function markSeen(b) { const e = watchEntry(b); if (e && e.seen !== (b.last || "")) { setWatch(b, { ...e, seen: b.last || "" }); updateWatchTab(); } }
 // The Watchlist tab: how many bills, and a badge for how many have news.
 let TAB_LATER = false;

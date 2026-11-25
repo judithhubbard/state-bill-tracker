@@ -117,6 +117,25 @@ LIGHT_FIELDS = {"summary": "", "stage": 0, "passedS": False, "passedA": False, "
                 "prev": [], "veto": 0, "votes": [], "laws": [], "places": [], "memo": None}
 
 
+def light_plausible(path):
+    """Whether a light session's outcomes can be right: in a two-house legislature, a session with laws has bills that
+    passed one house only. Open States' older records read by states/openstates_records.py before its fix gave none
+    (Texas 2019: 1,285 laws, no bill past one house, 2026-11-25), and such a session stays off the site until it's read
+    again (with the sessions before it: the run back from the first full session stops there)."""
+    if STATE in ("ne", "dc"):
+        return True
+    try:
+        bills = json.load(gzip.open(path, "rt", encoding="utf-8")).get("bills") or []
+    except (OSError, ValueError):
+        return False
+    laws = sum(1 for r in bills if r.get("stage") == 5)
+    one = sum(1 for r in bills if (r.get("stage") or 0) < 3 and (r.get("passedS") or r.get("passedA")))
+    if len(bills) > 300 and laws > 50 and not one:
+        print(f"   light {os.path.basename(path)}: {laws} laws but no bill past one house only: left out until read again")
+        return False
+    return True
+
+
 def load_light():
     """{session: (records, number -> index, fetched, {})} for each light session before the first full one, back without a gap."""
     out = {}
@@ -126,7 +145,7 @@ def load_light():
     # Only an unbroken run back from the first full session (one every YEARS): a gap (Wyoming's 2017-2023 still to
     # come) would pool far-apart sessions as if they followed each other.
     run, s = [], (first - YEARS if first else None)
-    while s in have:
+    while s in have and light_plausible(have[s]):
         run.append(s)
         s -= YEARS
     for s in sorted(run):
