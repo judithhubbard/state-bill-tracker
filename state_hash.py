@@ -8,7 +8,7 @@ states fall back to), the site's address (SITE_BASE) and today's date: some word
 "in session"), so every state is rebuilt at least once a day.
 
 The files are in two groups: the page's code (page_files(): tracker.html, lists_pages/, the state's profile.js, how.html
-and weighin.html, issues.py), which build_data.py only wraps the data in, and everything else (data_files()), which the
+and weighin.html), which build_data.py only wraps the data in, and everything else (data_files()), which the
 data is worked out from. build_data.py keeps what it worked out from the data between builds, keyed by data_files() (its
 bundle_key()), so a change to the page's code alone rewrites the pages without working the data out again.
 Usage: python3 state_hash.py STATE
@@ -17,7 +17,7 @@ import datetime, glob, hashlib, os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 # The page's code: what build_data.py reads only to write the pages, the issues file and the status words (bill_labels()).
-PAGE_CODE = ["tracker.html", "issues.py"] + [os.path.join("lists_pages", f) for f in (
+PAGE_CODE = ["tracker.html"] + [os.path.join("lists_pages", f) for f in (
     "named.js", "watchrules.js", "sankey.js", "watchrows.js", "rows.css", "sankey.css", "billfacts.js", "billlabels.js", "profilefacts.js")]
 PAGE_IN_STATE = ("profile.js", "how.html", "weighin.html")
 
@@ -42,7 +42,10 @@ def _all(state):
     for p in sorted(glob.glob(os.path.join(HERE, "states", "*.py")) + glob.glob(os.path.join(HERE, "states", "*.json"))):
         yield p, False
     for f in ("governors.py", "party_history.py", "build_data.py", "stages.py", "fetch_contacts.py", "listing_dates.py",
-              "balance.py", "site_meta.py", "state_hash.py", "photos.py"):
+              "balance.py", "site_meta.py", "state_hash.py", "photos.py",
+              # (A large bill's main parts in its text, build_data.py's bill_parts(): the issues' rules and short names,
+              # worked out with the data since 2026-11-25.)
+              "issues.py", "issues_site.py"):
         yield os.path.join(HERE, f), False
     for f in PAGE_CODE:
         yield os.path.join(HERE, f), True
