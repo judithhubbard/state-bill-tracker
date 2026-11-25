@@ -1899,7 +1899,11 @@ function billLink(b) {
   const num_ = baseNum(b.nums[0]);
   const here = DATA.sessions.find((s) => s.session === DATA.session);
   if (here && /^https:\/\/claude\.ai/.test(here.url || "")) return `${here.url}#${num_}`;
-  const root = ROOT || new URL(BASE || "./", location.href).href.replace(/[^/]*$/, "");
+  // On the public site, the bill's own address (/ny/bill/S7421; another session's /ny/bill/2023/S7421), whose link previews
+  // name the bill (lists_pages/bill_worker.js, 2026-11-24, the owner); it sends people on to #S7421&share. Elsewhere (a
+  // local copy with no ROOT), the page's own address with #S7421&share.
+  if (ROOT) return `${ROOT}bill/${DATA.session === LATEST ? "" : `${DATA.session}/`}${num_}`;
+  const root = new URL(BASE || "./", location.href).href.replace(/[^/]*$/, "");
   return `${root}${DATA.session === LATEST ? "" : `${DATA.session}.html`}#${num_}&share`;
 }
 // A shared bill link ("Copy link to share this bill": #S7421&share, 2026-11-24, the owner) opens the bill on its own: a slim
