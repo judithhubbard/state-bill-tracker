@@ -28,7 +28,22 @@ def fetch(session, data):
         return False
     F.house_zip(session, zips)
     F.senate_year(session)
-    missing = [m for m in F.never_downloaded([session]) if m != "senators"]
+    # (Not "representatives": each sitting member's own page, read only for the live session; an old session's members come
+    # with its House zip's MemberList.xml. Every 2015-2018 run stopped on it, 2026-11-24.)
+    missing = [m for m in F.never_downloaded([session]) if m not in ("senators", f"{session}:representatives")]
+    if missing == [f"{session}:senate-bills"]:
+        # A Senate bill whose page or actions fail every time (2015's SB 631 and SB 796: HTTP 500, three tries a run) leaves
+        # the session out for good: under 1% of the Senate's bills missing is accepted, and named.
+        sb = F.folder(session, "senate")
+        rows = F.load(F.folder(session, "senate", "list.json")) or []
+        keys = [f"{r.get('billPrefix', '')}{r.get('billSuffix', '')}".upper() for r in rows]
+        keys = [k for k in keys if F.SENATE_KIND.match(k)]
+        gone = [k for k in keys if not (os.path.exists(os.path.join(sb, "bills", k + ".html"))
+                                        and os.path.exists(os.path.join(sb, "actions", k + ".html")))]
+        if keys and len(gone) <= 0.01 * len(keys):
+            print(f"mo {session}: {len(gone)} of {len(keys)} Senate bills couldn't be read ({' '.join(gone)}); written without "
+                  "their history", flush=True)
+            missing = []
     if missing:
         print(f"mo {session}: not downloaded: {' '.join(missing)}", flush=True)
     return not missing

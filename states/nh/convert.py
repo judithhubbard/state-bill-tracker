@@ -79,6 +79,15 @@ def iso(d):
     return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}" if m else ""
 
 
+def _real_day(day):
+    """The day when it's a real date, else "": a history line's own typo ("13/..." in a 2021-22 docket line) stopped the
+    session's conversion (light history, 2026-11-25); the entry's day is used then."""
+    try:
+        return day if day and datetime.fromisoformat(day) else ""
+    except ValueError:
+        return ""
+
+
 def number(kind, house, n):
     """The site's number: "HB54", "SB12", "HCACR1" (a CACR with its house of origin)."""
     letters = KINDS[kind]
@@ -346,7 +355,7 @@ def load_session(session):
             h = d[4] if d[4] in HOUSE else origin
             # The line's own date, never the effective date it may also give ("...; Chapter 340;eff. 01/01/2027", or a
             # line that is only one: "I. Sections 1-4 Effective 01/01/2027"): those take the entry's day.
-            day = iso(re.split(r"\beff(?:ective)?\b", a, flags=re.I)[0]) or iso(d[2])
+            day = _real_day(iso(re.split(r"\beff(?:ective)?\b", a, flags=re.I)[0])) or iso(d[2])
             if iso(d[2]) and abs((datetime.fromisoformat(iso(d[2])) - datetime.fromisoformat(day)).days) > 180:
                 day = iso(d[2])  # a slip in the line's date ("04/13/2022" in HB 49 of 2023, "03/06/2035" in HB 425 of 2025)
             if re.match(r"(?:Signed by|Vetoed by|Law Without|Enacted in accordance)", a, re.I):

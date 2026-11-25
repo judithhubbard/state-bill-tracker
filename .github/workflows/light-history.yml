@@ -44,7 +44,17 @@ jobs:
         # PDF with pypdf, as download.yml's New Hampshire job does.)
         if: inputs.state == 'nh'
         run: pip install -q pymssql pypdf
+      # A session too slow for one run keeps what it downloaded (states/light.py's LIGHT_KEEP), here between runs: the
+      # newest copy for the state is restored, and saved again at the end, even when the step ran out of time.
+      - name: Restore partial downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/light-keep
+          key: light-keep-${{ inputs.state }}-${{ github.run_id }}
+          restore-keys: light-keep-${{ inputs.state }}-
       - name: Read the sessions, committing each
+        # (Short of the job's limit, so the partial downloads are saved below.)
+        timeout-minutes: 320
         env:
           ST: ${{ inputs.state }}
           WANT: ${{ inputs.sessions }}
@@ -53,6 +63,8 @@ jobs:
           LEGISCAN_API_KEY: ${{ secrets.LEGISCAN_API_KEY }}
         run: |
           set -u
+          export LIGHT_KEEP="$HOME/light-keep"
+          mkdir -p "$LIGHT_KEEP"
           # (One identity for every git step, the pull's autostash included: a state's download may change tracked files.)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -71,3 +83,12 @@ jobs:
             fi
           done
           python3 states/light.py --counts "$ST"
+      - name: Keep partial downloads for the next run
+        if: always()
+        run: mkdir -p ~/light-keep && du -sh ~/light-keep
+      - name: Save partial downloads
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/light-keep
+          key: light-keep-${{ inputs.state }}-${{ github.run_id }}

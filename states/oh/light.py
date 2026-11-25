@@ -20,8 +20,13 @@ def fetch(session, data):
     finally:
         sys.argv = saved
     P.DATA = data  # (fetch.py writes under P.DATA: the scratch folder; states/light.py puts the real one back after)
-    F.INCOMPLETE.discard(session)
-    F.session(session)
+    F.LIGHT = True  # (empty answers read as "none"; the 132nd's failing list replaced by finding its bills by number)
+    # Bills whose requests failed are asked again (the pass reads only those, the others being on disk), up to 3 passes.
+    for attempt in range(3):
+        F.INCOMPLETE.discard(session)
+        F.session(session)
+        if session not in F.INCOMPLETE:
+            break
     folder = os.path.join(data, str(session))
     ok = session not in F.INCOMPLETE and all(os.path.exists(os.path.join(folder, n))
                                              for n in ("legislation.json", "legislators.json"))

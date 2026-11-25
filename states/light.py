@@ -108,10 +108,16 @@ def run(state, wanted=None):
         if os.path.exists(path_of(real, session)):
             print(f"{state} {session}: already written", flush=True)
             continue
-        scratch = tempfile.mkdtemp(prefix=f"light-{state}-{session}-")
+        # LIGHT_KEEP (the workflow's cached folder): a session too slow for one run (Wisconsin's 2015-16 from GitHub's
+        # machines, about 16 seconds a bill) keeps what it downloaded, and the next run's fetch reads only what's missing.
+        keep = os.environ.get("LIGHT_KEEP")
+        scratch = os.path.join(keep, f"{state}-{session}") if keep else tempfile.mkdtemp(prefix=f"light-{state}-{session}-")
+        os.makedirs(scratch, exist_ok=True)
+        written = False
         try:
             if not H.fetch(session, scratch):
-                print(f"{state} {session}: not downloaded; nothing written", flush=True)
+                print(f"{state} {session}: not downloaded; nothing written"
+                      + (" (what was downloaded is kept for the next run)" if keep else ""), flush=True)
                 continue
             P.DATA = scratch
             C = importlib.import_module(f"states.{state}.convert")
@@ -121,9 +127,11 @@ def run(state, wanted=None):
             print(f"{state} {session}: {body['counts']}; lacks {body['lacks'] or 'nothing'}; no topic {body['noTopic']}"
                   + (f"; committees with no topic mapping: {body['unmappedCommittees']}" if body["unmappedCommittees"] else ""), flush=True)
             wrote.append(session)
+            written = True
         finally:
             P.DATA = real
-            shutil.rmtree(scratch, ignore_errors=True)
+            if written or not keep:
+                shutil.rmtree(scratch, ignore_errors=True)
     return wrote
 
 
