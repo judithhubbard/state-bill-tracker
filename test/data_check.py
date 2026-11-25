@@ -945,6 +945,16 @@ def check_light(state):
         bills = b["bills"]
         say(state, "LOOK", f"light {s}: {b['counts']} (compare with the official totals); lacks {b['lacks'] or 'nothing'}; "
                             f"{b.get('noTopic', 0)} with no topic")
+        # (What build_data.py's light_plausible() leaves off the site, said here so a held-back session is seen:
+        # Open States' Virginia 2018 and Michigan 2019-20 stop short of the governor's actions, 2026-11-25.)
+        laws = sum(1 for x in bills if x.get("stage") == 5)
+        waiting = sum(1 for x in bills if x.get("stage") in (3, 4) and "const" not in (x.get("topics") or []))
+        one = sum(1 for x in bills if (x.get("stage") or 0) < 3 and (x.get("passedS") or x.get("passedA")))
+        if laws > 50 and waiting > 0.15 * (laws + waiting):
+            say(state, "LOOK", f"light {s}: left off the site: {waiting} bills past both houses with no outcome against {laws} laws "
+                                f"(records that stop short of the governor's actions)")
+        elif state not in ("ne", "dc") and len(bills) > 300 and laws > 50 and not one:
+            say(state, "LOOK", f"light {s}: left off the site: {laws} laws but no bill past one house only")
         future = sorted({x["nums"][0] for x in bills if any(str(d)[:10] > tomorrow for d in
                          [x.get("first") or "", x.get("last") or ""] + [p for d in x.get("keyDates") or [] for p in str(d).split(";")])})
         if future:
