@@ -75,6 +75,8 @@ def main():
     # What each current bill does, in the Legislature's words (only documents not read before).
     from states.nj import texts
     texts.main(CURRENT)
+    # Past sessions' too, once each, for at most 15 minutes a run (texts.backfill()).
+    texts.backfill([s for s in range(FIRST, CURRENT, 2)], 15)
     # The current session's legislators, committees and leaders, once a day (it's one request per legislator).
     from states.nj import contacts
     path = os.path.join(P.DATA, f"contacts_{CURRENT}.json")

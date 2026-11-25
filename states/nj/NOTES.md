@@ -32,3 +32,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   same kind the committee agendas already had: the data check's "aren't records' numbers" FAIL was there before). Since
   2026-11-22 `agendas()` keeps only the session's records (`_main_bills()`, the rule load_session() uses: A and S bills,
   ACR and SCR constitutional amendments), so those resolutions (37 of 1,077 in 2026: AJR103, ACR144 ...) are left out.
+- **Past sessions' "What it does" (2026-11-25):** texts.py had run only for the current session, so the 2024-25 page (and
+  2022, 2020, 2018) had no "What it does" for any bill, the laws signed in January 2026 among them. fetch.py now also runs
+  `texts.backfill()` on the past sessions shown, newest first, for at most 15 minutes a run (the job takes about 30 seconds
+  otherwise); a session whose documents are all read gets data/nj/texts_<session>.done and isn't read again. The
+  DB<year>_TEXT.zip files list each document (BILLWP.TXT) but don't hold their text, so they're read from pub.njleg.gov
+  (robots.txt allows all), about 0.27 seconds each: about 45,000 documents for 2018-24 (2024: 12,000), some 15 runs. The
+  build reads texts_<session>.json for every session (bill_texts(), outside the finished-session cache), and a new file
+  changes the state's build fingerprint.

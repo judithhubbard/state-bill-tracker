@@ -63,7 +63,25 @@ def day(md):
     return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}" if m else ""
 
 
-def main(session):
+def done_path(session):
+    return os.path.join(P.DATA, f"texts_{session}.done")
+
+
+def backfill(sessions, minutes):
+    """Past sessions' texts (2026-11-25, the owner: the 2024-25 page had no "What it does" at all, since only the current
+    session was read): for at most `minutes` a run, newest session first; one whose documents are all read is marked
+    (texts_<session>.done) and never read again, as its documents don't change. About 45,000 documents for 2018-24 at
+    about 0.27 seconds each (measured): about 3.5 hours in all, some 15 runs (a day or two)."""
+    until = time.time() + minutes * 60
+    for s in sorted(sessions, reverse=True):
+        if os.path.exists(done_path(s)) or not os.path.exists(os.path.join(P.DATA, f"DB{s}_TEXT.zip")):
+            continue
+        if time.time() >= until:
+            break
+        main(s, until)
+
+
+def main(session, until=None):
     z = zipfile.ZipFile(os.path.join(P.DATA, f"DB{session}_TEXT.zip"))
     docs_path = os.path.join(P.DATA, f"docs_{session}.json")
     docs = json.load(open(docs_path)) if os.path.exists(docs_path) else {}  # address -> the part we keep
@@ -94,6 +112,9 @@ def main(session):
     pick = {"I": statement, "S": committee, "FE": fiscal}
     print(f"texts {session}: {len(todo)} documents to read")
     for n, url in enumerate(todo):
+        if until and time.time() >= until:
+            print(f"texts {session}: {len(todo) - n} documents left for the next run")
+            break
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "statebilltracker.org data fetch"})
             with urllib.request.urlopen(req, timeout=60) as r:
@@ -108,6 +129,8 @@ def main(session):
             json.dump(docs, open(docs_path, "w"))
         time.sleep(0.15)
     json.dump(docs, open(docs_path, "w"))
+    if until and not set(kinds) - set(docs):  # (a past session's every document read: not again)
+        open(done_path(session), "w").write(datetime.now(ZoneInfo(P.TIMEZONE)).isoformat())
 
     out = {}
     for bill, ds in wanted.items():
