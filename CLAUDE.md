@@ -847,7 +847,17 @@ ARCHITECTURE.md (repo root) is the map of the whole site: the pipeline from down
   teal with ✓, a law's green, now gold, ahead outlined) and `nextSteps()`'s block (bold "Next: ...", grey context and the
   step's odds from `insights.steps` (`stepOdds()`: per committee, split by whether the bill passed the other house first),
   then one "Ask ..." line and email per person who decides), and folds the rest (`pfold()`: What it does, History, Who
-  sponsors it, other sessions, Similar bills, Every action); watchlist cards keep their sections open; a row's pips, label and date are lists_pages/rows.css's,
+  sponsors it, other sessions, Similar bills, Every action). The action area since 2026-11-25 (the owner's "layout B",
+  chosen over a two-pane design): after the "Next:" block, one "Your side" line (`sideLine()`), then one row per person to
+  write to (`taList()` from `taGroups()`: label and the ask, and a "Draft ›" button that opens the drafted message under the
+  row in one click and becomes "Hide draft" in the same spot; the contacts, email or form and phone, are the draft's "To:"
+  line; "Why it matters" two lines, growing as typed); no "What you can do"/"Who to write to" headings or "Take action" step;
+  "Copy link to share" and "Your legislators: ... change" in one quiet `.billfoot` row at the bottom (on watchlist cards
+  with "+ Log an action"); a decided bill's decision line, then the same rows for whoever is asked something (a vetoed or
+  dead bill's sponsors: "reintroduce it next session"), a law with nobody to ask its line alone. While the visitor scrolls
+  inside an open bill, `pinBill()` pins "number · title · status" (`.pinhead`) under the list's bar. Your legislators who
+  sponsor a bill are still asked to urge the governor on a bill before the governor (`book.reps(..., sponsorsToo)`).
+  Watchlist cards open in the same way; a row's pips, label and date are lists_pages/rows.css's,
   the same in every view) and `nextSteps()` / `planFor()` /
   `contactBook()` (who to contact and what to ask; `draftBtn()` adds "Copy email" / "Copy message",
   which uses `draftFor()`).

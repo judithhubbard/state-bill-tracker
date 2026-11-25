@@ -104,6 +104,43 @@ html.embed body { padding: 0; background: var(--sheet); }
 .mainparts li { margin: 0 0 4px; }
 .mainparts ol.secs { margin: 6px 0 0; padding-left: 1.6em; font-size: 14px; color: var(--ink-2); }
 .mainparts ol.secs li { margin: 0 0 3px; }
+/* The action area (2026-11-25, the owner's layout B): one row per person, "Draft ›" opens the draft below it in one
+   click; "Your side" once; the bill's extras in one quiet row (.billfoot); the open bill's header pinned (.pinhead). */
+.ta2-side { display: flex; align-items: center; gap: 10px; margin: 14px 0 6px; font-size: 14px; color: var(--ink-2); }
+.ta2-side .seg button { text-transform: none; }
+.ta.ta2 { max-width: 78ch; }
+.ta2-who { list-style: none; margin: 4px 0 0; padding: 0; display: grid; }
+.ta2-row { border-top: 1px solid var(--rule); padding: 12px 0; }
+.ta2-row:last-child { border-bottom: 1px solid var(--rule); }
+.ta2-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: center; }
+.ta2-w { display: grid; gap: 2px; min-width: 0; }
+.ta2-w .w { font-weight: 700; font-size: 15px; }
+.ta2-w .d { color: var(--ink-2); font-size: 14px; }
+.ta2-go { white-space: nowrap; min-width: 104px; }
+.ta2-draft { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); font-size: 14px; line-height: 1.45; display: grid; gap: 6px; }
+.ta2-draft p { margin: 0; }
+.ta2-to { color: var(--ink-2); font-size: 13.5px; overflow-wrap: anywhere; }
+.ta2-subj { color: var(--ink-2); font-size: 13.5px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+.ta2-subj b { color: var(--ink); font-weight: 600; }
+.ta2-draft .ta-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.ta2-draft textarea.ta-fld { field-sizing: content; min-height: 3.2em; resize: vertical; margin: 0; }
+.ta2-draft input.ta-fld { margin: 0; }
+.ta2-draft .ta-send { margin-top: 4px; }
+.billfoot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; font-size: 13.5px; color: var(--ink-2); padding-top: 10px; border-top: 1px solid var(--rule); }
+.billfoot .yourreps { margin: 0; font-size: 13.5px; }
+.wcan .billfoot { border-top: 0; padding-top: 4px; }  /* (on a card it follows the rows' own last line) */
+/* An open bill's side is chosen once, in its panel (.ta2-side): the row's own buttons under the star hide meanwhile. */
+#list .bill[open] > summary .sides { display: none; }
+/* The pinned header (pinBill()). */
+.pinhead { display: none; }
+.bill.pin-on .pinhead { display: flex; position: sticky; top: var(--barH, 0px); z-index: 4; }
+.pinhead { align-items: baseline; gap: 10px; padding: 9px 12px; margin: 0 -12px 8px; background: var(--paper); border-bottom: 1px solid var(--rule);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .06); font-size: 14px; }
+.pinhead .pn { font: 700 13px/1 var(--mono, ui-monospace, monospace); flex: none; }
+.pinhead .pt { font-weight: 600; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; }
+.pinhead .ps { flex: none; font-size: 12.5px; color: var(--ink-2); }
+.pinhead .ps .lbl, pinhead .ps .tag { font-size: 12.5px; }
+
 /* A shared bill on its own (soloOn()): the site's home link (a newcomer learns what site this is), the state's name, the bill,
    and "See all <state> bills". */
 html.solo #siteYours, html.solo #siteAboutTop, html.solo #sessions, html.solo #power, html.solo #legsBox, html.solo #whereBox, html.solo #notice,
@@ -1073,55 +1110,16 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
 .next.nx .nxb .hint { margin-top: 4px; }
 .next.nx > .hint { margin: 10px 0 0; }
 .next.nx.done .nxb:empty { display: none; }
-/* "Take action" (taPanel()): who to write to, a choice each (one open at a time, its drafted email under it), then the
-   ways to send. In the bill panel it opens under the next step; on a watchlist card it's open. */
-.ta-open { margin: 12px 0 0; justify-self: start; width: auto; }
-.ta-box { margin-top: 10px; }
-.ta { background: var(--paper); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; max-width: 78ch; }
-.ta-h { margin: 0 0 8px; font: 700 12px/1.3 var(--body); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
-.ta-who { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.ta-pick { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 12px; align-items: center; width: 100%; text-align: left; font: inherit; color: var(--ink);
-  background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 9px 12px; cursor: pointer; }
-.ta-pick:hover { border-color: var(--navy); }
-.ta-pick:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
-.ta-who li.sel > .ta-pick { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); border-radius: 8px 8px 0 0; }
-.ta-pick .w { font-weight: 700; font-size: 15px; min-width: 0; }
-.ta-pick .d { grid-column: 1; color: var(--ink-2); font-size: 14px; min-width: 0; }
-.ta-pick .go { grid-row: 1 / 3; grid-column: 2; font-weight: 600; font-size: 14px; color: var(--navy); white-space: nowrap; }
-.ta-mail { background: var(--sheet); border: 1px solid var(--navy); border-top: 0; border-radius: 0 0 8px 8px; padding: 10px 12px 12px; display: grid; gap: 10px; }
-.ta-ppl { list-style: none; margin: 0; padding: 0; font-size: 14px; display: grid; gap: 3px; }
-.ta .ta-ppl li { display: block; margin: 0; }
-.ta-ppl b { font-weight: 600; margin-right: 4px; }
-.ta .ta-ppl a { display: inline; overflow-wrap: anywhere; }
-.ta-ppl .phone, .ta-gov .phone { white-space: nowrap; }
-@media (max-width: 600px) { .ta-ppl { font-size: 13px; gap: 6px; } .ta-ppl li { line-height: 1.35; } }
-.ta-gov { margin: 0; font-size: 14px; }
+/* Whom to write to (taList(): .ta2-*, above), and the draft's fields and buttons. */
 .ta-all { justify-self: start; font-size: 13.5px; }
-.ta-write { justify-self: start; }
-.ta-hide { margin-left: auto; font-size: 13.5px; }
-.ta-msg { border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; font-size: 14px; line-height: 1.5; }
-.ta .ta-msg p { margin: 0 0 8px; }
-.ta .ta-msg .ta-to { color: var(--ink-2); font-size: 13px; margin: 0 0 2px; overflow-wrap: anywhere; }
-.ta .ta-msg .ta-subj { color: var(--ink-2); font-size: 13px; border-bottom: 1px solid var(--rule); padding-bottom: 8px; margin-bottom: 10px; }
-.ta-msg .ta-subj b { color: var(--ink); font-weight: 600; }
 .ta-lbl { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 10px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin: 2px 0 3px; }
 .ta-lbl, .ta-lbl span { white-space: nowrap; }
-/* The boxes' own placeholders say what goes in them: the labels are for screen readers only (2026-11-24, the owner). */
-.ta-msg .ta-lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
 .ta-lbl span { font-weight: 500; }
-/* "Kept on this device": small and grey, inside the box's lower right corner (the owner's choice, 2026-11-24). */
-.ta-box { position: relative; display: block; }
-.ta-box .ta-fld { padding-bottom: 20px; }
-.ta-box input.ta-fld { padding-bottom: 6px; padding-right: 150px; }
-.ta-kept { position: absolute; right: 9px; bottom: 6px; font-size: 11.5px; color: var(--ink-2); opacity: .75; pointer-events: none; }
-.ta-box:has(input) .ta-kept { top: 50%; bottom: auto; transform: translateY(-50%); }
-@media (max-width: 600px) { .ta-box input.ta-fld { padding-right: 9px; padding-bottom: 20px; } .ta-box:has(input) .ta-kept { top: auto; bottom: 5px; transform: none; } }
 .ta-fld { display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; line-height: 1.5; color: var(--ink); background: var(--sheet);
   border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; margin: 0 0 8px; }
 textarea.ta-fld { resize: vertical; min-height: 4.6em; }
-@media (max-width: 600px) { textarea.ta-fld { min-height: 7.6em; } .ta { padding: 10px; } .ta-mail { padding: 10px; } }
+@media (max-width: 600px) { textarea.ta-fld { min-height: 7.6em; } }
 .ta-fld:focus-visible { outline: 3px solid var(--hover); outline-offset: 0; }
-.ta .ta-msg .ta-thanks { margin: 2px 0 4px; }
 .ta-send { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .ta-with { font-size: 13.5px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .ta-with select { font: inherit; font-size: 13.5px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 2px 4px; }
@@ -2939,13 +2937,16 @@ function contactBook(b, canMove = true, oppose = false) {
       return mine ? L : null;
     },
     // (star: they decide the next step, a floor vote already on the calendar.)
-    reps(houses = BOTH, ask, star) {
+    // (sponsorsToo: a sponsor among our legislators is asked as well, as when urging the governor, which a sponsor does
+    // best; 2026-11-25, the owner's Assembly member, a co-sponsor, was left out on a bill on the governor's desk.)
+    reps(houses = BOTH, ask, star, sponsorsToo = false) {
       for (const r of myReps()) if (houses.includes(r.house)) {
         // Nothing to ask our legislators if they already sponsor or co-sponsor it; otherwise the
         // stage's ask, or to sign on.
         const theirs = b.vers.some((v) => v.p[0] === r.house && (lastName(v.sponsor) === r.last || v.cosponsors.some((n) => lastName(n) === r.last)));
+        const skip = theirs && !(sponsorsToo && !oppose);
         add(r.name, r.house, `your ${MEMBER[r.house]}`,
-          theirs ? "" : ask || (!canMove || oppose ? "" : "sign on as a co-sponsor"), star && !theirs);
+          skip ? "" : ask || (!canMove || oppose ? "" : "sign on as a co-sponsor"), star && !skip);
       }
     },
     // Only people with something to do: sponsors already push for their own bills.
@@ -3223,12 +3224,12 @@ function planFor(b, stance = "support") {
     what = `<p class="when">Next: ${n.what}</p>`;
     if (n.gov) gov = A(...n.gov);
     (n.leaders || []).forEach((h) => book.leader(h, L(A(...n.leaderAsk)), live));
-    book.reps(n.leaders || BOTH, A(...n.reps));
+    book.reps(n.leaders || BOTH, A(...n.reps), false, !n.leaders && !!n.gov);  // (urging the governor: sponsors too)
   } else if (b.stage === 4) {
     due = b.due;
     what = `<p class="when">Next: ${EXEC.the} signs or vetoes it${b.due ? `, by about ${fmtDate(b.due)}` : ""}.</p>`;
     gov = A("sign it", "veto it") + (b.due ? ` by ${fmtDate(b.due)}` : "");
-    book.reps(BOTH, A(`urge ${EXEC.the} to sign it`, `urge ${EXEC.the} to veto it`));
+    book.reps(BOTH, A(`urge ${EXEC.the} to sign it`, `urge ${EXEC.the} to veto it`), false, true);
   } else if (b.stage === 5) {
     what = `<p class="when">${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}.${partlyVetoed(b) ? ` ${EXEC.The} vetoed part of it.` : ""}${govFrom(b)}</p>`;
     b.vers.forEach((v) => book.sponsor(v));
@@ -3401,7 +3402,7 @@ function deciderLines(b, plan) {
   const lines = [];
   const keys = plan.book.entries().filter((p) => p.star && p.asks.length);
   if (plan.leaderFirst) keys.sort((x, y) => /decides which bills/.test(y.roles[0] || "") - /decides which bills/.test(x.roles[0] || ""));
-  // (The emails are in "Take action" under the block: taPanel().)
+  // (The emails are in the rows under the block: taList().)
   if (plan.gov) lines.push(`<p class="ask1">Ask ${EXEC.the} to ${esc(plan.gov)}.</p>`);
   for (const p of keys) {
     const info = infoOf(p), title = info.title || (/\b(?:Committee|Board)\b/.test(p.name) ? "" : TITLE[p.house]);
@@ -3420,7 +3421,7 @@ function deciderLines(b, plan) {
 }
 // "Take action" (2026-11-24, the owner's design): who to write to about the bill's next step, most influential first,
 // each with its own drafted email. Shared by the bill panel's next step, the watchlist's cards and /your-bills/ (whose
-// cards the state's page draws in a frame). taGroups(): the choices; taPanel(): the panel; the clicks are wire()'s.
+// cards the state's page draws in a frame). taGroups(): the choices; taList(): the rows; the clicks are wire()'s.
 // The reason a person writes is kept per bill (STORE "why"), their sign-off once for every state ("abt:signoff"), the way
 // they send ("abt:sendwith"); nothing of it leaves the browser or goes into a shared list.
 const TA_STATE = new Map();   // billKey -> {g: the open choice, all: sponsors added, asked: the choice a draft was sent or copied for}
@@ -3436,7 +3437,9 @@ const titledList = (ps) => {
 };
 function taGroups(b, stance) {
   const opp = stance === "oppose", plan = planFor(b, opp ? "oppose" : "support");
-  if (!plan || !plan.actionable) return [];
+  // (A decided bill too, when someone is asked something: a vetoed or dead bill's sponsors, "reintroduce it next session";
+  // 2026-11-25, the owner: their cards were laid out open, unlike an open bill's rows.)
+  if (!plan || (!plan.actionable && !plan.book.entries().some((e) => e.asks.length))) return [];
   const people = DATA.contacts?.people || {};
   const infoOf = (name, house) => people[name] || Object.entries(people).find(([n]) => lastName(n) === lastName(name) && (LEGS.find((L) => L.name === n)?.house || house) === house)?.[1] || {};
   const P = (name, house) => ({ name, house, info: infoOf(name, house) });
@@ -3483,7 +3486,8 @@ function taGroups(b, stance) {
     const r = p.roles[0] || "", ask = p.asks.join("; ").replace(/ \(you sponsor it\)/g, "").replace(/your committee's agenda/g, "the committee agenda");
     const L = DATA.contacts?.leaders?.[p.house];
     const role = /decides which bills/.test(r) ? (L ? `The ${leaderTitle(L)}` : "The leader")
-      : /^chair of/.test(r) ? "The chair" : /^your /.test(r) ? `Your ${r.slice(5)}` : /^member of/.test(r) ? "A committee member" : "";
+      : /^chair of/.test(r) ? "The chair" : /^your /.test(r) ? `Your ${r.slice(5)}` : /^member of/.test(r) ? "A committee member"
+      : /^sponsor/i.test(r) ? "The sponsor" : "";
     out.push({ k: `p:${p.house}:${lastName(p.name)}`, label: `${role ? `${role}, ` : ""}${titledList([P(p.name, p.house)])}`, desc: `Ask them to ${ask}.`, people: [P(p.name, p.house)], kind: "ask", ask });
     have.add(`${p.house}:${lastName(p.name)}`);
   }
@@ -3526,46 +3530,48 @@ function taWrote(b) {
   const e = logOf(b).find((x) => x.how === "Email");
   return e ? `✓ You wrote to ${e.who} · ${new Date(`${e.d}T12:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "";
 }
-function taPanel(b, stance) {
+// Whom to write to (2026-11-25, the owner's layout B): one row per person, each with "Draft ›", which opens the drafted
+// message under it in one click and becomes "Hide draft" in the same spot; the contacts are the draft's first line.
+function taList(b, stance) {
   const groups = taGroups(b, stance);
   if (!groups.length) return "";
-  const k = billKey(b), st = TA_STATE.get(k) || {}, open = groups.length === 1 ? groups[0].k : st.g;
+  const k = billKey(b), st = TA_STATE.get(k) || {};
   let sign = "", how = "";
   try { sign = localStorage.getItem("abt:signoff") || ""; how = localStorage.getItem("abt:sendwith") || ""; } catch (e) {}
-  const why = TA_WHY()[k] || "";
-  const item = (g) => {
-    const on = g.k === open;
-    let body = "";
+  const why = TA_WHY()[k] || "", name = (SEND_WITH.find(([v]) => v === how) || [])[1];
+  const row = (g) => {
+    const on = st.m === g.k;
+    const btn = `<button type="button" class="act-btn ${on ? "" : "primary "}ta2-go" data-ta-write="${esc(g.k)}" data-idx="${b.idx}" aria-expanded="${on}">${on ? "Hide draft" : "Draft ›"}</button>`;
+    let draft = "";
     if (on) {
       const d = taDraft(b, g, stance, st.all);
-      const contact = d.ps.map((p) => `<li><b>${esc(titledList([p]))}</b> ${p.info.email ? `<a href="mailto:${esc(p.info.email)}" data-contact="email|ta">${esc(p.info.email)}</a>` : p.info.form || p.info.url ? `<a href="${esc(p.info.form || p.info.url)}" target="_blank" rel="noopener">contact form</a>` : ""}${p.info.phone ? ` · <a class="phone" href="tel:${esc(p.info.phone.replace(/[^\d+]/g, ""))}" data-contact="call|ta">${esc(p.info.phone)}</a>` : ""}</li>`).join("");
-      const gov = g.gov && GOV_REACH ? `<p class="ta-gov">${GOV_REACH}</p>` : "";
+      const phone = d.ps.map((p) => p.info.phone).find(Boolean);
+      const to = g.gov && GOV_REACH ? GOV_REACH
+        : [d.to.length ? d.to.map((e) => `<a href="mailto:${esc(e)}" data-contact="email|ta">${esc(e)}</a>`).join(", ") : "",
+           d.form.map((p) => `<a href="${esc(p.info.form || p.info.url)}" target="_blank" rel="noopener">${esc(shortName(p.name))}'s web form</a>`).join(", "),
+           phone ? `or call <a class="phone" href="tel:${esc(phone.replace(/[^\d+]/g, ""))}" data-contact="call|ta">${esc(phone)}</a>` : ""].filter(Boolean).join(" · ");
       const n = g.extra?.length || 0;
-      const more = n ? `<button type="button" class="linkish ta-all" data-ta-all="${b.idx}">${st.all ? `Leave out the ${n} sponsor${n > 1 ? "s" : ""}` : `Also write to the ${n} sponsor${n > 1 ? "s" : ""} on the committee (${esc(andList(g.extra.map((p) => shortName(p.name))))})`}</button>` : "";
-      const name = (SEND_WITH.find(([v]) => v === how) || [])[1];
-      // The drafted message opens only when asked for (2026-11-24, the owner: the whole email open was too bulky).
-      const write = `<button type="button" class="act-btn primary ta-write" data-ta-write="${esc(g.k)}" data-idx="${b.idx}" aria-expanded="false">Write a message</button>`;
-      body = st.m !== g.k ? `<div class="ta-mail">${contact ? `<ul class="ta-ppl">${contact}</ul>` : ""}${gov}${write}</div>` : `<div class="ta-mail">${contact ? `<ul class="ta-ppl">${contact}</ul>` : ""}${gov}${more}
-        <div class="ta-msg">${d.to.length ? `<p class="ta-to">To: ${esc(d.to.join(", "))}</p>` : ""}<p class="ta-subj"><b>Subject:</b> ${esc(d.subject)}</p>
-          <p>${esc(d.greet)}</p><p>${esc(d.line)}</p>
-          <label class="ta-lbl" for="taw-${b.idx}">Why it matters to you</label>
-          <span class="ta-box"><textarea id="taw-${b.idx}" class="ta-fld" rows="3" data-ta-why="${b.idx}" placeholder="Why it matters to you, in a sentence or two. Offices give your own words the most weight.">${esc(why)}</textarea><span class="ta-kept" aria-hidden="true">Kept on this device</span></span>
-          <p class="ta-thanks">Thank you,</p>
-          <label class="ta-lbl" for="tas-${b.idx}">Your name and town</label>
-          <span class="ta-box"><input id="tas-${b.idx}" class="ta-fld" data-ta-sign value="${esc(sign)}" placeholder="Your name and town" autocomplete="name"><span class="ta-kept" aria-hidden="true">Kept for all your bills</span></span>
-        </div>
-        ${d.form.length && !d.to.length ? `<p class="ta-note">${esc(andList(d.form.map((p) => titledList([p]))))} ${d.form.length > 1 ? "take" : "takes"} messages through a web form: copy the message, then open the form above.</p>` : ""}
-        <div class="ta-send">${d.to.length ? `<button type="button" class="act-btn primary" data-ta-send="${b.idx}">${name ? `Open in ${esc(name)}` : "Open in your email app"}</button>` : ""}<button type="button" class="act-btn" data-ta-copy="${b.idx}">Copy message</button>${d.to.length ? `<label class="ta-with">Send with <select data-ta-with>${SEND_WITH.map(([v, l]) => `<option value="${v}"${v === (how || "app") ? " selected" : ""}>${esc(l.charAt(0).toUpperCase() + l.slice(1))}</option>`).join("")}</select></label>` : ""}<button type="button" class="linkish ta-hide" data-ta-write="${esc(g.k)}" data-idx="${b.idx}" aria-expanded="true">Hide message</button></div>
+      const more = n ? `<button type="button" class="linkish ta-all" data-ta-all="${b.idx}">${st.all ? `Leave out the ${n} sponsor${n > 1 ? "s" : ""}` : `Also write to the ${n} sponsor${n > 1 ? "s" : ""} on the committee`}</button>` : "";
+      draft = `<div class="ta2-draft">
+        <p class="ta2-to">To: ${to}</p>${more}
+        <p class="ta2-subj"><b>Subject:</b> ${esc(d.subject)}</p>
+        <p>${esc(d.greet)}</p><p>${esc(d.line)}</p>
+        <label class="ta-lbl" for="taw-${b.idx}">Why it matters to you</label>
+        <textarea id="taw-${b.idx}" class="ta-fld" rows="2" data-ta-why="${b.idx}" placeholder="Why it matters to you, in a sentence or two">${esc(why)}</textarea>
+        <p class="ta2-thanks">Thank you,</p>
+        <label class="ta-lbl" for="tas-${b.idx}">Your name and town</label>
+        <input id="tas-${b.idx}" class="ta-fld" data-ta-sign value="${esc(sign)}" placeholder="Your name and town" autocomplete="name">
+        <div class="ta-send">${d.to.length ? `<button type="button" class="act-btn primary" data-ta-send="${b.idx}">${name ? `Open in ${esc(name)}` : "Open in your email app"}</button>` : ""}<button type="button" class="act-btn" data-ta-copy="${b.idx}">Copy message</button>${d.to.length ? `<label class="ta-with">Send with <select data-ta-with>${SEND_WITH.map(([v, l]) => `<option value="${v}"${v === (how || "app") ? " selected" : ""}>${esc(l.charAt(0).toUpperCase() + l.slice(1))}</option>`).join("")}</select></label>` : ""}</div>
         ${st.asked === g.k ? `<p class="ta-did"><b>Did you send it?</b> <button type="button" class="act-btn primary small" data-ta-yes="${b.idx}">Yes, note it</button> <button type="button" class="act-btn small" data-ta-no="${b.idx}">Not yet</button></p>` : ""}
       </div>`;
     }
-    return `<li class="${on ? "sel" : ""}"><button type="button" class="ta-pick" data-ta-pick="${esc(g.k)}" data-idx="${b.idx}" aria-expanded="${on}"><span class="w">${esc(g.label)}</span><span class="d">${esc(g.desc)}</span>${on ? "" : `<span class="go">Write ›</span>`}</button>${body}</li>`;
+    return `<li class="ta2-row${on ? " sel" : ""}">${on ? `<span hidden data-ta-pick="${esc(g.k)}"></span>` : ""}<div class="ta2-head"><div class="ta2-w"><span class="w">${esc(g.label)}</span><span class="d">${esc(g.desc)}</span></div>${btn}</div>${draft}</li>`;
   };
-  return `<div class="ta" data-ta="${b.idx}" data-tastance="${stance === "oppose" ? "oppose" : "support"}"><p class="ta-h">Who to write to</p><ul class="ta-who">${groups.map(item).join("")}</ul></div>`;
+  return `<div class="ta ta2" data-ta="${b.idx}" data-tastance="${stance === "oppose" ? "oppose" : "support"}"><ul class="ta2-who">${groups.map(row).join("")}</ul></div>`;
 }
 // The panel redrawn in place wherever it shows (the bill's panel, its watchlist card).
 function taRedraw(b) {
-  for (const el of document.querySelectorAll(`.ta[data-ta="${b.idx}"]`)) el.outerHTML = taPanel(b, el.dataset.tastance);
+  for (const el of document.querySelectorAll(`.ta[data-ta="${b.idx}"]`)) el.outerHTML = taList(b, el.dataset.tastance);
 }
 // The send links: Gmail, Outlook and Yahoo open a compose window in the browser; "your email app" is the computer's own.
 function taSendUrl(how, to, subject, body) {
@@ -3612,7 +3618,6 @@ function nextSteps(b) {
   const who = plan.book.html((plan.gov ? govItem(plan.gov, b) : "") + (plan.govAlso ? govItem(plan.govAlso, b, false) : ""));
   // The sponsors' contact details are on their cards below: the reintroduce line doesn't repeat them.
   if (!plan.actionable) what += reintroAsk(b, panelStance(b), !!who);
-  const stance = plan.actionable && who ? `<p class="hint">You <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${side === s}">${s}</button>`).join("")}</span> this bill</p>` : "";
   // The people who decide the next step, a line each; everyone else folds away.
   const box = document.createElement("ul");
   box.innerHTML = who;
@@ -3629,17 +3634,19 @@ function nextSteps(b) {
       : b.stage === 6 ? `Vetoed${D.vetoed ? ` ${fmtDate(D.vetoed)}` : ""}` : "";
     if (b.stage === 5) what = (partlyVetoed(b) ? `<p class="when">${EXEC.The} vetoed part of it.</p>` : "") + (govFrom(b) ? `<p class="when">${govFrom(b).trim()}</p>` : "");
     if (b.stage === 6) what = what.replace(/^(<p class="when">)Vetoed\. /, "$1");
-    return `<div class="next nx done">${roadPic(b, b.stage <= 2)}<div class="nxb">${outcome ? `<p class="t">${esc(outcome)}</p>` : ""}${what}${contacts}</div></div>`;
+    // Then the people to write to as rows with "Draft ›" (the sponsors, to reintroduce it), as on an open bill; a law with
+    // nobody to ask shows its decision line only.
+    const tl = taList(b, side || "support");
+    return `<div class="next nx done">${roadPic(b, b.stage <= 2)}<div class="nxb">${outcome ? `<p class="t">${esc(outcome)}</p>` : ""}${what}${tl ? "" : contacts}</div>${tl ? sideLine(b, side) + tl : ""}</div>`;
   }
-  // Inside the gold rule: the step (bold), its context in grey, then whom to ask. The side switch and your legislators
-  // follow it, outside (2026-11-24, the owner: the block was too busy).
+  // Inside the gold rule: the step (bold), its context in grey. Then "Your side" once, and one row per person to write to,
+  // each with "Draft ›" (taList(): 2026-11-25, the owner's layout B); where nobody can be written to, the asks as lines.
   what = what.replace(/<p class="when">/g, '<p class="when m">').replace(/<p>/g, '<p class="m">');
-  // "Take action": who to write to, each with a drafted email (taPanel()); folded until asked for.
-  const ta = taPanel(b, side || "support"), taOn = !!TA_STATE.get(billKey(b))?.open;
-  const take = ta ? `<button type="button" class="act-btn primary ta-open" data-ta-toggle="${b.idx}" aria-expanded="${taOn}">Take action ${taOn ? "⌄" : "›"}</button><div class="ta-box"${taOn ? "" : " hidden"}>${ta}</div>` : "";
-  const wrote = taWrote(b);
-  return `<div class="next nx">${roadPic(b)}<div class="nxb">${head ? `<p class="t">${head}</p>` : ""}${what}${odds}${lines.join("")}${wrote ? `<p class="ta-wrote">${esc(wrote)}</p>` : ""}</div>${take}${stance}${repsLine()}${contacts}</div>`;
+  const tl = taList(b, side || "support"), wrote = taWrote(b);
+  return `<div class="next nx">${roadPic(b)}<div class="nxb">${head ? `<p class="t">${head}</p>` : ""}${what}${odds}${tl ? "" : lines.join("")}${wrote ? `<p class="ta-wrote">${esc(wrote)}</p>` : ""}</div>${tl ? sideLine(b, side) : ""}${tl}${tl ? "" : contacts}</div>`;
 }
+// "Your side", once, above the people to write to.
+const sideLine = (b, side) => `<p class="ta2-side">Your side <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${side === s}">${s[0].toUpperCase() + s.slice(1)}</button>`).join("")}</span></p>`;
 
 // Bills still open for comment, listed right here (filters on the Bills tab don't apply).
 let openShown = 25;
@@ -5757,7 +5764,8 @@ const logOf = (b) => keysOf(b).flatMap((k) => LOG[k] || []).sort((x, y) => y.d.l
 function addLog(b, entry) { const k = billKey(b); (LOG[k] ||= []).push({ id: Date.now(), ...entry }); saveLog(); }
 function removeLog(id) { for (const k of Object.keys(LOG)) { LOG[k] = LOG[k].filter((e) => e.id !== id); if (!LOG[k].length) delete LOG[k]; } saveLog(); }
 
-function logBlock(x) {
+// (reps: "Your legislators: ... change" joins the quiet row, as at the foot of a bill's own panel.)
+function logBlock(x, reps = "") {
   const { b } = x;
   const entries = logOf(b);
   const who = [];
@@ -5768,7 +5776,7 @@ function logBlock(x) {
   who.push("Someone else");
   return `<div class="log">
     ${entries.length ? `<ul class="logged">${entries.map((e) => `<li><time>${fmtDate(e.d)}</time> <b>${esc(e.how)}</b> · ${esc(e.who)}${e.note ? ` · <span class="note">${esc(e.note)}</span>` : ""} <button class="x" type="button" data-unlog="${e.id}" title="Delete this entry">×</button></li>`).join("")}</ul>` : ""}
-    <button class="act-btn small" type="button" data-logopen="${b.idx}">+ Log an action</button> <button class="act-btn small" type="button" data-cardlink="${b.idx}">Copy link to share this bill</button>
+    <div class="billfoot"><button class="linkish" type="button" data-logopen="${b.idx}">+ Log an action</button><button class="linkish" type="button" data-cardlink="${b.idx}">Copy link to share</button>${reps}</div>
     <form class="logform" data-logform="${b.idx}" hidden>
       <label>Date <input type="date" name="d" value="${isoToday()}" required></label>
       <label>Who <select name="who">${who.map((w) => `<option>${esc(w)}</option>`).join("")}</select></label>
@@ -6032,17 +6040,19 @@ function watchCard(x, bodyOnly) {
     const odds = "";  // (the row and the next step carry the step's odds; the old whole-path line said a different number)
     const why = `${!x.key && x.plan?.reason ? `<p class="why">${esc(x.plan.reason)}</p>` : ""}${!x.key ? reintroAsk(b, x.stance) : ""}`;
     const note = !SHARED && myPublished()?.group ? `<details class="noteedit"${pubText().notes[baseNum(b.nums[0])] ? " open" : ""}><summary>Add a note</summary><textarea data-pubnote="${esc(baseNum(b.nums[0]))}" rows="2" maxlength="1000" placeholder="Why this bill matters or what to say about it">${esc(pubText().notes[baseNum(b.nums[0])] || "")}</textarea></details>` : "";
-    const log = SHARED ? "" : logBlock(x);
+    const log = SHARED ? "" : logBlock(x, bodyOnly && taList(b, x.stance || "support") ? repsLine() : "");
     // Opened below its row (or in a list page's frame), the card is the bill's panel, as on the Bills list: what you can
     // do first (your side, whom to ask, the odds, your actions), then everything else (fillDetail(), "inplace").
     if (bodyOnly) {
-      // Whom to write to, with the drafted emails (taPanel(): the same as the bill panel's Take action), open.
-      const ta = x.key ? taPanel(b, x.stance) : "", wrote = taWrote(b);
-      const can = `${top}${wrote ? `<p class="ta-wrote">${esc(wrote)}</p>` : ""}${ta || action}${ta ? repsLine() : ""}${odds}${why}${note}${log}`;
+      // Whom to write to as in the bill's own panel (taList(): one row per person, "Draft ›"; 2026-11-25, the owner's
+      // layout B), the sponsors of a decided or out-of-time bill too ("reintroduce it next session"); no headings.
+      const tl = taList(b, x.stance || "support"), wrote = taWrote(b);
+      const whyNow = tl && !x.key ? (x.plan?.reason ? `<p class="why">${esc(x.plan.reason)}</p>` : "") : why;
+      const can = `${top}${wrote ? `<p class="ta-wrote">${esc(wrote)}</p>` : ""}${odds}${whyNow}${tl || action}${note}${log || (tl ? `<div class="billfoot">${repsLine()}</div>` : "")}`;
       // The bill's steps first, as in its own panel (roadPic(): 2026-11-24, the owner missed it on watchlist cards).
       return `<article class="wcard open${ONE_CARD() ? "" : " inplace"}" data-idx="${b.idx}"><div class="wbody">
         ${roadPic(b, !DATA.current && b.stage <= 2)}
-        ${can.trim() ? `<div class="wcan"><h3>What you can do</h3>${can}</div>` : ""}
+        ${can.trim() ? `<div class="wcan">${can}</div>` : ""}
         <details class="bill morebill inplace" data-idx="${b.idx}" open><summary>More about this bill</summary><div class="detail"></div></details>
       </div></article>`;
     }
@@ -6351,7 +6361,7 @@ function fillDetail(el) {
     ${pfold("This bill in other sessions", [...new Set(b.hist.map((e) => e[0]))].sort().map(span).join(", "), lineage(b))}
     ${pfold("Similar bills", simHint(b), sim)}
     ${pfold("Every action", b.vers.map((v) => v.p).join(", "), `<div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>`)}
-    ${inCard ? "" : `<p class="sharebill"><button class="act-btn small" type="button" data-copylink="${esc(billLink(b))}">Copy link to share this bill</button></p>`}
+    ${inCard ? "" : `<div class="billfoot"><button class="linkish" type="button" data-copylink="${esc(billLink(b))}">Copy link to share</button>${repsLine()}</div>`}
     ${officialMore(b)}`;
   // (Who decides can depend on every bill's history: meetings().)
   if (MISSING.size) return waitIn(d, Promise.all([...MISSING].map((k) => need(k))), again);
@@ -6361,6 +6371,27 @@ function fillDetail(el) {
   const lv = headingLevel(d);
   d.dataset.hl = lv;
   d.innerHTML = html.replace(/<(\/?)h[34]\b/g, `<$1h${lv}`);
+  if (!inCard) pinBill(el, b);
+}
+// The open bill's number, title and status kept in sight: pinned to the top of the window once the bill's own row has
+// scrolled away (2026-11-25, the owner: scrolling an open bill lost which bill it was).
+let PIN_OBS = null;
+function pinBill(el, b) {
+  const d = el.querySelector(".detail");
+  if (!d || d.querySelector(".pinhead")) return;
+  const pin = document.createElement("div");
+  pin.className = "pinhead";
+  pin.innerHTML = `<span class="pn">${esc(b.nums[0])}</span><span class="pt">${esc(b.title)}</span><span class="ps">${statusText(b).replace(/<span class="stw">.*?<\/span>/, "")}</span>`;
+  d.prepend(pin);
+  // (Below the list's own sticky bar: search, count, sort.)
+  const bar = el.closest(".results")?.querySelector(".resultbar"), barH = bar && getComputedStyle(bar).position === "sticky" ? bar.offsetHeight : 0;
+  document.documentElement.style.setProperty("--barH", `${barH}px`);
+  if (!PIN_OBS && window.IntersectionObserver) {
+    PIN_OBS = new IntersectionObserver((es) => {
+      for (const e of es) e.target.closest(".bill")?.classList.toggle("pin-on", !e.isIntersecting && e.boundingClientRect.top < barH + 4);
+    }, { threshold: 0, rootMargin: `-${barH}px 0px 0px 0px` });
+  }
+  PIN_OBS?.observe(el.querySelector("summary"));
 }
 // The level for headings inside el: one below the last visible heading before it.
 function headingLevel(el) {
@@ -6606,7 +6637,8 @@ function wire() {
   });
   // In-page links to one bill are buttons, not #S1234 anchors: some viewers (Claude's artifact
   // viewer among them) reload the page on a hash link, which lost the bill and showed old filters.
-  // "Take action" (taPanel()): open it, pick whom to write to, add the sponsors, send or copy the email, note that it went.
+  // Whom to write to (taList()): "Draft ›" opens a person's draft (and "Hide draft" folds it), add the sponsors, send or copy
+  // the email, note that it went.
   // The reason and sign-off are kept as they're typed; the way of sending, when it's picked.
   document.addEventListener("input", (e) => {
     const w = e.target.closest?.("[data-ta-why]");
@@ -6642,25 +6674,6 @@ function wire() {
       icm.setAttribute("aria-expanded", String(on));
       return;
     }
-    const tt = e.target.closest("[data-ta-toggle]");
-    if (tt) {
-      const b = BILLS[+tt.dataset.taToggle], k = billKey(b), st = TA_STATE.get(k) || {}, on = !st.open;
-      TA_STATE.set(k, { ...st, open: on });
-      tt.setAttribute("aria-expanded", String(on)); tt.textContent = `Take action ${on ? "⌄" : "›"}`;
-      const box = tt.nextElementSibling;
-      if (box?.classList.contains("ta-box")) box.hidden = !on;
-      if (on) countUse("act/opened");
-      return;
-    }
-    const tp = e.target.closest("[data-ta-pick]");
-    if (tp) {
-      const b = BILLS[+tp.dataset.idx], k = billKey(b), st = TA_STATE.get(k) || {};
-      TA_STATE.set(k, { ...st, g: st.g === tp.dataset.taPick ? null : tp.dataset.taPick, all: false, asked: null });
-      taRedraw(b);
-      // (From the keyboard, focus stays on the choice; a click doesn't move it, so no outline is drawn.)
-      if (e.detail === 0) document.querySelector(`.ta[data-ta="${b.idx}"] [data-ta-pick="${CSS.escape(tp.dataset.taPick)}"]`)?.focus();
-      return;
-    }
     const tw = e.target.closest("[data-ta-write]");
     if (tw) {
       const b = BILLS[+tw.dataset.idx], k = billKey(b), st = TA_STATE.get(k) || {}, g = tw.dataset.taWrite, on = st.m !== g;
@@ -6668,7 +6681,7 @@ function wire() {
       taRedraw(b);
       const box = document.querySelector(`.ta[data-ta="${b.idx}"]`);
       if (on) { countUse("act/write"); box?.querySelector("[data-ta-why]")?.focus({ preventScroll: true }); }
-      else box?.querySelector("[data-ta-write]")?.focus({ preventScroll: true });
+      else box?.querySelector(`[data-ta-write="${CSS.escape(g)}"]`)?.focus({ preventScroll: true });
       return;
     }
     const ta = e.target.closest("[data-ta-all]");
@@ -6695,7 +6708,7 @@ function wire() {
       step("contacted");
       TA_STATE.set(k, { ...st, asked: g.k });
       const li = ts.closest("li");
-      if (li && !li.querySelector(".ta-did")) li.querySelector(".ta-mail")?.insertAdjacentHTML("beforeend", `<p class="ta-did"><b>Did you send it?</b> <button type="button" class="act-btn primary small" data-ta-yes="${b.idx}">Yes, note it</button> <button type="button" class="act-btn small" data-ta-no="${b.idx}">Not yet</button></p>`);
+      if (li && !li.querySelector(".ta-did")) li.querySelector(".ta2-draft")?.insertAdjacentHTML("beforeend", `<p class="ta-did"><b>Did you send it?</b> <button type="button" class="act-btn primary small" data-ta-yes="${b.idx}">Yes, note it</button> <button type="button" class="act-btn small" data-ta-no="${b.idx}">Not yet</button></p>`);
       return;
     }
     const ty = e.target.closest("[data-ta-yes], [data-ta-no]");
