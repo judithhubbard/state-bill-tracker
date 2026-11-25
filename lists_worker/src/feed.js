@@ -115,16 +115,17 @@ export async function feed(req, env, ctx, l) {
     const page = index[b.st][b.session].p;
     const link = `${site}/${b.st}/bill/${page === "./" ? "" : `${b.session}/`}${b.lead}`;
     const name = NAMES[b.st] || b.st.toUpperCase();
+    const one = l.state && l.state !== "all";  // (a one-state list: the state isn't repeated on every item)
     const next = (Array.isArray(meets) ? meets : []).find((m) => Array.isArray(m) && day(m[0]));
     const note = l.notes && (l.notes[b.key] || l.notes[b.num]);
     const lines = [
-      `${what}, ${fmtDay(when)}.`,
+      `${what}.`,  // (the day is the item's own date: newsletters show it above, 2026-11-25, the owner)
       next ? `Coming up: ${next[1] ? `${next[1]}, ` : ""}${fmtDay(next[0])}.` : "",
       b.oppose ? "This list opposes it." : "",
       note ? `Note: ${note}` : "",
     ].filter(Boolean);
     items.push({
-      when, title: `${full} · ${shortTitle(title)} (${name})`, link, text: lines,
+      when, title: `${full} · ${shortTitle(title)}${one ? "" : ` (${name})`}`, link, text: lines,
       guid: `statebilltracker:${b.st}:${b.session}:${b.lead}:${when}:${await shortHash(what)}`,
     });
   }
@@ -132,7 +133,9 @@ export async function feed(req, env, ctx, l) {
 
   const listLink = `${site}/list/#${l.slug}`;
   const channelTitle = `${l.title || "Shared list of bills"} · State Bill Tracker`;
-  const desc = (l.intro || "").trim() || "The latest step for each bill on this list, from State Bill Tracker.";
+  // (A list past the free plan's subrequests, MAX_PIECES, shows the bills its first pieces hold: said, not hidden.)
+  const cut = items.length < bills.length && pieces.size >= MAX_PIECES ? ` This feed shows ${items.length} of the list's ${bills.length} bills.` : "";
+  const desc = ((l.intro || "").trim() || "The latest step for each bill on this list, from State Bill Tracker.") + cut;
   const body = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
