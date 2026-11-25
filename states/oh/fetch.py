@@ -35,6 +35,13 @@ TODAY = datetime.now(ZoneInfo(P.TIMEZONE)).date()
 CURRENT = P.session_of(TODAY.year)
 AGENT = "statebilltracker.org (a nonprofit bill tracker; contact via github.com/judithhubbard)"
 INCOMPLETE = set()
+# Light history (states/oh/light.py) sets LIGHT: the 131st-133rd's API answers some records with an empty body (HTTP 200,
+# no JSON: HB 157 of the 131st's versions, HB 556's versions and actions), read as "none" (EMPTY) instead of a failure
+# (the converter then takes the title and sponsors from the list's entry); and the 132nd's legislation list answers 500
+# every time (2026-11-25), so its bills are found by number (enumerate_bills()).
+LIGHT = False
+EMPTY = ""
+PREFETCHED = {}
 
 
 def get(url, raw=False):
@@ -43,6 +50,8 @@ def get(url, raw=False):
             req = urllib.request.Request(url, headers={"User-Agent": AGENT, "Accept": "application/json"})
             with urllib.request.urlopen(req, timeout=120) as r:
                 body = r.read()
+            if LIGHT and not raw and not body.strip():
+                return EMPTY
             return body if raw else json.loads(body)
         except urllib.error.HTTPError as e:
             if e.code == 404:
@@ -79,12 +88,37 @@ def waiting(versions, actions):
     return bool(en) or len(houses) == 2 or any(re.match(r"Concurred|Conference report agreed", a) for a in acts)
 
 
+def enumerate_bills(base, gap=25):
+    """The General Assembly's bills found by number (HB 1, 2, ... until `gap` numbers in a row don't exist: "[]"), when its
+    list fails: list entries made from each bill's latest version, which session() then uses (PREFETCHED)."""
+    items = []
+    for kind in ("hb", "sb", "hjr", "sjr"):
+        n, misses = 0, 0
+        while misses < gap:
+            n += 1
+            d = get(f"{base}/legislation/{kind}{n}/")
+            if d == [] or d is None or d is False:
+                misses += 1
+                continue
+            misses = 0
+            top = d[-1] if isinstance(d, list) and d else {}
+            num = f"{kind}{n}"
+            items.append({"number": num, "short_title": top.get("short_title") or "", "sponsors": top.get("sponsors") or [],
+                          "cosponsors": top.get("cosponsors") or [], "revno": top.get("revno") or "found by number"})
+            PREFETCHED[num.upper()] = d if isinstance(d, list) else []
+    print(f"{base.rsplit('_', 1)[-1]}: no legislation list; {len(items)} bills found by number", flush=True)
+    return items
+
+
 def session(session):
     ga = P.assembly_of(session)
     base = f"{API}/general_assembly_{ga}"
     folder = os.path.join(P.DATA, str(session))
     os.makedirs(os.path.join(folder, "bills"), exist_ok=True)
     items = get(f"{base}/legislation/")
+    if not items and LIGHT:
+        listed = os.path.join(folder, "legislation.json")
+        items = json.load(open(listed)) if os.path.exists(listed) else enumerate_bills(base)
     if not items:
         print(f"{session}: no legislation list (the API didn't answer, or no bills yet); kept the last copy")
         # Only a list never read holds the state off, and not a new General Assembly's in its first two months (the
@@ -113,6 +147,9 @@ def session(session):
                 and not (ending and waiting(old["versions"], old.get("actions") or [])):
             return b, True  # a finished General Assembly's bill, unchanged
         actions = get(f"{base}/legislation/{b.lower()}/actions/")
+        if b in PREFETCHED and actions is not False:  # (the 132nd's: versions read while finding the bills by number)
+            save(f, {"versions": PREFETCHED.pop(b) or [], "actions": actions if isinstance(actions, list) else []})
+            return b, True
         # The list's revno doesn't change when a bill is enrolled or sent to the governor (HB 13 of the 136th: enrolled
         # and sent 2026-11-17, revno unchanged since its Senate committee report), so versions are read again when the
         # entry changes, when the actions changed, or while the bill waits on enrollment or the governor.

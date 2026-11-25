@@ -12,7 +12,9 @@ from states import window as W
 SOURCE = "docs.legis.wisconsin.gov (Wisconsin Legislature: bill histories, LRB analyses, members)"
 # 2015, 2017, 2019, 2021: each session by its first year, up to the window's first.
 SESSIONS = list(range(2015, W.first_session(), 2))
-SKIP = ("/related/votes/", "/related/records/", "/vetomessages/")
+# (The LRB analysis, /related/proposals/, left out too since 2026-11-25: from GitHub's machines each page took about 8
+# seconds, so a session needed more than a run's 340 minutes; the light records keep the titles, "lacks" says summary.)
+SKIP = ("/related/votes/", "/related/records/", "/vetomessages/", "/related/proposals/")
 
 
 def fetch(session, data):

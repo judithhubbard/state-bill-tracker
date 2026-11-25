@@ -175,6 +175,36 @@ owner: Arizona's 2015-2022 regular sessions ("AZ_52nd-1st-regular" ... "AZ_55th-
 years, from open.pluralpolicy.com/data/session-json/ (login), into light_bulk.json (not bulk.json, whose names every
 download imports into the site's own data).
 
+## After the third batch's first runs (2026-11-25)
+
+- **Resuming a session across runs:** states/light.py downloads into `$LIGHT_KEEP/<st>-<session>` when that's set (the
+  workflow sets ~/light-keep, restored from and saved to an Actions cache per state, `light-keep-<st>-<run id>`; the
+  reading step stops at 320 minutes so the save runs). A session that isn't finished keeps what it got, and the next run's
+  fetch reads only what's missing; a written session's folder is deleted. Before this, a session longer than one run
+  (Wisconsin's) could never finish.
+- **West Virginia:** www.wvlegislature.gov answers nothing (connections time out) from GitHub's runners since at least
+  2026-11-23 20:57 UTC, and from the owner's computer: the daily download fails the same way (every list "failed three
+  times"; the site keeps the last copy). Not a reader problem; run `wv` again once the site answers.
+- **Ohio:** the 131st-133rd's API answers some records with an empty body (HTTP 200, no JSON: about 15% of the 131st's
+  versions, some actions too), counted as failures until 2026-11-25, so no session was ever whole; fetch.py's `LIGHT` mode
+  (set by states/oh/light.py) reads them as "none" (the converter then takes the title and sponsors from the list's entry).
+  The 132nd's legislation list answers HTTP 500 every time: its bills are found by number (`enumerate_bills()`: HB, SB,
+  HJR, SJR 1, 2, ... until 25 in a row answer "[]"). Joint resolutions found that way lack the list's "CA:" title
+  prefix, so the 132nd's proposed constitutional amendments may be left out. The reader retries a session's failed bills
+  up to three passes.
+- **Wisconsin:** from GitHub's machines each page took about 8 seconds (URLErrors on about one bill in three, retried), so
+  2015-16 needed more than a run; the LRB analysis pages (/related/proposals/) are now left out (half the requests;
+  "lacks" says summary), and the session resumes across runs.
+- **Missouri:** every session stopped on "representatives" (each sitting member's own page, needed only for the live
+  session); left out, and a session with under 1% of its Senate bills unreadable (2015's SB 631 and SB 796: HTTP 500 every
+  time) is written without them.
+- **New Hampshire 2021-22:** a docket line's own date that isn't a real date ("13/..."): `_real_day()` in convert.py
+  falls back on the entry's day.
+- **Alaska's 31st (2019-20):** 126 bills answered "FaultException" in one seven-minute stretch on 2026-11-24 (a server
+  fault; they answer now): run again.
+- **Kentucky, Mississippi, New Mexico:** only ran out of time (Kentucky's LRC record at about 9 seconds a request, about
+  2.5 hours a session); runs resume.
+
 ## How the build uses them (stage 2, 2026-11-24)
 
 `load_light()` in build_data.py reads the light sessions in an unbroken run back from the state's first full session (one
