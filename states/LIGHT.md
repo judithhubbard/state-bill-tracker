@@ -224,3 +224,44 @@ button, search, issue or status file. They do count in:
   (same sponsor surname, titles sharing at least three in four words, the best match only), shown with the light
   record's outcome and the Legislature's link (MT 30, ND 13, OR 18 bills); never to an earlier law or budget bill.
 - Parties come from each file's header (`LIGHT_PARTIES`).
+
+## Fourth batch: the hard cases (written 2026-11-25, not yet run on GitHub)
+
+These states' own sources are slow (a request a bill), gone, or asked to be read gently, so most of their older sessions
+come from **Open States' bulk session files** through a shared reader, `states/openstates_records.py`: one download a
+session, turned into light records from Open States' action classifications (no state converter: `states/light.py`
+calls a hook's `records()` when it has one). Stages from the record's outcome; a house's passage is a "passage" that is
+also a third reading wherever the session marks third readings (Arizona's Committee of the Whole "DP" is marked
+"passage" too). Checked on Arizona's 2023 file: 205 laws and 143 vetoes, exactly the official count and the site's own
+converter's; Iowa 2017-18 read with first committees and amendments tagged. No parties (the files' sponsors carry none);
+chapters only where an action names one; summaries only where Open States has an abstract, so Trends compares titles.
+
+| State | Sessions | Route | Why not the official source |
+|---|---|---|---|
+| IL | 2015, 2017, 2019 (99th-101st GA) | Open States | ftp.ilga.gov: once a day, 10 s a request, 6,000-10,000 files an Assembly (the General Assembly's request) |
+| MA | 2017, 2019, 2021 | Open States (no 189th) | per-bill histories for "passed one house" |
+| MI | 2017, 2019, 2021 | Open States (no 2015-16) | one status file a bill, about 4,500 a session |
+| MN | 2017, 2019, 2021 | Open States | Revisor API, one request a bill, about 8,000 a Legislature |
+| NE | 2017, 2019, 2021 | Open States | a page a bill at a 3 s crawl delay |
+| SC | 2017, 2019, 2021 | Open States | search behind Cloudflare's bot check |
+| TX | 2019 | Open States (no 85th regular) | FTP, one file a bill, 10,000-12,000 a session |
+| WA | 2017, 2019 | Open States (no 2015-16) | one request a bill |
+| UT | 2017-2022 | Open States | API keys only recent sessions; roll calls barred |
+| KS | 2017, 2019, 2021 | Open States | API only 2023-24 on; older years HTML a bill |
+| MD | 2017-2022 | Open States | legislation.json only from 2019, governor's actions a page a bill |
+| VA | 2017-2021; 2022 | Open States; **2022 official** (legacy LIS CSVs, as 2023) | the legacy LIS has only 2022 (2015-2021: 404) |
+| AR | 2019-2022 | Open States (no 2017 regular) | BLR files' reach unverified |
+| NJ | 2014, 2016 | **official**: DB<year>_TEXT.zip, the site's own converter | (cheap: 1.5 MB a session) — written locally: 2014-15 396 laws, 158 vetoes; 2016-17 490 laws, 104 vetoes |
+
+**For the owner: the Open States files to name** (open.pluralpolicy.com/data/session-json/; paste each file's link, and
+it goes in states/<st>/light_bulk.json under the year shown):
+IL: "Illinois 99th Regular Session" (2015), "Illinois 100th Regular Session" (2017), "Illinois 101st Regular Session" (2019).
+MA: "Massachusetts 190th Legislature (2017-2018)" (2017), "191st Legislature (2019-2020)" (2019), "192nd Legislature (2021-2022)" (2021).
+MI, MN, SC, KS, WA: "<State> 2017-2018 Regular Session" (2017), "2019-2020 Regular Session" (2019), "2021-2022 Regular Session" (2021; not WA).
+NE: "Nebraska 105th Legislature (2017-2018)" (2017), "106th Legislature (2019-2020)" (2019), "107th Legislature (2021-2022)" (2021).
+TX: "Texas 86th Legislature (2019)" (2019).
+UT: "Utah 2017 General Session" ... "Utah 2022 General Session" (each its year).
+MD: "Maryland 2017 Regular Session" ... "Maryland 2022 Regular Session" (each its year).
+VA: "Virginia 2017 Regular Session" ... "Virginia 2021 Regular Session" (each its year).
+AR: "Arkansas 2019 Regular Session" (2019), "Arkansas 2020 Fiscal Session" (2020), "Arkansas 2021 Regular Session" (2021), "Arkansas 2022 Fiscal Session" (2022).
+Special and extraordinary sessions are left out. Each state's light history starts at the earliest year it has without a gap.

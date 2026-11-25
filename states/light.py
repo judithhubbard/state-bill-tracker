@@ -120,9 +120,13 @@ def run(state, wanted=None):
                       + (" (what was downloaded is kept for the next run)" if keep else ""), flush=True)
                 continue
             P.DATA = scratch
-            C = importlib.import_module(f"states.{state}.convert")
-            recs = C.load_session(session)[0]
-            parties = C.parties(session, recs) if hasattr(C, "parties") else {}
+            if hasattr(H, "records"):
+                # (A hook whose source isn't the converter's: Open States' bulk files, states/openstates_records.py.)
+                recs, parties = H.records(session, scratch, P)
+            else:
+                C = importlib.import_module(f"states.{state}.convert")
+                recs = C.load_session(session)[0]
+                parties = C.parties(session, recs) if hasattr(C, "parties") else {}
             body = write(state, session, recs, parties, H.SOURCE, real, P)
             print(f"{state} {session}: {body['counts']}; lacks {body['lacks'] or 'nothing'}; no topic {body['noTopic']}"
                   + (f"; committees with no topic mapping: {body['unmappedCommittees']}" if body["unmappedCommittees"] else ""), flush=True)

@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       state:
-        description: "State code with a states/<st>/light.py (mt, wy, nd, or, ca, ct, in, mo, ms, nm, sd, us, tn, ok, ri, vt, dc, ak, al, id, ia, ky, la, nc, oh, ga, nh, de, nv, wi, wv, az, hi)"
+        description: "State code with a states/<st>/light.py (mt, wy, nd, or, ca, ct, in, mo, ms, nm, sd, us, tn, ok, ri, vt, dc, ak, al, id, ia, ky, la, nc, oh, ga, nh, de, nv, wi, wv, az, hi, il, ma, mi, mn, ne, sc, tx, wa, ut, ks, md, va, ar, nj)"
         type: string
         required: true
       sessions:
