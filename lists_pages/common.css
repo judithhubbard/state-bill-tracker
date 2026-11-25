@@ -183,3 +183,8 @@ main { position: relative; }
 .info.wide { position: static; }
 .info.wide .info-t { left: 0; right: 0; transform: none; width: auto; max-width: 420px; font-stretch: normal; }
 .info-t a { color: inherit; }
+/* A shared list's feed line (common.js's feedLine()): under the list's link and share icons. */
+.feedline { margin-top: 4px; }
+.feedline .fl-h { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.feedline[open] .fl-h { margin-bottom: 6px; }
+.feedline p { margin: 0 0 8px; font-size: 13.5px; color: var(--ink-2); max-width: 62ch; }

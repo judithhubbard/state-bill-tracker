@@ -12,6 +12,10 @@
 //           "us:2025:HR1" (Congress). Notes are keyed by the bill without its "-".
 //           views:<slug>   -> { total, days: { "2026-10-23": n, ... last 30 days } }  (group lists only: KV allows few writes)
 //           rate:<ip>:<day> -> lists created from one address that day (expires after two days)
+//
+// GET /lists/<slug>/feed is the list's RSS feed (src/feed.js), read from the site's own status files.
+
+import { feed } from "./feed.js";
 
 const ALLOWED_ORIGINS = ["https://statebilltracker.org", "https://www.statebilltracker.org", "https://statebilltracker.pages.dev"];
 const allowed = (o) => !!o && (ALLOWED_ORIGINS.includes(o) || /^https:\/\/[a-z0-9-]+\.statebilltracker\.pages\.dev$/.test(o) || /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(o));
@@ -208,6 +212,13 @@ export default {
       }
       if (parts[0] !== "lists") return fail(req, 404, "Not found.");
       const slug = parts[1];
+
+      // ---- A list's feed (RSS), for newsletters and Slack: anyone (src/feed.js). Not counted as a view. ----
+      if (slug && parts[2] === "feed" && !parts[3] && req.method === "GET") {
+        const l = SLUG_RE.test(slug) && (await getJSON(env, `list:${slug}`));
+        if (!(await visible(env, l))) return new Response("This list isn't available.", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+        return feed(req, env, ctx, l);
+      }
 
       // ---- How often a group's list was opened: its editors only. ----
       if (slug && parts[2] === "views" && req.method === "GET") {

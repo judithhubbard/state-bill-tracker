@@ -472,6 +472,7 @@ function drawShare() {
     + ""  // (no group-code line: the owner, 2026-11-19)
     + `<details><summary>Use this list on another device</summary><p class="muted">Paste this key into Your bills on the other device. Anyone with it can change the list.</p>`
     + `<div class="row"><input type="text" readonly id="key" value="${esc(`${L.slug} ${L.editKey}`)}" aria-label="The list's key"><button type="button" class="btn" data-act="copykey">Copy</button></div></details>`
+    + feedLine(L.slug)  // (folded, beside "Use this list on another device")
     + `<p class="row"><button type="button" class="btn quiet" data-act="stop">Stop sharing and delete</button></p>`;
 }
 // The contribution line, the first time a list's link is copied or shared (at most once in 90 days: thanksOnce()).
