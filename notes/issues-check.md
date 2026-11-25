@@ -722,3 +722,51 @@ Delaware, Illinois, Kentucky, Nebraska and Pennsylvania now have bills. School m
 `"short": 2`. In the samples, openings that look like passing mentions mostly turned out to be on the subject (Louisiana's
 domestic abuse battery registry rule, New Jersey's earned income credit for domestic abuse victims, Utah's civil actions
 for human trafficking).
+
+## Large bills: one section about the issue (2026-11-25, the owner's approval)
+
+Why: H.R. 1 of the 119th Congress ("One Big Beautiful Bill Act", P.L. 119-21) created the federal tax-credit scholarships
+that start in 2027 (Sec. 70411), but wasn't on School vouchers: budget-sized bills need two mentions in "What it does", and
+Congress's "What it does" is the CRS summary cut at 4,000 characters (the scholarship section is far past that).
+
+The rule (issues.py `part_issues()`): a large bill also counts for an issue when one of its sections' openings (heading and
+first sentence, `opening()`) matches the issue's rules, says it changes something (`CHANGE`: establishes, creates,
+expands, amends, repeals, eliminates, requires, prohibits, increases, makes permanent ...), and isn't money or paperwork
+(`FUNDS_ONLY`: appropriations and "funds" riders, apportionment, extensions to a date, authorizations of a year's
+activities or of projects, reports, studies, "whether", "nothing in this title"). Examples a section gives in passing,
+"(e.g., ...)", are dropped first. Sections: Congress's full CRS summary, one per "(Sec. N)" paragraph (records'
+`sections`, states/us/convert.py `crs_sections()`, only when the summary shown is cut); else a "What it does" of 6,000+
+characters marked "Section N." or "(Sec. N)" (`sections()`). Voting is left out (`"sections": False`: its patterns caught
+"a unanimous vote of all Board members in order to grant parole", Kansas SB 459 of 2025). Lists say "One part of a larger
+bill" and show the section as the line under the title. `OVERRIDES` (hand-picked, with a reason each) is empty.
+
+Tried and dropped: California's digests in "This bill would ..." paragraphs as sections (28 additions in 2021-22, about
+half wrong: a foster-care "payment or voucher" on School vouchers, a bankruptcy exemption for "sick leave, family leave" on
+paid leave, a bail bond disclosure on bail).
+
+Issue rules tightened on the way (they also apply to ordinary matching): campaign finance's "contribution limit" not with
+ABLE accounts, IRAs, 401(k)s, health or education savings, 529s; property tax relief's credits not "refueling property",
+"energy property" (federal equipment credits).
+
+H.R. 1 (2025) now on: School vouchers (Sec. 70411, the scholarship credit), Prescription drug costs (71203, orphan drugs in
+negotiation), Abortion and Contraception (71113, Medicaid payments to Planned Parenthood), Firearms (70436, the $200 tax on
+silencers and short-barreled rifles ended), Immigration (10108, SNAP for some lawfully present noncitizens), Paid leave
+(70304), Child care (70401, the employer credit), Nuclear energy (70510), Energy costs (10103, LIHEAP and SNAP), Climate
+(50402, the ATVM loan cap), Health insurance coverage (71107, Medicaid redeterminations every six months). All real
+sections that change the program.
+
+Congress, all additions read (2021-22: 31, 2023-24: 45, 2025-26: 20, from 11, 26 and 9 large bills): about 90% right. Wrong
+or doubtful, left as they are: NDAA FY2024's ERCIP projects on Firearms, its civilian pay rates on DEI, a wildfire
+operations line; two appropriations acts' Sec. 210 (food service providers) on Plastics; an advisory committee's members on
+Child care; DOJ reentry grants on Sexual assault. Right examples: the American Rescue Plan's family leave, child care and
+premium credits; the Inflation Reduction Act's nuclear credit and Medicare vaccine cost-sharing; the 2023 omnibus's
+continuous Medicaid eligibility for children; the Safer Communities Act's domestic violence gun restriction; FY2026's
+hemp redefinition (Cannabis); the ROAD to Housing Act's housing supply grants.
+
+States: only texts marked off in sections qualify. In a survey of every state's newest texts file (2026-11-25), they're in
+Kansas, Missouri, Delaware and some New Jersey bills; Arizona, Florida, Iowa, Utah, West Virginia, Indiana and Ohio store
+short summaries with no sections (no additions there: their budget-created programs, if any, need `OVERRIDES`). Additions
+in the sample (KS 2023-25, MO 2024-26, DE 2023-25, NJ 2022-26): 5, all right: Missouri SB 894 and SB 1294 of 2026
+("dangerous felony" to include statutory rape: Sexual assault), SB 1066 and SB 1410 of 2026 (short-term rentals assessed
+as residential property), Delaware HB 2 of 2023 (the Marijuana Control Act's section on possessing a handgun: Firearms),
+New Jersey S682 of 2026-27 (residential parking standards in redevelopment plans: Housing supply).

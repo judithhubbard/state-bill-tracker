@@ -428,15 +428,15 @@ VERSION_WORDS = [
 ]
 
 
-def crs_summary(b, limit=4000):
-    """The latest CRS summary as plain paragraphs (cut at a paragraph near the limit), and its label."""
+def crs_paragraphs(b):
+    """The latest CRS summary as plain paragraphs, and the summary's element (None when there's none)."""
     best = None
     for s in b.findall("summaries/summary"):
         key = (s.findtext("actionDate") or "", s.findtext("updateDate") or "")
         if best is None or key > best[0]:
             best = (key, s)
     if best is None:
-        return "", ""
+        return [], None
     s = best[1]
     raw = s.findtext("cdata/text") or s.findtext("text") or ""
     raw = re.sub(r"\s+", " ", raw)
@@ -447,6 +447,24 @@ def crs_summary(b, limit=4000):
     # The first paragraph is often the bill's short title alone ("<b>Removing Extraneous ... Act</b>").
     if paras and len(paras) > 1 and not re.search(r"[.:;]$", paras[0]) and len(paras[0]) < 300:
         paras = paras[1:]
+    return paras, s
+
+
+def crs_sections(b, limit=4000):
+    """A large bill's sections for the national issues (issues.py's part_issues()): the opening of each "(Sec. N)"
+    paragraph of the full CRS summary, when the summary shown ("What it does") is cut at `limit`; else []."""
+    import issues
+    paras, _ = crs_paragraphs(b)
+    if sum(len(x) for x in paras) <= limit:
+        return []
+    return [issues.opening(x) for x in paras if x.startswith("(Sec")]
+
+
+def crs_summary(b, limit=4000):
+    """The latest CRS summary as plain paragraphs (cut at a paragraph near the limit), and its label."""
+    paras, s = crs_paragraphs(b)
+    if s is None:
+        return "", ""
     out, n = [], 0
     for x in paras:
         if n + len(x) > limit and out:
@@ -893,6 +911,8 @@ def record(congress, p, b):
         "comms": sorted({f"{h} · {c}" for h, c in refs}), "topics": topics, "places": [], "narrow": narrow,
         "commFate": "passed" if reported or discharged or passed else "none", "mainTopic": topics[0] if topics else "",
         "local": "local" in topics, "senDeleg": False, "asmDeleg": False, "budget": budget,
+        # A large bill's sections, for the national issues (issues.py's part_issues()): not shown, not published.
+        "sections": crs_sections(b),
         "passedS": "S" in passed_h, "passedA": "H" in passed_h, "program": None,
         # (Both houses passed it, but the second changed it: it's "passed" by that house, waiting on the first.)
         "stage": stage, "passedIn": (HOUSE[amended_by] if amended_by and len(passed_h) == 2 else HOUSE[origin] if origin in passed_h else HOUSE[other]) if stage == 2 else None,

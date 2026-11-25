@@ -149,6 +149,9 @@ ul.bills a { font-weight: 600; text-decoration: none; }
 ul.bills a:hover { text-decoration: underline; }
 .t { grid-column: 1 / -1; overflow-wrap: anywhere; }
 .why { grid-column: 1 / -1; color: var(--ink-2); font-size: 14px; overflow-wrap: anywhere; }
+/* A budget or omnibus bill on the issue through one of its sections (write_issues()'s last column). */
+.part { grid-column: 1 / -1; color: var(--ink-2); font-size: 12.5px; font-style: italic; }
+.panel .tt .part { display: block; color: var(--ink-2); }
 /* Where each bill is, as in every bill row (lists_pages/rows.css, added after these styles: css()): the pips and the
    colored label, then the date. Before them, the sponsors' party: D, R or Both (none for committee bills). */
 .tags { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 6px; align-items: center; align-self: start; justify-self: end; }
@@ -608,10 +611,12 @@ def bill_items(iid, st, mine):
     for f, b, new, passed in sorted(sorted(mine, key=lambda x: x[1][5], reverse=True), key=lambda x: (x[1][4] != 5, -x[1][4])):
         fl = " ".join(re.sub(r"[^a-z]+", "-", x.lower()) for x in (b[1].get(iid) or []))
         why = (b[9].get(iid) if len(b) > 9 else "") or ""
+        # On the issue through one of its sections (build_data.py's write_issues(), issues.part_issues()).
+        part = '<span class="part">One part of a larger bill</span>' if iid in (b[13] if len(b) > 13 else []) else ""
         items.append(f'<li data-stage="{b[4]}" data-f="{e(fl)}" data-p="{party(b) or "-"}" data-n="{int(new)}" data-l="{int(passed)}" data-k="{f["session"]}|{e(b[2])}|{e(b[5] or "")}"><a href="{e(link(f, b[2]))}">{e(shown(b[2], b[10] if len(b) > 10 else (), st))}</a>'
                      f'<span class="tags">{party_tag(party(b))}{pips(b[4], st, stage_text(b) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}<span class="stg s{b[4]}">{e(stage_text(b) + (f" in {b[8][:4]}" if b[4] == 5 and not passed and b[8] else ""))}</span>'
                      + (f'<span class="stw">{day(b[5])}</span>' if b[5] else "") + '</span>'
-                     f'<span class="t">{e(b[3])}</span>'
+                     f'<span class="t">{e(b[3])}</span>' + part
                      + (f'<span class="why">{e(why)}</span>' if why and why.lower() not in b[3].lower() else "")
                      + '</li>')
     return "".join(items)
@@ -877,9 +882,10 @@ function showState(st) {{
   pst.innerHTML = `<h3>${{esc(name)}}</h3><p>${{n ? `${{n}} bill${{n === 1 ? "" : "s"}}${{UPCOMING ? " prefiled" : ""}} in ${{YEAR}}` : `No bills in ${{YEAR}}`}}${{only}}${{l ? `, ${{l}} became law` : ""}}.${{links}}</p>`
     + pbig(SPLIT[st])
     + (items.length ? `<ul>${{items.map((li) => {{
-      const a = li.querySelector("a"), why = li.querySelector(".why"), t = li.querySelector(".t").textContent;
+      const a = li.querySelector("a"), why = li.querySelector(".why"), t = li.querySelector(".t").textContent, part = li.querySelector(".part");
       return `<li><a href="${{esc(a.getAttribute("href"))}}" title="${{esc(t)}}"><b>${{esc(a.textContent)}}</b>${{li.querySelector(".tags").outerHTML}}`
-        + `<span class="tt">${{esc(why ? t.replace(/[.\\s]+$/, "") : t)}}${{why ? `<span class="why">: ${{esc(why.textContent)}}</span>` : ""}}</span></a>`
+        + `<span class="tt">${{esc(why ? t.replace(/[.\\s]+$/, "") : t)}}${{part ? `<span class="part"><i>${{esc(part.textContent)}}</i>${{why ? `: ${{esc(why.textContent)}}` : ""}}</span>`
+          : why ? `<span class="why">: ${{esc(why.textContent)}}</span>` : ""}}</span></a>`
         + `${{li.dataset.k ? starBtn(st, li.dataset.k, a.textContent) : ""}}</li>`;
     }}).join("")}}</ul>` : "");
 }}
@@ -1056,7 +1062,9 @@ def main(site):
                                    # follows the panel's "Sponsor's party" menu).
                                    party(b), int(new), int(passed),
                                    # Its status words (the build's, as on its state's page).
-                                   stage_text(b)]
+                                   stage_text(b),
+                                   # 1: on the issue through one of its sections ("One part of a larger bill").
+                                   int(issue["id"] in (b[13] if len(b) > 13 else []))]
                                   for f, b, new, passed in sorted(sorted(rows, key=lambda x: x[1][5], reverse=True),
                                                                   key=lambda x: (x[1][4] != 5, -x[1][4]))]
                              for st, (n, laws, rows) in {**by, **us_by}.items()}

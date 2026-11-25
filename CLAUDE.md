@@ -549,7 +549,14 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   400 characters of each other, exclusions, filters such as AI's "Chatbots"); a match in the title or summary counts, one
   only in a long "What it does" needs two mentions (budget bills name subjects in passing), or as many as the issue's
   `"body"` says (`0`: the title or summary must name it; homelessness, income tax cuts, bail, assault, plastics); for those
-  issues the opening of "What it does" (`lead()`) counts like the summary, except school meals (`"lead": False`). Minimum wage is only bills
+  issues the opening of "What it does" (`lead()`) counts like the summary, except school meals (`"lead": False`). A large
+  bill (budget, omnibus) also counts when one of its sections creates or changes the issue's program (2026-11-25, the
+  owner: H.R. 1 of 2025's tax-credit scholarships, Sec. 70411, on School vouchers): `part_issues()`, a section's opening
+  matching the issue with a change verb (`CHANGE`) and not money or riders (`FUNDS_ONLY`); sections are Congress's full CRS
+  summary ("(Sec. N)" paragraphs, records' `sections`) or a long "What it does" marked off in sections, "Section N." or
+  "(Sec. N)" (`sections()`: Kansas, Missouri, Delaware, some New Jersey; most states' summaries are short or unmarked);
+  `"sections": False` keeps an issue out (voting: its patterns trip on short passages); the issue lists say "One part of a larger bill" (issues bills' last column); `OVERRIDES` (empty)
+  is for what the rule still misses, each with its reason. Minimum wage is only bills
   that set or change one (the owner's decision). Each state's build writes data/issues_<session>.json
   (`write_issues()` in build_data.py; local and placeholder bills left out); `issues_site.py`, run by build_site.sh
   after the states, builds /issues/ and /issues/<id>/ (a table by state, every bill linked to its state's page, filters)
