@@ -931,6 +931,18 @@ ASIDE = re.compile(r"\((?:e\.g\.|i\.e\.|for example|such as)[^)]*\)", re.I)
 SECTION_MARK = re.compile(r"(?:^|(?<=\n)|(?<=\. ))(?:\(Sec(?:tion|s)?\.? \d[\w.-]*(?:, [\w.-]+)*\)|(?:SECTION|Section|SEC\.|Sec\.) \d+[A-Za-z]?(?:\.\d+)*[.:)]?)\s")
 # For what the rule still misses: {"<st>:<session>:<number>": {"<issue>": "why it belongs"}}. Empty (2026-11-25).
 OVERRIDES = {}
+# And what it matches wrongly: {"<st>:<session>:<number>": {"<issue>": "why it doesn't belong"}} (2026-11-25, the owner:
+# the Congress additions read by hand, about 1 in 10 wrong; notes/issues-check.md).
+EXCLUDE = {
+    "us:2023:HR2670": {"firearms": "NDAA FY2024 Sec. 2402: energy resilience projects (ERCIP), not firearms",
+                       "dei": "NDAA FY2024 Sec. 1101: civilian personnel pay rates",
+                       "wildfire": "NDAA FY2024 Sec. 1832: wildfire operations named in a list of exceptions"},
+    "us:2021:HR2617": {"plastics": "Sec. 210: agencies to coordinate with food service providers",
+                       "childcare": "Sec. 2236: an advisory committee's membership",
+                       "assault": "Sec. 213: DOJ grant matching waivers for offender reentry programs"},
+    "us:2023:HR2882": {"plastics": "Sec. 210: agencies to coordinate with food service providers"},
+    "us:2023:HR4366": {"assault": "Sec. 213: DOJ grant matching waivers for offender reentry programs"},
+}
 
 
 def sections(body):

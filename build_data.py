@@ -1700,6 +1700,10 @@ def write_issues(session, inputs, page, current, labels=None):
         extra = [k for k in issues.OVERRIDES.get(f"{STATE}:{session}:{re.sub(r'[A-Z]$', '', num)}", {}) if k not in found]
         if extra:
             found, parts = found + extra, parts + extra
+        # And one the rules put on an issue wrongly, taken off with its reason (issues.EXCLUDE).
+        drop = issues.EXCLUDE.get(f"{STATE}:{session}:{re.sub(r'[A-Z]$', '', num)}", {})
+        if drop:
+            found, parts = [k for k in found if k not in drop], [k for k in parts if k not in drop]
         if not found:
             continue
         bills.append([found, filters, num, title, stage, last, const, intro, law,
