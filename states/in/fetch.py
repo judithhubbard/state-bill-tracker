@@ -163,6 +163,10 @@ def fingerprint(*parts):
     return hashlib.sha1(json.dumps(parts, sort_keys=True).encode()).hexdigest()
 
 
+# Light history (states/in/light.py) sets this: a bill the API answers empty is built from the session's list and actions.
+LIST_FALLBACK = False
+
+
 def bills(year):
     """The session's lists, then each bill whose fingerprint changed. Returns True when every wanted bill is saved."""
     folder = os.path.join(DATA, str(year))
@@ -229,7 +233,13 @@ def bills(year):
             d = get(i.get("link") or f"/{year}/bills/{name.lower()}")
             if not (isinstance(d, dict) and d.get("billName")):
                 FAILS["bill unreadable"] += 1
-                continue
+                if not LIST_FALLBACK:
+                    continue
+                # (Light history: the API answers an empty record for about 15% of 2015's bills, HB 1001 the budget among
+                # them; the list's entry and the session's actions still give its number, title and every step.)
+                d = {"billName": i.get("billName"), "displayName": i.get("displayName"), "number": i.get("number"),
+                     "title": i.get("description") or "", "description": i.get("description") or "",
+                     "originChamber": i.get("originChamber"), "type": i.get("type"), "fromList": True}
             d["actionsLink"] = (d.get("actions") or {}).get("link") if isinstance(d.get("actions"), dict) else None
             d["actions"] = sorted(by_bill.get(name, []), key=lambda a: (a.get("date") or "", _seq(a.get("sequence"))))
             d["listEntry"] = i

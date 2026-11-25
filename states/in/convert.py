@@ -27,6 +27,14 @@ CURRENT = P.session_of(datetime.now(ZoneInfo(P.TIMEZONE)).year)
 _PARTIES = {}
 
 
+
+def _seq(v):
+    """An action's sequence number; 2015-17's records have some "NaN" (sorted last on their day)."""
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return 10 ** 6
+
 def folder(session):
     return os.path.join(P.DATA, str(session))
 
@@ -176,7 +184,7 @@ def load_session(session):
         def order(a):
             """By day; within a day, timed lines first (the signatures and the governor's lines carry only a date)."""
             d = a.get("date") or ""
-            return (d[:10], d[11:19] in ("", "00:00:00"), d[11:19], int(a.get("sequence") or 0))
+            return (d[:10], d[11:19] in ("", "00:00:00"), d[11:19], _seq(a.get("sequence")))
         acts = sorted(b.get("actions") or [], key=order)
         steps = []  # (date, house, shared wording, as written, tally)
         for a in acts:

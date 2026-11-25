@@ -23,6 +23,7 @@ def fetch(session, data):
         print("in: no Indiana API key (INDIANA_API_KEY)", flush=True)
         return False
     F.DATA = data
+    F.LIST_FALLBACK = True
     done = F.bills(session)
     F.people(session)
     return bool(done)
