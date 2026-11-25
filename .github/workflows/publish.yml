@@ -545,3 +545,33 @@ jobs:
       - name: Check every state for the known data traps
         if: ${{ always() && (github.event.schedule == '50 10 * * *' || inputs.checks) }}
         run: python3 test/data_check.py
+
+      # Each live session against Open States (tools/openstates_check.py): our newest action a week behind theirs, or our
+      # bills falling against their count, fails the run; about 55 requests of the free tier's 250 a day. Its state (each
+      # state's recent ratios, the jurisdictions list) is kept in an Actions cache from day to day.
+      - name: Restore the Open States check's history
+        if: ${{ always() && (github.event.schedule == '50 10 * * *' || inputs.checks) }}
+        uses: actions/cache/restore@v4
+        with:
+          path: .openstates-check
+          key: openstates-check-${{ github.run_id }}
+          restore-keys: openstates-check-
+      - name: Cross-check every state against Open States
+        id: oscheck
+        if: ${{ always() && (github.event.schedule == '50 10 * * *' || inputs.checks) }}
+        env:
+          OPENSTATES_API_KEY: ${{ secrets.OPENSTATES_API_KEY }}
+        run: python3 tools/openstates_check.py --site _site --max 80
+      - name: Keep the Open States check's history
+        if: ${{ always() && steps.oscheck.conclusion != 'skipped' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .openstates-check
+          key: openstates-check-${{ github.run_id }}
+      - name: Drop older copies of the Open States check's history
+        if: ${{ always() && steps.oscheck.conclusion != 'skipped' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python3 tools/prune_caches.py openstates-check- "openstates-check-${{ github.run_id }}"
