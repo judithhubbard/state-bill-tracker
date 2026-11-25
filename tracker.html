@@ -115,6 +115,7 @@ html.embed body { padding: 0; background: var(--sheet); }
 .ta2-draft .ta-send { margin-top: 4px; }
 .billfoot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; font-size: 13.5px; color: var(--ink-2); padding-top: 10px; border-top: 1px solid var(--rule); }
 .billfoot .yourreps { margin: 0; font-size: 13.5px; }
+.wcan .billfoot { border-top: 0; padding-top: 4px; }  /* (on a card it follows the rows' own last line) */
 /* An open bill's side is chosen once, in its panel (.ta2-side): the row's own buttons under the star hide meanwhile. */
 #list .bill[open] > summary .sides { display: none; }
 /* The pinned header (pinBill()). */
