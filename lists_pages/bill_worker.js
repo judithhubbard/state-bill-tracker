@@ -122,7 +122,7 @@ export default {
       const sec = part && part.bills && part.bills[`${st}:${bill.session}:${bill.num}`];
       if (sec) {
         const short = String(part.short || part.name || issue);
-        t = `${full} · ${short[0].toUpperCase()}${short.slice(1)} section: ${cut(sec, 110)}`;
+        t = `${full} · ${short[0].toUpperCase()}${short.slice(1)} section: ${cut(sec, 140)}`;
         d = `${where || "On the issue"}. One part of a larger bill: ${title}.`;
         canon += `?issue=${issue}`;
         to += `&issue=${issue}`;

@@ -1609,6 +1609,34 @@ def outcomes(recs):
     return dict(out)
 
 
+def sec_line(x):
+    """"(Sec. 70411) This section establishes ..." -> "Sec. 70411 establishes ...": the section's number stays, so the issue's
+    box on the bill says where in the law it is (2026-11-25, the owner); other openings as they are."""
+    m = re.match(r"^\((?:Sec|Section)s?\.?\s*([^)]*)\)\s*(This section\s+)?", x or "")
+    if not m:
+        return x or ""
+    rest = x[m.end():]
+    return f"Sec. {m.group(1)} {rest}" if m.group(2) else f"Sec. {m.group(1)}: {rest[:1].upper()}{rest[1:]}"
+
+
+def bill_parts(session, r, text):
+    """A large bill's main parts and its sections, for "What it does" (2026-11-25, the owner: H.R. 1 of the 119th showed
+    only its formal title, "An act to provide for reconciliation ..."): {"main": [[issue id, issue name, its short name,
+    the section's sentence (short)], ...] for each issue it's on through a section (issues.part_issues(), less issues.EXCLUDE), "secs":
+    [each section's opening, short]}. None for a bill without sections."""
+    import issues  # (imported where it's used, as write_issues() does)
+    body = " ".join(x for j, x in enumerate((text or [])[:5]) if j in (0, 3, 4) and isinstance(x, str))
+    secs = r.get("sections") or issues.sections(body)
+    if not secs:
+        return None
+    head = f"{r['title']}. {r['summary'] or ''}"
+    drop = issues.EXCLUDE.get(f"{STATE}:{session}:{re.sub(r'[A-Z]$', '', r['nums'][0])}", {})
+    from issues_site import SHORT  # (each issue's short name: "school vouchers")
+    main = [[i, issues.BY_ID[i]["name"], SHORT.get(i, issues.BY_ID[i]["name"]), issues.short_line(sec_line(issues.part_section(i, secs)))]
+            for i in issues.part_issues(head, body, secs) if i not in drop]
+    return {"main": main, "secs": [issues.short_line(sec_line(x), 120) for x in secs]}
+
+
 def bill_texts(session, recs):
     """Bill (base number, as the page keys it) -> [sponsor's statement, committee, date, committee statement,
     fiscal summary, and (when the state's text isn't a sponsor's statement) where it's from], from
@@ -1621,12 +1649,19 @@ def bill_texts(session, recs):
     for r in recs:
         ts = [raw[n] for n in r["nums"] if n in raw]
         if not ts:
+            # (A large bill with sections and no text of its own: its main parts are "What it does".)
+            parts = bill_parts(session, r, None) if r.get("sections") else None
+            if parts:
+                out[re.sub(r"[A-Z]$", "", r["nums"][0])] = ["", "", "", "", "", "", parts]
             continue
         stmt = next((t["statement"] for t in ts if t.get("statement")), "")
         comm = max((t["committee"] for t in ts if t.get("committee")), key=lambda c: c[1], default=["", "", ""])
         fisc = next((t["fiscal"] for t in ts if t.get("fiscal")), "")
         label = next((t["label"] for t in ts if t.get("label")), "")
-        out[re.sub(r"[A-Z]$", "", r["nums"][0])] = [stmt, comm[0], comm[1], comm[2], fisc] + ([label] if label else [])
+        t = [stmt, comm[0], comm[1], comm[2], fisc] + ([label] if label else [])
+        # A large bill (sections): its main parts and every section, the text's 7th entry (tracker.html's whatItDoesHtml()).
+        parts = bill_parts(session, r, t)
+        out[re.sub(r"[A-Z]$", "", r["nums"][0])] = (t + [""] * (6 - len(t)) + [parts]) if parts else t
     return out
 
 
@@ -1689,12 +1724,6 @@ def write_issues(session, inputs, page, current, labels=None):
             # "Establishes a nonrefundable tax credit of up to $1,700 for cash contributions ...".)
             # ("(Sec. 70411) This section establishes ..." -> "Sec. 70411 establishes ...": the section's number stays, so the
             # issue's box on the bill says where in the law it is; 2026-11-25, the owner.)
-            def sec_line(x):
-                m = re.match(r"^\((?:Sec|Section)s?\.?\s*([^)]*)\)\s*(This section\s+)?", x)
-                if not m:
-                    return x
-                rest = x[m.end():]
-                return f"Sec. {m.group(1)} {rest}" if m.group(2) else f"Sec. {m.group(1)}: {rest[:1].upper()}{rest[1:]}"
             psec = {i: sec_line(issues.part_section(i, secs or issues.sections(body))) for i in parts}
             memo[k] = [found, {i: issues.filters_of(i, both) for i in found if issues.BY_ID[i].get("filters")},
                        {i: (psec[i][:1].upper() + psec[i][1:]) if i in psec else issues.excerpt(i, head, body) for i in found}, parts]

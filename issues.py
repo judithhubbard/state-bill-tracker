@@ -981,6 +981,17 @@ def part_issues(head, body="", secs=None):
     return out
 
 
+def short_line(text, n=140):
+    """A section's sentence in short (the issue's box, the share preview, "Its main parts"): whole up to n characters, else
+    cut at a word with "…" (tracker.html's shortLine(), lists_pages/bill_worker.js's cut(): the same rule)."""
+    text = re.sub(r"\s+", " ", text or "").strip()
+    if len(text) <= n:
+        return text
+    c = text[:n]
+    i = c.rfind(" ")
+    return (c[:i] if i > n * 0.6 else c).rstrip(",;: ") + "…"
+
+
 def part_section(issue_id, secs):
     """The section that put a large bill on the issue (for the issue lists' line under the title)."""
     i = BY_ID[issue_id]
