@@ -1506,6 +1506,14 @@ def _sim_words(text):
     return out
 
 
+# A bill whose contents became law inside a larger bill (states/part_of.py): the profile's PART_OF adds what the record
+# doesn't say.
+def part_of(recs, session):
+    from states import part_of as PO
+    own = getattr(P, "part_of_number", None)
+    return PO.find(recs, (getattr(P, "PART_OF", {}) or {}).get(session), own and (lambda t: own(t, session)), PO.statements(P.DATA, session))
+
+
 def similar_bills(recs, k=8, floor=0.35):
     """For each bill, up to k others with similarity >= floor, as [[index, percent], ...]."""
     import math
@@ -1796,7 +1804,7 @@ KEY_DATES = ["intro", "floor", "passS", "passA", "died", "deliv", "signed", "vet
 
 def label_inputs(session, recs, hist_s):
     """Each record as the page sees it, for bill_labels()."""
-    bills = []
+    bills, pof = [], part_of(recs, session)
     for i, r in enumerate(recs):
         kd = [r["first"] or ""] + list(r["keyDates"] or [])
         dates = {k: ((kd[j] if j < len(kd) else "") or "").split(";")[-1] or None for j, k in enumerate(KEY_DATES)}
@@ -1807,7 +1815,8 @@ def label_inputs(session, recs, hist_s):
                       "vers": [{"p": v["p"], "committee": v["committee"] or "", "statusDesc": v["statusDesc"] or "", "sponsor": v["sponsor"] or "",
                                 "actions": [[a[0], a[1]] for a in v["actions"]]} for v in r["vers"]],
                       "dates": dates, "earlier": sorted((e for e in hist_s[i].values() if e[0] < session), key=lambda e: (e[0], str(e[1]))),
-                      "later": sorted((e for e in hist_s[i].values() if e[0] > session), key=lambda e: (e[0], str(e[1])))})
+                      "later": sorted((e for e in hist_s[i].values() if e[0] > session), key=lambda e: (e[0], str(e[1]))),
+                      **({"partOf": pof[i][0]} if i in pof else {})})
     return bills
 
 
@@ -2649,6 +2658,7 @@ def compute(prev=None):
                                              narrow_bill(r), bool(r.get("shell"))] for r in recs]).encode()).hexdigest()
         was = prev.get(session) or {}
         sims = was["sims"] if was.get("simIn") == sim_in else similar_bills(recs)
+        pof = part_of(recs, session)
         for i, r in enumerate(recs):
             flags = (r["local"] and 1) | (r["senDeleg"] and 2) | (r["budget"] and 4) | (r["asmDeleg"] and 8) | (r["passedS"] and 16) | (r["passedA"] and 32) | (["", "person", "org", "naming"].index(r["narrow"]) << 6 if r["narrow"] != "place" else 512) | (256 if r.get("shell") else 0) | (1024 if r.get("ballot") else 0) | (2048 if r.get("lapsed") else 0) | (4096 if r.get("passedAgain") else 0)
             vers = [[v["p"], S(v["sponsor"]), v["cosp"], S(v["statusDesc"]), S(v["committee"]),
@@ -2668,7 +2678,7 @@ def compute(prev=None):
                          [d.replace("-", "") for d in [r["first"] or ""] + r["keyDates"]],
                          bill_parties(r, party_of), enc_votes(r["votes"]),
                          [[S(a[0]), *a[1:]] for a in agenda_of(r)],
-                         [(P.COUNTIES + ["?"]).index(c) for c in r["places"]], r["mainTopic"], sims[i], r["memo"], veto_note(i, r)])
+                         [(P.COUNTIES + ["?"]).index(c) for c in r["places"]], r["mainTopic"], sims[i], r["memo"], veto_note(i, r), pof.get(i, 0)])
 
         data = {
             "session": session,

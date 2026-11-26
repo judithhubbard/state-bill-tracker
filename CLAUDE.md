@@ -653,6 +653,19 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   it, and quoted sections of restated law misled), OK (LegiScan getBillText would cost about 11,000 queries).
   States cache sections (not leads) in data/<st>/<session>/leads.json, so a rule change needs no download. data_check
   fails (over 1%) on leads that are boilerplate, over 1,200 characters, or the title's words again.
+- **Bills that passed inside a larger bill (2026-11-26, the owner):** `states/part_of.py` marks a bill that didn't reach
+  the governor whose contents became law in a same-session law: its own record says so (NE "Provisions/portions of LB80
+  amended into LB814", VA "Incorporated by Courts of Justice (HB1912-...)", CT "INCORPORATED IN" + the bill's column, WV's
+  list "Incorporated into Com. Sub. for SB 325" (`statusLine`), MI "FOR FINAL DISPOSITION OF BUDGET, SEE HB 4706", DC's
+  notes "Provisions of this bill have been incorporated into Bill 25-131" (`part_of_number()`), VA/KS summaries "This bill
+  was incorporated into SB 180"; NE laws' "adds LB55, ... to LB261"), or the profile's `PART_OF` with its source (MN HF 642,
+  the National Popular Vote compact, in HF 1830, ch. 62). A bare "incorporated into" needs a shared distinctive word (CT's
+  January drafting lines into bills that became something else); fiscal notes (AK "FN1: ... INCORPORATED INTO") don't count.
+  The rows' last column ([law, chapter, day]); status words "Passed as part of HF1830" (billfacts.js), its panel "Became law
+  as part of HF1830 · Chapter 62 · date" (`partHead()`), out of time (`stillAlive()`), no "reintroduce it" (`lawTwin()`). It
+  keeps its own stage: Statistics' odds count it as a bill that stopped (the law counts once). data_check LOOKs at counts.
+  Text containment (a dead bill's text inside a law's) isn't done: summaries are cut at ~4,000 characters and omnibus texts
+  aren't downloaded; MN's statute pages' history ("2023 c 62 art 4 s 124") would be the way.
 - **Bill links with their own previews (2026-11-24, approved by the owner):** "Copy link to share this bill" (`billLink()`)
   copies /<st>/bill/<NUM> (another session: /<st>/bill/<session>/<NUM>). Link previews ignore what follows "#", so a Pages
   Function (advanced mode: tools/bill_worker.py writes lists_pages/bill_worker.js to _site/_worker.js; `_routes.json` sends

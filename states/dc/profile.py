@@ -43,6 +43,14 @@ def period_of(session):
     return 26 + (session - 2025) // 2
 
 
+def part_of_number(text, session):
+    """A bill named in a legislative note ("Bill 25-131", states/part_of.py) as the session's records write it ("B131"), or
+    None when it's another Council Period's."""
+    import re
+    m = re.match(r"(?:Bill|B) ?(\d+)-0*(\d+)$", text.strip())
+    return f"B{m.group(2)}" if m and int(m.group(1)) == period_of(session) else None
+
+
 def session_label(session):
     return f"{session}–{str(session + 1)[2:]}"
 

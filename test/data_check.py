@@ -143,6 +143,16 @@ def check(state):
         # Count bills by stage against the Legislature's own totals (signed, vetoed).
         say(state, "LOOK", f"{s}: {len(recs)} bills; signed {stages[5]}, vetoed {stages[6]}, passed both houses but not "
                            f"sent {stages[3]}, on the governor's desk {stages[4]} (compare with the official totals)")
+        # Bills whose contents became law inside a larger bill (states/part_of.py, 2026-11-26): the record's own lines
+        # ("Incorporated into SB 2508") or the profile's PART_OF. Listed to read over: each should name a law that carries it.
+        from states import part_of as PO
+        own = getattr(P, "part_of_number", None)
+        inside = PO.find(recs, (getattr(P, "PART_OF", {}) or {}).get(s), own and (lambda t, s=s: own(t, s)), PO.statements(P.DATA, s))
+        if inside:
+            laws = collections.Counter(v[0] for v in inside.values())
+            say(state, "LOOK", f"{s}: {len(inside)} bills passed as part of another bill that became law, into {len(laws)} laws "
+                               f"(most: {', '.join(f'{n} {c}' for n, c in laws.most_common(3))}), e.g. "
+                               f"{[recs[i]['nums'][0] + ' -> ' + v[0] for i, v in list(inside.items())[:4]]}")
         # Sponsors named only in another document: Idaho's committee bills name the member who asked for them in the
         # Statement of Purpose's "Contact:" section, matched to the year's members. A session where most don't match (a
         # new layout, a member list that didn't load) shows committees again; names titled as legislators that match no
