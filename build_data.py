@@ -163,6 +163,9 @@ def load_light():
             r["topics"] = r["topics"] or []
             r["firstComms"] = [tuple(x) for x in r["firstComms"] or []]
             r["vers"] = [{"cosponsors": [], "actions": [], "district": None, **v} for v in r.get("vers") or []]
+            # (A state may redo what its light files hold as shown on the page: Alaska's titles, 2026-11-26.)
+            if hasattr(C, "light_record"):
+                r = C.light_record(r)
             recs.append(r)
         out[s] = (recs, {n: i for i, r in enumerate(recs) for n in r["nums"]}, d.get("fetched", ""), {})
         LIGHT.add(s)
@@ -1707,7 +1710,8 @@ def issue_inputs(session, recs, texts, party_of=None):
                 active[str(y)] = active.get(str(y), 0) + 1
         key = re.sub(r"[A-Z]$", "", r["nums"][0])
         t = texts.get(key) or []
-        head = f"{r['title']}. {r['summary'] or ''}"
+        # ("aka": a title the record was also known by, matched too: Alaska's official short title, 2026-11-26.)
+        head = f"{r['title']}. {r['summary'] or ''}" + (f" {r['aka']}." if r.get("aka") else "")
         body = " ".join(x for j, x in enumerate(t[:5]) if j in (0, 3, 4) and isinstance(x, str))
         intro = max(session, int((r["first"] or str(session))[:4]))
         law = ""

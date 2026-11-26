@@ -24,8 +24,16 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   members who left are "H?Tilton"; a member who changed name has two active records (Robyn Niayuq Burke, now Frier: the
   "Name Changed" record is left out of contacts, its code kept for votes). Party "N" (nonpartisan or undeclared) is shown
   as "Independent". Bipartisan coalitions run both houses (legislatures.json `note`; seat counts show Republican majorities,
-  so balance.py's "unified" and the front page's dots would mislead: fix before adding Alaska there). Titles are the short
-  titles, sentence-cased with abbreviations spelled out (`titled()`); the summary is the official title. No "What it does"
+  so balance.py's "unified" and the front page's dots would mislead: fix before adding Alaska there). Titles (2026-11-26,
+  the owner: the short titles read "US president elect. popular vote compact") are the official long title made readable
+  (`shown_title()`: no "An Act relating to", leading article or effective-date clause; cut to its first clause when over 150
+  characters and that clause has three in four of the short title's words), else the short title sentence-cased with
+  abbreviations spelled out (`titled()`): a long title that lacks most of the short title's words misses the point (HB 215 of
+  2023, "Abortion; right to privacy", is "relating to the definition of privacy in the Constitution"), as do amendments'
+  ("relating to marriage" for "repeal marriage section"). In 2023-26 about 900 of 1,391 bills show the long title (about 70 of
+  them its first clause). The summary is the official title when the title isn't all of it, else empty; the short title is
+  kept as `aka` (issue matching reads it; topics and narrow_kind() still read the short title). Light sessions get the same
+  through `light_record()`. No "What it does"
   (decided 2026-11-08; since 2026-11-22 a lead quoted from the bill's text, below): the only plain account is the sponsor statement (PDF), an advocate's case for the bill as introduced
   (HB 57 of 2025's is about phones in classrooms; the law became the education funding bill), with letterheads and staff
   contacts, and on about half the bills. Constitutional amendments (HJR/SJR "Proposing amendments to the Constitution"):
