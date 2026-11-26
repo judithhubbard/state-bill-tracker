@@ -1080,8 +1080,10 @@ ul.impact { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 7
   font-size: 13px; font-weight: 600; white-space: nowrap; border: 1.5px solid var(--refer); color: var(--ink-2); }
 .road .rp.done { background: color-mix(in srgb, var(--navy) 15%, transparent); border-color: transparent; color: color-mix(in srgb, var(--navy) 78%, var(--ink)); }
 .road .rp.now { background: var(--gold); border-color: var(--gold); color: #1d1a10; }
-/* (No opacity: the faded text failed contrast, 2.8:1; the dashed border says "not reached".) */
-.road .rp.stop { border-style: dashed; color: var(--ink-2); }
+/* Steps not reached: a dashed border (no opacity: faded text failed contrast, 2.8:1). The step where a bill stopped
+   stands out most (2026-11-26, the owner): a solid grey pill with "✕". */
+.road .rp.ahead { border-style: dashed; }
+.road .rp.stop { background: color-mix(in srgb, var(--ink-2) 22%, transparent); border-color: transparent; color: var(--ink); }
 .road .rp.veto { background: var(--veto-soft); border-color: transparent; color: var(--veto-ink, var(--veto)); }
 .road .rp.mid { grid-row: 1 / 3; align-self: center; }
 .road .rl { height: 1.5px; background: var(--refer); }
@@ -3366,7 +3368,8 @@ function roadOf(b, dead = false) {
   if (b.stage === 0) {
     // Twins (each house's own version): every house where a version waits in committee; else the bill's own house.
     const ws = lanes.filter((l) => !l.date && inComm(STATE.oneNumber ? (l.h === origin ? l.v : null) : l.v));
-    (ws.length ? ws : [lane(origin) || lanes[0]]).forEach((l) => { l.comm = "now"; now = now || { h: l.h, step: "comm", v: l.v }; });
+    // (A prefiled bill no committee has yet, TX HB 266 of 2027: no step is "now" until it's referred; 2026-11-26.)
+    (ws.length ? ws : DATA.upcoming ? [] : [lane(origin) || lanes[0]]).forEach((l) => { l.comm = "now"; now = now || { h: l.h, step: "comm", v: l.v }; });
   } else if (b.stage === 1) {
     let hs = b.vers.filter((v) => /floor/i.test(v.statusDesc || "")).map((v) => v.p[0]);
     if (!hs.length) hs = b.vers.filter((v) => !inComm(v)).map((v) => v.p[0]).slice(0, 1);
@@ -3396,7 +3399,7 @@ function roadOf(b, dead = false) {
 function roadPic(b, dead = false) {
   const R = roadOf(b, dead), D = b.dates;
   const short = (h) => { const n = HOUSE[h] || ""; return n.length > 10 ? n.split(" ")[0] : n; };
-  const pill = (state, label, tip, area, cls = "") => `<span class="rp ${state || "ahead"}${cls}" style="grid-area:${area}"${tip ? ` title="${esc(tip)}"` : ""}>${state === "done" ? "✓ " : ""}${esc(label)}</span>`;
+  const pill = (state, label, tip, area, cls = "") => `<span class="rp ${state || "ahead"}${cls}" style="grid-area:${area}"${tip ? ` title="${esc(tip)}"` : ""}>${state === "done" ? "✓ " : state === "stop" ? "✕ " : ""}${esc(label)}</span>`;
   const out = [];
   R.lanes.forEach((l, i) => {
     const row = i + 1, comm = l.v?.committee ? commWord(commPlain(l.v.committee)) : "Committee";
@@ -3654,7 +3657,7 @@ function taSendUrl(how, to, subject, body) {
 // The block's first line: "Next: Senate Transportation Committee · Mon, Nov 30", "Next: a vote of the full Senate",
 // "Next: the governor decides · by Jan 13".
 function nextHead(b, now) {
-  if (!now) return "";
+  if (!now) return DATA.upcoming && b.stage === 0 && b.vers[0] ? `Next: sent to a ${UNI ? "" : `${HOUSE[b.vers[0].p[0]]} `}committee` : "";
   if (now.step === "gov") return b.stage === 4 ? `Next: ${EXEC.the} decides${b.due ? ` · by about ${fmtDate(b.due)}` : ""}` : "";
   if (now.step === "floor") {
     const fl = nextFloor(b), sure = fl && floorSure(fl) && floorCode(fl) === now.h;
