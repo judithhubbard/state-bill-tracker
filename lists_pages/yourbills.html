@@ -360,8 +360,11 @@ function opened(id) {
   const t = TABS.get("starred");
   if (t) { t.fresh = ITEMS.filter(freshStar).length; drawStrip(); }
 }
+// Bills from one state only (2026-11-26, the owner): no "Group by state" and no state badge on each row.
 function drawStarred(list) {
-  OneList.draw($("bills"), list, { tab: "s", byState: BY_STATE, isNew: freshStar, remove: true, mine: true, onOpen: (id) => opened(id) });
+  const one = new Set(list.map((x) => x.st)).size <= 1;
+  $("byState").closest(".bystate").hidden = one;
+  OneList.draw($("bills"), list, { tab: "s", byState: BY_STATE && !one, oneState: one, isNew: freshStar, remove: true, mine: true, onOpen: (id) => opened(id) });
 }
 async function draw() {
   syncTabs();
