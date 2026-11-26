@@ -27,6 +27,9 @@ const STATE = {
   // (Connecticut Constitution, Art. XII). The files have no votes, but the history says when a house adopted it "but
   // not by the necessary 3/4ths" or "failed to adopt by 3/4".
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext(s) { const e = s % 2 ? s + 1 : s; return { sessions: [e + 1, e + 2], ends: `${e + 2}-12-31`, label: `${e + 1}–${String(e + 2).slice(2)}` }; },
   amendmentOnce: true,
   ballotEvenYears: true,
   amendmentVote: "both houses by three-fourths, or by a majority in two Legislatures with an election between",

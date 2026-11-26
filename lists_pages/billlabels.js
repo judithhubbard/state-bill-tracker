@@ -7,7 +7,7 @@
 // stdout [[words, flags, newsDay, news], ...] in the same order (news: that day's news in plain words, as the state's
 // Watchlist tab says it after "New:", BillFacts.make().latestNews()). flags: "e" ended before the session did, "a" a constitutional
 // amendment that doesn't go to the governor, "2" its second (or only) passage, "d" the voters have decided it, "r" a
-// veto the Legislature can still override.
+// veto the Legislature can still override, "x" a first passage the next Legislature let die (billfacts.js's lapsedOf()).
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -35,7 +35,7 @@ const out = input.bills.map((b) => {
   const x = BF.factsOf(b);
   let veto = false;
   try { veto = !!S.vetoReturns?.(b)?.live; } catch (e) {}
-  const flags = (x.stops ? "e" : "") + (x.amend ? "a" : "") + (x.second ? "2" : "") + (x.voted ? "d" : "") + (veto ? "r" : "");
+  const flags = (x.stops ? "e" : "") + (x.amend ? "a" : "") + (x.second ? "2" : "") + (x.voted ? "d" : "") + (veto ? "r" : "") + (x.lapsed ? "x" : "");
   let news = "";
   try { news = BF.latestNews(b, routine); } catch (e) {}
   return [BillFacts.words(S, x), flags, BillFacts.newsDay((b.vers || []).flatMap((v) => v.actions || []), routine), news];

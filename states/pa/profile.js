@@ -24,6 +24,9 @@ const STATE = {
   // Joint resolutions proposing constitutional amendments pass two successive sessions, then go to the voters; never
   // to the governor (Pennsylvania Constitution, Art. XI).
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext: (s) => ({ sessions: [s + 2], ends: `${s + 3}-12-31`, label: `${s + 2}–${String(s + 3).slice(2)}` }),
   // A law's number: "Act 28 of 2025".
   lawWord: "Act",
 

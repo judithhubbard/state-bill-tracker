@@ -2204,7 +2204,7 @@ function renderPipeline() {
   // After the second year's last floor votes, only bills that passed both houses can still move: shown while any
   // are left (once the governor has acted on all of them, there's nothing in play).
   // (Amendments whose election has passed aren't in play: the voters decided.)
-  const inPlay = BILLS.some((b) => (b.stage === 3 && !votersDone(b)) || b.stage === 4);
+  const inPlay = BILLS.some((b) => (b.stage === 3 && !votersDone(b) && !lapsedAmend(b)) || b.stage === 4);
   const wentToVoters = !inPlay && BILLS.some((b) => votersDone(b));
   // The counts follow the other filters (a county, a topic ...): say so, so they don't seem to disagree with totals
   // elsewhere on the page (the notice counts every bill).
@@ -2341,7 +2341,7 @@ function statusParts(b) {
   }
   // (What the break between sessions means for a bill is said once, in the notice and the "Out of time" heading, and
   // in the bill's panel: not on every row.)
-  const over = b.stage <= 2 && !stillAlive(b) ? " over" : "";
+  const over = (b.stage <= 2 && !stillAlive(b)) || lapsedAmend(b) ? " over" : "";
   return [t, small, over];
 }
 const statusLabel = (b) => statusParts(b)[0];
@@ -3165,6 +3165,8 @@ const agendaAsk = (committee) => (STATE.chairAsks?.[committee] || ["put it on th
 const isAmendment = (b) => BF.isAmendment(b);
 const toVoters = (b) => BF.toVoters(b);
 const secondPassage = (b) => BF.secondPassage(b);
+// A first passage the next Legislature let die: its status words ("Died: not passed again in 2025"), or "" (billfacts.js).
+const lapsedAmend = (b) => (b.stage === 3 && isAmendment(b) ? BF.lapsedOf(b) : "");
 const ballotLine = (b) => BF.ballotLine(b);
 // The ballot line as shown: once the election has passed, the state's official results page when the profile gives one
 // (STATE.electionResults), instead of "The result isn't shown here".
@@ -3275,6 +3277,8 @@ function planFor(b, stance = "support") {
     if (!live && !continuedTo(b)) b.vers.forEach(again);
   } else if (b.stage === 3 && toVoters(b)) {
     what = `<p class="when">It doesn't go to ${EXEC.the}. ${ballotText(b)}</p>`;
+  } else if (b.stage === 3 && isAmendment(b) && lapsedAmend(b)) {
+    what = `<p class="when">${esc(lapsedAmend(b))}.</p>`;
   } else if (b.stage === 3 && isAmendment(b)) {
     what = secondPassage(b)
       ? `<p class="when">${STATE.amendmentOnce ? "" : "Second passage. "}${ballotText(b)}</p>`
@@ -3673,7 +3677,10 @@ function nextSteps(b) {
   const side = panelStance(b);
   const plan = planFor(b, side || "support");
   // (A past session, or no contacts: the road alone.)
-  if (!plan) return `<div class="next nx done">${roadPic(b, !DATA.current && b.stage <= 2)}</div>`;
+  if (!plan) {
+    const lap = lapsedAmend(b);
+    return `<div class="next nx done">${roadPic(b, (!DATA.current && b.stage <= 2) || !!lap)}${lap ? `<div class="nxb"><p class="t">${esc(lap)}</p></div>` : ""}</div>`;
+  }
   plan.book.ifSupport = !side;
   const R = roadOf(b, !plan.actionable), head = plan.actionable ? nextHead(b, R.now) : "";
   let what = plan.what;
@@ -5452,7 +5459,7 @@ const WROW_RULES = { get WR() { return WR; } };
 function watchRow(b, x) {
   const n = baseNum(b.nums[0]);
   return { key: `${STATE.code}:${DATA.session}:${n}`, st: STATE.code, session: DATA.session, num: n, full: b.nums[0], other: b.nums[1] || "", found: true, b, w: x,
-    title: b.title, stage: b.stage, last: b.last || "", stance: watchStance(b) || "", rules: WROW_RULES,
+    title: b.title, stage: b.stage, last: b.last || "", stance: watchStance(b) || "", rules: WROW_RULES, lapsed: !!lapsedAmend(b),
     label: statusLabel(b), action: (() => { const [d, t, all] = latestStep(b); return t ? shortStep(t, d, all) : ""; })(),
     ...WatchRows.place(b, { S: STATE, WR, current: !!DATA.current, upcoming: !!DATA.upcoming, act: !!DATA.current && !DATA.upcoming && canActNow(b), exec: EXEC.title,
       session: DATA.session, next: (x) => BillFacts.nextStep(STATE, BF.factsOf(x)) }) };
@@ -7769,6 +7776,9 @@ function decode(raw) {
       laws: laws.map(str), comms: comms.map(str), law: str(law), program: str(program), comm: str(comm),
       passedIn: passedIn || null, last: day(last),
       sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: flags & 512 ? "place" : ["", "person", "org", "naming"][(flags >> 6) & 3], shell: !!(flags & 256), ballot: !!(flags & 1024),
+      // A constitutional amendment's first passage that the next Legislature let die, or passed again, as the state's own
+      // record of its second round says (build_data.py's flags; Nevada's converter reads it: states/nv/convert.py).
+      lapsed: !!(flags & 2048), passedAgain: !!(flags & 4096),
       memo: memo || "",
       vetoNote: decodeVeto(vetoNote),
       nums: v.map((x) => x.p), sponsors: v.map((x) => x.sponsor).filter(Boolean), vers: v,

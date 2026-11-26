@@ -28,6 +28,9 @@ const STATE = {
   // one General Assembly and two-thirds of each house's members in the next, then goes to the voters at the next
   // election for governor (Tennessee Constitution, Art. XI, sec. 3); never to the governor.
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext: (s) => ({ sessions: [s + 2], ends: `${s + 3}-12-31`, label: `${s + 2}–${String(s + 3).slice(2)}` }),
   amendmentVote: "a majority of each house's members in one General Assembly, then two-thirds of each house's members in the next",
   ballotYear(d) {
     let y = +(d || String(DATA.session)).slice(0, 4);

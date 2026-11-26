@@ -31,10 +31,14 @@ const STATE = {
   // Joint resolutions proposing amendments to the Nevada Constitution pass each house by a majority of its members in two
   // sessions in a row, then go to the voters at the next general election (Art. 16, sec. 1); never to the governor.
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext: (s) => ({ sessions: [s + 2], ends: `${s + 3}-12-31`, label: String(s + 2) }),
   amendmentVote: "a majority of each house's members in two sessions in a row",
-  // A resolution passed again carries its first session's name ("SJR 7 of the 82nd Session"); the records read here have
-  // only each session's new resolutions, so every one shown is a first passage.
-  amendmentFinal: (b) => /\bof the \d+(?:st|nd|rd|th) Session\b/i.test(`${b.title} ${b.summary}`),
+  // A resolution passed again carries its first session's name ("SJR 7 of the 82nd Session"). Its second round is read
+  // from the next session's "All Previous Session Bills" into the first passage's record (fetch.py's second_rounds(),
+  // convert.py's second_round()): passed again (b.passedAgain), or let die (b.lapsed: "Died: not passed again in 2025").
+  amendmentFinal: (b) => !!b.passedAgain || /\bof the \d+(?:st|nd|rd|th) Session\b/i.test(`${b.title} ${b.summary}`),
   amendmentAgain: (b) => `Next: the Legislature has to pass it again, unchanged, in the ${DATA.session + 2} session; then it goes to the voters at the November ${DATA.session + 3} general election.`,
   ballotLine: () => `It goes to the voters at the next general election.`,
 

@@ -28,6 +28,9 @@ const STATE = {
   // governor (Indiana Constitution, Art. XVI, sec. 1). Its digest says which passage it is: "This proposed amendment has
   // been agreed to by one general assembly" (the second) or "has not been previously agreed to" (the first).
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext(s) { const e = s % 2 ? s + 1 : s; return { sessions: [e + 1, e + 2], ends: `${e + 2}-12-31`, label: `${e + 1}–${String(e + 2).slice(2)}` }; },
   amendmentVote: "a majority of each house's members in two General Assemblies in a row",
   ballotEvenYears: true,
   amendmentFinal: (b) => /has been agreed to by one general assembly/i.test(b.summary || ""),

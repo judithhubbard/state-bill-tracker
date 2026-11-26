@@ -42,6 +42,22 @@ const BillFacts = (() => {
     // Its second passage: the version in the session two years earlier passed both houses (or the state decides it per
     // bill, S.amendmentFinal; or one passage is enough, S.amendmentOnce).
     const secondPassage = (b) => (S.amendmentFinal ? !!S.amendmentFinal(b) : !!S.amendmentOnce || (b.earlier || []).some((e) => e[0] === F().session - 2 && e[2] >= 3));
+    // A first passage the next Legislature let die (2026-11-26: Nevada's AJR 6 of 2023 read "Passed the first of two
+    // rounds" long after the 2025 session let it die): the state's own record of its second round (b.lapsed, b.passedAgain:
+    // Nevada's converter reads it), or its version in the next Legislature, linked by the state's records (b.later), that
+    // didn't pass both houses once that Legislature's time is up (S.amendmentNext(session): {sessions: [the next
+    // Legislature's sessions], ends: its last day, label: "2025-26"}). No linked version says nothing: second passages
+    // aren't always linked (New York's 2021 S517, Iowa's flat tax of 2024), so the first passage is left as it was.
+    // Returns the status words ("Died: not passed again in 2025"), or "".
+    function lapsedOf(b) {
+      if (!isAmendment(b) || b.stage !== 3 || b.passedAgain || secondPassage(b)) return "";
+      const nx = S.amendmentNext?.(F().session);
+      const words = () => `Died: not passed again${nx?.label ? ` in ${nx.label}` : " by the next Legislature"}`;
+      if (b.lapsed) return words();
+      if (!nx || !(today() > nx.ends)) return "";
+      const vs = (b.later || []).filter((e) => nx.sessions.includes(e[0]) && e[2] !== -2);
+      return vs.length && !vs.some((e) => e[2] >= 3) ? words() : "";
+    }
     // After its second passage it goes on the ballot in November: that year's if it passed by July, else the next year's.
     function ballotLine(b) {
       if (S.ballotLine) return S.ballotLine(b);
@@ -102,6 +118,7 @@ const BillFacts = (() => {
       x.amend = isAmendment(b);
       x.ballot = toVoters(b);
       x.second = x.amend && b.stage === 3 && tryIt(() => secondPassage(b), false);
+      x.lapsed = x.amend && b.stage === 3 && !x.second ? tryIt(() => lapsedOf(b), "") : "";
       x.voted = b.stage === 3 ? tryIt(() => votersDone(b), "") : "";
       // A law's own words while it isn't in force yet (S.lawText: the District's acts, under review by Congress).
       x.lawText = b.stage === 5 && S.lawText ? tryIt(() => S.lawText(b), "") || "" : "";
@@ -190,7 +207,7 @@ const BillFacts = (() => {
       const top = all.filter(([d, t]) => d === day && !routine.test(t)).sort((x, y) => weightOf(x[1]) - weightOf(y[1]))[0];
       return top ? newsWhat(top[1], top[0], b) : "";
     }
-    return { factsOf, isAmendment, toVoters, secondPassage, ballotLine, votersDone, continuedTo, endedOf, billsDied, gateBack, commPlain,
+    return { factsOf, isAmendment, toVoters, secondPassage, lapsedOf, ballotLine, votersDone, continuedTo, endedOf, billsDied, gateBack, commPlain,
       plainAction, newsWhat, latestNews };
   }
   // Which news matters most, so a "New: ..." names the step that matters.
@@ -216,7 +233,9 @@ const BillFacts = (() => {
     if (k === 3) {
       if (f.voted) return f.voted;
       if (f.amend && f.second && S.amendmentDone) return S.amendmentDone;
-      // A constitutional amendment that needs two passages, with only the first done (New York: the next Legislature votes again).
+      // A constitutional amendment that needs two passages, with only the first done (New York: the next Legislature votes
+      // again), or the next Legislature let it die (f.lapsed: lapsedOf()'s words).
+      if (f.amend && !f.second && f.lapsed) return f.lapsed;
       if (f.amend && !f.second) return "Passed the first of two rounds";
       if (f.amend || f.ballot) return `${PB}; goes to the voters`;
       return PB;
@@ -229,7 +248,7 @@ const BillFacts = (() => {
   // What comes next for a bill that passed both houses but isn't the governor's: the voters, or a second passage.
   function nextStep(S, f) {
     if (f.ballot) return "Goes to the voters";
-    if (!f.amend || f.stage !== 3) return "";
+    if (!f.amend || f.stage !== 3 || f.lapsed) return "";
     return f.second ? S.amendmentDone || "Goes to the voters" : `Must pass again${S.amendmentAgain ? "" : " in the next Legislature"}`;
   }
   // "New since you last looked": an action after the day last seen that isn't paperwork (a new print number, the "sent

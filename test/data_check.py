@@ -46,6 +46,15 @@ def wording(state, loaded):
     from stages import has_signature, unsigned
     profile = open(os.path.join(HERE, "states", state, "profile.js"), encoding="utf-8").read()
     day = lambda d: str(d or "")[:10]
+    # Each record's versions in later sessions, from their own "prev" links (as build_data.py's cross-session links):
+    # wording_check.js reads them for constitutional amendments' first passages (billfacts.js's lapsedOf()).
+    later = collections.defaultdict(list)
+    stage_of = {(s2, n): r2["stage"] for s2, recs2 in loaded.items() for r2 in recs2
+                for n in list(r2["nums"]) + list(r2.get("base") or [])}
+    for s2, recs2 in loaded.items():
+        for r2 in recs2:
+            for ps, pp in r2.get("prev") or []:
+                later[(ps, pp)].append([s2, " / ".join(r2["nums"]), r2["stage"]])
     for s, recs in loaded.items():
         bills = []
         for r in recs:
@@ -59,7 +68,15 @@ def wording(state, loaded):
                           "vers": [{"p": v["p"], "actions": [[day(a[0]), a[1]] for a in v["actions"]]} for v in r["vers"]],
                           "votes": [[v[0], v[1], v[2], day(v[3]), v[4], v[5], v[7] if len(v) > 7 else ""] for v in r.get("votes") or []],
                           # (stages.py's reading of a law's history, for the governor's page's past sessions: compared there)
-                          **({"sig": [has_signature(r), unsigned(r)]} if r["stage"] == 5 else {})})
+                          **({"sig": [has_signature(r), unsigned(r)]} if r["stage"] == 5 else {}),
+                          # (A constitutional amendment that passed both houses: what decides whether it's a first passage, and
+                          # whether the next Legislature passed it again or let it die.)
+                          **({"topics": r["topics"], "title": r["title"], "summary": r.get("summary") or "",
+                              "lapsed": bool(r.get("lapsed")), "passedAgain": bool(r.get("passedAgain")),
+                              "earlier": [[ps, pp, stage_of[(ps, pp)]] for ps, pp in r.get("prev") or [] if (ps, pp) in stage_of],
+                              "later": sorted({tuple(e) for n in dict.fromkeys(list(r["nums"]) + list(r.get("base") or []))
+                                                              for e in map(tuple, later.get((s, n), []))})}
+                             if r["stage"] == 3 and "const" in (r.get("topics") or []) else {})})
         run = subprocess.run(["node", os.path.join(HERE, "test", "wording_check.js")], capture_output=True, text=True,
                              input=json.dumps({"profile": profile, "session": s, "current": s == max(loaded), "bills": bills}))
         if run.returncode:

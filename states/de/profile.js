@@ -32,6 +32,9 @@ const STATE = {
   // changes. Then it's part of the constitution: Delaware alone among the states doesn't send amendments to the voters
   // (Constitution, Art. XVI, sec. 1), and they never go to the governor.
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext: (s) => ({ sessions: [s + 2], ends: `${s + 3}-12-31`, label: `${s + 2}–${String(s + 3).slice(2)}` }),
   amendmentVote: "two-thirds of each house's members in two General Assemblies in a row, with an election between",
   amendmentFinal: (b) => /^Constitutional amendment \(second passage\)/.test(b.title),
   amendmentDone: "Second passage: now part of the constitution",
