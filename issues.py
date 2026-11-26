@@ -952,6 +952,10 @@ OVERRIDES = {
 # And what it matches wrongly: {"<st>:<session>:<number>": {"<issue>": "why it doesn't belong"}} (2026-11-25, the owner:
 # the Congress additions read by hand, about 1 in 10 wrong; notes/issues-check.md).
 EXCLUDE = {
+    # (2026-11-26) Constitutional amendments adding twelve Senators and twelve at-large electors chosen by national
+    # popular vote: not the interstate compact.
+    "us:2023:HJRES23": {"popularvote": "a U.S. constitutional amendment for at-large Senators and electors, not the compact"},
+    "us:2025:HJRES102": {"popularvote": "a U.S. constitutional amendment for at-large Senators and electors, not the compact"},
     "us:2023:HR2670": {"firearms": "NDAA FY2024 Sec. 2402: energy resilience projects (ERCIP), not firearms",
                        "dei": "NDAA FY2024 Sec. 1101: civilian personnel pay rates",
                        "wildfire": "NDAA FY2024 Sec. 1832: wildfire operations named in a list of exceptions"},

@@ -791,3 +791,12 @@ Known laws checked: Minnesota 2023 (in the state government and elections omnibu
 site's summary is the Senate's of SF 1426 before conference and never names it, so it's in `OVERRIDES`; the standalone
 HF 642 / SF 538 died), Maine LD 1578 (2023-24, law in 2024), Virginia HB 965 and SB 322 (2026). The earlier joins (MD, NJ
 2007 ... CO, DE, NM, OR 2019) are before the issues' window (2023 on).
+
+Check (2026-11-26, the published bills of 2026-11-17/19 in .issues-cache, plus a local build of VA, MN, ME, NV, CO, AK):
+85 matches in 25 states and Congress, every one read: 83 right (joining, withdrawing, repealing, Missouri's SJR 17 of 2023
+barring the state from entering it, Michigan's companion bills on the compact's electors), 2 wrong (Congress's H.J.Res. 23
+of 2023 and H.J.Res. 102 of 2025: at-large Senators and electors by a U.S. constitutional amendment), now in `EXCLUDE`.
+Of 111 bills whose titles name presidential electors or the popular vote and didn't match, a sample of 30 were all about
+electors in general (faithful electors, district allocation, the electors' meeting day), as intended. Light history
+(2015-22, titles and summaries only) would find Connecticut 2018, Delaware 2019 and Oregon 2019 as laws; Colorado has no
+light history and New Mexico's 2019-20 is missing.
