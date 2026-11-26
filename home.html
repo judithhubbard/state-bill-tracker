@@ -1304,7 +1304,7 @@ function remember() {
   const opt = (i) => `<button type="button" data-id="${esc(i.id)}" title="${esc(i.name)}">${esc(label(i))}</button>`;
   const groups = issues.groups || [];
   const extra = issues.issues.filter((i) => !groups.includes(i.group)).sort((x, y) => label(x).localeCompare(label(y)));
-  menu.innerHTML = `<div class="party"><button type="button" data-id="">Party control</button>${HAS_CMP ? '<button type="button" data-id="laws">Bills that became law</button>' : ""}<button type="button" data-id="mine" hidden>★ Your bills</button></div><div class="grp">`
+  menu.innerHTML = `<div class="party"><button type="button" data-id="">Party control</button><button type="button" data-id="mine" hidden>★ Your bills</button></div><div class="grp">`
     + groups.map((g) => {
       const xs = issues.issues.filter((i) => i.group === g).sort((x, y) => label(x).localeCompare(label(y)));
       return xs.length ? `<div><h2>${esc(g)}</h2>${xs.map(opt).join("")}</div>` : "";
@@ -1390,6 +1390,8 @@ document.addEventListener("click", (e) => {
   }
 }
 let WANT_MINE = location.hash === "#mine";  // shown once "Your bills" has loaded (drawMine())
+// (The map's "Bills that became law" view left the menu 2026-11-26, the owner: not useful on a map; /compare/ keeps the
+// numbers. An old #laws link still opens it.)
 if (location.hash === "#laws" && HAS_CMP) CUSTOM = lawsView();
 {
   const m = location.hash.match(/^#(?:issue=([a-z]+))?&?(?:year=(\d{4}|all))?&?(?:party=(D|R|B|none))?&?(?:view=(chart|map))?$/);
