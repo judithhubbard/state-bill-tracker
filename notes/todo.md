@@ -3,6 +3,48 @@
 One list of open work. Dated chores for January 2027 are in the january-2027-checks memory; the launch steps are
 in CLAUDE.md's launch checklist.
 
+## Open now (updated 2026-11-26; newest first; move items to "done" in the commit that does them)
+- **Issue pages back to 2015** (owner: to-do, 2026-11-26). The light history (data/<st>/light_<year>.json.gz, 2015+)
+  feeds only Statistics. Needs: issue rows for light sessions (issues.py rules work on their titles and summaries: the
+  popular-vote issue finds CT 2018, DE 2019, OR 2019), links to the legislature's own page (no bill pages for those
+  years), year buttons and the 90% coverage rule back to 2015, a quiet note that older years are titles and summaries
+  only. States with no light history: CO, FL, ME, PA, WV; NM 2019-20 failed. Medium job, every issue.
+- **The part of a big bill that's on an issue** (owner: to-do, 2026-11-26). Under "One part of a larger bill" in issue
+  lists and the map panel, a line naming the part: "Article 4, sections 123-125: enacts the National Popular Vote
+  compact", linked to the law's text. From part_issues()'s matched section, or a note kept with each issues.OVERRIDES
+  entry (MN HF 1830). Small.
+- **Watching a search or an issue** (owner: on hold, 2026-11-26; wants more thought on how it fits the watchlist).
+  Draft design: a watched search/issue is a feed of candidates, not a second watchlist. "Follow this issue" on issue
+  pages, "Follow this search" on the front page's results; a "Following" tab on Your bills with "N new bills" per
+  followed item; opening one lists only bills new since last looked, each with the star (adds it to the watchlist, which
+  then tracks every step) and "Not for me" (hides it for that search). Kept in the browser like the watchlist; later the
+  same follows drive phone notifications (the app/alerts plan). Open questions: free text vs issues (lead with issues:
+  checked rules); scope (the state picked when followed); is "Not for me" worth it; an option "also tell me when one
+  becomes law". Mock before building.
+- **"Still in play" filter** (owner approved 2026-11-26): the state sidebar's "Still in play" heading clickable as a
+  filter (and "Out of time" likewise), and a third choice in the front page search's menu: All bills / Still in play /
+  Became law (the search files' status labels already carry each state's out-of-time rule).
+- **Virginia's paired twins show one chapter** ("Chapter 715"; SB 322's 716 only under Every action). Show "Chapters 715
+  and 716": a second chapter field through build_data.py and the six places tracker.html prints b.chapter, and the
+  status rows. Small but touches many places.
+- **Bills passed inside bigger bills by text** (states/part_of.py does record wording only): find a dead bill's text in a
+  same-session law's text. Needs full texts of omnibus laws; Minnesota's statute pages list each section's session-law
+  chapter (cheap there).
+- **Twin bills in other states** (Virginia done 2026-11-26): TX companion field, MD "cross-filed with", FL "Substituted
+  for" / "companion bill(s) passed", AL "companion"; states with no field could use Virginia's text rule.
+- **Coverage audit gaps** (scratchpad report 2026-11-26, summarized): Indiana floor votes without names (its data service
+  may have them); chapters not read in TX, UT, SD, KS, MO; Trends hidden in 21 states (re-pick after light history);
+  older sessions' roll calls without names (MT, KS 2023; NY 2019-21; VA 2023-24; OH, TN, NV); contacts gaps (DE emails,
+  AR/MS/ND/HI phones); NJ past vetoes' dates; "passed by voice vote" wording where no roll call exists (MA, ME, NH, VT,
+  WI, Congress).
+- **Clutter audit leftovers** (2026-11-26): the sidebar's "Where it is now" (three nested boxes, nine ⓘ); the default sort
+  shows paperwork first (sort by the latest real step); a legislator page's "Kelles: sponsor" tag on every row; the
+  Compare table's 51 ⓘ and per-row Chart buttons; the watchlist header's three layers; on a phone an open bill is indented
+  under the number column; Statistics' stray "33% of laws..." line; How's label and picture heading repeat.
+- **Arizona "What it does"** from bill text: skipped (www.azleg.gov's 120-second delay: about 57 hours for 1,700 texts).
+  Michigan's leads often only name the laws amended (about 45%).
+- **Michigan, Minnesota "Amends ..." leads**, an Alaska lead that is only a retroactivity clause (HB 62): boilerplate rules.
+
 ## "What it does" (summaries)
 - **New York:** done 2026-11-14 for Senate bills and Assembly bills with a Senate twin (the purpose and summary of
   provisions from the Senate sponsor's memo, data/texts_<session>.json, written by fetch_bills.py). Assembly bills:
