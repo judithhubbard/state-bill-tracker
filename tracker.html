@@ -3504,7 +3504,16 @@ function taGroups(b, stance) {
     out.push({ k: `p:${p.house}:${lastName(p.name)}`, label: `${role ? `${role}, ` : ""}${titledList([P(p.name, p.house)])}`, desc: `Ask them to ${ask}.`, people: [P(p.name, p.house)], kind: "ask", ask });
     have.add(`${p.house}:${lastName(p.name)}`);
   }
-  return out;
+  // Your legislators asked the same thing make one row and one message (2026-11-26, the owner).
+  const yours = out.filter((g) => /^p:/.test(g.k) && /^Your /.test(g.label));
+  for (const g of yours) {
+    const same = yours.filter((x) => x.ask === g.ask && !x.merged);
+    if (same.length < 2 || same[0] !== g) continue;
+    const ps = same.flatMap((x) => x.people);
+    Object.assign(g, { k: "yours", label: `Your legislators, ${titledList(ps)}`, people: ps });
+    for (const x of same.slice(1)) x.merged = true;
+  }
+  return out.filter((g) => !g.merged);
 }
 // The bill in a sentence: "A3481, which revises the Homelessness Prevention Program and requires a new charge for filing
 // of eviction action" when its title starts with what it does ("Revises ...; requires ..."), else "A3481 ("<title>")".
@@ -3521,7 +3530,8 @@ function taDraft(b, g, stance, all) {
   const what = billPhrase(b);
   const long = (w) => new Date(w).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   const greet = g.gov ? EXEC.dear : ps.length === 1 ? `Dear ${GREET[ps[0].house]} ${shortName(ps[0].name)},`
-    : `Dear ${GREET[ps[0].house]}s ${andList(ps.map((p) => shortName(p.name)))},`;
+    : ps.every((p) => p.house === ps[0].house) ? `Dear ${GREET[ps[0].house]}s ${andList(ps.map((p) => shortName(p.name)))},`
+    : `Dear ${andList(ps.map((p) => `${GREET[p.house]} ${shortName(p.name)}`))},`;
   const when = g.meet ? `, when ${g.cw || "the committee"} meets on ${long(g.meet.when)}` : "";
   const md = g.meet ? ` on ${new Date(g.meet.when).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "";
   let subject, line;
