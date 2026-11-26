@@ -1194,12 +1194,11 @@ details.pfold > .pfb { padding: 0 0 10px; }
 .pg.stale .srow .sl { font-size: 12.5px; }
 .pg.stale .srow .ss { display: none; }
 details.morefilters { margin-top: 4px; }
-#topicBox .topics { margin-top: 10px; }
 details.morefilters > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: baseline; }
 details.morefilters > summary::-webkit-details-marker { display: none; }
 details.morefilters > summary::after { content: "Show"; font: 600 12px var(--body); letter-spacing: 0; text-transform: none; color: var(--navy); }
 details.morefilters[open] > summary::after { content: "Hide"; }
-details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6px; color: var(--gold); text-transform: none; letter-spacing: 0; }
+details.morefilters #moreCount { margin-left: 6px; color: var(--gold); text-transform: none; letter-spacing: 0; }
 .side .field .subsel, .subsel { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; color: var(--ink-2); text-transform: none; letter-spacing: 0; font-weight: 400; }
 .subsel select { width: auto; padding: 4px 8px; font-size: 13px; }
 .tl { position: relative; height: 228px; max-width: 940px; margin: 8px 0 0; padding-left: 96px; }
@@ -1420,10 +1419,10 @@ html.embed #notice { display: none !important; }
           <select id="issueSel"><option value="">Any issue</option><option value="" disabled>Loading issues…</option></select>
           <a class="issuelink" id="issueLink" hidden>This issue in every state ›</a>
         </div>
-        <details class="group morefilters" id="topicBox" open>
-          <summary class="group-h">Topic <span id="topicCount"></span></summary>
-          <div class="topics" id="topics" role="group" aria-label="Filter by topic"></div>
-        </details>
+        <div class="group issuefield" id="topicField">
+          <label class="group-h" for="topicSel">Topic</label>
+          <select id="topicSel"><option value="">Any topic</option></select>
+        </div>
         <details class="group morefilters" id="moreFilters">
           <summary class="group-h">More filters <span id="moreCount"></span></summary>
           <div class="morebody">
@@ -2236,11 +2235,15 @@ function setAgenda(on) {
   state.shown = PAGE; syncControls(); render();
 }
 
+// Topic is one menu, as Issue (2026-11-26, the owner; chips until then), biggest topics first, with their counts.
+// (state.topics stays a set, of one topic now: a link with two still filters by both.)
 function renderTopics() {
   const counts = {};
   for (const b of BILLS) if (matches(b, "topic")) for (const t of b.topics) counts[t] = (counts[t] || 0) + 1;
-  $("topics").innerHTML = Object.keys(TOPICS).map((t) =>
-    `<button class="topic" type="button" data-t="${t}" aria-pressed="${state.topics.has(t)}">${esc(TOPICS[t])}<span class="c">${num(counts[t] || 0)}</span></button>`).join("");
+  const cur = [...state.topics][0] || "";
+  const ts = Object.keys(TOPICS).sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+  $("topicSel").innerHTML = `<option value="">Any topic</option>` + ts.map((t) =>
+    `<option value="${t}"${t === cur ? " selected" : ""}>${esc(TOPICS[t])} (${num(counts[t] || 0)})</option>`).join("");
 }
 
 
@@ -6294,9 +6297,6 @@ function fillSelects() {
   const more = MORE_KEYS.filter((k) => state[k]).length;
   $("moreCount").textContent = more ? `${more} active` : "";
   if (more) $("moreFilters").open = true;
-  const nt = state.topics.size;
-  $("topicCount").textContent = nt ? `${nt} selected` : "";
-  if (nt) $("topicBox").open = true;
   for (const id of Object.keys(selectOptions())) SELECTS_STALE.add(id);
   fillStaleSelects();
   for (const id of SELECTS_STALE) $(id).value = state[id] || "";
@@ -6620,9 +6620,8 @@ function wire() {
     const btn = e.target.closest(".srow"); if (!btn) return;
     const k = +btn.dataset.k; state.stage = state.stage === k ? null : k; state.shown = PAGE; render();
   });
-  $("topics").addEventListener("click", (e) => {
-    const btn = e.target.closest(".topic"); if (!btn) return;
-    const t = btn.dataset.t; state.topics.has(t) ? state.topics.delete(t) : state.topics.add(t); state.shown = PAGE; render();
+  $("topicSel").addEventListener("change", (e) => {
+    state.topics = new Set(e.target.value ? [e.target.value] : []); state.shown = PAGE; render(); countUse("filter/topic");
   });
   let timer;
   $("q").addEventListener("input", (e) => { clearTimeout(timer); timer = setTimeout(() => {

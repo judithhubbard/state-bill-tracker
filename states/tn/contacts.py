@@ -129,4 +129,12 @@ def main(session):
 
 
 if __name__ == "__main__":
-    main(int(sys.argv[1]) if len(sys.argv) > 1 else max(L.folders(P.DATA)))
+    # With no session named: the newest (next year's prefiled bills) and the one sitting now, which the site's pages and
+    # check_site.py read (2026-11-26: once LegiScan listed 2027, only the 2027 file was refreshed).
+    if len(sys.argv) > 1:
+        main(int(sys.argv[1]))
+    else:
+        have = sorted(L.folders(P.DATA))
+        now = [s for s in have if s <= datetime.now().year]
+        for s in sorted({have[-1]} | set(now[-1:])):
+            main(s)
