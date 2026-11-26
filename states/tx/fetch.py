@@ -159,6 +159,17 @@ if __name__ == "__main__":
         except Exception as e:  # never holds the run back
             print(f"bill texts {CURRENT}: failed ({type(e).__name__}: {e})")
         texts.main(CURRENT)
+    # Next session's prefiled bills (November and December of even years): no analysis until a committee acts, so a lead
+    # from their text too (2026-11-26: HB 266 of 2027 had no "What it does").
+    if os.path.isdir(os.path.join(P.DATA, P.code_of(CURRENT + 2), "billhistory")):
+        try:
+            billtext.main(CURRENT + 2, texts.analysed(CURRENT + 2), 4)
+        except Exception as e:  # never holds the run back
+            print(f"bill texts {CURRENT + 2}: failed ({type(e).__name__}: {e})")
+        try:
+            texts.main(CURRENT + 2)
+        except Exception as e:  # never holds the run back
+            print(f"texts {CURRENT + 2}: failed ({type(e).__name__}: {e})")
     for year in range(CURRENT - 2, FIRST - 1, -2):  # earlier sessions: a few minutes a run until each is read
         if os.path.isdir(os.path.join(P.DATA, P.code_of(year), "billhistory")):
             try:
