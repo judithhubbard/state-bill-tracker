@@ -534,7 +534,7 @@ notes before changing its code. Shared notes on the LegiScan states are in state
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.
-- **National issues (built 2026-11-15):** the same subjects across states, sixty-five of them: data centers, PFAS, AI, children
+- **National issues (built 2026-11-15):** the same subjects across states, sixty-six of them: data centers, PFAS, AI, children
   online, phones in schools, housing supply, minimum wage, right to repair, sports betting, prescription drug costs (the
   first ten, chosen in notes/issues-draft.md with the owner's answers), and abortion, firearms, school vouchers and
   education savings accounts, voting and elections, immigration (named "Immigration enforcement" until 2026-11-17; the id
@@ -551,7 +551,7 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   domestic violence (the sixth batch, with PFAS's "Sludge on farmland" filter and Voting's "Presidential electors and
   popular vote"), and homelessness and camping bans, income tax cuts, homeowners insurance, bail and pretrial release, drug
   penalties and overdoses, contraception, mental health and 988, food additives and dyes, school meals, plastics and
-  packaging, heat protections for workers, same-sex marriage (the seventh batch, the same day). Groups (`GROUPS`) include
+  packaging, heat protections for workers, same-sex marriage (the seventh batch, the same day), and the National Popular Vote compact (2026-11-26, the owner: joining, leaving or repealing it, and amendments adopting it; presidential electors in general stay in Voting's filter; Minnesota's 2023 omnibus, HF 1830, is in `OVERRIDES`). Groups (`GROUPS`) include
   "Drugs" (cannabis, psychedelics, kratom, overdoses). Each issue may have `words`, a few extra terms for the front page's search (not used for matching).
   Each one's scope, the checks, the owner's answers
   and open questions are in notes/issues-check.md. `issues.py` holds each issue's rules (patterns that must appear within
