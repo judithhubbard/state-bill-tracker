@@ -4878,6 +4878,18 @@ function floorLine(b) {
     return "Approved by committee and sent to the floor";
   return day.some((t) => NO_COMMITTEE.test(t)) ? "Placed on the floor calendar without going to a committee" : "Sent to the floor";
 }
+// The lines for a house's passages: "Passed the Senate", then "Passed the Senate again" (New York's second-year votes).
+// When the record's bills passed it separately (Virginia's identical House and Senate bills, one record since 2026-11-26:
+// HB 965 and SB 322 each passed both houses), each line names its bill: "SB 322 passed the House".
+function passLines(b, days, h) {
+  const word = new RegExp(`^(?:RE)?PASSED ${HOUSE[h].toUpperCase()}\\b`);
+  const by = (d) => (b.vers || []).filter((v) => (v.actions || []).some(([x, t]) => x === d && word.test(t))).map((v) => v.p);
+  const who = days.map(by);
+  const named = (b.vers || []).length > 1 && new Set(who.flat()).size > 1;
+  return days.map((d, i) => [d, named && who[i].length
+    ? `${andList(who[i].map((n) => (window.WatchRows ? WatchRows.numText(STATE.code, n) : n)))} passed the ${HOUSE[h]}`
+    : i ? `Passed the ${HOUSE[h]} again` : `Passed the ${HOUSE[h]}`, h]);
+}
 // "History": the bill's main steps and its recorded votes in one dated list. A floor vote that passed goes on the line of
 // the passage it records ("Passed the Senate · 26–11"); other votes (committees, votes that failed) keep a line of their
 // own, worded as in the old Votes list. Your legislators' votes are under the vote. While the bill waits on the governor,
@@ -4892,8 +4904,8 @@ function historyBlock(b) {
   const items = [
     [D.intro, "Introduced", null, 0],
     [D.floor, floorLine(b), "floor"],
-    ...D.passSAll.map((d, i) => [d, i ? "Passed the Senate again" : "Passed the Senate", "S"]),
-    ...D.passAAll.map((d, i) => [d, i ? `Passed the ${HOUSE[LOW]} again` : `Passed the ${HOUSE[LOW]}`, LOW]),
+    ...passLines(b, D.passSAll, "S"),
+    ...passLines(b, D.passAAll, LOW),
     // (Where it went is the state's: STATE.resetLine(), read from the record. New York's Assembly bills go back to the floor
     // calendar, not a committee; a line saying "committee" for every state was wrong for them.)
     [D.died, STATE.resetLine?.(b) || "Its earlier passage was reset for the new year (had to pass again)"],

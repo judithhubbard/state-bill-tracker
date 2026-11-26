@@ -78,3 +78,16 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   chapters fall far below another session's.
 - **"Enacted, Chapter N" (2026-11-23):** a bill that became law when the General Assembly accepted the governor's
   amendments (about 60 a year) is "ENACTED CHAP.N", not "SIGNED CHAP.N": the page said "Signed into law"; now "Became law".
+- **Identical House and Senate bills are one record (2026-11-26, the owner's request: HB 965 and SB 322 of 2026, the
+  National Popular Vote Compact, were two rows everywhere).** Members file the same bill in both houses and Virginia often
+  passes and signs both, each with its own chapter. The LIS files have no companion field; `twin_pairs()` in convert.py
+  pairs one House and one Senate bill (or joint resolution) when a summary says so ("This bill is identical to SB 388.",
+  in the summaries of bills as passed: 283 pairs in 2026), or when they have the same short description (spacing and
+  punctuation aside; bills incorporated into another left out) and summaries sharing 80% of their words; never when both
+  reached the governor with different results. Pairs: 316 (2023), 314 (2024), 280 (2025), 366 (2026), 25 (2027). About
+  50 read by hand: no false pairs; the least alike are companions one house amended (HB 24 / SB 115 of 2026). As in New
+  Jersey, the record leads with the bill that got further (else the House bill), keeps each bill's history, votes and
+  sponsors as its versions, and answers to both numbers (links, stars, search). So the site counts fewer bills and laws
+  than Virginia's own totals, which count chapters: laws 811 → 580 (2023), 863 → 657 (2024), 1,126 → 849 (2026); the
+  chapter shown is the leading bill's. The light history (2017-22) isn't paired, so Statistics' earlier years still count
+  both copies.
