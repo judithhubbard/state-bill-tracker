@@ -527,7 +527,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .found ul { overflow-y: auto; flex: 1 1 auto; min-height: 0; }
 .found li { position: relative; border-bottom: 1px solid var(--rule); }
 .found li:last-child { border-bottom: 0; }
-.found li a { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; align-items: baseline; padding: 6px 44px 6px 12px;
+.found li a { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1px 10px; align-items: baseline; padding: 6px 44px 6px 12px;
   color: var(--ink); text-decoration: none; font-size: 14px; }
 .found li a:hover, .found li a:focus-visible { background: var(--paper); }
 .found li a:focus-visible { outline: 3px solid var(--hover); outline-offset: -3px; }
@@ -535,7 +535,10 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .found .fn b { font-weight: 600; color: var(--navy); }
 .found .fn small { font-size: 12px; }
 .found .tt { grid-column: 1 / -1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.found .fst { justify-self: end; display: inline-flex; gap: 6px; align-items: center; min-width: 0; }
+/* The state, number and session keep their room (2026-11-26: "HB 11..." hid the session); a long status label is cut short. */
+.found .fst { justify-self: end; display: inline-flex; gap: 6px; align-items: center; min-width: 0; overflow: hidden; max-width: 100%; }
+.found .fst > * { flex: none; }
+.found .fst > .stg { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .found .note { padding: 10px 12px; margin: 0; font-size: 14px; color: var(--ink-2); }
 .found .more { display: block; width: 100%; font: inherit; font-size: 14px; font-weight: 600; color: var(--navy); background: none; border: 0;
   border-top: 1px solid var(--rule); padding: 8px 12px; cursor: pointer; text-align: left; }
@@ -547,11 +550,7 @@ ul, ol { list-style: none; margin: 0; padding: 0; }
 .found .fpast input:focus-visible { outline: 3px solid var(--hover); outline-offset: 1px; }
 /* On a phone the state, number and session keep their room; a long status label is cut short instead. */
 @media (max-width: 600px) {
-  .found li a { grid-template-columns: auto minmax(0, 1fr); }
-  .found .fst { overflow: hidden; max-width: 100%; }
-  .found .fst > * { flex: none; }
   .found .fst > .pips { display: none; }
-  .found .fst > .stg { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 }
 .found li.fsess, .panel li.fsess { padding: 8px 12px 3px; font: 600 12px/1.3 var(--body); color: var(--ink-2); background: var(--paper); }
 /* "Bills that became law": the panel's numbers for the state pointed at. */
@@ -1412,6 +1411,17 @@ if (!issue && !CUSTOM) document.getElementById("legend").hidden = false;
 // star here shows on the state's page and the other way around.
 /*billfacts.js*/
 /*status.js*/
+// The years the earlier sessions' bills span, from their labels ("2023–24", "2025"): ", 2017–2024".
+function pastYears(xs) {
+  const ys = [];
+  for (const x of xs) if (!x.s.live) {
+    const m = String(x.s.label || x.s.session).match(/(\d{4})(?:\s*[–-]\s*(\d{2,4}))?/);
+    if (m) { ys.push(+m[1]); if (m[2]) ys.push(m[2].length === 2 ? +(m[1].slice(0, 2) + m[2]) : +m[2]); }
+  }
+  if (!ys.length) return "";
+  const lo = Math.min(...ys), hi = Math.max(...ys);
+  return lo === hi ? `, ${lo}` : `, ${lo}–${hi}`;
+}
 function starBtn(st, session, num, last, label) {
   const on = `${session}:${baseNum(num)}` in readWatch(st);
   return `<button type="button" class="star" data-star="${esc(st)}|${session}|${esc(num)}|${esc(last || "")}" aria-pressed="${on}"`
@@ -1757,7 +1767,7 @@ drawMine();
       // The session, when the state has two in the search (this one and next year's prefiled bills), and on every
       // earlier session's bill (they come after this session's, under "Earlier sessions").
       const sess = !s.live || (ready[st] || { s: [] }).s.length > 1 ? ` <small>${esc(s.label || String(s.session))}</small>` : "";
-      const head = !s.live && (i === 0 || xs[i - 1].s.live) ? `<li class="fsess">Earlier sessions</li>` : "";
+      const head = !s.live && (i === 0 || xs[i - 1].s.live) ? `<li class="fsess">Earlier sessions${pastYears(hits)}</li>` : "";
       return `${head}<li><a href="${st}/${page}#${esc(num)}" title="${esc(title)}"><span class="fn">${esc(name)} <b>${esc(numText(st, shown))}</b>${sess}${same}</span>`
         + `<span class="fst">${BillFacts.pips(s.up ? 0 : stage, BillFacts.oneHouse(st), "mini", label, st)}<span class="stg s${s.up ? 0 : stage}">${esc(label)}</span></span><span class="tt">${esc(title)}</span></a>${starBtn(st, s.session, num, "", `${name} ${numText(st, num)}`)}${listBtn(st, s.session, num, `${name} ${numText(st, num)}`)}</li>`;
     }).join("");
