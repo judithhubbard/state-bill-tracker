@@ -2339,6 +2339,8 @@ function statusParts(b) {
   }
   // (What the break between sessions means for a bill is said once, in the notice and the "Out of time" heading, and
   // in the bill's panel: not on every row.)
+  // Its contents became law inside a larger bill: that law, its chapter and day.
+  if (f.partOf && b.partOf) small = `${b.partOf[0]} became law${b.partOf[1] ? ` · ${LAW_WORD} ${b.partOf[1]}` : ""}${b.partOf[2] ? ` · ${fmtDate(dayOf(b.partOf[2]))}` : ""}`;
   const over = b.stage <= 2 && !stillAlive(b) ? " over" : "";
   return [t, small, over];
 }
@@ -3199,7 +3201,7 @@ function planFor(b, stance = "support") {
   // still at stage 0-2 has no next step: say where it stopped instead.
   const other_ = b.passedIn === HOUSE.S ? HOUSE[LOW] : HOUSE.S;
   const dead = adjourned && (STATE.floorVotesEnd === false || STATE.diesAfterFloor || today > `${y2}-12-31`);
-  const stopped = dead && !ended && b.stage <= 2 ? (b.stage === 2 ? `It passed the ${b.passedIn} but not the ${other_}.`
+  const stopped = dead && !ended && b.stage <= 2 && !b.partOf ? (b.stage === 2 ? `It passed the ${b.passedIn} but not the ${other_}.`
     : b.stage === 1 ? `It never passed the ${HOUSE[b.vers[0].p[0]] || "full house"}.` : "It never got out of committee.") : "";
   const book = contactBook(b, live || b.stage >= 3, opp);
   // The same proposal (a "nearly the same" bill) became law: nothing to reintroduce.
@@ -3669,8 +3671,8 @@ function nextSteps(b) {
   // No side chosen yet: the support asks, each "If you support it: ..." (book.html()'s ifSupport).
   const side = panelStance(b);
   const plan = planFor(b, side || "support");
-  // (A past session, or no contacts: the road alone.)
-  if (!plan) return `<div class="next nx done">${roadPic(b, !DATA.current && b.stage <= 2)}</div>`;
+  // (A past session, or no contacts: the road alone, and where its contents became law.)
+  if (!plan) return `<div class="next nx done">${roadPic(b, !DATA.current && b.stage <= 2)}${partHead(b) ? `<div class="nxb">${partHead(b)}</div>` : ""}</div>`;
   plan.book.ifSupport = !side;
   const R = roadOf(b, !plan.actionable), head = plan.actionable ? nextHead(b, R.now) : "";
   let what = plan.what;
@@ -3707,13 +3709,21 @@ function nextSteps(b) {
     // Then the people to write to as rows with "Draft ›" (the sponsors, to reintroduce it), as on an open bill; a law with
     // nobody to ask shows its decision line only.
     const tl = taList(b, side || "support");
-    return `<div class="next nx done">${roadPic(b, b.stage <= 2)}<div class="nxb">${outcome ? `<p class="t">${esc(outcome)}</p>` : ""}${what}${tl ? "" : contacts}</div>${tl ? sideLine(b, side) + tl : ""}</div>`;
+    // (Its contents became law inside a larger bill: that, and a link to it, is the outcome.)
+    const head = partHead(b) || (outcome ? `<p class="t">${esc(outcome)}</p>` : "");
+    return `<div class="next nx done">${roadPic(b, b.stage <= 2)}<div class="nxb">${head}${what}${tl ? "" : contacts}</div>${tl ? sideLine(b, side) + tl : ""}</div>`;
   }
   // Inside the gold rule: the step (bold), its context in grey. Then "Your side" once, and one row per person to write to,
   // each with "Draft ›" (taList(): 2026-11-25, the owner's layout B); where nobody can be written to, the asks as lines.
   what = what.replace(/<p class="when">/g, '<p class="when m">').replace(/<p>/g, '<p class="m">');
   const tl = taList(b, side || "support"), wrote = taWrote(b);
   return `<div class="next nx">${roadPic(b)}<div class="nxb">${head ? `<p class="t">${head}</p>` : ""}${what}${odds}${tl ? "" : lines.join("")}${wrote ? `<p class="ta-wrote">${esc(wrote)}</p>` : ""}</div>${tl ? sideLine(b, side) : ""}${tl}${tl ? "" : contacts}</div>`;
+}
+// A bill whose contents became law inside a larger bill (b.partOf): "Became law as part of HF1830 · Chapter 62 · May 24,
+// 2023", the law's title under it.
+function partHead(b) {
+  const inside = b.stage <= 3 ? partLaw(b) : null;
+  return inside ? `<p class="t">Became law as part of ${billBtn(inside)}${inside.chapter ? ` · ${LAW_WORD} ${inside.chapter}` : ""}${inside.dates.signed ? ` · ${fmtDate(inside.dates.signed)}` : ""}</p><p class="when m">${esc(inside.title)}</p>` : "";
 }
 // "Your side", once, above the people to write to.
 const sideLine = (b, side) => `<p class="ta2-side">Your side <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${side === s}">${s[0].toUpperCase() + s.slice(1)}</button>`).join("")}</span></p>`;
@@ -5111,12 +5121,16 @@ function likelierOf(a, b) {
 // A link that opens another bill on this page.
 const billBtn = (o) => `<button type="button" class="linkish" data-bill="${esc(baseNum(o.nums[0]))}">${esc(o.nums.join(" / "))}</button>`;
 // A near-identical bill that became law: the same proposal passed under another number.
-const lawTwin = (b) => b.similar.filter((x) => x.s >= 70).map(({ j }) => BILLS[j]).find((o) => o.stage === 5 && o !== b) || null;
+// (Or the larger bill its contents became law in: b.partOf.)
+const partLaw = (b) => (b.partOf ? BILLS.find((o) => o.stage === 5 && o.nums.includes(b.partOf[0])) || null : null);
+const lawTwin = (b) => partLaw(b) || b.similar.filter((x) => x.s >= 70).map(({ j }) => BILLS[j]).find((o) => o.stage === 5 && o !== b) || null;
 // Near-duplicate bills, named so both versions can be followed, with which one is likelier to move (only while both can
 // still move: once one is a law, or dead, there's nothing to compare).
 function twinLine(b) {
   const twins = b.similar.filter((x) => x.s >= 70).map(({ j }) => BILLS[j]);
   if (!twins.length) return "";
+  const inside = b.stage <= 3 && partLaw(b);
+  if (inside) return `<p class="wtwin">Its contents became law as part of ${billBtn(inside)}${inside.chapter ? ` (${LAW_WORD} ${inside.chapter})` : ""}.</p>`;
   const law = b.stage <= 2 && lawTwin(b);
   if (law) return `<p class="wtwin">The same proposal became law as ${billBtn(law)}.</p>`;
   const notes = !stillAlive(b) ? [] : twins.filter(stillAlive).map((o) => {
@@ -7738,7 +7752,7 @@ function decode(raw) {
   // (On the public site, the bills whose titles and histories came in the list part; the rest come next.)
   const rowsIn = raw.rowsIn ? new Set(raw.rowsIn) : null;
   raw.bills = rows.map((r, i) => {
-    let [title, summary, laws, comms, topics, flags, stage, passedIn, chapter, veto, comm, last, cosp, act, lawCode, program, law, vers, intro, hist, kd, parties, votes, agenda, places, mainTopic, similar, memo, vetoNote] = r;
+    let [title, summary, laws, comms, topics, flags, stage, passedIn, chapter, veto, comm, last, cosp, act, lawCode, program, law, vers, intro, hist, kd, parties, votes, agenda, places, mainTopic, similar, memo, vetoNote, partOf] = r;
     summary = decodeSummary(summary, title);
     const dates = Object.fromEntries(KEY_DATES.map((k, i) => [k, kd[i] ? day(kd[i].split(";").pop()) : null]));
     // Every date each house passed it (a bill sent back in year two may pass twice).
@@ -7768,6 +7782,8 @@ function decode(raw) {
       sen: !!(flags & 2), asm: !!(flags & 8), budget: !!(flags & 4), passedS: !!(flags & 16), passedA: !!(flags & 32), narrow: flags & 512 ? "place" : ["", "person", "org", "naming"][(flags >> 6) & 3], shell: !!(flags & 256), ballot: !!(flags & 1024),
       memo: memo || "",
       vetoNote: decodeVeto(vetoNote),
+      // Its contents became law inside a larger bill: [that law's number, its chapter, the day] (build_data.py's part_of()).
+      partOf: Array.isArray(partOf) ? partOf : null,
       nums: v.map((x) => x.p), sponsors: v.map((x) => x.sponsor).filter(Boolean), vers: v,
       rowIn: !rowsIn || rowsIn.has(i),
       // (On the public site, a bill's panel waits for its shard: needBills().)
@@ -7819,7 +7835,7 @@ const outTip = () => (billsDied() || !STATE.sessionEnds ? OUT_OF_TIME
 const stageLong = (k) => (k <= 2 && DATA.current && !DATA.upcoming && billsDied() ? STAGE_TEXT.final : TEXT).long[k];
 // A bill that can no longer move this session: decided, died with the session, ended early (a floor defeat, a study order).
 function stillAlive(b) {
-  if (b.stage >= 5 || !DATA.current) return false;
+  if (b.stage >= 5 || !DATA.current || b.partOf) return false;
   if (b.stage <= 2 && (billsDied() || endedOf(b))) return false;
   return true;
 }

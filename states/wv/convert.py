@@ -865,6 +865,11 @@ def load_session(session):
             continue
         what = what_it_does(session, b)
         rec = record(session, b, parties)
+        # The list's status column says where a bill went when it was folded into another ("Incorporated into Com. Sub. for
+        # SB 325": the agencies' rule bills bundled into one), which its history doesn't (states/part_of.py reads it).
+        cells = (lst["bills"].get(k_) or {}).get("cells") or []
+        if len(cells) > 2 and str(cells[2]).startswith("Incorporated into"):
+            rec["statusLine"] = cells[2]
         index[k_] = len(recs)
         recs.append(rec)
         if what:

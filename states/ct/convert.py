@@ -157,6 +157,11 @@ def decode(line, q1, origin, house, comms):
         return house, "OVERRIDDEN"
     if re.match(r"(PUBLIC|SPECIAL) ACT$", up):
         return "G", "ACT NUMBER"
+    # A proposed bill drafted into a committee's bill: the bill is in the next column ("INCORPORATED IN", "SB00376"), named
+    # here so the page can say where it went (states/part_of.py).
+    m = re.match(r"([HS]B)0*(\d+)$", (q1 or "").strip().upper())
+    if up.strip() == "INCORPORATED IN" and m:
+        return house, f"Incorporated into {m.group(1)} {m.group(2)}"
     # Kept as written, in sentence case, so "REFERRED TO OLR, OFA" (the research and fiscal offices) can't pass for
     # the shared "REFERRED TO <committee>".
     return house, line[:1].upper() + line[1:].lower() if line.isupper() else line

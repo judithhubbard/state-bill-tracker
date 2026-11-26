@@ -105,6 +105,9 @@ const BillFacts = (() => {
       x.voted = b.stage === 3 ? tryIt(() => votersDone(b), "") : "";
       // A law's own words while it isn't in force yet (S.lawText: the District's acts, under review by Congress).
       x.lawText = b.stage === 5 && S.lawText ? tryIt(() => S.lawText(b), "") || "" : "";
+      // Its contents became law inside a larger bill (build_data.py's part_of(): "Passed as part of HF1830").
+      x.partOf = b.stage <= 3 && b.partOf ? (Array.isArray(b.partOf) ? b.partOf[0] : b.partOf) : "";
+      if (x.partOf) x.stops = true;
       return x;
     }
     // An action in plain words. The API's action log is in capitals with abbreviations: "ORDERED TO THIRD READING RULES
@@ -204,6 +207,7 @@ const BillFacts = (() => {
     const set = (f.up ? T.prefiled : null) || (k <= 2 ? (f.alive ? T.live : T.final) : f.current ? T.live : T.final) || T.live || {};
     const long = (i) => (set.long || [])[i] || ["In committee", "Awaiting a floor vote", "Passed one house", PB, "", "Became law", "Vetoed"][i];
     if (k === 0 && f.up) return (T.prefiled?.long || [])[0] || "Prefiled";
+    if (f.partOf && k <= 3) return `Passed as part of ${f.partOf}`;
     if (k <= 2 && f.ended) return f.ended;
     if (k === 0) {
       const c = f.comm ? ` in the ${commPlain(f.comm)} Committee` : "";

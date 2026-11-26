@@ -157,3 +157,14 @@ TRENDS = [
     ("rise", "Immigration", r"immigra|migrants?\b|asylum|noncitizen|illegal alien|undocumented", True),
 ]
 WORDING = []
+
+# Bills whose contents became law inside a larger bill where the record doesn't say so (build_data.py's part_of()):
+# {session: {number: [the law's number, the source]}}.
+PART_OF = {
+    2023: {
+        # The National Popular Vote compact: Laws 2023, chapter 62 (HF 1830, the state government and elections omnibus,
+        # signed May 24, 2023), article 4, section 124, enacts it as Minn. Stat. 208.051 (the statute's history: "2023 c 62 art 4 s 124"); the standalone bills died in committee.
+        "HF642": ["HF1830", "Laws 2023, ch. 62, art. 4, sec. 124 (Minn. Stat. 208.051)"],
+        "SF538": ["HF1830", "Laws 2023, ch. 62, art. 4, sec. 124 (Minn. Stat. 208.051)"],
+    },
+}
