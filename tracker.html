@@ -4572,12 +4572,14 @@ function renderStats() {
   const per100 = nI ? Math.round((lI / nI) * 100) : 0;
   $("statFunnel").innerHTML = "";
   const [q0, , , , qAll] = I.persistence?.[t] || [0, 0, 0, 0, 0];
+  // (Laws that passed twice, once from each house, each pair one record: Virginia's. Over the sessions the chart pools.)
+  const paired = (I.pastSessions || []).reduce((a, s) => a + ((((DATA.outcomes || {})[s] || {})[t] || [])[5] || 0), 0);
   const tries = (I.fullPast || I.pastSessions).length >= 2 && qAll ? `<p>${pctOf(qAll - q0, qAll)}% of laws had been introduced in an earlier session first.</p>` : "";
   $("statOdds").innerHTML = `<h2>Odds of becoming law${ofTopic}</h2>
     ${nI ? `<p class="takeaway">${per100 >= 1 ? `About ${per100} in 100 bills introduced became law.` : "Fewer than 1 in 100 bills introduced became law."}</p>` : ""}
     ${sankey(odds, I.fate?.[t], I.commFate?.[t])}
     ${tries}
-    <p class="note">${inState(topicName)}, ${pastSpan()}.${CYCLE() && STATE.cycleNote ? ` ${STATE.cycleNote}` : ""}${STATE.heldNote && (I.commFate?.[t]?.held || [0])[0] > 0 ? ` “${STATE.heldLabel}”: ${STATE.heldNote}` : ""}${shellsOut()}</p>
+    <p class="note">${inState(topicName)}, ${pastSpan()}.${CYCLE() && STATE.cycleNote ? ` ${STATE.cycleNote}` : ""}${STATE.heldNote && (I.commFate?.[t]?.held || [0])[0] > 0 ? ` “${STATE.heldLabel}”: ${STATE.heldNote}` : ""}${shellsOut()}${paired ? ` Identical House and Senate bills count once here: ${num(paired)} laws passed twice, once from each house, and ${stateName()}'s own totals count both.` : ""}</p>
     <h3 class="sub">Once a bill gets this far</h3>
     <div class="vlist">${ODDS_POINTS.map(([k, l]) => { const [n, law] = odds[k] || [0, 0];
       return vrow(l, `${num(n)} bills`, [[pctOf(law, n), "l"]], `<b class="big">${pctOf(law, n)}%</b> became law`); }).join("")}</div>`;
@@ -4707,6 +4709,15 @@ function renderStats() {
   if (statSec === "statNet" && !$("view-stats").hidden) renderNet();
 }
 
+// Laws counted once that are two of the state's own law numbers: Virginia's identical House and Senate bills that both
+// became law are one record here (2026-11-26, the owner: count each pair once, and say so). c: an outcomes row, its
+// sixth count the pairs (build_data.py's outcomes()).
+function pairedTip(c, t) {
+  const word = `${LAW_WORD.toLowerCase()}s`;
+  return t === "all"
+    ? `${stateName()}'s ${num(c[2] + c[5])} ${word} include ${num(c[5])} laws passed twice, once from each house; each pair counts once here.`
+    : `${num(c[5])} of these laws passed twice, once from each house. ${stateName()}'s own count of ${word} counts both; each pair counts once here.`;
+}
 function renderOutcomes() {
   const t = $("statTopic").value || "all";
   const pct = (n, d) => (d ? `${((n / d) * 100).toFixed(1)}%` : "–");
@@ -4724,7 +4735,7 @@ function renderOutcomes() {
   $("ocOpen").textContent = open && waiting ? `${span(LATEST)}: ${num(waiting)} bill${waiting === 1 ? "" : "s"} still with ${EXEC.the}. ` : "";
   $("ocShells").textContent = shellsOut() + (LIGHTS.size ? ` * No page on this site for these sessions: counted from each bill's outcome in ${BODY}'s records.` : "");
   const row = ({ session, c, share, label, cls, light }) => `<tr class="${[session === DATA.session ? "here" : "", light ? "light" : "", cls || ""].join(" ").trim()}">
-      <td>${label || span(session)}${light ? "*" : ""}${session === LATEST ? " (so far)" : ""}</td><td>${num(c[0])}</td><td>${num(c[1])}</td><td>${num(c[2])}</td><td>${num(c[3])}</td>
+      <td>${label || span(session)}${light ? "*" : ""}${session === LATEST ? " (so far)" : ""}</td><td>${num(c[0])}</td><td>${num(c[1])}</td><td>${num(c[2])}${c[5] ? TIPI(pairedTip(c, t)) : ""}</td><td>${num(c[3])}</td>
       <td class="bar"><div class="sharebar"><i style="width:${(share / max) * 70}%"></i><b>${pct(c[2], c[0])}</b></div></td>
       <td>${pct(c[3], c[2] + c[3])}</td></tr>`;
   // By two-year cycle (STAT_CYCLE): each cycle's totals, then its two sessions by name.
@@ -4733,7 +4744,7 @@ function renderOutcomes() {
     const cycles = [...new Set(rows.map((r) => r.session - ((r.session + 1) % 2)))];
     body = cycles.map((cy) => {
       const own = rows.filter((r) => r.session - ((r.session + 1) % 2) === cy).sort((a, b) => a.session - b.session);
-      const c = [0, 1, 2, 3].map((i) => own.reduce((a, r) => a + r.c[i], 0));
+      const c = [0, 1, 2, 3, 4, 5].map((i) => own.reduce((a, r) => a + (r.c[i] || 0), 0));
       const open = own.some((r) => r.session === LATEST);
       const name = STATE.cycleName ? ` <small>${esc(STATE.cycleName(cy))}</small>` : "";
       const total = row({ session: null, c, share: c[0] ? c[2] / c[0] : 0, label: `<b>${cycleSpan(cy)}</b>${name}${open ? " (so far)" : ""}`, cls: "cyc" });
@@ -4898,6 +4909,18 @@ function floorLine(b) {
     return "Approved by committee and sent to the floor";
   return day.some((t) => NO_COMMITTEE.test(t)) ? "Placed on the floor calendar without going to a committee" : "Sent to the floor";
 }
+// The lines for a house's passages: "Passed the Senate", then "Passed the Senate again" (New York's second-year votes).
+// When the record's bills passed it separately (Virginia's identical House and Senate bills, one record since 2026-11-26:
+// HB 965 and SB 322 each passed both houses), each line names its bill: "SB 322 passed the House".
+function passLines(b, days, h) {
+  const word = new RegExp(`^(?:RE)?PASSED ${HOUSE[h].toUpperCase()}\\b`);
+  const by = (d) => (b.vers || []).filter((v) => (v.actions || []).some(([x, t]) => x === d && word.test(t))).map((v) => v.p);
+  const who = days.map(by);
+  const named = (b.vers || []).length > 1 && new Set(who.flat()).size > 1;
+  return days.map((d, i) => [d, named && who[i].length
+    ? `${andList(who[i].map((n) => (window.WatchRows ? WatchRows.numText(STATE.code, n) : n)))} passed the ${HOUSE[h]}`
+    : i ? `Passed the ${HOUSE[h]} again` : `Passed the ${HOUSE[h]}`, h]);
+}
 // "History": the bill's main steps and its recorded votes in one dated list. A floor vote that passed goes on the line of
 // the passage it records ("Passed the Senate · 26–11"); other votes (committees, votes that failed) keep a line of their
 // own, worded as in the old Votes list. Your legislators' votes are under the vote. While the bill waits on the governor,
@@ -4912,8 +4935,8 @@ function historyBlock(b) {
   const items = [
     [D.intro, "Introduced", null, 0],
     [D.floor, floorLine(b), "floor"],
-    ...D.passSAll.map((d, i) => [d, i ? "Passed the Senate again" : "Passed the Senate", "S"]),
-    ...D.passAAll.map((d, i) => [d, i ? `Passed the ${HOUSE[LOW]} again` : `Passed the ${HOUSE[LOW]}`, LOW]),
+    ...passLines(b, D.passSAll, "S"),
+    ...passLines(b, D.passAAll, LOW),
     // (Where it went is the state's: STATE.resetLine(), read from the record. New York's Assembly bills go back to the floor
     // calendar, not a committee; a line saying "committee" for every state was wrong for them.)
     [D.died, STATE.resetLine?.(b) || "Its earlier passage was reset for the new year (had to pass again)"],

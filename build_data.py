@@ -167,6 +167,9 @@ def load_light():
             if hasattr(C, "light_record"):
                 r = C.light_record(r)
             recs.append(r)
+        # (A state that makes identical bills one record pairs its light history the same way: Virginia's.)
+        if hasattr(C, "light_twins"):
+            recs = C.light_twins(s, recs)
         out[s] = (recs, {n: i for i, r in enumerate(recs) for n in r["nums"]}, d.get("fetched", ""), {})
         LIGHT.add(s)
         LIGHT_LACKS[s] = sorted(d.get("lacks") or [])
@@ -1150,7 +1153,7 @@ def write_compare(done, hist, current, insight):
         if s >= current or s == CURRENT:
             continue
         recs = loaded[s][0]
-        odds, cfate, fate = defaultdict(lambda: [0, 0]), {}, {}
+        odds, cfate, fate, paired = defaultdict(lambda: [0, 0]), {}, {}, 0
         left = {"shell": sum(1 for r in done[s][0] if r.get("shell")), "narrow": 0, "const": 0}
         nxt = s + YEARS in loaded and s not in LIGHT  # (a light session has no links to the next one's bills)
         for i, r in enumerate(recs):
@@ -1172,6 +1175,7 @@ def write_compare(done, hist, current, insight):
                 if ok:
                     odds[p][0] += 1
                     odds[p][1] += got["law"]
+            paired += (r.get("twinLaws") or 0) if got["law"] else 0
             later = [e for e in hist_[s][i].values() if e[0] > s]
             back, law = any(e[0] == s + YEARS for e in later), any(e[2] == 5 for e in later)
             if r["stage"] == 0:
@@ -1187,7 +1191,9 @@ def write_compare(done, hist, current, insight):
                 c[2] += law
         label = f"{s}–{str(s + 1)[2:]}" if CYCLE else P.session_label(s)
         sessions.append({"session": s, "label": label, "kind": P.session_kind(s) if hasattr(P, "session_kind") and not CYCLE else "",
-                         "odds": dict(odds), "cfate": cfate, "fate": fate if nxt else None, "left": left})
+                         "odds": dict(odds), "cfate": cfate, "fate": fate if nxt else None, "left": left,
+                         # Laws that are two of the state's law numbers (Virginia's identical bills, one record each).
+                         **({"pairedLaws": paired} if paired else {})})
     # The check: the Statistics tab's general-bills odds chart is the same counts, amendments kept, over its sessions.
     stats = insight["odds"].get("all|g") or {}
     for p, v in stats.items():
@@ -1628,8 +1634,9 @@ def trends(loaded, titles_only=False):
 
 
 def outcomes(recs):
-    """Counts per topic: [bills, passed both houses or further, signed, vetoed, passed one house only]."""
-    out = defaultdict(lambda: [0, 0, 0, 0, 0])
+    """Counts per topic: [bills, passed both houses or further, signed, vetoed, passed one house only, laws that are two
+    of the state's own law numbers (Virginia's identical House and Senate bills, each pair one record: "twinLaws")]."""
+    out = defaultdict(lambda: [0, 0, 0, 0, 0, 0])
     for r in recs:
         if r.get("shell"):  # Illinois's shell bills, as in insights()
             continue
@@ -1640,6 +1647,7 @@ def outcomes(recs):
             c[2] += r["stage"] == 5
             c[3] += r["stage"] == 6
             c[4] += r["stage"] == 2
+            c[5] += r.get("twinLaws") or 0
     return dict(out)
 
 
