@@ -39,6 +39,8 @@ def pages():
                 rel = rel[: -len("index.html")]
             elif rel in ("404.html",):
                 continue
+            else:  # Cloudflare Pages serves "ny/2023.html" at "ny/2023" and redirects the first (308): list the address it keeps
+                rel = rel[: -len(".html")]
             yield BASE + rel
 
 
