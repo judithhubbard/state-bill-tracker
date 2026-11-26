@@ -1428,7 +1428,8 @@ function starClick(e) {
   const [st, session, num, last] = b.dataset.star.split("|"), w = readWatch(st), k = `${session}:${baseNum(num)}`;
   // (A side already picked on the state's page, abt:<st>:stance, comes with the star.)
   let side = null; try { side = JSON.parse(localStorage.getItem(`abt:${st}:stance`) || "{}")[k] || null; } catch (e) {}
-  if (k in w) delete w[k]; else { w[k] = { seen: last, stance: side }; countUse(`home/starred/${b.closest(".found") ? "search" : b.closest("#mine") ? "your bills" : "panel"}`); }
+  // (Search results carry no last-action day: a star there is seen as of today, so it isn't "New" for older news.)
+  if (k in w) delete w[k]; else { w[k] = { seen: last || new Date().toLocaleDateString("en-CA"), stance: side }; countUse(`home/starred/${b.closest(".found") ? "search" : b.closest("#mine") ? "your bills" : "panel"}`); }
   writeWatch(st, w);
   b.outerHTML = starBtn(st, +session, num, last, b.getAttribute("aria-label").replace(/^(Star|Remove) /, "").replace(/(: follow it in Your bills| from your bills)$/, ""));
   drawMine();
