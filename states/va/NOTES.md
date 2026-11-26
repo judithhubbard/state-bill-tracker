@@ -66,5 +66,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   predicts again), later 0.8%, never 0.4%. Floor days are weekdays (a Saturday or Sunday 1-3 times a session). Lines of
   bills continued from the last session (dated then) are left out. Not handled: a second reading on the session's last
   day or on crossover day (the next weekday is past the deadline; rare).
+- **Chapters and parties in every session (2026-11-26):** 2025's BILLS.CSV (saved 2025-10-29) has no Approved flag and no
+  Chapter_id on any bill, so its 721 laws had no chapter; convert.py now takes the chapter from the history's "Approved by
+  Governor-Chapter 366" / "Enacted, Chapter N" line when the column is empty (721 of 721). Sponsors' parties were read only
+  for the current session (contacts_<session>.json), so 2023-25 and the prefiled 2027 had none (0%; issue pages'
+  "Sponsor's party" and the Statistics party rows were blank). LIS member ids ("H0386") are the same in every session:
+  other sessions take each id's party from the newest contacts file that has it, then from states/va/parties.json
+  (states/va/parties.py, run by hand: the 82 members who left, from Open States' public-domain people data by house and
+  name, a member who changed houses by name, and three by hand). Now 96% (2023), 99%, 99%, 97% (2026), 100% (2027); the
+  rest are committees and the Governor's bills. test/data_check.py FAILs when a recent session's sponsor parties or laws'
+  chapters fall far below another session's.
 - **"Enacted, Chapter N" (2026-11-23):** a bill that became law when the General Assembly accepted the governor's
   amendments (about 60 a year) is "ENACTED CHAP.N", not "SIGNED CHAP.N": the page said "Signed into law"; now "Became law".

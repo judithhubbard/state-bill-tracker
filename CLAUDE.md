@@ -522,6 +522,11 @@ notes before changing its code. Shared notes on the LegiScan states are in state
       fifth of its floor dates) or with no committee step at all (Congress's Senate calendar, MA's "Rules suspended"), and
       UT's "Substitute Recommendation" followed by a failed motion to recommend read as a report (HB 109 of 2024 died in
       committee). `floorLine()` reads the record: an approval that day or in the two weeks before, else what it shows.
+  - (2026-11-26) A column a year's bulk file stops filling: VA's 2025 BILLS.CSV has no Approved flag or Chapter_id on any
+    bill (721 laws without a chapter), and parties read for the current session only (VA 2023-25 and 2027: 0%). Fall back to
+    the history's line, and ids shared across sessions. The check FAILs when a recent session's chapters, sponsor parties or
+    named split floor votes fall far below another session's. (A falling share of floor votes naming anyone isn't one: DC
+    lists only members not voting yes, so unanimous votes name nobody.)
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.

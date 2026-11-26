@@ -591,15 +591,55 @@ def check(state):
     if hasattr(C, "parties"):
         share = {}
         for s, recs in loaded.items():
-            named = [r for r in recs if r["vers"][0]["sponsor"] not in ("", "—") and  # members, not committees
+            named = [r for r in recs if r["vers"][0]["sponsor"] not in ("", "—", "?") and  # members, not committees or "?" (NV 2027's prefiled bills)
                      not re.search(r"Committee|Management|Council|Commission|Caucus|Efficiency|Rules", r["vers"][0]["sponsor"])]
             party = C.parties(s, recs)
             if len(named) >= 20:
                 share[s] = sum(1 for r in named if (r["vers"][0]["p"][0], r["vers"][0]["sponsor"]) in party) / len(named)
         low = {s: f"{100 * v:.0f}%" for s, v in share.items() if share and v < 0.5 * max(share.values())}
-        if low:
+        # (A FAIL for this year's sessions, the one before and next year's (2026-11-26: Virginia's 2025 and 2027 had none,
+        # its past and prefiled sessions reading parties only for the current one; a LOOK didn't stand out). Older ones
+        # stay a LOOK: GA, MI and NC 2023.)
+        bad = {s: v for s, v in low.items() if s >= date.today().year - 2}
+        if bad and max(share.values()) >= 0.8:
+            say(state, "FAIL", f"recent sessions whose sponsors mostly have no party (a member list that didn't match?): "
+                               f"{bad}, best {100 * max(share.values()):.0f}%")
+        elif low:
             say(state, "LOOK", f"sessions whose sponsors mostly have no party (a member list that didn't match?): {low}, "
                                f"best {100 * max(share.values()):.0f}%")
+
+    # Each session against the state's others (2026-11-26, after Virginia's 2025 laws lost their chapters: its bill list
+    # stopped carrying the column, 0 of 721, while 2023, 2024 and 2026 had all): a share far below what another session
+    # shows means a reader stopped finding something. A FAIL for recent sessions, a LOOK for older ones (whose sources
+    # can be thinner: MT and KS 2023's roll calls).
+    def against_others(what, shares, floor=0.8, low=0.5):
+        if not shares:
+            return
+        best_s = max(shares, key=lambda k: shares[k][0])
+        best = shares[best_s][0]
+        if best < floor:
+            return
+        drops = {k: v for k, v in shares.items() if v[0] < low * best}
+        for k, (x, n) in sorted(drops.items()):
+            say(state, "FAIL" if k >= date.today().year - 2 else "LOOK",
+                f"{k}: {what} {100 * x:.0f}% of {n}, {best_s} {100 * best:.0f}% of {shares[best_s][1]}")
+
+    laws_ch = {}
+    for s, recs in loaded.items():
+        laws = [r for r in recs if r["stage"] == 5 and "const" not in r["topics"]]
+        if len(laws) >= 20:
+            laws_ch[s] = (sum(1 for r in laws if r.get("chapter")) / len(laws), len(laws))
+    against_others("laws with a chapter or act number", laws_ch)
+    # Split floor votes (ayes and noes both) that name members, house by house: unanimous votes are left out, since a
+    # state may list only the members who didn't vote yes (DC: 2025-26's votes were more often unanimous with everyone
+    # present, so fewer named anyone at all, 27% against 54%, with every member accounted for).
+    for h in sorted({v[0] for recs in loaded.values() for r in recs for v in r["votes"] if v[1] == "F"}):
+        named = {}
+        for s, recs in loaded.items():
+            fl = [v for r in recs for v in r["votes"] if v[0] == h and v[1] == "F" and v[4] and v[5]]
+            if len(fl) >= 20:
+                named[s] = (sum(1 for v in fl if v[6]) / len(fl), len(fl))
+        against_others(f"{h} split floor votes naming members", named, low=0.6)
 
     # The current session's votes should name seats, not leftover names. Former members are expected: a name missing from its
     # house's last 30 days of roll calls has left (the District's Council, 13 members, lost two at-large members in 2025-26,
