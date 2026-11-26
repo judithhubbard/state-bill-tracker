@@ -1127,6 +1127,15 @@ textarea.ta-fld { resize: vertical; min-height: 4.6em; }
 .ta-did { margin: 0; padding-top: 10px; border-top: 1px solid var(--rule); display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14.5px; }
 .ta-wrote { margin: 6px 0 0; font-size: 14px; font-weight: 600; color: var(--st-5-ink); }
 /* The rest of a bill's panel, folded (fillDetail()'s pfold()): a line each, with a hint of what's inside. */
+.whatbox { max-width: 78ch; margin: 14px 0 12px; }
+/* "Every action", at the end of History (2026-11-26, the owner): each version's actions open, no second click. */
+.allacts { margin-top: 14px; }
+.allacts .aa-h { margin: 0 0 6px; font: 700 12px/1.3 var(--body); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
+.allacts details.acts > summary { display: none; }
+.whatbox .wb-h { margin: 0 0 4px; font: 700 12px/1.3 var(--body); letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); }
+.whatbox .wb-body p { margin: 0 0 8px; }
+.whatbox .wb-body.clamp { max-height: 7.8em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 60%, transparent); mask-image: linear-gradient(#000 60%, transparent); }
+.whatbox .wb-more { font-size: 14px; }
 details.pfold { border-top: 1px solid var(--rule); max-width: 78ch; }
 details.pfold { border-bottom: 1px solid var(--rule); }
 details.pfold > summary { cursor: pointer; padding: 7px 0 7px 16px; margin: 0; font-size: 15px; list-style: none; position: relative; }
@@ -6299,6 +6308,14 @@ function drawAll() {
 
 // A folded section of a bill's panel: its name and a hint of what's in it on the line, the section (without its own
 // heading) inside.
+// "What it does", open (2026-11-25, the owner: a folded line cut mid-sentence wasted two lines on a fragment): the first
+// few lines of the summary, with "Read more" when there's more.
+function whatBox(body) {
+  if (!body || !body.trim()) return "";
+  const inner = body.replace(/<h4>[^<]*<\/h4>/, ""), long = inner.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").length > 330;
+  return `<section class="whatbox"><h4 class="wb-h">What it does</h4><div class="wb-body${long ? " clamp" : ""}">${inner}</div>`
+    + (long ? `<button type="button" class="linkish wb-more" aria-expanded="false">Read more</button>` : "") + `</section>`;
+}
 function pfold(name, hint, body) {
   if (!body || !body.trim()) return "";
   return `<details class="pfold"><summary><span class="pfn">${name}</span>${hint ? `<span class="pfh"> · ${esc(hint)}</span>` : ""}</summary>`
@@ -6352,15 +6369,14 @@ function fillDetail(el) {
   const hist = historyBlock(b), spons = sponsorsBlock(b), sim = similarBlock(b);
   const html = `${inCard ? "" : issueBox(b)}${inCard ? "" : nextSteps(b)}
     ${STATE.resetNote?.(b) ? `<p class="reset">${esc(STATE.resetNote(b))}</p>` : ""}
-    ${pfold("What it does", mainHint(b) || (b.summary ? clipText(b.summary, 90) : ""), what)}
-    ${pfold("History", histHint(hist), hist)}
+    ${whatBox(what)}
+    ${pfold("History", histHint(hist), hist + `<div class="allacts"><h5 class="aa-h">Every action</h5><div class="versions">${b.vers.map((v) => verBlock(v, b).replace('<details class="acts">', '<details class="acts" open>')).join("")}</div></div>`)}
     ${pfold("Who sponsors it", sponsHint(b), spons + panelTags(b, folded))}
     ${chapterAmendment(b)}
     ${signingMemo(b)}${vetoMemo(b)}
     ${folded ? "" : twinLine(b)}
     ${pfold("This bill in other sessions", [...new Set(b.hist.map((e) => e[0]))].sort().map(span).join(", "), lineage(b))}
     ${pfold("Similar bills", simHint(b), sim)}
-    ${pfold("Every action", b.vers.map((v) => v.p).join(", "), `<div class="versions">${b.vers.map((v) => verBlock(v, b)).join("")}</div>`)}
     ${inCard ? "" : `<div class="billfoot"><button class="linkish" type="button" data-copylink="${esc(billLink(b))}">Copy link to share</button>${repsLine()}</div>`}
     ${officialMore(b)}`;
   // (Who decides can depend on every bill's history: meetings().)
@@ -6665,6 +6681,14 @@ function wire() {
     });
   }, true);
   document.addEventListener("click", (e) => {
+    const wbm = e.target.closest(".wb-more");
+    if (wbm) {
+      const on = wbm.getAttribute("aria-expanded") !== "true";
+      wbm.previousElementSibling.classList.toggle("clamp", !on);
+      wbm.textContent = on ? "Show less" : "Read more";
+      wbm.setAttribute("aria-expanded", String(on));
+      return;
+    }
     const icm = e.target.closest(".ic-more");
     if (icm) {
       const box = icm.closest(".issuectx"), on = icm.getAttribute("aria-expanded") !== "true";
