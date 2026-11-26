@@ -333,6 +333,11 @@ def load_session(session):
     # The current session's members are tied to their seats ("S:34", "H:71"), so the page can show how each
     # legislator voted and which bills they sponsor; earlier sessions' members keep their names.
     seat_of, party_of = seats(session) if session == CURRENT else ({}, {})
+    # Parties for the other sessions too (2026-11-26: 2023-25 and 2027 showed none): LIS member ids ("H0386") are the same
+    # in every session, so a member's party comes from the newest contacts file that has them; then from the other
+    # sessions' own lists (states/va/parties.json: members who have left, from Open States' public-domain people data).
+    if session != CURRENT:
+        party_of = {**old_parties(), **newest_parties()}
 
     def member(mid):
         return seat_of.get(mid) or f"{mid[:1]}?{names.get(mid, mid)}"
@@ -426,6 +431,10 @@ def load_session(session):
             return {"first": ds[0], "last": ds[-1], "all": ";".join(ds)}[mode] if ds else ""
 
         chap = re.match(r"CHAP0*(\d+)", b["Chapter_id"] or "")
+        if not chap:
+            # (2025's BILLS.CSV has no Approved flag or Chapter_id on any bill: 0 of 721 laws had a chapter. The history
+            # says it: "Approved by Governor-Chapter 366", read as "SIGNED CHAP.366".)
+            chap = next((m for m in (re.search(r"(?:SIGNED|ENACTED) CHAP\.(\d+)", t) for t in texts) if m), None)
         intro = iso(b["Introduction_date"])
         action_dates = [d for d, _, _, _ in acts if d]
         chief_id = next((r["MEMBER_ID"] for r in sp if "Chief Patron" in r["PATRON_TYPE"]), mid(b["Patron_id"]))
@@ -529,6 +538,29 @@ _PARTIES = {}
 def parties(session, recs):
     """Party ("D" or "R") for each sponsor as the records name them, keyed by (house, name)."""
     return {k: v for k, v in _PARTIES.get(session, {}).items() if v in ("D", "R")}
+
+
+def newest_parties():
+    """Member id -> party letter from every contacts file, the newest winning."""
+    out = {}
+    for path in sorted(glob.glob(os.path.join(P.DATA, "contacts_*.json"))):
+        try:
+            for p in json.load(open(path))["people"].values():
+                mid = p.get("id") or ""
+                if mid and (p.get("party") or "")[:1] in ("D", "R", "I"):
+                    out[mid[0] + mid[1:].zfill(4)] = p["party"][:1]
+        except (OSError, ValueError, KeyError):
+            pass
+    return out
+
+
+def old_parties():
+    """Member id -> party letter for members no contacts file has (states/va/parties.json)."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "parties.json")
+    try:
+        return json.load(open(path))
+    except (OSError, ValueError):
+        return {}
 
 
 def seats(session):

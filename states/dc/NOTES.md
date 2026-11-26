@@ -118,6 +118,12 @@ Started 2026-11-22. Shared conventions, the data traps list and the site's code 
   December 2025; Robert White, October 2026; Doni Crawford, interim February-July 2026) are names. With 13 members two
   departures are 11% of the named votes, so test/data_check.py's "votes not tied to a seat" check now FAILs only on names
   still voting in the last four months (9.6% on 2026-11-22, falling as Robert White's last votes age).
+  Only members who didn't vote yes are listed (the yeas are the rest), so a unanimous vote with everyone present names
+  nobody. 2025-26's floor votes name someone less often than 2023-24's (27% of 302 against 54% of 344, 2026-11-26) because
+  more were unanimous with all present, not because names are lost: every permanent bill's first and final reading has its
+  roll call in LIMS, and every roll call lists each seated member (12 while Ward 8 was vacant, March-August 2025, and in
+  January 2026; 13 otherwise), the same as LegiScan's copy (67 of 304 named). Emergency and temporary acts have no roll
+  calls in either source. data_check compares split votes (ayes and noes both) across sessions instead.
 - **"What it does":** the Secretary's abstract ("As introduced, it would ..."), with referral notes dropped and the labelled
   notes kept after it ("Fiscal note: ...", "Racial equity analysis: ..."), and the enacted act's long title from the law
   library ("As enacted, it is an act to amend ..."). 450 of 478 bills in 2025-26, 352 of 467 in 2023-24.
