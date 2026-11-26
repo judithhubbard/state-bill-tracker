@@ -100,7 +100,8 @@ const WatchRows = (() => {
     // (No "Take action ›" on the row, 2026-11-26, the owner: the row itself opens its card, whose rows each have Draft ›.)
     // The status column, as on the state's Bills list: the pips, the status label, then the date of the latest action
     // and the deadline (lists_pages/rows.css). A bill out of time this session is greyed, as there.
-    const over = (x.out || x.group === "done") && x.stage <= 2 ? " over" : "", uni = opt.uni ? opt.uni(x) : BillFacts.oneHouse(x.st);
+    // (x.lapsed: a first passage the next Legislature let die, billfacts.js's lapsedOf(): grey, as a bill that died.)
+    const over = ((x.out || x.group === "done") && x.stage <= 2) || x.lapsed ? " over" : "", uni = opt.uni ? opt.uni(x) : BillFacts.oneHouse(x.st);
     // (A deadline the group's heading already gives isn't repeated on each row: opt.groupDay.)
     const due = x.due && !(opt.groupDay && x.date === opt.groupDay && (x.group === "session" || x.group === "year")) ? x.due : "";
     // (The last action's day is left out when it's the deadline's own day: "Oct 22, 2026 · Floor vote Oct 22" read twice.)

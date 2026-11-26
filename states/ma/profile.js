@@ -31,6 +31,9 @@ const STATE = {
   // in a row, one goes to the voters at the next state election, in an even year (Amendments, Art. 48). The second
   // approval is recorded as "Amendment again agreed to", on the document the next General Court takes "from the files".
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext: (s) => ({ sessions: [s + 2], ends: `${s + 3}-12-31`, label: `${s + 2}–${String(s + 3).slice(2)}` }),
   amendmentVote: "a joint session of both houses, by a majority of all members, in two General Courts in a row",
   ballotEvenYears: true,
   amendmentFinal: (b) => b.vers.some((v) => v.actions.some(([, t]) => /^Amendment again agreed to\b/i.test(t))),

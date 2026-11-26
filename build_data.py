@@ -1798,10 +1798,12 @@ def label_inputs(session, recs, hist_s):
         dates = {k: ((kd[j] if j < len(kd) else "") or "").split(";")[-1] or None for j, k in enumerate(KEY_DATES)}
         bills.append({"stage": r["stage"], "comm": r["comm"] or "", "passedIn": r["passedIn"] or "", "topics": r["topics"] or [],
                       "ballot": bool(r.get("ballot")), "budget": bool(r.get("budget")), "title": r["title"], "summary": r["summary"] or "",
+                      "lapsed": bool(r.get("lapsed")), "passedAgain": bool(r.get("passedAgain")),
                       "nums": [v["p"] for v in r["vers"]], "chapter": r["chapter"] or 0, "veto": r["veto"] or 0, "last": r["last"] or "",
                       "vers": [{"p": v["p"], "committee": v["committee"] or "", "statusDesc": v["statusDesc"] or "", "sponsor": v["sponsor"] or "",
                                 "actions": [[a[0], a[1]] for a in v["actions"]]} for v in r["vers"]],
-                      "dates": dates, "earlier": sorted((e for e in hist_s[i].values() if e[0] < session), key=lambda e: (e[0], str(e[1])))})
+                      "dates": dates, "earlier": sorted((e for e in hist_s[i].values() if e[0] < session), key=lambda e: (e[0], str(e[1]))),
+                      "later": sorted((e for e in hist_s[i].values() if e[0] > session), key=lambda e: (e[0], str(e[1])))})
     return bills
 
 
@@ -1813,8 +1815,10 @@ def bill_labels(session, bills, profile_js, facts):
     import subprocess
     js = [os.path.join(HERE, "lists_pages", f) for f in ("billlabels.js", "billfacts.js", "watchrules.js")]
     # (A finished session's words don't change with the date: its key leaves the date out, so a new day doesn't run it
-    # through Node again. test/cache_same.sh's next-day check compares with a build that works everything out.)
-    key = hashlib.sha256(json.dumps([profile_js, session, facts, bills, today_here() if facts.get("c") or os.environ.get("KEEP_SESSIONS") == "off" else ""],
+    # through Node again. test/cache_same.sh's next-day check compares with a build that works everything out. Its year
+    # stays in: a first passage the next Legislature didn't pass reads as died from the year after that Legislature ends,
+    # billfacts.js's lapsedOf(), whose ends are each a December 31.)
+    key = hashlib.sha256(json.dumps([profile_js, session, facts, bills, today_here() if facts.get("c") or os.environ.get("KEEP_SESSIONS") == "off" else today_here()[:4]],
                                     ensure_ascii=False).encode("utf-8")).hexdigest()[:20]
     version = file_hash(*js)
     saved = cached_json(f"labels_{session}", version)
@@ -2642,7 +2646,7 @@ def compute(prev=None):
         was = prev.get(session) or {}
         sims = was["sims"] if was.get("simIn") == sim_in else similar_bills(recs)
         for i, r in enumerate(recs):
-            flags = (r["local"] and 1) | (r["senDeleg"] and 2) | (r["budget"] and 4) | (r["asmDeleg"] and 8) | (r["passedS"] and 16) | (r["passedA"] and 32) | (["", "person", "org", "naming"].index(r["narrow"]) << 6 if r["narrow"] != "place" else 512) | (256 if r.get("shell") else 0) | (1024 if r.get("ballot") else 0)
+            flags = (r["local"] and 1) | (r["senDeleg"] and 2) | (r["budget"] and 4) | (r["asmDeleg"] and 8) | (r["passedS"] and 16) | (r["passedA"] and 32) | (["", "person", "org", "naming"].index(r["narrow"]) << 6 if r["narrow"] != "place" else 512) | (256 if r.get("shell") else 0) | (1024 if r.get("ballot") else 0) | (2048 if r.get("lapsed") else 0) | (4096 if r.get("passedAgain") else 0)
             vers = [[v["p"], S(v["sponsor"]), v["cosp"], S(v["statusDesc"]), S(v["committee"]),
                      [[a[0].replace("-", ""), S(a[1])] for a in v["actions"]],
                      [S(n) for n in v["cosponsors"]] if session >= current else [], v.get("district") or 0,

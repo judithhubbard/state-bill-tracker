@@ -264,7 +264,8 @@ def ago(days):
 
 def parse_bill_list(page, sess):
     out = {}
-    for m in re.finditer(rf'<a id="([A-Z]+\d+)" href="/App/NELIS/REL/{sess}/Bill/(\d+)/Overview">.*?</a>\s*</div>\s*'
+    # (The "All Previous Session Bills" list marks each with a star: "AJR6*".)
+    for m in re.finditer(rf'<a id="([A-Z]+\d+)\*?" href="/App/NELIS/REL/{sess}/Bill/(\d+)/Overview">.*?</a>\s*</div>\s*'
                          r'<div class="col[^"]*">(.*?)</div>\s*</div>\s*<hr', page, re.S):
         body = m.group(3)
         title = ""
@@ -331,6 +332,38 @@ def lists(year, folder, state):
     save(out, path)
     state["lists"] = TODAY.isoformat()
     return out
+
+
+def second_rounds(year, folder, state):
+    """Constitutional amendments the session before passed, back for their second passage (2026-11-26): NELIS lists them
+    under the session's "All Previous Session Bills" (SelectedBillTypes=PSB, "AJR6*" for AJR 6 of the session before,
+    beside vetoed bills returned), each with its own page and history ("Returned from Secretary of State", then this
+    session's steps: passed again, or "(Pursuant to Joint Standing Rule No. 14.3.1, no further action allowed.)").
+    Writes prior.json ({number: {key, summary, title}}) and prior/<number>.html; read daily while the session is live,
+    then once after it. convert.py adds these steps to the first passage's record."""
+    sess = session_name(year)
+    path = os.path.join(folder, "prior.json")
+    seen = state.get("prior", "")
+    if os.path.exists(path) and (seen >= TODAY.isoformat() or (not live(year) and seen >= date(year, 8, 1).isoformat())):
+        return
+    page = request(f"/App/NELIS/REL/{sess}/HomeBill/BillsTab?Page=1&Filters.DisplayTitles=True"
+                   f"&Filters.PageSize=2147483647&SelectedBillTypes=PSB", f"{year} previous session's measures", 'id="billTab"')
+    if page is None:
+        return
+    rows = {k: b for k, b in parse_bill_list(page, sess).items()
+            if "JR" in k and AMENDS.search(b["summary"] + " " + b["title"])}
+    os.makedirs(os.path.join(folder, "prior"), exist_ok=True)
+    for k, b in rows.items():
+        if out_of_time():
+            return
+        pg = request(f"/App/NELIS/REL/{sess}/Bill/FillSelectedBillTab?selectedTab=Overview&billKey={b['key']}",
+                     f"{year} {k} (second round)", "Bill History")
+        if pg is None:
+            return  # the last copies stay; asked again next run
+        save_text(strip_scripts(pg), os.path.join(folder, "prior", f"{k}.html"))
+    save(rows, path)
+    state["prior"] = TODAY.isoformat()
+    print(f"{year}: {len(rows)} amendments back from the session before for their second passage", flush=True)
 
 
 def wanted(listing):
@@ -898,6 +931,11 @@ def main():
             if not out_of_time():
                 committees(year, folder, state)
             save(state, state_path)
+        for year, (folder, state, listing) in {**found, **done_years}.items():
+            # (Only when the session before is kept here: its first passages are what these records finish.)
+            if not out_of_time() and os.path.isdir(os.path.join(DATA, str(year - 2))):
+                second_rounds(year, folder, state)
+                save(state, os.path.join(folder, "state.json"))
         for year, (folder, state, listing) in found.items():
             if out_of_time():
                 break

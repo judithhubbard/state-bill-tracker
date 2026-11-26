@@ -54,6 +54,9 @@ const STATE = {
   // The line under "Passed both houses", in the stage list and (with the bill) in its row.
   // Constitutional amendments (concurrent resolutions) pass two separately elected Legislatures, then the voters.
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext: (s) => ({ sessions: [s + 2], ends: `${s + 3}-12-31`, label: `${s + 2}–${String(s + 3).slice(2)}` }),
   passedBothNote: (live) => `${live ? "Not yet requested" : "Never requested"} by the governor`,
   passedBothGroup: ["By December 31", () => "The governor's office has to request these and decide on them by the end of the year, or they die."],
 

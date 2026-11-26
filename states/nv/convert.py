@@ -172,6 +172,59 @@ def page(session, p):
     return _PAGES[key]
 
 
+def second_round(session, p, origin):
+    """A constitutional amendment's second round, in the next session (fetch.py's second_rounds(): data/nv/<session + 2>/
+    prior/<p>.html, NELIS's "AJR6*" of the session before): its steps there, and {"session", "passed" (both houses again),
+    "ended" (the day it died there: a deadline, "no further action", or the session's end)}; ([], None) when it isn't
+    listed (not back yet, or that session isn't read). 2023's AJR 5, AJR 6 and SJR 7 all died in 2025 (Joint Standing
+    Rule 14.3.1, April 12)."""
+    nxt = session + 2
+    path = os.path.join(folder(nxt), "prior", f"{p}.html")
+    try:
+        s = open(path, encoding="utf-8").read()
+    except OSError:
+        return [], None
+    rows = [(day(d), text(re.sub(r"<[^>]+>", " ", a.replace("\n", " "))))
+            for d, a in re.findall(r'data-th="Date">([^<]*)</td>\s*<td class="col" data-th="Action">(.*?)</td>', region(s, "Bill History"), re.S)]
+    steps, cur, passed, done, ended = [], origin, set(), False, ""
+    for d, t in rows:
+        if re.search(r"\bReturned from Secretary of State\b", t):
+            steps.append((d, origin, f"Back in the {nxt} session for its second passage", "again"))
+        for m in tokens(t)[0]:
+            g, H = m.lastgroup, HOUSE[cur]
+            if g == "ref":
+                steps.append((d, cur, f"REFERRED TO {committee_label(m.group('comm')).upper()}", "ref2"))
+            elif g == "fromc":
+                steps.append((d, cur, f"The committee recommended: {text(m.group('rec')).rstrip('.')}", "report2"))
+            elif g == "passed":
+                passed.add(cur)
+                tl = tally(m.group("tally"))
+                steps.append((d, cur, f"Passed the {H} again" + (f", {tl.get('Yeas', 0)}-{tl.get('Nays', 0)}" if tl else ""), "pass2"))
+            elif g == "lost":
+                tl = tally(m.group("ltally"))
+                ended = ended or d
+                steps.append((d, cur, f"Failed in the {H}" + (f", {tl.get('Yeas', 0)}-{tl.get('Nays', 0)}" if tl else ""), "fail2"))
+            elif g in ("enroll", "deliv"):
+                done = True
+            elif g == "deadline":
+                ended = ended or d
+                steps.append((d, cur, f"Missed a deadline (Joint Standing Rule {m.group('rule')}): no further action allowed", "deadline2"))
+            elif g == "nfa":
+                ended = ended or d
+                steps.append((d, cur, "No further action", "nfa2"))
+            elif g == "tohouse":
+                cur = CHAMBER[m.group("toh")]
+            elif g == "inhouse":
+                cur = CHAMBER[m.group("inh")]
+    again = done or passed >= {"A", "S"}
+    if again:
+        ended = ""
+    elif not ended and adjourned(nxt) < date.today().isoformat():
+        ended = adjourned(nxt)
+        steps.append((ended, origin, f"The {nxt} session ended without passing it again", "ended2"))
+    return steps, {"session": nxt, "passed": again, "ended": ended}
+
+
 def votes_file(session, p):
     try:
         return json.load(open(os.path.join(folder(session), "votes", f"{p}.json"), encoding="utf-8"))
@@ -616,6 +669,8 @@ def record(session, p, row, lst):
         vetoed = True
         vd = day_slash(veto_day)
         steps.append((vd, "G", "VETOED", "vetoed"))
+    # A constitutional amendment's second round, in the next session (its own record there: second_round()).
+    again_steps, again = second_round(session, p, origin) if amendment else ([], None)
     steps.sort(key=lambda s: s[0])  # stable: the site's order within a day
     overridden = sum(1 for s in steps if s[3] == "override") >= 2
     # Vetoes NELIS's records miss (VETO_FIX). Any other bill delivered and neither signed nor vetoed once the governor's
@@ -654,6 +709,8 @@ def record(session, p, row, lst):
         stage = None
     if stage is None:
         stage = 1 if place == "floor" or origin in failed else 0
+    # (The second round's steps come after the first's: they don't change how far the first got.)
+    steps += sorted(again_steps, key=lambda s: s[0])
     if law and chapter_no:
         when = max((s[0] for s in steps if s[3] in ("signed", "nosign", "override")), default="")
         steps.append((when, "G", f"SIGNED CHAPTER {chapter_no}", "chapter"))
@@ -750,6 +807,12 @@ def record(session, p, row, lst):
         rec["vetoReturns"] = session + 2
     if deadline and stage <= 2:
         rec["deadline"] = deadline[2]
+    # A first passage the next session passed again, or let die (build_data.py's flags; billfacts.js reads both).
+    if again and stage == 3:
+        if again["passed"]:
+            rec["passedAgain"] = True
+        elif again["ended"]:
+            rec["lapsed"] = True
     if not page(session, p):
         rec["missing"] = True
     return rec, what

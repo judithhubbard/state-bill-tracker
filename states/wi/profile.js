@@ -28,6 +28,9 @@ const STATE = {
   // the second resolution sets; never to the governor (Wisconsin Constitution, Art. XII, Sec. 1). The title keeps the
   // "(second consideration)" that marks the final passage, so it's known even when the first isn't in these records.
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext: (s) => ({ sessions: [s + 2], ends: `${s + 3}-12-31`, label: `${s + 2}–${String(s + 3).slice(2)}` }),
   amendmentFinal: (b) => /\(second consideration\)/i.test(b.title),
   amendmentVote: "two successive Legislatures, each by a majority of the members of both houses",
   // The second-consideration resolution names the election (often the April spring election or the August primary).

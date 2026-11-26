@@ -531,6 +531,15 @@ notes before changing its code. Shared notes on the LegiScan states are in state
     the history's line, and ids shared across sessions. The check FAILs when a recent session's chapters, sponsor parties or
     named split floor votes fall far below another session's. (A falling share of floor votes naming anyone isn't one: DC
     lists only members not voting yes, so unanimous votes name nobody.)
+  - (2026-11-26) A first passage read as alive after the next Legislature let it die: NV's AJR 6 of 2023 (the National
+    Popular Vote Compact) showed "Passed the first of two rounds", the road's "Voters" next, though the 2025 session let it
+    die in committee. A state's own record of the second round decides (NV: the next session's "All Previous Session
+    Bills", read into the first passage's record: `lapsed`, `passedAgain`), else the first passage's linked version in the
+    next Legislature that didn't pass, once that Legislature's time is up (`STATE.amendmentNext`, billfacts.js's
+    `lapsedOf()`: "Died: not passed again in 2025"). Never the calendar alone: second passages aren't always linked (NY's
+    S517 and S360 of 2021 and S2414 of 2017, VA's SJ 231 of 2023, IA's flat tax of 2024 were passed again, unlinked). The
+    wording check FAILs on a two-round state without `amendmentNext` or a first passage whose linked version didn't pass
+    shown alive, and LOOKs at first passages still alive after the next Legislature with no record of it there.
 - **Hawaii (built 2026-11-15, from Open States)**: see states/hi/NOTES.md.
 - **Iowa (built 2026-11-15; official pages, else Open States)**: see states/ia/NOTES.md.
 - **Congress (/us/, built 2026-11-16; on the front page's list, not its map)**: see states/us/NOTES.md.

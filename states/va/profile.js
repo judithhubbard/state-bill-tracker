@@ -29,6 +29,9 @@ const STATE = {
   // reads "first passage"); without that, the same amendment passed in an earlier session before a House election.
   // The bill that puts the question on the ballot is an ordinary bill, signed by the governor.
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext(s) { const e = s % 2 ? s : s + 1; return { sessions: [e + 1], ends: `${e + 1}-12-31`, label: String(e + 1) }; },
   amendmentVote: "both houses twice, with a House of Delegates election between",
   amendmentFinal(b) {
     if (/\bsecond passage\b/i.test(b.title)) return true;

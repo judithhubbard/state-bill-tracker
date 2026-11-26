@@ -67,6 +67,7 @@ const OneList = (() => {
     // page works it out: billfacts.js): it ended before the session did ("e"), a veto that can still be overridden ("r"),
     // the voters have decided it ("d"), an amendment ("a") on its second passage ("2").
     const has = (c) => flags.includes(c);
+    x.lapsed = has("x");
     const bill = { stage, due: null, agenda: meets.map(([when, committee, kind, note]) => ({ when, committee, kind: kind || "", note: note || "" })), topics: kind === "const" ? ["const"] : [],
       vers: [{ p: full, actions: [], statusDesc: "", committee: comm || "" }], nums: [full], budget: has("b"), ballot: has("v") };
     try {
@@ -83,7 +84,7 @@ const OneList = (() => {
     return out;
   }
   // ---- Kept in this browser, to show the rows at once next time ----
-  const FIELDS = ["key", "st", "session", "num", "found", "gone", "full", "title", "stage", "label", "last", "action", "group", "date", "due", "out", "later", "sessionLabel", "old", "upcoming", "href", "page", "yearGroup", "news", "other"];
+  const FIELDS = ["key", "st", "session", "num", "found", "gone", "full", "title", "stage", "label", "last", "action", "group", "date", "due", "out", "later", "sessionLabel", "old", "upcoming", "href", "page", "yearGroup", "news", "other", "lapsed"];
   function keep(list) {
     try {
       const o = JSON.parse(localStorage.getItem(CACHE) || "{}");

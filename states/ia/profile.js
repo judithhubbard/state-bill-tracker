@@ -27,6 +27,9 @@ const STATE = {
   // two General Assemblies in a row (the second with the same text), then the voters at a general election; never the
   // governor (Constitution, Art. X, sec. 1).
   amendments: true,
+  // The next Legislature, where a first passage has to pass again (billfacts.js's lapsedOf(): once its time is up, a first
+  // passage whose linked version there didn't pass reads "Died: not passed again in ...").
+  amendmentNext: (s) => ({ sessions: [s + 2], ends: `${s + 3}-12-31`, label: `${s + 2}–${String(s + 3).slice(2)}` }),
   amendmentVote: "a majority of each house's members (26 senators, 51 representatives) in two General Assemblies in a row",
   amendmentFinal: (b) => b.vers.some((v) => v.actions.some(([, t]) => /^Second passage: /.test(t))),
   amendmentAgain: () => `Next: the General Assembly elected in November ${DATA.session + 1} has to pass it again, unchanged; then it goes to the voters.`,

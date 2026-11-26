@@ -41,9 +41,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   data yet; check when the 2027 session acts). Joint resolutions whose bill draft is a "C-" request propose
   constitutional amendments: tagged "const", a majority of each house's members in two sessions in a row, then the voters
   at the next general election; they go to the Secretary of State ("File No. 24"), never the governor (2023 AJR 5, AJR 6,
-  SJR 7; 2025 AJR 8: first passages). A resolution passed the second time is listed under its first session's number
-  ("SJR 7 of the 82nd Session") in a list fetch.py doesn't read, so second passages are missing (`amendmentFinal` reads
-  that wording if they're ever added). Other joint resolutions (memorials) are left out; the laws list includes
+  SJR 7; 2025 AJR 8: first passages). A first passage comes back in the next session under its first session's number
+  ("AJR6* of the 82nd (2023) Session"), listed in that session's "All Previous Session Bills" (SelectedBillTypes=PSB,
+  beside the vetoed bills returned): fetch.py's `second_rounds()` saves the list (prior.json) and each one's history
+  (prior/AJR6.html; daily while the session is live, then once), and convert.py's `second_round()` adds those steps to the
+  first passage's record: "Back in the 2025 session for its second passage", the referral, and either passed again
+  (`passedAgain`: profile.js's `amendmentFinal`, then the voters) or died ("Missed a deadline (Joint Standing Rule
+  14.3.1): no further action allowed", else the session's end: `lapsed`, shown "Died: not passed again in 2025"). 2023's
+  AJR 5 (lotteries), AJR 6 (National Popular Vote Compact) and SJR 7 (reproductive rights) were all referred to committee
+  on Feb 3, 2025 and died there on April 12, 2025 (checked 2026-11-26; Ballotpedia: AJR 6 not on the 2026 ballot). Other joint resolutions (memorials) are left out; the laws list includes
   resolutions, which aren't counted. Floor votes: each final passage member by member (votes/), matched to its history
   line by house, day and tally; NELIS calls every one "Passed", lost ones too (AB 500 of 2025: 25-17, short of
   two-thirds; then 20-22), so the history decides. SB 1 of 2023 carries two May roll calls that match none of its history

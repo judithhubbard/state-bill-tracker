@@ -43,6 +43,7 @@ T.vers_unsigned = (b) => b.vers.some((v) => v.actions.some(([, t]) => T.NO_SIGNA
 
 const fails = [], looks = [];
 const s = input.session;
+const todayIso = new Date().toISOString().slice(0, 10);
 const say = (bad, total, limit, what) => {
   if (!bad.length) return;
   (bad.length > limit * Math.max(1, total) ? fails : looks).push(`${s}: ${bad.length} ${what}, e.g. ${bad.slice(0, 4).join(", ")}`);
@@ -155,4 +156,25 @@ say(undone, bills.length, 1, "bills worded as ended early whose last step sends 
 const allLaws = [/<th>Signed/, /k-law"><\/i>Signed/, /\["s5", "Signed"\]/, /\["signed", "Signed", "l"\]/, /Signed into law or vetoed/];
 for (const re of allLaws) if (re.test(page)) fails.push(`tracker.html labels every law "Signed" (${re})`);
 
+// N. Constitutional amendments' first passages (2026-11-26: Nevada's AJR 6 of 2023 read "Passed the first of two rounds"
+// after the 2025 session let it die). In a state where an amendment passes two Legislatures, a first passage whose next
+// Legislature's time is up reads as died when the record says so (billfacts.js's lapsedOf(): the state's own record of the
+// second round, or its linked version there that didn't pass). FAIL: a state with first passages and no amendmentNext to
+// say when the next Legislature's time is up; a first passage whose linked version in the next Legislature didn't pass,
+// shown alive. LOOK: first passages still shown alive after the next Legislature, with no record of it there (passed
+// again under a number the records don't link, or died: read the next Legislature's resolutions).
+if (S.amendments && !S.amendmentOnce) {
+  const BF = BillFacts.make(S, { WR: { floorVotesOver: () => true, lastYear: (x) => x }, facts: () => ({ session: s, current: !!input.current }), today: () => todayIso, fmtDate: (d) => d });
+  const firsts = bills.filter((b) => b.stage === 3 && b.topics && BF.isAmendment(b) && !(() => { try { return BF.secondPassage(b); } catch (e) { return false; } })());
+  const nx = firsts.length && S.amendmentNext ? S.amendmentNext(s) : null;
+  if (firsts.length && !S.amendmentNext) fails.push(`${s}: ${firsts.length} first passages of constitutional amendments and no STATE.amendmentNext to say when the next Legislature's time is up`);
+  if (nx && todayIso > nx.ends) {
+    const shown = (b) => BillFacts.words(S, BF.factsOf(b));
+    const alive = firsts.filter((b) => !/^Died\b/.test(shown(b)));
+    const linkedDead = alive.filter((b) => { const vs = (b.later || []).filter((e) => nx.sessions.includes(e[0])); return vs.length && !vs.some((e) => e[2] >= 3); });
+    if (linkedDead.length) fails.push(`${s}: ${linkedDead.length} first passages of constitutional amendments shown alive though their version in ${nx.label} didn't pass, e.g. ${linkedDead.slice(0, 4).map((b) => b.n[0]).join(", ")}`);
+    const silent = alive.filter((b) => !(b.later || []).some((e) => nx.sessions.includes(e[0])));
+    if (silent.length) looks.push(`${s}: ${silent.length} first passages of constitutional amendments still "${shown(silent[0])}" after ${nx.label}, with no record of them there (passed again under a number not linked, or died?), e.g. ${silent.slice(0, 4).map((b) => b.n[0]).join(", ")}`);
+  }
+}
 console.log(JSON.stringify({ fails, looks }));
