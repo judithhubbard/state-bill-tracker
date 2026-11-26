@@ -15,7 +15,8 @@ WIDE = {  # words in a title: bills with these that the issue missed are read ov
     "housing": [r"\b(?:zoning|land use|housing|dwelling|density|lot)"],
     "minwage": [r"\bwage"], "repair": [r"\brepair"],
     "betting": [r"\b(?:wager|gaming|gambl|sweepstake|casino|bet)"],
-    "drugcosts": [r"\b(?:drug|pharmac|insulin|prescription)"]}
+    "drugcosts": [r"\b(?:drug|pharmac|insulin|prescription)"],
+    "popularvote": [r"\b(?:popular vote|electoral (?:college|votes?)|presidential electors?|elect\w* (?:the )?president)"]}
 def bills():
     for path in sorted(glob.glob(os.path.join(HERE, "..", "..", ".issues-cache", "*.json"))):
         st, s = os.path.basename(path)[:-5].split("_")

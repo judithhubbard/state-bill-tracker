@@ -554,6 +554,14 @@ ISSUES = [
      "rules": [[r"\branked[- ]choice\b"], [r"\binstant[- ]run-?offs?\b"], [r"\bapproval voting\b"], [r"\bpreferential (?:voting|ballots?)\b(?! pupil)"],
                [r"\branked (?:voting|ballots?)\b"], [r"\brank(?:ing)? (?:the )?candidates? in order of preference\b"], [r"\bfinal[- ]five voting\b"],
                [r"(?-i)\bSTAR voting\b"], [r"(?-i)\bRCV\b"]]},
+    {"id": "popularvote", "group": "Elections and government", "name": "National Popular Vote compact", "words": ["national popular vote", "popular vote", "npvic", "npv", "electoral college", "interstate compact president"],
+     # The National Popular Vote Interstate Compact (2026-11-26, the owner): joining, leaving or repealing it, and
+     # constitutional amendments adopting it (Nevada's AJR 6 of 2023). Not presidential electors in general (winner-take-all
+     # or by district, faithless electors): those stay in Voting and elections' filter "Presidential electors and popular
+     # vote", where these bills are too.
+     "rules": [[r"\bnational popular vote\b"], [r"\bpopular vote (?:interstate )?compact\b"],
+               [r"\bagreement among the states to elect the president\b"],
+               [r"\binterstate compact\b", r"\b(?:elect\w* (?:the )?President|presidential electors?|popular vote)\b"]]},
     {"id": "utilityrates", "group": "Environment and energy", "name": "Energy costs and utility rates", "words": ["electric bills", "electricity prices", "utility bills", "rate case", "liheap", "shutoffs"],
      # Electric and gas rates and rate cases, shutoffs, energy assistance, who pays for grid upgrades (large loads). Not
      # water and sewer rates, phone or broadband. Net metering (what solar owners are paid) counts as a rate.
@@ -933,8 +941,14 @@ FUNDS_ONLY = re.compile(r"\b(?:appropriat\w*|funds?|funding|moneys?|apportion\w*
 # Examples a section gives in passing ("(e.g., a survivor of domestic violence or human trafficking)") aren't its subject.
 ASIDE = re.compile(r"\((?:e\.g\.|i\.e\.|for example|such as)[^)]*\)", re.I)
 SECTION_MARK = re.compile(r"(?:^|(?<=\n)|(?<=\. ))(?:\(Sec(?:tion|s)?\.? \d[\w.-]*(?:, [\w.-]+)*\)|(?:SECTION|Section|SEC\.|Sec\.) \d+[A-Za-z]?(?:\.\d+)*[.:)]?)\s")
-# For what the rule still misses: {"<st>:<session>:<number>": {"<issue>": "why it belongs"}}. Empty (2026-11-25).
-OVERRIDES = {}
+# For what the rule still misses: {"<st>:<session>:<number>": {"<issue>": "why it belongs"}}.
+OVERRIDES = {
+    # Minnesota joined the National Popular Vote compact in its 2023 state government and elections omnibus (Laws 2023,
+    # chapter 62, article 4, sections 123-125; Minn. Stat. 208.051-.052), but the summary the site shows is the Senate's of
+    # SF 1426 before conference, which neither names it nor reaches article 4 (2026-11-26, the owner).
+    "mn:2023:HF1830": {"popularvote": "Laws 2023, ch. 62, art. 4, secs. 123-125 enact the National Popular Vote compact (Minn. Stat. 208.051)",
+                       "voting": "Laws 2023, ch. 62, art. 4: the elections policy article, with the National Popular Vote compact"},
+}
 # And what it matches wrongly: {"<st>:<session>:<number>": {"<issue>": "why it doesn't belong"}} (2026-11-25, the owner:
 # the Congress additions read by hand, about 1 in 10 wrong; notes/issues-check.md).
 EXCLUDE = {

@@ -774,3 +774,20 @@ in the sample (KS 2023-25, MO 2024-26, DE 2023-25, NJ 2022-26): 5, all right: Mi
 ("dangerous felony" to include statutory rape: Sexual assault), SB 1066 and SB 1410 of 2026 (short-term rentals assessed
 as residential property), Delaware HB 2 of 2023 (the Marijuana Control Act's section on possessing a handgun: Firearms),
 New Jersey S682 of 2026-27 (residential parking standards in redevelopment plans: Housing supply).
+
+## National Popular Vote compact (2026-11-26, the owner)
+
+Its own issue (`popularvote`, group Elections and government), from Voting's filter "Presidential electors and popular
+vote", which stays. Scope: bills to join, leave or repeal the National Popular Vote Interstate Compact, and constitutional
+amendments adopting it (Nevada's AJR 6 of 2023, which passed once and wasn't passed again in 2025). Rules: "national popular
+vote", "popular vote (interstate) compact" (Alaska's short titles: "US president elect. popular vote compact"), "Agreement
+Among the States to Elect the President", and "interstate compact" near electing the President or presidential electors.
+
+Decided: presidential electors in general (winner-take-all or by congressional district, faithless and false electors) stay
+in Voting and its filter, not here: they're a different question (how a state's own electors are chosen), and a page for
+the compact reads clearer without them.
+
+Known laws checked: Minnesota 2023 (in the state government and elections omnibus, HF 1830, Laws 2023 ch. 62 art. 4: the
+site's summary is the Senate's of SF 1426 before conference and never names it, so it's in `OVERRIDES`; the standalone
+HF 642 / SF 538 died), Maine LD 1578 (2023-24, law in 2024), Virginia HB 965 and SB 322 (2026). The earlier joins (MD, NJ
+2007 ... CO, DE, NM, OR 2019) are before the issues' window (2023 on).
