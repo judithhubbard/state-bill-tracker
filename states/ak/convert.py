@@ -81,7 +81,11 @@ ABBREV = {"AK": "Alaska", "APPROP": "appropriation", "APPROPS": "appropriations"
           "UNIV": "university", "CRIM.": "criminal", "BD": "board", "BDS": "boards", "BD.": "board", "COMP": "compensation",
           "CONST.": "constitutional", "CONST": "constitutional", "AM": "amendment", "DEPT": "department", "DEPT.": "department",
           "REG": "regulation", "REGS": "regulations", "TEMP": "temporary", "ENG": "engineering", "ARCH": "architecture",
-          "LEG": "legislative", "AG": "agricultural", "EXEC.": "executive", "GOVT": "government", "COMM'N": "commission"}
+          "LEG": "legislative", "AG": "agricultural", "EXEC.": "executive", "GOVT": "government", "COMM'N": "commission",
+          "AGRIC.": "agricultural", "INFO.": "information", "ASSIST.": "assistance", "TRANSP.": "transportation",
+          "MAINTEN.": "maintenance", "PERFORM.": "performance", "CNCL.": "council", "DEV.": "development", "EXAM.": "examination",
+          "CONVIC.": "conviction", "LIC.": "license", "ORG.": "organization", "REG.": "regulation", "PROGRM": "program",
+          "W/": "with", "REQ": "requirements", "REQ.": "requirements", "ELECT.": "election"}
 UPPER = set("PFD POMV PFAS RCA AGDC AHFC TRS PERS BSA CPR SNAP UA DEED LB&A US U.S. AIDEA CBRF ERA GPS DNA DUI ATV DOT "
             "LLC LNG HIV AI ID REAL CO2 EV TV KTOO ANWR NPR-A II III IV VPSO PCE ESSER AMHS AHCC ARPA FY CDQ PF APOC SBA PTSD STEM "
             "K-12 ASMI RV REAA".split())
@@ -110,6 +114,81 @@ def titled(short):
     t = PROPER.sub(lambda m: " ".join(x[:1].upper() + x[1:] for x in m.group(1).split(" ")), t)
     t = re.sub(r"(: |^)([a-z])", lambda m: m.group(1) + m.group(2).upper(), t, count=1)
     return t[:1].upper() + t[1:]
+
+
+# The title shown (2026-11-26, the owner): the official long title, readable, in place of the abbreviated short title
+# ("US president elect. popular vote compact" -> "Interstate compact to elect the President and Vice-President of the
+# United States by national popular vote"): without "An Act relating to" (or "An Act"), a leading "the"/"a"/"an" and the
+# closing "and providing for an effective date"; a constitutional amendment's "Proposing amendments to the Constitution of the State of Alaska
+# relating to" as "Constitutional amendment: "; later clauses' "relating to" dropped. A long title over TITLE_MAX
+# characters is cut to its first clause only when that clause has three in four of the short title's words (SB 61 of 2023: "US
+# president elect. popular vote compact" in "an interstate compact to elect the President ... by national popular
+# vote"); else the short title stays (abbreviations spelled out: titled()), since the first clause can miss the point
+# (HB 205 of 2023, "Criminalize abortion; privacy; courts", opens "interpreting the right to privacy"). A cut title keeps
+# the long title as the summary. A whole long title too needs more than half of the short title's words. The short title
+# is kept as the record's "aka", which build_data.py's issue matching reads with the title (its words, "PFAS", "net
+# metering", put four bills on national issues), and topics and narrow_kind() still read it.
+STOP = {"and", "the", "for", "of", "to", "in", "on", "by", "or", "with", "a", "an"}
+
+
+def covers(clause, short, share=0.75):
+    """At least share of the short title's words (by their first four letters) in the clause; more than half with
+    share=0.5."""
+    have = {w[:4] for w in re.findall(r"[a-z]{3,}", clause.lower())}
+    want = {w[:4] for w in re.findall(r"[a-z]{3,}", short.lower()) if w not in STOP}
+    n = sum(w in have for w in want)
+    return bool(want) and (n > 0.5 * len(want) if share == 0.5 else n >= share * len(want))
+
+
+TITLE_MAX = 150
+EFFECTIVE = re.compile(r"[;,]?\s*(?:and\s+)?providing for (?:an? |retroactive |delayed |immediate )*(?:and )?(?:retroactive |delayed )?effective dates?\b.*$", re.I)
+
+
+def shown_title(long_title, short, amendment=False):
+    """(title, cut): cut when the title isn't the whole long title (then the long title is worth showing too)."""
+    t = re.sub(r"\s+", " ", long_title or "").strip(' "').rstrip(".").strip()
+    t = EFFECTIVE.sub("", t).strip(" ,;")
+    head = ""
+    if amendment:
+        m = re.match(r"Proposing (?:an )?amendments? to (?:the )?Constitution of the State of Alaska,?\s*(?:relating to |to )?(.*)", t, re.I)
+        if not m:
+            return short, True
+        head, t = "Constitutional amendment: ", m.group(1)
+        # (An amendment's long title names only the subject, "relating to marriage", where the short title says what it
+        # does, "repeal marriage section": the long one only when it has the short one's words.)
+        if not covers(re.split(r";\s*", t)[0], re.sub(r"^Constitutional amendment[:/]?\s*", "", short)):
+            return short, True
+    else:
+        t = re.sub(r"^An Act\s+(?:relating to\s+)?", "", t, flags=re.I)
+    if not t:
+        return short, True
+    cut = False
+    t = re.sub(r";\s*(?:and\s+)?(?:relating to\s+)?", "; ", t)
+    if len(t) < 8:
+        return short, True
+    if len(head + t) > TITLE_MAX:
+        first = re.split(r";\s*", t)[0].strip(" ,")
+        if len(head + first) > TITLE_MAX or len(first) < 20 or not covers(first, short):
+            return short, True
+        t, cut = first, True
+    elif not covers(t, short, 0.5):
+        return short, True  # (a whole long title can miss the point too: HB 215 of 2023, "Abortion; right to privacy", is
+        # "relating to the definition of privacy in the Constitution of the State of Alaska")
+    t = re.sub(r"^(?:the|an?)\s+", "", t, flags=re.I)  # ("The village public safety officer program": a label, not a sentence)
+    if not head:
+        t = t[:1].upper() + t[1:]
+    elif not PROPER.match(t) and not t[:2].isupper():
+        t = t[:1].lower() + t[1:]
+    return head + t, cut
+
+
+def light_record(r):
+    """A light history record (states/ak/light.py, converted before 2026-11-26): its title as shown_title() makes it, from
+    the long title kept as its summary."""
+    if not r.get("summary"):
+        return r
+    title, cut = shown_title(r["summary"], r["title"], "const" in (r.get("topics") or []))
+    return {**r, "title": title, "summary": r["summary"] if cut else "", "aka": r["title"] if title != r["title"] else ""}
 
 
 def full_title(b):
@@ -504,11 +583,13 @@ def load_session(session):
             title = re.sub(r"^Constitutional amendment[:/]?\s*", "", title)
             title = f"Constitutional amendment: {title if PROPER.match(title) or title[:2].isupper() else title[:1].lower() + title[1:]}"
         long_title = full_title(b)
+        short_title = title
+        title, cut = shown_title(long_title, short_title, amendment)
         subjects = [text(s) for s in b.get("Subjects") or []]
         topics = list(dict.fromkeys((["const"] if amendment else []) +
                                     [P.COMMITTEE_TOPICS[c] for h in plan for c in plan[h] if c in P.COMMITTEE_TOPICS] +
                                     [P.SUBJECT_TOPICS[s] for s in subjects if s in P.SUBJECT_TOPICS] +
-                                    [k for k in P.TOPIC_WORDS if P.TOPIC_WORDS[k].search(title)]))
+                                    [k for k in P.TOPIC_WORDS if P.TOPIC_WORDS[k].search(short_title)]))
         left = bool(first_ref and first_ref in reported[origin]) or bool(passed)
         fate = "passed" if left else "none"
         # Sponsors in order: members ("Fields"), or a committee: "Rules Committee, by request of the governor".
@@ -565,8 +646,8 @@ def load_session(session):
         action_dates = [s[0] for s in steps if s[0]]
         rec = {
             "nums": [p], "base": [p], "prev": earlier(session, b, p),
-            "title": title, "summary": long_title, "act": "", "lawCode": "", "law": None, "laws": [],
-            "comms": comm_list, "topics": topics, "places": [], "narrow": P.narrow_kind(title),
+            "title": title, "summary": long_title if cut else "", "aka": short_title if title != short_title else "", "act": "", "lawCode": "", "law": None, "laws": [],
+            "comms": comm_list, "topics": topics, "places": [], "narrow": P.narrow_kind(short_title),
             "commFate": fate, "mainTopic": topics[0] if topics else "", "local": "local" in topics,
             "senDeleg": False, "asmDeleg": False,
             "budget": bool(re.match(r"An Act making (?:and amending )?(?:supplemental |special )?appropriations", long_title, re.I)),
@@ -574,7 +655,7 @@ def load_session(session):
             "stage": stage, "passedIn": (HOUSE[origin] if origin in passed else HOUSE[other]) if stage == 2 else None,
             "chapter": chapter[0] if chapter and stage == 5 else None,
             "veto": None, "memo": "", "vetoMemo": None,
-            "simText": f"{title} {long_title}",
+            "simText": f"{title} {long_title} {short_title}",
             "comm": comm if stage == 0 and place == "committee" else None,
             "first": min(action_dates, default=f"{session}-01-01"),
             "last": max(action_dates, default=f"{session}-01-01"),
