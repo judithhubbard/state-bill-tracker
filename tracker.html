@@ -6421,7 +6421,8 @@ function drawAll() {
 // few lines of the summary, with "Read more" when there's more.
 function whatBox(body) {
   if (!body || !body.trim()) return "";
-  const inner = body.replace(/<h4>[^<]*<\/h4>/, ""), long = inner.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").length > 330;
+  // (The summary's own "Read the rest" fold is opened up: "Read more" here shows all of it in one click.)
+  const inner = body.replace(/<h4>[^<]*<\/h4>/, "").replace(/<details class="memo"><summary>Read the rest<\/summary>([\s\S]*?)<\/details>/, "$1"), long = inner.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").length > 330;
   return `<section class="whatbox"><h4 class="wb-h">What it does</h4><div class="wb-body${long ? " clamp" : ""}">${inner}</div>`
     + (long ? `<button type="button" class="linkish wb-more" aria-expanded="false">Read more</button>` : "") + `</section>`;
 }

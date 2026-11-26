@@ -243,7 +243,7 @@ class RhodeIsland(L.Rules):
         heading, plain = parts(b)
         if len(plain.split()) < 6:
             return None
-        return plain[:1].upper() + plain[1:], "From the General Assembly's description of the bill (as LegiScan publishes it)."
+        return plain[:1].upper() + plain[1:], "From the General Assembly's description of the bill."
 
     def topics(self, b, comms, title):
         heading, plain = parts(b)

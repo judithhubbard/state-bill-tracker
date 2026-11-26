@@ -345,7 +345,7 @@ class Tennessee(L.Rules):
         if len(d.split()) < 6:
             return None
         d = re.sub(r"\s+-\s+((?:Amends|Enacts|Repeals)\b.*)$", r"\n\1", d)
-        return d, "From the General Assembly's bill summary (as LegiScan publishes it)."
+        return d, "From the General Assembly's bill summary."
 
     def topics(self, b, comms, title):
         subjects = [L.text(s.get("subject_name")) for s in b.get("subjects") or []]

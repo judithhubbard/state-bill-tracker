@@ -41,8 +41,8 @@ from states.ok import profile as P
 
 PATH = os.path.join(P.DATA, "summaries.json")
 TRIES = 3
-LABEL = {"House": "From the Oklahoma House staff's bill summary, via LegiScan.",
-         "Senate": "From the Oklahoma Senate staff's bill summary, via LegiScan."}
+LABEL = {"House": "From the Oklahoma House staff's bill summary.",
+         "Senate": "From the Oklahoma Senate staff's bill summary."}
 GOVERNOR = re.compile(r"^(?:Approved by Governor|Becomes law without|Vetoed|Pocket veto|Line item veto)", re.I)
 LAW = re.compile(r"^(?:Approved by Governor|Becomes law without|Line item veto|Veto overridden)", re.I)
 DOC = re.compile(r"/BILLSUM/(House|Senate)/[HS]B\d+((?:%20.+?)?)%20BILLSUM\.PDF$", re.I)
