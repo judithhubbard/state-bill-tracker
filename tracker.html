@@ -130,7 +130,11 @@ html.embed body { padding: 0; background: var(--sheet); }
 .billfoot .yourreps { margin: 0; font-size: 13.5px; }
 .wcan .billfoot { border-top: 0; padding-top: 4px; }  /* (on a card it follows the rows' own last line) */
 /* An open bill's side is chosen once, in its panel (.ta2-side): the row's own buttons under the star hide meanwhile. */
-#list .bill[open] > summary .sides { display: none; }
+#list .bill[open] > summary .sides, #list details.bill[open] + .rowstar .sides { display: none; }
+/* One bill shown (drawAll(): html.onebill): the bill and its "Showing one bill · Clear all" chip, nothing of the list's. */
+html.onebill #filtered:has(> #view-bills:not([hidden])) > #side, html.onebill .resultbar, html.onebill #more { display: none !important; }
+html.onebill #filtered:has(> #view-bills:not([hidden])) { display: block; }
+html.onebill #active { margin-top: 4px; }
 /* The pinned header (pinBill()). */
 .pinhead { display: none; }
 .bill.pin-on .pinhead { display: flex; position: sticky; top: var(--barH, 0px); z-index: 4; }
@@ -6272,6 +6276,9 @@ function fillStaleSelects() {
 let RENDER_LATER = false, SEARCH_LATER = false, DRAWN = false;
 function render() { keepFocus(drawAll); }
 function drawAll() {
+  // One bill shown (#S7421, the "Showing one bill" chip): only the bill and the chip, without the list's count, share, sort
+  // and filters, whose zeros read as wrong (2026-11-26, the owner). Clearing the chip brings them back.
+  document.documentElement.classList.toggle("onebill", ONE != null && !EMBED);
   // A filter that reads a part not in yet (a text search, the vote filter ...) waits for it: the list says "Loading…"
   // until then.
   const missing = listNeeds();

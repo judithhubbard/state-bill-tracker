@@ -93,12 +93,11 @@ const WatchRows = (() => {
     const stance = x.stance === "oppose" || (x.stance === "support" && opt.stance !== false) ? `<span class="wr-stance ${x.stance}">${x.stance === "oppose" ? "Oppose" : "Support"}</span>` : "";
     // What's new, inside the row (2026-11-24, the owner's design: no separate box above the list): what happened and its
     // day in bold (newText(x)), then the step's odds in grey (oddsOf(x), the state's page only). And what the person did
-    // about it ("✓ You wrote to Sens. Amato and Schepisi · Nov 26": wroteOf(x)), and "Take action" on a bill that can
-    // still move (the row opens its card, whose "Who to write to" has the emails).
+    // about it ("✓ You wrote to Sens. Amato and Schepisi · Nov 26": wroteOf(x)).
     const fresh = !!opt.isNew?.(x), odds = fresh ? opt.oddsOf?.(x) || "" : "", wrote = opt.wroteOf?.(x) || "";
     const news = fresh ? `<span class="wr-news"><b class="wr-what">${h(opt.newText ? opt.newText(x) : `${x.action || ""}${x.last ? ` · ${fullDay(x.last)}` : ""}`)}</b>${odds ? `<span class="wr-odds">${h(odds)}</span>` : ""}</span>` : "";
     const did = wrote ? `<span class="wr-wrote">${h(wrote)}</span>` : "";
-    const go = opt.act !== false && x.found && ["soon", "session", "year", "later"].includes(groupOf(x)) && !x.upcoming ? '<span class="wr-ta">Take action ›</span>' : "";
+    // (No "Take action ›" on the row, 2026-11-26, the owner: the row itself opens its card, whose rows each have Draft ›.)
     // The status column, as on the state's Bills list: the pips, the status label, then the date of the latest action
     // and the deadline (lists_pages/rows.css). A bill out of time this session is greyed, as there.
     const over = (x.out || x.group === "done") && x.stage <= 2 ? " over" : "", uni = opt.uni ? opt.uni(x) : BillFacts.oneHouse(x.st);
@@ -128,7 +127,7 @@ const WatchRows = (() => {
     // they wanted.)
     const side = x.stance === "oppose" ? " wr-opp" : x.stance === "support" ? (x.stage === 5 ? " wr-won" : " wr-sup") : "";
     return `<li class="wr-row${yr ? " wr-yr" : ""}${two ? " wr-two" : ""}${side}${fresh ? " wr-fresh" : ""}" data-key="${h(x.key)}"><button type="button" class="wr-btn rowbtn" data-open="${h(id)}" aria-controls="emb-${h(id)}" aria-expanded="${card != null}">`
-      + `<span class="wr-num">${st}${shown}${yr}${fresh ? '<span class="wr-newmark">New</span>' : ""}</span><span class="wr-tt">${h(x.title)}</span>${note ? `<span class="wr-note">${h(note)}</span>` : ""}${news}${did}${go}${where}</button>`
+      + `<span class="wr-num">${st}${shown}${yr}${fresh ? '<span class="wr-newmark">New</span>' : ""}</span><span class="wr-tt">${h(x.title)}</span>${note ? `<span class="wr-note">${h(note)}</span>` : ""}${news}${did}${where}</button>`
       + `${btns}${back}<div class="wr-emb" id="emb-${h(id)}"${card != null ? "" : " hidden"}>${card || ""}</div></li>`;
   }
   // A group's heading: its name and note (when the group is one state's, that state's note on it), and anything the page
