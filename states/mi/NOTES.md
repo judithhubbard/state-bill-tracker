@@ -78,3 +78,12 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
     day, no group's names failed to add up once the parsing above was in. Check after the first full copy:
     `VOTE_STATS` in convert.py (`python3 -m states.mi.convert` prints them: "no journal roll call" should fall to the Senate's few lines whose
     journal is missing, "House roster doesn't fit", "names don't add up", "journal reads another bill" near 0).
+
+- **"What it does" from the bill's own text (2026-11-26):** bills with no fiscal agency analysis get a lead quoted from the
+  bill as introduced (`states/mi/billtext.py`, states/billtext_lead.py): documents/<session>/billintroduced/{House,Senate}/
+  htm/2025-HIB-4001.htm (the folder listings give names and dates). Word's HTML: `FormattedNew` spans are new wording,
+  `FormattedStrike` deleted; a "Sec. 4c." whose heading is new wording is a section the bill adds, any other is amended
+  (its MCL number from the anchor "sec_import_start_408_414") and only its new whole sentences count, not lone list items or
+  definitions. The enacting sections are left out. `analyses()` in fetch.py runs it for the current session, at most 8
+  minutes a run at one request a second (about 400 a run), laws first; sections in data/mi/<session>/leads.json. Michigan
+  amends in small phrases, so about 45% of leads only name the laws amended ("Amends MCL 408.414 and 408.414b.").

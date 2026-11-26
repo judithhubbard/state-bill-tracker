@@ -342,13 +342,27 @@ def write(session):
         subject = "the bill" if others < 1 else "this bill and " + (f"{others} others" if others > 1 else "one other")
         label = f"From the {d['agency']}'s analysis of {subject}" + (f" {d['words']}" if d["words"] else "") + "."
         out[b] = {"statement": "\n".join(for_bill(d["paras"], b) if others > 0 else cut(d["paras"])), "label": label}
+    analysed = len(out)
+    # Bills with no analysis: a lead quoted from the bill's text as introduced (billtext.py), when it's been read.
+    from states.mi import billtext
+    for b, e in billtext.entries(session).items():
+        out.setdefault(b, e)
     path = os.path.join(DATA, f"texts_{session}.json")
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=0)
     os.replace(tmp, path)
-    print(f"texts_{session}.json: {len(out)} bills", flush=True)
+    print(f"texts_{session}.json: {analysed} bills from analyses, {len(out) - analysed} leads from bill texts", flush=True)
     return len(out)
+
+
+def analysed(session):
+    """The bills texts_<session>.json has an analysis for (not a lead from the bill's text)."""
+    try:
+        return {b for b, v in json.load(open(os.path.join(DATA, f"texts_{session}.json"))).items()
+                if not (v.get("label") or "").startswith("From the bill's text")}
+    except (OSError, ValueError):
+        return set()
 
 
 if __name__ == "__main__":

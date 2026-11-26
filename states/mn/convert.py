@@ -1168,6 +1168,13 @@ def load_session(session):
                 lab = re.sub(r"(of [HS]\.F\. \d+)", rf"\1 of the {special_label(fold)}", lab, count=1)
             texts[special_num(fold, lead) if sp else lead] = {"statement": cands[0][1], "label": lab}
             STATS[session]["records with a summary"] += 1
+        elif not sp:
+            # No summary: a lead quoted from the bill's text as introduced (states/mn/billtext.py), when it's been read.
+            from states.mn import billtext
+            e = billtext.entry(session, order)
+            if e:
+                texts[lead] = e
+                STATS[session]["records with a lead from the bill's text"] += 1
         budget = any(re.search(r"\bomnibus\b.*\b(appropriation|finance|budget)|\b(appropriation|finance|budget) bill\b|^Omnibus", d, re.I) for d in descs) and \
             not any(re.search(r"^[A-Z][\w.' -]+?;", d) and narrow_of([d]) == "place" for d in descs)
         rec = {

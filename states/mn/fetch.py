@@ -1165,6 +1165,17 @@ def main():
             done[s["key"]] &= hrd_summaries(s, folder, state)
             done[s["key"]] &= senate_summaries(s, folder, state)
         for s in found:
+            # Records with no summary: a lead quoted from the bill's text as introduced (states/mn/billtext.py), the
+            # current Legislature's regular session, at most 8 minutes a run; never holds Minnesota off the site.
+            if s["live"] and not s["special"] and s["ls"] == CURRENT_LS and not out_of_time():
+                try:
+                    from states.mn import billtext
+                    billtext.main(s["first"], request, 8, out_of_time)
+                except Refused:
+                    raise
+                except Exception as e:
+                    print(f"{s['key']} bill texts: failed ({type(e).__name__}: {e})", flush=True)
+        for s in found:
             folder, state, lst = ctx[s["key"]]
             if not s["special"]:
                 done[s["key"]] &= journals(s["ls"], folder, state, s["live"])

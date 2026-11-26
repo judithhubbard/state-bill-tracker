@@ -1001,6 +1001,14 @@ def main():
         summaries(list(range(FIRST, CURRENT + 1, 2)))
     except Exception as e:
         print(f"summaries: failed ({type(e).__name__}: {e})", flush=True)
+    try:  # "What it does" for bills with no summary: a lead from the bill's text as filed (states/nc/billtext.py), at most
+        # 8 minutes a run, the current session only, after the summaries; never holds the run or the copy's completeness
+        from states.nc import billtext
+        T = texts_module()
+        billtext.main(CURRENT, T.analysed(CURRENT), 8, out_of_time, sys.modules[__name__])
+        T.write(CURRENT)
+    except Exception as e:
+        print(f"bill texts: failed ({type(e).__name__}: {e})", flush=True)
 
 
 if __name__ == "__main__":

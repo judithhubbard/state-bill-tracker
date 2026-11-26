@@ -47,7 +47,7 @@ BOILER = re.compile(
     # definitions
     r"(?:The )?definitions? (?:in|set forth in) this|(?:As|When) used in this|(?:For|In) (?:the )?purposes? of this (?:act|chapter|"
     r"section|subsection|subchapter|article|part),? (?:the (?:following|term|words?)|unless|[\"“])|"
-    r"(?:For|In) (?:the )?purposes? of this [a-z]+,[^.]{0,120}?\b(?:means|includes|shall mean|has the (?:same )?meaning)\b|Unless the context (?:clearly )?(?:requires|indicates) otherwise|In this (?:act|chapter|section)"
+    r"(?:For|In) (?:the )?purposes? of this [a-z]+,[^.]{0,120}?\b(?:means|includes|shall mean|has the (?:same )?meaning)\b|Unless the context (?:clearly )?(?:requires|indicates) otherwise|In this (?:act|chapter|section|subchapter|article|part|title|code)"
     r"(?:, unless[^:]*)?:|\"[^\"]{1,80}\" (?:means|includes|has the meaning)|“[^”]{1,80}” (?:means|includes|has the meaning)|"
     r"[A-Z][\w,'-]*(?: [\w,'-]+){0,6} (?:means|shall mean)\b|[^.]{0,120}\bDefinitions?\s*[:.]|"
     # severability, construction, application
@@ -60,6 +60,13 @@ BOILER = re.compile(
     r"(?:Sections?|Subsections?) [\d\w ,.()-]+ (?:of this act )?(?:takes?|shall take) effect|"
     r"This (?:act|section|chapter|subsection) (?:expires|shall expire|is repealed|terminates)|"
     r"(?:Sections?|Subsections?) [\d\w ,.()-]+ (?:of this act )?(?:expires?|shall expire)|"
+    r"(?:(?:Unless|Except as) otherwise provided[^,]{0,60},\s*)?this (?:act|section|part|article|subpart) (?:is|becomes|shall become) effective|"
+    r"If any (?:[\w,]+ ){1,5}of this (?:act|Part|section) is (?:declared|held|found)|"
+    r"(?:Sections?|Subsections?|Parts?) [\d\w ,.()-]{1,60} of this (?:act|section|Part) (?:is|are|becomes?) effective|"
+    r"This act (?:does not (?:repeal|affect)|has no effect upon|applies only to|applies to [^.]{1,100}\bonly\.$)|"
+    r"Prosecutions for offenses committed before the effective date of this act|"
+    r"The amendment set out in Section \d+ of this act shall be submitted to the (?:qualified )?voters|"
+    r"[^.]{0,160}\b(?:shall|may|has authority to) adopt (?:temporary |emergency )?rules to (?:implement|enact) (?:the provisions of )?this (?:act|Part|section|Article)\b|(?:Sections?|Subsections?|Parts?) [\d\w ,.()-]+ of this act (?:is|are|becomes?) effective|"
     r"This act is necessary for the immediate preservation|(?:Except as (?:otherwise )?provided (?:in|by) [^,]{1,80},\s*)?this act "
     r"(?:takes|shall take) effect|If (?:this act|secs?\.[^,]{1,40}|sections?[^,]{1,40}) takes effect, it takes effect|"
     r".{0,160}?\bappl(?:y|ies) (?:only )?to .{0,120}?\b(?:on or after|before) the effective date|"
@@ -81,7 +88,25 @@ BOILER = re.compile(
     r"(?:shall maintain complete accounting|whenever two \(2\) or more bids|is hereby authorized to purchase and pay premiums|"
     r"shall be expended in compliance)|"
     r"(?:Any|All) (?:of the )?(?:money|funds) (?:remaining|not expended|unexpended|appropriated (?:by|in) this act (?:which|that) (?:are|is) "
-    r"unexpended)|The State Fiscal Officer shall"
+    r"unexpended)|The State Fiscal Officer shall|"
+    # TX: a new chapter's standing clauses (its definitions borrowed from another chapter, the Sunset review)
+    r"The definitions? (?:in|provided by|under) [^.]{1,80} appl(?:y|ies) to this|[^.]{0,160}\bis subject to Chapter 325 \(Texas Sunset Act\)|"
+    r"[^.]{0,160}\bare subject to Chapter 325 \(Texas Sunset Act\)|"
+    # transition clauses: whom the change applies to and from when, rules to carry it out
+    r"The changes? in law made by this (?:Act|section)|This Act applies (?:beginning|only|to [^.]{0,120}?\b(?:beginning|on or after))|"
+    r"As soon as practicable after the effective date of this Act|"
+    r"(?:Not later than|On or before) [^,]{3,40}, (?:the )?[^.]{3,160}?\b(?:shall|must) adopt (?:the )?rules (?:as necessary|necessary|required|to implement)|"
+    r"[^.]{0,120}\b(?:shall|may) adopt (?:any )?rules (?:as necessary |necessary )?(?:to implement|to administer|for the implementation of) this "
+    r"(?:section|subchapter|chapter|article|part|Act)\.$|"
+    r"In this (?:section|subchapter|chapter|article|part|Act|code),\s*(?:the term )?[\"“][^\"”]{1,80}[\"”] (?:means|has the meaning|includes)|"
+    r"In this (?:section|subchapter|chapter|article),\s*[^.,]{1,60}\b(?:means|includes)\b|"
+    r"This (?:chapter|subchapter|section|article|part) (?:shall|must|is to) be (?:liberally )?construed|"
+    r"If before implementing any provision of this Act|This proposed constitutional amendment shall be submitted to the voters|"
+    r"(?:Sections?|Subsections?|Articles?) [^.]{1,120}, as (?:added|amended|amended and added) by this Act, appl(?:y|ies) only|"
+    # MN: repealers, names, appropriation tables
+    r".{0,240}?\b(?:is|are) (?:hereby )?repealed\.$|.{0,40}?\$ (?=[a-z])|"
+    r"(?:(?:Unless|Except as) otherwise provided[^,]{0,60},\s*)?(?:each section of this act|(?:Sections?|Articles?) [\d\w ,.()-]{1,60}) (?:is|are|becomes?) effective|This section (?:may|shall|must|will) be (?:known|cited)|"
+    r"(?:For (?:the )?purposes of this [a-z]+, )?the following terms have the meanings given|The sums shown in the columns marked|.{0,300}?\$\s?-0-"
     r")", re.I)
 # A section that's an intent or findings section has already given its intent sentence.
 CODIFY_HEAD = re.compile(r"^(?:A |Two |Three |\w+ )?new (?:sections?|chapters?|subsections?) (?:is|are) (?:each )?(?:hereby )?added to .{0,120}?(?:to read as follows|as follows)?:?$|"
@@ -160,7 +185,14 @@ def opening(paras, limit=MAX_SENTENCE):
                 items.append("…")
                 break
             items.append(item)
-        if not items:
+        cut_short = bool(items) and items[-1] == "…"
+        while items and (items[-1] == "…" or items[-1].endswith(":")):
+            # (the last item that fit leads into its own list: "(2) assist state agencies in identifying:")
+            cut_short = cut_short or items[-1].endswith(":")
+            items.pop()
+        if cut_short:
+            items.append("…")
+        if not items or items == ["…"]:
             return ""  # a lead-in with nothing after it
         return clean(s + " " + " ".join(items))
     return cut(s, limit)
@@ -214,6 +246,12 @@ MODAL = re.compile(r"\b(?:shall|must|may not|this (?:act|section|chapter|subsect
 OPERATIVE = re.compile(r"\b(?:shall|must|may|is|are|has|have|will|does|do|means|includes?|applies|apply|constitutes?)\b", re.I)
 
 
+DEFS = re.compile(r"^(?:(?:For|In) (?:the )?purposes? of this [a-z]+,? (?:the following|unless)|As used in this|The following (?:terms|words|definitions)|"
+                  r"In this (?:section|subchapter|chapter|article|part|act)(?:, unless[^:]*)?:|(?:The )?definitions? (?:in|set forth in) this)", re.I)
+DEFN = re.compile(r"^(?:[\"“][^\"”]{1,80}[\"”]|[A-Z][\w ,'-]{1,60}?)(?:\.\s*[–—-]\s*.*)?\s(?:means|includes|has the meaning|shall mean)\b|^[\"“][^\"”]{1,80}[\"”]", re.I)
+SCOPE = re.compile(r"^This (?:section|subchapter|chapter|article|part) applies (?:only )?to\b[^.]*\.$", re.I)
+
+
 def lead(sections):
     """{"intent", "bullets", "added", "amends"} from a bill's sections, or None when there's nothing to say."""
     intent, at = intent_of(sections)
@@ -227,13 +265,28 @@ def lead(sections):
         if not paras or findings_only({"paras": paras}):
             continue
         body = unnumber(decaption(paras[0]))
+        if DEFS.match(body) and len(paras) > 1:
+            # Definitions first ("For purposes of this section, the following terms have the meanings given.", then
+            # '"Dissemination" means ...'): what the section does comes after them.
+            k = 1
+            while k < len(paras) and (DEFN.match(unnumber(paras[k])) or re.match(r"^\((?:[ivx]+|[A-Z]|\d+)\)", paras[k])
+                                      and not re.match(r"^\([a-z]\)", paras[k])):
+                k += 1
+            if k < len(paras) and not BOILER.match(unnumber(paras[k])):
+                paras = paras[k:]
+                body = unnumber(paras[0])
+        if SCOPE.match(body) and len(paras) > 1 and not BOILER.match(unnumber(paras[1])):
+            # (whom it applies to, then what it does: "(a) This section applies only to a county with ... (b) The
+            # commissioners court may ...")
+            paras = paras[1:]
+            body = unnumber(paras[0])
         ss = sentences(body)
         if k == 0 and len(paras) == len(sec["paras"]) and len(ss) >= 3 and not MODAL.search(" ".join(ss[:2])):
             continue  # a first section that only describes the problem
         if not body or BOILER.match(body) or INTENT.search(body[:150]):
             continue
         s = opening([body] + paras[1:])
-        if (not s or len(s) < 25 or len(re.findall(r"[a-z]", s)) < 0.5 * len(s) or not s[0].isupper()
+        if (not s or len(s) < 25 or len(re.findall(r"[a-z]", s)) < 0.5 * len(s) or not (s[0].isupper() or s[0] == "$")
                 or len(s.split()) < 6 or not OPERATIVE.search(s if not s.endswith("…") else s + " " + " ".join(paras[:3]))):
             continue  # (nothing, a list of statute numbers, a heading or a list item: "Write-in or sticker candidate.")
         key = re.sub(r"\W+", " ", s.lower())[:80]

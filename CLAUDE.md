@@ -629,7 +629,9 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   whitespace and section numbers change, a long sentence is cut at a clause with "…". Paragraph plus "• " lines (as other
   states' lists), label "From the bill's text as introduced: its statement of intent and the opening of its new sections."
   (worded for what's there). Shared readers: `paragraphs()` (HTML with underline/strike), `split()` at "SECTION 1." marks.
-  Wired in WA (bills with no bill report), AK and MA (no summaries); measured and left out: MS (long titles already say
+  Wired in WA (bills with no bill report), AK and MA (no summaries), and (2026-11-26) TX, MI, MN and NC (bills
+  with no staff summary; each state's NOTES.md); Arizona left out (its text is only on www.azleg.gov at the 120-second
+  crawl delay, already spent on agendas, and its unsummarized bills are mostly ones that died); measured and left out: MS (long titles already say
   it, and quoted sections of restated law misled), OK (LegiScan getBillText would cost about 11,000 queries).
   States cache sections (not leads) in data/<st>/<session>/leads.json, so a rule change needs no download. data_check
   fails (over 1%) on leads that are boilerplate, over 1,200 characters, or the title's words again.
