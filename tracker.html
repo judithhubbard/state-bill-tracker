@@ -4913,13 +4913,15 @@ function floorLine(b) {
 // When the record's bills passed it separately (Virginia's identical House and Senate bills, one record since 2026-11-26:
 // HB 965 and SB 322 each passed both houses), each line names its bill: "SB 322 passed the House".
 function passLines(b, days, h) {
-  const word = new RegExp(`^(?:RE)?PASSED ${HOUSE[h].toUpperCase()}\\b`);
+  // (One house, Nebraska's and DC's: HOUSE.S is undefined; the line said "Passed the Senate" before, as it still does.)
+  const hn = HOUSE[h] || (h === "S" ? "Senate" : HOUSE[LOW] || "");
+  const word = new RegExp(`^(?:RE)?PASSED ${hn.toUpperCase()}\\b`);
   const by = (d) => (b.vers || []).filter((v) => (v.actions || []).some(([x, t]) => x === d && word.test(t))).map((v) => v.p);
   const who = days.map(by);
   const named = (b.vers || []).length > 1 && new Set(who.flat()).size > 1;
   return days.map((d, i) => [d, named && who[i].length
-    ? `${andList(who[i].map((n) => (window.WatchRows ? WatchRows.numText(STATE.code, n) : n)))} passed the ${HOUSE[h]}`
-    : i ? `Passed the ${HOUSE[h]} again` : `Passed the ${HOUSE[h]}`, h]);
+    ? `${andList(who[i].map((n) => (window.WatchRows ? WatchRows.numText(STATE.code, n) : n)))} passed the ${hn}`
+    : i ? `Passed the ${hn} again` : `Passed the ${hn}`, h]);
 }
 // "History": the bill's main steps and its recorded votes in one dated list. A floor vote that passed goes on the line of
 // the passage it records ("Passed the Senate · 26–11"); other votes (committees, votes that failed) keep a line of their

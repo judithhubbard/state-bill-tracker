@@ -32,6 +32,8 @@ in CLAUDE.md's launch checklist.
   chapter (cheap there).
 - **Twin bills in other states** (Virginia done 2026-11-26): TX companion field, MD "cross-filed with", FL "Substituted
   for" / "companion bill(s) passed", AL "companion"; states with no field could use Virginia's text rule.
+- **Arizona 2023-24 chapter numbers**: Open States' records have none (data_check's CHAPTER_GAPS marks it a known gap).
+  apps.azleg.gov (permission covers bill status) has them: read 2023-24's laws' chapters from it.
 - **Coverage audit gaps** (scratchpad report 2026-11-26, summarized): Indiana floor votes without names (its data service
   may have them); chapters not read in TX, UT, SD, KS, MO; Trends hidden in 21 states (re-pick after light history);
   older sessions' roll calls without names (MT, KS 2023; NY 2019-21; VA 2023-24; OH, TN, NV); contacts gaps (DE emails,

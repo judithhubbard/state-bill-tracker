@@ -74,8 +74,20 @@ def sessions(st, live_only=True):
             continue
         path = os.path.join(BUILT, st, "data", f"status_{s}.json")
         if os.path.exists(path):
-            out.append((s, f, json.load(open(path)).get("bills") or {}))
+            d = json.load(open(path))
+            out.append((s, f, Rows(d.get("bills") or {}, len(d.get("alias") or {}))))
     return out
+
+
+class Rows(dict):
+    """A status file's bills, with how many other numbers they answer to (2026-11-26: Virginia's identical House and
+    Senate bills became one record each, and the bill count read 366 "lost"). count() is every bill number."""
+    def __init__(self, bills, aliases):
+        super().__init__(bills)
+        self.aliases = aliases
+
+    def count(self):
+        return len(self) + self.aliases
 
 
 def newest_action(rows):
@@ -95,7 +107,7 @@ def record():
         try:
             for s, f, rows in sessions(st):
                 days = log.setdefault(st, {}).setdefault(s, [])
-                days[:] = [d for d in days if keep <= d[0] < day] + [[day, len(rows), newest_action(rows)]]
+                days[:] = [d for d in days if keep <= d[0] < day] + [[day, rows.count(), newest_action(rows)]]
         except (OSError, ValueError, KeyError) as e:
             print(f"{st}: couldn't read its status files ({e})")
     for st in list(log):
@@ -201,8 +213,8 @@ def freshness():
             before = [d for d in (log.get(st) or {}).get(s, []) if d[0] < today]
             if before:
                 day, n0 = before[-1][0], before[-1][1]
-                lost = n0 - len(rows)
-                label = f"{name}: {len(rows):,} bills in its {s} session, {lost:,} fewer than on {short(day)} ({n0:,})"
+                lost = n0 - rows.count()
+                label = f"{name}: {rows.count():,} bills in its {s} session, {lost:,} fewer than on {short(day)} ({n0:,})"
                 if lost >= 5 and lost >= 0.02 * n0:
                     problems.append(label + ": were bills lost in the download or the build?")
                 elif lost >= 3:

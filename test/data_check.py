@@ -20,6 +20,9 @@ fails = []
 # emails come from Open States, Ohio's phones from its members' pages and Hawaii's from the Public Access Room's
 # directory, all since 2026-11-22.)
 CONTACT_GAPS = {"nh": ("phone",), "fl": ("phone",)}
+# Sessions whose source has no law numbers at all (LOOK, not FAIL, in the chapters comparison), each with its reason in
+# the state's NOTES.md: Arizona 2023-24 comes from Open States, whose records carry no chapter (2025 on: apps.azleg.gov).
+CHAPTER_GAPS = {"az": (2023, 2024)}
 # Each legislature's seats (states/legislatures.json), to check votes against the size of their house.
 LEGISLATURES = json.load(open(os.path.join(HERE, "states", "legislatures.json")))["states"]
 # The topics every state uses, with the same names, so states can be compared ("Shared conventions" in CLAUDE.md).
@@ -640,7 +643,7 @@ def check(state):
     # stopped carrying the column, 0 of 721, while 2023, 2024 and 2026 had all): a share far below what another session
     # shows means a reader stopped finding something. A FAIL for recent sessions, a LOOK for older ones (whose sources
     # can be thinner: MT and KS 2023's roll calls).
-    def against_others(what, shares, floor=0.8, low=0.5):
+    def against_others(what, shares, floor=0.8, low=0.5, known=()):
         if not shares:
             return
         best_s = max(shares, key=lambda k: shares[k][0])
@@ -649,7 +652,7 @@ def check(state):
             return
         drops = {k: v for k, v in shares.items() if v[0] < low * best}
         for k, (x, n) in sorted(drops.items()):
-            say(state, "FAIL" if k >= date.today().year - 2 else "LOOK",
+            say(state, "FAIL" if k >= date.today().year - 2 and k not in known else "LOOK",
                 f"{k}: {what} {100 * x:.0f}% of {n}, {best_s} {100 * best:.0f}% of {shares[best_s][1]}")
 
     laws_ch = {}
@@ -657,7 +660,7 @@ def check(state):
         laws = [r for r in recs if r["stage"] == 5 and "const" not in r["topics"]]
         if len(laws) >= 20:
             laws_ch[s] = (sum(1 for r in laws if r.get("chapter")) / len(laws), len(laws))
-    against_others("laws with a chapter or act number", laws_ch)
+    against_others("laws with a chapter or act number", laws_ch, known=CHAPTER_GAPS.get(state, ()))
     # Split floor votes (ayes and noes both) that name members, house by house: unanimous votes are left out, since a
     # state may list only the members who didn't vote yes (DC: 2025-26's votes were more often unanimous with everyone
     # present, so fewer named anyone at all, 27% against 54%, with every member accounted for).
