@@ -129,11 +129,15 @@ notes before changing its code. Shared notes on the LegiScan states are in state
   day (`govNow.photo`): the governor's page card and the header's Governor panel; the credit is in How's "About this data".
 - **Tabs (2026-11-19):** a state's page has Bills, Watchlist, Statistics and How laws are made. The Weigh in tab is gone
   (the owner's decision): "Find your legislators" (`#whereBox`, `renderMyReps()`, drawn when opened; "Where you live"
-  until 2026-11-20; the names link to their pages) is a line under the title on every tab, the only place to pick a
+  until 2026-11-20; the names link to their pages) follows the party line under the title (`.hdrrow`; its own line on a
+  phone), the only place to pick a
   county, town or address (the sidebar keeps only "Hide bills about other places", shown once a county is chosen); each state's weighin.html (how to weigh in, the governor's office, who decides)
   is still put in `#view-act` by the build and moved at startup to the end of How's "Having an impact" (`#impact`). A
   legislator's page keeps `#view-act` as its "Open for comment" tab (`renderOpenNow()`). Statistics opens on "Odds of
-  becoming law" (the "How far bills get" bars were dropped); Statistics' Committees and Timing link to How's Committees and
+  becoming law" (the "How far bills get" bars were dropped). The compact header (2026-11-26, the owner's choice): the
+  session menu beside the title, the party line and "Find your legislators" under them, `#notice` under the tabs as one
+  grey line; on Statistics and How only the title row and the tabs (`html[data-view]`); on a phone no eyebrow line and a
+  Filters button (`#fbtn`) beside the search box instead of the folded sidebar's bar. Statistics' Committees and Timing link to How's Committees and
   calendar, and How's Committees back (`data-gostat`).
 - **Saved settings are per state (2026-10-29):** the states share one web address, and a browser keeps one set of saved
   settings per address, so tracker.html prefixes every saved name with `STORE` ("abt:nj:", "abt:va:", and "abt:ny:" since

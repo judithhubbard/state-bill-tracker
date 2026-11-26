@@ -3050,8 +3050,11 @@ def finish(session, core, current, urls):
         # (Each house's name and the governor's open a list under the header: tracker.html's openLegs().)
         power = balance.summary_html(STATE, lower, buttons=True)
         if power:
+            # (On a phone, "veto-proof" gives way to an ⓘ with the sentence, so the line fits on one line: tracker.html's .bp-tip.)
+            why = html_escape(balance.meaning(STATE, lower))
+            tip = f'<button type="button" class="tip bp-tip" aria-label="What this means" data-tip="{why}">i</button>' if why else ""
             template = template.replace('<p class="power" id="power"></p>',
-                                        f'<p class="power" id="power">{power}<span class="bp-why">{html_escape(balance.meaning(STATE, lower))}</span></p>', 1)
+                                        f'<p class="power" id="power">{power}<span class="bp-why">{why}</span>{tip}</p>', 1)
     # The frame shown while the data loads: the tabs this page will have, and how many bills are coming.
     template = frame_tabs(template, "past" if session < current else "upcoming" if session > current else "")
     template = template.replace('id="frameLoad">Loading bills…<', f'id="frameLoad">Loading {core["n"]:,} bills…<', 1)

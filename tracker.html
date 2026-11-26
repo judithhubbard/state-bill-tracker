@@ -86,7 +86,7 @@ body {
 .frameload { display: none; }
 html:not(.ready) .frameload { display: block; min-height: 80vh; padding: 40px 4px; color: var(--ink-2); }
 html:not(.ready) .wrap > :not(.mast):not(.views):not(main), html:not(.ready) main > :not(.frameload),
-html:not(.ready) .mast > :not(.mast-top), html:not(.ready) #sessions { visibility: hidden; }
+html:not(.ready) .mast > :not(.mast-top):not(.hdrrow), html:not(.ready) #sessions, html:not(.ready) #whereBox { visibility: hidden; }
 html:not(.ready) .views { pointer-events: none; }
 /* A shared list's bills inside the list's page (#embed=: EMBED): only the watchlist (or one bill's card's body), on the
    list's own card. */
@@ -398,7 +398,7 @@ table.oc th { vertical-align: bottom; }
 .power { margin: 6px 0 0; color: var(--ink-2); font-size: 13px; line-height: 1.6; }
 .power:empty { display: none; }
 .power .bp-ch { white-space: nowrap; }
-.power .bp-why { display: none; }
+.power .bp-why, .power .bp-tip { display: none; }
 .bp-pty { display: inline-block; min-width: 1.3em; padding: 0 4px; border-radius: 4px; text-align: center; font-weight: 700;
   font-size: 11px; line-height: 1.6; text-decoration: none; vertical-align: 1px; }
 .bp-D { background: var(--pty-d); color: var(--pty-d-ink); } .bp-R { background: var(--pty-r); color: var(--pty-r-ink); }
@@ -1327,6 +1327,50 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
 .wcard .wside .sides { margin: 0; padding: 0; }
 .wcard .wside .wlists { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
 #wlList > .wrows { margin-top: 14px; }
+/* The header (2026-11-26, the owner's choice of a compact header): the session menu beside the title; the party line with
+   "Find your legislators" after it; the notice under the tabs as one quiet line; on phones no eyebrow and a Filters button
+   beside the search box (the sidebar folds away); on Statistics and How only the title row and the tabs. */
+.mast { gap: 6px; }
+.mast-top { align-items: center; flex-wrap: nowrap; }
+.mast-top > div { min-width: 0; }
+.hdrrow > .power { display: inline; margin: 0 14px 0 0; }
+.hdrrow > .where { display: inline; margin: 0; white-space: nowrap; }
+.hdrrow > .where[open] { display: block; white-space: normal; margin-top: 6px; }
+.hdrrow > .where[hidden] { display: none; }
+.hdrrow:has(> .power:empty):has(> .where[hidden]) { display: none; }
+nav.views + .notice { background: none; padding: 8px 0 0; margin: 0; font-size: 13px; color: var(--ink-2); border-radius: 0; }
+html[data-view="stats"] .mast > :is(.hdrrow, .legs), html[data-view="how"] .mast > :is(.hdrrow, .legs),
+html[data-view="stats"] nav.views + .notice, html[data-view="how"] nav.views + .notice,
+html[data-view="stats"] .mast .eyebrow, html[data-view="how"] .mast .eyebrow { display: none !important; }
+html.embed #notice { display: none !important; }
+.fbtn { display: none; }
+.fbtn .fcount:not(:empty) { margin-left: 6px; padding: 0 6px; border-radius: 9px; background: var(--navy); color: var(--paper); font-size: 11.5px; }
+@media (max-width: 900px) {
+  .side:not([open]) > .side-toggle { display: none; }
+  .side:not([open]) { border: 0; padding: 0; margin: 0; }
+  .layout:has(> .side:not([open])) { gap: 0; }
+  .fbtn { display: inline-flex; align-items: center; align-self: stretch; }
+  .resultbar .qbox { flex: 1 1 calc(100% - 110px); }
+  .resultbar .fbtn { order: 1; }
+  .resultbar > :not(.qbox):not(.fbtn) { order: 2; }
+}
+@media (max-width: 640px) {
+  .mast .eyebrow { display: none; }
+  h1 { font-size: 27px; }
+  .hdrrow > :is(.power, .where) { font-size: 12.5px; line-height: 1.5; }
+  /* (One line on a 390px phone: "veto-proof" gives way to an ⓘ with what the balance means; build_data.py writes it.) */
+  .power .bp-vp { display: none; }
+  .power .bp-tip { display: inline-flex; }
+  .hdrrow > .where:not([hidden]) { display: block; margin-top: 2px; }
+  .mast .sessions { flex: 0 0 auto; }
+  .mast .sessions .sessmenu { font-size: 13px; padding: 4px 6px; }
+  .wrap { gap: 12px; }
+  nav.views + .notice { padding: 0; font-size: 12.5px; line-height: 1.45; }
+  .resultbar { row-gap: 8px; column-gap: 8px; padding-top: 4px; }
+  .resultbar #count { flex: 1 1 auto; font-size: 13px; }
+  .resultbar .sortby { font-size: 0; margin-left: 0; }
+  .resultbar .sortby select { font-size: 13px; max-width: 8.5em; padding: 4px 4px; }
+}
 /*rows.css*/
 </style>
 
@@ -1338,13 +1382,11 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
       <div>
         <div class="eyebrow" id="sessionLabel">New York State Legislature</div>
         <h1><a id="homeLink" href="./">Albany Bill Tracker</a></h1>
-        <p class="power" id="power"></p>
       </div>
       <nav class="sessions" id="sessions" aria-label="Legislative sessions"></nav>
     </div>
+    <div class="hdrrow"><p class="power" id="power"></p><details class="where" id="whereBox"><summary id="whereSum">Find your legislators</summary><div class="act-sec" id="myReps"></div></details></div>
     <section class="legs" id="legsBox" aria-label="Members" hidden></section>
-    <details class="where" id="whereBox"><summary id="whereSum">Find your legislators</summary><div class="act-sec" id="myReps"></div></details>
-    <p class="notice" id="notice" hidden></p>
     <div class="person" id="person" hidden></div>
   </header>
 
@@ -1356,6 +1398,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
     <button class="view-tab" type="button" data-view="person" hidden>Record</button>
     <button class="view-tab view-tab-end" type="button" data-view="how"><span class="tab-long">How a bill becomes law in New York</span><span class="tab-short">How laws are made</span><span class="tab-tiny">How</span></button>
   </nav>
+  <p class="notice" id="notice" hidden></p>
   <main id="main">
   <div class="frameload" id="frameLoad">Loading bills…</div>
   <noscript><p class="notice">This page needs JavaScript to show the bills.</p></noscript>
@@ -1437,6 +1480,7 @@ details.morefilters #moreCount, details.morefilters #topicCount { margin-left: 6
         <span class="qbox"><input type="search" id="q" class="q" placeholder="Search bills: number, words, sponsor" autocomplete="off" aria-label="Search bills">
         <button type="button" class="tip" aria-label="How to search" data-tip="Bills must have every word you type. Use OR for either (climate OR energy), a minus to leave out a word (wage -farm), and quote marks for words together (&quot;paid sick leave&quot;).">i</button></span>
         <span id="count" role="status"></span>
+        <button type="button" class="act-btn fbtn" id="fbtn" aria-controls="side" aria-expanded="false">Filters<span class="fcount" id="fbtnCount"></span></button>
         <details class="sharemenu" id="shareMenu"><summary class="act-btn">Share</summary>
           <div class="smenu"><button type="button" id="viewLinkBtn" hidden>Copy a link to this list</button><button type="button" id="csv">Download as a spreadsheet</button></div></details>
         <span id="starAllBox"></span>
@@ -5249,6 +5293,7 @@ function renderActive() {
     ? `<p class="linkcounty">This link shows bills that could affect ${esc(placeName(HOME))}. <button type="button" class="linkish" data-mycounty>Show ${esc(placeName(LINK_COUNTY.mine))} instead</button></p>` : "";
   $("active").innerHTML = html + note; $("active").hidden = !list.length && !note;
   $("filterCount").textContent = list.length ? `${list.length} active` : "";
+  $("fbtnCount").textContent = list.length || "";
 }
 
 function clearFilter(k, v) {
@@ -6469,6 +6514,7 @@ function showView(v, push = true) {
     if (tab.dataset.view === v) tab.setAttribute("aria-current", "page"); else tab.removeAttribute("aria-current");
   }
   for (const id of ["bills", "watch", "stats", "how", "act", "person"]) $("view-" + id).hidden = id !== v;
+  document.documentElement.dataset.view = v;  // (a smaller header on Statistics and How)
   // How opens on its first section each time it's opened from another tab (the owner: coming back to the last one read
   // was odd); a link to one of its sections picks that one after this.
   if (v === "how" && from && from !== "how") showHowSec("howSteps");
@@ -6635,6 +6681,10 @@ function wire() {
     if (chip.dataset.clear === "all") { Object.assign(state, blank(), { sort: state.sort }, PRESET?.who ? { who: PRESET.who, whoCos: state.whoCos } : {}); syncControls(); render(); return; }
     clearFilter(chip.dataset.k, chip.dataset.v);
   });
+  // The phone's Filters button beside the search box opens the filters above the list.
+  $("fbtn").addEventListener("click", () => { const sd = $("side"); sd.open = !sd.open; if (sd.open) sd.scrollIntoView({ block: "start" }); });
+  $("side").addEventListener("toggle", () => $("fbtn").setAttribute("aria-expanded", $("side").open));
+  if (window.matchMedia?.("(max-width: 640px)").matches) $("q").placeholder = "Search bills";
   document.querySelector(".views").addEventListener("click", (e) => {
     const tab = e.target.closest(".view-tab"); if (tab) showView(tab.dataset.view);
   });
