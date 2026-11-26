@@ -483,61 +483,66 @@ def load_session(session):
 
 
 # ---- Identical House and Senate bills as one record (2026-11-26, the owner: HB 965 and SB 322 of 2026, the National
-# Popular Vote Compact, showed as two rows everywhere). Virginia's members file the same bill in both houses and often
-# pass both, each with its own chapter. LIS's files have no companion field; a pair is one House and one Senate bill (or
-# joint resolution) of the session that
+# Popular Vote Compact, showed as two rows everywhere; counting each pair once, and saying so, the owner's choice).
+# Virginia's members file the same bill in both houses and often pass both, each with its own chapter. LIS's files have no
+# companion field; a pair is one House and one Senate bill (or joint resolution) of the session that
 #   - a summary says are the same ("This bill is identical to SB 388.", in the summaries of bills as passed), or
 #   - have the same short description (spacing and punctuation aside), the only two that do besides bills incorporated
-#     into another, with summaries (texts_<session>.json) sharing at least TWIN_WORDS of their words,
+#     into another, with summaries sharing at least TWIN_WORDS of their words,
 # and whose outcomes don't disagree (both reached the governor with different results: not paired). New Jersey's
-# identical bills and New York's same-as bills are one record too, so the states count alike; Virginia's own totals count
-# chapters, so the site's law count for a session is smaller than the Acts of Assembly's by the paired laws. Each bill
-# keeps its own history, votes and sponsors (the record's versions); the one that got further leads, else the House bill.
+# identical bills and New York's same-as bills are one record too, so the states count alike. Virginia's own totals count
+# chapters: a pair that both became law is one law here and two chapters there; its record's "twinLaws" says so, and
+# the Statistics tab and /compare/ say how many (build_data.py's outcomes(), "pairedLaws"). Each bill keeps its own
+# history, votes and sponsors (the record's versions); the one that got further leads, else the House bill. The light
+# history (2017-22: titles, summaries, outcomes) is paired by the same rule (light_twins(), called by load_light()).
 TWIN_WORDS = 0.8
 IDENTICAL = re.compile(r"\b(?:is|are) identical to ((?:(?:,|and|\s)*(?:HB|SB|HJ|SJ) ?\d+)+)")
+INCORPORATED = re.compile(r"\bwas incorporated into\b")
+_RANK = {5: 6, 4: 5, 3: 4, 6: 3, 2: 2, 1: 1, 0: 0}
 
 
 def _twords(t):
     return set(re.findall(r"[a-z]{3,}", (t or "").lower()))
 
 
-def twin_pairs(session, bills, recs, index):
-    """[(lead, other)] bill numbers paired in this session."""
-    try:
-        texts = json.load(open(os.path.join(P.DATA, f"texts_{session}.json")))
-    except (OSError, ValueError):
-        return []
-    summary = lambda p: (texts.get(p) or {}).get("statement") or ""
-    # Bills incorporated into another are gone (their description is often the other's).
-    gone = {p for p in index if any(t.startswith("Incorporated by") for _, t in recs[index[p]]["vers"][0]["actions"])}
-    cand = []
-    for p in index:
-        for m in IDENTICAL.finditer(summary(p)):
+def _alike(a, b):
+    """How alike two summaries are: shared words, or (2021's light-history summaries run words together: "Reinstatesthe
+    estate tax") shared runs of six letters, spacing aside. 0 when either is missing."""
+    wa, wb = _twords(a), _twords(b)
+    if not wa or not wb:
+        return 0
+    grams = lambda t: (lambda x: {x[i:i + 6] for i in range(len(x) - 5)})(re.sub(r"[^a-z]", "", t.lower()))
+    ga, gb = grams(a), grams(b)
+    return max(len(wa & wb) / len(wa | wb), len(ga & gb) / max(1, len(ga | gb)))
+
+
+def pair_up(cands):
+    """[(lead, other)] from {number: (short description, summary, stage, steps, incorporated into another)}."""
+    pairs = []
+    for p, (_, summ, _, _, _) in cands.items():
+        for m in IDENTICAL.finditer(summ):
             for q in re.findall(r"(?:HB|SB|HJ|SJ) ?\d+", m.group(1)):
                 q = q.replace(" ", "")
-                if q in index and q[0] != p[0] and q[1] == p[1]:
-                    cand.append((p, q))
+                if q in cands and q[0] != p[0] and q[1] == p[1]:
+                    pairs.append((p, q))
     by = defaultdict(list)
-    for p, b in bills.items():
-        if p in index and p not in gone:
-            by[(p[1], re.sub(r"[^a-z0-9]", "", b["Bill_description"].lower()))].append(p)
+    for p, (desc, _, _, _, gone) in cands.items():
+        if not gone:
+            by[(p[1], re.sub(r"[^a-z0-9]", "", desc.lower()))].append(p)
     for (_, desc), ps in by.items():
         hs, ss = [p for p in ps if p[0] == "H"], [p for p in ps if p[0] == "S"]
         if len(hs) != 1 or len(ss) != 1 or not desc:
             continue
-        a, b = _twords(summary(hs[0])), _twords(summary(ss[0]))
-        if a and b and len(a & b) >= TWIN_WORDS * len(a | b):
-            cand.append((hs[0], ss[0]))
-    rank = {5: 6, 4: 5, 3: 4, 6: 3, 2: 2, 1: 1, 0: 0}
-    key = lambda r: (rank[r["stage"]], len(r["vers"][0]["actions"]))
+        if _alike(cands[hs[0]][1], cands[ss[0]][1]) >= TWIN_WORDS:
+            pairs.append((hs[0], ss[0]))
+    key = lambda p: (_RANK.get(cands[p][2], 0), cands[p][3])
     out, used = [], set()
-    for x, y in sorted({tuple(sorted(c)) for c in cand}):
+    for x, y in sorted({tuple(sorted(c)) for c in pairs}):
         if x in used or y in used:
             continue
-        rx, ry = recs[index[x]], recs[index[y]]
-        if rx["stage"] >= 3 and ry["stage"] >= 3 and rx["stage"] != ry["stage"]:
+        if cands[x][2] >= 3 and cands[y][2] >= 3 and cands[x][2] != cands[y][2]:
             continue
-        lead = y if key(ry) > key(rx) else x
+        lead = y if key(y) > key(x) else x
         out.append((lead, x if lead == y else y))
         used |= {x, y}
     return out
@@ -551,45 +556,71 @@ def merge_twins(a, b):
             return ""
         return ds[0] if mode == "first" else ";".join(ds)
     seen, votes = set(), []
-    for v in sorted(a["votes"] + b["votes"], key=lambda v: v[3]):
+    for v in sorted((a.get("votes") or []) + (b.get("votes") or []), key=lambda v: v[3]):
         k = json.dumps(v[:6])
         if k not in seen:
             seen.add(k)
             votes.append(v)
     fates = ("passed", "defeated", "held", "none")
+    fate = lambda r: r.get("commFate") if r.get("commFate") in fates else "none"
     return {**a,
-            "nums": a["nums"] + b["nums"], "base": a["base"] + b["base"],
-            "prev": set(a["prev"]) | set(b["prev"]),
-            "comms": sorted(set(a["comms"]) | set(b["comms"])),
+            "nums": a["nums"] + b["nums"], **({"base": a["base"] + b["base"]} if "base" in a else {}),
+            **({"prev": set(a["prev"]) | set(b.get("prev") or ())} if "prev" in a else {}),
+            "comms": sorted(set(a.get("comms") or []) | set(b.get("comms") or [])),
             "topics": a["topics"] + [t for t in b["topics"] if t not in a["topics"]],
-            "commFate": min(a["commFate"], b["commFate"], key=fates.index),
-            "local": a["local"] or b["local"], "budget": a["budget"] or b["budget"],
-            "passedS": a["passedS"] or b["passedS"], "passedA": a["passedA"] or b["passedA"],
+            "commFate": min(fate(a), fate(b), key=fates.index),
+            "local": bool(a.get("local") or b.get("local")), "budget": bool(a.get("budget") or b.get("budget")),
+            "passedS": bool(a["passedS"] or b["passedS"]), "passedA": bool(a["passedA"] or b["passedA"]),
             "chapter": a["chapter"] or (b["chapter"] if a["stage"] == 5 else None),
-            "first": min(a["first"], b["first"]), "last": max(a["last"], b["last"]),
-            "cosp": max(a["cosp"], b["cosp"]),
+            "first": min(filter(None, [a["first"], b["first"]]), default=a["first"]),
+            "last": max(filter(None, [a["last"], b["last"]]), default=a["last"]),
+            "cosp": max(a.get("cosp") or 0, b.get("cosp") or 0),
             "keyDates": [joined(0, "first"), joined(1, "all"), joined(2, "all"), "",
                          a["keyDates"][4] or b["keyDates"][4], a["keyDates"][5] or b["keyDates"][5], a["keyDates"][6]],
-            "votes": votes, "firstComms": a["firstComms"] + b["firstComms"], "vers": a["vers"] + b["vers"]}
+            "votes": votes, "firstComms": (a.get("firstComms") or []) + (b.get("firstComms") or []),
+            "vers": a["vers"] + b["vers"],
+            # Laws counted once here that are two chapters in Virginia's totals.
+            "twinLaws": (a.get("twinLaws") or 0) + (b.get("twinLaws") or 0) + (a["stage"] == 5 and b["stage"] == 5)}
 
 
-def twins(session, bills, recs, index):
-    """The records and index with each pair (twin_pairs()) as one record, under both numbers."""
-    pairs = twin_pairs(session, bills, recs, index)
-    if not pairs:
-        return recs, index
+def _merged(recs, pairs):
     gone = {o for _, o in pairs}
-    merged = {lead: merge_twins(recs[index[lead]], recs[index[o]]) for lead, o in pairs}
+    at = {r["nums"][0]: r for r in recs}
+    merged = {lead: merge_twins(at[lead], at[o]) for lead, o in pairs}
     out, new = [], {}
     for r in recs:
-        p = r["nums"][0]
-        if p in gone:
+        if r["nums"][0] in gone:
             continue
-        r = merged.get(p, r)
+        r = merged.get(r["nums"][0], r)
         for n in r["nums"]:
             new[n] = len(out)
         out.append(r)
     return out, new
+
+
+def twins(session, bills, recs, index):
+    """The records and index with each pair as one record, under both numbers."""
+    try:
+        texts = json.load(open(os.path.join(P.DATA, f"texts_{session}.json")))
+    except (OSError, ValueError):
+        return recs, index
+    cands = {}
+    for p, b in bills.items():
+        if p in index:
+            r = recs[index[p]]
+            acts = r["vers"][0]["actions"]
+            cands[p] = (b["Bill_description"], (texts.get(p) or {}).get("statement") or "", r["stage"], len(acts),
+                        any(t.startswith("Incorporated by") for _, t in acts))
+    pairs = pair_up(cands)
+    return _merged(recs, pairs) if pairs else (recs, index)
+
+
+def light_twins(session, recs):
+    """The light history's records (build_data.py's load_light()) with the same pairs as one record."""
+    cands = {r["nums"][0]: (r["title"] or "", r.get("summary") or "", r["stage"], 0, bool(INCORPORATED.search(r.get("summary") or "")))
+             for r in recs if len(r["nums"]) == 1}
+    pairs = pair_up(cands)
+    return _merged(recs, pairs)[0] if pairs else recs
 
 
 def agendas(session):

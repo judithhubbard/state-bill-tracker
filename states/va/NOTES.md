@@ -80,14 +80,23 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   amendments (about 60 a year) is "ENACTED CHAP.N", not "SIGNED CHAP.N": the page said "Signed into law"; now "Became law".
 - **Identical House and Senate bills are one record (2026-11-26, the owner's request: HB 965 and SB 322 of 2026, the
   National Popular Vote Compact, were two rows everywhere).** Members file the same bill in both houses and Virginia often
-  passes and signs both, each with its own chapter. The LIS files have no companion field; `twin_pairs()` in convert.py
+  passes and signs both, each with its own chapter. The LIS files have no companion field; `pair_up()` in convert.py
   pairs one House and one Senate bill (or joint resolution) when a summary says so ("This bill is identical to SB 388.",
   in the summaries of bills as passed: 283 pairs in 2026), or when they have the same short description (spacing and
-  punctuation aside; bills incorporated into another left out) and summaries sharing 80% of their words; never when both
-  reached the governor with different results. Pairs: 316 (2023), 314 (2024), 280 (2025), 366 (2026), 25 (2027). About
-  50 read by hand: no false pairs; the least alike are companions one house amended (HB 24 / SB 115 of 2026). As in New
-  Jersey, the record leads with the bill that got further (else the House bill), keeps each bill's history, votes and
-  sponsors as its versions, and answers to both numbers (links, stars, search). So the site counts fewer bills and laws
-  than Virginia's own totals, which count chapters: laws 811 → 580 (2023), 863 → 657 (2024), 1,126 → 849 (2026); the
-  chapter shown is the leading bill's. The light history (2017-22) isn't paired, so Statistics' earlier years still count
-  both copies.
+  punctuation aside; bills incorporated into another left out) and summaries 80% alike (shared words, or shared runs of
+  six letters where a file runs words together); never when both reached the governor with different results. Pairs:
+  316 (2023), 314 (2024), 280 (2025), 366 (2026), 25 (2027). About 50 read by hand: no false pairs; the least alike are
+  companions one house amended (HB 24 / SB 115 of 2026). As in New Jersey, the record leads with the bill that got
+  further (else the House bill), keeps each bill's history, votes and sponsors as its versions, and answers to both
+  numbers (links, stars, search); the chapter shown is the leading bill's.
+  **Counted once, and said so (the owner's choice, 2026-11-26):** a pair that both became law is one law here and two
+  chapters in Virginia's totals; its record's `twinLaws` counts the second. build_data.py's `outcomes()` carries the
+  count per session and topic (sixth number) and `write_compare()` per session ("pairedLaws"), so the Sessions table's
+  "Became law" ⓘ ("Virginia's 1,126 chapters include 277 laws passed twice, once from each house; each pair counts once
+  here."), the odds chart's note and /compare/'s "Became law" ⓘ say how many. Laws + second chapters = Virginia's
+  chapters: 580 + 231 = 811 (2023), 657 + 186 = 843 (2024), 581 + 140 = 721 (2025), 849 + 277 = 1,126 (2026);
+  test/data_check.py's "compare with the official totals" line adds them up beside the highest chapter number.
+  The light history is paired by the same rule (`light_twins()`, called by build_data.py's `load_light()`): 251 laws
+  passed twice in 2020, 52 in 2021 (a short session), 116 in 2017. 2017's and 2019's files lack a summary for about half
+  their bills (937 and 1,204), so same-title pairs with no summary stay two records there (about 90 a year); 2018 and 2019
+  are held off the site anyway (records that stop short of the governor).

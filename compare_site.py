@@ -137,25 +137,29 @@ function row(d, list) {
   if (!list.length) return null;
   const { odds } = pool(list), n = (k) => (odds[k] || [0, 0])[0];
   const intro = n("intro"), law = (odds.intro || [0, 0])[1];
-  return { d, list, intro, comm: intro - n("floor"), house: d.chart.uni ? n("both") : n("house"), law, vetoes: n("vetoed") + n("overridden"), over: n("overridden") };
+  return { d, list, intro, comm: intro - n("floor"), house: d.chart.uni ? n("both") : n("house"), law, vetoes: n("vetoed") + n("overridden"), over: n("overridden"),
+    paired: list.reduce((a, s) => a + (s.pairedLaws || 0), 0) };
 }
 let SORT = ["name", 1];
 const KEYS = { name: (r) => r.d.name, intro: (r) => r.intro, comm: (r) => r.comm / r.intro, house: (r) => r.house / r.intro, law: (r) => r.law / r.intro,
   vetoes: (r) => r.vetoes, years: (r) => r.d.years * 10 + r.list.length };
-function cell(cls, a, b, sub) {
-  return `<td class="n ${cls}">${pctText(a, b)}<small>${num(a)}</small><span class="bar" aria-hidden="true"><i style="width:${Math.min(100, (100 * a) / (b || 1)).toFixed(1)}%"></i></span></td>`;
+function cell(cls, a, b, tip) {
+  return `<td class="n ${cls}">${pctText(a, b)}${tip ? itip(tip) : ""}<small>${num(a)}</small><span class="bar" aria-hidden="true"><i style="width:${Math.min(100, (100 * a) / (b || 1)).toFixed(1)}%"></i></span></td>`;
 }
 // The session's kind, in an ⓘ beside it. A two-year legislature whose session is named by one year (Montana, Texas)
 // meets every other year.
 const lengthText = (d, list) => (d.years === 2 && !/–|-/.test(list[0].label) ? "Meets every other year"
   : list.length > 1 ? `${d.years === 1 ? "One-year" : "Two-year"} sessions`
   : `${d.years === 1 ? "One-year" : "Two-year"} session${list[0].kind ? ` (${list[0].kind})` : ""}`);
+// Identical House and Senate bills that both became law, counted once (Virginia's: one record each; its own totals count
+// each chapter).
+const pairedText = (d, n) => `${num(n)} of these laws passed twice, once from each house. ${d.name}'s own totals count both; each pair counts once here.`;
 function tr(r, all) {
   const { d, list } = r, picked = [A.value, B.value].includes(d.state);
   const ph = `<small class="ph">${esc(all ? r.sessText : yearsText(d, list))}</small>`;
   const name = all ? `<td class="st">${esc(d.name)}${ph}</td>` : `<td class="st"><a href="../${d.state}/#stats">${esc(d.name)}</a>${d.note ? itip(d.note) : ""}${ph}${d.state === "us" ? "<small>Not counted with the states</small>" : ""}</td>`;
   return `<tr>${name}<td class="sess">${esc(all ? r.sessText : yearsText(d, list))}${all ? "" : itip(lengthText(d, list))}</td>`
-    + `<td class="n">${num(r.intro)}</td>${cell("", r.comm, r.intro)}${cell("house", r.house, r.intro)}${cell("law", r.law, r.intro)}`
+    + `<td class="n">${num(r.intro)}</td>${cell("", r.comm, r.intro)}${cell("house", r.house, r.intro)}${cell("law", r.law, r.intro, r.paired ? pairedText(d, r.paired) : "")}`
     + `<td class="n">${num(r.vetoes)}${r.over ? `<small>${num(r.over)} overridden</small>` : ""}</td>`
     + `<td class="pickcol">${all ? "" : `<button type="button" class="pickc" data-st="${d.state}" aria-pressed="${picked}" aria-label="${esc(`Show ${d.name}'s chart`)}">Chart</button>`}</td></tr>`;
 }

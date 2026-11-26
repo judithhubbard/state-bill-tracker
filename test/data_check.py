@@ -125,7 +125,8 @@ def check(state):
         stages = collections.Counter(r["stage"] for r in recs if not (r["stage"] == 3 and "const" in r["topics"]))
         # Count bills by stage against the Legislature's own totals (signed, vetoed).
         say(state, "LOOK", f"{s}: {len(recs)} bills; signed {stages[5]}, vetoed {stages[6]}, passed both houses but not "
-                           f"sent {stages[3]}, on the governor's desk {stages[4]} (compare with the official totals)")
+                           f"sent {stages[3]}, on the governor's desk {stages[4]} (compare with the official totals)"
+                           + chapters_line(recs))
         # Sponsors named only in another document: Idaho's committee bills name the member who asked for them in the
         # Statement of Purpose's "Contact:" section, matched to the year's members. A session where most don't match (a
         # new layout, a member list that didn't load) shows committees again; names titled as legislators that match no
@@ -968,6 +969,19 @@ def check_balance(state):
                                                for c, ch in b["chambers"].items()) + f" | governor {b['governor'][1]}")
 
 
+def chapters_line(recs):
+    """Where identical House and Senate bills are one record (Virginia's, 2026-11-26): a law here that is two chapters in
+    the state's own totals ("twinLaws"). The laws plus those second chapters are the session's chapters, which Virginia
+    numbers from 1: they should match the highest chapter number."""
+    twin = sum(r.get("twinLaws") or 0 for r in recs)
+    if not twin:
+        return ""
+    laws = sum(1 for r in recs if r["stage"] == 5)
+    top = max([int(m.group(1)) for r in recs for v in r["vers"] for a in v.get("actions") or []
+               if (m := re.search(r"CHAP\.?\s*0*(\d+)", str(a[1])))] + [r.get("chapter") or 0 for r in recs])
+    return f"; {laws} laws + {twin} passed twice (identical House and Senate bills, one record) = {laws + twin} chapters; highest chapter number {top}"
+
+
 def check_light(state):
     """The state's light history (data/<st>/light_<session>.json.gz, states/LIGHT.md): its counts to compare with the
     official totals (LOOK), and what can't be right (FAIL): a date in the future, a law number on a bill that isn't a law,
@@ -985,6 +999,16 @@ def check_light(state):
         bills = b["bills"]
         say(state, "LOOK", f"light {s}: {b['counts']} (compare with the official totals); lacks {b['lacks'] or 'nothing'}; "
                             f"{b.get('noTopic', 0)} with no topic")
+        # (Identical House and Senate bills as one record, as the build pairs them: states/va/convert.py's light_twins().)
+        C = importlib.import_module(f"states.{state}.convert") if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "states", state, "convert.py")) else None
+        if C is not None and hasattr(C, "light_twins"):
+            paired = C.light_twins(s, [dict(x, keyDates=(list(x.get("keyDates") or []) + [""] * 7)[:7], topics=x.get("topics") or [],
+                                            vers=x.get("vers") or [], nums=x["nums"]) for x in bills])
+            twin = sum(x.get("twinLaws") or 0 for x in paired)
+            say(state, "LOOK", f"light {s}: as one record per pair of identical House and Senate bills, {len(paired)} bills, "
+                                f"{sum(1 for x in paired if x.get('stage') == 5)} laws + {twin} passed twice = "
+                                f"{sum(1 for x in paired if x.get('stage') == 5) + twin} chapters"
+                                f" (highest chapter number {max([x.get('chapter') or 0 for x in bills])})")
         # (What build_data.py's light_plausible() leaves off the site, said here so a held-back session is seen:
         # Open States' Virginia 2018 and Michigan 2019-20 stop short of the governor's actions, 2026-11-25.)
         laws = sum(1 for x in bills if x.get("stage") == 5)
