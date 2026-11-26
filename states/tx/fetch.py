@@ -152,8 +152,12 @@ if __name__ == "__main__":
         vetoes.main(minutes=8)
     except Exception as e:  # never holds the run back
         print(f"veto proclamations: failed ({type(e).__name__}: {e})")
-    from states.tx import texts  # "What it does", from the bill analyses
+    from states.tx import texts, billtext  # "What it does", from the bill analyses
     if os.path.isdir(os.path.join(P.DATA, P.code_of(CURRENT), "billhistory")):
+        try:  # bills with no analysis: a lead from the bill's own text, 8 minutes a run (billtext.py)
+            billtext.main(CURRENT, texts.analysed(CURRENT), 8)
+        except Exception as e:  # never holds the run back
+            print(f"bill texts {CURRENT}: failed ({type(e).__name__}: {e})")
         texts.main(CURRENT)
     for year in range(CURRENT - 2, FIRST - 1, -2):  # earlier sessions: a few minutes a run until each is read
         if os.path.isdir(os.path.join(P.DATA, P.code_of(year), "billhistory")):

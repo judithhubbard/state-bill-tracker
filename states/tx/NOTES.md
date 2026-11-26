@@ -66,3 +66,13 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   should name about the bills that reached a second-reading calendar (1,500-2,000 a session). Limits: a committee vote
   with every member present and voting yes names nobody (yes votes aren't listed), and the page then can't say how a
   member voted, as for other states' unanimous committee votes; bills that never reached the floor have no analysis.
+
+- **"What it does" from the bill's own text (2026-11-26):** bills with no bill analysis (about two thirds of a session)
+  get a lead quoted from the bill as introduced (`states/tx/billtext.py`, states/billtext_lead.py): the history XML's
+  "Introduced" version on the FTP site (billtext/HTML/.../HB00010I.HTM), a table of printed lines (an indented line starts a
+  paragraph). "SECTION n." marks the bill's sections; a new code section ("Sec. 465.0051.", "Art. 42A.5025.") is underlined
+  and counts as a section of new law; an amended one keeps its "Sec." plain and only its new whole sentences count.
+  Transition clauses ("The change in law made by this Act applies ...", "This Act applies beginning with the 2025-2026
+  school year.", rules "as soon as practicable") are boilerplate. fetch.py reads them before texts.py, at most 8 minutes a
+  run, four at a time (about 120 a minute), laws first, then bills that passed a house; sections in
+  data/tx/<code>/leads.json (read once). 89R: about 5,900 bills, about six runs.

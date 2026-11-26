@@ -74,3 +74,11 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   interim commissions (14 meetings, no bills). Untested live: the House's /Schedules/All with a session's worth of
   meetings (size), and special-session numbering.
 - **The next Legislature (2026-11-22):** Minnesota has no prefiled bills; the Revisor lists session 0952027 already, with no bills (2026-11-22). fetch.py asks for its first bills each run (`has_bills()`, two searches) and makes its folder only then; a new Legislature with no bills on file, or in its first January, never holds Minnesota off the site (`holds()`), and members are read daily that January (`MEMBERS_DAYS`) so the new members replace the old within a day of the swearing-in (January 12, 2027).
+
+- **"What it does" from the bill's own text (2026-11-26):** records with no House Research or Senate summary get a lead
+  quoted from the bill as introduced (`states/mn/billtext.py`, states/billtext_lead.py): the Revisor's page for version 0
+  (TEXT_VERSION_LIST), each `div.bill_section` a section ("newstatute" is new law; "... is amended to read:" marks new
+  wording `<ins>`, so only its new whole sentences count); headings, subdivision numbers, effective dates and the
+  screen-reader words are left out. One number per companion pair. fetch.py runs it after the summaries, for the current
+  Legislature's regular session, at most 8 minutes a run through `request()` (robots.txt, a second apart); convert.py
+  uses a lead only for a record with no summary. Sections in data/mn/<first year>/leads.json.

@@ -437,12 +437,26 @@ def write(session):
             t = None
         if t:
             out[key] = t
+    summarized = len(out)
+    # Bills with no summary: a lead quoted from the bill's text as filed (billtext.py), when it's been read.
+    from states.nc import billtext
+    for b, e in billtext.entries(session).items():
+        out.setdefault(b, e)
     path = os.path.join(DATA, f"texts_{session}.json")
     with open(path + ".tmp", "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=0)
     os.replace(path + ".tmp", path)
-    print(f"texts_{session}.json: {len(out)} bills", flush=True)
+    print(f"texts_{session}.json: {summarized} bill summaries, {len(out) - summarized} leads from bill texts", flush=True)
     return len(out)
+
+
+def analysed(session):
+    """The bills texts_<session>.json has a staff summary for (not a lead from the bill's text)."""
+    try:
+        return {b for b, v in json.load(open(os.path.join(DATA, f"texts_{session}.json"))).items()
+                if not (v.get("label") or "").startswith("From the bill's text")}
+    except (OSError, ValueError):
+        return set()
 
 
 if __name__ == "__main__":

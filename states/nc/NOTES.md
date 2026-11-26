@@ -46,3 +46,10 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   (every one overridden); 2025-26 has 6 (H 96, H 171, H 377, H 437, H 958, S 50). Quality (H 96, H 171, H 377, S 50 checked
   against the scans, some faint photocopies): the message text read almost perfectly ("origmally" in H 96); the stamps and
   handwriting after it are junk and are cut off.
+
+- **"What it does" from the bill's own text (2026-11-26):** bills with no staff summary get a lead quoted from the bill as
+  filed (`states/nc/billtext.py`, states/billtext_lead.py): the "Filed" edition's HTML twin (.../HTML/H10v0.html, Windows
+  text), at the 2-second crawl delay (fetch.py's clock), at most 8 minutes a run (about 240), after the summaries,
+  laws first; section captions ("SECTION 1. Establishment. –") left out, "reads as rewritten:" read as an amendment (its
+  underlined whole sentences count). Sections in data/nc/<session>/leads.json; texts.py adds the leads to
+  texts_<session>.json for bills with no summary.

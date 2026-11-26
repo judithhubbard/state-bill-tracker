@@ -109,9 +109,23 @@ def main(session, minutes=None):
         if text:
             v = re.search(r"([HSEF])\.htm$", url, re.I)
             out[p] = {"statement": text, "label": f"From {LABEL.get(v.group(1).upper() if v else '', 'the')} bill analysis."}
+    analyses = len(out)
+    # Bills with no analysis: a lead quoted from the bill's text as introduced (billtext.py), when it's been read.
+    from states.tx import billtext
+    for b, e in billtext.entries(session).items():
+        out.setdefault(b, e)
     json.dump(out, open(os.path.join(P.DATA, f"texts_{session}.json"), "w"), ensure_ascii=False)
-    print(f"texts_{session}.json: {len(out)} bill analyses ({done} downloaded now"
-          + (f", {left} left for later runs)" if left else ")"))
+    print(f"texts_{session}.json: {analyses} bill analyses ({done} downloaded now"
+          + (f", {left} left for later runs" if left else "") + f"), {len(out) - analyses} leads from bill texts")
+
+
+def analysed(session):
+    """The bills with an analysis that says something (from the analyses read so far)."""
+    try:
+        cache = json.load(open(os.path.join(P.DATA, P.code_of(session), "analyses.json")))
+    except (OSError, ValueError):
+        cache = {}
+    return {b for b, us in analysis_urls(session).items() if any(cache.get(u) for u in us)}
 
 
 if __name__ == "__main__":

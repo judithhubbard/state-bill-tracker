@@ -316,6 +316,15 @@ def analyses(start):
         got += 1
     json.dump(seen, open(seen_path, "w"))
     print(f"{session} analyses: {got} of {len(todo)} read ({listed} listed)", flush=True)
+    if start == CURRENT:
+        # Bills with no analysis: a lead quoted from the bill's text as introduced (states/mi/billtext.py), at most
+        # 8 minutes a run, laws and passed bills first.
+        try:
+            from states.mi import billtext
+            T.write(start)
+            billtext.main(start, T.analysed(start), get_doc, 8, out_of_time)
+        except Exception as e:  # never stops the run
+            print(f"{session} bill texts: failed ({type(e).__name__}: {e})", flush=True)
     try:
         T.write(start)
     except Exception as e:  # a summary that fails to parse never stops the run
