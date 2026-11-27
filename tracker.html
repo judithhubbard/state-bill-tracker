@@ -2327,10 +2327,13 @@ function statusParts(b) {
     small = fmtDate(b.passedIn === "Senate" ? D.passS : D.passA);
   } else if (b.stage === 3 && f.voted) {
     // A constitutional amendment (or a measure referred to the voters) whose election day has passed.
-    small = `${PASSED_BOTH} · passed ${passedOn()}`;
+    small = `Passed ${passedOn()}`;
+  } else if (b.stage === 3 && f.amend && !f.ballot) {
+    // (The label already says which round: the grey line says what comes next, not the label again. 2026-11-27, the owner.)
+    const nx = !STATE.amendmentOnce && !STATE.amendmentDone && !f.second && STATE.amendmentNext ? STATE.amendmentNext(DATA.session) : null;
+    small = nx ? `Must pass again in ${nx.label} · passed ${passedOn()}` : `Passed ${passedOn()}`;
   } else if (b.stage === 3) {
-    small = `${f.ballot ? `Sent to the voters, not ${EXEC.the}` : f.amend ? `Constitutional amendment${STATE.amendmentOnce || STATE.amendmentDone ? "" : f.second ? ", second passage" : ", first passage"}`
-      : STATE.passedBothNote(live, b)} · passed ${passedOn()}`;
+    small = `${f.ballot ? `Sent to the voters, not ${EXEC.the}` : STATE.passedBothNote(live, b)} · passed ${passedOn()}`;
   } else if (b.stage === 4) {
     small = live && b.due ? `Sent ${fmtDate(D.deliv)} · decision due ${fmtDate(b.due)} (est.)` : `Sent ${fmtDate(D.deliv)}`;
   } else if (b.stage === 5) {

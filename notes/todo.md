@@ -32,6 +32,15 @@ in CLAUDE.md's launch checklist.
   chapter (cheap there).
 - **Twin bills in other states** (Virginia done 2026-11-26): TX companion field, MD "cross-filed with", FL "Substituted
   for" / "companion bill(s) passed", AL "companion"; states with no field could use Virginia's text rule.
+- **Constitutional amendments, explained and filtered** (owner: to-do, 2026-11-27). With "Only: constitutional
+  amendments" picked, the sidebar still offers Became law / Vetoed / On the governor's desk (all 0, never apply: amendments
+  skip the governor) and "Passed both houses" with an amendments sub-row. Give amendments their own steps there, per state
+  (STATE.amendments, amendmentOnce/amendmentNext, ballotYear): passed one house, passed the first round (waiting for the
+  next Legislature), passed the second round / going to the voters, approved or rejected by voters (ballot-results
+  memory: certified results entered by hand), died. Explain the process in How (each state's how.html has little or
+  nothing) with a simple picture like renderHowPic(): two Legislatures, then the voters (NY, NV, MA ...), or one passage
+  then the voters (most states), or the governor's role where there is one (VA's bills setting up the ballot). Also the
+  bill panel's step picture for amendments: "Voters" after one round or two.
 - **Arizona 2023-24 chapter numbers**: Open States' records have none (data_check's CHAPTER_GAPS marks it a known gap).
   apps.azleg.gov (permission covers bill status) has them: read 2023-24's laws' chapters from it.
 - **Coverage audit gaps** (scratchpad report 2026-11-26, summarized): Indiana floor votes without names (its data service
