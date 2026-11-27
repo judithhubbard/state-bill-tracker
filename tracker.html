@@ -127,7 +127,7 @@ html.embed body { padding: 0; background: var(--sheet); }
 .ta2-draft input.ta-fld { margin: 0; }
 .ta2-draft .ta-send { margin-top: 4px; }
 .billfoot { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; font-size: 13.5px; color: var(--ink-2); padding-top: 10px; border-top: 1px solid var(--rule); }
-.billfoot .yourreps { margin: 0; font-size: 13.5px; }
+.billfoot .yourreps { margin: 0; font-size: 13.5px; min-width: 0; max-width: 100%; }  /* (a long place list's menu wraps, not the page) */
 .wcan .billfoot { border-top: 0; padding-top: 4px; }  /* (on a card it follows the rows' own last line) */
 /* An open bill's side is chosen once, in its panel (.ta2-side): the row's own buttons under the star hide meanwhile. */
 #list .bill[open] > summary .sides, #list details.bill[open] + .rowstar .sides { display: none; }
@@ -1406,8 +1406,8 @@ html.embed #notice { display: none !important; }
     <button class="view-tab" type="button" data-view="person" hidden>Record</button>
     <button class="view-tab view-tab-end" type="button" data-view="how"><span class="tab-long">How a bill becomes law in New York</span><span class="tab-short">How laws are made</span><span class="tab-tiny">How</span></button>
   </nav>
-  <p class="notice" id="notice" hidden></p>
   <main id="main">
+  <p class="notice" id="notice" hidden></p>
   <div class="frameload" id="frameLoad">Loading bills…</div>
   <noscript><p class="notice">This page needs JavaScript to show the bills.</p></noscript>
 
