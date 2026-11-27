@@ -41,6 +41,10 @@ in CLAUDE.md's launch checklist.
   nothing) with a simple picture like renderHowPic(): two Legislatures, then the voters (NY, NV, MA ...), or one passage
   then the voters (most states), or the governor's role where there is one (VA's bills setting up the ballot). Also the
   bill panel's step picture for amendments: "Voters" after one round or two.
+- **Local bills named by a neighborhood or landmark** (2026-11-27: NY's S1462 "Battery Park project area" passed "Hide bills
+  about other places"). New York's REGIONS now lists about 20 (Battery Park, Jamaica Bay, Indian Point ...). Other
+  states' place rules have the same blind spot: scan each state's titles that name no place for capitalized
+  "... Park/Island/Bay/Lake/Creek/project area" phrases, and add the local ones to that state's list.
 - **Arizona 2023-24 chapter numbers**: Open States' records have none (data_check's CHAPTER_GAPS marks it a known gap).
   apps.azleg.gov (permission covers bill status) has them: read 2023-24's laws' chapters from it.
 - **Coverage audit gaps** (scratchpad report 2026-11-26, summarized): Indiana floor votes without names (its data service

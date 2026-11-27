@@ -172,6 +172,14 @@ REGIONS = {
     "Cayuga Lake": ["Cayuga", "Seneca", "Tompkins"],
     "Southern Tier": ["Allegany", "Broome", "Cattaraugus", "Chautauqua", "Chemung", "Chenango", "Delaware", "Schuyler", "Steuben", "Tioga", "Tompkins"],
     "Central New York": ["Cayuga", "Cortland", "Madison", "Onondaga", "Oswego", "Tompkins"],
+    # Neighborhoods, landmarks and project areas named without a town or county (2026-11-27: S1462's "Battery Park project
+    # area" counted as statewide). Not the World Trade Center: its bills are about first responders statewide.
+    "Battery Park": ["New York"], "Hudson Yards": ["New York"], "Roosevelt Island": ["New York"],
+    "Governors Island": ["New York"], "Randalls Island": ["New York"], "Rikers Island": NYC,
+    "Jamaica Bay": ["Kings", "Queens"], "Cross Bay": ["Queens"], "Kew Gardens": ["Queens"], "LaGuardia": ["Queens"],
+    "JFK": ["Queens"], "Oakwood Beach": ["Richmond"], "Indian Point": ["Westchester"], "Belmont Park": ["Nassau"],
+    "Stony Brook": ["Suffolk"], "Fishers Island": ["Suffolk"], "Ocean Bay Park": ["Suffolk"], "Peconic Bay": ["Suffolk"],
+    "Fire Island": ["Suffolk"], "Grand Island": ["Erie"], "Rockland Lake": ["Rockland"], "Fishkill Creek": ["Dutchess"],
 }
 # Cities named on their own. Names that are also common words or other things (Hudson, Rome, Geneva) are left out.
 CITY_NAMES = ["Buffalo", "Rochester", "Syracuse", "Yonkers", "Schenectady", "Binghamton", "Utica", "Niagara Falls", "Poughkeepsie",
