@@ -4,6 +4,12 @@ One list of open work. Dated chores for January 2027 are in the january-2027-che
 in CLAUDE.md's launch checklist.
 
 ## Open now (updated 2026-11-26; newest first; move items to "done" in the commit that does them)
+- **Cities, starting with New York City** (owner: to-do, 2026-11-27; after the January rush, February or March 2027).
+  Model on DC (one chamber plus a mayor's veto; NYC: 51 members, two-thirds to override, a four-year session). Source:
+  the Council's Legistar (bills "Intros", histories, sponsors, roll calls by member; NYC's web API needs a free token,
+  to confirm); write the Legistar reader once so other Legistar cities (Chicago, Seattle, Philadelphia ...) cost little.
+  Show local laws only (no resolutions, land use, ceremonial items), council district maps for "Find your council
+  member" (NYC Open Data), party features muted where councils are nonpartisan. Read each site's robots.txt and terms first.
 - **A strategy for search engines (SEO)** (owner: to-do, 2026-11-27). Start from Search Console (indexed pages, queries,
   the "not indexed" reasons) and GoatCounter's referrers. Questions: which pages should rank (each bill's own page
   /<st>/bill/<num> is now a real address with a title and description, but bills open in the list by "#"; legislator
