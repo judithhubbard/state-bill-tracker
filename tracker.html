@@ -143,6 +143,12 @@ html.onebill #active { margin-top: 4px; }
 .pinhead .pn { font: 700 13px/1 var(--mono, ui-monospace, monospace); flex: none; }
 .pinhead .pt { font-weight: 600; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1; }
 .pinhead .ps { flex: none; font-size: 12.5px; color: var(--ink-2); }
+.pinhead { cursor: pointer; }
+.pinhead .pc { flex: none; font-size: 12.5px; color: var(--navy); font-weight: 600; }
+.pinhead:hover .pc { text-decoration: underline; }
+@media (max-width: 600px) { .pinhead .ps { display: none; } }
+.detail .ownpage { display: block; width: fit-content; margin: 0 0 6px auto; font-size: 13px; color: var(--navy); }
+html.solo .detail .ownpage { display: none; }
 .pinhead .ps .lbl, pinhead .ps .tag { font-size: 12.5px; }
 
 /* A shared bill on its own (soloOn()): the site's home link (a newcomer learns what site this is), the state's name, the bill,
@@ -6483,7 +6489,9 @@ function fillDetail(el) {
   // In a bill's own panel (2026-11-23, the owner's design), the road and the next step come first and the rest is folded,
   // each fold's line saying a little of what's in it; a watchlist card folds the same way (2026-11-24, the owner).
   const hist = historyBlock(b), spons = sponsorsBlock(b), sim = similarBlock(b);
-  const html = `${inCard ? "" : issueBox(b)}${inCard ? "" : nextSteps(b)}
+  // (On the public site, a link to the bill on its own page, /ny/bill/S9276: 2026-11-27, the owner.)
+  const own = !inCard && ROOT && !EMBED ? `<a class="ownpage" href="${esc(billLink(b))}">Open on its own page ↗</a>` : "";
+  const html = `${own}${inCard ? "" : issueBox(b)}${inCard ? "" : nextSteps(b)}
     ${STATE.resetNote?.(b) ? `<p class="reset">${esc(STATE.resetNote(b))}</p>` : ""}
     ${whatBox(what)}
     ${pfold("History", histHint(hist), hist + `<div class="allacts"><h5 class="aa-h">Every action</h5><div class="versions">${b.vers.map((v) => verBlock(v, b).replace('<details class="acts">', '<details class="acts" open>')).join("")}</div></div>`)}
@@ -6513,7 +6521,16 @@ function pinBill(el, b) {
   if (!d || d.querySelector(".pinhead")) return;
   const pin = document.createElement("div");
   pin.className = "pinhead";
-  pin.innerHTML = `<span class="pn">${esc(b.nums[0])}</span><span class="pt">${esc(b.title)}</span><span class="ps">${statusText(b).replace(/<span class="stw">.*?<\/span>/, "")}</span>`;
+  pin.innerHTML = `<span class="pn">${esc(b.nums[0])}</span><span class="pt">${esc(b.title)}</span><span class="ps">${statusText(b).replace(/<span class="stw">.*?<\/span>/, "")}</span><span class="pc" aria-hidden="true">Close ▴</span>`;
+  // (Clicking the pinned bar closes the bill and goes back to its row: 2026-11-27, the owner.)
+  pin.title = "Close this bill";
+  pin.addEventListener("click", (e) => {
+    if (e.target.closest("a, button")) return;
+    const sm = el.querySelector("summary");
+    sm.click();
+    const top = el.getBoundingClientRect().top + scrollY - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--barH")) || 0) - 8;
+    if (el.getBoundingClientRect().top < 0) scrollTo({ top });
+  });
   d.prepend(pin);
   // (Below the list's own sticky bar: search, count, sort.)
   const bar = el.closest(".results")?.querySelector(".resultbar"), barH = bar && getComputedStyle(bar).position === "sticky" ? bar.offsetHeight : 0;

@@ -4,6 +4,14 @@ One list of open work. Dated chores for January 2027 are in the january-2027-che
 in CLAUDE.md's launch checklist.
 
 ## Open now (updated 2026-11-26; newest first; move items to "done" in the commit that does them)
+- **A strategy for search engines (SEO)** (owner: to-do, 2026-11-27). Start from Search Console (indexed pages, queries,
+  the "not indexed" reasons) and GoatCounter's referrers. Questions: which pages should rank (each bill's own page
+  /<st>/bill/<num> is now a real address with a title and description, but bills open in the list by "#"; legislator
+  and governor pages; issue pages; state pages), what people search ("<state> bill <number>", "<issue> bill <state>",
+  "my state senator"), sitemaps per state and for bill pages (tens of thousands of URLs: Cloudflare Pages' file limit
+  doesn't apply to the Function's pages), titles and descriptions per page, structured data (Legislation schema),
+  canonical addresses (www, .com, the old Albany pages), speed (Core Web Vitals in Cloudflare), and links from
+  advocacy groups and press. Measure before and after.
 - **Issue pages back to 2015** (owner: to-do, 2026-11-26). The light history (data/<st>/light_<year>.json.gz, 2015+)
   feeds only Statistics. Needs: issue rows for light sessions (issues.py rules work on their titles and summaries: the
   popular-vote issue finds CT 2018, DE 2019, OR 2019), links to the legislature's own page (no bill pages for those
