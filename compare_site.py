@@ -38,8 +38,11 @@ table.cmp th[aria-sort] button { color: var(--ink); }
 table.cmp th[aria-sort="ascending"] button::after { content: " ▲"; font-size: 10px; }
 table.cmp th[aria-sort="descending"] button::after { content: " ▼"; font-size: 10px; }
 table.cmp td.st { white-space: nowrap; font-weight: 600; }
-table.cmp td.st a { text-decoration: none; }
-table.cmp td.st a:hover { text-decoration: underline; }
+/* The state's name opens its odds chart (2026-11-28: one control instead of a "Chart" button on every row). */
+table.cmp td.st button.pickc { font: inherit; font-weight: 600; color: var(--navy); background: none; border: 0; padding: 0; cursor: pointer;
+  text-align: left; white-space: inherit; }
+table.cmp td.st button.pickc:hover { text-decoration: underline; }
+table.cmp td.st button.pickc[aria-pressed="true"] { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 table.cmp td small { display: block; color: var(--ink-2); font-size: 12.5px; font-weight: 400; white-space: nowrap; }
 table.cmp td .bar { display: block; height: 4px; border-radius: 2px; background: var(--rule); margin-top: 3px; overflow: hidden; }
 table.cmp td .bar i { display: block; height: 100%; background: var(--stall); }
@@ -47,12 +50,8 @@ table.cmp td.house .bar i { background: var(--navy); }
 table.cmp td.law .bar i { background: var(--lawn); }
 table.cmp tbody.all td { font-weight: 700; background: var(--paper); }
 table.cmp tbody.fed td { border-top: 2px solid var(--rule); }
-table.cmp button.pickc { font: inherit; font-size: 13px; color: var(--navy); background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px;
-  padding: 1px 8px; cursor: pointer; white-space: nowrap; }
-table.cmp button.pickc[aria-pressed="true"] { background: var(--navy); color: var(--sheet); border-color: var(--navy); }
 table.cmp td.dash { color: var(--ink-2); }
 table.cmp th .itip { margin-left: 3px; }
-table.cmp td.sess .itip { margin-left: 5px; }
 .tablewrap { margin: 0 0 8px; position: relative; }
 table.cmp td.st small.ph { display: none; }
 /* On a phone: the share columns that matter most, the session under the state's name. */
@@ -60,7 +59,7 @@ table.cmp td.st small.ph { display: none; }
   table.cmp { min-width: 0; font-size: 14px; }
   table.cmp th, table.cmp td { padding: 6px 4px; }
   table.cmp td.st, table.cmp td small { white-space: normal; }
-  table.cmp .sess, table.cmp .house, table.cmp .pickcol { display: none; }
+  table.cmp .sess, table.cmp .house { display: none; }
   table.cmp td.st small.ph { display: block; }
 }
 .charts h3 { margin: 18px 0 2px; }
@@ -157,11 +156,12 @@ const pairedText = (d, n) => `${num(n)} of these laws passed twice, once from ea
 function tr(r, all) {
   const { d, list } = r, picked = [A.value, B.value].includes(d.state);
   const ph = `<small class="ph">${esc(all ? r.sessText : yearsText(d, list))}</small>`;
-  const name = all ? `<td class="st">${esc(d.name)}${ph}</td>` : `<td class="st"><a href="../${d.state}/#stats">${esc(d.name)}</a>${d.note ? itip(d.note) : ""}${ph}${d.state === "us" ? "<small>Not counted with the states</small>" : ""}</td>`;
-  return `<tr>${name}<td class="sess">${esc(all ? r.sessText : yearsText(d, list))}${all ? "" : itip(lengthText(d, list))}</td>`
+  const name = all ? `<td class="st">${esc(d.name)}${ph}</td>`
+    : `<td class="st"><button type="button" class="pickc" data-st="${d.state}" aria-pressed="${picked}" title="${esc(`Show ${d.name}'s chart`)}">${esc(d.name)}</button>${d.note ? itip(d.note) : ""}${ph}${d.state === "us" ? "<small>Not counted with the states</small>" : ""}</td>`;
+  // (The session's kind is the cell's hover text; one ⓘ in the column's heading says what the column is.)
+  return `<tr>${name}<td class="sess"${all ? "" : ` title="${esc(lengthText(d, list))}"`}>${esc(all ? r.sessText : yearsText(d, list))}</td>`
     + `<td class="n">${num(r.intro)}</td>${cell("", r.comm, r.intro)}${cell("house", r.house, r.intro)}${cell("law", r.law, r.intro, r.paired ? pairedText(d, r.paired) : "")}`
-    + `<td class="n">${num(r.vetoes)}${r.over ? `<small>${num(r.over)} overridden</small>` : ""}</td>`
-    + `<td class="pickcol">${all ? "" : `<button type="button" class="pickc" data-st="${d.state}" aria-pressed="${picked}" aria-label="${esc(`Show ${d.name}'s chart`)}">Chart</button>`}</td></tr>`;
+    + `<td class="n">${num(r.vetoes)}${r.over ? `<small>${num(r.over)} overridden</small>` : ""}</td></tr>`;
 }
 function allRow(rows) {
   const states = rows.filter((r) => r.d.state !== "us");
@@ -263,7 +263,7 @@ def page(states):
 <p class="big" id="lede"></p>
 <div class="tools"><select id="period" aria-label="Sessions"></select></div>
 <div class="tablewrap"><table class="cmp">
-<thead><tr>{th("name", "State", "")}{th("years", "Session", "sess")}{th("intro", "Bills", "n", issues_site.itip("States count bills differently: New York counts a Senate bill and its identical Assembly bill as one, while most states count each, and some, like Minnesota, put their budget in a few large bills.", "r"))}{th("comm", "Died in committee")}{th("house", "Passed a house", "n house")}{th("law", "Became law")}{th("vetoes", "Vetoed")}<th scope="col" class="pickcol"><span class="vh">Chart</span></th></tr></thead>
+<thead><tr>{th("name", "State", "")}{th("years", "Session", "sess", issues_site.itip("The sessions counted for each state. Most legislatures hold two-year sessions; some hold a new one each year, and a few meet only every other year. Point at a session to see which.", "l"))}{th("intro", "Bills", "n", issues_site.itip("States count bills differently: New York counts a Senate bill and its identical Assembly bill as one, while most states count each, and some, like Minnesota, put their budget in a few large bills.", "r"))}{th("comm", "Died in committee")}{th("house", "Passed a house", "n house")}{th("law", "Became law")}{th("vetoes", "Vetoed")}</tr></thead>
 <tbody id="rows"></tbody><tbody class="all" id="allrow"></tbody><tbody class="fed" id="fedrow"></tbody>
 </table></div>
 <p class="note">Finished sessions only, without local bills, placeholder bills and constitutional amendments.</p>
