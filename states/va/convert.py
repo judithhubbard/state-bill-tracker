@@ -572,6 +572,8 @@ def merge_twins(a, b):
             "local": bool(a.get("local") or b.get("local")), "budget": bool(a.get("budget") or b.get("budget")),
             "passedS": bool(a["passedS"] or b["passedS"]), "passedA": bool(a["passedA"] or b["passedA"]),
             "chapter": a["chapter"] or (b["chapter"] if a["stage"] == 5 else None),
+            # Both copies became law: Virginia gave each its own chapter ("Chapters 715 and 716" on the page).
+            **({"chapter2": b["chapter"]} if a["stage"] == 5 and b["stage"] == 5 and a["chapter"] and b["chapter"] and b["chapter"] != a["chapter"] else {}),
             "first": min(filter(None, [a["first"], b["first"]]), default=a["first"]),
             "last": max(filter(None, [a["last"], b["last"]]), default=a["last"]),
             "cosp": max(a.get("cosp") or 0, b.get("cosp") or 0),

@@ -7,7 +7,7 @@ in CLAUDE.md's launch checklist.
 - **New York Senate after Andrea Stewart-Cousins's death (2026-11-27)**: LEADERS "S" is None and VACANT has "S:35".
   When Senate Democrats choose a leader (expected January 2027), set LEADERS "S" (or LEADERS_NEXT with the start day).
   When the Senate's own list drops her or a successor is seated (special election, or the 2027 session's member), remove
-  "S:35" from VACANT. Possibly: show "Vacant" for the seat under Find your legislators, rather than leaving it out.
+  "S:35" from VACANT (Find your legislators says "Senate District 35: vacant" meanwhile).
 - **Cities, starting with New York City** (owner: to-do, 2026-11-27; after the January rush, February or March 2027).
   Model on DC (one chamber plus a mayor's veto; NYC: 51 members, two-thirds to override, a four-year session). Source:
   the Council's Legistar (bills "Intros", histories, sponsors, roll calls by member; NYC's web API needs a free token,
@@ -27,10 +27,6 @@ in CLAUDE.md's launch checklist.
   popular-vote issue finds CT 2018, DE 2019, OR 2019), links to the legislature's own page (no bill pages for those
   years), year buttons and the 90% coverage rule back to 2015, a quiet note that older years are titles and summaries
   only. States with no light history: CO, FL, ME, PA, WV; NM 2019-20 failed. Medium job, every issue.
-- **The part of a big bill that's on an issue** (owner: to-do, 2026-11-26). Under "One part of a larger bill" in issue
-  lists and the map panel, a line naming the part: "Article 4, sections 123-125: enacts the National Popular Vote
-  compact", linked to the law's text. From part_issues()'s matched section, or a note kept with each issues.OVERRIDES
-  entry (MN HF 1830). Small.
 - **Watching a search or an issue** (owner: on hold, 2026-11-26; wants more thought on how it fits the watchlist).
   Draft design: a watched search/issue is a feed of candidates, not a second watchlist. "Follow this issue" on issue
   pages, "Follow this search" on the front page's results; a "Following" tab on Your bills with "N new bills" per
@@ -39,9 +35,6 @@ in CLAUDE.md's launch checklist.
   same follows drive phone notifications (the app/alerts plan). Open questions: free text vs issues (lead with issues:
   checked rules); scope (the state picked when followed); is "Not for me" worth it; an option "also tell me when one
   becomes law". Mock before building.
-- **Virginia's paired twins show one chapter** ("Chapter 715"; SB 322's 716 only under Every action). Show "Chapters 715
-  and 716": a second chapter field through build_data.py and the six places tracker.html prints b.chapter, and the
-  status rows. Small but touches many places.
 - **Bills passed inside bigger bills by text** (states/part_of.py does record wording only): find a dead bill's text in a
   same-session law's text. Needs full texts of omnibus laws; Minnesota's statute pages list each section's session-law
   chapter (cheap there).

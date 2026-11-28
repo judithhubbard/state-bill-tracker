@@ -1789,9 +1789,12 @@ def write_issues(session, inputs, page, current, labels=None):
     for i, head, body, num, title, stage, last, const, intro, law, short, others, party, *more in inputs["rows"]:
         found, filters, excerpts, parts = match(head, body, more[0] if more else [])
         # A bill the rules miss, put on an issue by hand with its reason (issues.OVERRIDES; empty since 2026-11-25).
-        extra = [k for k in issues.OVERRIDES.get(f"{STATE}:{session}:{re.sub(r'[A-Z]$', '', num)}", {}) if k not in found]
+        ov = issues.OVERRIDES.get(f"{STATE}:{session}:{re.sub(r'[A-Z]$', '', num)}", {})
+        extra = [k for k in ov if k not in found]
         if extra:
             found, parts = found + extra, parts + extra
+            # (Its reason is the line under "One part of a larger bill": "Laws 2023, ch. 62, art. 4, secs. 123-125 enact ...".)
+            excerpts = {**excerpts, **{k: ov[k] for k in extra if ov[k]}}
         # And one the rules put on an issue wrongly, taken off with its reason (issues.EXCLUDE).
         drop = issues.EXCLUDE.get(f"{STATE}:{session}:{re.sub(r'[A-Z]$', '', num)}", {})
         if drop:
@@ -2691,7 +2694,7 @@ def compute(prev=None):
             if summ.startswith(r["title"]) and summ != r["title"] and r["title"]:
                 summ = "\x01" + summ[len(r["title"]):]
             rows.append([r["title"], summ, [S(x) for x in r["laws"]], [S(x) for x in r["comms"]],
-                         r["topics"], flags, r["stage"], r["passedIn"] or "", r["chapter"] or 0, r["veto"] or 0,
+                         r["topics"], flags, r["stage"], r["passedIn"] or "", (f'{r["chapter"]} and {r["chapter2"]}' if r.get("chapter2") else r["chapter"] or 0), r["veto"] or 0,
                          S(r["comm"]), r["last"].replace("-", ""), r["cosp"], "", r["lawCode"],
                          S(r["program"]), S(r["law"]), vers, max(session, int((r["first"] or str(session))[:4])), h,
                          [d.replace("-", "") for d in [r["first"] or ""] + r["keyDates"]],
@@ -2754,6 +2757,9 @@ def compute(prev=None):
         if session == current:
             data["contacts"] = contacts_for(session, recs, names)
             data["legislators"] = legislators(session)
+            # Seats the profile marks vacant (VACANT): "Find your legislators" says "Senate District 35: vacant".
+            if getattr(P, "VACANT", None):
+                data["vacant"] = [[k.split(":")[0], int(k.split(":")[1])] for k in P.VACANT if k.split(":")[1].isdigit()]
             # The governor's page (/<st>/governor/, tracker.html's renderGov()): their record in past sessions, and this
             # session's bills whose veto came with a message (indexes into the rows).
             data["govRecord"] = gov_record

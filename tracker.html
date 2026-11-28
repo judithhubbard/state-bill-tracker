@@ -2270,6 +2270,9 @@ function plainAction(t, d, acts, short) { return BF.plainAction(t, d, acts, shor
 
 // What a law's number is called: "Chapter 28" (most states), "Act 28" (Pennsylvania).
 const LAW_WORD = STATE.lawWord || "Chapter";
+// "Chapter 715", or "Chapters 715 and 716" for Virginia's identical House and Senate bills that both became law (one
+// record since 2026-11-26; the build writes the record's chapter as "715 and 716").
+const lawNo = (c) => (/ and /.test(String(c)) ? `${LAW_WORD}s ${c}` : `${LAW_WORD} ${c}`);
 // A governor who can veto parts of a bill (Washington's sections, appropriation items elsewhere) and did.
 // How a law got there: over the governor's veto (vetoed, then overridden), or signed; a state whose records don't show
 // the signature (Maine's) says only that it became law (STATE.noSignatures).
@@ -2344,7 +2347,7 @@ function statusParts(b) {
   } else if (b.stage === 4) {
     small = live && b.due ? `Sent ${fmtDate(D.deliv)} · decision due ${fmtDate(b.due)} (est.)` : `Sent ${fmtDate(D.deliv)}`;
   } else if (b.stage === 5) {
-    small = `${lawLine(b)}${b.chapter ? ` · ${LAW_WORD} ${b.chapter}` : ""}${partlyVetoed(b) ? " · part vetoed" : ""} · ${fmtDate(D.signed)}`;
+    small = `${lawLine(b)}${b.chapter ? ` · ${lawNo(b.chapter)}` : ""}${partlyVetoed(b) ? " · part vetoed" : ""} · ${fmtDate(D.signed)}`;
   } else if (b.stage === 6) {
     // Nevada: a veto after the session goes back to the next regular session (STATE.vetoReturns).
     const back = STATE.vetoReturns?.(b);
@@ -2532,6 +2535,14 @@ function myReps() {
     .concat(h === LOW && STATE.atLarge ? [STATE.atLarge] : []);
   return BOTH.flatMap((h) => LEGS.filter((L) => L.house === h && (L.district === +c[h] || also(h).includes(L.district))))
     .map((L) => ({ title: L.title, name: L.name, house: L.house, last: lastName(L.name) }));
+}
+// Seats left vacant (a member died or resigned: the profile's VACANT, DATA.vacant) among the visitor's districts:
+// ["Senate District 35: vacant"]. (2026-11-27: Andrea Stewart-Cousins's seat.)
+function vacantReps() {
+  const c = chosenReps();
+  if (!c || !DATA.vacant?.length) return [];
+  return DATA.vacant.filter(([h, d]) => +c[h] === d && !LEGS.some((L) => L.house === h && L.district === d))
+    .map(([h, d]) => `${HOUSE[h] || ""} District ${d}: vacant`);
 }
 function renderMyReps() {
   const box = $("myReps");
@@ -2937,7 +2948,7 @@ function repsLine() {
     : `<select data-reppick="town">${townOptions(town)}</select>`;
   if (!reps.length) return `<p class="yourreps"><label>Your ${REPS_WORD}: ${picker}</label></p>`;
   const place = town ? townName(town) : c?.region || (!DATA.towns && HOME ? placeName(HOME) : "");
-  return `<p class="yourreps">Your ${REPS_WORD}: ${esc(reps.map((r) => `${TITLE[r.house]} ${r.name}`).join(", "))}${place ? ` (${esc(place)})` : ""}`
+  return `<p class="yourreps">Your ${REPS_WORD}: ${esc(reps.map((r) => `${TITLE[r.house]} ${r.name}`).concat(vacantReps()).join(", "))}${place ? ` (${esc(place)})` : ""}`
     + ` · <button type="button" class="linkish" data-repchange>change</button><span class="reppick" hidden> ${picker}</span></p>`;
 }
 function refreshRepsLines() { for (const el of document.querySelectorAll(".yourreps")) el.outerHTML = repsLine(); }
@@ -3310,7 +3321,7 @@ function planFor(b, stance = "support") {
     gov = A("sign it", "veto it") + (b.due ? ` by ${fmtDate(b.due)}` : "");
     book.reps(BOTH, A(`urge ${EXEC.the} to sign it`, `urge ${EXEC.the} to veto it`), false, true);
   } else if (b.stage === 5) {
-    what = `<p class="when">${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}.${partlyVetoed(b) ? ` ${EXEC.The} vetoed part of it.` : ""}${govFrom(b)}</p>`;
+    what = `<p class="when">${lawLine(b)}${b.chapter ? `, ${lawNo(b.chapter)}` : ""}.${partlyVetoed(b) ? ` ${EXEC.The} vetoed part of it.` : ""}${govFrom(b)}</p>`;
     b.vers.forEach((v) => book.sponsor(v));
   } else if (b.stage === 6 && STATE.vetoReturns?.(b)) {
     // Nevada: a veto after the session goes back to the next regular session, which can override it.
@@ -3332,7 +3343,7 @@ function planFor(b, stance = "support") {
   const actionable = WR.canAct(b, live, STATE.vetoReturns?.(b)?.live, votersDone(b));
   // Why nothing can be done now, in plain words.
   let reason = "";
-  if (b.stage === 5) reason = `${lawLine(b)}${b.chapter ? ` as ${LAW_WORD} ${b.chapter}` : ""}. Changing it would take a new bill.`;
+  if (b.stage === 5) reason = `${lawLine(b)}${b.chapter ? ` as ${lawNo(b.chapter)}` : ""}. Changing it would take a new bill.`;
   else if (b.stage === 6 && STATE.vetoReturns?.(b)) reason = STATE.vetoReturns(b).reason;
   else if (b.stage === 6) reason = `Vetoed${b.veto ? ` (veto memo ${b.veto})` : ""}. To revive it, the sponsors would ${live ? "file it again as a new bill" : "reintroduce it next session"}.`;
   else if (!actionable && adjourned) {
@@ -3723,7 +3734,7 @@ function nextSteps(b) {
   // A decided bill (a law, a veto, a bill that died): grey, its outcome and date first.
   if (!plan.actionable) {
     const D = b.dates;
-    const outcome = b.stage === 5 ? `${lawLine(b)}${D.signed ? ` ${fmtDate(D.signed)}` : ""}${b.chapter ? ` · ${LAW_WORD} ${b.chapter}` : ""}`
+    const outcome = b.stage === 5 ? `${lawLine(b)}${D.signed ? ` ${fmtDate(D.signed)}` : ""}${b.chapter ? ` · ${lawNo(b.chapter)}` : ""}`
       : b.stage === 6 ? `Vetoed${D.vetoed ? ` ${fmtDate(D.vetoed)}` : ""}` : "";
     if (b.stage === 5) what = (partlyVetoed(b) ? `<p class="when">${EXEC.The} vetoed part of it.</p>` : "") + (govFrom(b) ? `<p class="when">${govFrom(b).trim()}</p>` : "");
     if (b.stage === 6) what = what.replace(/^(<p class="when">)Vetoed\. /, "$1");
@@ -3744,7 +3755,7 @@ function nextSteps(b) {
 // 2023", the law's title under it.
 function partHead(b) {
   const inside = b.stage <= 3 ? partLaw(b) : null;
-  return inside ? `<p class="t">Became law as part of ${billBtn(inside)}${inside.chapter ? ` · ${LAW_WORD} ${inside.chapter}` : ""}${inside.dates.signed ? ` · ${fmtDate(inside.dates.signed)}` : ""}</p><p class="when m">${esc(inside.title)}</p>` : "";
+  return inside ? `<p class="t">Became law as part of ${billBtn(inside)}${inside.chapter ? ` · ${lawNo(inside.chapter)}` : ""}${inside.dates.signed ? ` · ${fmtDate(inside.dates.signed)}` : ""}</p><p class="when m">${esc(inside.title)}</p>` : "";
 }
 // "Your side", once, above the people to write to.
 const sideLine = (b, side) => `<p class="ta2-side">Your side <span class="seg">${["support", "oppose"].map((s) => `<button type="button" data-panelstance="${s}" data-idx="${b.idx}" aria-pressed="${side === s}">${s[0].toUpperCase() + s.slice(1)}</button>`).join("")}</span></p>`;
@@ -4954,7 +4965,7 @@ function historyBlock(b) {
     // calendar, not a committee; a line saying "committee" for every state was wrong for them.)
     [D.died, STATE.resetLine?.(b) || "Its earlier passage was reset for the new year (had to pass again)"],
     [D.deliv, `Sent to ${EXEC.the}`, null, 3],
-    [D.signed, `${lawLine(b)}${b.chapter ? `, ${LAW_WORD} ${b.chapter}` : ""}`, null, after(D.signed) ? 5 : 4],
+    [D.signed, `${lawLine(b)}${b.chapter ? `, ${lawNo(b.chapter)}` : ""}`, null, after(D.signed) ? 5 : 4],
     [D.vetoed, `Vetoed${b.veto ? `, Memo ${b.veto}` : ""}`, null, 4],
   ].filter(([d]) => d).map(([d, l, house, rank = 2], i) => ({ d, html: esc(l), house, rank, seq: 1000 + i }));
   b.votes.forEach((v, seq) => {
@@ -5176,7 +5187,7 @@ function twinLine(b) {
   const twins = b.similar.filter((x) => x.s >= 70).map(({ j }) => BILLS[j]);
   if (!twins.length) return "";
   const inside = b.stage <= 3 && partLaw(b);
-  if (inside) return `<p class="wtwin">Its contents became law as part of ${billBtn(inside)}${inside.chapter ? ` (${LAW_WORD} ${inside.chapter})` : ""}.</p>`;
+  if (inside) return `<p class="wtwin">Its contents became law as part of ${billBtn(inside)}${inside.chapter ? ` (${lawNo(inside.chapter)})` : ""}.</p>`;
   const law = b.stage <= 2 && lawTwin(b);
   if (law) return `<p class="wtwin">The same proposal became law as ${billBtn(law)}.</p>`;
   const notes = !stillAlive(b) ? [] : twins.filter(stillAlive).map((o) => {
@@ -6348,7 +6359,8 @@ function fillSelects() {
   $("votedLabel").textContent = PRESET?.who ? "How they voted" : `How your ${REPS_WORD} voted`;
   const reps = PRESET?.who ? [] : votePeople();
   // (Each name links to the legislator's page on the public site.)
-  $("whereSum").innerHTML = reps.length ? `Your legislators: ${andList(reps.map((L) => { const n = esc(`${L.title || ""} ${L.name}`.trim()); return ROOT && L.slug && DATA.current ? `<a href="${esc(ROOT + L.slug)}/">${n}</a>` : n; }))}`.replace(/^Your legislators/, `Your ${REPS_WORD}`) : `Find your ${REPS_WORD}`;
+  const vac = vacantReps().map(esc);
+  $("whereSum").innerHTML = reps.length || vac.length ? `Your legislators: ${andList(reps.map((L) => { const n = esc(`${L.title || ""} ${L.name}`.trim()); return ROOT && L.slug && DATA.current ? `<a href="${esc(ROOT + L.slug)}/">${n}</a>` : n; }).concat(vac))}`.replace(/^Your legislators/, `Your ${REPS_WORD}`) : `Find your ${REPS_WORD}`;
   for (const id of ["who", "law", "voted", "changed", ...MORE_KEYS]) $(id)?.classList.toggle("on", !!state[id]);
   // How many more bills each "hide" box takes out, given the other filters.
   // (States that find legislators by town have no county box.)
