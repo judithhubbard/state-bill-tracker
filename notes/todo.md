@@ -4,6 +4,10 @@ One list of open work. Dated chores for January 2027 are in the january-2027-che
 in CLAUDE.md's launch checklist.
 
 ## Open now (updated 2026-11-26; newest first; move items to "done" in the commit that does them)
+- **Interrupted 2026-11-28 (computer shut), not yet committed; redo if their worktrees in .claude/worktrees/ hold nothing:**
+  the Watchlist tab (title line and Share on one line; an opened card's status words matching its row, with "Next:");
+  the sidebar's "Where it is now" as one flat list (quiet group headings, fewer ⓘ, the amendments row not wrapping);
+  the default sort by the latest real step (BillFacts.newsDay, not paperwork); Indiana's floor votes by member (IGA API).
 - **New York Senate after Andrea Stewart-Cousins's death (2026-11-27)**: LEADERS "S" is None and VACANT has "S:35".
   When Senate Democrats choose a leader (expected January 2027), set LEADERS "S" (or LEADERS_NEXT with the start day).
   When the Senate's own list drops her or a successor is seated (special election, or the 2027 session's member), remove
