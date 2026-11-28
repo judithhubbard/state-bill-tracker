@@ -1350,11 +1350,13 @@ details.morefilters #moreCount { margin-left: 6px; color: var(--gold); text-tran
 .hdrrow > .where[open] { display: block; white-space: normal; margin-top: 6px; }
 .hdrrow > .where[hidden] { display: none; }
 .hdrrow:has(> .power:empty):has(> .where[hidden]) { display: none; }
-nav.views + .notice { background: none; padding: 8px 0 0; margin: 0; font-size: 13px; color: var(--ink-2); border-radius: 0; }
+#main > .notice { background: none; padding: 8px 0 0; margin: 0; font-size: 13px; color: var(--ink-2); border-radius: 0; }
 html[data-view="stats"] .mast > :is(.hdrrow, .legs), html[data-view="how"] .mast > :is(.hdrrow, .legs),
-html[data-view="stats"] nav.views + .notice, html[data-view="how"] nav.views + .notice,
+html[data-view="stats"] #notice, html[data-view="how"] #notice,
 html[data-view="stats"] .mast .eyebrow, html[data-view="how"] .mast .eyebrow { display: none !important; }
 html.embed #notice { display: none !important; }
+/* (Statistics and How hide the eyebrow line, which kept the site's links clear of the session buttons: room for them.) */
+@media (min-width: 821px) { html[data-view="stats"] .mast, html[data-view="how"] .mast { padding-top: 26px; } }
 .fbtn { display: none; }
 .fbtn .fcount:not(:empty) { margin-left: 6px; padding: 0 6px; border-radius: 9px; background: var(--navy); color: var(--paper); font-size: 11.5px; }
 @media (max-width: 900px) {
