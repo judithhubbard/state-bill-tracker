@@ -220,7 +220,7 @@
     "data/in"
    ],
    "minutes": 60,
-   "run": "python3 states/in/fetch.py && (python3 states/in/contacts.py 2023 || true) && python3 states/in/contacts.py 2024 && python3 states/in/contacts.py 2025 && python3 states/in/contacts.py"
+   "run": "python3 states/in/fetch.py && (python3 states/in/contacts.py 2023 || true) && python3 states/in/contacts.py 2024 && python3 states/in/contacts.py 2025 && python3 states/in/contacts.py && (python3 states/in/os_votes.py || true)"
   },
   {
    "name": "Arkansas",
