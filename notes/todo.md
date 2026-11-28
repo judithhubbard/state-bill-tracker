@@ -7,7 +7,8 @@ in CLAUDE.md's launch checklist.
 - **Interrupted 2026-11-28 (computer shut), not yet committed; redo if their worktrees in .claude/worktrees/ hold nothing:**
   the Watchlist tab (title line and Share on one line; an opened card's status words matching its row, with "Next:");
   the sidebar's "Where it is now" as one flat list (quiet group headings, fewer ⓘ, the amendments row not wrapping);
-  the default sort by the latest real step (BillFacts.newsDay, not paperwork); Indiana's floor votes by member (IGA API).
+  the default sort by the latest real step (BillFacts.newsDay, not paperwork); (Indiana's floor votes by member: built 2026-11-28 from Open States' bulk files, states/in/os_votes.py; waiting
+  for the owner to put the 2023-2026 session file names in states/in/bulk.json.)
 - **New York Senate after Andrea Stewart-Cousins's death (2026-11-27)**: LEADERS "S" is None and VACANT has "S:35".
   When Senate Democrats choose a leader (expected January 2027), set LEADERS "S" (or LEADERS_NEXT with the start day).
   When the Senate's own list drops her or a successor is seated (special election, or the 2027 session's member), remove
