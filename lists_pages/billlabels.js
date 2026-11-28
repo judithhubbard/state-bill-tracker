@@ -35,7 +35,13 @@ const out = input.bills.map((b) => {
   const x = BF.factsOf(b);
   let veto = false;
   try { veto = !!S.vetoReturns?.(b)?.live; } catch (e) {}
-  const flags = (x.stops ? "e" : "") + (x.amend ? "a" : "") + (x.second ? "2" : "") + (x.voted ? "d" : "") + (veto ? "r" : "") + (x.lapsed ? "x" : "");
+  // "p": still in play, as the state page's "Still in play" counts it (2026-11-28, for the front page search's menu): a
+  // live or prefiled session's bill that can still move: not ended, not a dead first passage, not decided by the voters;
+  // before the session's floor votes are over every stage up to the governor, after them only bills past both houses.
+  let over = false;
+  try { over = WR.floorVotesOver(); } catch (e) {}
+  const play = (x.current || x.up) && b.stage <= 4 && !x.stops && !x.lapsed && !x.voted && (b.stage >= 3 || x.up || (x.alive && !over));
+  const flags = (x.stops ? "e" : "") + (x.amend ? "a" : "") + (x.second ? "2" : "") + (x.voted ? "d" : "") + (veto ? "r" : "") + (x.lapsed ? "x" : "") + (play ? "p" : "");
   let news = "";
   try { news = BF.latestNews(b, routine); } catch (e) {}
   return [BillFacts.words(S, x), flags, BillFacts.newsDay((b.vers || []).flatMap((v) => v.actions || []), routine), news];

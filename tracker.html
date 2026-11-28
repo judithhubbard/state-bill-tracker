@@ -1182,6 +1182,7 @@ details.pfold > .pfb { padding: 0 0 10px; }
 .pg.leg { background: var(--chip); border-left-color: var(--move); }
 .pg-h.pick { cursor: pointer; border-radius: 6px; }
 .pg-h.pick:hover { text-decoration: underline; }
+.pg-h .pga { color: var(--navy); font-weight: 700; }  /* (the heading picks its whole group: 2026-11-28) */
 .pg-h.pick.on { color: var(--navy); text-decoration: underline; text-decoration-thickness: 2px; }
 .pg.live { background: var(--chip); border-left-color: var(--move-2); }
 .pg.live .srow:hover { background: color-mix(in srgb, var(--move) 15%, transparent); }
@@ -2206,7 +2207,7 @@ function renderPipeline() {
   const head = (label, ks, extra = "", tip = "") => {
     const key = ks.join(",");
     PIPE_GROUPS[key] = label;
-    return `<div class="pg-h pick${String(state.stage) === key ? " on" : ""}" data-g="${key}" role="button" tabindex="0" title="Show all ${esc(label.toLowerCase())} bills"${ROW_DESC(tip)}>${label}${TIPR(tip)}${extra}</div>`;
+    return `<div class="pg-h pick${String(state.stage) === key ? " on" : ""}" data-g="${key}" role="button" tabindex="0" title="Show all ${esc(label.toLowerCase())} bills"${ROW_DESC(tip)}>${label}<span class="pga" aria-hidden="true"> ›</span>${TIPR(tip)}${extra}</div>`;
   };
   // After the second year's last floor votes, only bills that passed both houses can still move: shown while any
   // are left (once the governor has acted on all of them, there's nothing in play).

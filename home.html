@@ -1747,6 +1747,8 @@ drawMine();
     // "Became law" (2026-11-24, the owner): of the bills found, only laws. (No "still moving": a finished session's bills
     // aren't, and search has no session dates to tell.)
     if (stageF === "law") hits = hits.filter((h) => h.r[2] === 5);
+    // (Still in play: the rows the state's own rules mark so, search/<st>.json's "p".)
+    if (stageF === "play") hits = hits.filter((h) => (h.s.pset ||= new Set((h.s.p || []).map((i) => h.s.b[i]))).has(h.r));
     const most = hits.length && hits.every((h) => h.tier === 1);
     const where = p.st ? ` in ${esc(stateName(p.st))}` : "";
     const go = goTo(p);
@@ -1760,7 +1762,7 @@ drawMine();
     else if (pastLoading && hits.length) count += " · loading earlier sessions…";
     const busy = loading || pastLoading;
     const opts = [["", "All states"], ...codes().map((c) => [c, stateName(c)]).sort((a, b) => (a[0] === "us" ? -1 : b[0] === "us" ? 1 : a[1].localeCompare(b[1])))];
-    const stagePick = `<select id="fstage" aria-label="Which bills">${[["", "All bills"], ["law", "Became law"]].map(([v, t]) => `<option value="${v}"${v === stageF ? " selected" : ""}>${t}</option>`).join("")}</select>`;
+    const stagePick = `<select id="fstage" aria-label="Which bills">${[["", "All bills"], ["play", "Still in play"], ["law", "Became law"]].map(([v, t]) => `<option value="${v}"${v === stageF ? " selected" : ""}>${t}</option>`).join("")}</select>`;
     const pick = `<select id="fstate" aria-label="Search one state, or all">${opts.map(([c, n]) => `<option value="${c}"${c === (only === "all" ? "" : only || p.st || "") ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>`;
     const rows = hits.slice(0, limit).map(({ st, name, s, r, shown }, i, xs) => {
       const [num, title, stage, w] = r, label = s.w[w] || "";

@@ -50,7 +50,7 @@ def session_rows(out, st, d):
                 on.setdefault(re.sub(r"[A-Z]$", "", n), set()).update(x[0])
     except (OSError, ValueError, KeyError):
         pass
-    rows, tags, words = [], {}, {}
+    rows, tags, words, play = [], {}, {}, []
     for key, b in d["bills"].items():
         # (Sorted, so the file is the same from build to build: a set's order changes with each run.)
         for i in sorted(on.get(key, set()) | on.get(re.sub(r"[A-Z]$", "", b[0]), set())):
@@ -58,9 +58,11 @@ def session_rows(out, st, d):
         row = [b[0], short(b[1]), b[2], words.setdefault(b[11] if len(b) > 11 else "", len(words))]
         if key in others:
             row.append(others[key])
+        if "p" in (b[9] if len(b) > 9 else ""):  # still in play (the status row's flags: billlabels.js)
+            play.append(len(rows))
         rows.append(row)
     return {"session": d["session"], "label": label, "page": page, "live": bool(d["live"]), "up": bool(d["live"] and page),
-            "w": list(words), "b": rows, "t": tags}
+            "w": list(words), "b": rows, "t": tags, **({"p": play} if play else {})}
 
 
 def text_of(d):
