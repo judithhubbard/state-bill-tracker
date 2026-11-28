@@ -164,9 +164,57 @@ def bill_link(p, session):
     return f"https://iga.in.gov/legislative/{session}/{kind}/{house}/{'joint/' if p[1] == 'J' else ''}{int(p[2:])}/details"
 
 
+# Members' votes from Open States' bulk files (states/in/os_votes.py): the groups other than yes, as the other states'
+# records list them ([seat, code]); members voting yes are the house's other members.
+VOTE_CODE = {"no": "N", "not voting": "A", "present": "B", "excused": "E"}
+
+
+def os_votes(session):
+    """{"HB1001.402_S": {"yes", "no", "names"}} for the session, or {} before its bulk file is read."""
+    try:
+        return json.load(open(os.path.join(folder(session), "os_votes.json"))).get("votes") or {}
+    except (OSError, ValueError):
+        return {}
+
+
+def seat_finder(session):
+    """A voter's name as the roll call prints it ("Jackson, C", "Bohacek") -> "H:18" (or "H?Jackson, C" when no member
+    of that house, or more than one, fits)."""
+    # (The session's member list shows who sits at its end: a member who left mid-session, Rep. Pat Boy in 2025, is
+    # found in the years before, if no one now sitting has the name.)
+    by = {}
+    for year in (session, session - 1, session - 2):
+        try:
+            items = json.load(open(os.path.join(folder(year), "legislators.json")))
+            items = items.get("items", items) if isinstance(items, dict) else items
+        except (OSError, ValueError):
+            continue
+        found = {}
+        for x in items:
+            h = "S" if (x.get("position_title") or "").startswith("Senator") else "H"
+            d = re.search(r"\d+", x.get("district") or "")
+            if d:
+                found.setdefault((h, (x.get("lastName") or x.get("lastname") or "").lower()), []).append(
+                    ((x.get("firstName") or x.get("firstname") or "").upper(), int(d.group())))
+        for k, v in found.items():
+            by.setdefault(k, v)
+
+    def seat(h, n):
+        # "Jackson, C" in the House, "Ford J.D." in the Senate: the last name, then initials.
+        n = (n or "").strip()
+        last, _, ini = n.partition(",") if "," in n or (h, n.lower()) in by else n.partition(" ")
+        fits = by.get((h, last.strip().lower()), [])
+        ini = ini.strip().rstrip(".").upper()
+        if ini:
+            fits = [f for f in fits if f[0].startswith(ini)] or fits
+        return f"{h}:{fits[0][1]}" if len(fits) == 1 else f"{h}?{n}"
+    return seat
+
+
 def load_session(session):
     """Read one year's bills and return (records, bill number -> record index, fetched time, delegation)."""
     parties = _PARTIES.setdefault(session, {})
+    osv, seat_of = os_votes(session), seat_finder(session)
     files = glob.glob(os.path.join(folder(session), "bills", "*.json"))
     fetched = datetime.fromtimestamp(max(os.path.getmtime(f) for f in files), ZoneInfo(P.TIMEZONE)).strftime("%Y-%m-%d %H:%M")
     texts, recs, index = {}, [], {}
@@ -293,7 +341,12 @@ def load_session(session):
         votes = []
         for d, h, t, a, tl in steps:
             if tl and h in HOUSE and (t.startswith("PASSED") or t in ("FAILED", "CONCURRED", "VETO OVERRIDDEN") or t.startswith("CCR ")):
-                votes.append([h, "F", None, d, tl[0], tl[1], []])
+                # Members' names when Open States' copy of the same roll call has the same tally.
+                rc = re.search(r"Roll Call (\d+)", a)
+                ov = osv.get(f"{name}.{int(rc.group(1))}_{h}") if rc else None
+                names_ = [[seat_of(h, n), VOTE_CODE[g]] for g, ns in (ov or {}).get("names", {}).items() if g in VOTE_CODE for n in ns] \
+                    if ov and (ov.get("yes"), ov.get("no")) == tuple(tl) else []
+                votes.append([h, "F", None, d, tl[0], tl[1], names_])
         action_dates = [s[0] for s in steps if s[0]]
         rec = {
             "nums": [p], "base": [p], "prev": earlier(session, b, p),

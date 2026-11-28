@@ -18,8 +18,15 @@ Moved from CLAUDE.md (2026-11-19). Shared conventions, the data traps list and t
   "Bill Became Law on 8th Day Without Signature", a "Public Law 126" number (`STATE.lawWord` "Public Law"); "Vetoed by the
   Governor". Signatures and the governor's lines carry only a date: within a day, timed lines sort first. The authorship
   lines ("Authored by", "... added as coauthor") are dropped from the history (the sponsor lists hold them). Committees
-  don't vote bills down on the record: a bill the chair never hears just stays ("no action"). Votes are tallies only (the
-  roll calls' member lists are PDFs the API doesn't serve). Joint resolutions proposing amendments (not the "Vehicle joint
+  don't vote bills down on the record: a bill the chair never hears just stays ("no action"). Votes are tallies only from the
+  API (the roll calls' member lists are PDFs: the API's ?format=pdf redirects to iga.in.gov, which answers automated
+  requests with its script page, and the journals' PDFs the same; checked again 2026-11-28, not worked around). Members'
+  names come from Open States' bulk files instead (`states/in/os_votes.py`, 2026-11-28): each Open States vote's source
+  is the same roll-call PDF ("HB1001.402_S.pdf"), so it joins our "Roll Call 402" exactly; convert.py fills a floor
+  vote's names only when the tallies agree, and finds members who left mid-session in the earlier years' lists (Rep. Pat
+  Boy, House 9, 2025). The files' names need the owner's login at open.pluralpolicy.com/data/session-json/ and go in
+  `states/in/bulk.json` ({"2025": "IN_2025_json_<id>.zip"}, one per session year; a live session's file gets a new name
+  when Open States rebuilds it). Tested on HB 1001 of 2025 through the API: 4 floor votes, every name tied to a seat. Joint resolutions proposing amendments (not the "Vehicle joint
   resolution" placeholders, nor calls for a federal convention) are tagged "const": two General Assemblies in a row, then
   the voters, never the governor, though they get Public Law numbers; the digest says "has been agreed to by one general
   assembly" on the second passage (`STATE.amendmentFinal` reads it from the summary). "Vehicle Bill." placeholders (about
