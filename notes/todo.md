@@ -49,10 +49,13 @@ in CLAUDE.md's launch checklist.
   nothing) with a simple picture like renderHowPic(): two Legislatures, then the voters (NY, NV, MA ...), or one passage
   then the voters (most states), or the governor's role where there is one (VA's bills setting up the ballot). Also the
   bill panel's step picture for amendments: "Voters" after one round or two.
-- **Local bills named by a neighborhood or landmark** (2026-11-27: NY's S1462 "Battery Park project area" passed "Hide bills
-  about other places"). New York's REGIONS now lists about 20 (Battery Park, Jamaica Bay, Indian Point ...). Other
-  states' place rules have the same blind spot: scan each state's titles that name no place for capitalized
-  "... Park/Island/Bay/Lake/Creek/project area" phrases, and add the local ones to that state's list.
+- **Bills about one place, outside New York** (2026-11-28, found while scanning for landmarks). Only New York ties bills
+  to counties (states/ny/convert.py's place_counties()); every other converter writes "places": [], so "Hide bills about
+  other places" hides only titles narrow_kind() flags (namings, one person or group, GA/NC local bills), and never a
+  city's charter bill or a road designation. Size: CA 2025 88 titles naming a place, TX 207, PA 48, MI 22, NJ 52, VA 29.
+  Per state: match titles against its towns and counties (data/<st>/district_towns.json), fill "places", set COUNTIES.
+  Also check tracker.html's farAway(): a GA/NC local bill with no places is hidden even when it's about the visitor's
+  own county. Medium job per state.
 - **Arizona 2023-24 chapter numbers**: Open States' records have none (data_check's CHAPTER_GAPS marks it a known gap).
   apps.azleg.gov (permission covers bill status) has them: read 2023-24's laws' chapters from it.
 - **Coverage audit gaps** (scratchpad report 2026-11-26, summarized): Indiana floor votes without names (its data service
