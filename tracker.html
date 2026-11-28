@@ -386,7 +386,9 @@ table.oc th { vertical-align: bottom; }
   .starspace .sides, .rowstar .sides { flex-direction: column; align-items: stretch; }
   .bill > summary .status { grid-column: 2; }
   .bill > summary .status .pips { max-width: 170px; }
-  .detail { margin: 2px 0 20px 20px; padding-left: 14px; }
+  /* (A phone's open bill uses the width: a small indent, and the Draft button only as wide as its word. 2026-11-28.) */
+  .detail { margin: 2px 0 20px 2px; padding-left: 12px; }
+  .ta2-go { min-width: 0; padding-left: 14px; padding-right: 14px; }
   .lineage li { grid-template-columns: 60px minmax(0, 1fr); }
   .lineage li .oc { grid-column: 2; }
   .keydates li { grid-template-columns: 96px minmax(0, 1fr); }
