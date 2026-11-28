@@ -39,9 +39,6 @@ in CLAUDE.md's launch checklist.
   same follows drive phone notifications (the app/alerts plan). Open questions: free text vs issues (lead with issues:
   checked rules); scope (the state picked when followed); is "Not for me" worth it; an option "also tell me when one
   becomes law". Mock before building.
-- **"Still in play" filter** (owner approved 2026-11-26): the state sidebar's "Still in play" heading clickable as a
-  filter (and "Out of time" likewise), and a third choice in the front page search's menu: All bills / Still in play /
-  Became law (the search files' status labels already carry each state's out-of-time rule).
 - **Virginia's paired twins show one chapter** ("Chapter 715"; SB 322's 716 only under Every action). Show "Chapters 715
   and 716": a second chapter field through build_data.py and the six places tracker.html prints b.chapter, and the
   status rows. Small but touches many places.
