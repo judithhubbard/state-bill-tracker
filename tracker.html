@@ -2216,7 +2216,7 @@ function renderPipeline() {
   const wentToVoters = !inPlay && BILLS.some((b) => votersDone(b));
   // The counts follow the other filters (a county, a topic ...): say so, so they don't seem to disagree with totals
   // elsewhere on the page (the notice counts every bill).
-  const by = activeFilters().filter(([k]) => k !== "stage" && k !== "one");
+  const by = activeFilters().filter(([k]) => k !== "stage" && k !== "one" && !(PRESET?.who && k === "who"));
   const note = !by.length ? "" : `<p class="pnote"><span class="ftag" title="${by.length === 1 && by[0][0] === "nearby" ? `Counting only ${esc(by[0][3])}.` : "Counting only the bills your filters show."}">Filtered</span></p>`;
   // Prefiled bills, before the session opens: only the stages some bills are at.
   if (DATA.upcoming) {
@@ -5022,8 +5022,9 @@ function historyTags(b) {
 function pageRole(b) {
   const L = PRESET?.who && LEG_BY_ID[PRESET.who];
   if (!L) return "";
-  const role = sponsoredBy(b, L, false) ? "sponsor" : sponsoredBy(b, L, true) ? "co-sponsor" : "";
-  return role ? `<span class="role-tag">${esc(shortName(L.name))}: ${role}</span>` : "";
+  // (Their own page: sponsoring is the usual case, so only co-sponsored bills are tagged, without the name again:
+  // 2026-11-28, the clutter audit.)
+  return !sponsoredBy(b, L, false) && sponsoredBy(b, L, true) ? `<span class="role-tag">Co-sponsor</span>` : "";
 }
 
 // What a bill does, in the legislature's own words (New Jersey: the sponsor's statement, the latest
