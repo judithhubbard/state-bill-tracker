@@ -962,7 +962,8 @@ a.phone:hover { text-decoration-color: currentColor; }
 .howsec { display: grid; gap: 14px; }
 /* How's picture (renderHowPic()): one lane per house. Under 600px the lanes turn into columns. */
 .howpic { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; container-type: inline-size; max-width: 900px; }
-.howpic h2 { margin: 0 0 2px; }
+/* (The tab already says "How a bill becomes law in New York": the picture's heading is for screen readers only. 2026-11-28.) */
+.howpic h2 { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .howpic .cap { margin: 0 0 12px; font-size: 14px; color: var(--ink-2); max-width: 60ch; }
 .howpic .hpdefs { position: absolute; }
 .howpic svg.wide, .howpic svg.tall { width: 100%; height: auto; }
@@ -4593,14 +4594,13 @@ function renderStats() {
   // (The odds chart leads the tab; "How far bills get", a simpler bar version of it, was dropped 2026-11-19.)
   const per100 = nI ? Math.round((lI / nI) * 100) : 0;
   $("statFunnel").innerHTML = "";
-  const [q0, , , , qAll] = I.persistence?.[t] || [0, 0, 0, 0, 0];
   // (Laws that passed twice, once from each house, each pair one record: Virginia's. Over the sessions the chart pools.)
   const paired = (I.pastSessions || []).reduce((a, s) => a + ((((DATA.outcomes || {})[s] || {})[t] || [])[5] || 0), 0);
-  const tries = (I.fullPast || I.pastSessions).length >= 2 && qAll ? `<p>${pctOf(qAll - q0, qAll)}% of laws had been introduced in an earlier session first.</p>` : "";
+  // ("N% of laws had been introduced in an earlier session first" stood alone under the chart; Repeat tries' "Sessions
+  // it took laws to pass" says it: dropped 2026-11-28, the clutter audit.)
   $("statOdds").innerHTML = `<h2>Odds of becoming law${ofTopic}</h2>
     ${nI ? `<p class="takeaway">${per100 >= 1 ? `About ${per100} in 100 bills introduced became law.` : "Fewer than 1 in 100 bills introduced became law."}</p>` : ""}
     ${sankey(odds, I.fate?.[t], I.commFate?.[t])}
-    ${tries}
     <p class="note">${inState(topicName)}, ${pastSpan()}.${CYCLE() && STATE.cycleNote ? ` ${STATE.cycleNote}` : ""}${STATE.heldNote && (I.commFate?.[t]?.held || [0])[0] > 0 ? ` “${STATE.heldLabel}”: ${STATE.heldNote}` : ""}${shellsOut()}${paired ? ` Identical House and Senate bills count once here: ${num(paired)} laws passed twice, once from each house, and ${stateName()}'s own totals count both.` : ""}</p>
     <h3 class="sub">Once a bill gets this far</h3>
     <div class="vlist">${ODDS_POINTS.map(([k, l]) => { const [n, law] = odds[k] || [0, 0];
