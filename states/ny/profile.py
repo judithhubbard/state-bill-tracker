@@ -52,8 +52,13 @@ DELEGATION_NAMES = {"Webb", "Kelles"}
 # Who decides which bills reach each house's floor: name, title, and the pronoun the site uses
 # for them. Check after leadership votes in January of odd years; a leader is shown only while the
 # named person still holds a seat.
-LEADERS = {"S": ("Andrea Stewart-Cousins", "Senate Majority Leader", "her"),
+# Andrea Stewart-Cousins, Senate Majority Leader since 2019, died 2026-11-27; the post is empty here (None: no leader
+# named, and the contacts file's copy isn't used) until Senate Democrats choose a successor (expected January 2027).
+LEADERS = {"S": None,
            "A": ("Carl Heastie", "Assembly Speaker", "him")}
+# Seats whose member died or resigned, until the Senate's or Assembly's own list drops them (build_data.py's vacate()):
+# Senate District 35, Andrea Stewart-Cousins (died 2026-11-27).
+VACANT = {"S:35": "2026-11-27"}
 
 
 # Senators the contacts file doesn't list get an address on nysenate.gov, made from their name.

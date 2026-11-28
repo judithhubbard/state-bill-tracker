@@ -493,13 +493,21 @@ def photo_address(name):
     return urlparse(urljoin(P.SITE_URL, "../assets/photos/" + name)).path
 
 
+def vacate(seats):
+    """The contacts file's seats without those the profile's VACANT lists ({"S:35": "2026-11-27"}: a member who died or
+    resigned, before the legislature's own list drops them). Votes and sponsorships keep their names; only the current
+    members (legislator pages, "Find your legislators", whom to write to, leaders) leave them out."""
+    gone = getattr(P, "VACANT", {}) or {}
+    return {k: v for k, v in seats.items() if k not in gone}
+
+
 def legislators(session):
     """Current legislators with a short page address each: last name, or first-last when shared."""
     path = os.path.join(P.DATA, f"contacts_{session}.json")
     if not os.path.exists(path):
         return []
     raw = json.load(open(path))
-    seats = raw.get("people", {})
+    seats = vacate(raw.get("people", {}))
     since = raw.get("since", {})
     last = lambda p: p["key"].split()[-1]
 
@@ -537,7 +545,7 @@ def contacts_for(session, recs, delegation_names):
     if not os.path.exists(path):
         return None
     raw = json.load(open(path))
-    seats = raw.get("people", {})  # "S:52" -> {name, key, email, phone, url}
+    seats = vacate(raw.get("people", {}))  # "S:52" -> {name, key, email, phone, url}
     asm_members = raw.get("assemblyMembers", {})
     people = {}
 
@@ -608,7 +616,10 @@ def contacts_for(session, recs, delegation_names):
     # site (OWN_LEADERS there) names someone else, so the profile gets updated.
     due = set(P.LEADERS)
     listed = {h: (v["name"], v["role"], "them") for h, v in raw.get("leaders", {}).items() if h not in due}
-    for house, (name, role, pronoun) in {**P.LEADERS, **listed}.items():
+    for house, who in {**P.LEADERS, **listed}.items():
+        if not who:  # (a post the profile marks empty: New York's Senate leader from 2026-11-27, until one is chosen)
+            continue
+        name, role, pronoun = who
         if any(k[0] == house and v["key"] == name_key(name) for k, v in seats.items()):
             person(name, house)
             leaders[house] = {"name": name, "role": role, "pronoun": pronoun}
