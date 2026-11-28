@@ -4,6 +4,10 @@ One list of open work. Dated chores for January 2027 are in the january-2027-che
 in CLAUDE.md's launch checklist.
 
 ## Open now (updated 2026-11-26; newest first; move items to "done" in the commit that does them)
+- **New York Senate after Andrea Stewart-Cousins's death (2026-11-27)**: LEADERS "S" is None and VACANT has "S:35".
+  When Senate Democrats choose a leader (expected January 2027), set LEADERS "S" (or LEADERS_NEXT with the start day).
+  When the Senate's own list drops her or a successor is seated (special election, or the 2027 session's member), remove
+  "S:35" from VACANT. Possibly: show "Vacant" for the seat under Find your legislators, rather than leaving it out.
 - **Cities, starting with New York City** (owner: to-do, 2026-11-27; after the January rush, February or March 2027).
   Model on DC (one chamber plus a mayor's veto; NYC: 51 members, two-thirds to override, a four-year session). Source:
   the Council's Legistar (bills "Intros", histories, sponsors, roll calls by member; NYC's web API needs a free token,
